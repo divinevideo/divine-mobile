@@ -40,10 +40,12 @@ OutgoingDm _row({
   DateTime? lastAttemptAt,
   String ownerPubkey = _ownerPubkey,
   DateTime? queuedAt,
+  String? recipientWrapEventId,
+  String? conversationId,
 }) {
   return OutgoingDm(
     id: id,
-    conversationId: 'conv:$id',
+    conversationId: conversationId ?? 'conv:$id',
     recipientPubkey: _recipientPubkey,
     content: 'hello',
     createdAt: 1700000000,
@@ -54,6 +56,7 @@ OutgoingDm _row({
     ownerPubkey: ownerPubkey,
     retryCount: retryCount,
     lastAttemptAt: lastAttemptAt,
+    recipientWrapEventId: recipientWrapEventId,
   );
 }
 
@@ -108,6 +111,13 @@ void main() {
     when(
       () => dmRepository.retryableMessageDeletions(),
     ).thenAnswer((_) async => const <DmMessageDeletionRetryTarget>[]);
+    when(
+      () => dao.getExhaustedHeldForOwner(
+        ownerPubkey: any(named: 'ownerPubkey'),
+        maxRetries: any(named: 'maxRetries'),
+        environment: any(named: 'environment'),
+      ),
+    ).thenAnswer((_) async => const <OutgoingDm>[]);
   });
 
   tearDown(() async {
@@ -160,6 +170,14 @@ void main() {
         final service = buildService(environment: 'staging');
 
         await service.sweep();
+
+        verify(
+          () => dao.getExhaustedHeldForOwner(
+            ownerPubkey: _ownerPubkey,
+            maxRetries: any(named: 'maxRetries'),
+            environment: 'staging',
+          ),
+        ).called(1);
 
         verify(
           () => dao.getRetryableForOwner(
@@ -1105,11 +1123,28 @@ void main() {
     });
 
     group('message-deletion sweep', () {
+      /// The rumor ids the repository holds as unconfirmed: their automatic
+      /// retries ran out, as [DmRepository.markMessageDeletionUnconfirmed]
+      /// records (#10012).
+      late Set<String> ranOut;
+
+      setUp(() {
+        ranOut = {};
+        when(
+          () => dmRepository.markMessageDeletionUnconfirmed(
+            rumorId: any(named: 'rumorId'),
+          ),
+        ).thenAnswer((invocation) async {
+          ranOut.add(invocation.namedArguments[#rumorId] as String);
+        });
+      });
+
       DmMessageDeletionRetryTarget target(String rumorId) =>
           DmMessageDeletionRetryTarget(
             rumorId: rumorId,
             conversationId: 'conv_1',
             createdAt: 1700000000,
+            retriesRanOut: ranOut.contains(rumorId),
           );
 
       void stubPending(List<String> rumorIds) {
@@ -1118,18 +1153,229 @@ void main() {
         );
       }
 
+      void stubOutcome(DmMessageDeletionOutcome outcome) {
+        when(
+          () => dmRepository.retryMessageDeletion(
+            rumorId: any(named: 'rumorId'),
+            automatic: any(named: 'automatic'),
+          ),
+        ).thenAnswer((_) async => outcome);
+      }
+
+      group('once a deletion runs out of retries (#10012)', () {
+        test('marks it unconfirmed once, on the last attempt', () async {
+          var clock = DateTime.utc(2026, 5, 10, 12);
+          stubPending(['del1']);
+          stubOutcome(DmMessageDeletionOutcome.unconfirmed);
+          final service = buildService(
+            retryConfig: const OutgoingDmRetryConfig(maxRetries: 2),
+            now: () => clock,
+          );
+
+          await service.sweep();
+          verifyNever(
+            () => dmRepository.markMessageDeletionUnconfirmed(
+              rumorId: any(named: 'rumorId'),
+            ),
+          );
+          clock = clock.add(const Duration(hours: 1));
+          await service.sweep();
+          verify(
+            () => dmRepository.markMessageDeletionUnconfirmed(rumorId: 'del1'),
+          ).called(1);
+          for (var i = 0; i < 3; i++) {
+            clock = clock.add(const Duration(hours: 1));
+            await service.sweep();
+          }
+
+          verify(
+            () => dmRepository.retryMessageDeletion(
+              rumorId: 'del1',
+              automatic: true,
+            ),
+          ).called(2);
+          verifyNever(
+            () => dmRepository.markMessageDeletionUnconfirmed(
+              rumorId: any(named: 'rumorId'),
+            ),
+          );
+        });
+
+        test('gives it one more try on a later launch, which leaves its '
+            'warning as it is', () async {
+          var clock = DateTime.utc(2026, 5, 10, 12);
+          ranOut.add('del1');
+          stubPending(['del1']);
+          stubOutcome(DmMessageDeletionOutcome.unconfirmed);
+          final service = buildService(now: () => clock);
+
+          for (var i = 0; i < 4; i++) {
+            clock = clock.add(const Duration(hours: 1));
+            await service.sweep();
+          }
+
+          verify(
+            () => dmRepository.retryMessageDeletion(
+              rumorId: 'del1',
+              automatic: true,
+            ),
+          ).called(1);
+          // An automatic attempt never moves it off unconfirmed.
+          verifyNever(
+            () => dmRepository.markMessageDeletionUnconfirmed(
+              rumorId: any(named: 'rumorId'),
+            ),
+          );
+        });
+
+        test('marks it again when a Try again left it pending', () async {
+          var clock = DateTime.utc(2026, 5, 10, 12);
+          stubPending(['del1']);
+          stubOutcome(DmMessageDeletionOutcome.unconfirmed);
+          final service = buildService(
+            retryConfig: const OutgoingDmRetryConfig(maxRetries: 1),
+            now: () => clock,
+          );
+          await service.sweep();
+          verify(
+            () => dmRepository.markMessageDeletionUnconfirmed(rumorId: 'del1'),
+          ).called(1);
+
+          // The sender's Try again moved it back to pending, and no relay
+          // confirmed that attempt either.
+          ranOut.remove('del1');
+          clock = clock.add(const Duration(hours: 1));
+          await service.sweep();
+
+          verify(
+            () => dmRepository.markMessageDeletionUnconfirmed(rumorId: 'del1'),
+          ).called(1);
+          verify(
+            () => dmRepository.retryMessageDeletion(
+              rumorId: 'del1',
+              automatic: true,
+            ),
+          ).called(1);
+        });
+
+        test('a mark that throws does not end the pass', () async {
+          final crashReporting = _MockCrashReportingService();
+          when(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: any(named: 'reason'),
+            ),
+          ).thenAnswer((_) async {});
+          stubPending(['del1', 'del2']);
+          stubOutcome(DmMessageDeletionOutcome.unconfirmed);
+          when(
+            () => dmRepository.markMessageDeletionUnconfirmed(rumorId: 'del1'),
+          ).thenThrow(StateError('database is closed'));
+          final service = buildService(
+            retryConfig: const OutgoingDmRetryConfig(maxRetries: 1),
+            crashReporting: crashReporting,
+          );
+
+          await expectLater(service.sweep(), completes);
+
+          verify(
+            () => dmRepository.retryMessageDeletion(
+              rumorId: 'del2',
+              automatic: true,
+            ),
+          ).called(1);
+          verify(
+            () => dmRepository.markMessageDeletionUnconfirmed(rumorId: 'del2'),
+          ).called(1);
+          verify(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: OutgoingDmRetryServiceReportableSites
+                  .markMessageDeletionUnconfirmed,
+            ),
+          ).called(1);
+        });
+
+        group('follow-up pass', () {
+          /// Runs one pass on a budget of [maxRetries] attempts, and returns
+          /// how many passes ran within the five minutes after it.
+          int passesAfter({required int maxRetries}) {
+            var passes = 0;
+            fakeAsync((async) {
+              when(() => dmRepository.retryableMessageDeletions()).thenAnswer(
+                (_) async {
+                  passes++;
+                  return [target('del1')];
+                },
+              );
+              stubOutcome(DmMessageDeletionOutcome.unconfirmed);
+              final service = buildService(
+                retryConfig: OutgoingDmRetryConfig(maxRetries: maxRetries),
+              );
+              unawaited(service.initialize());
+              async.flushMicrotasks();
+              unawaited(service.sweep());
+              async.flushMicrotasks();
+              expect(passes, 1, reason: 'precondition: the first pass ran');
+
+              async
+                ..elapse(const Duration(minutes: 5))
+                ..flushMicrotasks();
+              unawaited(service.dispose());
+              async.flushMicrotasks();
+            });
+            return passes - 1;
+          }
+
+          test('is armed while the deletion has attempts left', () {
+            expect(passesAfter(maxRetries: 2), greaterThan(0));
+          });
+
+          test('is not armed by the attempt that ran out', () {
+            expect(passesAfter(maxRetries: 1), 0);
+          });
+        });
+
+        test('does not mark one a relay confirmed', () async {
+          stubPending(['del1']);
+          stubOutcome(DmMessageDeletionOutcome.sent);
+
+          await buildService(
+            retryConfig: const OutgoingDmRetryConfig(maxRetries: 1),
+          ).sweep();
+
+          verify(
+            () => dmRepository.retryMessageDeletion(
+              rumorId: 'del1',
+              automatic: true,
+            ),
+          ).called(1);
+          verifyNever(
+            () => dmRepository.markMessageDeletionUnconfirmed(
+              rumorId: any(named: 'rumorId'),
+            ),
+          );
+        });
+      });
+
       test('re-drives an unconfirmed deletion', () async {
         stubPending(['del1']);
         when(
           () => dmRepository.retryMessageDeletion(
             rumorId: any(named: 'rumorId'),
+            automatic: any(named: 'automatic'),
           ),
         ).thenAnswer((_) async => DmMessageDeletionOutcome.sent);
 
         await buildService().sweep();
 
         verify(
-          () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+          () => dmRepository.retryMessageDeletion(
+            rumorId: 'del1',
+            automatic: true,
+          ),
         ).called(1);
       });
 
@@ -1139,6 +1385,7 @@ void main() {
         when(
           () => dmRepository.retryMessageDeletion(
             rumorId: any(named: 'rumorId'),
+            automatic: any(named: 'automatic'),
           ),
         ).thenAnswer((_) async => DmMessageDeletionOutcome.unconfirmed);
         final service = buildService(now: () => now);
@@ -1148,7 +1395,10 @@ void main() {
         await service.sweep();
 
         verify(
-          () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+          () => dmRepository.retryMessageDeletion(
+            rumorId: 'del1',
+            automatic: true,
+          ),
         ).called(1);
       });
 
@@ -1158,6 +1408,7 @@ void main() {
         when(
           () => dmRepository.retryMessageDeletion(
             rumorId: any(named: 'rumorId'),
+            automatic: any(named: 'automatic'),
           ),
         ).thenAnswer((_) async => DmMessageDeletionOutcome.unconfirmed);
         final service = buildService(
@@ -1172,7 +1423,10 @@ void main() {
         }
 
         verify(
-          () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+          () => dmRepository.retryMessageDeletion(
+            rumorId: 'del1',
+            automatic: true,
+          ),
         ).called(2);
       });
 
@@ -1184,6 +1438,7 @@ void main() {
         when(
           () => dmRepository.retryMessageDeletion(
             rumorId: any(named: 'rumorId'),
+            automatic: any(named: 'automatic'),
           ),
         ).thenAnswer((_) async => DmMessageDeletionOutcome.unavailable);
         final service = buildService(
@@ -1197,7 +1452,10 @@ void main() {
         }
 
         verify(
-          () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+          () => dmRepository.retryMessageDeletion(
+            rumorId: 'del1',
+            automatic: true,
+          ),
         ).called(4);
       });
 
@@ -1209,6 +1467,7 @@ void main() {
           when(
             () => dmRepository.retryMessageDeletion(
               rumorId: any(named: 'rumorId'),
+              automatic: any(named: 'automatic'),
             ),
           ).thenAnswer((_) async => DmMessageDeletionOutcome.unconfirmed);
           final service = buildService(
@@ -1228,7 +1487,10 @@ void main() {
           await service.sweep();
 
           verify(
-            () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+            () => dmRepository.retryMessageDeletion(
+              rumorId: 'del1',
+              automatic: true,
+            ),
           ).called(2);
         },
       );
@@ -1238,6 +1500,7 @@ void main() {
         when(
           () => dmRepository.retryMessageDeletion(
             rumorId: any(named: 'rumorId'),
+            automatic: any(named: 'automatic'),
           ),
         ).thenThrow(StateError('boom'));
 
@@ -1255,6 +1518,7 @@ void main() {
         verifyNever(
           () => dmRepository.retryMessageDeletion(
             rumorId: any(named: 'rumorId'),
+            automatic: any(named: 'automatic'),
           ),
         );
       });
@@ -2474,6 +2738,538 @@ void main() {
           verify(() => dao.incrementRetry('interrupted-throw')).called(1);
         },
       );
+    });
+
+    group('a held group member whose retries ran out (#10012)', () {
+      final now = DateTime.utc(2026, 5, 10, 12);
+
+      /// A pending row a fallback-pool relay holds a wrap of, with its
+      /// retries spent.
+      OutgoingDm heldExhausted(String id) => _row(
+        id: id,
+        recipient: OutgoingWrapStatus.pending,
+        self: OutgoingWrapStatus.pending,
+        retryCount: 5,
+        queuedAt: now.subtract(const Duration(minutes: 5)),
+        recipientWrapEventId: 'pool-wrap:$id',
+      );
+
+      void stubTerminalize() {
+        when(
+          () => dao.markRecipientWrapStatus(
+            id: any(named: 'id'),
+            status: any(named: 'status'),
+            lastError: any(named: 'lastError'),
+          ),
+        ).thenAnswer((_) async => true);
+        when(
+          () => dao.markSelfWrapStatus(
+            id: any(named: 'id'),
+            status: any(named: 'status'),
+            lastError: any(named: 'lastError'),
+          ),
+        ).thenAnswer((_) async => true);
+      }
+
+      void stubStop(Future<bool> Function() answer) {
+        when(
+          () => dmRepository.stopHeldMemberDelivery(
+            rumorId: any(named: 'rumorId'),
+            maxRetries: any(named: 'maxRetries'),
+          ),
+        ).thenAnswer((_) => answer());
+      }
+
+      void verifyNotTerminalized(String id) {
+        verifyNever(
+          () => dao.markRecipientWrapStatus(
+            id: id,
+            status: OutgoingWrapStatus.failed,
+            lastError: any(named: 'lastError'),
+          ),
+        );
+        verifyNever(
+          () => dao.markSelfWrapStatus(
+            id: id,
+            status: OutgoingWrapStatus.failed,
+            lastError: any(named: 'lastError'),
+          ),
+        );
+      }
+
+      void verifyTerminalized(String id) {
+        verify(
+          () => dao.markRecipientWrapStatus(
+            id: id,
+            status: OutgoingWrapStatus.failed,
+            lastError: any(named: 'lastError'),
+          ),
+        ).called(1);
+        verify(
+          () => dao.markSelfWrapStatus(
+            id: id,
+            status: OutgoingWrapStatus.failed,
+            lastError: any(named: 'lastError'),
+          ),
+        ).called(1);
+      }
+
+      test('stops it instead of failing it', () async {
+        when(
+          () => dao.getStillPendingForOwner(any()),
+        ).thenAnswer((_) async => [heldExhausted('held-1')]);
+        stubTerminalize();
+        stubStop(() async => true);
+
+        await buildService(now: () => now).sweep();
+
+        verify(
+          () => dmRepository.stopHeldMemberDelivery(
+            rumorId: 'held-1',
+            maxRetries: any(named: 'maxRetries'),
+          ),
+        ).called(1);
+        verifyNotTerminalized('held-1');
+        verifyNever(() => dmRepository.recoverFullSend(rumorId: 'held-1'));
+      });
+
+      test('asks to stop it on its own budget', () async {
+        when(() => dao.getStillPendingForOwner(any())).thenAnswer(
+          (_) async => [heldExhausted('held-1').copyWith(retryCount: 3)],
+        );
+        stubTerminalize();
+        stubStop(() async => true);
+
+        await buildService(
+          now: () => now,
+          retryConfig: const OutgoingDmRetryConfig(maxRetries: 3),
+        ).sweep();
+
+        verify(
+          () => dmRepository.stopHeldMemberDelivery(
+            rumorId: 'held-1',
+            maxRetries: 3,
+          ),
+        ).called(1);
+      });
+
+      test('fails it as before when the repository keeps it', () async {
+        when(
+          () => dao.getStillPendingForOwner(any()),
+        ).thenAnswer((_) async => [heldExhausted('held-1to1')]);
+        stubTerminalize();
+        stubStop(() async => false);
+
+        await buildService(now: () => now).sweep();
+
+        verifyTerminalized('held-1to1');
+      });
+
+      test('never offers a 1:1 message, which fails as before', () async {
+        when(() => dao.getStillPendingForOwner(any())).thenAnswer(
+          (_) async => [
+            heldExhausted('one-to-one').copyWith(
+              conversationId: DmRepository.computeConversationId([
+                _ownerPubkey,
+                _recipientPubkey,
+              ]),
+            ),
+          ],
+        );
+        stubTerminalize();
+        stubStop(() async => true);
+
+        await buildService(now: () => now).sweep();
+
+        verifyNever(
+          () => dmRepository.stopHeldMemberDelivery(
+            rumorId: any(named: 'rumorId'),
+            maxRetries: any(named: 'maxRetries'),
+          ),
+        );
+        verifyTerminalized('one-to-one');
+      });
+
+      test(
+        'fails it as before, and reports, when stopping it throws '
+        'unexpectedly',
+        () async {
+          final crashReporting = _MockCrashReportingService();
+          when(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: any(named: 'reason'),
+            ),
+          ).thenAnswer((_) async {});
+          when(
+            () => dao.getStillPendingForOwner(any()),
+          ).thenAnswer((_) async => [heldExhausted('held-throws')]);
+          stubTerminalize();
+          stubStop(() async => throw Exception('drift busy'));
+
+          await expectLater(
+            buildService(
+              now: () => now,
+              crashReporting: crashReporting,
+            ).sweep(),
+            completes,
+          );
+
+          verifyTerminalized('held-throws');
+          verify(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason:
+                  OutgoingDmRetryServiceReportableSites.stopHeldMemberDelivery,
+            ),
+          ).called(1);
+        },
+      );
+
+      group('when stopping it throws an expected error', () {
+        late _MockCrashReportingService crashReporting;
+
+        setUp(() {
+          crashReporting = _MockCrashReportingService();
+          when(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: any(named: 'reason'),
+            ),
+          ).thenAnswer((_) async {});
+          when(() => dao.getStillPendingForOwner(any())).thenAnswer(
+            (_) async => [heldExhausted('held-1'), heldExhausted('held-2')],
+          );
+          stubTerminalize();
+          stubStop(() async => true);
+        });
+
+        test('leaves it pending and ends the arm while the repository is not '
+            'ready', () async {
+          when(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'held-1',
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).thenThrow(StateError('not initialized'));
+
+          await buildService(
+            now: () => now,
+            crashReporting: crashReporting,
+          ).sweep();
+
+          verifyNotTerminalized('held-1');
+          verifyNever(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'held-2',
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          );
+          verifyNotTerminalized('held-2');
+          verifyNever(
+            () => dao.getExhaustedHeldForOwner(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              maxRetries: any(named: 'maxRetries'),
+              environment: any(named: 'environment'),
+            ),
+          );
+          verifyNever(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: any(named: 'reason'),
+            ),
+          );
+        });
+
+        test('leaves a row that is gone or not ours and goes on', () async {
+          when(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'held-1',
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).thenThrow(ArgumentError.value('held-1', 'rumorId'));
+
+          await buildService(
+            now: () => now,
+            crashReporting: crashReporting,
+          ).sweep();
+
+          verifyNotTerminalized('held-1');
+          verify(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'held-2',
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).called(1);
+          verifyNever(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: any(named: 'reason'),
+            ),
+          );
+        });
+      });
+
+      test('fails a row no pool relay holds a wrap of without asking to stop '
+          'it', () async {
+        when(() => dao.getStillPendingForOwner(any())).thenAnswer(
+          (_) async => [
+            _row(
+              id: 'not-held',
+              recipient: OutgoingWrapStatus.pending,
+              self: OutgoingWrapStatus.pending,
+              retryCount: 5,
+              queuedAt: now.subtract(const Duration(minutes: 5)),
+            ),
+          ],
+        );
+        stubTerminalize();
+        stubStop(() async => true);
+
+        await buildService(now: () => now).sweep();
+
+        verifyNever(
+          () => dmRepository.stopHeldMemberDelivery(
+            rumorId: any(named: 'rumorId'),
+            maxRetries: any(named: 'maxRetries'),
+          ),
+        );
+        verifyTerminalized('not-held');
+      });
+
+      group('already failed with its retries spent', () {
+        void stubExhaustedHeld(
+          List<String> ids, {
+          Set<String> oneToOne = const {},
+        }) {
+          when(
+            () => dao.getExhaustedHeldForOwner(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              maxRetries: any(named: 'maxRetries'),
+              environment: any(named: 'environment'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              for (final id in ids)
+                _row(
+                  id: id,
+                  recipient: OutgoingWrapStatus.failed,
+                  self: OutgoingWrapStatus.failed,
+                  retryCount: 5,
+                  recipientWrapEventId: 'pool-wrap:$id',
+                  conversationId: oneToOne.contains(id)
+                      ? DmRepository.computeConversationId([
+                          _ownerPubkey,
+                          _recipientPubkey,
+                        ])
+                      : null,
+                ),
+            ],
+          );
+        }
+
+        test(
+          'never offers a 1:1 message, which keeps Failed to send',
+          () async {
+            stubExhaustedHeld(
+              ['one-to-one', 'group'],
+              oneToOne: {'one-to-one'},
+            );
+            stubStop(() async => false);
+
+            await buildService().sweep();
+
+            verifyNever(
+              () => dmRepository.stopHeldMemberDelivery(
+                rumorId: 'one-to-one',
+                maxRetries: any(named: 'maxRetries'),
+              ),
+            );
+            verify(
+              () => dmRepository.stopHeldMemberDelivery(
+                rumorId: 'group',
+                maxRetries: any(named: 'maxRetries'),
+              ),
+            ).called(1);
+          },
+        );
+
+        test('stops each one', () async {
+          stubExhaustedHeld(['spent-1', 'spent-2']);
+          stubStop(() async => true);
+
+          await buildService().sweep();
+
+          verify(
+            () => dao.getExhaustedHeldForOwner(
+              ownerPubkey: _ownerPubkey,
+              maxRetries: 5,
+              environment: any(named: 'environment'),
+            ),
+          ).called(1);
+          verify(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'spent-1',
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).called(1);
+          verify(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'spent-2',
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).called(1);
+        });
+
+        test('one that throws unexpectedly is reported and the rest go '
+            'on', () async {
+          final crashReporting = _MockCrashReportingService();
+          when(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: any(named: 'reason'),
+            ),
+          ).thenAnswer((_) async {});
+          stubExhaustedHeld(['spent-1', 'spent-2']);
+          stubStop(() async => true);
+          when(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'spent-1',
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).thenThrow(Exception('drift busy'));
+
+          await expectLater(
+            buildService(crashReporting: crashReporting).sweep(),
+            completes,
+          );
+
+          verify(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'spent-2',
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).called(1);
+          verify(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason:
+                  OutgoingDmRetryServiceReportableSites.stopHeldMemberDelivery,
+            ),
+          ).called(1);
+        });
+
+        test(
+          'stops at the first one the repository is not ready for',
+          () async {
+            stubExhaustedHeld(['spent-1', 'spent-2']);
+            stubStop(() async => true);
+            when(
+              () => dmRepository.stopHeldMemberDelivery(
+                rumorId: 'spent-1',
+                maxRetries: any(named: 'maxRetries'),
+              ),
+            ).thenThrow(StateError('not initialized'));
+
+            await buildService().sweep();
+
+            verifyNever(
+              () => dmRepository.stopHeldMemberDelivery(
+                rumorId: 'spent-2',
+                maxRetries: any(named: 'maxRetries'),
+              ),
+            );
+          },
+        );
+
+        test('asks to stop each on its own budget', () async {
+          stubExhaustedHeld(['spent-1']);
+          stubStop(() async => true);
+
+          await buildService(
+            retryConfig: const OutgoingDmRetryConfig(maxRetries: 3),
+          ).sweep();
+
+          verify(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'spent-1',
+              maxRetries: 3,
+            ),
+          ).called(1);
+        });
+
+        test('skips one that is gone or not ours', () async {
+          stubExhaustedHeld(['spent-1', 'spent-2']);
+          stubStop(() async => true);
+          when(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'spent-1',
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).thenThrow(ArgumentError.value('spent-1', 'rumorId'));
+
+          await buildService().sweep();
+
+          verify(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'spent-2',
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).called(1);
+        });
+
+        test('are left alone while the repository is not ready', () async {
+          stubExhaustedHeld(['spent-1']);
+          stubStop(() async => true);
+          when(
+            () => dao.getRetryableForOwner(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              _row(
+                id: 'rumor-not-ready',
+                recipient: OutgoingWrapStatus.failed,
+                self: OutgoingWrapStatus.pending,
+              ),
+            ],
+          );
+          when(
+            () => dmRepository.recoverFullSend(rumorId: 'rumor-not-ready'),
+          ).thenThrow(StateError('not initialized'));
+
+          await buildService().sweep();
+
+          verifyNever(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: any(named: 'rumorId'),
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          );
+        });
+
+        test('are left alone while offline', () async {
+          stubExhaustedHeld(['spent-1']);
+          stubStop(() async => true);
+
+          await buildService(isOffline: () async => true).sweep();
+
+          verifyNever(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: any(named: 'rumorId'),
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          );
+        });
+      });
     });
 
     group('offline pass (probe reports no connectivity)', () {

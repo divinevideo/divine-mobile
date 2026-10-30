@@ -7,6 +7,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart' show VideoEvent;
 import 'package:openvine/observability/reportable_error.dart';
 
+/// One owner-feed page. This cursor never confers entry membership.
+class ChallengeCandidatePage {
+  const ChallengeCandidatePage({required this.videos, this.nextOffset});
+  final List<VideoEvent> videos;
+  final int? nextOffset;
+}
+
 class ChallengeParticipationState {
   const ChallengeParticipationState({
     this.busy = false,
@@ -14,6 +21,8 @@ class ChallengeParticipationState {
     this.review,
     this.status,
     this.playing,
+    this.playingEntryId,
+    this.candidatesHaveMore = false,
     this.actions = const [],
     this.candidates = const [],
     this.handoffs = const [],
@@ -22,6 +31,8 @@ class ChallengeParticipationState {
     this.previewGeneration = 0,
   });
   final NostrEvent? playing;
+  final String? playingEntryId;
+  final bool candidatesHaveMore;
   final bool busy;
   final ChallengeRead? read;
   final SubmissionReview? review;
@@ -47,11 +58,15 @@ class ChallengeParticipationCubit extends Cubit<ChallengeParticipationState> {
     required this.prepareRecording,
     required this.handoffs,
     required this.reviewPublished,
+    this.loadCandidatePage,
   }) : super(const ChallengeParticipationState());
   final String coordinate;
   final ChallengeSubmissionRepository submissions;
   final Future<ChallengeRead> Function() refresh;
   final Future<List<VideoEvent>> Function() loadCandidates;
+  final Future<ChallengeCandidatePage> Function(int?)? loadCandidatePage;
+  int? _nextCandidateOffset;
+  int _playRequest = 0;
   final Future<NostrEvent?> Function(String) exactVideo;
   final Future<List<List<String>>> Function() clientTags;
   final Future<String> Function(NostrEvent) prepareRecording;
@@ -68,6 +83,8 @@ class ChallengeParticipationCubit extends Cubit<ChallengeParticipationState> {
     SubmissionStatus? status,
     List<PendingChallengeAction>? actions,
     NostrEvent? playing,
+    String? playingEntryId,
+    bool? candidatesHaveMore,
     List<VideoEvent>? candidates,
     List<String>? recovered,
     bool picking = false,
@@ -82,6 +99,8 @@ class ChallengeParticipationCubit extends Cubit<ChallengeParticipationState> {
         review: review,
         status: status,
         playing: playing,
+        playingEntryId: playingEntryId,
+        candidatesHaveMore: candidatesHaveMore ?? state.candidatesHaveMore,
         actions: actions ?? state.actions,
         candidates: candidates ?? state.candidates,
         handoffs: recovered ?? state.handoffs,
@@ -95,10 +114,17 @@ class ChallengeParticipationCubit extends Cubit<ChallengeParticipationState> {
   Future<void> _run(
     Future<void> Function() work, {
     bool keepReviewOnFailure = false,
+    bool keepPickingOnFailure = false,
   }) {
     final next = (_queues[submissions] ?? Future<void>.value()).then((_) async {
       if (isClosed) return;
-      _set(busy: true, review: state.review, picking: state.picking);
+      _set(
+        busy: true,
+        review: state.review,
+        picking: state.picking,
+        playing: state.playing,
+        playingEntryId: state.playingEntryId,
+      );
       try {
         await work();
       } on SubmissionException catch (error, stackTrace) {
@@ -107,6 +133,7 @@ class ChallengeParticipationCubit extends Cubit<ChallengeParticipationState> {
         _set(
           status: error.status,
           review: keepReviewOnFailure ? state.review : null,
+          picking: keepPickingOnFailure && state.picking,
         );
       } on Object catch (error, stackTrace) {
         if (isClosed) return;
@@ -121,6 +148,7 @@ class ChallengeParticipationCubit extends Cubit<ChallengeParticipationState> {
         _set(
           status: SubmissionStatus.readUnavailable,
           review: keepReviewOnFailure ? state.review : null,
+          picking: keepPickingOnFailure && state.picking,
         );
       }
     });
@@ -129,6 +157,9 @@ class ChallengeParticipationCubit extends Cubit<ChallengeParticipationState> {
   }
 
   Future<void> _reload({SubmissionStatus? status}) async {
+    final playing = state.playing;
+    final playingEntryId = state.playingEntryId;
+    final request = _playRequest;
     final read = await refresh();
     final actions = (await submissions.pendingActions())
         .where(
@@ -140,25 +171,84 @@ class ChallengeParticipationCubit extends Cubit<ChallengeParticipationState> {
         )
         .toList();
     final recovered = await handoffs();
-    _set(read: read, actions: actions, recovered: recovered, status: status);
+    final retained =
+        request == _playRequest &&
+        playingEntryId != null &&
+        read.view.entries.any(
+          (e) => e.event.id == playingEntryId && e.video.id == playing?.id,
+        );
+    _set(
+      read: read,
+      actions: actions,
+      recovered: recovered,
+      status: status,
+      playing: retained ? playing : null,
+      playingEntryId: retained ? playingEntryId : null,
+    );
   }
 
   Future<void> load() => _run(_reload);
-  Future<void> playEntry(String entryId) => _run(() async {
-    final read = await refresh();
-    final entry = read.view.entries
-        .where((e) => e.event.id == entryId)
-        .firstOrNull;
-    if (entry == null) {
-      _set(read: read, status: SubmissionStatus.blocked);
-      return;
-    }
-    _set(read: read, playing: entry.video);
-  });
+  Future<void> playEntry(String entryId) {
+    final request = ++_playRequest;
+    return _run(() async {
+      final read = await refresh();
+      if (request != _playRequest) {
+        _set(read: read);
+        return;
+      }
+      final entry = read.view.entries
+          .where((e) => e.event.id == entryId)
+          .firstOrNull;
+      if (entry == null) {
+        _set(read: read, status: SubmissionStatus.blocked);
+        return;
+      }
+      _set(read: read, playing: entry.video, playingEntryId: entry.event.id);
+    });
+  }
+
+  void stopPlaying() {
+    _playRequest++;
+    _set(busy: state.busy);
+  }
+
   Future<void> chooseVideo() => _run(() async {
-    final candidates = await loadCandidates();
-    _set(candidates: candidates, picking: true);
+    final page =
+        await loadCandidatePage?.call(null) ??
+        ChallengeCandidatePage(videos: await loadCandidates());
+    _nextCandidateOffset = page.nextOffset;
+    _set(
+      candidates: page.videos,
+      picking: true,
+      candidatesHaveMore: _nextCandidateOffset != null,
+    );
   });
+  Future<void> moreVideos() {
+    if (state.busy ||
+        !state.picking ||
+        _nextCandidateOffset == null ||
+        loadCandidatePage == null) {
+      return Future.value();
+    }
+    return _run(() async {
+      final offset = _nextCandidateOffset!;
+      final page = await loadCandidatePage!(offset);
+      _nextCandidateOffset =
+          page.nextOffset != null && page.nextOffset! > offset
+          ? page.nextOffset
+          : null;
+      final seen = <String>{};
+      _set(
+        candidates: [
+          ...state.candidates,
+          ...page.videos,
+        ].where((v) => seen.add(v.id)).toList(),
+        picking: true,
+        candidatesHaveMore: _nextCandidateOffset != null,
+      );
+    }, keepPickingOnFailure: true);
+  }
+
   Future<void> selectVideo(String eventId) => _run(() async {
     final read = await refresh();
     final definition = read.view.definition;

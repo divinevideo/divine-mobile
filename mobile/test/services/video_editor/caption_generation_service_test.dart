@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:caption_generator/caption_generator.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show AudioEvent, VoiceEffect;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/video_editor/caption_generation_service.dart';
@@ -44,6 +45,39 @@ DivineVideoClip _clip(
   trimEnd: trimEnd,
   volume: volume,
   playbackSpeed: playbackSpeed,
+);
+
+const _takeId = '${AudioEvent.voiceOverIdPrefix}_1';
+const _extractedId = '${AudioEvent.localExtractedMarker}_1';
+
+/// A 10 s sound at [url] that plays from [startTime] to [endTime].
+AudioEvent _track(
+  String id, {
+  required String url,
+  required Duration startTime,
+  required Duration endTime,
+  Duration startOffset = Duration.zero,
+  double volume = 1,
+  double playbackSpeed = 1,
+  String? originalUrl,
+  VoiceEffect voiceEffect = VoiceEffect.none,
+  bool noiseReduction = false,
+  String? anchorClipId,
+}) => AudioEvent(
+  id: id,
+  pubkey: '',
+  createdAt: 0,
+  url: url,
+  originalUrl: originalUrl,
+  duration: 10,
+  startTime: startTime,
+  endTime: endTime,
+  startOffset: startOffset,
+  volume: volume,
+  playbackSpeed: playbackSpeed,
+  voiceEffect: voiceEffect,
+  noiseReduction: noiseReduction,
+  anchorClipId: anchorClipId,
 );
 
 AudioExtractionResult _extraction(String path) => AudioExtractionResult(
@@ -123,11 +157,15 @@ void main() {
       );
     }
 
-    void stubGenerator(List<CaptionSegment> words) {
+    void stubGenerator(
+      List<CaptionSegment> words, {
+      bool requireOnDeviceRecognition = false,
+    }) {
       when(
         () => generator.generateCaptions(
           audioPath: any(named: 'audioPath'),
           localeIdentifier: any(named: 'localeIdentifier'),
+          requireOnDeviceRecognition: requireOnDeviceRecognition,
         ),
       ).thenAnswer((_) async => words);
     }
@@ -260,11 +298,12 @@ void main() {
           // Clips a and c are audible; the muted clip between them is dropped
           // from the merge but still occupies 3s of timeline. In the merged
           // audio a and c are contiguous ([0,3s) and [3s,6s)); on the timeline
-          // a is at 0s and c is at 6s. A word straddling the a/c merge boundary
-          // must stay inside a's span, not spill its tail into the muted gap.
+          // a is at 0s and c is at 6s. A word lying mostly in a, with its tail
+          // across the a/c merge boundary, must stay inside a's span, not
+          // spill its tail into the muted gap.
           stubMerge([_offset(0, 3000), _offset(3000, 3000)]);
           final service = buildService(
-            remote: remoteReturning([_word('boundary', 2900, 3200)]),
+            remote: remoteReturning([_word('boundary', 2800, 3100)]),
           );
 
           final outcome = await service.generateForClips(
@@ -274,9 +313,30 @@ void main() {
 
           final cue = (outcome as CaptionsGenerated).cues.single;
           expect(cue.text, equals('boundary'));
-          expect(cue.start, equals(const Duration(milliseconds: 2900)));
+          expect(cue.start, equals(const Duration(milliseconds: 2800)));
           // Clamped to clip a's timeline end (3s); never into the gap [3s,6s).
           expect(cue.end, equals(const Duration(seconds: 3)));
+        },
+      );
+
+      test(
+        'gives a cue starting just before a boundary to the source it lies in',
+        () async {
+          // The server times this cue 50ms early: it starts at the end of a
+          // but lies almost entirely in c, which plays after the muted gap.
+          stubMerge([_offset(0, 3000), _offset(3000, 3000)]);
+          final service = buildService(
+            remote: remoteReturning([_word('Late.', 2950, 3700)]),
+          );
+
+          final outcome = await service.generateForClips(
+            clips: [_clip('a'), _clip('muted', volume: 0), _clip('c')],
+            localeIdentifier: 'en-US',
+          );
+
+          final cue = (outcome as CaptionsGenerated).cues.single;
+          expect(cue.start, equals(const Duration(seconds: 6)));
+          expect(cue.end, equals(const Duration(milliseconds: 6700)));
         },
       );
 
@@ -722,6 +782,797 @@ void main() {
           _word('there.', 450, 900),
         ]);
       });
+    });
+
+    group('speech tracks', () {
+      List<AudioMergeSegment> capturedSegments() =>
+          verify(
+                () => extraction.mergeClipAudio(
+                  segments: captureAny(named: 'segments'),
+                  sampleRate: any(named: 'sampleRate'),
+                  channels: any(named: 'channels'),
+                ),
+              ).captured.single
+              as List<AudioMergeSegment>;
+
+      test('keeps anchored speech outside its audible clip window', () async {
+        stubMerge([
+          _offset(0, 1000),
+          _offset(1000, 2000),
+          _offset(3000, 1000),
+        ]);
+        final service = buildService(
+          remote: remoteReturning([
+            _word('Before.', 200, 600),
+            _word('Clip.', 1200, 1600),
+            _word('After.', 3200, 3600),
+          ]),
+        );
+
+        final outcome = await service.generateForClips(
+          clips: [
+            _clip('lead', duration: const Duration(seconds: 2), volume: 0),
+            _clip(
+              'source',
+              duration: const Duration(seconds: 4),
+              trimStart: const Duration(seconds: 1),
+              trimEnd: const Duration(seconds: 1),
+            ),
+            _clip('tail', duration: const Duration(seconds: 2), volume: 0),
+          ],
+          audioTracks: [
+            _track(
+              _extractedId,
+              url: '/tmp/extracted.wav',
+              startTime: const Duration(seconds: 1),
+              endTime: const Duration(seconds: 5),
+              anchorClipId: 'source',
+            ),
+          ],
+          localeIdentifier: 'en-US',
+        );
+
+        final cues = (outcome as CaptionsGenerated).cues;
+        expect(
+          cues.map((cue) => (cue.text, cue.start, cue.end)),
+          equals([
+            (
+              'Before.',
+              const Duration(milliseconds: 1200),
+              const Duration(milliseconds: 1600),
+            ),
+            (
+              'Clip.',
+              const Duration(milliseconds: 2200),
+              const Duration(milliseconds: 2600),
+            ),
+            (
+              'After.',
+              const Duration(milliseconds: 4200),
+              const Duration(milliseconds: 4600),
+            ),
+          ]),
+        );
+        final segments = capturedSegments();
+        expect(segments, hasLength(3));
+        expect(segments.first.startTime, Duration.zero);
+        expect(segments.first.endTime, const Duration(seconds: 1));
+        expect(segments.last.startTime, const Duration(seconds: 3));
+        expect(segments.last.endTime, const Duration(seconds: 4));
+      });
+
+      test('merges a voice-over take as recorded, where it plays', () async {
+        stubMerge([_offset(0, 6000), _offset(6000, 2000)]);
+        final service = buildService(
+          remote: remoteReturning([_word('Narrated.', 6500, 7000)]),
+        );
+
+        final outcome = await service.generateForClips(
+          clips: [_clip('a', duration: const Duration(seconds: 6))],
+          audioTracks: [
+            _track(
+              _takeId,
+              url: '/tmp/take_clean.m4a',
+              originalUrl: '/tmp/take.m4a',
+              noiseReduction: true,
+              startTime: const Duration(seconds: 2),
+              endTime: const Duration(seconds: 4),
+              startOffset: const Duration(seconds: 1),
+              playbackSpeed: 2,
+            ),
+          ],
+          localeIdentifier: 'en-US',
+        );
+
+        final take = capturedSegments().last;
+        expect(take.video.file?.path, equals('/tmp/take.m4a'));
+        expect(take.startTime, equals(const Duration(seconds: 1)));
+        // 2 s of timeline at 2× plays 4 s of the take.
+        expect(take.endTime, equals(const Duration(seconds: 5)));
+        expect(take.speed, equals(2));
+        final cue = (outcome as CaptionsGenerated).cues.single;
+        expect(cue.start, equals(const Duration(milliseconds: 2500)));
+        expect(cue.end, equals(const Duration(seconds: 3)));
+      });
+
+      test('on-device keeps only the unique anchored speech windows', () async {
+        stubExtraction();
+        stubGenerator(const []);
+        when(
+          () => generator.generateCaptions(
+            audioPath: '/tmp/extracted.wav.wav',
+            localeIdentifier: any(named: 'localeIdentifier'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            _word('Before.', 200, 600),
+            _word('Repeated.', 1200, 1600),
+            _word('After.', 3200, 3600),
+          ],
+        );
+
+        final outcome = await buildService().generateForClips(
+          clips: [
+            _clip('lead', duration: const Duration(seconds: 2), volume: 0),
+            _clip(
+              'source',
+              duration: const Duration(seconds: 4),
+              trimStart: const Duration(seconds: 1),
+              trimEnd: const Duration(seconds: 1),
+            ),
+            _clip('tail', duration: const Duration(seconds: 2), volume: 0),
+          ],
+          audioTracks: [
+            _track(
+              _extractedId,
+              url: '/tmp/extracted.wav',
+              startTime: const Duration(seconds: 1),
+              endTime: const Duration(seconds: 5),
+              anchorClipId: 'source',
+            ),
+          ],
+          localeIdentifier: 'en-US',
+        );
+
+        expect(
+          (outcome as CaptionsGenerated).cues.map(
+            (cue) => (cue.text, cue.start),
+          ),
+          equals([
+            ('Before.', const Duration(milliseconds: 1200)),
+            ('After.', const Duration(milliseconds: 4200)),
+          ]),
+        );
+      });
+
+      test(
+        'transcribes extracted sound in place of its muted clip',
+        () async {
+          stubMerge([_offset(0, 3000)]);
+          final service = buildService(
+            remote: remoteReturning([_word('Hi.', 100, 600)]),
+          );
+
+          final outcome = await service.generateForClips(
+            clips: [_clip('a', volume: 0)],
+            audioTracks: [
+              _track(
+                _extractedId,
+                url: '/tmp/extracted.wav',
+                startTime: Duration.zero,
+                endTime: const Duration(seconds: 3),
+                anchorClipId: 'a',
+              ),
+            ],
+            localeIdentifier: 'en-US',
+          );
+
+          expect(
+            capturedSegments().single.video.file?.path,
+            equals('/tmp/extracted.wav'),
+          );
+          final cue = (outcome as CaptionsGenerated).cues.single;
+          expect(cue.start, equals(const Duration(milliseconds: 100)));
+        },
+      );
+
+      test('leaves out music and muted takes', () async {
+        stubMerge([_offset(0, 3000)]);
+        final service = buildService(remote: remoteReturning(const []));
+
+        await service.generateForClips(
+          clips: [_clip('a')],
+          audioTracks: [
+            _track(
+              '${AudioEvent.localImportMarker}_song',
+              url: '/tmp/song.mp3',
+              startTime: Duration.zero,
+              endTime: const Duration(seconds: 3),
+            ),
+            _track(
+              _takeId,
+              url: '/tmp/take.m4a',
+              startTime: Duration.zero,
+              endTime: const Duration(seconds: 3),
+              volume: 0,
+            ),
+          ],
+          localeIdentifier: 'en-US',
+        );
+
+        expect(
+          capturedSegments().single.video.file?.path,
+          equals('/tmp/a.mp4'),
+        );
+      });
+
+      test('stops a take where the video ends', () async {
+        stubMerge([_offset(0, 3000), _offset(3000, 1000)]);
+        final service = buildService(remote: remoteReturning(const []));
+
+        await service.generateForClips(
+          clips: [_clip('a')],
+          audioTracks: [
+            _track(
+              _takeId,
+              url: '/tmp/take.m4a',
+              startTime: const Duration(seconds: 2),
+              endTime: const Duration(seconds: 5),
+            ),
+          ],
+          localeIdentifier: 'en-US',
+        );
+
+        expect(
+          capturedSegments().last.endTime,
+          equals(const Duration(seconds: 1)),
+        );
+      });
+
+      test('lets one cue run across takes laid back to back', () async {
+        stubMerge([_offset(0, 1500), _offset(1500, 2000)]);
+        final service = buildService(
+          remote: remoteReturning([_word('Eins. Zwei.', 200, 3000)]),
+        );
+
+        final outcome = await service.generateForClips(
+          clips: [_clip('a', volume: 0, duration: const Duration(seconds: 6))],
+          audioTracks: [
+            _track(
+              '${_takeId}_a',
+              url: '/tmp/take1.m4a',
+              startTime: Duration.zero,
+              endTime: const Duration(milliseconds: 1500),
+            ),
+            _track(
+              '${_takeId}_b',
+              url: '/tmp/take2.m4a',
+              startTime: const Duration(milliseconds: 1500),
+              endTime: const Duration(milliseconds: 3500),
+            ),
+          ],
+          localeIdentifier: 'en-US',
+        );
+
+        final cue = (outcome as CaptionsGenerated).cues.single;
+        expect(cue.start, equals(const Duration(milliseconds: 200)));
+        expect(cue.end, equals(const Duration(seconds: 3)));
+      });
+
+      test(
+        'never ends a cue before it starts across overlapping takes',
+        () async {
+          // Within the back-to-back tolerance, the second take starts 50 ms
+          // before the first ends, so mapping each end through its own take
+          // would put the end before the start.
+          stubMerge([_offset(0, 2000), _offset(2000, 2050)]);
+          final service = buildService(
+            remote: remoteReturning([_word('Hm.', 1990, 2030)]),
+          );
+
+          final outcome = await service.generateForClips(
+            clips: [
+              _clip('a', volume: 0, duration: const Duration(seconds: 6)),
+            ],
+            audioTracks: [
+              _track(
+                '${_takeId}_a',
+                url: '/tmp/take1.m4a',
+                startTime: Duration.zero,
+                endTime: const Duration(milliseconds: 2000),
+              ),
+              _track(
+                '${_takeId}_b',
+                url: '/tmp/take2.m4a',
+                startTime: const Duration(milliseconds: 1950),
+                endTime: const Duration(milliseconds: 4000),
+              ),
+            ],
+            localeIdentifier: 'en-US',
+          );
+
+          final cue = (outcome as CaptionsGenerated).cues.single;
+          expect(cue.end, greaterThanOrEqualTo(cue.start));
+          // It belongs to the second take, which it overlaps most.
+          expect(cue.start, equals(const Duration(milliseconds: 1950)));
+          expect(cue.end, equals(const Duration(milliseconds: 1980)));
+        },
+      );
+
+      test(
+        'leaves out extracted sound anchored to a clip that plays its own',
+        () async {
+          stubMerge([_offset(0, 3000), _offset(3000, 2000)]);
+          final service = buildService(remote: remoteReturning(const []));
+
+          await service.generateForClips(
+            clips: [_clip('a')],
+            audioTracks: [
+              _track(
+                '${_extractedId}_anchored',
+                url: '/tmp/anchored.wav',
+                startTime: Duration.zero,
+                endTime: const Duration(seconds: 3),
+                anchorClipId: 'a',
+              ),
+              // Moved away from its clip, it plays the speech a second time.
+              _track(
+                '${_extractedId}_moved',
+                url: '/tmp/moved.wav',
+                startTime: const Duration(seconds: 1),
+                endTime: const Duration(seconds: 3),
+              ),
+            ],
+            localeIdentifier: 'en-US',
+          );
+
+          expect(
+            capturedSegments().map((segment) => segment.video.file?.path),
+            equals(['/tmp/a.mp4', '/tmp/moved.wav']),
+          );
+        },
+      );
+
+      group('with a voice effect', () {
+        AudioEvent robotTake() => _track(
+          _takeId,
+          url: '/tmp/take_robot.m4a',
+          originalUrl: '/tmp/take.m4a',
+          voiceEffect: const VoiceEffect(robot: 100),
+          startTime: const Duration(seconds: 2),
+          endTime: const Duration(seconds: 4),
+        );
+
+        test(
+          'keeps strict local recognition when retrying the locale',
+          () async {
+            stubMerge([_offset(0, 6000)]);
+            stubExtraction();
+            when(
+              () => generator.generateCaptions(
+                audioPath: any(named: 'audioPath'),
+                localeIdentifier: any(named: 'localeIdentifier'),
+                requireOnDeviceRecognition: true,
+              ),
+            ).thenThrow(
+              const SpeechRecognizerUnavailableException('Unavailable locally'),
+            );
+            final service = buildService(
+              remote: remoteReturning([_word('Clip talk.', 4500, 5000)]),
+            );
+
+            final outcome = await service.generateForClips(
+              clips: [_clip('a', duration: const Duration(seconds: 6))],
+              audioTracks: [robotTake()],
+              localeIdentifier: 'en-US',
+            );
+
+            expect(
+              (outcome as CaptionsGenerated).cues.single.text,
+              equals('Clip talk.'),
+            );
+            final locales = verify(
+              () => generator.generateCaptions(
+                audioPath: any(named: 'audioPath'),
+                localeIdentifier: captureAny(named: 'localeIdentifier'),
+                requireOnDeviceRecognition: true,
+              ),
+            ).captured;
+            expect(locales, equals(['en-US', null]));
+          },
+        );
+
+        test('recognizes the take on the device, next to the server', () async {
+          stubMerge([_offset(0, 6000)]);
+          stubExtraction();
+          stubGenerator(
+            [_word('Narrated.', 500, 1000)],
+            requireOnDeviceRecognition: true,
+          );
+          final service = buildService(
+            remote: remoteReturning([_word('Clip talk.', 4500, 5000)]),
+          );
+
+          final outcome = await service.generateForClips(
+            clips: [_clip('a', duration: const Duration(seconds: 6))],
+            audioTracks: [robotTake()],
+            localeIdentifier: 'en-US',
+          );
+
+          expect(
+            capturedSegments().single.video.file?.path,
+            equals('/tmp/a.mp4'),
+          );
+          verify(
+            () => extraction.extractAudio(videoPath: '/tmp/take.m4a', speed: 1),
+          ).called(1);
+          final cues = (outcome as CaptionsGenerated).cues;
+          expect(
+            cues.map((cue) => (cue.text, cue.start)),
+            equals([
+              ('Narrated.', const Duration(milliseconds: 2500)),
+              ('Clip talk.', const Duration(milliseconds: 4500)),
+            ]),
+          );
+        });
+
+        test(
+          'keeps the unique windows of effected extracted sound off the server',
+          () async {
+            stubMerge([_offset(0, 2000)]);
+            stubExtraction();
+            stubGenerator(const [], requireOnDeviceRecognition: true);
+            when(
+              () => generator.generateCaptions(
+                audioPath: '/tmp/extracted.wav.wav',
+                localeIdentifier: any(named: 'localeIdentifier'),
+                requireOnDeviceRecognition: true,
+              ),
+            ).thenAnswer(
+              (_) async => [
+                _word('Before.', 200, 600),
+                _word('Repeated.', 1200, 1600),
+                _word('After.', 3200, 3600),
+              ],
+            );
+            final service = buildService(
+              remote: remoteReturning([_word('Clip.', 200, 600)]),
+            );
+
+            final outcome = await service.generateForClips(
+              clips: [
+                _clip('lead', duration: const Duration(seconds: 2), volume: 0),
+                _clip(
+                  'source',
+                  duration: const Duration(seconds: 4),
+                  trimStart: const Duration(seconds: 1),
+                  trimEnd: const Duration(seconds: 1),
+                ),
+                _clip('tail', duration: const Duration(seconds: 2), volume: 0),
+              ],
+              audioTracks: [
+                _track(
+                  _extractedId,
+                  url: '/tmp/extracted_robot.wav',
+                  originalUrl: '/tmp/extracted.wav',
+                  voiceEffect: const VoiceEffect(robot: 100),
+                  startTime: const Duration(seconds: 1),
+                  endTime: const Duration(seconds: 5),
+                  anchorClipId: 'source',
+                ),
+              ],
+              localeIdentifier: 'en-US',
+            );
+
+            expect(
+              capturedSegments().single.video.file?.path,
+              equals('/tmp/source.mp4'),
+            );
+            verify(
+              () => extraction.extractAudio(
+                videoPath: '/tmp/extracted.wav',
+                speed: 1,
+              ),
+            ).called(2);
+            expect(
+              (outcome as CaptionsGenerated).cues.map(
+                (cue) => (cue.text, cue.start),
+              ),
+              equals([
+                ('Before.', const Duration(milliseconds: 1200)),
+                ('Clip.', const Duration(milliseconds: 2200)),
+                ('After.', const Duration(milliseconds: 4200)),
+              ]),
+            );
+          },
+        );
+
+        test(
+          'a strict locale rejection does not change later clip language',
+          () async {
+            stubExtraction();
+            stubGenerator([_word('Wrong default.', 100, 500)]);
+            when(
+              () => generator.generateCaptions(
+                audioPath: any(named: 'audioPath'),
+                localeIdentifier: 'en-US',
+              ),
+            ).thenAnswer((_) async => [_word('Clip.', 100, 500)]);
+            stubGenerator(
+              [_word('Take.', 100, 500)],
+              requireOnDeviceRecognition: true,
+            );
+            when(
+              () => generator.generateCaptions(
+                audioPath: any(named: 'audioPath'),
+                localeIdentifier: 'en-US',
+                requireOnDeviceRecognition: true,
+              ),
+            ).thenThrow(
+              const SpeechRecognizerUnavailableException('No local model'),
+            );
+
+            final outcome = await buildService().generateForClips(
+              clips: [_clip('lead', volume: 0), _clip('a')],
+              audioTracks: [
+                robotTake().copyWith(
+                  startTime: Duration.zero,
+                  endTime: const Duration(seconds: 1),
+                ),
+              ],
+              localeIdentifier: 'en-US',
+            );
+
+            expect(
+              (outcome as CaptionsGenerated).cues.map((cue) => cue.text),
+              equals(['Take.', 'Clip.']),
+            );
+          },
+        );
+
+        for (final serverFails in [false, true]) {
+          test(
+            'keeps other captions when strict local recognition fails '
+            '${serverFails ? "after a server failure" : "without a server"}',
+            () async {
+              stubExtraction();
+              stubGenerator([_word('Clip.', 100, 400)]);
+              when(
+                () => generator.generateCaptions(
+                  audioPath: any(named: 'audioPath'),
+                  localeIdentifier: any(named: 'localeIdentifier'),
+                  requireOnDeviceRecognition: true,
+                ),
+              ).thenThrow(
+                const SpeechRecognizerUnavailableException(
+                  'Unavailable locally',
+                ),
+              );
+              final remote = serverFails ? remoteReturning(const []) : null;
+              if (remote != null) {
+                stubMerge([_offset(0, 6000)]);
+                when(
+                  () => remote.transcribe(
+                    audioPath: any(named: 'audioPath'),
+                    localeIdentifier: any(named: 'localeIdentifier'),
+                  ),
+                ).thenThrow(
+                  const CaptionRemoteTranscriptionException('Unavailable'),
+                );
+              }
+
+              final outcome = await buildService(remote: remote)
+                  .generateForClips(
+                    clips: [_clip('a', duration: const Duration(seconds: 6))],
+                    audioTracks: [robotTake()],
+                    localeIdentifier: 'en-US',
+                  );
+
+              expect(
+                (outcome as CaptionsGenerated).cues.single.text,
+                equals('Clip.'),
+              );
+            },
+          );
+        }
+
+        test('one failed take does not discard another take', () async {
+          stubMerge([_offset(0, 6000)]);
+          stubExtraction();
+          stubGenerator(
+            [_word('Kept.', 100, 400)],
+            requireOnDeviceRecognition: true,
+          );
+          when(
+            () => generator.generateCaptions(
+              audioPath: '/tmp/take.m4a.wav',
+              localeIdentifier: any(named: 'localeIdentifier'),
+              requireOnDeviceRecognition: true,
+            ),
+          ).thenThrow(const SpeechNotAuthorizedException());
+          final service = buildService(
+            remote: remoteReturning([_word('Clip.', 4500, 5000)]),
+          );
+
+          final outcome = await service.generateForClips(
+            clips: [_clip('a', duration: const Duration(seconds: 6))],
+            audioTracks: [
+              robotTake(),
+              robotTake().copyWith(
+                id: '${_takeId}_second',
+                url: '/tmp/second_robot.m4a',
+                originalUrl: '/tmp/second.m4a',
+                startTime: const Duration(seconds: 4),
+                endTime: const Duration(seconds: 6),
+              ),
+            ],
+            localeIdentifier: 'en-US',
+          );
+
+          expect(
+            (outcome as CaptionsGenerated).cues.map((cue) => cue.text),
+            equals(['Kept.', 'Clip.']),
+          );
+        });
+
+        test(
+          'reports a failure when the only take cannot be recognized',
+          () async {
+            stubExtraction();
+            when(
+              () => generator.generateCaptions(
+                audioPath: any(named: 'audioPath'),
+                localeIdentifier: any(named: 'localeIdentifier'),
+                requireOnDeviceRecognition: true,
+              ),
+            ).thenThrow(const SpeechNotAuthorizedException());
+
+            final outcome = await buildService().generateForClips(
+              clips: [
+                _clip('a', volume: 0, duration: const Duration(seconds: 6)),
+              ],
+              audioTracks: [robotTake()],
+              localeIdentifier: 'en-US',
+            );
+
+            expect(
+              (outcome as CaptionsFailed).reason,
+              equals(CaptionGenerationFailure.notAuthorized),
+            );
+          },
+        );
+
+        test(
+          'sends nothing to the server when the take is all there is',
+          () async {
+            stubExtraction();
+            stubGenerator(
+              [_word('Narrated.', 500, 1000)],
+              requireOnDeviceRecognition: true,
+            );
+            final remote = remoteReturning(const []);
+
+            final outcome = await buildService(remote: remote).generateForClips(
+              clips: [
+                _clip('a', volume: 0, duration: const Duration(seconds: 6)),
+              ],
+              audioTracks: [robotTake()],
+              localeIdentifier: 'en-US',
+            );
+
+            verifyNever(
+              () => remote.transcribe(
+                audioPath: any(named: 'audioPath'),
+                localeIdentifier: any(named: 'localeIdentifier'),
+              ),
+            );
+            expect(
+              (outcome as CaptionsGenerated).cues.single.text,
+              equals('Narrated.'),
+            );
+          },
+        );
+
+        test(
+          'keeps the server captions when the device cannot recognize the take',
+          () async {
+            stubMerge([_offset(0, 6000)]);
+            stubExtraction();
+            when(
+              () => generator.generateCaptions(
+                audioPath: any(named: 'audioPath'),
+                localeIdentifier: any(named: 'localeIdentifier'),
+                requireOnDeviceRecognition: true,
+              ),
+            ).thenThrow(const SpeechNotAuthorizedException());
+            final service = buildService(
+              remote: remoteReturning([_word('Clip talk.', 4500, 5000)]),
+            );
+
+            final outcome = await service.generateForClips(
+              clips: [_clip('a', duration: const Duration(seconds: 6))],
+              audioTracks: [robotTake()],
+              localeIdentifier: 'en-US',
+            );
+
+            expect(
+              (outcome as CaptionsGenerated).cues.single.text,
+              equals('Clip talk.'),
+            );
+          },
+        );
+      });
+
+      test('keeps a voice-over over clip speech in its own cues', () async {
+        stubMerge([_offset(0, 6000), _offset(6000, 2000)]);
+        final service = buildService(
+          remote: remoteReturning([
+            _word('Clip', 1000, 1300),
+            _word('talk.', 1350, 1600),
+            _word('Voice', 6000, 6300),
+            _word('over.', 6350, 6600),
+          ]),
+        );
+
+        final outcome = await service.generateForClips(
+          clips: [_clip('a', duration: const Duration(seconds: 6))],
+          audioTracks: [
+            _track(
+              _takeId,
+              url: '/tmp/take.m4a',
+              startTime: const Duration(seconds: 1),
+              endTime: const Duration(seconds: 3),
+            ),
+          ],
+          localeIdentifier: 'en-US',
+        );
+
+        final cues = (outcome as CaptionsGenerated).cues;
+        expect(
+          cues.map((cue) => cue.text),
+          unorderedEquals(['Clip talk.', 'Voice over.']),
+        );
+      });
+
+      test(
+        'on-device, windows the take and shifts it to where it plays',
+        () async {
+          stubExtraction();
+          when(
+            () => generator.generateCaptions(
+              audioPath: '/tmp/take.m4a.wav',
+              localeIdentifier: any(named: 'localeIdentifier'),
+            ),
+          ).thenAnswer(
+            (_) async => [_word('Cut', 0, 800), _word('Kept.', 1200, 1800)],
+          );
+
+          final outcome = await buildService().generateForClips(
+            clips: [
+              _clip('a', volume: 0, duration: const Duration(seconds: 6)),
+            ],
+            audioTracks: [
+              _track(
+                _takeId,
+                url: '/tmp/take_robot.m4a',
+                originalUrl: '/tmp/take.m4a',
+                startTime: const Duration(seconds: 2),
+                endTime: const Duration(seconds: 4),
+                startOffset: const Duration(seconds: 1),
+              ),
+            ],
+            localeIdentifier: 'en-US',
+          );
+
+          verify(
+            () => extraction.extractAudio(videoPath: '/tmp/take.m4a', speed: 1),
+          ).called(1);
+          final cue = (outcome as CaptionsGenerated).cues.single;
+          expect(cue.text, equals('Kept.'));
+          expect(cue.start, equals(const Duration(milliseconds: 2200)));
+          expect(cue.end, equals(const Duration(milliseconds: 2800)));
+        },
+      );
     });
 
     test('leaves server cues without word timings', () async {

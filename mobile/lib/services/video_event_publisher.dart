@@ -207,6 +207,8 @@ class VideoEventPublisher {
     Duration? thumbnailTimestamp,
     List<String> collaboratorPubkeys = const [],
     List<String> mentionedPubkeys = const [],
+    List<String> linkUrls = const [],
+    List<VideoStickerRegion> stickerRegions = const [],
     String? inspiredByAddressableId,
     String? inspiredByRelayUrl,
     List<String> inspiredByNpubs = const [],
@@ -241,6 +243,8 @@ class VideoEventPublisher {
       allowVideoReuse: allowVideoReuse,
       collaboratorPubkeys: collaboratorPubkeys,
       mentionedPubkeys: mentionedPubkeys,
+      linkUrls: linkUrls,
+      stickerRegions: stickerRegions,
       inspiredByAddressableId: inspiredByAddressableId,
       inspiredByRelayUrl: inspiredByRelayUrl,
       inspiredByNpubs: inspiredByNpubs,
@@ -305,6 +309,8 @@ class VideoEventPublisher {
     bool allowVideoReuse = false,
     List<String> collaboratorPubkeys = const [],
     List<String> mentionedPubkeys = const [],
+    List<String> linkUrls = const [],
+    List<VideoStickerRegion> stickerRegions = const [],
     Duration? thumbnailTimestamp,
     String? inspiredByAddressableId,
     String? inspiredByRelayUrl,
@@ -357,6 +363,8 @@ class VideoEventPublisher {
       allowVideoReuse: allowVideoReuse,
       collaboratorPubkeys: collaboratorPubkeys,
       mentionedPubkeys: mentionedPubkeys,
+      linkUrls: linkUrls,
+      stickerRegions: stickerRegions,
       thumbnailTimestamp: thumbnailTimestamp,
       inspiredByAddressableId: inspiredByAddressableId,
       inspiredByRelayUrl: inspiredByRelayUrl,
@@ -401,6 +409,8 @@ class VideoEventPublisher {
     required bool allowVideoReuse,
     required List<String> collaboratorPubkeys,
     required List<String> mentionedPubkeys,
+    required List<String> linkUrls,
+    required List<VideoStickerRegion> stickerRegions,
     required Duration? thumbnailTimestamp,
     required String? inspiredByAddressableId,
     required String? inspiredByRelayUrl,
@@ -485,6 +495,8 @@ class VideoEventPublisher {
         inspiredByNpubs: inspiredByNpubs,
         clipSourceCredits: clipSourceCredits,
       );
+      addVideoLinkTags(tags, linkUrls);
+      addVideoStickerTags(tags, stickerRegions);
       // Written as true or false, so an edit keeps an explicit decline.
       tags.add(['allow_video_reuse', allowVideoReuse.toString()]);
 

@@ -4,11 +4,13 @@ import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_selection_tile.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_tags_selector.dart';
+import 'package:pro_image_editor/pro_image_editor.dart';
 
 void main() {
   late _MockHashtagRepository hashtagRepository;
@@ -48,6 +50,44 @@ void main() {
       );
 
       expect(find.text('flutter, dart'), findsOneWidget);
+    });
+
+    testWidgets('renders the tags the post carries, sticker ones first', (
+      tester,
+    ) async {
+      final sticker = const SocialStickerData(
+        kind: SocialStickerKind.hashtag,
+        hashtag: 'sticker',
+      ).toMeta();
+      final tags = [for (var i = 0; i < 10; i++) 'tag$i'];
+      final state = VideoEditorProviderState(
+        tags: tags.toSet(),
+        editorEditingParameters:
+            CompleteParameters.fromMap(
+              <String, dynamic>{},
+            ).copyWith(
+              layers: [
+                WidgetLayer(
+                  widget: const SizedBox(),
+                  meta: sticker,
+                  exportConfigs: WidgetLayerExportConfigs(meta: sticker),
+                ),
+              ],
+            ),
+      );
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          hashtagRepository: hashtagRepository,
+          videoEditorState: state,
+        ),
+      );
+
+      // A post carries ten tags, so the last typed one does not make it.
+      expect(
+        find.text(['sticker', ...tags.take(9)].join(', ')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('picker header describes cancel and apply actions', (

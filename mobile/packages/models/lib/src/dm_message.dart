@@ -12,7 +12,9 @@ enum DmRetractionStatus {
   /// Delivery has not yet been confirmed for every recipient.
   pending,
 
-  /// Delivery was refused for at least one recipient.
+  /// Delivery was refused for at least one recipient, or its automatic
+  /// retries ran out without every recipient confirming it (#10012). Either
+  /// way the sender can try again.
   failed,
 }
 

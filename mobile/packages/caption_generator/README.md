@@ -48,6 +48,11 @@ mode. An empty list means the recognizer found no speech.
 | iOS / macOS | `SFSpeechRecognizer` | On-device when the locale supports it and `preferOnDeviceRecognition` is true; otherwise Apple's server-based recognition (limited to ~1 minute of audio). |
 | Android 14+ | Platform `SpeechRecognizer` | `createOnDeviceSpeechRecognizer` + `EXTRA_AUDIO_SOURCE` file input + `RecognitionPart` word timing. Fully on-device; language packs are managed by the OS. |
 
+Set `requireOnDeviceRecognition: true` when recognition must stay local. On
+Apple platforms this fails with `SpeechRecognizerUnavailableException` when the
+locale has no on-device recognizer, without falling back to server recognition.
+Android always uses its on-device recognizer.
+
 On Android, `RecognitionPart` only reports each word's **start** offset, so a
 word's end time is approximated by the next word's start; the final word gets a
 bounded cadence-based fallback. Devices below Android 14, devices without

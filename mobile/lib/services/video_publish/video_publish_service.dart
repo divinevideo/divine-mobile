@@ -8,6 +8,7 @@ import 'dart:typed_data';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:meta/meta.dart';
+import 'package:models/models.dart' show VideoStickerKind, VideoStickerRegion;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/constants/nip71_migration.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/extensions/draft_content_warning_extensions.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_publish/publish_result.dart';
 import 'package:openvine/models/video_publish/video_publish_state.dart';
 import 'package:openvine/repositories/scheduled_posts_repository.dart';
@@ -28,6 +30,8 @@ import 'package:openvine/services/mention_resolution_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:openvine/services/upload_manager.dart';
+import 'package:openvine/services/video_editor/draft_render_parameters_service.dart'
+    show DraftOverlayRestoreException;
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/video_publish/draft_upload_materializer.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
@@ -281,11 +285,13 @@ class VideoPublishService {
         identifiers: draft.collaboratorPubkeys,
         creatorIdentifier: pubkey,
       );
+      final stickerCredits = _stickerCreditsOf(draft);
+      final hashtags = stickerCredits.hashtagsWith(draft.hashtags);
 
       // Use existing upload if available, otherwise start new upload
       final pendingUpload = await timeline.measure(
         PublishPhases.upload,
-        () => _getOrCreateUpload(pubkey, draft),
+        () => _getOrCreateUpload(pubkey, draft, hashtags: hashtags),
       );
       if (pendingUpload == null) {
         Log.error('❌ Upload creation failed', category: .video);
@@ -329,11 +335,18 @@ class VideoPublishService {
 
       final mentionedPubkeys = await timeline.measure(
         PublishPhases.mentions,
-        () => _resolveMentionedPubkeys(
-          draft,
-          currentUserPubkey: pubkey,
-          collaboratorPubkeys: collaboratorPubkeys,
-        ),
+        () async => [
+          ...await _resolveMentionedPubkeys(
+            draft,
+            currentUserPubkey: pubkey,
+            collaboratorPubkeys: collaboratorPubkeys,
+          ),
+          ..._stickerMentionedPubkeys(
+            stickerCredits,
+            currentUserPubkey: pubkey,
+            collaboratorPubkeys: collaboratorPubkeys,
+          ),
+        ],
       );
 
       final captionTrack = _captionTrackForPublish(draft);
@@ -369,7 +382,7 @@ class VideoPublishService {
           upload: pendingUpload,
           title: draft.title,
           description: draft.description,
-          hashtags: draft.hashtags.toList(),
+          hashtags: hashtags,
           // Relative to the moment the post goes live, which for a scheduled
           // post is its publish time rather than now.
           expirationTimestamp: expireTime != null
@@ -380,6 +393,8 @@ class VideoPublishService {
           allowVideoReuse: draft.allowVideoReuse,
           collaboratorPubkeys: collaboratorPubkeys.toList(),
           mentionedPubkeys: mentionedPubkeys,
+          linkUrls: stickerCredits.links.toList(),
+          stickerRegions: _publishedStickerRegions(draft),
           inspiredByAddressableId: draft.inspiredByVideo?.addressableId,
           inspiredByRelayUrl: draft.inspiredByVideo?.relayUrl,
           inspiredByNpubs: draft.inspiredByNpubs,
@@ -650,6 +665,53 @@ class VideoPublishService {
   /// `de-CH` -> `de`; text-track lang tags carry the bare language code.
   String _languageCode(String languageTag) => languageTag.split('-').first;
 
+  /// What [draft]'s stickers add to the post.
+  ///
+  /// Throws a [DraftOverlayRestoreException] when its edit history cannot be
+  /// read: the post would go out without the tags its stickers show.
+  SocialStickerCredits _stickerCreditsOf(DivineVideoDraft draft) {
+    try {
+      return draft.stickerCredits;
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        DraftOverlayRestoreException(
+          'The stickers could not be read from the edit history: $error',
+        ),
+        stackTrace,
+      );
+    }
+  }
+
+  /// The people the mention stickers in [credits] name, other than the
+  /// creator and the collaborators, who carry their own `p` tags.
+  Iterable<String> _stickerMentionedPubkeys(
+    SocialStickerCredits credits, {
+    required String currentUserPubkey,
+    required Set<String> collaboratorPubkeys,
+  }) {
+    final self = currentUserPubkey.toLowerCase();
+    return credits.mentionPubkeys.where(
+      (pubkey) => pubkey != self && !collaboratorPubkeys.contains(pubkey),
+    );
+  }
+
+  /// The stickers of [draft]'s final render a viewer can tap, without a
+  /// sound sticker that names no sound of its own and credits a sound other
+  /// than the one the video points to: a tap on it opens the video's sound.
+  List<VideoStickerRegion> _publishedStickerRegions(DivineVideoDraft draft) {
+    final sound = draft.selectedSound;
+    return [
+      for (final region
+          in draft.finalRenderedClip?.stickerRegions ??
+              const <VideoStickerRegion>[])
+        if (region.kind != VideoStickerKind.sound ||
+            region.target.isNotEmpty ||
+            (sound != null &&
+                SocialStickerData.regionCreditsSound(region, sound)))
+          region,
+    ];
+  }
+
   Future<List<String>> _resolveMentionedPubkeys(
     DivineVideoDraft draft, {
     required String currentUserPubkey,
@@ -782,12 +844,13 @@ class VideoPublishService {
   }
 
   /// Gets existing upload from background ID, reuses a matching upload
-  /// found by video path, or creates a new one.
+  /// found by video path, or creates a new one carrying [hashtags].
   /// Returns null if upload creation fails.
   Future<PendingUpload?> _getOrCreateUpload(
     String pubkey,
-    DivineVideoDraft draft,
-  ) async {
+    DivineVideoDraft draft, {
+    required List<String> hashtags,
+  }) async {
     // 1. Check in-memory ID (covers same-session retry)
     if (_backgroundUploadId != null) {
       final existingUpload = uploadManager.getUpload(_backgroundUploadId!);
@@ -816,7 +879,7 @@ class VideoPublishService {
     }
 
     // 3. Nothing reusable — start fresh
-    return _startNewUpload(pubkey, draft);
+    return _startNewUpload(pubkey, draft, hashtags: hashtags);
   }
 
   /// Resolves the video file path from a draft, mirroring the materializer.
@@ -943,8 +1006,9 @@ class VideoPublishService {
   /// Returns the upload if successful, null if failed.
   Future<PendingUpload?> _startNewUpload(
     String pubkey,
-    DivineVideoDraft draft,
-  ) async {
+    DivineVideoDraft draft, {
+    required List<String> hashtags,
+  }) async {
     // Ensure upload manager is initialized
     if (!uploadManager.isInitialized) {
       Log.info('📝 Initializing upload manager...', category: .video);
@@ -964,7 +1028,7 @@ class VideoPublishService {
       nostrPubkey: pubkey,
       title: draft.title,
       description: draft.description,
-      hashtags: draft.hashtags.toList(),
+      hashtags: hashtags,
       videoWidth: materialized.videoWidth,
       videoHeight: materialized.videoHeight,
       videoDuration: materialized.videoDuration,
@@ -1136,6 +1200,11 @@ class VideoPublishService {
     }
     if (e is AudioReuseNotPermittedException) {
       return PublishErrorKind.audioReuseNotPermitted;
+    }
+    if (e is DraftOverlayRestoreException) {
+      // The draft has to be opened in the editor; a plain retry reads the
+      // same history again.
+      return PublishErrorKind.overlaysUnavailable;
     }
     if (e is ScheduledSignatureTimestampException) {
       // The media is up and the event is signed for the wrong moment: not a

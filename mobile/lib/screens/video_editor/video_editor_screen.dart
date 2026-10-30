@@ -44,8 +44,10 @@ import 'package:openvine/models/video_editor/clip_mask_window.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/providers/analytics_providers.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
@@ -73,6 +75,9 @@ import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_sheet.da
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_clip_mask_preview.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_inputs.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_layer_actions.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_sheet.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_captions_sheet.dart';
@@ -798,6 +803,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   Future<void> _addStickers() async {
     // Reset search when opening the sheet
     _stickerBloc.add(const VideoEditorStickerSearch(''));
+    final soundCredits = _soundCredits;
 
     final picked = await VineBottomSheet.show<Object>(
       context: context,
@@ -807,12 +813,19 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       minChildSize: VineTheme.bottomSheetDismissFloor,
       buildScrollBody: (scrollController) => BlocProvider.value(
         value: _stickerBloc,
-        child: VideoEditorStickerSheet(scrollController: scrollController),
+        child: VideoEditorStickerSheet(
+          scrollController: scrollController,
+          soundCredit: soundCredits.firstOrNull,
+        ),
       ),
     );
 
     if (picked is InfoStickerKind) {
       if (mounted) await _addInfoSticker(picked);
+      return;
+    }
+    if (picked is SocialStickerKind) {
+      if (mounted) await _addSocialSticker(picked, soundCredits: soundCredits);
       return;
     }
     if (picked case final StickerData sticker) {
@@ -865,8 +878,65 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     );
   }
 
-  /// How wide a new image or info sticker is: a third of the screen, at most
-  /// 300, converted to render coordinates.
+  /// Sets up a new social sticker of [kind] and adds it, as large as a new
+  /// image sticker.
+  ///
+  /// A mention starts with the people search; a sound credit starts from
+  /// the first of [soundCredits], the credits for the video's sounds, and
+  /// can switch to the others.
+  Future<void> _addSocialSticker(
+    SocialStickerKind kind, {
+    required List<SocialStickerData> soundCredits,
+  }) async {
+    final SocialStickerData initial;
+    switch (kind) {
+      case SocialStickerKind.mention:
+        final person = await pickMentionedPerson(
+          context,
+          viewerPubkey: ref.read(authServiceProvider).currentPublicKeyHex,
+        );
+        if (person == null || !mounted) return;
+        initial = SocialStickerData.mentionOf(person);
+      case SocialStickerKind.hashtag || SocialStickerKind.link:
+        initial = SocialStickerData(kind: kind);
+      case SocialStickerKind.soundCredit:
+        final first = soundCredits.firstOrNull;
+        if (first == null) return;
+        initial = first;
+    }
+    final data = await showSocialStickerSheet(
+      context,
+      initial: initial,
+      isNew: true,
+      otherHashtags: socialStickerOtherHashtags(
+        postTags: ref.read(videoEditorProvider).tags,
+        layers: _editor?.activeLayers ?? const [],
+      ),
+      soundChoices: soundCredits,
+    );
+    final editor = _editor;
+    if (data == null || editor == null || !mounted) return;
+    Log.debug(
+      'Adding social sticker layer: ${data.kind.name}',
+      name: 'VideoEditorScreen',
+      category: LogCategory.video,
+    );
+    editor.addLayer(
+      socialStickerWidgetLayer(data, width: _newStickerWidth),
+      blockSelectLayer: true,
+    );
+  }
+
+  /// The credits for the video's sounds that have a title: the recorded
+  /// sound first, then the timeline's tracks.
+  List<SocialStickerData> get _soundCredits =>
+      SocialStickerData.soundCreditsFor([
+        ?ref.read(videoEditorProvider).selectedSound,
+        ..._timelineOverlayBloc.state.audioTracks,
+      ]);
+
+  /// How wide a new image, info or social sticker is: a third of the screen,
+  /// at most 300, converted to render coordinates.
   double get _newStickerWidth =>
       min(300, (_bodySizeNotifier.value.width / 3) / _fittedBoxScale);
 
@@ -994,7 +1064,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     mainBloc.add(const VideoEditorMainOpenSubEditor(.captions));
 
     // The cubit prefers server-side transcription (higher quality), falling
-    // back to on-device per clip when the request fails.
+    // back to on-device per sound when the request fails.
     final result = await showCaptionsEditorSheet(
       context,
       burnIn: burnIn,
@@ -1004,6 +1074,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       clips: clipEditorBloc.state.clips,
       totalDuration: clipEditorBloc.state.totalDuration,
       initialCues: initialCues,
+      audioTracks: editor.stateManager.audioTracks,
       canDeleteTrack: hasSession,
       blossomUploadService: ref.read(blossomUploadServiceProvider),
     );

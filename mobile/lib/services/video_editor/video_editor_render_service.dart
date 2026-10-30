@@ -34,11 +34,12 @@ import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
 import 'package:openvine/services/video_editor/image_layer_sequence.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
-import 'package:openvine/services/video_editor/rec_timer_frames.dart';
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
 import 'package:openvine/services/video_editor/render_audio_visualizer_energies.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/render_progress_tracker.dart';
+import 'package:openvine/services/video_editor/sticker_frames.dart';
+import 'package:openvine/services/video_editor/sticker_regions.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
@@ -46,6 +47,7 @@ import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/utils/path_resolver.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -231,6 +233,11 @@ class VideoEditorRenderService {
         VideoRenderFailureReason.emptyClips,
       );
     }
+    // The layers were captured once the emoji font had loaded or failed to,
+    // earlier in this session. Neither changes later in a session: a loaded
+    // font stays loaded and a failed one is not fetched again, so this is the
+    // font the capture drew its emoji in.
+    final emojiFontLoaded = stickerEmojiFontLoaded;
 
     final effectiveTaskId = taskId ?? clips.first.id;
     final renderToken = RenderCancellationRegistry.start(effectiveTaskId);
@@ -378,6 +385,13 @@ class VideoEditorRenderService {
         targetAspectRatio: renderClips.first.targetAspectRatio,
         thumbnailPath: cover?.path ?? renderClips.first.thumbnailPath,
         thumbnailTimestamp: cover?.timestamp,
+        stickerRegions: stickerRegionsFor(
+          capturedLayers: parameters?.capturedLayers ?? const [],
+          bodySize: parameters?.bodySize,
+          targetAspectRatio: renderClips.first.targetAspectRatio.value,
+          timelineMap: TransitionTimelineMap.fromClips(renderClips),
+          emojiFontLoaded: emojiFontLoaded,
+        ),
       );
 
       return (clip, proofManifestJson);
@@ -915,9 +929,9 @@ class VideoEditorRenderService {
 
     final effectEntries =
         parameters?.videoEffectEntriesFromCompleteMeta ?? const [];
-    final beats = await _beatsOnOutput(
+    final beats = await beatsForRender(
       effectEntries: effectEntries,
-      parameters: parameters,
+      sounds: parameters?.audioTracksFromMeta ?? const [],
       clips: clips,
       videoEnd: videoContentDuration,
     );
@@ -926,8 +940,12 @@ class VideoEditorRenderService {
         .map((s) => s.copyWith(volume: s.volume))
         .toList();
 
-    final capturedLayers =
-        imageLayerOverride ?? parameters?.capturedLayers ?? const [];
+    // A moving sticker brings a frame for every frame it shows.
+    final capturedLayers = await withStickerFrames(
+      imageLayerOverride ?? parameters?.capturedLayers ?? const [],
+      timelineMap,
+      audioEnergies,
+    );
 
     Size? renderResolution;
     if (capturedLayers.isNotEmpty && volumeSegments.isNotEmpty) {
@@ -955,7 +973,7 @@ class VideoEditorRenderService {
       shouldOptimizeForNetworkUse: true,
       audioTracks: audioTracks,
       imageLayers: buildImageLayers(
-        capturedLayers: await withRecTimerFrames(capturedLayers, timelineMap),
+        capturedLayers: capturedLayers,
         bodySize: parameters?.bodySize,
         videoSize: videoSize,
         targetAspectRatio: aspectRatio.value,
@@ -1324,40 +1342,6 @@ class VideoEditorRenderService {
     List<Duration> beats = const [],
   }) {
     return videoEffectsOnOutput(effects, timelineMap, beats: beats);
-  }
-
-  /// The beats of the video's music on the output axis, or none when no
-  /// effect in [effectEntries] fires on the beat.
-  ///
-  /// A sound whose beats cannot be read leaves its effects without beats, so
-  /// they are left out of the export, rather than failing it: the sound
-  /// itself was fetched for the export already.
-  static Future<List<Duration>> _beatsOnOutput({
-    required List<EditorVideoEffect> effectEntries,
-    required CompleteParameters? parameters,
-    required List<DivineVideoClip> clips,
-    required Duration videoEnd,
-  }) async {
-    if (!effectEntries.any((entry) => entry.onBeat)) return const [];
-    final parts = beatSourceFor(
-      sounds: parameters?.audioTracksFromMeta ?? const [],
-      clips: clips,
-      videoEnd: videoEnd,
-    );
-    final resolver = VideoEditorBeatResolver();
-    try {
-      await resolver.read(parts);
-      return resolver.beatsOnOutput(parts, videoEnd: videoEnd);
-    } on Exception catch (error, stackTrace) {
-      Log.error(
-        'Could not read the beats for effects on the beat',
-        name: _logName,
-        category: LogCategory.video,
-        error: error,
-        stackTrace: stackTrace,
-      );
-      return const [];
-    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────

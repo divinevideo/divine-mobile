@@ -698,6 +698,31 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
     return rows.map(_rowToModel).toList();
   }
 
+  /// Fetch the rows for [ownerPubkey] whose recipient wrap failed with the
+  /// retry budget spent (`retry_count >= maxRetries`) while a fallback-pool
+  /// relay holds a wrap of theirs (`recipient_wrap_event_id` set, #10012):
+  /// the held members the retry sweep no longer re-drives. Oldest first.
+  /// With [environment], rows queued in another environment are left out;
+  /// see [_inEnvironment].
+  Future<List<OutgoingDm>> getExhaustedHeldForOwner({
+    required String ownerPubkey,
+    required int maxRetries,
+    String? environment,
+  }) async {
+    final query = select(outgoingDms)
+      ..where(
+        (t) =>
+            t.ownerPubkey.equals(ownerPubkey) &
+            t.recipientWrapStatus.equals(OutgoingWrapStatus.failed.name) &
+            t.retryCount.isBiggerOrEqualValue(maxRetries) &
+            t.recipientWrapEventId.isNotNull() &
+            _inEnvironment(t, environment),
+      )
+      ..orderBy([(t) => OrderingTerm(expression: t.queuedAt)]);
+    final rows = await query.get();
+    return rows.map(_rowToModel).toList();
+  }
+
   /// Fetch all rows for [ownerPubkey] still in
   /// [OutgoingWrapStatus.pending] for either wrap. Used to recover
   /// in-flight sends after an app kill that interrupted the publish

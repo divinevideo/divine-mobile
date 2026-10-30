@@ -70,6 +70,18 @@ VideoEvent _fullVideo() => VideoEvent(
   authorName: 'Test Author',
   authorAvatar: 'https://cdn.divine.video/avatar.jpg',
   collaboratorPubkeys: [_otherCollab],
+  linkUrls: const ['https://divine.video/about'],
+  stickerRegions: const [
+    VideoStickerRegion(
+      kind: VideoStickerKind.link,
+      target: 'https://divine.video/about',
+      centerX: 0.5,
+      centerY: 0.25,
+      width: 0.4,
+      height: 0.05,
+      end: Duration(seconds: 3),
+    ),
+  ],
   inspiredByVideo: const InspiredByInfo(
     addressableId: '34236:abc123:my-video',
     relayUrl: 'wss://relay.divine.video',
@@ -160,6 +172,8 @@ const _expectedKeys = <String>{
   'authorName',
   'authorAvatar',
   'collaboratorPubkeys',
+  'linkUrls',
+  'stickerRegions',
   'inspiredByVideo',
   'inspiredByNpub',
   'inspiredByPubkeys',
@@ -383,6 +397,8 @@ void main() {
         restored.collaboratorPubkeys,
         equals(original.collaboratorPubkeys),
       );
+      expect(restored.linkUrls, equals(original.linkUrls));
+      expect(restored.stickerRegions, equals(original.stickerRegions));
       expect(restored.inspiredByVideo, equals(original.inspiredByVideo));
       expect(restored.inspiredByNpub, equals(original.inspiredByNpub));
       expect(restored.inspiredByPubkeys, equals(original.inspiredByPubkeys));

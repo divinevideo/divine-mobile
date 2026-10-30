@@ -33,10 +33,13 @@ abstract class CaptionGeneratorPlatform extends PlatformInterface {
   /// (e.g. `en-US`, device locale by default). [preferOnDeviceRecognition]
   /// keeps recognition on-device on Apple platforms whenever the locale
   /// supports it; Android is always on-device.
+  /// [requireOnDeviceRecognition] forbids server-based recognition and fails
+  /// when local recognition is unavailable.
   Future<List<CaptionSegment>> transcribe({
     required String audioPath,
     String? localeIdentifier,
     bool preferOnDeviceRecognition = true,
+    bool requireOnDeviceRecognition = false,
   }) {
     throw UnimplementedError('transcribe() has not been implemented.');
   }

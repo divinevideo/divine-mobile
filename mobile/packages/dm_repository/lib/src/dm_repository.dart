@@ -508,6 +508,7 @@ class DmMessageDeletionRetryTarget {
     required this.rumorId,
     required this.conversationId,
     required this.createdAt,
+    this.retriesRanOut = false,
   });
 
   /// Rumor id of the deleted message — the argument
@@ -520,6 +521,11 @@ class DmMessageDeletionRetryTarget {
 
   /// Deleted message's `created_at` (unix seconds). Orders the sweep.
   final int createdAt;
+
+  /// Whether an earlier run of automatic retries ran out without a relay
+  /// confirming the retraction ([DmRepository.markMessageDeletionUnconfirmed]),
+  /// so the sweep gives it a reduced allowance (#10012).
+  final bool retriesRanOut;
 }
 
 /// Repository for NIP-17 direct message operations.
@@ -8413,6 +8419,74 @@ class DmRepository {
     return stopped;
   }
 
+  /// Stop delivering a group message to a member held on an unreadable
+  /// inbox once its retries ran out (#10012), leaving the record
+  /// [cancelOutgoingSend] leaves, so the bubble reads "Not sent to everyone"
+  /// instead of "Failed to send".
+  ///
+  /// Only a held member ([_heldPoolWrapId]) whose inbox is still unreadable
+  /// is stopped, for a group message stored for the members who have it.
+  /// Its retries must be spent (`retryCount` of at least [maxRetries]), with
+  /// no recovery running. The call then returns `true`.
+  /// Anything else is left as it is and returns `false`:
+  /// a missing row, a delivery already stopped, a member that is not held or
+  /// still has retries (as after a Resend) or a recovery running, a 1:1
+  /// message, and a group message no member has, which all keep "Failed to
+  /// send".
+  ///
+  /// Throws [StateError] if the queue DAO is not wired in, and
+  /// [ArgumentError] if the row belongs to a different account.
+  Future<bool> stopHeldMemberDelivery({
+    required String rumorId,
+    required int maxRetries,
+  }) async {
+    _assertInitialized();
+    final dao = _outgoingDmsDao;
+    if (dao == null) {
+      throw StateError(
+        'stopHeldMemberDelivery requires the outgoing_dms queue DAO; '
+        'wire OutgoingDmsDao into DmRepository before calling.',
+      );
+    }
+    Future<bool> eligible(OutgoingDm? row) async {
+      if (row == null) return false;
+      if (row.ownerPubkey != _userPubkey) {
+        throw ArgumentError.value(
+          rumorId,
+          'rumorId',
+          'queue row belongs to a different account',
+        );
+      }
+      if (!_isLiveDelivery(row) || _heldPoolWrapId(row) == null) return false;
+      // Retries left, or one running now: the delivery is still in progress.
+      if (row.retryCount < maxRetries ||
+          _recoveriesInFlight.containsKey('full:${row.id}')) {
+        return false;
+      }
+      return _stoppedRowKeepsItsRecord(row);
+    }
+
+    final candidate = await dao.getById(rumorId);
+    if (!await eligible(candidate)) return false;
+    // The pool wrap survives a later failed publish to a found inbox. It
+    // proves a past held attempt, not that unreadability still explains this
+    // failure. Keep Resend when the inbox can now be read. Resolve outside
+    // the transaction so network waits never hold a database write lock.
+    final inbox = await resolveDmInboxRelaysDetailed(
+      candidate!.recipientPubkey,
+    );
+    if (inbox.state != DmInboxResolution.unreadable) return false;
+
+    var stopped = false;
+    await _conversationsDao.runInTransaction<void>(() async {
+      final row = await dao.getById(rumorId);
+      // A Resend or cancellation may have changed the row during the lookup.
+      if (!await eligible(row)) return;
+      stopped = await dao.markRecipientCancelled(rumorId);
+    });
+    return stopped;
+  }
+
   /// Cancel every queued row of the send batch containing [rumorId] — the
   /// group-send counterpart of [cancelOutgoingSend], for deleting a message.
   ///
@@ -8560,11 +8634,12 @@ class DmRepository {
       ownerPubkey: _ownerPubkey,
     );
     if (message == null || message.senderPubkey != _userPubkey) return false;
-    // Mirrors the thread query: a retraction that is pending or was refused
-    // keeps the bubble on screen, a confirmed one removes it.
+    // Mirrors the thread query: a retraction that is not yet confirmed for
+    // every recipient keeps the bubble on screen, a confirmed one removes it.
     return !message.isDeleted ||
-        message.deletionPublishStatus == DirectMessagesDao.deletionPending ||
-        message.deletionPublishStatus == DirectMessagesDao.deletionBlocked;
+        DirectMessagesDao.retractionsShownToSender.contains(
+          message.deletionPublishStatus,
+        );
   }
 
   /// Whether [row] is still a delivery in progress: present, and not one the
@@ -10050,9 +10125,32 @@ class DmRepository {
             rumorId: r.id,
             conversationId: r.conversationId,
             createdAt: r.createdAt,
+            retriesRanOut:
+                r.deletionPublishStatus ==
+                DirectMessagesDao.deletionUnconfirmed,
           ),
         )
         .toList(growable: false);
+  }
+
+  /// Record that the automatic retries of the retraction of [rumorId] ran
+  /// out without every recipient confirming it (#10012).
+  ///
+  /// Its bubble then shows the failed retraction, with Try again, instead of
+  /// progress, and it stays on [retryableMessageDeletions] with
+  /// [DmMessageDeletionRetryTarget.retriesRanOut] set for a later launch.
+  /// Only a pending retraction changes, and not while a retry of it is
+  /// running: that retry settles the status itself. An automatic retry
+  /// leaves a retraction whose retries ran out unconfirmed throughout, and
+  /// the sender's Try again writes the warning back when nothing confirms it.
+  ///
+  /// Throws whatever the database throws.
+  Future<void> markMessageDeletionUnconfirmed({required String rumorId}) async {
+    if (_messageDeletionRecoveriesInFlight.containsKey(rumorId)) return;
+    await _directMessagesDao.markMessageDeletionUnconfirmed(
+      rumorId,
+      ownerPubkey: _ownerPubkey,
+    );
   }
 
   /// Re-drive a delete-for-everyone that no relay confirmed.
@@ -10076,20 +10174,67 @@ class DmRepository {
   /// unreadable inbox is sent nothing more while it stays unreadable, is
   /// settled on that wrap once they advertise no inbox, and is wrapped again
   /// only once their inbox is found (#10012).
+  ///
+  /// [automatic] is for the retry sweep. A retraction whose retries ran out
+  /// keeps its warning through an automatic attempt, so a launch shows no
+  /// spinner and a kill mid-attempt leaves it on its reduced allowance. The
+  /// default is the sender's Try again, which moves it back to pending for
+  /// the spinner and writes the warning back when nothing confirms it, even
+  /// when it joins an automatic attempt already running (#10012).
   Future<DmMessageDeletionOutcome> retryMessageDeletion({
     required String rumorId,
+    bool automatic = false,
   }) {
     final existing = _messageDeletionRecoveriesInFlight[rumorId];
-    if (existing != null) return existing;
-    final future = _retryMessageDeletion(rumorId: rumorId);
+    if (existing != null) {
+      return automatic
+          ? existing
+          : _tryAgainWhileRetrying(rumorId: rumorId, running: existing);
+    }
+    final future = _retryMessageDeletion(
+      rumorId: rumorId,
+      automatic: automatic,
+    );
     _messageDeletionRecoveriesInFlight[rumorId] = future;
     return future.whenComplete(
       () => _messageDeletionRecoveriesInFlight.remove(rumorId),
     );
   }
 
+  /// The sender's Try again of [rumorId] while another attempt of it is
+  /// [running]: an automatic one leaves a retraction whose retries ran out
+  /// showing the warning, so move it to pending for the spinner before
+  /// joining, and write the warning back unless it settles (#10012).
+  /// The move is a compare-and-set, since the running attempt can settle the
+  /// row at any moment, and a settled row must never be reopened.
+  Future<DmMessageDeletionOutcome> _tryAgainWhileRetrying({
+    required String rumorId,
+    required Future<DmMessageDeletionOutcome> running,
+  }) async {
+    final movedToPending = await _directMessagesDao
+        .markUnconfirmedMessageDeletionPending(
+          rumorId,
+          ownerPubkey: _ownerPubkey,
+        );
+    final outcome = await running;
+    if (movedToPending && !_settlesDeletion(outcome)) {
+      await _directMessagesDao.markMessageDeletionUnconfirmed(
+        rumorId,
+        ownerPubkey: _ownerPubkey,
+      );
+    }
+    return outcome;
+  }
+
+  /// Whether [outcome] leaves the retraction settled, as sent or blocked.
+  /// Anything else leaves a row moved back to pending for nobody to settle.
+  static bool _settlesDeletion(DmMessageDeletionOutcome outcome) =>
+      outcome == DmMessageDeletionOutcome.sent ||
+      outcome == DmMessageDeletionOutcome.blocked;
+
   Future<DmMessageDeletionOutcome> _retryMessageDeletion({
     required String rumorId,
+    required bool automatic,
   }) async {
     if (_messageService == null || _userPubkey.isEmpty) {
       return DmMessageDeletionOutcome.unavailable;
@@ -10134,10 +10279,15 @@ class DmRepository {
           targetKind: row.messageKind,
         );
 
-    // A user-driven retry moves a blocked row back through pending so the
-    // bubble swaps its warning icon for progress. A freshly minted rumor must
-    // also cross the durability boundary before the wire, so the sweep can
-    // re-drive it. Sweep retries of an already-pending row need neither.
+    // The sender's retry of a blocked row, or of one whose automatic retries
+    // ran out (#10012), moves it back through pending so the bubble swaps its
+    // warning icon for progress. An automatic retry leaves a ran-out row as
+    // it is. A freshly minted rumor must also cross the durability boundary
+    // before the wire, so the sweep can re-drive it. Sweep retries of an
+    // already-pending row need neither.
+    final retriesRanOut =
+        row.deletionPublishStatus == DirectMessagesDao.deletionUnconfirmed;
+    var backToPending = false;
     if (mintedFresh ||
         row.deletionPublishStatus == DirectMessagesDao.deletionBlocked) {
       await _directMessagesDao.markMessageDeletionPending(
@@ -10147,10 +10297,18 @@ class DmRepository {
             : storedRumor!,
         ownerPubkey: _ownerPubkey,
       );
+      backToPending = true;
       if (mintedFresh) _notifyRetryableWork();
+    } else if (retriesRanOut && !automatic) {
+      // A compare-and-set, as for a Try again that joins a running attempt.
+      backToPending = await _directMessagesDao
+          .markUnconfirmedMessageDeletionPending(
+            rumorId,
+            ownerPubkey: _ownerPubkey,
+          );
     }
 
-    return _driveMessageDeletion(
+    final outcome = await _driveMessageDeletion(
       rumorId: rumorId,
       conversationId: row.conversationId,
       deletion: deletion,
@@ -10161,6 +10319,17 @@ class DmRepository {
           ? const {}
           : decodeHeldWraps(row.heldDeletionWraps),
     );
+    // It came back to pending with its retries spent and nothing confirmed
+    // it: show the warning again now, rather than a spinner until the
+    // sweep's next pass (#10012). This call holds the in-flight slot, so it
+    // writes through the DAO rather than [markMessageDeletionUnconfirmed].
+    if (retriesRanOut && backToPending && !_settlesDeletion(outcome)) {
+      await _directMessagesDao.markMessageDeletionUnconfirmed(
+        rumorId,
+        ownerPubkey: _ownerPubkey,
+      );
+    }
+    return outcome;
   }
 
   /// Wrap [deletion] to each recipient in turn.
@@ -10186,9 +10355,10 @@ class DmRepository {
   ///
   /// Scoring the unreadable case as landed is #8515, and it is not merely a
   /// mislabel: [DirectMessagesDao.markMessageDeletionSent] clears the stored
-  /// rumor, and `getRetryableOwnMessageDeletions` selects on `deletion_pending`
-  /// AND a non-null rumor — so the row leaves the sweep's worklist on two
-  /// counts and the retraction becomes unrecoverable.
+  /// rumor, and `getRetryableOwnMessageDeletions` selects on
+  /// `deletion_pending` or `deletion_unconfirmed` AND a non-null rumor — so
+  /// the row leaves the sweep's worklist on two counts and the retraction
+  /// becomes unrecoverable.
   ///
   /// Unlike `_fanOutRumor`, the aggregate failure does NOT carry
   /// `retryablePending`. Nothing can observe it here: this result is consumed
@@ -13371,7 +13541,8 @@ class DmRepository {
       sendBatchId: row.sendBatchId,
       retractionStatus: switch (row.deletionPublishStatus) {
         DirectMessagesDao.deletionPending => DmRetractionStatus.pending,
-        DirectMessagesDao.deletionBlocked => DmRetractionStatus.failed,
+        DirectMessagesDao.deletionBlocked ||
+        DirectMessagesDao.deletionUnconfirmed => DmRetractionStatus.failed,
         _ => DmRetractionStatus.none,
       },
     );

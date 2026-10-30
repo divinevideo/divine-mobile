@@ -1859,6 +1859,29 @@ class AppLocalizationsJa extends AppLocalizations {
   String get metadataSoundsLabel => 'サウンド';
 
   @override
+  String get metadataLinksLabel => 'リンク';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'リンクステッカー、$url を開きます';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel => 'メンションステッカー、プロフィールを開きます';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'ハッシュタグステッカー、#$hashtag を開きます';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => 'サウンドステッカー、サウンドを開きます';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'このリンクはDivineの外で開きます。移動する前にアドレスを確認してください。';
+
+  @override
   String get metadataOriginalSound => 'オリジナルサウンド';
 
   @override
@@ -8465,6 +8488,39 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectSparkles => 'キラキラ';
 
   @override
+  String get videoEditorEffectRain => '雨';
+
+  @override
+  String get videoEditorEffectLeaves => '落ち葉';
+
+  @override
+  String get videoEditorEffectBlossoms => '桜';
+
+  @override
+  String get videoEditorEffectBubbles => 'シャボン玉';
+
+  @override
+  String get videoEditorEffectBokeh => '玉ボケ';
+
+  @override
+  String get videoEditorEffectMusicNotes => '音符';
+
+  @override
+  String get videoEditorEffectStars => '星';
+
+  @override
+  String get videoEditorEffectFireflies => 'ホタル';
+
+  @override
+  String get videoEditorEffectEmbers => '火の粉';
+
+  @override
+  String get videoEditorEffectMoney => 'お札';
+
+  @override
+  String get videoEditorEffectBalloons => '風船';
+
+  @override
   String get videoEditorEffectTiltShift => 'ティルトシフト';
 
   @override
@@ -10241,6 +10297,69 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorInfoStickersTitle => '情報';
 
   @override
+  String get videoEditorSocialStickersTitle => 'ソーシャル';
+
+  @override
+  String get videoEditorSocialStickerMention => 'メンション';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'ハッシュタグ';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'サウンド';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'なまえ';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'ハッシュタグ';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => '相手を選択';
+
+  @override
+  String get videoEditorSocialStickerMentionNote => '投稿でメンションされ、通知が届きます。';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'ハッシュタグを入力';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote => '投稿のハッシュタグにも追加されます。';
+
+  @override
+  String get videoEditorSocialStickerLyricHint => '歌詞の1行（任意）';
+
+  @override
+  String get videoEditorSocialStickerLink => 'リンク';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'ウェブアドレス';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'タイトル（任意）';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => 'アドレスは投稿に追加されます。';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => 'まだウェブアドレスではありません。';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => '音符';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'レコード';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'カセット';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'イコライザー';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'プレーヤー';
+
+  @override
   String get videoEditorInfoStickerTime => '時刻';
 
   @override
@@ -11948,6 +12067,11 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '「#$tag」を追加';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag（動画内のステッカーから）';
   }
 
   @override
@@ -14199,9 +14323,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14222,11 +14343,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -14260,9 +14376,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -14325,4 +14438,37 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
 }

@@ -431,8 +431,19 @@ void main() {
           EditorEffectType.confetti,
           EditorEffectType.hearts,
           EditorEffectType.sparkles,
+          EditorEffectType.rain,
+          EditorEffectType.leaves,
+          EditorEffectType.blossoms,
+          EditorEffectType.bubbles,
+          EditorEffectType.bokeh,
+          EditorEffectType.notes,
+          EditorEffectType.stars,
+          EditorEffectType.fireflies,
+          EditorEffectType.embers,
+          EditorEffectType.money,
+          EditorEffectType.balloons,
         ].map((type) => shaderTileOf(type)!.values.last),
-        [0, 1, 2, 3],
+        [for (var style = 0; style < 15; style++) style],
       );
     });
 

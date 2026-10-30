@@ -3,6 +3,8 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
+import 'package:openvine/services/video_editor/draft_render_parameters_service.dart'
+    show DraftOverlayRestoreException;
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:upload_repository/upload_repository.dart'
@@ -28,6 +30,15 @@ void main() {
           AudioReuseNotPermittedException('b' * 64),
         ),
         PublishErrorKind.audioReuseNotPermitted,
+      );
+    });
+
+    test('maps overlays that cannot be rebuilt to their own kind', () {
+      expect(
+        VideoPublishService.classifyPublishErrorObject(
+          const DraftOverlayRestoreException('history unreadable'),
+        ),
+        PublishErrorKind.overlaysUnavailable,
       );
     });
 

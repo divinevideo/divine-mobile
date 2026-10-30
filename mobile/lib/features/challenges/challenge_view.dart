@@ -5,14 +5,29 @@ import 'package:challenge_protocol/challenge_protocol.dart' hide ChallengeView;
 import 'package:challenges_repository/challenges_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/features/challenges/challenge_deadline.dart';
+import 'package:openvine/features/challenges/challenge_detail_view.dart';
 import 'package:openvine/features/challenges/challenge_participation_cubit.dart';
 import 'package:openvine/features/challenges/challenge_playback.dart';
+import 'package:openvine/features/challenges/challenge_video_picker.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/list_owner_action_tile.dart';
 
 class ChallengeView extends StatefulWidget {
-  const ChallengeView({required this.onRecord, this.ownerName, super.key});
+  const ChallengeView({
+    required this.onRecord,
+    this.ownerName,
+    this.organizerName,
+    this.organizerAvatarUrl,
+    this.onOrganizerTap,
+    this.loadCandidatePreview,
+    super.key,
+  });
+  final Future<NostrEvent?> Function(String)? loadCandidatePreview;
+  final String? organizerName;
+  final String? organizerAvatarUrl;
+  final VoidCallback? onOrganizerTap;
   final String? ownerName;
   final Future<void> Function(BuildContext, String) onRecord;
   @override
@@ -66,6 +81,43 @@ class _ChallengeViewState extends State<ChallengeView>
     super.dispose();
   }
 
+  Future<void> _showEntrySources() async {
+    final cubit = context.read<ChallengeParticipationCubit>();
+    final l10n = context.l10n;
+    final source = await VineBottomSheet.show<_EntrySource>(
+      context: context,
+      scrollable: false,
+      showHeader: false,
+      children: [
+        ListOwnerActionTile(
+          identifier: 'challenge-record',
+          label: l10n.challengeRecord,
+          icon: DivineIconName.videoCamera,
+          action: _EntrySource.record,
+        ),
+        ListOwnerActionTile(
+          identifier: 'challenge-choose',
+          label: l10n.challengeChoose,
+          icon: DivineIconName.filmSlate,
+          action: _EntrySource.existing,
+        ),
+      ],
+    );
+    if (!mounted ||
+        source == null ||
+        cubit.state.busy ||
+        cubit.state.read?.view.state != 'open') {
+      return;
+    }
+    switch (source) {
+      case _EntrySource.record:
+        final id = await cubit.record();
+        if (mounted && id != null) await widget.onRecord(context, id);
+      case _EntrySource.existing:
+        await cubit.chooseVideo();
+    }
+  }
+
   @override
   Widget build(
     BuildContext context,
@@ -81,6 +133,103 @@ class _ChallengeViewState extends State<ChallengeView>
       final view = state.read?.view;
       final definition = view?.definition;
       final review = state.review;
+      if (review == null && state.picking) {
+        return ChallengeVideoPicker(
+          videos: state.candidates,
+          busy: state.busy,
+          hasMore: state.candidatesHaveMore,
+          onLoadMore: cubit.moreVideos,
+          error: state.status == null
+              ? null
+              : challengeStatusText(l10n, state.status!),
+          onCancel: cubit.cancelReview,
+          onContinue: cubit.selectVideo,
+          loadPreview: widget.loadCandidatePreview,
+          allowed: cubit.submissions.reads.isVisible,
+        );
+      }
+      if (review == null && !state.picking && definition != null) {
+        final detail = ChallengeDetailView(
+          state: state,
+          organizerName: widget.organizerName,
+          organizerAvatarUrl: widget.organizerAvatarUrl,
+          onOrganizerTap: widget.onOrganizerTap,
+          viewerPubkey: cubit.submissions.currentOwner(),
+          onEnter: _showEntrySources,
+          onRefresh: cubit.load,
+          onPlay: cubit.playEntry,
+          onWithdraw: (entry) => cubit.withdraw(jsonEncode(entry.toJson())),
+          allowed: cubit.submissions.reads.isVisible,
+          deliveryActions: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (state.status case final status?)
+                Text(
+                  challengeStatusText(l10n, status),
+                  key: const ValueKey('challenge-status'),
+                ),
+              for (final id in state.handoffs)
+                DivineButton(
+                  type: DivineButtonType.quiet,
+                  onPressed: state.busy ? null : () => cubit.recover(id),
+                  label: l10n.challengeRecover,
+                ),
+              for (final action in state.actions)
+                _ActionCard(action: action, busy: state.busy),
+            ],
+          ),
+        );
+        final video = state.playing;
+        return PopScope(
+          canPop: video == null,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop && video != null) cubit.stopPlaying();
+          },
+          child: Stack(
+            children: [
+              ExcludeFocus(
+                excluding: video != null,
+                child: Offstage(offstage: video != null, child: detail),
+              ),
+              if (video != null)
+                Positioned.fill(
+                  child: Scaffold(
+                    appBar: DiVineAppBar(
+                      title: definition.title,
+                      showBackButton: true,
+                      onBackPressed: cubit.stopPlaying,
+                    ),
+                    body: SafeArea(
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: Center(
+                              child: !_foreground || state.busy
+                                  ? const DivineCircularProgressIndicator()
+                                  : ChallengePlayback(
+                                      key: ValueKey((video.id, state.read)),
+                                      video: video,
+                                      allowed:
+                                          cubit.submissions.reads.isVisible,
+                                    ),
+                            ),
+                          ),
+                          DivineButton(
+                            label: l10n.commonRetry,
+                            type: DivineButtonType.quiet,
+                            onPressed: !_foreground || state.busy
+                                ? null
+                                : cubit.load,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      }
       return Scaffold(
         appBar: DiVineAppBar(
           showBackButton: Navigator.of(context).canPop(),
@@ -210,7 +359,7 @@ class _ChallengeViewState extends State<ChallengeView>
                   const SizedBox(height: 16),
                   DivineButton(
                     label: review.withdrawalEntry == null
-                        ? l10n.challengeAgree
+                        ? l10n.challengeEnterVideo
                         : l10n.challengeWithdrawConfirm,
                     onPressed:
                         !_foreground ||
@@ -231,151 +380,13 @@ class _ChallengeViewState extends State<ChallengeView>
                     onPressed: state.busy ? null : cubit.cancelReview,
                     label: l10n.commonCancel,
                   ),
-                ] else if (state.picking) ...[
-                  Text(
-                    l10n.challengeChoose,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  if (state.candidates.isEmpty) Text(l10n.challengeNoVideos),
-                  for (final video in state.candidates)
-                    ListTile(
-                      title: Text(
-                        video.title ?? video.content,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        video.id,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      onTap: state.busy
-                          ? null
-                          : () => cubit.selectVideo(video.id),
-                    ),
+                ] else ...[
+                  Text(l10n.challengeUnavailable),
                   DivineButton(
                     type: DivineButtonType.quiet,
-                    onPressed: state.busy ? null : cubit.cancelReview,
-                    label: l10n.commonCancel,
+                    onPressed: state.busy ? null : cubit.load,
+                    label: l10n.commonRetry,
                   ),
-                ] else ...[
-                  if (definition == null) ...[
-                    Text(l10n.challengeUnavailable),
-                    DivineButton(
-                      type: DivineButtonType.quiet,
-                      onPressed: state.busy ? null : cubit.load,
-                      label: l10n.commonRetry,
-                    ),
-                  ] else ...[
-                    Text(
-                      definition.title,
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(challengeLifecycleText(l10n, view!.state)),
-                    Text(
-                      _deadline(context, definition.end),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      l10n.challengeRules,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(definition.event.content),
-                    const SizedBox(height: 20),
-                    if (view.state == 'open') ...[
-                      DivineButton(
-                        label: l10n.challengeRecord,
-                        onPressed: state.busy
-                            ? null
-                            : () async {
-                                final id = await cubit.record();
-                                if (context.mounted && id != null) {
-                                  await widget.onRecord(context, id);
-                                }
-                              },
-                      ),
-                      const SizedBox(height: 12),
-                      DivineButton(
-                        label: l10n.challengeChoose,
-                        type: DivineButtonType.secondary,
-                        onPressed: state.busy ? null : cubit.chooseVideo,
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    Text(
-                      l10n.challengeEntries,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    if (view.entries.isEmpty) Text(l10n.challengeEmpty),
-                    if (state.playing case final video?)
-                      ChallengePlayback(
-                        key: ValueKey(video.id),
-                        video: video,
-                        allowed: cubit.submissions.reads.isVisible,
-                      ),
-                    for (final entry in view.entries)
-                      ListTile(
-                        onTap: state.busy
-                            ? null
-                            : () => cubit.playEntry(entry.event.id),
-                        leading: Tooltip(
-                          message: l10n.challengePlay,
-                          child: const DivineIcon(icon: DivineIconName.play),
-                        ),
-                        title: Text(
-                          entry.video.content.isEmpty
-                              ? l10n.challengeVideoRevision
-                              : entry.video.content,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              entry.video.id,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (entry.rulesChanged) Text(l10n.challengeChanged),
-                          ],
-                        ),
-                        trailing:
-                            entry.event.pubkey ==
-                                cubit.submissions.currentOwner()
-                            ? DivineButton(
-                                type: DivineButtonType.quiet,
-                                onPressed: state.busy
-                                    ? null
-                                    : () => cubit.withdraw(
-                                        jsonEncode(entry.event.toJson()),
-                                      ),
-                                label: l10n.challengeWithdraw,
-                              )
-                            : null,
-                      ),
-                    if (view.currentResult case final result?) ...[
-                      const SizedBox(height: 24),
-                      Text(
-                        l10n.challengeResults,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      for (final winner in result.winners)
-                        ListTile(
-                          onTap: !winner.available || state.busy
-                              ? null
-                              : () => cubit.playEntry(winner.entryId),
-                          title: Text(winner.label),
-                          subtitle: Text(
-                            winner.available
-                                ? winner.entry!.video.id
-                                : l10n.challengeWinnerUnavailable,
-                          ),
-                        ),
-                    ],
-                  ],
                   for (final id in state.handoffs)
                     DivineButton(
                       type: DivineButtonType.quiet,
@@ -488,11 +499,9 @@ String challengeStatusText(AppLocalizations l10n, SubmissionStatus status) =>
       _ => l10n.challengeFailed,
     };
 
-String _deadline(BuildContext context, int end) =>
-    context.l10n.challengeDeadline(
-      DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag())
-          .add_Hm()
-          .format(
-            DateTime.fromMillisecondsSinceEpoch(end * 1000, isUtc: true),
-          ),
-    );
+String _deadline(BuildContext context, int end) => challengeDeadlineText(
+  context.l10n,
+  DateTime.fromMillisecondsSinceEpoch(end * 1000, isUtc: true).toLocal(),
+);
+
+enum _EntrySource { record, existing }

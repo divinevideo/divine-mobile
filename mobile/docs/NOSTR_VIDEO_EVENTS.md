@@ -118,6 +118,111 @@ Publishing lives in `mobile/lib/services/video_event_publisher.dart` and
 `mobile/lib/services/video_metadata_update_service.dart`; parsing in
 `mobile/packages/models/lib/src/video_event.dart`.
 
+### Divine Sticker Tags
+
+Social stickers placed in the video editor add what they point to, plus where a
+viewer can tap them. All of these are Divine conventions.
+
+| Tag | Format | Description |
+|-----|--------|-------------|
+| `t` | `["t", "summer"]` | A hashtag sticker's hashtag, written with the post's own hashtags. |
+| `p` | `["p", "<pubkey>", "<relay>", "mention"]` | A mention sticker's profile, written like a caption mention. |
+| `r` | `["r", "https://example.com/page", "link"]` | The web page of a link sticker. The `link` marker is required: an unmarked `r` tag on a video event is read as one of the video's own media URLs. |
+| `sticker` | `["sticker", "<kind>", "<target>", "<cx> <cy> <w> <h>", "<degrees>", "<start ms>", "<end ms>", "<style>", "<label>"]` | Where a link, mention, hashtag or sound sticker stands on the video and how it looks, so a viewer can draw it again and tap it. |
+
+The `sticker` tag's fields:
+
+- `kind` is `link`, `mention`, `hashtag` or `sound`.
+- `target` is the full `http`/`https` address of a named host, the full hex
+  pubkey, or the hashtag. A reader strips one leading `#` from a hashtag and
+  lowercases it, as it does a pubkey. For `sound` it is the id the credited
+  sound's page opens it by: `bundled_<id>` for a sound from Divine's library,
+  or the event id of a sound published on Nostr. It is empty for a sound only
+  the video carries (an imported file, a provider sound, a video's original
+  sound), and the sticker then opens the video's own sound, the one its audio
+  reference names; such a sticker is only published when it credits that
+  sound. A reader takes any other sound target as empty.
+- The area gives the sticker's centre and its size before it is turned, as
+  fractions of the video frame's width (`cx`, `w`) and height (`cy`, `h`).
+- `degrees` is how far it is turned clockwise around its centre.
+- `start ms` and `end ms` are when it shows on the published video. Both are
+  optional: a missing start means from the beginning, a missing end means until
+  the video ends. Either may be an empty string when a later field follows.
+- `style` names the sticker's look (`light`, `dark`, `glass`, `brand`,
+  `highlight`, `neon`, `plain` or `outline`).
+- `label` is the text the sticker shows, without `@` or `#`: a link's title or
+  domain, a name, or a hashtag as typed; for a sound, its title, artist and line
+  of lyrics, one per line.
+
+A reader drops the whole tag when:
+
+- it has no `degrees` (fewer than five elements, counting the tag name), or
+  names another `kind`;
+- a link has another scheme or no host;
+- a pubkey is not 64 hex characters;
+- a hashtag is empty, longer than 100 characters, or contains whitespace, `#`,
+  `/` or `?`;
+- the area is not four finite numbers, a size is not above 0 and at most 4, or
+  no part of the turned sticker can reach the frame;
+- the angle is not a finite number;
+- a time is not a whole number of milliseconds of zero or more, or the end is
+  not after the start.
+
+A label longer than 300 characters is dropped and the button kept.
+
+The sticker is also part of the video's frames, so other clients still show
+it. Divine draws it again from `style` and `label` exactly over the one in the
+frames, sharp at the screen's resolution, and makes it the button; without
+both fields it only places the button. The copy draws only what covers: the
+text, and the pill's fill and border where they are solid. A see-through fill,
+a glow or a shadow is in the frames already and would come out twice as
+strong.
+
+Over a see-through look (`dark`, `glass`, `neon`, `plain`, `outline`) the
+frames show through the copy, so its text has to come out the same on the
+creator's and the viewer's phone. Divine draws sticker text in its bundled
+font, Bricolage Grotesque, and emoji in Noto Color Emoji, which it downloads
+from Google Fonts (`fonts.gstatic.com`, about 24 MB, kept on the device) the
+first time a sticker needs it. The link and note marks are drawn from vector
+paths, not emoji. A viewer's copy of every look waits until Noto Color
+Emoji has loaded when its text has an emoji, and is never drawn for text in a
+script the bundled font lacks; until then the sticker shows as it is in the
+frames, with its button. A solid background cannot correct different glyph
+advances when a copy is fitted to the captured box, so the same readiness and
+coverage checks apply to `light`, `brand` and `highlight` too.
+
+Emoji coverage is taken from the exact pinned font's cmap, not a Unicode
+emoji property. Newer emoji absent from that file keep their appearance in
+the frames and their button instead of being redrawn in a phone's fallback
+font.
+
+Some stickers are published without `style`, since a copy would not match the
+frames:
+
+- a sound sticker whose design moves with the video (record, cassette, player,
+  equalizer), as a copy could not keep time with the frames beneath;
+- a sticker drawn see-through, with a blend mode or through a mask, as a copy
+  would come back solid;
+- any look whose text has a character the bundled font lacks,
+  unless every such character is an emoji and the creator's app drew it in
+  Noto Color Emoji, as a viewer's phone could draw it differently;
+- a sticker with another layer over it at the same time, as a copy would hide
+  that layer.
+
+A sticker drawn fully transparent gets no tag. A sticker that moves across the
+video (keyframes, tracking or an animation) is never published with an area,
+which is why the editor offers none of those for these four sticker kinds.
+
+Before a link to a host outside `divine.video` and its subdomains opens, the
+app shows its whole domain and its address, cut after three lines, in a sheet.
+
+Publishing lives in `mobile/lib/services/video_publish/video_event_tags.dart`.
+The area is taken from the final render in
+`mobile/lib/services/video_editor/sticker_regions.dart`. Parsing is in
+`mobile/packages/models/lib/src/video_sticker_region.dart`, and the stickers
+drawn over the feed are in
+`mobile/lib/widgets/video_feed_item/video_sticker_tap_areas.dart`.
+
 ### Event Metadata
 
 | Tag | Format | Description | Required |

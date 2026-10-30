@@ -22,12 +22,20 @@ class OutgoingDmRetryConfig {
     this.initialDelay = const Duration(seconds: 2),
     this.maxDelay = const Duration(minutes: 5),
     this.backoffMultiplier = 2.0,
+    this.retriesOnceRanOut = 1,
   });
 
   final int maxRetries;
   final Duration initialDelay;
   final Duration maxDelay;
   final double backoffMultiplier;
+
+  /// Attempts a delete-for-everyone gets in a session once its retries ran
+  /// out, in this session or an earlier one
+  /// ([DmMessageDeletionRetryTarget.retriesRanOut]). Fewer than [maxRetries],
+  /// so one that is never confirmed costs a single attempt per launch rather
+  /// than a full set (#10012). Mirrors `DmReactionRetryConfig`.
+  final int retriesOnceRanOut;
 
   /// Minimum required gap between attempts for a row whose previous
   /// attempt count is [retryCount]. Clamped at [maxDelay].
@@ -40,6 +48,22 @@ class OutgoingDmRetryConfig {
     }
     return Duration(milliseconds: ms.round());
   }
+}
+
+/// What became of a held group member the sweep asked the repository to
+/// stop (#10012).
+enum _HeldMemberStop {
+  /// Stopped: its bubble reads "Not sent to everyone".
+  stopped,
+
+  /// Left as it was by the repository, or stopping it threw unexpectedly.
+  kept,
+
+  /// The repository is not ready: leave the row and end the arm.
+  notReady,
+
+  /// The row went missing or belongs to another account: leave it.
+  skipped,
 }
 
 /// Sweeps the durable `outgoing_dms` queue for rows whose recipient
@@ -71,7 +95,8 @@ class OutgoingDmRetryConfig {
 /// charged, and it waits for a relay to connect rather than the follow-up
 /// timer (#8516).
 ///
-/// **Scope:** three sweep arms run on each trigger:
+/// **Scope:** four sweep arms run on each trigger, then the
+/// delete-for-everyone pass ([_sweepMessageDeletions]):
 ///
 /// 1. `recipient: sent / self: failed` → [DmRepository.recoverSelfWrap]
 ///    (the canonical partial-delivery recovery from #4124).
@@ -91,7 +116,12 @@ class OutgoingDmRetryConfig {
 ///    A pending row that has burned the retry budget (`retry_count >=
 ///    maxRetries`) is terminalized to `failed` here, since
 ///    `getStillPendingForOwner` — unlike the failed arm's
-///    `getRetryableForOwner` — has no retry-count cap of its own.
+///    `getRetryableForOwner` — has no retry-count cap of its own. A group
+///    member held on an unreadable inbox is stopped instead, when the message
+///    is stored for the others ([DmRepository.stopHeldMemberDelivery]), so
+///    its bubble reads "Not sent to everyone" (#10012).
+/// 4. A held group member already `failed` with its budget spent, which the
+///    failed arm no longer selects, is stopped the same way.
 class OutgoingDmRetryService {
   OutgoingDmRetryService({
     required DmRepository dmRepository,
@@ -219,6 +249,12 @@ class OutgoingDmRetryService {
   /// pass. Session-scoped: entries are pruned each sweep as rows settle.
   final Map<String, int> _deletionAttempts = {};
   final Map<String, DateTime> _deletionLastAttempt = {};
+
+  /// Deletions whose retries have run out, in this session or an earlier one
+  /// ([DmMessageDeletionRetryTarget.retriesRanOut]). They get
+  /// [OutgoingDmRetryConfig.retriesOnceRanOut] for the rest of the session,
+  /// whatever status a Try again leaves them in (#10012).
+  final Set<String> _deletionRanOut = {};
 
   bool get isInitialized => _isInitialized;
 
@@ -511,6 +547,7 @@ class OutgoingDmRetryService {
       var blockedInterrupted = 0;
       var notSentInterrupted = 0;
       var exhaustedInterrupted = 0;
+      var stoppedHeld = 0;
       var skippedInterruptedTooYoung = 0;
       if (!abortedNotReady) {
         final pending = await _dao.getStillPendingForOwner(
@@ -533,8 +570,16 @@ class OutgoingDmRetryService {
           // maxRetries`; `getStillPendingForOwner` does not, so without this
           // an unconfirmable pending row would re-drive forever.
           if (row.retryCount >= _retryConfig.maxRetries) {
-            await _markInterruptedExhausted(row);
-            exhaustedInterrupted++;
+            final stop = await _markInterruptedExhausted(row);
+            if (stop == _HeldMemberStop.notReady) {
+              abortedNotReady = true;
+              break;
+            }
+            if (stop == _HeldMemberStop.stopped) {
+              stoppedHeld++;
+            } else if (stop == _HeldMemberStop.kept) {
+              exhaustedInterrupted++;
+            }
             continue;
           }
 
@@ -621,6 +666,12 @@ class OutgoingDmRetryService {
         }
       }
 
+      if (!abortedNotReady) {
+        final failedHeld = await _stopExhaustedHeldMembers();
+        stoppedHeld += failedHeld.stopped;
+        abortedNotReady = failedHeld.notReady;
+      }
+
       final deletions = await _sweepMessageDeletions();
 
       Log.info(
@@ -638,11 +689,13 @@ class OutgoingDmRetryService {
         'interrupted-blocked=$blockedInterrupted '
         'interrupted-not-sent=$notSentInterrupted '
         'interrupted-exhausted=$exhaustedInterrupted '
+        'held-stopped=$stoppedHeld '
         'skipped-backoff=$skippedBackoff '
         'skipped-interrupted-too-young=$skippedInterruptedTooYoung '
         'aborted-not-ready=$abortedNotReady '
         'deletions(sent=${deletions.sent} blocked=${deletions.blocked} '
         'unconfirmed=${deletions.unconfirmed} '
+        'ran-out=${deletions.ranOut} '
         'skipped-backoff=${deletions.skippedBackoff} '
         'skipped-exhausted=${deletions.skippedExhausted})',
         name: 'OutgoingDmRetryService',
@@ -662,7 +715,8 @@ class OutgoingDmRetryService {
             failedInterrupted > 0 ||
             skippedBackoff > 0 ||
             skippedInterruptedTooYoung > 0 ||
-            deletions.unconfirmed > 0 ||
+            // The attempt that ran out leaves nothing for this session.
+            deletions.unconfirmed > deletions.ranOut ||
             deletions.skippedBackoff > 0,
       );
     } on Object catch (e, stackTrace) {
@@ -733,37 +787,51 @@ class OutgoingDmRetryService {
   ///
   /// Attempt and backoff bookkeeping is in memory rather than on the row: a
   /// `direct_messages` row carries no retry columns, and the sweep only needs
-  /// to avoid hammering within a session — the pending status itself is what
-  /// survives a restart. `DmReactionRetryService` tracks its own deletions
-  /// the same way.
+  /// to avoid hammering within a session. Each session's budget is
+  /// [OutgoingDmRetryConfig.maxRetries]. What survives a restart is the
+  /// row's status: when the budget runs out the row is marked unconfirmed
+  /// ([DmRepository.markMessageDeletionUnconfirmed]), which shows the sender
+  /// a warning with Try again instead of a spinner, and every later session
+  /// gives it [OutgoingDmRetryConfig.retriesOnceRanOut], as an automatic
+  /// attempt that keeps the warning (#10012).
+  /// `DmReactionRetryService` tracks its own deletions the same way.
   Future<
     ({
       int sent,
       int blocked,
       int unconfirmed,
+      int ranOut,
       int skippedBackoff,
       int skippedExhausted,
     })
   >
   _sweepMessageDeletions() async {
     final targets = await _dmRepository.retryableMessageDeletions();
-    _deletionAttempts.removeWhere(
-      (id, _) => !targets.any((t) => t.rumorId == id),
-    );
-    _deletionLastAttempt.removeWhere(
-      (id, _) => !targets.any((t) => t.rumorId == id),
-    );
+    final liveIds = {for (final t in targets) t.rumorId};
+    _deletionAttempts.removeWhere((id, _) => !liveIds.contains(id));
+    _deletionLastAttempt.removeWhere((id, _) => !liveIds.contains(id));
+    _deletionRanOut.removeWhere((id) => !liveIds.contains(id));
 
     var sent = 0;
     var blocked = 0;
     var unconfirmed = 0;
+    var ranOut = 0;
     var skippedBackoff = 0;
     var skippedExhausted = 0;
 
     for (final target in targets) {
       final attempts = _deletionAttempts[target.rumorId] ?? 0;
-      if (attempts >= _retryConfig.maxRetries) {
+      if (target.retriesRanOut) _deletionRanOut.add(target.rumorId);
+      final allowance = _deletionRanOut.contains(target.rumorId)
+          ? _retryConfig.retriesOnceRanOut
+          : _retryConfig.maxRetries;
+      if (attempts >= allowance) {
         skippedExhausted++;
+        // Still pending with this session's budget spent, so nothing has
+        // recorded yet that its retries ran out: the mark after its last
+        // attempt threw, that attempt threw itself, or a Try again's own
+        // write-back did not land.
+        if (!target.retriesRanOut) await _markDeletionRanOut(target.rumorId);
         continue;
       }
       final lastAttempt = _deletionLastAttempt[target.rumorId];
@@ -780,6 +848,7 @@ class OutgoingDmRetryService {
       try {
         outcome = await _dmRepository.retryMessageDeletion(
           rumorId: target.rumorId,
+          automatic: true,
         );
       } on Object catch (e, stackTrace) {
         unconfirmed++;
@@ -807,6 +876,14 @@ class OutgoingDmRetryService {
           blocked++;
         case DmMessageDeletionOutcome.unconfirmed:
           unconfirmed++;
+          if (attempts + 1 >= allowance) {
+            _deletionRanOut.add(target.rumorId);
+            // An automatic attempt leaves one already unconfirmed as it is.
+            if (!target.retriesRanOut) {
+              await _markDeletionRanOut(target.rumorId);
+            }
+            ranOut++;
+          }
         case DmMessageDeletionOutcome.unavailable:
           // Nothing was attempted, so refund the budget this row just spent
           // rather than exhausting it on a state the sweep cannot influence.
@@ -818,9 +895,37 @@ class OutgoingDmRetryService {
       sent: sent,
       blocked: blocked,
       unconfirmed: unconfirmed,
+      ranOut: ranOut,
       skippedBackoff: skippedBackoff,
       skippedExhausted: skippedExhausted,
     );
+  }
+
+  /// This session will not attempt the deletion of [rumorId] again. Record
+  /// that, so its bubble shows a warning with Try again instead of a spinner.
+  ///
+  /// Never throws: a throw would end the pass before the deletions after it
+  /// were driven.
+  Future<void> _markDeletionRanOut(String rumorId) async {
+    try {
+      await _dmRepository.markMessageDeletionUnconfirmed(rumorId: rumorId);
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'could not mark deletion $rumorId unconfirmed: $e',
+        name: 'OutgoingDmRetryService',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      unawaited(
+        _crashReporting.recordError(
+          e,
+          stackTrace,
+          reason: OutgoingDmRetryServiceReportableSites
+              .markMessageDeletionUnconfirmed,
+        ),
+      );
+    }
   }
 
   /// Runs the injected connectivity probe, defaulting to online on any error
@@ -884,9 +989,22 @@ class OutgoingDmRetryService {
   /// recipient wraps untouched. Rows whose recipient wrap is still
   /// pending/failed terminalize both wraps.
   ///
+  /// A group member a fallback-pool relay holds a wrap of (#10012) is first
+  /// offered to [DmRepository.stopHeldMemberDelivery]: when the message is
+  /// stored for the members who have it, the member is stopped instead, and
+  /// the bubble reads "Not sent to everyone". A row the repository keeps is
+  /// terminalized as below, and so, after a report, is one whose stop threw
+  /// unexpectedly. One it is not ready for, or that went missing, is left as
+  /// it is.
+  ///
   /// Swallows DAO errors — a failed mark just means the row is
   /// re-evaluated next sweep and terminalized then.
-  Future<void> _markInterruptedExhausted(OutgoingDm row) async {
+  Future<_HeldMemberStop> _markInterruptedExhausted(OutgoingDm row) async {
+    if (row.recipientWrapStatus == OutgoingWrapStatus.pending &&
+        row.recipientWrapEventId != null) {
+      final stop = await _stopHeldMember(row);
+      if (stop != _HeldMemberStop.kept) return stop;
+    }
     if (row.recipientWrapStatus == OutgoingWrapStatus.sent) {
       try {
         await _dao.markSelfWrapStatus(
@@ -901,12 +1019,93 @@ class OutgoingDmRetryService {
           category: LogCategory.system,
         );
       }
-      return;
+      return _HeldMemberStop.kept;
     }
     await _terminalizeRow(
       row.id,
       error: 'Exhausted retries without recipient confirmation',
     );
+    return _HeldMemberStop.kept;
+  }
+
+  /// Stops the held group members already failed with their retry budget
+  /// spent, which the failed arm no longer re-drives: rows exhausted before
+  /// held members were stopped, or after a Resend whose retries ran out
+  /// (#10012). Returns how many were stopped, and whether the repository was
+  /// not ready, which ends the arm as it does the others.
+  Future<({int stopped, bool notReady})> _stopExhaustedHeldMembers() async {
+    final rows = await _dao.getExhaustedHeldForOwner(
+      ownerPubkey: _userPubkey,
+      maxRetries: _retryConfig.maxRetries,
+      environment: _environment,
+    );
+    var stopped = 0;
+    for (final row in rows) {
+      final stop = await _stopHeldMember(row);
+      if (stop == _HeldMemberStop.notReady) {
+        return (stopped: stopped, notReady: true);
+      }
+      if (stop == _HeldMemberStop.stopped) stopped++;
+    }
+    return (stopped: stopped, notReady: false);
+  }
+
+  /// [DmRepository.stopHeldMemberDelivery] for [row], with the error policy
+  /// of the other arms. Never throws. A 1:1 row is kept without asking: it
+  /// keeps "Failed to send". A [StateError] means the repository is not ready
+  /// and an [ArgumentError] that the row went missing or is not ours: both
+  /// are logged and left alone, unreported. Anything else is logged and
+  /// reported, and reads as kept, so the row gets the status it would have
+  /// had (#10012).
+  Future<_HeldMemberStop> _stopHeldMember(OutgoingDm row) async {
+    final rowId = row.id;
+    // The conversation of a 1:1 row is the pair of its owner and recipient.
+    final pair = [row.ownerPubkey, row.recipientPubkey];
+    if (row.conversationId == DmRepository.computeConversationId(pair)) {
+      return _HeldMemberStop.kept;
+    }
+    try {
+      return await _dmRepository.stopHeldMemberDelivery(
+            rumorId: rowId,
+            maxRetries: _retryConfig.maxRetries,
+          )
+          ? _HeldMemberStop.stopped
+          : _HeldMemberStop.kept;
+    } on Object catch (e, stackTrace) {
+      // StateError and ArgumentError are part of stopHeldMemberDelivery's
+      // documented contract, as for the recovery calls of the other arms.
+      if (e is StateError) {
+        Log.warning(
+          'repo not ready to stop held member $rowId; aborting: $e',
+          name: 'OutgoingDmRetryService',
+          category: LogCategory.system,
+        );
+        return _HeldMemberStop.notReady;
+      }
+      if (e is ArgumentError) {
+        Log.warning(
+          'skipping held member $rowId: $e',
+          name: 'OutgoingDmRetryService',
+          category: LogCategory.system,
+        );
+        return _HeldMemberStop.skipped;
+      }
+      Log.error(
+        'could not stop held member delivery $rowId: $e',
+        name: 'OutgoingDmRetryService',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      unawaited(
+        _crashReporting.recordError(
+          e,
+          stackTrace,
+          reason: OutgoingDmRetryServiceReportableSites.stopHeldMemberDelivery,
+        ),
+      );
+      return _HeldMemberStop.kept;
+    }
   }
 
   /// Offline pass: no publish can succeed, so instead of leaving the queue

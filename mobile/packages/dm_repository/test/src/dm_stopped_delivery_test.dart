@@ -1,6 +1,7 @@
 // ABOUTME: A group message that reached some members and not others keeps a
 // ABOUTME: record of the members whose delivery the sender stopped (#8180).
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
@@ -12,6 +13,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -424,6 +426,25 @@ void main() {
         await stopB(sent.rowForB);
       });
 
+      test('keeps a record after a delete for everyone ran out of retries '
+          '(#10012)', () async {
+        final sent = await sendReachingOnlyA();
+        deletionWrap = (rumor, recipient) async => recipient == _memberB
+            ? const NIP17SendResult.failure('no relay confirmed the wrap')
+            : await delivered(rumor, recipient);
+        await repository.deleteMessageForEveryone(sent.messageId);
+        await pumpEventQueue();
+        await repository.markMessageDeletionUnconfirmed(
+          rumorId: sent.messageId,
+        );
+        expect(
+          (await stored(sent.messageId))?.deletionPublishStatus,
+          equals(DirectMessagesDao.deletionUnconfirmed),
+        );
+
+        await stopB(sent.rowForB);
+      });
+
       test('keeps a record after a delete for everyone was refused', () async {
         final sent = await sendReachingOnlyA();
         deletionWrap = (rumor, recipient) async =>
@@ -538,6 +559,383 @@ void main() {
 
         expect(cancelled, isTrue);
         expect(await outgoingDao.getById(rowId), isNull);
+      });
+    });
+
+    group('stopHeldMemberDelivery (#10012)', () {
+      /// Members whose kind-10050 cannot be read: a wrap the fallback pool
+      /// confirms for them is held, and their row records it.
+      late Set<String> unreadable;
+      late Set<String> advertised;
+
+      setUp(() {
+        unreadable = {};
+        advertised = {};
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            tempRelays: any(named: 'tempRelays'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((invocation) async {
+          final filters = (invocation.positionalArguments.first as List)
+              .cast<nostr_filter.Filter>();
+          final authors = filters.first.authors ?? const <String>[];
+          return (
+            events: [
+              for (final author in authors.where(advertised.contains))
+                Event(
+                  author,
+                  EventKind.dmRelaysList,
+                  const [
+                    ['relay', 'wss://inbox.example'],
+                  ],
+                  '',
+                  createdAt: 1700000000,
+                ),
+            ],
+            timedOut: false,
+            noRelays: authors.any(unreadable.contains),
+          );
+        });
+      });
+
+      /// The retry budget the sweep gives a row.
+      const budget = 5;
+
+      /// The row of [recipient], pinned to be held on its unreadable inbox,
+      /// with its retry budget spent unless [spent] is false.
+      Future<OutgoingDm> heldRowFor(
+        String conversationId,
+        String recipient, {
+        bool spent = true,
+      }) async {
+        final row = await rowFor(conversationId, recipient);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.pending));
+        expect(
+          row?.recipientWrapEventId,
+          isNotNull,
+          reason: 'precondition: held on the wrap the pool accepted',
+        );
+        if (spent) {
+          for (var charged = row!.retryCount; charged < budget; charged++) {
+            await outgoingDao.incrementRetry(row.id);
+          }
+        }
+        return (await outgoingDao.getById(row!.id))!;
+      }
+
+      Future<bool> stop(String rowId) =>
+          repository.stopHeldMemberDelivery(rumorId: rowId, maxRetries: budget);
+
+      test(
+        'keeps a record of a held member when the message is stored',
+        () async {
+          unreadable.add(_memberB);
+          final sent = await sendToAAndB();
+          final held = await heldRowFor(sent.conversationId, _memberB);
+          expect(await stored(sent.messageId), isNotNull);
+
+          expect(
+            await stop(held.id),
+            isTrue,
+          );
+
+          final row = await outgoingDao.getById(held.id);
+          expect(
+            row?.recipientWrapStatus,
+            equals(OutgoingWrapStatus.cancelled),
+          );
+        },
+      );
+
+      test('keeps a record of a held member already failed with its retries '
+          'spent', () async {
+        unreadable.add(_memberB);
+        final sent = await sendToAAndB();
+        final held = await heldRowFor(sent.conversationId, _memberB);
+        // What the sweep did to such a member before held members were
+        // stopped, and still does to one it could not stop.
+        for (final mark in [
+          outgoingDao.markRecipientWrapStatus,
+          outgoingDao.markSelfWrapStatus,
+        ]) {
+          await mark(
+            id: held.id,
+            status: OutgoingWrapStatus.failed,
+            lastError: 'Exhausted retries without recipient confirmation',
+          );
+        }
+        expect(
+          (await outgoingDao.getExhaustedHeldForOwner(
+            ownerPubkey: _owner,
+            maxRetries: budget,
+          )).map((row) => row.id),
+          equals([held.id]),
+          reason: 'precondition: the sweep finds it',
+        );
+
+        expect(await stop(held.id), isTrue);
+
+        final row = await outgoingDao.getById(held.id);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.cancelled));
+      });
+
+      test('leaves a held member whose retries are not spent', () async {
+        unreadable.add(_memberB);
+        final sent = await sendToAAndB();
+        final held = await heldRowFor(sent.conversationId, _memberB);
+        // What a Resend does: a fresh budget.
+        await outgoingDao.resetRetryCount(held.id);
+
+        expect(await stop(held.id), isFalse);
+
+        final row = await outgoingDao.getById(held.id);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.pending));
+        expect(row?.retryCount, equals(0));
+      });
+
+      for (final pending in [false, true]) {
+        test(
+          'keeps Resend after the formerly unreadable inbox is found '
+          'but its publish ${pending ? 'is unconfirmed' : 'fails'}',
+          () async {
+            unreadable.add(_memberB);
+            final sent = await sendToAAndB();
+            final held = await heldRowFor(
+              sent.conversationId,
+              _memberB,
+              spent: false,
+            );
+            unreadable.remove(_memberB);
+            advertised.add(_memberB);
+            expect(
+              (await repository.resolveDmInboxRelaysDetailed(_memberB)).state,
+              DmInboxResolution.found,
+            );
+            messageWrap = (rumor, recipient) async => NIP17SendResult.failure(
+              'inbox relay did not confirm',
+              retryablePending: pending,
+            );
+
+            for (var attempt = held.retryCount; attempt < budget; attempt++) {
+              final result = await repository.recoverFullSend(rumorId: held.id);
+              expect(result.success, isFalse);
+            }
+            final exhausted = (await outgoingDao.getById(held.id))!;
+            expect(exhausted.retryCount, budget);
+            expect(exhausted.recipientWrapEventId, held.recipientWrapEventId);
+            expect(
+              exhausted.recipientWrapStatus,
+              pending ? OutgoingWrapStatus.pending : OutgoingWrapStatus.failed,
+            );
+
+            expect(await stop(held.id), isFalse);
+
+            expect(
+              (await outgoingDao.getById(held.id))?.recipientWrapStatus,
+              exhausted.recipientWrapStatus,
+            );
+          },
+        );
+      }
+
+      test('leaves a held member while a recovery of it is running', () async {
+        unreadable.add(_memberB);
+        final sent = await sendToAAndB();
+        final held = await heldRowFor(sent.conversationId, _memberB);
+        final lookupGate = Completer<void>();
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            tempRelays: any(named: 'tempRelays'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((invocation) async {
+          await lookupGate.future;
+          return (events: const <Event>[], timedOut: false, noRelays: true);
+        });
+        // The held retry asks the send policy before it settles anything.
+        when(
+          () => messageService.preSendRefusal(any()),
+        ).thenAnswer((_) async => null);
+        when(() => nostrClient.connectedRelayCount).thenReturn(1);
+        final recovery = repository.recoverFullSend(rumorId: held.id);
+        await pumpEventQueue();
+
+        expect(await stop(held.id), isFalse);
+
+        expect(
+          (await outgoingDao.getById(held.id))?.recipientWrapStatus,
+          equals(OutgoingWrapStatus.pending),
+        );
+        lookupGate.complete();
+        await recovery;
+      });
+
+      test('rechecks the retry budget after the inbox lookup', () async {
+        unreadable.add(_memberB);
+        final sent = await sendToAAndB();
+        final held = await heldRowFor(sent.conversationId, _memberB);
+        final lookupStarted = Completer<void>();
+        final lookupGate = Completer<void>();
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            tempRelays: any(named: 'tempRelays'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) async {
+          if (!lookupStarted.isCompleted) lookupStarted.complete();
+          await lookupGate.future;
+          return (events: const <Event>[], timedOut: false, noRelays: true);
+        });
+
+        final stopping = stop(held.id);
+        await lookupStarted.future;
+        await outgoingDao.resetRetryCount(held.id);
+        lookupGate.complete();
+
+        expect(await stopping, isFalse);
+        final row = (await outgoingDao.getById(held.id))!;
+        expect(row.retryCount, 0);
+        expect(row.recipientWrapStatus, OutgoingWrapStatus.pending);
+      });
+
+      test('leaves a held 1:1 message as it is', () async {
+        unreadable.add(_memberB);
+        final result = await repository.sendMessage(
+          recipientPubkey: _memberB,
+          content: 'see you at eight',
+        );
+        final conversationId = DmRepository.computeConversationId([
+          _owner,
+          _memberB,
+        ]);
+        final held = await heldRowFor(conversationId, _memberB);
+        expect(held.id, equals(result.queuedRumorId));
+
+        expect(
+          await stop(held.id),
+          isFalse,
+        );
+
+        final row = await outgoingDao.getById(held.id);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.pending));
+      });
+
+      test('leaves a held member of a message no member has', () async {
+        unreadable.addAll([_memberA, _memberB]);
+        final sent = await sendToAAndB();
+        final held = await heldRowFor(sent.conversationId, _memberB);
+        expect(
+          await stored(sent.messageId),
+          isNull,
+          reason: 'precondition: nobody has it, so nothing is stored',
+        );
+
+        expect(
+          await stop(held.id),
+          isFalse,
+        );
+
+        final row = await outgoingDao.getById(held.id);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.pending));
+      });
+
+      test('leaves a member who is not held', () async {
+        final sent = await sendReachingOnlyA();
+        expect(
+          (await outgoingDao.getById(sent.rowForB))?.recipientWrapEventId,
+          isNull,
+          reason: 'precondition: the relay refused B, so nothing is held',
+        );
+        // Spent, so only the held check can keep it.
+        for (var charged = 0; charged < budget; charged++) {
+          await outgoingDao.incrementRetry(sent.rowForB);
+        }
+        expect(
+          (await outgoingDao.getById(sent.rowForB))?.retryCount,
+          greaterThanOrEqualTo(budget),
+        );
+
+        expect(
+          await stop(sent.rowForB),
+          isFalse,
+        );
+
+        final row = await outgoingDao.getById(sent.rowForB);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.failed));
+      });
+
+      test('changes nothing on a member already stopped', () async {
+        unreadable.add(_memberB);
+        final sent = await sendToAAndB();
+        final held = await heldRowFor(sent.conversationId, _memberB);
+        await stopB(held.id);
+
+        expect(
+          await stop(held.id),
+          isFalse,
+        );
+
+        final row = await outgoingDao.getById(held.id);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.cancelled));
+      });
+
+      test('is false for a row that is gone', () async {
+        expect(
+          await stop(_hex(0xdead)),
+          isFalse,
+        );
+      });
+
+      test("refuses another account's row", () async {
+        final rowId = _hex(0xf1);
+        await outgoingDao.enqueue(
+          OutgoingDm(
+            id: rowId,
+            conversationId: DmRepository.computeConversationId([
+              _memberC,
+              _memberA,
+              _memberB,
+            ]),
+            recipientPubkey: _memberB,
+            content: 'not ours',
+            createdAt: 1700000000,
+            rumorEventJson: jsonEncode({'id': rowId, 'kind': 14}),
+            recipientWrapStatus: OutgoingWrapStatus.pending,
+            recipientWrapEventId: _hex(0xf2),
+            selfWrapStatus: OutgoingWrapStatus.pending,
+            queuedAt: DateTime.utc(2026, 8),
+            ownerPubkey: _memberC,
+          ),
+        );
+
+        await expectLater(
+          stop(rowId),
+          throwsArgumentError,
+        );
+        final row = await outgoingDao.getById(rowId);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.pending));
       });
     });
 

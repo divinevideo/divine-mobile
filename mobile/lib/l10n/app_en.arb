@@ -1346,6 +1346,40 @@
   "metadataBadgeNotDivine": "Not Divine",
   "metadataBadgeHumanMade": "Human-Made",
   "metadataSoundsLabel": "Sounds",
+  "metadataLinksLabel": "Links",
+  "@metadataLinksLabel": {
+    "description": "Label of the section in a video's info sheet that lists the web pages its link stickers point to."
+  },
+  "videoStickerLinkSemanticLabel": "Link sticker, opens {url}",
+  "@videoStickerLinkSemanticLabel": {
+    "description": "Screen reader label for the invisible button over a link sticker on a playing video; tapping it opens the web page.",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerMentionSemanticLabel": "Mention sticker, opens the profile",
+  "@videoStickerMentionSemanticLabel": {
+    "description": "Screen reader label for the invisible button over a mention sticker on a playing video; tapping it opens the mentioned profile."
+  },
+  "videoStickerHashtagSemanticLabel": "Hashtag sticker, opens #{hashtag}",
+  "@videoStickerHashtagSemanticLabel": {
+    "description": "Screen reader label for the invisible button over a hashtag sticker on a playing video; tapping it opens the hashtag's feed.",
+    "placeholders": {
+      "hashtag": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerSoundSemanticLabel": "Sound sticker, opens the sound",
+  "@videoStickerSoundSemanticLabel": {
+    "description": "Screen reader label for the invisible button over a sound sticker on a playing video; tapping it opens the page of the video's sound."
+  },
+  "videoStickerLinkSheetBody": "This link opens outside Divine. Check the address before you go.",
+  "@videoStickerLinkSheetBody": {
+    "description": "Note in the sheet a link sticker on a video opens, above the link's full address: the page opens outside the app."
+  },
   "metadataOriginalSound": "Original sound",
   "metadataVerificationLabel": "Verification",
   "metadataDeviceAttestation": "Device attestation",
@@ -4145,7 +4179,7 @@
   },
   "dmStatusNotSentToEveryone": "Not sent to everyone",
   "@dmStatusNotSentToEveryone": {
-    "description": "Caption under a sent group DM bubble that reached some members but not all, after the sender stopped trying to reach the rest (Stop trying, or a delete for everyone that has not gone through). Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it."
+    "description": "Caption under a sent group DM bubble that reached some members but not all, after delivery to the rest stopped: the sender chose Stop trying, a delete for everyone has not gone through, or the app gave up on a member whose inbox could not be read once its retries ran out. Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it."
   },
   "inboxConversationActionsSheetLabel": "Conversation actions",
   "@inboxConversationActionsSheetLabel": {
@@ -6249,6 +6283,50 @@
   "@videoEditorEffectSparkles": {
     "description": "Name of a video effect: small four-pointed glints twinkle over the picture."
   },
+  "videoEditorEffectRain": "Rain",
+  "@videoEditorEffectRain": {
+    "description": "Name of a video effect: rain streaks down at a slant over the picture."
+  },
+  "videoEditorEffectLeaves": "Leaves",
+  "@videoEditorEffectLeaves": {
+    "description": "Name of a video effect: autumn leaves in reds, oranges and yellows rock and turn over as they fall over the picture."
+  },
+  "videoEditorEffectBlossoms": "Blossoms",
+  "@videoEditorEffectBlossoms": {
+    "description": "Name of a video effect: pink cherry blossom petals flutter down over the picture on the wind."
+  },
+  "videoEditorEffectBubbles": "Bubbles",
+  "@videoEditorEffectBubbles": {
+    "description": "Name of a video effect: shimmering soap bubbles float up over the picture."
+  },
+  "videoEditorEffectBokeh": "Bokeh",
+  "@videoEditorEffectBokeh": {
+    "description": "Name of a video effect, after the photography term: soft round discs of out-of-focus light drift and glow over the picture. Use the photography term your language uses."
+  },
+  "videoEditorEffectMusicNotes": "Music notes",
+  "@videoEditorEffectMusicNotes": {
+    "description": "Name of a video effect: music notes (♪, ♫) rock as they rise over the picture. Keep it short — it sits under a small tile."
+  },
+  "videoEditorEffectStars": "Stars",
+  "@videoEditorEffectStars": {
+    "description": "Name of a video effect: five-pointed gold and silver stars spin as they fall over the picture."
+  },
+  "videoEditorEffectFireflies": "Fireflies",
+  "@videoEditorEffectFireflies": {
+    "description": "Name of a video effect: small yellow-green lights wander about over the picture, glowing up and fading, like fireflies at night."
+  },
+  "videoEditorEffectEmbers": "Embers",
+  "@videoEditorEffectEmbers": {
+    "description": "Name of a video effect: glowing orange sparks rise from below and die away, as over a campfire."
+  },
+  "videoEditorEffectMoney": "Money",
+  "@videoEditorEffectMoney": {
+    "description": "Name of a video effect: green banknotes tumble down over the picture, as in \"make it rain\"."
+  },
+  "videoEditorEffectBalloons": "Balloons",
+  "@videoEditorEffectBalloons": {
+    "description": "Name of a video effect: colourful party balloons on strings swing as they rise over the picture."
+  },
   "videoEditorEffectTiltShift": "Tilt-Shift",
   "@videoEditorEffectTiltShift": {
     "description": "Name of a video effect: the top and bottom of the picture are blurred, so the scene looks like a miniature model. Tilt-shift is the photography term for this look."
@@ -7985,6 +8063,90 @@
   "@videoEditorInfoStickersTitle": {
     "description": "Heading of the info stickers (time, date, weather and so on) in the video editor's sticker sheet."
   },
+  "videoEditorSocialStickersTitle": "Social",
+  "@videoEditorSocialStickersTitle": {
+    "description": "Heading above the row of social stickers (mention, hashtag, sound credit) in the video editor's sticker sheet."
+  },
+  "videoEditorSocialStickerMention": "Mention",
+  "@videoEditorSocialStickerMention": {
+    "description": "Name of the sticker that mentions a person in the video; the sheet title and timeline label for it."
+  },
+  "videoEditorSocialStickerHashtag": "Hashtag",
+  "@videoEditorSocialStickerHashtag": {
+    "description": "Name of the sticker that shows a hashtag in the video and adds it to the post's hashtags."
+  },
+  "videoEditorSocialStickerSoundCredit": "Sound",
+  "@videoEditorSocialStickerSoundCredit": {
+    "description": "Name of the sticker that credits the title and artist of the video's sound."
+  },
+  "videoEditorSocialStickerMentionSample": "yourname",
+  "@videoEditorSocialStickerMentionSample": {
+    "description": "Made-up handle shown after an @ on the sample mention sticker in the sticker sheet. Lowercase, one word."
+  },
+  "videoEditorSocialStickerHashtagSample": "hashtag",
+  "@videoEditorSocialStickerHashtagSample": {
+    "description": "Made-up hashtag shown after a # on the sample hashtag sticker in the sticker sheet. Lowercase, one word."
+  },
+  "videoEditorSocialStickerChoosePerson": "Choose someone",
+  "@videoEditorSocialStickerChoosePerson": {
+    "description": "Row in the mention sticker sheet that opens the people search to pick who the sticker mentions."
+  },
+  "videoEditorSocialStickerMentionNote": "They're mentioned in your post and get a notification.",
+  "@videoEditorSocialStickerMentionNote": {
+    "description": "Help line in the mention sticker sheet: placing the sticker mentions the person in the post, which notifies them."
+  },
+  "videoEditorSocialStickerHashtagHint": "Type a hashtag",
+  "@videoEditorSocialStickerHashtagHint": {
+    "description": "Label of the field where the creator types the hashtag a hashtag sticker shows."
+  },
+  "videoEditorSocialStickerHashtagNote": "Also added to your post's hashtags.",
+  "@videoEditorSocialStickerHashtagNote": {
+    "description": "Help line in the hashtag sticker sheet: the sticker's hashtag also becomes one of the post's hashtags."
+  },
+  "videoEditorSocialStickerLyricHint": "Line of lyrics (optional)",
+  "@videoEditorSocialStickerLyricHint": {
+    "description": "Label of the optional field for a line of song lyrics shown under a sound credit sticker."
+  },
+  "videoEditorSocialStickerLink": "Link",
+  "@videoEditorSocialStickerLink": {
+    "description": "Name of the sticker that shows a link to a web page in the video and adds its address to the post."
+  },
+  "videoEditorSocialStickerLinkUrlHint": "Web address",
+  "@videoEditorSocialStickerLinkUrlHint": {
+    "description": "Label of the field where the creator types the web address a link sticker points to."
+  },
+  "videoEditorSocialStickerLinkTitleHint": "Title (optional)",
+  "@videoEditorSocialStickerLinkTitleHint": {
+    "description": "Label of the optional field for a short title a link sticker shows instead of the domain."
+  },
+  "videoEditorSocialStickerLinkNote": "The address is added to your post.",
+  "@videoEditorSocialStickerLinkNote": {
+    "description": "Help line in the link sticker sheet: the address also goes into the published post."
+  },
+  "videoEditorSocialStickerLinkInvalid": "That's not a web address yet.",
+  "@videoEditorSocialStickerLinkInvalid": {
+    "description": "Warning in the link sticker sheet while the typed text is not a usable web address."
+  },
+  "videoEditorSocialStickerSoundNote": "Note",
+  "@videoEditorSocialStickerSoundNote": {
+    "description": "Name of the sound credit design with a music note in front of the title and artist."
+  },
+  "videoEditorSocialStickerSoundVinyl": "Record",
+  "@videoEditorSocialStickerSoundVinyl": {
+    "description": "Name of the sound credit design with a vinyl record in front of the title and artist."
+  },
+  "videoEditorSocialStickerSoundCassette": "Cassette",
+  "@videoEditorSocialStickerSoundCassette": {
+    "description": "Name of the sound credit design with a cassette tape in front of the title and artist."
+  },
+  "videoEditorSocialStickerSoundEqualizer": "Equalizer",
+  "@videoEditorSocialStickerSoundEqualizer": {
+    "description": "Name of the sound credit design with equalizer bars in front of the title and artist."
+  },
+  "videoEditorSocialStickerSoundPlayer": "Player",
+  "@videoEditorSocialStickerSoundPlayer": {
+    "description": "Name of the sound credit design that looks like a music player with a progress bar and buttons."
+  },
   "videoEditorInfoStickerTime": "Time",
   "@videoEditorInfoStickerTime": {
     "description": "Name of the info sticker that shows the time a clip was recorded."
@@ -9273,6 +9435,15 @@
   },
   "videoMetadataTagsPickerAddTag": "Add \"#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
+  "videoMetadataTagsPickerStickerTag": "{tag}, from a sticker in your video",
+  "@videoMetadataTagsPickerStickerTag": {
+    "description": "Screen reader label of a hashtag in the tags picker that comes from a hashtag sticker in the video and can only be removed with the sticker. {tag} is the hashtag without its #.",
     "placeholders": {
       "tag": {
         "type": "String"
@@ -11818,10 +11989,6 @@
   "@challengeReview": {
     "description": "Native challenge participation test-build flow."
   },
-  "challengeAgree": "Agree and submit",
-  "@challengeAgree": {
-    "description": "Native challenge participation test-build flow."
-  },
   "challengeWithdraw": "Withdraw entry",
   "@challengeWithdraw": {
     "description": "Native challenge participation test-build flow."
@@ -11849,11 +12016,6 @@
   "challengeRules": "Current rules",
   "@challengeRules": {
     "description": "Native challenge participation test-build flow."
-  },
-  "challengeDeadline": "Deadline (UTC): {deadline}",
-  "@challengeDeadline": {
-    "description": "Challenge deadline, explicitly in UTC; deadline is formatted in the app locale.",
-    "placeholders": {"deadline": {"type": "String"}}
   },
   "challengeOwner": "Signing account",
   "@challengeOwner": {
@@ -11897,10 +12059,6 @@
   },
   "challengeEntries": "Entries",
   "@challengeEntries": {
-    "description": "Native challenge participation test-build flow."
-  },
-  "challengeResults": "Results",
-  "@challengeResults": {
     "description": "Native challenge participation test-build flow."
   },
   "challengeWinnerUnavailable": "Selected entry unavailable",
@@ -11974,5 +12132,17 @@
   "challengeDetails": "Technical details",
   "@challengeDetails": {
     "description": "Challenge entry review challengeDetails"
-  }
+  },
+  "challengeLocalDeadline": "Deadline: {deadline} ({timeZone})",
+  "@challengeLocalDeadline": {"description": "Challenge deadline in the viewer display timezone, including its actual zone label.", "placeholders": {"deadline": {"type": "String"}, "timeZone": {"type": "String"}}},
+  "challengeEnter": "Enter challenge",
+  "challengeEnterVideo": "Enter this video",
+  "challengeOrganizer": "Organizer",
+  "challengeAllRules": "Show all rules",
+  "challengeWinners": "Winners",
+  "challengeAwaitingResults": "Awaiting results",
+  "challengeOrganizerTimezone": "Organizer timezone: {timeZone}",
+  "@challengeOrganizerTimezone": {"placeholders": {"timeZone": {"type": "String"}}},
+  "challengeOrganizerTime": "Organizer time: {deadline} ({timeZone})",
+  "@challengeOrganizerTime": {"placeholders": {"deadline": {"type": "String"}, "timeZone": {"type": "String"}}}
 }

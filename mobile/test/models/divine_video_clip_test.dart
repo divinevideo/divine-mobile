@@ -1051,6 +1051,29 @@ void main() {
       expect(restored.recordingSha256, 'abc123');
     });
 
+    test('round-trips the tappable stickers of a final render', () {
+      const region = model.VideoStickerRegion(
+        kind: model.VideoStickerKind.link,
+        target: 'https://divine.video/',
+        centerX: 0.5,
+        centerY: 0.25,
+        width: 0.4,
+        height: 0.05,
+        end: Duration(seconds: 2),
+      );
+      final rendered = clip(
+        '/videos/clip.mp4',
+      ).copyWith(stickerRegions: const [region]);
+
+      final restored = DivineVideoClip.fromJson(rendered.toJson(), '/videos');
+
+      expect(restored.stickerRegions, equals([region]));
+      expect(
+        clip('/videos/clip.mp4').toJson(),
+        isNot(contains('stickerRegions')),
+      );
+    });
+
     test('signs an unedited clip against its own file', () {
       expect(clip('/videos/clip.mp4').signingSources, const [
         C2paEditSource(path: '/videos/clip.mp4'),

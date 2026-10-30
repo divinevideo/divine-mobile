@@ -1879,6 +1879,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get metadataSoundsLabel => '声音';
 
   @override
+  String get metadataLinksLabel => '链接';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return '链接贴纸，打开 $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel => '提及贴纸，打开个人主页';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return '话题标签贴纸，打开 #$hashtag';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => '声音贴纸，打开声音';
+
+  @override
+  String get videoStickerLinkSheetBody => '此链接会在 Divine 之外打开。继续之前请先核对网址。';
+
+  @override
   String get metadataOriginalSound => '原声';
 
   @override
@@ -8392,6 +8414,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectSparkles => '闪光';
 
   @override
+  String get videoEditorEffectRain => '雨滴';
+
+  @override
+  String get videoEditorEffectLeaves => '落叶';
+
+  @override
+  String get videoEditorEffectBlossoms => '樱花';
+
+  @override
+  String get videoEditorEffectBubbles => '泡泡';
+
+  @override
+  String get videoEditorEffectBokeh => '光斑';
+
+  @override
+  String get videoEditorEffectMusicNotes => '音符';
+
+  @override
+  String get videoEditorEffectStars => '星星';
+
+  @override
+  String get videoEditorEffectFireflies => '萤火虫';
+
+  @override
+  String get videoEditorEffectEmbers => '火花';
+
+  @override
+  String get videoEditorEffectMoney => '钞票';
+
+  @override
+  String get videoEditorEffectBalloons => '气球';
+
+  @override
   String get videoEditorEffectTiltShift => '移轴';
 
   @override
@@ -10138,6 +10193,69 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorInfoStickersTitle => '信息';
 
   @override
+  String get videoEditorSocialStickersTitle => '社交';
+
+  @override
+  String get videoEditorSocialStickerMention => '提及';
+
+  @override
+  String get videoEditorSocialStickerHashtag => '话题标签';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => '声音';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => '你的名字';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => '话题';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => '选择一个人';
+
+  @override
+  String get videoEditorSocialStickerMentionNote => '对方会在你的帖子中被提及，并收到通知。';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => '输入话题标签';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote => '也会加到你帖子的话题标签里。';
+
+  @override
+  String get videoEditorSocialStickerLyricHint => '一句歌词（可选）';
+
+  @override
+  String get videoEditorSocialStickerLink => '链接';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => '网址';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => '标题（可选）';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => '网址会添加到你的帖子里。';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => '这还不是一个网址。';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => '音符';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => '黑胶唱片';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => '磁带';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => '均衡器';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => '播放器';
+
+  @override
   String get videoEditorInfoStickerTime => '时间';
 
   @override
@@ -11812,6 +11930,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '添加“#$tag”';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag，来自视频中的贴纸';
   }
 
   @override
@@ -14027,9 +14150,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14050,11 +14170,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -14088,9 +14203,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -14153,4 +14265,37 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
 }

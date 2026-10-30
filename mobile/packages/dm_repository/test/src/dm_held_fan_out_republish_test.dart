@@ -4,6 +4,7 @@
 // ABOUTME: inbox until it reads absent (settle) or is found (wrap again); the
 // ABOUTME: sender's copy waits for delivery.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
@@ -11,6 +12,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
@@ -76,6 +78,58 @@ class _RecordFailingDirectMessagesDao extends DirectMessagesDao {
     required Map<String, String> wraps,
     String? ownerPubkey,
   }) async => throw StateError('database is locked');
+}
+
+/// The real message store, observed: counts the moves of a retraction back to
+/// pending and the warnings written back, and runs [nextStep] once at the
+/// next point a retry reads the row or moves it back to pending.
+class _ObservedDirectMessagesDao extends DirectMessagesDao {
+  _ObservedDirectMessagesDao(super.attachedDatabase);
+
+  Future<void> Function()? nextStep;
+  int movesToPending = 0;
+  int warningsWritten = 0;
+
+  Future<void> _step() async {
+    final step = nextStep;
+    nextStep = null;
+    await step?.call();
+  }
+
+  @override
+  Future<DirectMessageRow?> getMessageById(
+    String id, {
+    String? ownerPubkey,
+  }) async {
+    final row = await super.getMessageById(id, ownerPubkey: ownerPubkey);
+    await _step();
+    return row;
+  }
+
+  @override
+  Future<bool> markUnconfirmedMessageDeletionPending(
+    String rumorId, {
+    String? ownerPubkey,
+  }) async {
+    await _step();
+    movesToPending++;
+    return super.markUnconfirmedMessageDeletionPending(
+      rumorId,
+      ownerPubkey: ownerPubkey,
+    );
+  }
+
+  @override
+  Future<bool> markMessageDeletionUnconfirmed(
+    String rumorId, {
+    String? ownerPubkey,
+  }) {
+    warningsWritten++;
+    return super.markMessageDeletionUnconfirmed(
+      rumorId,
+      ownerPubkey: ownerPubkey,
+    );
+  }
 }
 
 // Real curve keys: the real message service encrypts every wrap, so each
@@ -1256,6 +1310,392 @@ void main() {
             equals([_advertisedInbox]),
           );
           expect(wrapsTo(owner), hasLength(1));
+        });
+      });
+
+      group('once its automatic retries ran out', () {
+        Future<DmMessage> bubble() async {
+          final row = await messageRow();
+          final messages = await repository
+              .watchMessages(row.conversationId)
+              .first;
+          return messages.singleWhere((m) => m.id == _retractedMessageId);
+        }
+
+        Future<DmMessageDeletionRetryTarget> worklistEntry() async =>
+            (await repository.retryableMessageDeletions()).singleWhere(
+              (t) => t.rumorId == _retractedMessageId,
+            );
+
+        test('shows the warning and stays on the worklist for a later '
+            'launch', () async {
+          await heldRetraction();
+          expect(
+            (await bubble()).retractionStatus,
+            DmRetractionStatus.pending,
+          );
+          expect((await worklistEntry()).retriesRanOut, isFalse);
+
+          await repository.markMessageDeletionUnconfirmed(
+            rumorId: _retractedMessageId,
+          );
+
+          expect((await bubble()).retractionStatus, DmRetractionStatus.failed);
+          expect((await worklistEntry()).retriesRanOut, isTrue);
+        });
+
+        test('Try again sends a held member nothing more and keeps the held '
+            'wraps', () async {
+          await heldRetraction();
+          final heldBefore = (await messageRow()).heldDeletionWraps;
+          await repository.markMessageDeletionUnconfirmed(
+            rumorId: _retractedMessageId,
+          );
+
+          expect(await retryRetraction(), DmMessageDeletionOutcome.unconfirmed);
+
+          expect((await messageRow()).heldDeletionWraps, equals(heldBefore));
+          expect(wrapsTo(peerB), hasLength(1));
+          expect(wrapsTo(owner), isEmpty);
+        });
+
+        test('a Try again that nothing confirms reads failed again as soon '
+            'as it returns', () async {
+          await heldRetraction();
+          await repository.markMessageDeletionUnconfirmed(
+            rumorId: _retractedMessageId,
+          );
+
+          expect(await retryRetraction(), DmMessageDeletionOutcome.unconfirmed);
+
+          expect(
+            (await messageRow()).deletionPublishStatus,
+            DirectMessagesDao.deletionUnconfirmed,
+          );
+          expect((await bubble()).retractionStatus, DmRetractionStatus.failed);
+        });
+
+        test('a Try again reads pending while it runs, then failed, with no '
+            'sweep in between', () async {
+          await heldRetraction();
+          await repository.markMessageDeletionUnconfirmed(
+            rumorId: _retractedMessageId,
+          );
+          final seen = <DmRetractionStatus>[];
+          final subscription = repository
+              .watchMessages((await messageRow()).conversationId)
+              .listen((messages) {
+                final status = messages
+                    .singleWhere((m) => m.id == _retractedMessageId)
+                    .retractionStatus;
+                if (seen.isEmpty || seen.last != status) seen.add(status);
+              });
+          addTearDown(subscription.cancel);
+          await pumpEventQueue();
+          expect(seen, [DmRetractionStatus.failed], reason: 'precondition');
+
+          await retryRetraction();
+          await pumpEventQueue();
+
+          expect(seen, [
+            DmRetractionStatus.failed,
+            DmRetractionStatus.pending,
+            DmRetractionStatus.failed,
+          ]);
+        });
+
+        test('Try again records a member it reaches, so the next retry sends '
+            'them nothing again', () async {
+          await heldRetraction(
+            participants: [owner, peerB, peerC],
+            heldFor: [peerB, peerC],
+          );
+          await repository.markMessageDeletionUnconfirmed(
+            rumorId: _retractedMessageId,
+          );
+          inboxes[peerB] = _Inbox.found;
+
+          expect(await retryRetraction(), DmMessageDeletionOutcome.unconfirmed);
+          final delivery = wrapsTo(peerB).last;
+          expect(heldWraps((await messageRow()).heldDeletionWraps), {
+            peerB: deliveredEntry(delivery.id),
+            peerC: heldEntry(wrapsTo(peerC).single.id),
+          });
+
+          expect(await retryRetraction(), DmMessageDeletionOutcome.unconfirmed);
+
+          expect(
+            wrapsTo(peerB),
+            hasLength(2),
+            reason: 'the pool wrap, then one wrap to the inbox it found',
+          );
+        });
+
+        group('an automatic retry', () {
+          Future<DmMessageDeletionOutcome> automaticRetry() =>
+              repository.retryMessageDeletion(
+                rumorId: _retractedMessageId,
+                automatic: true,
+              );
+
+          /// The retraction status each change of the thread shows, from now;
+          /// null once the message has left the thread.
+          Future<List<DmRetractionStatus?>> watchStatuses() async {
+            final seen = <DmRetractionStatus?>[];
+            final subscription = repository
+                .watchMessages((await messageRow()).conversationId)
+                .listen((messages) {
+                  final shown = messages.where(
+                    (m) => m.id == _retractedMessageId,
+                  );
+                  final status = shown.isEmpty
+                      ? null
+                      : shown.single.retractionStatus;
+                  if (seen.isEmpty || seen.last != status) seen.add(status);
+                });
+            addTearDown(subscription.cancel);
+            await pumpEventQueue();
+            return seen;
+          }
+
+          /// Holds every inbox lookup until [gate] completes.
+          void holdLookups(Completer<void> gate) {
+            when(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                sendAfterAuth: any(named: 'sendAfterAuth'),
+                useCache: any(named: 'useCache'),
+                useQueryPool: any(named: 'useQueryPool'),
+                timeout: any(named: 'timeout'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                acceptRelayClosedWhenOthersAnswered: any(
+                  named: 'acceptRelayClosedWhenOthersAnswered',
+                ),
+              ),
+            ).thenAnswer((invocation) async {
+              await gate.future;
+              return answerLookup(
+                (invocation.positionalArguments.first as List)
+                    .cast<nostr_filter.Filter>(),
+              );
+            });
+          }
+
+          /// A retraction whose retries ran out, on a store this test observes.
+          Future<_ObservedDirectMessagesDao> observedRanOutRetraction() async {
+            final observed = _ObservedDirectMessagesDao(db);
+            buildStack(messagesDao: observed);
+            await heldRetraction();
+            await repository.markMessageDeletionUnconfirmed(
+              rumorId: _retractedMessageId,
+            );
+            observed
+              ..movesToPending = 0
+              ..warningsWritten = 0;
+            return observed;
+          }
+
+          test('keeps the warning for the whole attempt', () async {
+            await heldRetraction();
+            await repository.markMessageDeletionUnconfirmed(
+              rumorId: _retractedMessageId,
+            );
+            final seen = await watchStatuses();
+
+            expect(
+              await automaticRetry(),
+              DmMessageDeletionOutcome.unconfirmed,
+            );
+            await pumpEventQueue();
+
+            expect(seen, [DmRetractionStatus.failed]);
+            expect(
+              (await messageRow()).deletionPublishStatus,
+              DirectMessagesDao.deletionUnconfirmed,
+            );
+          });
+
+          test('records a member it reaches, so the next one sends them '
+              'nothing again', () async {
+            await heldRetraction(
+              participants: [owner, peerB, peerC],
+              heldFor: [peerB, peerC],
+            );
+            await repository.markMessageDeletionUnconfirmed(
+              rumorId: _retractedMessageId,
+            );
+            inboxes[peerB] = _Inbox.found;
+
+            expect(
+              await automaticRetry(),
+              DmMessageDeletionOutcome.unconfirmed,
+            );
+            expect(heldWraps((await messageRow()).heldDeletionWraps), {
+              peerB: deliveredEntry(wrapsTo(peerB).last.id),
+              peerC: heldEntry(wrapsTo(peerC).single.id),
+            });
+            expect(
+              await automaticRetry(),
+              DmMessageDeletionOutcome.unconfirmed,
+            );
+
+            expect(wrapsTo(peerB), hasLength(2));
+            expect(
+              (await messageRow()).deletionPublishStatus,
+              DirectMessagesDao.deletionUnconfirmed,
+            );
+          });
+
+          test('settles a retraction it delivers', () async {
+            await heldRetraction();
+            await repository.markMessageDeletionUnconfirmed(
+              rumorId: _retractedMessageId,
+            );
+            inboxes[peerB] = _Inbox.absent;
+
+            expect(await automaticRetry(), DmMessageDeletionOutcome.sent);
+
+            expect((await messageRow()).deletionPublishStatus, 'deletion_sent');
+          });
+
+          test(
+            'a Try again that joins it shows progress, then the warning',
+            () async {
+              await heldRetraction();
+              await repository.markMessageDeletionUnconfirmed(
+                rumorId: _retractedMessageId,
+              );
+              final seen = await watchStatuses();
+              final lookupGate = Completer<void>();
+              holdLookups(lookupGate);
+              final automatic = automaticRetry();
+              await pumpEventQueue();
+
+              final tryAgain = retryRetraction();
+              await pumpEventQueue();
+              expect(
+                (await messageRow()).deletionPublishStatus,
+                DirectMessagesDao.deletionPending,
+                reason: 'the spinner shows while the running attempt finishes',
+              );
+              lookupGate.complete();
+
+              expect(await tryAgain, DmMessageDeletionOutcome.unconfirmed);
+              expect(await automatic, DmMessageDeletionOutcome.unconfirmed);
+              await pumpEventQueue();
+              expect(seen, [
+                DmRetractionStatus.failed,
+                DmRetractionStatus.pending,
+                DmRetractionStatus.failed,
+              ]);
+              expect(wrapsTo(peerB), hasLength(1));
+            },
+          );
+
+          for (final settle in [
+            (
+              as: DmMessageDeletionOutcome.sent,
+              status: 'deletion_sent',
+              arrange: () => inboxes[peerB] = _Inbox.absent,
+            ),
+            (
+              as: DmMessageDeletionOutcome.blocked,
+              status: DirectMessagesDao.deletionBlocked,
+              arrange: () {
+                inboxes[peerB] = _Inbox.absent;
+                policyDecision = DmSendPolicyDecision.terminallyBlockedDiscard;
+              },
+            ),
+          ]) {
+            test('a Try again that joins it after it settled as '
+                '${settle.as.name} leaves it settled', () async {
+              final observed = await observedRanOutRetraction();
+              final seen = await watchStatuses();
+              final lookupGate = Completer<void>();
+              holdLookups(lookupGate);
+              final automatic = automaticRetry();
+              await pumpEventQueue();
+              // The running attempt settles just before the Try again moves
+              // the row back to pending.
+              observed.nextStep = () async {
+                settle.arrange();
+                lookupGate.complete();
+                expect(await automatic, settle.as, reason: 'precondition');
+              };
+
+              expect(await retryRetraction(), settle.as);
+              await pumpEventQueue();
+
+              expect(
+                (await messageRow()).deletionPublishStatus,
+                settle.status,
+              );
+              expect(seen, isNot(contains(DmRetractionStatus.pending)));
+            });
+          }
+
+          test('a Try again that joins it shows the warning again when it '
+              'had nothing to send', () async {
+            final observed = await observedRanOutRetraction();
+            final conversationId = (await messageRow()).conversationId;
+            final readGate = Completer<void>();
+            // The running attempt waits after its read of the row.
+            observed.nextStep = () => readGate.future;
+            final automatic = automaticRetry();
+            await pumpEventQueue();
+            final tryAgain = retryRetraction();
+            await pumpEventQueue();
+            expect(
+              (await messageRow()).deletionPublishStatus,
+              DirectMessagesDao.deletionPending,
+              reason: 'precondition: the spinner shows',
+            );
+            // Nobody is left to send it to.
+            await ConversationsDao(
+              db,
+            ).deleteConversation(conversationId, ownerPubkey: owner);
+            readGate.complete();
+
+            expect(await automatic, DmMessageDeletionOutcome.unavailable);
+            expect(await tryAgain, DmMessageDeletionOutcome.unavailable);
+
+            expect(
+              (await messageRow()).deletionPublishStatus,
+              DirectMessagesDao.deletionUnconfirmed,
+            );
+          });
+
+          test('joins a running Try again without touching the status '
+              'itself', () async {
+            final observed = await observedRanOutRetraction();
+            final seen = await watchStatuses();
+            final lookupGate = Completer<void>();
+            holdLookups(lookupGate);
+            final tryAgain = retryRetraction();
+            await pumpEventQueue();
+            final automatic = automaticRetry();
+            await pumpEventQueue();
+            lookupGate.complete();
+
+            expect(await automatic, DmMessageDeletionOutcome.unconfirmed);
+            expect(await tryAgain, DmMessageDeletionOutcome.unconfirmed);
+            await pumpEventQueue();
+
+            expect(observed.movesToPending, 1, reason: 'the Try again only');
+            expect(observed.warningsWritten, 1, reason: 'the Try again only');
+            expect(
+              (await messageRow()).deletionPublishStatus,
+              DirectMessagesDao.deletionUnconfirmed,
+            );
+            expect(seen, [
+              DmRetractionStatus.failed,
+              DmRetractionStatus.pending,
+              DmRetractionStatus.failed,
+            ]);
+          });
         });
       });
 

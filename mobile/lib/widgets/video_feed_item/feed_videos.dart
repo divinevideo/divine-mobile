@@ -56,6 +56,7 @@ import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:openvine/widgets/video_feed_item/video_interactions_bloc_key.dart';
 import 'package:openvine/widgets/video_feed_item/video_interactions_restriction_listener.dart';
 import 'package:openvine/widgets/video_feed_item/video_loading_placeholder.dart';
+import 'package:openvine/widgets/video_feed_item/video_sticker_tap_areas.dart';
 
 import 'package:uuid/uuid.dart';
 
@@ -607,6 +608,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
                   onSkipToNextVideo: () => _skipPooledVideoAt(index),
                   onAutomaticSkipToNextVideo: () =>
                       unawaited(_animateToPage(index + 1)),
+                  shouldPortraitExpand: widget.shouldPortraitExpand,
                 ),
               ),
             ),
@@ -629,12 +631,17 @@ class _Overlay extends ConsumerStatefulWidget {
     required this.onContentWarningRevealed,
     required this.onSkipToNextVideo,
     required this.onAutomaticSkipToNextVideo,
+    required this.shouldPortraitExpand,
     this.onSuppressAutoAdvance,
     this.onResumeAutoAdvance,
   });
 
   final String? contextTitle;
   final DivineVideoPlayerController? controller;
+
+  /// Whether the feed fills the item with a video that is not square, which
+  /// decides where on the item the video's stickers stand.
+  final bool shouldPortraitExpand;
   final VideoEvent video;
   final int index;
 
@@ -1346,6 +1353,18 @@ class __OverlayState extends ConsumerState<_Overlay> {
                           ),
                         ),
                       ),
+                      // Above the gesture surface, which still sees every
+                      // pointer through them, and below the chrome, whose
+                      // buttons win where they cover a sticker.
+                      if (widget.controller != null &&
+                          video.stickerRegions.isNotEmpty)
+                        Positioned.fill(
+                          child: VideoStickerTapAreas(
+                            video: video,
+                            controller: widget.controller!,
+                            shouldPortraitExpand: widget.shouldPortraitExpand,
+                          ),
+                        ),
                       if (widget.controller != null)
                         // The paused play indicator is chrome too — it
                         // covers the frame the peek is meant to reveal,

@@ -10,10 +10,12 @@ import 'package:flutter/services.dart' show PlatformException;
 import 'package:models/models.dart' show AudioEvent, AudioSourceKind;
 import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/utils/beat_detection.dart';
 import 'package:openvine/utils/wav_decoding.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// A stretch of a sound or clip whose beats land on the exported video.
 class BeatSourcePart extends Equatable {
@@ -103,6 +105,37 @@ class BeatSourcePart extends Equatable {
     rampStart,
     rampLength,
   ];
+}
+
+/// The beats of the music in [sounds] and [clips] on an exported video
+/// ending at [videoEnd], or none when no effect in [effectEntries] fires on
+/// the beat.
+///
+/// A sound whose beats cannot be read leaves its effects without beats, so
+/// they are left out of the export, rather than failing it: the sound itself
+/// was fetched for the export already.
+Future<List<Duration>> beatsForRender({
+  required List<EditorVideoEffect> effectEntries,
+  required List<AudioEvent> sounds,
+  required List<DivineVideoClip> clips,
+  required Duration videoEnd,
+}) async {
+  if (!effectEntries.any((entry) => entry.onBeat)) return const [];
+  final parts = beatSourceFor(sounds: sounds, clips: clips, videoEnd: videoEnd);
+  final resolver = VideoEditorBeatResolver();
+  try {
+    await resolver.read(parts);
+    return resolver.beatsOnOutput(parts, videoEnd: videoEnd);
+  } on Exception catch (error, stackTrace) {
+    Log.error(
+      'Could not read the beats for effects on the beat',
+      name: 'VideoEditorRenderService',
+      category: LogCategory.video,
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return const [];
+  }
 }
 
 /// Where the beats of a video ending at [videoEnd] come from: the first music

@@ -17,6 +17,7 @@ import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_tab_bottom_inset_sliver.dart';
 import 'package:openvine/widgets/profile/profile_tab_empty_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_error_state.dart';
@@ -134,26 +135,17 @@ class _ProfileLikedGridState extends State<ProfileLikedGrid>
         return CustomScrollView(
           physics: const ClampingScrollPhysics(),
           slivers: [
-            SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 4,
-                mainAxisSpacing: 4,
+            ProfileMasonryGrid(
+              childCount: likedVideos.length,
+              aspectRatioOf: (index) =>
+                  profileTileAspectRatioForVideo(likedVideos[index]),
+              itemBuilder: (context, index) => _LikedGridTile(
+                videoEvent: likedVideos[index],
+                index: index,
+                allVideos: likedVideos,
+                userIdHex: widget.userIdHex,
+                acquireFeedLease: widget.acquireFeedLease,
               ),
-              delegate: SliverChildBuilderDelegate((context, index) {
-                if (index >= likedVideos.length) {
-                  return const SizedBox.shrink();
-                }
-
-                final videoEvent = likedVideos[index];
-                return _LikedGridTile(
-                  videoEvent: videoEvent,
-                  index: index,
-                  allVideos: likedVideos,
-                  userIdHex: widget.userIdHex,
-                  acquireFeedLease: widget.acquireFeedLease,
-                );
-              }, childCount: likedVideos.length),
             ),
             if (state.isLoadingMore)
               const ProfileTabLoadingMoreSliver()

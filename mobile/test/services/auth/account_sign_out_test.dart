@@ -267,6 +267,45 @@ void main() {
   }
 
   group('ownerless sign out ownership', () {
+    test(
+      'local account rollback permits fresh sign-in after an expired switch',
+      () async {
+        final auth = subject();
+        expect((await auth.importFromHex('3' * 64)).success, isTrue);
+        final leavingOwner = auth.currentPublicKeyHex!;
+        final target = KeycastSession(
+          bunkerUrl: 'https://keycast.example.invalid',
+          accessToken: 'expired-target-token',
+          expiresAt: DateTime.utc(2020),
+          userPubkey: 'b' * 64,
+          refreshToken: 'target-refresh',
+          authorizationHandle: 'target-handle',
+        );
+        final targetJson = jsonEncode(target.toJson());
+        final archiveKey = 'keycast_session_${target.userPubkey}';
+        await secure.write(key: archiveKey, value: targetJson);
+        await target.save(secure);
+        // A refused refresh removes its token but leaves the authorization handle.
+        await secure.write(key: 'keycast_auth_handle', value: 'target-handle');
+
+        await auth.restoreSignerInfoForCurrentAccount();
+        expect(auth.currentPublicKeyHex, leavingOwner);
+        expect(auth.isAuthenticated, isTrue);
+        await auth.signOut();
+
+        expect(auth.authState, AuthState.unauthenticated);
+        expect(native['keycast_session'], isNull);
+        expect(native['keycast_refresh_token'], isNull);
+        expect(native['keycast_auth_handle'], isNull);
+        expect(native[archiveKey], targetJson);
+        expect(
+          AccountActivationCoordinator.forPreferences(prefs)
+              .hasUnresolvedActivation,
+          isFalse,
+        );
+      },
+    );
+
     test('failed forget remains replayable after removing the login', () async {
       final cleanup = UserDataCleanupService(prefs);
       final auth = subject(cleanupService: cleanup);

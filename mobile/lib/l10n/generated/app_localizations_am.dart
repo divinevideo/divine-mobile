@@ -1974,6 +1974,29 @@ class AppLocalizationsAm extends AppLocalizations {
   String get metadataSoundsLabel => 'ይሰማል።';
 
   @override
+  String get metadataLinksLabel => 'ሊንኮች';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'የሊንክ ተለጣፊ፣ $url ይከፍታል';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel => 'የመጥቀሻ ተለጣፊ፣ መገለጫውን ይከፍታል';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'የሃሽታግ ተለጣፊ፣ #$hashtag ይከፍታል';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => 'የድምጽ ተለጣፊ፣ ድምጹን ይከፍታል';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'ይህ ሊንክ ከDivine ውጭ ይከፈታል። ከመሄድዎ በፊት አድራሻውን ያረጋግጡ።';
+
+  @override
   String get metadataOriginalSound => 'ኦሪጅናል ድምጽ';
 
   @override
@@ -8706,6 +8729,39 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectSparkles => 'ብልጭታዎች';
 
   @override
+  String get videoEditorEffectRain => 'ዝናብ';
+
+  @override
+  String get videoEditorEffectLeaves => 'ቅጠሎች';
+
+  @override
+  String get videoEditorEffectBlossoms => 'የአበባ ቅጠሎች';
+
+  @override
+  String get videoEditorEffectBubbles => 'አረፋዎች';
+
+  @override
+  String get videoEditorEffectBokeh => 'ቦኬ';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'ኖታዎች';
+
+  @override
+  String get videoEditorEffectStars => 'ኮከቦች';
+
+  @override
+  String get videoEditorEffectFireflies => 'የእሳት ዝንቦች';
+
+  @override
+  String get videoEditorEffectEmbers => 'ፍም';
+
+  @override
+  String get videoEditorEffectMoney => 'ገንዘብ';
+
+  @override
+  String get videoEditorEffectBalloons => 'ፊኛዎች';
+
+  @override
   String get videoEditorEffectTiltShift => 'ቲልት-ሺፍት';
 
   @override
@@ -10524,6 +10580,70 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'መረጃ';
 
   @override
+  String get videoEditorSocialStickersTitle => 'ማኅበራዊ';
+
+  @override
+  String get videoEditorSocialStickerMention => 'መጥቀስ';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'ሃሽታግ';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'ድምፅ';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'ስምዎ';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'ሃሽታግ';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'ሰው ይምረጡ';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'በልጥፍዎ ውስጥ ይጠቀሳሉ፣ ማሳወቂያም ይደርሳቸዋል።';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'ሃሽታግ ይጻፉ';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote => 'ወደ ልጥፍዎ ሃሽታጎችም ይታከላል።';
+
+  @override
+  String get videoEditorSocialStickerLyricHint => 'የዘፈን ግጥም መስመር (አማራጭ)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'ሊንክ';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'የድር አድራሻ';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'ርዕስ (አማራጭ)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => 'አድራሻው ወደ ልጥፍዎ ይታከላል።';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => 'ይህ ገና የድር አድራሻ አይደለም።';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'ኖታ';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'የሙዚቃ ሸክላ';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'ካሴት';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'ኢኳላይዘር';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'ማጫወቻ';
+
+  @override
   String get videoEditorInfoStickerTime => 'ሰዓት';
 
   @override
@@ -12266,6 +12386,11 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" ያክሉ';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag፣ በቪዲዮዎ ውስጥ ካለ ስቲከር';
   }
 
   @override
@@ -14559,9 +14684,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14582,11 +14704,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -14620,9 +14737,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -14685,4 +14799,37 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
 }

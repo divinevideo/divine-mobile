@@ -1,6 +1,6 @@
 // ABOUTME: Round-trip coverage for the editor's widget-layer loader: detached
-// ABOUTME: clips, visualizers, info stickers and stickers share one meta
-// ABOUTME: channel and must not be rebuilt as each other after a reopen.
+// ABOUTME: clips, visualizers, info and social stickers and stickers share one
+// ABOUTME: meta channel and must not be rebuilt as each other after a reopen.
 
 import 'dart:convert';
 
@@ -13,12 +13,15 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_view.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_layer_actions.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_group.dart';
 import 'package:openvine/widgets/video_editor/video_editor_widget_layer_loader.dart';
@@ -126,6 +129,24 @@ void main() {
       // Read as an image sticker, its meta does not parse at all.
       expect(restored.widget, isA<InfoStickerView>());
       expect((restored.widget as InfoStickerView).data, equals(data));
+    });
+
+    test('rebuilds a social sticker with what it shows', () {
+      const data = SocialStickerData(
+        kind: SocialStickerKind.hashtag,
+        style: InfoStickerStyle.neon,
+        hashtag: 'summer',
+      );
+      final layer = socialStickerWidgetLayer(data, width: 120);
+      // A draft stores the history as JSON.
+      final stored = jsonDecode(
+        jsonEncode(_exportedHistory(layer)),
+      ) as Map<String, dynamic>;
+
+      final restored = _reopen(stored).single! as WidgetLayer;
+
+      expect(restored.widget, isA<SocialStickerView>());
+      expect((restored.widget as SocialStickerView).data, equals(data));
     });
 
     test('still rebuilds a sticker as a sticker', () {

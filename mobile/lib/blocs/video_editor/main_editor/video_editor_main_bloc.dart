@@ -1,6 +1,7 @@
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 part 'video_editor_main_event.dart';
@@ -13,9 +14,13 @@ part 'video_editor_main_state.dart';
 /// - Layer interaction state (scaling/rotating)
 /// - Sub-editor open state and navigation
 /// - Playback, seek and timeline mode state
+/// - Handing the edit over to the export after Done
 class VideoEditorMainBloc
     extends Bloc<VideoEditorMainEvent, VideoEditorMainState> {
-  VideoEditorMainBloc() : super(const VideoEditorMainState()) {
+  VideoEditorMainBloc({
+    Future<void> Function(Iterable<String> texts)? loadStickerFonts,
+  }) : _loadStickerFonts = loadStickerFonts ?? loadStickerEmojiFontFor,
+       super(const VideoEditorMainState()) {
     on<VideoEditorMainCapabilitiesChanged>(_onCapabilitiesChanged);
     on<VideoEditorLayerInteractionStarted>(_onLayerInteractionStarted);
     on<VideoEditorLayerInteractionEnded>(_onLayerInteractionEnded);
@@ -46,7 +51,17 @@ class VideoEditorMainBloc
     on<VideoEditorDetachedClipOpacityPreviewChanged>(
       _onDetachedClipOpacityPreviewChanged,
     );
+    // Concurrent, so a request while one waits for its fonts sees it pending
+    // and is ignored, and a cancel lands while the fonts still load.
+    on<VideoEditorFinishRequested>(
+      _onFinishRequested,
+      transformer: concurrent(),
+    );
+    on<VideoEditorFinishCancelled>(_onFinishCancelled);
   }
+
+  /// Loads the fonts the given sticker texts draw in.
+  final Future<void> Function(Iterable<String> texts) _loadStickerFonts;
 
   /// Updates undo/redo state based on editor capabilities.
   void _onCapabilitiesChanged(
@@ -299,6 +314,36 @@ class VideoEditorMainBloc
     Emitter<VideoEditorMainState> emit,
   ) {
     emit(state.copyWith(isMarkingTrackRegion: event.isMarking));
+  }
+
+  /// Hands the edit over once the fonts its social stickers draw in are
+  /// loaded: the export captures the stickers as they show, and a viewer's
+  /// copy draws its emoji in the same font. A request while one is pending is
+  /// ignored, and one cancelled meanwhile, or replaced by a newer one, never
+  /// hands over.
+  Future<void> _onFinishRequested(
+    VideoEditorFinishRequested event,
+    Emitter<VideoEditorMainState> emit,
+  ) async {
+    if (state.isFinishing) return;
+    final finish = state.finishCounter + 1;
+    emit(state.copyWith(isFinishing: true, finishCounter: finish));
+    await _loadStickerFonts(event.stickerTexts);
+    if (!state.isFinishing || state.finishCounter != finish) return;
+    emit(
+      state.copyWith(
+        isFinishing: false,
+        handOverCounter: state.handOverCounter + 1,
+      ),
+    );
+  }
+
+  void _onFinishCancelled(
+    VideoEditorFinishCancelled event,
+    Emitter<VideoEditorMainState> emit,
+  ) {
+    if (!state.isFinishing) return;
+    emit(state.copyWith(isFinishing: false));
   }
 
   void _onMaskEditingChanged(

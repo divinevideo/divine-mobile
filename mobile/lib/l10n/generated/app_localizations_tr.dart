@@ -1954,6 +1954,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get metadataSoundsLabel => 'Sesler';
 
   @override
+  String get metadataLinksLabel => 'Bağlantılar';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Bağlantı çıkartması, $url adresini açar';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'Bahsetme çıkartması, profili açar';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Hashtag çıkartması, #$hashtag etiketini açar';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => 'Ses çıkartması, sesi açar';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Bu bağlantı Divine dışında açılır. Devam etmeden önce adresi kontrol et.';
+
+  @override
   String get metadataOriginalSound => 'Orijinal ses';
 
   @override
@@ -8824,6 +8848,39 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectSparkles => 'Pırıltılar';
 
   @override
+  String get videoEditorEffectRain => 'Yağmur';
+
+  @override
+  String get videoEditorEffectLeaves => 'Yapraklar';
+
+  @override
+  String get videoEditorEffectBlossoms => 'Kiraz çiçeği';
+
+  @override
+  String get videoEditorEffectBubbles => 'Baloncuklar';
+
+  @override
+  String get videoEditorEffectBokeh => 'Bokeh';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'Notalar';
+
+  @override
+  String get videoEditorEffectStars => 'Yıldızlar';
+
+  @override
+  String get videoEditorEffectFireflies => 'Ateş böcekleri';
+
+  @override
+  String get videoEditorEffectEmbers => 'Kor';
+
+  @override
+  String get videoEditorEffectMoney => 'Para';
+
+  @override
+  String get videoEditorEffectBalloons => 'Balonlar';
+
+  @override
   String get videoEditorEffectTiltShift => 'Tilt-Shift';
 
   @override
@@ -10683,6 +10740,73 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'Bilgi';
 
   @override
+  String get videoEditorSocialStickersTitle => 'Sosyal';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Bahsetme';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Ses';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'adın';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtag';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Birini seç';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Gönderinde bu kişiden bahsedilir ve bildirim alır.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Hashtag yaz';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Gönderinin hashtag\'lerine de eklenir.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'Şarkı sözünden bir satır (isteğe bağlı)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Bağlantı';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Web adresi';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'Başlık (isteğe bağlı)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => 'Adres gönderine eklenir.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'Bu henüz bir web adresi değil.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Nota';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Plak';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Kaset';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Ekolayzer';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Oynatıcı';
+
+  @override
   String get videoEditorInfoStickerTime => 'Saat';
 
   @override
@@ -12488,6 +12612,11 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" ekle';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, videondaki bir çıkartmadan';
   }
 
   @override
@@ -14849,9 +14978,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14872,11 +14998,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -14910,9 +15031,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -14975,4 +15093,37 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
 }

@@ -1869,6 +1869,29 @@ class AppLocalizationsKo extends AppLocalizations {
   String get metadataSoundsLabel => '사운드';
 
   @override
+  String get metadataLinksLabel => '링크';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return '링크 스티커, $url 열기';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel => '멘션 스티커, 프로필 열기';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return '해시태그 스티커, #$hashtag 열기';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => '사운드 스티커, 사운드 열기';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      '이 링크는 Divine 밖에서 열려요. 이동하기 전에 주소를 확인하세요.';
+
+  @override
   String get metadataOriginalSound => '오리지널 사운드';
 
   @override
@@ -8483,6 +8506,39 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectSparkles => '반짝이';
 
   @override
+  String get videoEditorEffectRain => '비';
+
+  @override
+  String get videoEditorEffectLeaves => '낙엽';
+
+  @override
+  String get videoEditorEffectBlossoms => '벚꽃';
+
+  @override
+  String get videoEditorEffectBubbles => '비눗방울';
+
+  @override
+  String get videoEditorEffectBokeh => '보케';
+
+  @override
+  String get videoEditorEffectMusicNotes => '음표';
+
+  @override
+  String get videoEditorEffectStars => '별';
+
+  @override
+  String get videoEditorEffectFireflies => '반딧불이';
+
+  @override
+  String get videoEditorEffectEmbers => '불씨';
+
+  @override
+  String get videoEditorEffectMoney => '돈';
+
+  @override
+  String get videoEditorEffectBalloons => '풍선';
+
+  @override
   String get videoEditorEffectTiltShift => '틸트 시프트';
 
   @override
@@ -10261,6 +10317,69 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorInfoStickersTitle => '정보';
 
   @override
+  String get videoEditorSocialStickersTitle => '소셜';
+
+  @override
+  String get videoEditorSocialStickerMention => '멘션';
+
+  @override
+  String get videoEditorSocialStickerHashtag => '해시태그';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => '사운드';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => '이름';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => '해시태그';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => '사람 선택';
+
+  @override
+  String get videoEditorSocialStickerMentionNote => '게시물에서 멘션되고 알림을 받아요.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => '해시태그 입력';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote => '게시물 해시태그에도 추가돼요.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint => '가사 한 줄 (선택)';
+
+  @override
+  String get videoEditorSocialStickerLink => '링크';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => '웹 주소';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => '제목 (선택)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => '주소가 게시물에 추가돼요.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => '아직 웹 주소가 아니에요.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => '음표';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => '레코드';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => '카세트';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => '이퀄라이저';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => '플레이어';
+
+  @override
   String get videoEditorInfoStickerTime => '시간';
 
   @override
@@ -11967,6 +12086,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" 추가';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, 동영상 속 스티커에서';
   }
 
   @override
@@ -14214,9 +14338,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14237,11 +14358,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -14275,9 +14391,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -14340,4 +14453,37 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
 }

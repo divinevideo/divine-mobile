@@ -3427,6 +3427,42 @@ abstract class AppLocalizations {
   /// **'Sounds'**
   String get metadataSoundsLabel;
 
+  /// Label of the section in a video's info sheet that lists the web pages its link stickers point to.
+  ///
+  /// In en, this message translates to:
+  /// **'Links'**
+  String get metadataLinksLabel;
+
+  /// Screen reader label for the invisible button over a link sticker on a playing video; tapping it opens the web page.
+  ///
+  /// In en, this message translates to:
+  /// **'Link sticker, opens {url}'**
+  String videoStickerLinkSemanticLabel(String url);
+
+  /// Screen reader label for the invisible button over a mention sticker on a playing video; tapping it opens the mentioned profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Mention sticker, opens the profile'**
+  String get videoStickerMentionSemanticLabel;
+
+  /// Screen reader label for the invisible button over a hashtag sticker on a playing video; tapping it opens the hashtag's feed.
+  ///
+  /// In en, this message translates to:
+  /// **'Hashtag sticker, opens #{hashtag}'**
+  String videoStickerHashtagSemanticLabel(String hashtag);
+
+  /// Screen reader label for the invisible button over a sound sticker on a playing video; tapping it opens the page of the video's sound.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound sticker, opens the sound'**
+  String get videoStickerSoundSemanticLabel;
+
+  /// Note in the sheet a link sticker on a video opens, above the link's full address: the page opens outside the app.
+  ///
+  /// In en, this message translates to:
+  /// **'This link opens outside Divine. Check the address before you go.'**
+  String get videoStickerLinkSheetBody;
+
   /// No description provided for @metadataOriginalSound.
   ///
   /// In en, this message translates to:
@@ -10507,7 +10543,7 @@ abstract class AppLocalizations {
   /// **'Failed to send'**
   String get dmStatusFailed;
 
-  /// Caption under a sent group DM bubble that reached some members but not all, after the sender stopped trying to reach the rest (Stop trying, or a delete for everyone that has not gone through). Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it.
+  /// Caption under a sent group DM bubble that reached some members but not all, after delivery to the rest stopped: the sender chose Stop trying, a delete for everyone has not gone through, or the app gave up on a member whose inbox could not be read once its retries ran out. Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it.
   ///
   /// In en, this message translates to:
   /// **'Not sent to everyone'**
@@ -15011,6 +15047,72 @@ abstract class AppLocalizations {
   /// **'Sparkles'**
   String get videoEditorEffectSparkles;
 
+  /// Name of a video effect: rain streaks down at a slant over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Rain'**
+  String get videoEditorEffectRain;
+
+  /// Name of a video effect: autumn leaves in reds, oranges and yellows rock and turn over as they fall over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaves'**
+  String get videoEditorEffectLeaves;
+
+  /// Name of a video effect: pink cherry blossom petals flutter down over the picture on the wind.
+  ///
+  /// In en, this message translates to:
+  /// **'Blossoms'**
+  String get videoEditorEffectBlossoms;
+
+  /// Name of a video effect: shimmering soap bubbles float up over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Bubbles'**
+  String get videoEditorEffectBubbles;
+
+  /// Name of a video effect, after the photography term: soft round discs of out-of-focus light drift and glow over the picture. Use the photography term your language uses.
+  ///
+  /// In en, this message translates to:
+  /// **'Bokeh'**
+  String get videoEditorEffectBokeh;
+
+  /// Name of a video effect: music notes (♪, ♫) rock as they rise over the picture. Keep it short — it sits under a small tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Music notes'**
+  String get videoEditorEffectMusicNotes;
+
+  /// Name of a video effect: five-pointed gold and silver stars spin as they fall over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Stars'**
+  String get videoEditorEffectStars;
+
+  /// Name of a video effect: small yellow-green lights wander about over the picture, glowing up and fading, like fireflies at night.
+  ///
+  /// In en, this message translates to:
+  /// **'Fireflies'**
+  String get videoEditorEffectFireflies;
+
+  /// Name of a video effect: glowing orange sparks rise from below and die away, as over a campfire.
+  ///
+  /// In en, this message translates to:
+  /// **'Embers'**
+  String get videoEditorEffectEmbers;
+
+  /// Name of a video effect: green banknotes tumble down over the picture, as in "make it rain".
+  ///
+  /// In en, this message translates to:
+  /// **'Money'**
+  String get videoEditorEffectMoney;
+
+  /// Name of a video effect: colourful party balloons on strings swing as they rise over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Balloons'**
+  String get videoEditorEffectBalloons;
+
   /// Name of a video effect: the top and bottom of the picture are blurred, so the scene looks like a miniature model. Tilt-shift is the photography term for this look.
   ///
   /// In en, this message translates to:
@@ -18341,6 +18443,132 @@ abstract class AppLocalizations {
   /// **'Info'**
   String get videoEditorInfoStickersTitle;
 
+  /// Heading above the row of social stickers (mention, hashtag, sound credit) in the video editor's sticker sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Social'**
+  String get videoEditorSocialStickersTitle;
+
+  /// Name of the sticker that mentions a person in the video; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Mention'**
+  String get videoEditorSocialStickerMention;
+
+  /// Name of the sticker that shows a hashtag in the video and adds it to the post's hashtags.
+  ///
+  /// In en, this message translates to:
+  /// **'Hashtag'**
+  String get videoEditorSocialStickerHashtag;
+
+  /// Name of the sticker that credits the title and artist of the video's sound.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound'**
+  String get videoEditorSocialStickerSoundCredit;
+
+  /// Made-up handle shown after an @ on the sample mention sticker in the sticker sheet. Lowercase, one word.
+  ///
+  /// In en, this message translates to:
+  /// **'yourname'**
+  String get videoEditorSocialStickerMentionSample;
+
+  /// Made-up hashtag shown after a # on the sample hashtag sticker in the sticker sheet. Lowercase, one word.
+  ///
+  /// In en, this message translates to:
+  /// **'hashtag'**
+  String get videoEditorSocialStickerHashtagSample;
+
+  /// Row in the mention sticker sheet that opens the people search to pick who the sticker mentions.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose someone'**
+  String get videoEditorSocialStickerChoosePerson;
+
+  /// Help line in the mention sticker sheet: placing the sticker mentions the person in the post, which notifies them.
+  ///
+  /// In en, this message translates to:
+  /// **'They\'re mentioned in your post and get a notification.'**
+  String get videoEditorSocialStickerMentionNote;
+
+  /// Label of the field where the creator types the hashtag a hashtag sticker shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a hashtag'**
+  String get videoEditorSocialStickerHashtagHint;
+
+  /// Help line in the hashtag sticker sheet: the sticker's hashtag also becomes one of the post's hashtags.
+  ///
+  /// In en, this message translates to:
+  /// **'Also added to your post\'s hashtags.'**
+  String get videoEditorSocialStickerHashtagNote;
+
+  /// Label of the optional field for a line of song lyrics shown under a sound credit sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Line of lyrics (optional)'**
+  String get videoEditorSocialStickerLyricHint;
+
+  /// Name of the sticker that shows a link to a web page in the video and adds its address to the post.
+  ///
+  /// In en, this message translates to:
+  /// **'Link'**
+  String get videoEditorSocialStickerLink;
+
+  /// Label of the field where the creator types the web address a link sticker points to.
+  ///
+  /// In en, this message translates to:
+  /// **'Web address'**
+  String get videoEditorSocialStickerLinkUrlHint;
+
+  /// Label of the optional field for a short title a link sticker shows instead of the domain.
+  ///
+  /// In en, this message translates to:
+  /// **'Title (optional)'**
+  String get videoEditorSocialStickerLinkTitleHint;
+
+  /// Help line in the link sticker sheet: the address also goes into the published post.
+  ///
+  /// In en, this message translates to:
+  /// **'The address is added to your post.'**
+  String get videoEditorSocialStickerLinkNote;
+
+  /// Warning in the link sticker sheet while the typed text is not a usable web address.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s not a web address yet.'**
+  String get videoEditorSocialStickerLinkInvalid;
+
+  /// Name of the sound credit design with a music note in front of the title and artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get videoEditorSocialStickerSoundNote;
+
+  /// Name of the sound credit design with a vinyl record in front of the title and artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get videoEditorSocialStickerSoundVinyl;
+
+  /// Name of the sound credit design with a cassette tape in front of the title and artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Cassette'**
+  String get videoEditorSocialStickerSoundCassette;
+
+  /// Name of the sound credit design with equalizer bars in front of the title and artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Equalizer'**
+  String get videoEditorSocialStickerSoundEqualizer;
+
+  /// Name of the sound credit design that looks like a music player with a progress bar and buttons.
+  ///
+  /// In en, this message translates to:
+  /// **'Player'**
+  String get videoEditorSocialStickerSoundPlayer;
+
   /// Name of the info sticker that shows the time a clip was recorded.
   ///
   /// In en, this message translates to:
@@ -21146,6 +21374,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add \"#{tag}\"'**
   String videoMetadataTagsPickerAddTag(String tag);
+
+  /// Screen reader label of a hashtag in the tags picker that comes from a hashtag sticker in the video and can only be removed with the sticker. {tag} is the hashtag without its #.
+  ///
+  /// In en, this message translates to:
+  /// **'{tag}, from a sticker in your video'**
+  String videoMetadataTagsPickerStickerTag(String tag);
 
   /// Welcome-screen Divine Greenlight label above the sign-in / create-account buttons.
   ///
@@ -24912,12 +25146,6 @@ abstract class AppLocalizations {
   /// Native challenge participation test-build flow.
   ///
   /// In en, this message translates to:
-  /// **'Agree and submit'**
-  String get challengeAgree;
-
-  /// Native challenge participation test-build flow.
-  ///
-  /// In en, this message translates to:
   /// **'Withdraw entry'**
   String get challengeWithdraw;
 
@@ -24956,12 +25184,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Current rules'**
   String get challengeRules;
-
-  /// Challenge deadline, explicitly in UTC; deadline is formatted in the app locale.
-  ///
-  /// In en, this message translates to:
-  /// **'Deadline (UTC): {deadline}'**
-  String challengeDeadline(String deadline);
 
   /// Native challenge participation test-build flow.
   ///
@@ -25028,12 +25250,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Entries'**
   String get challengeEntries;
-
-  /// Native challenge participation test-build flow.
-  ///
-  /// In en, this message translates to:
-  /// **'Results'**
-  String get challengeResults;
 
   /// Native challenge participation test-build flow.
   ///
@@ -25142,6 +25358,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Technical details'**
   String get challengeDetails;
+
+  /// Challenge deadline in the viewer display timezone, including its actual zone label.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline: {deadline} ({timeZone})'**
+  String challengeLocalDeadline(String deadline, String timeZone);
+
+  /// No description provided for @challengeEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter challenge'**
+  String get challengeEnter;
+
+  /// No description provided for @challengeEnterVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter this video'**
+  String get challengeEnterVideo;
+
+  /// No description provided for @challengeOrganizer.
+  ///
+  /// In en, this message translates to:
+  /// **'Organizer'**
+  String get challengeOrganizer;
+
+  /// No description provided for @challengeAllRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all rules'**
+  String get challengeAllRules;
+
+  /// No description provided for @challengeWinners.
+  ///
+  /// In en, this message translates to:
+  /// **'Winners'**
+  String get challengeWinners;
+
+  /// No description provided for @challengeAwaitingResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting results'**
+  String get challengeAwaitingResults;
+
+  /// No description provided for @challengeOrganizerTimezone.
+  ///
+  /// In en, this message translates to:
+  /// **'Organizer timezone: {timeZone}'**
+  String challengeOrganizerTimezone(String timeZone);
+
+  /// No description provided for @challengeOrganizerTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Organizer time: {deadline} ({timeZone})'**
+  String challengeOrganizerTime(String deadline, String timeZone);
 }
 
 class _AppLocalizationsDelegate

@@ -30,22 +30,17 @@ enum InfoStickerKind {
 
   /// The looks this kind can take, the default first.
   List<InfoStickerStyle> get styles => switch (this) {
-    time => const [..._cardStyles, .film, .camcorder, .digital, .analog],
-    date => const [..._cardStyles, .film, .camcorder],
+    time => const [
+      ...InfoStickerStyle.pills,
+      .film,
+      .camcorder,
+      .digital,
+      .analog,
+    ],
+    date => const [...InfoStickerStyle.pills, .film, .camcorder],
     recTimer => const [.camcorder, .dark, .digital, .film],
-    _ => _cardStyles,
+    _ => InfoStickerStyle.pills,
   };
-
-  static const List<InfoStickerStyle> _cardStyles = [
-    .light,
-    .dark,
-    .glass,
-    .brand,
-    .highlight,
-    .neon,
-    .plain,
-    .outline,
-  ];
 
   /// Whether the sheet searches a place for this kind: the place itself for
   /// a location sticker, where to read the weather, the sun or the altitude
@@ -94,7 +89,20 @@ enum InfoStickerStyle {
   digital,
 
   /// A clock face with hands; time only.
-  analog,
+  analog;
+
+  /// The pill looks, which every sticker that shows a line of text can take,
+  /// the default first.
+  static const List<InfoStickerStyle> pills = [
+    light,
+    dark,
+    glass,
+    brand,
+    highlight,
+    neon,
+    plain,
+    outline,
+  ];
 }
 
 /// How a date sticker writes its date.

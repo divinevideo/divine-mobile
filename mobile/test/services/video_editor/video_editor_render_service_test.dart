@@ -25,8 +25,8 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
-import 'package:openvine/services/video_editor/rec_timer_frames.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
+import 'package:openvine/services/video_editor/sticker_frames.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/utils/audio_band_energies.dart';
@@ -132,7 +132,7 @@ void main() {
         ),
       ];
 
-      final timer = RecTimerExportedLayer(layer(), frames);
+      final timer = StickerFramesExportedLayer(layer(), frames);
 
       final exported = VideoEditorRenderService.buildImageLayers(
         capturedLayers: [timer],

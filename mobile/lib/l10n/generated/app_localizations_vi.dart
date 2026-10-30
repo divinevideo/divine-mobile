@@ -1987,6 +1987,29 @@ class AppLocalizationsVi extends AppLocalizations {
   String get metadataSoundsLabel => 'Âm thanh';
 
   @override
+  String get metadataLinksLabel => 'Liên kết';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Nhãn dán liên kết, mở $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel => 'Nhãn dán nhắc đến, mở hồ sơ';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Nhãn dán hashtag, mở #$hashtag';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => 'Nhãn dán âm thanh, mở âm thanh';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Liên kết này mở bên ngoài Divine. Hãy kiểm tra địa chỉ trước khi tiếp tục.';
+
+  @override
   String get metadataOriginalSound => 'Âm thanh gốc';
 
   @override
@@ -8866,6 +8889,39 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectSparkles => 'Lấp lánh';
 
   @override
+  String get videoEditorEffectRain => 'Mưa';
+
+  @override
+  String get videoEditorEffectLeaves => 'Lá rơi';
+
+  @override
+  String get videoEditorEffectBlossoms => 'Hoa anh đào';
+
+  @override
+  String get videoEditorEffectBubbles => 'Bong bóng';
+
+  @override
+  String get videoEditorEffectBokeh => 'Bokeh';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'Nốt nhạc';
+
+  @override
+  String get videoEditorEffectStars => 'Ngôi sao';
+
+  @override
+  String get videoEditorEffectFireflies => 'Đom đóm';
+
+  @override
+  String get videoEditorEffectEmbers => 'Than hồng';
+
+  @override
+  String get videoEditorEffectMoney => 'Tiền';
+
+  @override
+  String get videoEditorEffectBalloons => 'Bóng bay';
+
+  @override
   String get videoEditorEffectTiltShift => 'Tilt-shift';
 
   @override
@@ -10724,6 +10780,75 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'Thông tin';
 
   @override
+  String get videoEditorSocialStickersTitle => 'Xã hội';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Nhắc đến';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Âm thanh';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'tencuaban';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtag';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Chọn một người';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Người này được nhắc đến trong bài đăng của bạn và nhận thông báo.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Nhập hashtag';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Cũng được thêm vào hashtag của bài đăng.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'Một dòng lời bài hát (không bắt buộc)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Liên kết';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Địa chỉ web';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint =>
+      'Tiêu đề (không bắt buộc)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'Địa chỉ được thêm vào bài đăng của bạn.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'Đây chưa phải là địa chỉ web.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Nốt nhạc';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Đĩa than';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Băng cassette';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Bộ chỉnh âm';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Trình phát';
+
+  @override
   String get videoEditorInfoStickerTime => 'Giờ';
 
   @override
@@ -12524,6 +12649,11 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Thêm \"#$tag\"';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, từ một sticker trong video của bạn';
   }
 
   @override
@@ -14864,9 +14994,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14887,11 +15014,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -14925,9 +15047,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -14990,4 +15109,37 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
 }

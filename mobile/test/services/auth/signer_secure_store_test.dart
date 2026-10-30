@@ -15,6 +15,7 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show NostrRemoteSignerInfo;
 import 'package:openvine/models/authentication_source.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/signer_secure_store.dart';
 
 import '../support/auth_service_test_harness.dart';
@@ -417,14 +418,63 @@ void main() {
         await store.saveAmber(_pubkeyA, 'com.example.signer');
         await const KeycastSession(
           bunkerUrl: 'bunker://x',
+          userPubkey: _pubkeyB,
+          refreshToken: 'target-refresh',
+          authorizationHandle: 'target-handle',
         ).save(const FlutterSecureStorage());
+        final archivedSession = mocks.secureStorage['keycast_session']!;
+        mocks.secureStorage['keycast_session_$_pubkeyB'] = archivedSession;
+        mocks.secureStorage['keycast_refresh_token'] = 'target-refresh';
+        mocks.secureStorage['keycast_auth_handle'] = 'target-handle';
 
         await store.restoreActiveKeys(_pubkeyA, AuthenticationSource.nip07);
 
         expect(mocks.secureStorage.containsKey('bunker_info'), isFalse);
         expect(mocks.secureStorage.containsKey('amber_pubkey'), isFalse);
         expect(mocks.secureStorage.containsKey('keycast_session'), isFalse);
+        expect(
+          mocks.secureStorage.containsKey('keycast_refresh_token'),
+          isFalse,
+        );
+        expect(mocks.secureStorage.containsKey('keycast_auth_handle'), isFalse);
+        expect(
+          mocks.secureStorage['keycast_session_$_pubkeyB'],
+          archivedSession,
+        );
       });
+
+      test(
+        'local restore refuses an unacknowledged OAuth token deletion',
+        () async {
+          const session = KeycastSession(
+            bunkerUrl: 'bunker://x',
+            userPubkey: _pubkeyB,
+            refreshToken: 'target-refresh',
+          );
+          await session.save(const FlutterSecureStorage());
+          final sessionJson = mocks.secureStorage['keycast_session']!;
+          mocks.secureStorage['keycast_refresh_token'] = 'target-refresh';
+          final storage = _MockSecureStorage();
+          when(() => storage.delete(key: any(named: 'key')))
+              .thenAnswer((_) async {});
+          when(() => storage.read(key: any(named: 'key'))).thenAnswer(
+            (call) async => mocks.secureStorage[call.namedArguments[#key]],
+          );
+
+          await expectLater(
+            SignerSecureStore(storage).restoreActiveKeys(
+              _pubkeyA,
+              AuthenticationSource.importedKeys,
+            ),
+            throwsA(isA<AccountStorageException>()),
+          );
+          expect(mocks.secureStorage['keycast_session'], sessionJson);
+          expect(
+            mocks.secureStorage['keycast_refresh_token'],
+            'target-refresh',
+          );
+        },
+      );
 
       test('null storage no-ops', () async {
         await SignerSecureStore(

@@ -431,6 +431,25 @@ class AudioEvent {
   /// Whether this audio is derived from a video's original sound.
   bool get isOriginalSound => id.startsWith('video_');
 
+  /// The id this sound's page opens it by, without the suffixes the editor
+  /// adds to a timeline track's id: `bundled_<id>` for a sound from Divine's
+  /// library, or the event id of a sound published on Nostr.
+  ///
+  /// `null` for a sound no page can find by id: a video's original sound,
+  /// an imported file, or a sound from an external provider, which only get
+  /// an event once the video using them is published.
+  String? get soundPageId {
+    if (isBundled) {
+      return RegExp(
+        '^(${bundledMarker}_[a-z0-9_]+?)(?:-\\d+|_copy_\\d+)*\$',
+      ).firstMatch(id)?.group(1);
+    }
+    if (isOriginalSound || isLocalImport || isExternalProviderSound) {
+      return null;
+    }
+    return attributionEventId;
+  }
+
   /// The Nostr event id a reusing video should reference in its
   /// `["e", <id>, <relay>, "audio"]` attribution tag, or `null` when this
   /// audio has no referenceable Nostr event (bundled sounds, or imported

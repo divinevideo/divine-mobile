@@ -17,6 +17,7 @@ class _FakeCaptionGeneratorPlatform extends CaptionGeneratorPlatform {
           String audioPath,
           String? localeIdentifier,
           bool preferOnDeviceRecognition,
+          bool requireOnDeviceRecognition,
           bool audioFileExistedAtCall,
         })
       >[];
@@ -29,11 +30,13 @@ class _FakeCaptionGeneratorPlatform extends CaptionGeneratorPlatform {
     required String audioPath,
     String? localeIdentifier,
     bool preferOnDeviceRecognition = true,
+    bool requireOnDeviceRecognition = false,
   }) async {
     calls.add((
       audioPath: audioPath,
       localeIdentifier: localeIdentifier,
       preferOnDeviceRecognition: preferOnDeviceRecognition,
+      requireOnDeviceRecognition: requireOnDeviceRecognition,
       audioFileExistedAtCall: File(audioPath).existsSync(),
     ));
     if (error case final Exception error) throw error;
@@ -200,6 +203,19 @@ void main() {
         expect(call.audioPath, equals(audioPath));
         expect(call.localeIdentifier, equals('de-CH'));
         expect(call.preferOnDeviceRecognition, isFalse);
+      });
+
+      test('on $platform forwards strict local recognition', () async {
+        debugDefaultTargetPlatformOverride = platform;
+        fakePlatform.response = segments;
+
+        final result = await generator.generateCaptions(
+          audioPath: writeStereoWav('local.wav'),
+          requireOnDeviceRecognition: true,
+        );
+
+        expect(result, equals(segments));
+        expect(fakePlatform.calls.single.requireOnDeviceRecognition, isTrue);
       });
     }
   });
