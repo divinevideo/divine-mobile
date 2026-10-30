@@ -160,7 +160,8 @@ void main() {
       await expectLater(operation, throwsA(isA<FunnelcakeApiException>()));
       expect(requests, hasLength(1));
       expect(signatures, 2);
-    });
+      // A retry that never signs leaves retrySigning pending; fail, don't hang.
+    }, timeout: const Timeout(Duration(seconds: 10)));
 
     test('a different current signing owner is never used', () async {
       await sender.send('b' * 64, update, () => current);
