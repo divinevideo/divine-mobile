@@ -368,6 +368,210 @@ void main() {
       },
     );
 
+    group('subscription mutation ordering', () {
+      late String account;
+      late StreamController<void> sessions;
+      late List<Event> publications;
+
+      setUp(() {
+        account = _pubkey(1);
+        sessions = StreamController<void>.broadcast();
+        publications = [];
+        var revision = 0;
+        repository = BadgeRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: preferences,
+          currentPubkey: () => account,
+          sessionChanges: sessions.stream,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async {
+                return _event(
+                  id: _eventId(800000 + revision++),
+                  pubkey: account,
+                  kind: kind,
+                  tags: tags,
+                  createdAt: createdAt ?? 1000,
+                );
+              },
+        );
+        addTearDown(repository.dispose);
+        addTearDown(sessions.close);
+      });
+
+      final first = BadgeCoordinate(pubkey: _pubkey(2), identifier: 'first');
+      final second = BadgeCoordinate(pubkey: _pubkey(2), identifier: 'second');
+
+      test('overlapping edits preserve both successful selections', () async {
+        final started = Completer<void>();
+        final accepted = Completer<PublishOutcome>();
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((call) {
+          final event = call.positionalArguments.single as Event;
+          publications.add(event);
+          if (publications.length == 1) {
+            started.complete();
+            return accepted.future;
+          }
+          return Future.value(_acceptedPublishOutcome(event));
+        });
+        final savingFirst = repository.setSubscription(first, subscribed: true);
+        await started.future;
+        final savingSecond = repository.setSubscription(
+          second,
+          subscribed: true,
+        );
+        await pumpEventQueue();
+        final publishedBeforeAcknowledgement = publications.length;
+        accepted.complete(_acceptedPublishOutcome(publications.first));
+        expect(await savingFirst, {first});
+        expect(await savingSecond, {first, second});
+        expect(publishedBeforeAcknowledgement, 1);
+        expect(
+          publications.last.createdAt,
+          greaterThan(publications.first.createdAt),
+        );
+        expect(await repository.loadSubscriptions(requireComplete: true), {
+          first,
+          second,
+        });
+      });
+
+      test('queued unsubscribe applies after the pending subscribe', () async {
+        final started = Completer<void>();
+        final accepted = Completer<PublishOutcome>();
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((call) {
+          final event = call.positionalArguments.single as Event;
+          publications.add(event);
+          if (publications.length == 1) {
+            started.complete();
+            return accepted.future;
+          }
+          return Future.value(_acceptedPublishOutcome(event));
+        });
+        final subscribing = repository.setSubscription(first, subscribed: true);
+        await started.future;
+        final unsubscribing = repository.setSubscription(
+          first,
+          subscribed: false,
+        );
+        await pumpEventQueue();
+        accepted.complete(_acceptedPublishOutcome(publications.first));
+        await subscribing;
+        expect(await unsubscribing, isEmpty);
+        expect(
+          await repository.loadSubscriptions(requireComplete: true),
+          isEmpty,
+        );
+      });
+
+      test('a failed edit releases the next queued edit', () async {
+        final started = Completer<void>();
+        final accepted = Completer<PublishOutcome>();
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((call) {
+          final event = call.positionalArguments.single as Event;
+          publications.add(event);
+          if (publications.length == 1) {
+            started.complete();
+            return accepted.future;
+          }
+          return Future.value(_acceptedPublishOutcome(event));
+        });
+        final savingFirst = repository.setSubscription(first, subscribed: true);
+        final rejected = expectLater(savingFirst, throwsA(isA<Exception>()));
+        await started.future;
+        final savingSecond = repository.setSubscription(
+          second,
+          subscribed: true,
+        );
+        accepted.completeError(Exception('relay unavailable'));
+        await rejected;
+        expect(await savingSecond, {second});
+        expect(await repository.loadSubscriptions(requireComplete: true), {
+          second,
+        });
+      });
+
+      test(
+        'late old-account acknowledgement cannot erase the active account cache',
+        () async {
+          final started = Completer<void>();
+          final accepted = Completer<PublishOutcome>();
+          when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((call) {
+            final event = call.positionalArguments.single as Event;
+            publications.add(event);
+            if (event.pubkey == _pubkey(1)) {
+              started.complete();
+              return accepted.future;
+            }
+            return Future.value(_acceptedPublishOutcome(event));
+          });
+          final savingFirst = repository.setSubscription(
+            first,
+            subscribed: true,
+          );
+          await started.future;
+          account = _pubkey(3);
+          expect(await repository.setSubscription(second, subscribed: true), {
+            second,
+          });
+          accepted.complete(_acceptedPublishOutcome(publications.first));
+          await savingFirst;
+          expect(await repository.loadSubscriptions(requireComplete: true), {
+            second,
+          });
+        },
+      );
+
+      for (final boundary in ['new session', 'dispose']) {
+        test('queued edits do not cross $boundary', () async {
+          final started = Completer<void>();
+          final accepted = Completer<PublishOutcome>();
+          when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((call) {
+            final event = call.positionalArguments.single as Event;
+            publications.add(event);
+            if (publications.length == 1) {
+              started.complete();
+              return accepted.future;
+            }
+            return Future.value(_acceptedPublishOutcome(event));
+          });
+          final savingFirst = repository.setSubscription(
+            first,
+            subscribed: true,
+          );
+          await started.future;
+          final savingSecond = repository.setSubscription(
+            second,
+            subscribed: true,
+          );
+          final rejected = expectLater(
+            savingSecond,
+            throwsA(isA<BadgeReadIncompleteException>()),
+          );
+          if (boundary == 'dispose') {
+            await repository.dispose();
+          } else {
+            sessions.add(null);
+            await pumpEventQueue();
+          }
+          accepted.complete(_acceptedPublishOutcome(publications.first));
+          await savingFirst;
+          await rejected;
+          expect(publications, hasLength(1));
+          if (boundary != 'dispose') {
+            expect(
+              await repository.loadSubscriptions(requireComplete: true),
+              isEmpty,
+            );
+          }
+        });
+      }
+    });
+
     test('announces a saved subscription change', () async {
       // Following listens for this to reload only its own feed.
       final coordinate = BadgeCoordinate(

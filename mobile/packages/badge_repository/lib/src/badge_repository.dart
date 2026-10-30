@@ -416,6 +416,8 @@ class BadgeRepository {
 
   String? _subscriptionAccount;
   int _subscriptionSession = 0;
+  int _subscriptionAccountSession = 0;
+  final Map<String, Completer<void>> _subscriptionEditTails = {};
   int _subscriptionProof = 0;
   int _subscriptionEdits = 0;
   bool _verifiedEmptySubscriptions = false;
@@ -434,6 +436,8 @@ class BadgeRepository {
     final pubkey = _currentPubkey();
     if (!preserveObservedSubscriptions || pubkey != _subscriptionAccount) {
       _observedSubscriptions = null;
+      _publishedSubscriptions = null;
+      _subscriptionAccountSession++;
     }
     _subscriptionAccount = pubkey;
     _subscriptionSession++;
@@ -816,6 +820,35 @@ class BadgeRepository {
   }) async {
     final pubkey = _requireCurrentPubkey();
     _syncSubscriptionAccount();
+    final accountSession = _subscriptionAccountSession;
+    final previous = _subscriptionEditTails[pubkey];
+    final completed = Completer<void>();
+    _subscriptionEditTails[pubkey] = completed;
+    try {
+      // Keep read/modify/sign/publish together: another edit must read the
+      // acknowledged event, even before relays return it in queries.
+      if (previous != null) await previous.future;
+      if (_disposed ||
+          accountSession != _subscriptionAccountSession ||
+          pubkey != _currentPubkey()) {
+        throw const BadgeReadIncompleteException(
+          'Badge subscription edit was superseded',
+        );
+      }
+      return await _setSubscription(coordinate, subscribed: subscribed);
+    } finally {
+      completed.complete();
+      if (identical(_subscriptionEditTails[pubkey], completed)) {
+        _subscriptionEditTails.remove(pubkey);
+      }
+    }
+  }
+
+  Future<Set<BadgeCoordinate>> _setSubscription(
+    BadgeCoordinate coordinate, {
+    required bool subscribed,
+  }) async {
+    final pubkey = _requireCurrentPubkey();
     _resetSubscriptionSession(preserveObservedSubscriptions: true);
     final session = _subscriptionSession;
     _subscriptionEdits++;
@@ -839,7 +872,7 @@ class BadgeRepository {
             in current.toList()..sort((a, b) => a.value.compareTo(b.value)))
           ['a', item.value],
       ];
-      _publishedSubscriptions = await _signAndPublish(
+      final published = await _signAndPublish(
         kind: EventKind.appSpecificData,
         label: 'badge subscriptions',
         tags: tags,
@@ -849,6 +882,7 @@ class BadgeRepository {
             _isSubscriptionSessionCurrent(pubkey, session),
       );
       if (_isSubscriptionSessionCurrent(pubkey, session)) {
+        _publishedSubscriptions = published;
         _subscriptionChanges.add(null);
       }
       return Set.unmodifiable(current);
