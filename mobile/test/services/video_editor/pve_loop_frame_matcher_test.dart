@@ -632,7 +632,7 @@ void main() {
     for (final (width, height) in [(180, 320), (320, 180)]) {
       test('known limit: a rigid subject touching opposite edges is accepted '
           'as camera drift at $width x $height', () {
-        // main behaves the same; the framing-contract work should flip this.
+        // main behaves the same; only a framing signal would flip this.
         final frames = [
           for (var i = 0; i < 90; i++)
             _oppositeEdgeSubjectFrame(
@@ -737,7 +737,9 @@ void main() {
         expect(match.boundaryModelError, lessThan(.5));
       });
     }
-    for (final (width, height, span) in [(180, 320, .08), (320, 180, .05)]) {
+    // Corner counts jump with span, so these spans, picked by sweep, keep a
+    // match to spare above the band minimum.
+    for (final (width, height, span) in [(180, 320, .09), (320, 180, .06)]) {
       test('no computable background fit rejects at $width x $height', () {
         final match = PveLoopFrameMatcher().match(
           _patchedMarginFrame(
