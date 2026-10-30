@@ -31,13 +31,7 @@ LoopFrame _frame(
           (math.cos(angle) * cx + math.sin(angle) * cy) / scale + width / 2;
       final sy =
           (-math.sin(angle) * cx + math.cos(angle) * cy) / scale + height / 2;
-      var value = blank
-          ? 100.0
-          : 100 +
-                26 * math.sin(sx * .43 + sy * .11) +
-                23 * math.cos(sy * .37 - sx * .09) +
-                21 * math.sin(sx * .17 + sy * .23) +
-                17 * math.cos(sx * .61 - sy * .41);
+      var value = blank ? 100.0 : _texture(sx, sy);
       if (plainMargins && (sx < width * .1 || sy < height * .1)) {
         value = 100;
       }
@@ -122,6 +116,63 @@ LoopFrame _flipped(
             (horizontal ? frame.width - x - 1 : x)],
   ]),
 );
+
+double _texture(double x, double y) =>
+    100 +
+    26 * math.sin(x * .43 + y * .11) +
+    23 * math.cos(y * .37 - x * .09) +
+    21 * math.sin(x * .17 + y * .23) +
+    17 * math.cos(x * .61 - y * .41);
+
+double _subjectTexture(double x, double y) =>
+    150 +
+    30 * math.sin(x * .29 + y * .13) +
+    25 * math.cos(y * .41 - x * .07) +
+    18 * math.sin(x * .11 + y * .31) +
+    14 * math.cos(x * .53 - y * .23);
+
+// Camera drift over plain 10% margins, with textured patches placed in the
+// left and right support bands. A stationary patch ignores the drift.
+LoopFrame _patchedMarginFrame(
+  int width,
+  int height,
+  double drift, {
+  required double leftSpan,
+  required double rightSpan,
+  double stationaryLeftSpan = 0,
+}) {
+  final pixels = Uint8List(width * height);
+  for (var y = 0; y < height; y++) {
+    for (var x = 0; x < width; x++) {
+      final sx = x - drift;
+      final fx = sx / width;
+      final fy = y / height;
+      var value = 100.0;
+      if (fx > .1 && fx < .9 && fy > .1 && fy < .9) {
+        value = _texture(sx, y.toDouble());
+      }
+      if (fx > .01 && fx < .075 && (fy - .5).abs() < leftSpan / 2) {
+        value = _subjectTexture(sx, y.toDouble());
+      }
+      if (fx > .925 && fx < .99 && (fy - .5).abs() < rightSpan / 2) {
+        value = _subjectTexture(sx, y.toDouble());
+      }
+      if (x / width > .01 &&
+          x / width < .075 &&
+          fy > .12 &&
+          fy < .12 + stationaryLeftSpan) {
+        value = _subjectTexture(x.toDouble(), y.toDouble());
+      }
+      pixels[y * width + x] = value.round().clamp(0, 255);
+    }
+  }
+  return LoopFrame(
+    time: Duration.zero,
+    width: width,
+    height: height,
+    luma: pixels,
+  );
+}
 
 LoopFrame _repeatedFrame(int width, int height, double shift) => LoopFrame(
   time: Duration.zero,
@@ -521,6 +572,99 @@ void main() {
       expect(match.pose.ty.abs(), lessThan(.3));
       expect(const LoopAlignmentLimits().acceptsMatch(match, 320, 180), isTrue);
     });
+    for (final (width, height, leftSpan) in [
+      (180, 320, .01),
+      (320, 180, .02),
+    ]) {
+      test('a band with fewer than 4 matches rejects at $width x $height', () {
+        final match = PveLoopFrameMatcher().match(
+          _patchedMarginFrame(
+            width,
+            height,
+            0,
+            leftSpan: leftSpan,
+            rightSpan: .7,
+          ),
+          _patchedMarginFrame(
+            width,
+            height,
+            2,
+            leftSpan: leftSpan,
+            rightSpan: .7,
+          ),
+        );
+        expect(match, isNotNull);
+        expect(
+          const LoopAlignmentLimits().acceptsMatch(match!, width, height),
+          isFalse,
+        );
+        expect(match.left.agreeing, lessThan(4));
+        expect(match.right.agreeing, greaterThanOrEqualTo(4));
+        expect(match.boundaryModelError, lessThan(.5));
+      });
+    }
+    for (final (width, height, stationarySpan) in [
+      (180, 320, .3),
+      (320, 180, .15),
+    ]) {
+      test('a band under 60% agreement rejects at $width x $height', () {
+        final match = PveLoopFrameMatcher().match(
+          _patchedMarginFrame(
+            width,
+            height,
+            0,
+            leftSpan: .2,
+            rightSpan: .7,
+            stationaryLeftSpan: stationarySpan,
+          ),
+          _patchedMarginFrame(
+            width,
+            height,
+            2,
+            leftSpan: .2,
+            rightSpan: .7,
+            stationaryLeftSpan: stationarySpan,
+          ),
+        );
+        expect(match, isNotNull);
+        expect(
+          const LoopAlignmentLimits().acceptsMatch(match!, width, height),
+          isFalse,
+        );
+        expect(match.left.agreeing, greaterThanOrEqualTo(4));
+        expect(match.left.agreeing / match.left.retained, lessThan(.6));
+        expect(match.right.agreeing, greaterThanOrEqualTo(4));
+        expect(match.boundaryModelError, lessThan(.5));
+      });
+    }
+    for (final (width, height, span) in [(180, 320, .08), (320, 180, .05)]) {
+      test('no computable background fit rejects at $width x $height', () {
+        final match = PveLoopFrameMatcher().match(
+          _patchedMarginFrame(
+            width,
+            height,
+            0,
+            leftSpan: span,
+            rightSpan: span,
+          ),
+          _patchedMarginFrame(
+            width,
+            height,
+            2,
+            leftSpan: span,
+            rightSpan: span,
+          ),
+        );
+        expect(match, isNotNull);
+        expect(
+          const LoopAlignmentLimits().acceptsMatch(match!, width, height),
+          isFalse,
+        );
+        expect(match.boundaryModelError, double.infinity);
+        expect(match.left.agreeing, greaterThanOrEqualTo(4));
+        expect(match.right.agreeing, greaterThanOrEqualTo(4));
+      });
+    }
     test('blank frames never establish camera confidence', () {
       expect(
         PveLoopFrameMatcher().match(

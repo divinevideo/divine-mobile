@@ -216,6 +216,18 @@ void main() {
         );
       },
     );
+
+    test('rejects an interior anchor that fails the match limits', () {
+      final fixture = _Fixture(
+        times: [for (var ms = 0; ms <= 1600; ms += 40) ms],
+        poseAt: (ms) => LoopPose.components(x: 2.4 * ms / 1600),
+      );
+      expect(fixture.plan(), isNotNull);
+      expect(
+        fixture.plan(refusedTime: const Duration(milliseconds: 800)),
+        isNull,
+      );
+    });
   });
 }
 
@@ -261,12 +273,17 @@ final class _Fixture {
 
   LoopAlignmentPlan? plan({
     Duration? unreliableTime,
+    Duration? refusedTime,
     LoopAlignmentLimits limits = const LoopAlignmentLimits(),
   }) => const LoopAlignmentPlanner().plan(
     input: input,
     firstFrames: frames,
     lastFrames: frames,
-    matcher: SceneMatcher(poses, unreliableTime: unreliableTime),
+    matcher: SceneMatcher(
+      poses,
+      unreliableTime: unreliableTime,
+      refusedTime: refusedTime,
+    ),
     limits: limits,
   );
 
