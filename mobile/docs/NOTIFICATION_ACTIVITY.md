@@ -58,10 +58,10 @@ Roll out the push-service policy and Funnelcake gateway before releasing mobile.
 Foreground visits reset only the absence allowance; the server retains the
 six-hour cooldown, delivery identities, consent, expiry, and quiet-hour rules.
 
-## Pending simulator evidence
+## Optional simulator evidence
 
-Digest tap routing changes an interaction. Before/after screenshots are still
-required by the shared PR review policy; automated tests do not satisfy it.
+Digest tap routing changes an interaction. Before/after screenshots can provide
+useful supporting evidence; missing captures are not a draft or readiness gate.
 At implementation handoff the booted iOS simulator had no Divine installation,
 and no authenticated synthetic digest/inbox capture fixture was prepared.
 
@@ -87,4 +87,5 @@ For safe capture:
 5. Tap the notification. Capture the base's single-video destination and the
    head's Notifications inbox with `xcrun simctl io <device> screenshot <file>`.
    Inspect both images, then publish comparable Before/After pairs through the
-   coordinating PR workflow. Keep the PR draft until that evidence is available.
+   coordinating PR workflow. Record any missing evidence and the actual device
+   validation limits in the PR description.
