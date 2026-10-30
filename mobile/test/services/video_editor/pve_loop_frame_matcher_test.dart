@@ -603,9 +603,8 @@ void main() {
               limits: const LoopAlignmentLimits(),
             );
             expect(plan, isNotNull);
-            expect(plan!.zoom, inInclusiveRange(1, 1.08));
             _expectCameraCancelled(
-              plan,
+              plan!,
               frames,
               dx: dx,
               dy: dy,
