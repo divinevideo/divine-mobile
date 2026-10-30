@@ -280,7 +280,7 @@ class _StickerTapArea extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             if (sticker != null &&
-                sticker.isRedrawnAlike(emojiFontLoaded: stickerEmojiFontLoaded))
+                sticker.canBeRedrawn(emojiFontLoaded: stickerEmojiFontLoaded))
               // Laid over the sticker in the frames at its exact size, in the
               // parts that cover that one; the button below names it, and
               // only the button takes the pointer.
@@ -288,10 +288,7 @@ class _StickerTapArea extends StatelessWidget {
                 child: ExcludeSemantics(
                   child: SizedBox.fromSize(
                     size: stickerSize,
-                    child: FittedBox(
-                      fit: BoxFit.fill,
-                      child: SocialStickerView(data: sticker, overFrames: true),
-                    ),
+                    child: SocialStickerCopy(data: sticker),
                   ),
                 ),
               ),

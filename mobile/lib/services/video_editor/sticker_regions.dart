@@ -80,7 +80,7 @@ VideoStickerRegion? _regionOf(
     // glyphs a viewer's phone draws its own way would show both.
     style:
         sticker.isAnimated ||
-            !sticker.isRedrawnAlike(emojiFontLoaded: emojiFontLoaded) ||
+            !sticker.canBeRedrawn(emojiFontLoaded: emojiFontLoaded) ||
             !_isDrawnPlainly(layer) ||
             above.any((upper) => _isCoveredBy(item, upper, bodySize))
         ? null
