@@ -90,11 +90,12 @@ Initial conservative acceptance limits are:
   Do not widen support into possible foreground to rescue a plain margin,
   because a wider band can reach a subject. This does not establish semantic
   background identity, and it has known limits. Coherent foreground obscuring
-  the boundaries stays ambiguous: a rigid subject spanning nearly the whole
-  band can be accepted as camera drift (measured: accepted at a 5% inset from
-  the left and right edges, rejected at 10%). On encoded footage a plain margin
-  within a few pixels of the band can still gain support from resampling
-  ringing. Once ringing gives a band corners, a subject moving less than the
+  the boundaries stays ambiguous: a rigid subject filling nearly the whole
+  frame can be accepted as camera drift. Measured: one reaching the left and
+  right edges was accepted when inset 5% from the top and bottom and rejected
+  at 10%; one reaching the top and bottom was already rejected at 5%. On
+  encoded footage a plain margin within a few pixels of the band can still gain
+  support from resampling ringing. Once ringing gives a band corners, a subject moving less than the
   one-pixel agreement tolerance can pass as camera drift: on one-off synthetic
   encodes with a 10% plain margin, a fitted displacement of about 0.6 analysis
   pixels was repaired and about 1.3 was declined.

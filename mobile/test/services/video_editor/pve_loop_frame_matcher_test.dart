@@ -738,7 +738,8 @@ void main() {
       });
     }
     // Corner counts jump with span, so these spans, picked by sweep, keep a
-    // match to spare above the band minimum.
+    // match to spare above the band minimum and below the 12 band matches that
+    // make a fit computable (two thirds train it, and it needs 8).
     for (final (width, height, span) in [(180, 320, .09), (320, 180, .06)]) {
       test('no computable background fit rejects at $width x $height', () {
         final match = PveLoopFrameMatcher().match(
