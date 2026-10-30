@@ -96,7 +96,7 @@ ios/fastlane/README.md
 ios/fastlane/DerivedData/
 ios/fastlane/.venv/
 
-# Loop-alignment native-test media and artifacts. Private recordings replayed
-# through LOOP_ALIGNMENT_INPUT_VIDEO must never be staged.
+# Generated loop-alignment fixtures and native-test output. Keep private
+# recordings outside the checkout; these rules cover only the generator's files.
 integration_test/fixtures/*.mp4
 integration_test/fixtures/native-output/
