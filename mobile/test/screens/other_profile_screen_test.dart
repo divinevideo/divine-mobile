@@ -376,7 +376,7 @@ void main() {
           ),
         );
         await tester.pumpWidget(const SizedBox.shrink());
-        // This externally owned container holds the short-link auth timer.
+        // This externally owned container holds the short-link budget timer.
         // Dispose it before Flutter checks for pending timers.
         container.dispose();
         await tester.pump(const Duration(seconds: 3));

@@ -828,7 +828,6 @@ void main() {
         final shortener = ShortLinkClient(
           client: httpClient,
           enabled: true,
-          authorize: (_, _) async => 'Nostr synthetic',
         );
         service = VideoSharingService(
           authService: mockAuthService,
