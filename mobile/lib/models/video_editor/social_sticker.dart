@@ -42,9 +42,10 @@ enum SocialStickerKind {
   /// wrote, or the video's thumbnail. A tap opens it.
   reply;
 
-  /// The looks a sticker of this kind can take, the default first. A
-  /// countdown takes only solid ones, which the player's time left can cover
-  /// the date in the frames with; a reply's card only a light and a dark one.
+  /// The looks a sticker of this kind can take, the default first.
+  ///
+  /// A countdown takes only solid looks, so the player's copy can hide its
+  /// date in the frames; a reply's card takes a light or a dark one.
   List<InfoStickerStyle> get styles => switch (this) {
     countdown => const [
       InfoStickerStyle.light,
@@ -80,7 +81,7 @@ enum SocialStickerSoundDesign {
 /// Stored in both meta slots of its `WidgetLayer`, like an info sticker. A
 /// mention, a hashtag and a link also go into the published event; see
 /// [SocialStickerCredits]. A reply keeps the name, text and picture of what it
-/// replies to as they were when the video was recorded.
+/// replies to as they were when the reply camera was opened.
 class SocialStickerData extends Equatable {
   const SocialStickerData({
     required this.kind,
@@ -202,8 +203,8 @@ class SocialStickerData extends Equatable {
   );
 
   /// The sticker showing what [context] replies to, from the snapshot taken
-  /// when the reply was recorded, or `null` when it has none. The comment is
-  /// kept on one line and cut to [maxReplyTextLength].
+  /// when the reply camera was opened, or `null` when it has none. The comment
+  /// is kept on one line and cut to [maxReplyTextLength].
   static SocialStickerData? replyTo(
     VideoReplyContext context, {
     InfoStickerStyle style = InfoStickerStyle.light,

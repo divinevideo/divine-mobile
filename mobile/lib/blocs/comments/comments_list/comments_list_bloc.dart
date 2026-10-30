@@ -64,8 +64,9 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   /// Page size for comment loading.
   static const _pageSize = 50;
 
-  /// The most comments loaded while looking for the comment the list was
-  /// opened on, before it is shown from the top without it.
+  /// Below this many loaded comments, the search for the comment the list was
+  /// opened on asks for another page; at or above it, the list is shown from
+  /// the top without that comment.
   static const _maxCommentsLoadedForFocus = 500;
 
   /// Maximum number of real-time comments to accept per second.
@@ -276,9 +277,10 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   }
 
   /// Scrolls to the comment the list was opened on once it is loaded, and
-  /// loads older comments while it is not, up to
-  /// [_maxCommentsLoadedForFocus]. One that is gone, such as a deleted
-  /// comment, leaves the list where it starts.
+  /// asks for another page of older comments while it is not and fewer than
+  /// [_maxCommentsLoadedForFocus] are loaded, so the list can end a page past
+  /// it. The search also ends on the last page and on a failed load. A comment
+  /// it does not find, such as a deleted one, leaves the list where it starts.
   ///
   /// A page that added no comment ends the search: `hasMoreContent` can stay
   /// true past the last comment the relays return, because the count it is

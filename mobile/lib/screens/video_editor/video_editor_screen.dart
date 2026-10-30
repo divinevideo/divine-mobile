@@ -941,9 +941,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   }
 
   /// The sticker showing what the video replies to, from the snapshot taken
-  /// when the reply was recorded, or `null` when it replies to nothing, has
-  /// no snapshot, or replies to someone the creator cannot mention: who
-  /// blocked them, or whom they blocked.
+  /// when the reply camera was opened, or `null` when it replies to nothing,
+  /// has no snapshot, or replies to someone the creator cannot mention: whom
+  /// they blocked, or who blocked or muted them.
   SocialStickerData? get _replySticker {
     final replyContext = ref.read(videoReplyContextProvider);
     final sticker = replyContext == null

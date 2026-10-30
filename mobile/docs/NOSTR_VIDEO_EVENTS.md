@@ -129,7 +129,7 @@ conventions.
 | `t` | `["t", "summer"]` | A hashtag sticker's hashtag, written with the post's own hashtags. |
 | `p` | `["p", "<pubkey>", "<relay>", "mention"]` | A mention sticker's profile, written like a caption mention. |
 | `r` | `["r", "https://example.com/page", "link"]` | The web page of a link sticker. The `link` marker is required: an unmarked `r` tag on a video event is read as one of the video's own media URLs. |
-| `sticker` | `["sticker", "<kind>", "<target>", "<cx> <cy> <w> <h>", "<degrees>", "<start ms>", "<end ms>", "<style>", "<label>"]` | Where a tappable sticker stands on the video and how it looks, so a viewer can draw it again and tap it. |
+| `sticker` | `["sticker", "<kind>", "<target>", "<cx> <cy> <w> <h>", "<degrees>", "<start ms>", "<end ms>", "<style>", "<label>"]` | Where a tappable sticker stands on the video and how it looks, so a viewer can tap it and, for most kinds, draw it again. |
 
 The `sticker` tag's fields:
 
@@ -244,16 +244,15 @@ The newer kinds:
   place of the date, ticking each second, and its date again once it is over;
   a tap sets a local reminder for the end, or removes it, and asks for
   notification permission only then. On the web, which has no reminders, it
-  is no button. The editor offers a countdown only the
+  is no button. The editor offers a countdown in only the
   solid `light`, `brand` and `highlight` looks, so the copy hides the date in
   the frames.
 - `reply` shows the avatar, name and comment the video replies to, as they
-  were when the reply was recorded, or the thumbnail and creator of the video.
-  It is never published with `style`, as its picture is not in the tag. A tap
-  opens the video the reply's own NIP-22 root tags name; for a reply to a
-  comment, with its comments open and scrolled to that comment, or at the top
-  when the comment is gone. It is published only on a video that replies to
-  its target.
+  were when the reply camera was opened, or the thumbnail and creator of the
+  video. It is never published with `style`, as its picture is not in the tag.
+  A tap opens the video the reply's own NIP-22 root tags name; for a reply to
+  a comment, with its comments open on that comment. It is published only on a
+  video that replies to its target.
 
 Older Divine versions drop a sticker tag whose `kind` they do not know, and
 then show the sticker only as it is in the frames.

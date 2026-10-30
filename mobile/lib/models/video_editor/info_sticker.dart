@@ -322,7 +322,7 @@ class InfoStickerData extends Equatable {
   /// The name of the place a location sticker shows.
   final String? placeName;
 
-  /// The place's name with its region and country, such as "Zermatt, Wallis,
+  /// The place's name, town, region and country, such as "Zermatt, Wallis,
   /// Schweiz", which a viewer's map app searches for when they tap the
   /// published sticker. A sticker placed before it was kept has none.
   final String? placeAddress;

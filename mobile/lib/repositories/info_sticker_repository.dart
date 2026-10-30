@@ -30,9 +30,10 @@ class InfoStickerPlace extends Equatable {
   /// Where it is, such as "Bern, Schweiz", or `null` when [name] says it all.
   final String? detail;
 
-  /// What the geocoder is asked to find the place again, [name] with
-  /// everything that tells it apart, such as "Zermatt, Wallis, Schweiz". The
-  /// search names places without their coordinates.
+  /// What the geocoder is asked to find the place again, and what a viewer's
+  /// map app searches for on the published sticker: [name] with everything
+  /// that tells it apart, such as "Zermatt, Wallis, Schweiz". The search names
+  /// places without their coordinates.
   final String address;
 
   /// The ISO 3166 code of its country, such as `CH`.

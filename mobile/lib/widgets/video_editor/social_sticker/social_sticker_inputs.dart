@@ -390,8 +390,8 @@ class _SocialStickerLyricFieldState extends State<SocialStickerLyricField> {
   }
 }
 
-/// A countdown's title and the moment it counts down to, on a wheel that
-/// starts no earlier than now.
+/// A countdown's title and the moment it counts down to, on a wheel whose
+/// earliest moment is now, or the countdown's own end when that has passed.
 class SocialStickerCountdownFields extends StatefulWidget {
   const SocialStickerCountdownFields({this.autofocus = false, super.key});
 

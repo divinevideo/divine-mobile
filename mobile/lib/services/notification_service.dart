@@ -809,9 +809,10 @@ class NotificationService {
   /// How a reminder shows: in its own channel, so a viewer can silence
   /// reminders without silencing uploads.
   static const _reminderDetails = NotificationDetails(
+    // The channel id is stable; changing it orphans the user's settings for it.
     android: AndroidNotificationDetails(
-      'openvine_reminders', // channel ID - stable, do not change
-      'Reminders', // channel name - user-visible
+      'openvine_reminders',
+      'Reminders',
       channelDescription: 'Reminders you set for countdowns in videos',
       importance: Importance.high,
       priority: Priority.high,

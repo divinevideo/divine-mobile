@@ -24,10 +24,10 @@ class VideoReplyContext extends Equatable {
   final String? parentAuthorPubkey;
 
   /// The name of whoever wrote what the reply replies to, the parent comment
-  /// or else the root video, as it was when the reply was recorded.
+  /// or else the root video, as it was when the reply camera was opened.
   final String? replyToName;
 
-  /// The text of the parent comment as it was when the reply was recorded;
+  /// The text of the parent comment as it was when the reply camera was opened;
   /// `null` for a reply to the video itself.
   final String? replyToText;
 

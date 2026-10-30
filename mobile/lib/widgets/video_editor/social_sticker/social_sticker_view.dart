@@ -1,5 +1,5 @@
-// ABOUTME: Draws a social sticker: an @mention, a #hashtag or a link in its
-// ABOUTME: pill, a sound credit that moves with the playhead, a countdown, a reply.
+// ABOUTME: Draws a social sticker: an @mention, a #hashtag or a link as a pill,
+// ABOUTME: a sound credit that moves with the playhead, a countdown or a reply.
 
 import 'dart:async';
 
@@ -211,8 +211,8 @@ const double _countdownValueFontSize = 40;
 /// The radius of a countdown card's corners.
 const double _countdownRadius = 48;
 
-/// The size of a countdown's title: the one [StickerPillPalette.textStyle]
-/// writes in by default.
+/// The size of a countdown's title, drawn in [StickerPillPalette.textStyle]'s
+/// default size; it only sizes the corner radius, so the two change together.
 const double _countdownTitleFontSize = 48;
 
 /// The space above and below a countdown's title and date in its card.
@@ -222,8 +222,10 @@ const double _countdownPaddingVertical = 28;
 const double _countdownSpacing = 8;
 
 /// How round a countdown card's corners are, as a share of its height: its
-/// padding, its title line and its date line, each line 1.15 of its font
-/// size high (see [StickerPillPalette.textStyle]).
+/// padding, its title line and its date line.
+///
+/// The 1.15 line height and [_countdownTitleFontSize] mirror
+/// [StickerPillPalette.textStyle]'s defaults and change together with them.
 const double _countdownRoundness =
     _countdownRadius /
     (2 * _countdownPaddingVertical +

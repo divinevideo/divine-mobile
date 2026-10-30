@@ -137,13 +137,17 @@ final class CommentsListState extends Equatable {
   /// Transient one-shot signal: the id of a comment the UI should scroll into
   /// view (e.g. the local user's just-inserted reply, which nests under an
   /// older parent and would otherwise render off-screen — #5854). Set by the
-  /// optimistic-insert handler and cleared by [CommentsScrollHandled] after the
-  /// UI performs the scroll.
+  /// optimistic-insert handler, and by the load once [pendingFocusCommentId]
+  /// is in the list; cleared by [CommentsScrollHandled] after the UI performs
+  /// the scroll.
   final String? scrollToCommentId;
 
   /// The comment the list was opened on, such as the one a tapped reply
   /// sticker replies to, until it is loaded and handed to
-  /// [scrollToCommentId], or until the list has none of it to load.
+  /// [scrollToCommentId].
+  ///
+  /// The search for it ends when it is found or gives up: no more pages, the
+  /// comment cap, a page that adds nothing, or a failed load.
   final String? pendingFocusCommentId;
 
   /// Returns a comparator for sorting comments based on [sortMode].
@@ -283,7 +287,7 @@ final class CommentsListState extends Equatable {
       scrollToCommentId: clearScrollTo
           ? null
           : (scrollToCommentId ?? this.scrollToCommentId),
-      // Set only when the list is opened on a comment.
+      // Only the constructor sets it; copyWith can only clear it.
       pendingFocusCommentId: clearPendingFocus ? null : pendingFocusCommentId,
     );
   }
