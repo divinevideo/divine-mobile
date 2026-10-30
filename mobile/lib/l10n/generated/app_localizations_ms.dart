@@ -11720,23 +11720,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get badgesTitle => 'Lencana';
 
   @override
-  String get badgeSubscriptionsPublicNotice =>
-      'Your badge subscriptions are public.';
-
-  @override
-  String get badgeSubscribeAction => 'Langgan lencana';
-
-  @override
-  String get badgeSubscribedAction => 'Melanggan';
-
-  @override
-  String get badgeAcceptedHoldersTitle => 'Pemegang lencana yang menerima';
-
-  @override
-  String get badgeSubscriptionLoadError =>
-      'Langganan lencana anda tidak dapat dimuatkan. Cuba lagi.';
-
-  @override
   String get badgesLoadError => 'Tidak dapat memuatkan lencana';
 
   @override
@@ -15278,4 +15261,21 @@ class AppLocalizationsMs extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Langgan lencana';
+
+  @override
+  String get badgeSubscribedAction => 'Melanggan';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Pemegang lencana yang menerima';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'Langganan lencana anda tidak dapat dimuatkan. Cuba lagi.';
 }

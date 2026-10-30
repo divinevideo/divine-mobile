@@ -148,7 +148,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   final Future<Iterable<String>> Function()? _badgeAuthors;
   final Stream<void>? _badgeSubscriptionChanges;
   StreamSubscription<void>? _badgeSubscriptionsSubscription;
-  bool _isClosing = false;
 
   late final _followingFeed = FollowingVideoFeedSession(
     videosRepository: _videosRepository,
@@ -1175,6 +1174,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Emitter<VideoFeedBlocState> emit,
   ) async {
     if (state.source.type != VideoFeedSourceType.following) return;
+    // This first-page refresh retires the previous pagination generation,
+    // including its loading indicator if the replacement read fails.
+    if (state.isLoadingMore) emit(state.copyWith(isLoadingMore: false));
     final feedLoad = _feedTracker?.startFeedLoad(
       state.source.mode.name,
       reason: FeedLoadReason.refresh,
@@ -1961,15 +1963,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     String? cursor,
     int? paginationGeneration,
   }) {
-    final requestSequence = _firstPageRequestSequence;
+    final requestSequence = _loadGeneration;
     return _followingFeed.loadPage(
       cursor: cursor,
       ownsRequest: () =>
-          requestSequence == _firstPageRequestSequence &&
+          requestSequence == _loadGeneration &&
           (paginationGeneration == null ||
               paginationGeneration == _paginationGeneration) &&
+          !_isClosing &&
           !isClosed,
-      isActive: () => !isClosed,
+      isActive: () => !_isClosing && !isClosed,
     );
   }
 

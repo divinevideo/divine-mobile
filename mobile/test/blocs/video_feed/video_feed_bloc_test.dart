@@ -24,13 +24,13 @@ import 'package:openvine/blocs/video_feed/home_feed_cache.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/observability/reportable_error.dart';
-import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/auth_service.dart'
     show AuthService, AuthState;
+import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -133,6 +133,7 @@ class _GatedWrites extends InMemorySharedPreferencesStore {
     return super.setValue(valueType, key, value);
   }
 }
+
 class _MockSharedPreferences extends Mock implements SharedPreferences {}
 
 void main() {
@@ -1288,7 +1289,7 @@ void main() {
         ],
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'loads subscribed badge holders when there are no direct follows',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
@@ -1326,7 +1327,7 @@ void main() {
         ).called(1),
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'reloads Following when the account changes its badge subscriptions',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
@@ -1377,7 +1378,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'pages a subscribed badge and direct follows through one merged pager',
         setUp: () {
           badgeAuthorLoads = 0;
@@ -1722,7 +1723,7 @@ void main() {
           await closed;
           expect(listens, 0);
         });
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'late badge discovery preserves the current video and position',
           setUp: () {
             when(() => mockFollowRepository.followingPubkeys)
@@ -1787,7 +1788,7 @@ void main() {
       });
 
       group('Following pager ownership', () {
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'badge subscription discovery leaves For You untouched',
           setUp: () {
             when(
@@ -1830,7 +1831,7 @@ void main() {
           },
         );
 
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'superseded cached-window page preserves continuation when reload fails',
           setUp: () {
             when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
@@ -1868,7 +1869,7 @@ void main() {
         );
 
         for (final hasBadgeLoader in [false, true]) {
-          blocTest<VideoFeedBloc, VideoFeedBlocState>(
+          feedBlocTest(
             'badge cursor without a live snapshot never creates a pager or calls home, loader $hasBadgeLoader',
             build: () => VideoFeedBloc(
               videosRepository: mockVideosRepository,
@@ -2283,6 +2284,7 @@ void main() {
           SharedPreferences.setMockInitialValues({});
           client = _MockBadgeNostrClient();
           badges = BadgeRepository(
+            signer: () => nostr.LocalNostrSigner('1' * 64),
             nostrClient: client,
             sharedPreferences: await SharedPreferences.getInstance(),
             currentPubkey: () => '2' * 64,
@@ -2639,7 +2641,7 @@ void main() {
       });
 
       for (final failVideos in [false, true]) {
-        blocTest<VideoFeedBloc, VideoFeedBlocState>(
+        feedBlocTest(
           'shows retryable failure without direct follows when '
           '${failVideos ? 'badge videos' : 'badge holders'} fail',
           setUp: () {
@@ -2694,7 +2696,7 @@ void main() {
         );
       }
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'shows direct follows when badge subscriptions cannot be resolved',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn([
@@ -2737,7 +2739,7 @@ void main() {
         ),
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'shows direct follows when badge holder videos are unavailable',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn([
@@ -2909,7 +2911,7 @@ void main() {
         },
       );
 
-      blocTest<VideoFeedBloc, VideoFeedBlocState>(
+      feedBlocTest(
         'does not emit noFollowedUsers for forYou when following list is empty',
         setUp: () {
           when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
@@ -5754,6 +5756,15 @@ void main() {
             ),
           ).thenAnswer((_) async => true);
           stubRecommended(createTestVideos(1));
+          when(
+            () => mockVideosRepository.getHomeFeedVideos(
+              authors: any(named: 'authors'),
+              userPubkey: any(named: 'userPubkey'),
+              cursor: any(named: 'cursor'),
+            ),
+          ).thenAnswer(
+            (_) async => HomeFeedResult(videos: createTestVideos(1)),
+          );
           stubMemberVideos(createTestVideos(2));
           return SharedPreferences.getInstance();
         }

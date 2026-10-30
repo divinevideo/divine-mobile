@@ -11771,23 +11771,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get badgesTitle => 'Badges';
 
   @override
-  String get badgeSubscriptionsPublicNotice =>
-      'Your badge subscriptions are public.';
-
-  @override
-  String get badgeSubscribeAction => 'Badge volgen';
-
-  @override
-  String get badgeSubscribedAction => 'Volgend';
-
-  @override
-  String get badgeAcceptedHoldersTitle => 'Geaccepteerde badgehouders';
-
-  @override
-  String get badgeSubscriptionLoadError =>
-      'Je badge-abonnementen konden niet worden geladen. Probeer het opnieuw.';
-
-  @override
   String get badgesLoadError => 'Badges konden niet geladen worden';
 
   @override
@@ -15364,4 +15347,21 @@ class AppLocalizationsNl extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Badge volgen';
+
+  @override
+  String get badgeSubscribedAction => 'Volgend';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Geaccepteerde badgehouders';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'Je badge-abonnementen konden niet worden geladen. Probeer het opnieuw.';
 }

@@ -5835,10 +5835,6 @@
   "settingsBadgesTitle": "Lencana",
   "settingsBadgesSubtitle": "Terima anugerah dan semak status lencana yang dikeluarkan.",
   "badgesTitle": "Lencana",
-  "badgeSubscribeAction": "Langgan lencana",
-  "badgeSubscribedAction": "Melanggan",
-  "badgeAcceptedHoldersTitle": "Pemegang lencana yang menerima",
-  "badgeSubscriptionLoadError": "Langganan lencana anda tidak dapat dimuatkan. Cuba lagi.",
   "badgesLoadError": "Tidak dapat memuatkan lencana",
   "badgesUpdateError": "Tidak dapat mengemas kini lencana",
   "badgesAwardedEmptyTitle": "Belum ada anugerah lencana",
@@ -7424,5 +7420,9 @@
   "videoEditorLoopRepairProgress": "Menjajarkan gelung anda…",
   "videoEditorLoopRepairTrimmed": "Gelung dilancarkan. {seconds} s dibuang.",
   "notificationFromDivine": "Daripada Divine",
-  "announcementUnavailable": "Pengumuman ini tidak lagi tersedia."
+  "announcementUnavailable": "Pengumuman ini tidak lagi tersedia.",
+  "badgeSubscribeAction": "Langgan lencana",
+  "badgeSubscribedAction": "Melanggan",
+  "badgeAcceptedHoldersTitle": "Pemegang lencana yang menerima",
+  "badgeSubscriptionLoadError": "Langganan lencana anda tidak dapat dimuatkan. Cuba lagi."
 }

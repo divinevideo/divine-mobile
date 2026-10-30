@@ -11724,23 +11724,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get badgesTitle => 'Märken';
 
   @override
-  String get badgeSubscriptionsPublicNotice =>
-      'Your badge subscriptions are public.';
-
-  @override
-  String get badgeSubscribeAction => 'Prenumerera på märket';
-
-  @override
-  String get badgeSubscribedAction => 'Prenumererar';
-
-  @override
-  String get badgeAcceptedHoldersTitle => 'Personer som godkänt märket';
-
-  @override
-  String get badgeSubscriptionLoadError =>
-      'Det gick inte att läsa in dina märkprenumerationer. Försök igen.';
-
-  @override
   String get badgesLoadError => 'Kunde inte ladda märken';
 
   @override
@@ -15299,4 +15282,21 @@ class AppLocalizationsSv extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Prenumerera på märket';
+
+  @override
+  String get badgeSubscribedAction => 'Prenumererar';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Personer som godkänt märket';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'Det gick inte att läsa in dina märkprenumerationer. Försök igen.';
 }

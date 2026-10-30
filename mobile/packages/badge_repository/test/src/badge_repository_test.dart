@@ -154,6 +154,27 @@ void main() {
       },
     );
 
+    test('dispose closes account state listeners', () async {
+      final events = StreamController<Event>.broadcast();
+      final statuses =
+          StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+      when(() => nostrClient.subscribe(any())).thenAnswer((_) => events.stream);
+      when(
+        () => nostrClient.relayStatusStream,
+      ).thenAnswer((_) => statuses.stream);
+      addTearDown(() async {
+        await repository.closeAccountState();
+        await events.close();
+        await statuses.close();
+      });
+      await repository.startAccountState();
+      expect(events.hasListener, isTrue);
+      expect(statuses.hasListener, isTrue);
+      await repository.dispose();
+      expect(events.hasListener, isFalse);
+      expect(statuses.hasListener, isFalse);
+    });
+
     test(
       'local account key enumeration isolates complete compatibility inputs',
       () {
@@ -380,6 +401,7 @@ void main() {
         var revision = 0;
         repository = BadgeRepository(
           nostrClient: nostrClient,
+          signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => account,
           sessionChanges: sessions.stream,
@@ -661,6 +683,7 @@ void main() {
         () async {
           final unsigned = BadgeRepository(
             nostrClient: nostrClient,
+            signer: () => dismissalSigner,
             sharedPreferences: preferences,
             currentPubkey: () => _pubkey(1),
             signEvent:
@@ -829,6 +852,7 @@ void main() {
           ).thenAnswer((_) => pending.future);
           final scoped = BadgeRepository(
             nostrClient: nostrClient,
+            signer: () => dismissalSigner,
             sharedPreferences: preferences,
             currentPubkey: () => account,
             signEvent:
@@ -872,6 +896,7 @@ void main() {
         () async {
           final scoped = BadgeRepository(
             nostrClient: nostrClient,
+            signer: () => dismissalSigner,
             sharedPreferences: preferences,
             currentPubkey: () => _pubkey(1),
             signEvent:
@@ -914,6 +939,7 @@ void main() {
             final signed = Completer<Event?>();
             final scoped = BadgeRepository(
               nostrClient: nostrClient,
+              signer: () => dismissalSigner,
               sharedPreferences: preferences,
               currentPubkey: () => account,
               sessionChanges: sessions.stream,
@@ -998,6 +1024,7 @@ void main() {
       );
       final otherDevice = BadgeRepository(
         nostrClient: nostrClient,
+        signer: () => dismissalSigner,
         sharedPreferences: preferences,
         currentPubkey: () => _pubkey(1),
         signEvent:
@@ -1161,6 +1188,7 @@ void main() {
     test('reads curated definitions from the public relay', () async {
       final publicRepository = BadgeRepository(
         nostrClient: nostrClient,
+        signer: () => dismissalSigner,
         sharedPreferences: preferences,
         currentPubkey: () => null,
         signEvent:
@@ -1204,6 +1232,7 @@ void main() {
       test('drops hidden accounts and keeps the order', () {
         final filtering = BadgeRepository(
           nostrClient: nostrClient,
+          signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => _pubkey(1),
           signEvent:
@@ -1688,6 +1717,7 @@ void main() {
             var account = _pubkey(1);
             final scoped = BadgeRepository(
               nostrClient: nostrClient,
+              signer: () => dismissalSigner,
               sharedPreferences: preferences,
               currentPubkey: () => account,
               signEvent:
@@ -1738,6 +1768,7 @@ void main() {
             var account = _pubkey(1);
             final scoped = BadgeRepository(
               nostrClient: nostrClient,
+              signer: () => dismissalSigner,
               sharedPreferences: preferences,
               currentPubkey: () => account,
               signEvent:
@@ -1804,6 +1835,7 @@ void main() {
             addTearDown(resets.close);
             final scoped = BadgeRepository(
               nostrClient: nostrClient,
+              signer: () => dismissalSigner,
               sharedPreferences: preferences,
               currentPubkey: () => _pubkey(1),
               signEvent:
@@ -1964,6 +1996,7 @@ void main() {
             var account = _pubkey(1);
             final scoped = BadgeRepository(
               nostrClient: nostrClient,
+              signer: () => dismissalSigner,
               sharedPreferences: preferences,
               currentPubkey: () => account,
               signEvent:
@@ -2079,6 +2112,7 @@ void main() {
       test('is empty without a signed-in account', () async {
         final signedOut = BadgeRepository(
           nostrClient: nostrClient,
+          signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
           signEvent:
@@ -2229,7 +2263,14 @@ void main() {
               events: [
                 for (final pubkey in filter.authors ?? const <String>[])
                   _profileBadgesEvent(
-                    id: _eventId(500 + int.parse(pubkey, radix: 16)),
+                    id: _eventId(
+                      500 +
+                          [
+                            _pubkey(10),
+                            _pubkey(11),
+                            _pubkey(12),
+                          ].indexOf(pubkey),
+                    ),
                     pubkey: pubkey,
                     tags: [
                       for (final entry in holderOf.entries)
@@ -2379,7 +2420,10 @@ void main() {
             events: [
               for (final pubkey in filter.authors ?? const <String>[])
                 _profileBadgesEvent(
-                  id: _eventId(500 + int.parse(pubkey, radix: 16)),
+                  id: _eventId(
+                    500 +
+                        [_pubkey(10), _pubkey(11), _pubkey(12)].indexOf(pubkey),
+                  ),
                   pubkey: pubkey,
                   tags: [
                     ['a', coordinate.value],
@@ -2432,6 +2476,7 @@ void main() {
       );
       final viewer = BadgeRepository(
         nostrClient: nostrClient,
+        signer: () => dismissalSigner,
         sharedPreferences: preferences,
         currentPubkey: () => _pubkey(1),
         signEvent:
@@ -2466,7 +2511,10 @@ void main() {
             events: [
               for (final pubkey in filter.authors ?? const <String>[])
                 _profileBadgesEvent(
-                  id: _eventId(500 + int.parse(pubkey, radix: 16)),
+                  id: _eventId(
+                    500 +
+                        [_pubkey(10), _pubkey(11), _pubkey(12)].indexOf(pubkey),
+                  ),
                   pubkey: pubkey,
                   tags: [
                     ['a', coordinate.value],
@@ -3172,8 +3220,13 @@ void main() {
         signer: () => dismissalSigner,
         sharedPreferences: await SharedPreferences.getInstance(),
         currentPubkey: () => _pubkey(1),
-        signEvent: ({required kind, required content, required tags}) async =>
-            _event(
+        signEvent:
+            ({
+              required kind,
+              required content,
+              required tags,
+              createdAt,
+            }) async => _event(
               id: _eventId(901 + kind),
               pubkey: _pubkey(1),
               kind: kind,
@@ -5245,7 +5298,7 @@ void main() {
             identifier: ' scene-stealer ',
             name: fields['name']!,
             description: ' Steals the scroll. ',
-            imageUrl: artworkUri.toString(),
+            imageUrl: 'https://media.divine.video/scene.png',
             thumbnailUrl: 'https://media.divine.video/scene-thumb.png',
           ),
         );

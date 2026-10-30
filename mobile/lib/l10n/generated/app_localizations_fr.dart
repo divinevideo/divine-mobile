@@ -11901,23 +11901,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get badgesTitle => 'Insignes';
 
   @override
-  String get badgeSubscriptionsPublicNotice =>
-      'Your badge subscriptions are public.';
-
-  @override
-  String get badgeSubscribeAction => 'S’abonner au badge';
-
-  @override
-  String get badgeSubscribedAction => 'Abonné';
-
-  @override
-  String get badgeAcceptedHoldersTitle => 'Titulaires ayant accepté le badge';
-
-  @override
-  String get badgeSubscriptionLoadError =>
-      'Impossible de charger tes abonnements aux badges. Réessaie.';
-
-  @override
   String get badgesLoadError => 'Impossible de charger les badges';
 
   @override
@@ -15522,4 +15505,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'S’abonner au badge';
+
+  @override
+  String get badgeSubscribedAction => 'Abonné';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Titulaires ayant accepté le badge';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'Impossible de charger tes abonnements aux badges. Réessaie.';
 }

@@ -18,6 +18,7 @@ import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
@@ -421,6 +422,7 @@ class _AcceptedHolders extends ConsumerWidget {
         BlocProvider(
           key: ValueKey((followRepository, blocklistRepository)),
           create: (_) => MyFollowingBloc(
+            consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
             followRepository: followRepository,
             contentBlocklistRepository: blocklistRepository,
           )..add(const MyFollowingListLoadRequested()),

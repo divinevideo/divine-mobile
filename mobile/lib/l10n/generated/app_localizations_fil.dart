@@ -11806,23 +11806,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get badgesTitle => 'Mga Badge';
 
   @override
-  String get badgeSubscriptionsPublicNotice =>
-      'Your badge subscriptions are public.';
-
-  @override
-  String get badgeSubscribeAction => 'Mag-subscribe sa badge';
-
-  @override
-  String get badgeSubscribedAction => 'Naka-subscribe';
-
-  @override
-  String get badgeAcceptedHoldersTitle => 'Mga tumanggap ng badge';
-
-  @override
-  String get badgeSubscriptionLoadError =>
-      'Hindi ma-load ang iyong mga subscription sa badge. Subukan muli.';
-
-  @override
   String get badgesLoadError => 'Hindi na-load ang mga badge';
 
   @override
@@ -15411,4 +15394,21 @@ class AppLocalizationsFil extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Mag-subscribe sa badge';
+
+  @override
+  String get badgeSubscribedAction => 'Naka-subscribe';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Mga tumanggap ng badge';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'Hindi ma-load ang iyong mga subscription sa badge. Subukan muli.';
 }

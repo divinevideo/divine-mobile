@@ -19857,36 +19857,6 @@ abstract class AppLocalizations {
   /// **'Badges'**
   String get badgesTitle;
 
-  /// Disclosure next to the badge subscription button: subscribing publishes the selected badge coordinates publicly on Nostr.
-  ///
-  /// In en, this message translates to:
-  /// **'Your badge subscriptions are public.'**
-  String get badgeSubscriptionsPublicNotice;
-
-  /// No description provided for @badgeSubscribeAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Subscribe to badge'**
-  String get badgeSubscribeAction;
-
-  /// No description provided for @badgeSubscribedAction.
-  ///
-  /// In en, this message translates to:
-  /// **'Subscribed'**
-  String get badgeSubscribedAction;
-
-  /// No description provided for @badgeAcceptedHoldersTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Accepted holders'**
-  String get badgeAcceptedHoldersTitle;
-
-  /// Shown when badge subscription preferences could not be read; retry reloads only subscriptions.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not load your badge subscriptions. Try again.'**
-  String get badgeSubscriptionLoadError;
-
   /// No description provided for @badgesLoadError.
   ///
   /// In en, this message translates to:
@@ -25544,6 +25514,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Organizer time: {deadline} ({timeZone})'**
   String challengeOrganizerTime(String deadline, String timeZone);
+
+  /// Disclosure next to the badge subscription button: subscribing publishes the selected badge coordinates publicly on Nostr.
+  ///
+  /// In en, this message translates to:
+  /// **'Your badge subscriptions are public.'**
+  String get badgeSubscriptionsPublicNotice;
+
+  /// No description provided for @badgeSubscribeAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe to badge'**
+  String get badgeSubscribeAction;
+
+  /// No description provided for @badgeSubscribedAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribed'**
+  String get badgeSubscribedAction;
+
+  /// No description provided for @badgeAcceptedHoldersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted holders'**
+  String get badgeAcceptedHoldersTitle;
+
+  /// Shown when badge subscription preferences could not be read; retry reloads only subscriptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load your badge subscriptions. Try again.'**
+  String get badgeSubscriptionLoadError;
 }
 
 class _AppLocalizationsDelegate

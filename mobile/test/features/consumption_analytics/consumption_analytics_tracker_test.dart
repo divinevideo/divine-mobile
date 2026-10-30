@@ -55,6 +55,7 @@ void main() {
           (ViewTrafficSource.discoveryNew, null, 'new_vines', 'discovery'),
           (ViewTrafficSource.discoveryClassic, null, 'classics', 'discovery'),
           (ViewTrafficSource.discoveryPopular, null, 'popular', 'discovery'),
+          (ViewTrafficSource.discoveryBadges, null, 'unknown', 'discovery'),
           (
             ViewTrafficSource.discoveryFeatured,
             'private-theme',

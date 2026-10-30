@@ -11635,23 +11635,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get badgesTitle => 'Rozetler';
 
   @override
-  String get badgeSubscriptionsPublicNotice =>
-      'Your badge subscriptions are public.';
-
-  @override
-  String get badgeSubscribeAction => 'Rozete abone ol';
-
-  @override
-  String get badgeSubscribedAction => 'Abone olundu';
-
-  @override
-  String get badgeAcceptedHoldersTitle => 'Rozeti kabul edenler';
-
-  @override
-  String get badgeSubscriptionLoadError =>
-      'Rozet aboneliklerin yüklenemedi. Tekrar dene.';
-
-  @override
   String get badgesLoadError => 'Rozetler yüklenemedi';
 
   @override
@@ -15213,4 +15196,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Rozete abone ol';
+
+  @override
+  String get badgeSubscribedAction => 'Abone olundu';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Rozeti kabul edenler';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'Rozet aboneliklerin yüklenemedi. Tekrar dene.';
 }

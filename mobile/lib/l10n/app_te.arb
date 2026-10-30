@@ -6644,10 +6644,6 @@
   "settingsBadgesTitle": "బ్యాడ్జ్‌లు",
   "settingsBadgesSubtitle": "అవార్డులను అంగీకరించండి మరియు జారీ చేయబడిన బ్యాడ్జ్ స్థితిని తనిఖీ చేయండి.",
   "badgesTitle": "బ్యాడ్జ్‌లు",
-  "badgeSubscribeAction": "బ్యాడ్జ్‌ను సబ్‌స్క్రైబ్ చేయండి",
-  "badgeSubscribedAction": "సబ్‌స్క్రైబ్ చేశారు",
-  "badgeAcceptedHoldersTitle": "బ్యాడ్జ్‌ను అంగీకరించినవారు",
-  "badgeSubscriptionLoadError": "మీ బ్యాడ్జ్ సబ్‌స్క్రిప్షన్‌లను లోడ్ చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.",
   "badgesLoadError": "బ్యాడ్జ్‌లను లోడ్ చేయడం సాధ్యపడలేదు",
   "badgesUpdateError": "బ్యాడ్జ్‌ని అప్‌డేట్ చేయడం సాధ్యపడలేదు",
   "badgesAwardedEmptyTitle": "ఇంకా బ్యాడ్జ్ అవార్డులు లేవు",
@@ -9053,5 +9049,9 @@
   "videoEditorLoopRepairProgress": "మీ లూప్‌ను సమలేఖనం చేస్తున్నాం…",
   "videoEditorLoopRepairTrimmed": "లూప్ సాఫీగా మారింది. {seconds} సె. తొలగించాం.",
   "notificationFromDivine": "Divine నుండి",
-  "announcementUnavailable": "ఈ ప్రకటన ఇకపై అందుబాటులో లేదు."
+  "announcementUnavailable": "ఈ ప్రకటన ఇకపై అందుబాటులో లేదు.",
+  "badgeSubscribeAction": "బ్యాడ్జ్‌ను సబ్‌స్క్రైబ్ చేయండి",
+  "badgeSubscribedAction": "సబ్‌స్క్రైబ్ చేశారు",
+  "badgeAcceptedHoldersTitle": "బ్యాడ్జ్‌ను అంగీకరించినవారు",
+  "badgeSubscriptionLoadError": "మీ బ్యాడ్జ్ సబ్‌స్క్రిప్షన్‌లను లోడ్ చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి."
 }

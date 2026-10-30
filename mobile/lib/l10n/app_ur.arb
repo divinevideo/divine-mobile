@@ -5835,10 +5835,6 @@
   "settingsBadgesTitle": "بیجز",
   "settingsBadgesSubtitle": "ایوارڈز قبول کریں اور جاری شدہ بیج اسٹیٹس چیک کریں۔",
   "badgesTitle": "بیجز",
-  "badgeSubscribeAction": "بیج سبسکرائب کریں",
-  "badgeSubscribedAction": "سبسکرائب کر لیا",
-  "badgeAcceptedHoldersTitle": "بیج قبول کرنے والے",
-  "badgeSubscriptionLoadError": "آپ کی بیج سبسکرپشنز لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کریں۔",
   "badgesLoadError": "بیجز لوڈ نہیں ہو سکے",
   "badgesUpdateError": "بیج اپڈیٹ نہیں ہو سکا",
   "badgesAwardedEmptyTitle": "ابھی کوئی بیج ایوارڈ نہیں",
@@ -7424,5 +7420,9 @@
   "videoEditorLoopRepairProgress": "آپ کا لوپ سیدھا کیا جا رہا ہے…",
   "videoEditorLoopRepairTrimmed": "لوپ ہموار ہو گیا۔ {seconds} سیکنڈ ہٹا دیے گئے۔",
   "notificationFromDivine": "Divine کی طرف سے",
-  "announcementUnavailable": "یہ اعلان اب دستیاب نہیں ہے۔"
+  "announcementUnavailable": "یہ اعلان اب دستیاب نہیں ہے۔",
+  "badgeSubscribeAction": "بیج سبسکرائب کریں",
+  "badgeSubscribedAction": "سبسکرائب کر لیا",
+  "badgeAcceptedHoldersTitle": "بیج قبول کرنے والے",
+  "badgeSubscriptionLoadError": "آپ کی بیج سبسکرپشنز لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کریں۔"
 }

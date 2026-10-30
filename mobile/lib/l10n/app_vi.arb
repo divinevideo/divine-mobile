@@ -5835,10 +5835,6 @@
   "settingsBadgesTitle": "Huy hiệu",
   "settingsBadgesSubtitle": "Nhận giải thưởng và kiểm tra trạng thái huy hiệu đã phát.",
   "badgesTitle": "Huy hiệu",
-  "badgeSubscribeAction": "Theo dõi huy hiệu",
-  "badgeSubscribedAction": "Đang theo dõi",
-  "badgeAcceptedHoldersTitle": "Người đã chấp nhận huy hiệu",
-  "badgeSubscriptionLoadError": "Không thể tải các đăng ký huy hiệu của bạn. Hãy thử lại.",
   "badgesLoadError": "Không tải được huy hiệu",
   "badgesUpdateError": "Không cập nhật được huy hiệu",
   "badgesAwardedEmptyTitle": "Chưa có huy hiệu nào",
@@ -7424,5 +7420,9 @@
   "videoEditorLoopRepairProgress": "Đang căn chỉnh vòng lặp…",
   "videoEditorLoopRepairTrimmed": "Đã làm mượt vòng lặp. Đã cắt {seconds} giây.",
   "notificationFromDivine": "Từ Divine",
-  "announcementUnavailable": "Thông báo này không còn khả dụng."
+  "announcementUnavailable": "Thông báo này không còn khả dụng.",
+  "badgeSubscribeAction": "Theo dõi huy hiệu",
+  "badgeSubscribedAction": "Đang theo dõi",
+  "badgeAcceptedHoldersTitle": "Người đã chấp nhận huy hiệu",
+  "badgeSubscriptionLoadError": "Không thể tải các đăng ký huy hiệu của bạn. Hãy thử lại."
 }
