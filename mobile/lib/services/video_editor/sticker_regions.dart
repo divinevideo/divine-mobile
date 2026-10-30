@@ -17,7 +17,8 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 /// [timelineMap].
 ///
 /// Whether the sticker emoji font drew the stickers' emoji when they were
-/// captured, [emojiFontLoaded], decides which of them a viewer can redraw.
+/// captured, [emojiFontLoaded], decides which see-through ones a viewer can
+/// redraw.
 ///
 /// Empty without a [bodySize], which the layers' offsets are measured in.
 List<VideoStickerRegion> stickerRegionsFor({
@@ -78,13 +79,12 @@ VideoStickerRegion? _regionOf(
     // again over the frames: a turning record or an equalizer would not keep
     // time with the video beneath, a faded, blended or masked one would come
     // back solid, a copy would hide what lies on it, and a see-through one in
-    // glyphs a viewer's phone draws its own way would show both. A location
+    // glyphs either phone draws its own way would show both. A location
     // sticker is not drawn again: its flag and globe are not in the tag.
     style:
         sticker == null ||
-            !sticker.isRedrawable ||
             sticker.isAnimated ||
-            !sticker.isRedrawnAlike(emojiFontLoaded: emojiFontLoaded) ||
+            !sticker.canBeRedrawn(emojiFontLoaded: emojiFontLoaded) ||
             !_isDrawnPlainly(layer) ||
             above.any((upper) => _isCoveredBy(item, upper, bodySize))
         ? null

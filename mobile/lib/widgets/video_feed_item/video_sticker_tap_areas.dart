@@ -219,9 +219,10 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
     });
   }
 
-  /// Loads the sticker emoji font when a sticker has an emoji to draw in it,
-  /// and draws the stickers again once it is in; until then a see-through one
-  /// shows only as it is in the frames.
+  /// Loads the sticker emoji font when a sticker's emoji are all its text
+  /// needs beyond the sticker font, and draws the stickers again once it is
+  /// in; until then a see-through one shows only as it is in the frames, and
+  /// a solid one draws its emoji in the phone's own font.
   void _loadEmojiFont() {
     if (stickerEmojiFontLoaded) return;
     final hasEmoji = widget.video.stickerRegions.any(
@@ -318,9 +319,6 @@ class _StickerTapArea extends StatelessWidget {
     final width = math.max(stickerSize.width, kMinInteractiveDimension);
     final height = math.max(stickerSize.height, kMinInteractiveDimension);
     final sticker = SocialStickerData.ofRegion(region);
-    final redrawn =
-        sticker != null &&
-        sticker.isRedrawnAlike(emojiFontLoaded: stickerEmojiFontLoaded);
     return Positioned(
       left: center.dx - width / 2,
       top: center.dy - height / 2,
@@ -331,7 +329,8 @@ class _StickerTapArea extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            if (redrawn)
+            if (sticker != null &&
+                sticker.canBeRedrawn(emojiFontLoaded: stickerEmojiFontLoaded))
               // Laid over the sticker in the frames at its exact size, in the
               // parts that cover that one; the button below names it, and
               // only the button takes the pointer.
@@ -339,12 +338,9 @@ class _StickerTapArea extends StatelessWidget {
                 child: ExcludeSemantics(
                   child: SizedBox.fromSize(
                     size: stickerSize,
-                    child: FittedBox(
-                      fit: BoxFit.fill,
-                      child: sticker.kind == SocialStickerKind.countdown
-                          ? _LiveCountdown(data: sticker)
-                          : SocialStickerView(data: sticker, overFrames: true),
-                    ),
+                    child: sticker.kind == SocialStickerKind.countdown
+                        ? _LiveCountdown(data: sticker)
+                        : SocialStickerCopy(data: sticker),
                   ),
                 ),
               ),
@@ -424,12 +420,11 @@ class _LiveCountdownState extends State<_LiveCountdown> {
   @override
   Widget build(BuildContext context) {
     final left = _left;
-    return SocialStickerView(
+    return SocialStickerCopy(
       data: widget.data.copyWith(
         localeName: Localizations.localeOf(context).toString(),
         use24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
       ),
-      overFrames: true,
       countdownValue: left > Duration.zero
           ? countdownTimeLeft(context.l10n, left)
           : null,

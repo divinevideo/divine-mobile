@@ -336,21 +336,25 @@ class SocialStickerData extends Equatable {
     replyText,
   ].nonNulls.join('\n');
 
-  /// Whether the player can draw the sticker again over its frames. A reply
-  /// cannot: its picture is not in the event.
-  bool get isRedrawable => kind != SocialStickerKind.reply;
-
-  /// Whether the sticker's text has an emoji, which looks the same on every
-  /// phone only in the sticker emoji font.
+  /// Whether the sticker's text is in the sticker font but for its emoji,
+  /// which look the same on every phone only in the sticker emoji font. Text
+  /// with a character neither font has does not count: another phone draws
+  /// it differently anyway.
   bool get hasEmoji => StickerTextGlyphs.of(_drawnText) == .emoji;
 
-  /// Whether a sharp copy of the sticker, drawn over the same sticker in a
-  /// video's frames, has matching glyphs and advances on every phone. Every
-  /// look needs the bundled font, with emoji in the loaded sticker emoji
-  /// font: a solid background cannot correct a differently sized glyph.
-  bool isRedrawnAlike({required bool emojiFontLoaded}) => StickerTextGlyphs.of(
-    _drawnText,
-  ).isDrawnAlike(emojiFontLoaded: emojiFontLoaded);
+  /// Whether the sticker's text allows a sharp copy over the same sticker in
+  /// a video's frames. A solid pill hides the sticker beneath, so its text
+  /// can be in any script and its emoji in any font. The frames show through
+  /// any other look, so its text needs glyphs every phone draws alike: all in
+  /// the sticker font, with emoji in the loaded sticker emoji font. Whether
+  /// the sticker holds still is up to the caller; see [isAnimated]. A reply
+  /// is never drawn again: its picture is not in the event.
+  bool canBeRedrawn({required bool emojiFontLoaded}) =>
+      kind != SocialStickerKind.reply &&
+      (style.hasSolidPill ||
+          StickerTextGlyphs.of(
+            _drawnText,
+          ).isDrawnAlike(emojiFontLoaded: emojiFontLoaded));
 
   /// Whether the sticker moves with how loud the video's sound is.
   bool get listensToSound =>

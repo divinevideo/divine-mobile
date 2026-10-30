@@ -126,6 +126,74 @@ class SocialStickerView extends StatelessWidget {
   }
 }
 
+/// A sharp copy of a social sticker, filling the box the same sticker takes
+/// in a video's frames, to be laid over it there.
+///
+/// A solid look draws its pill at that box, hiding the sticker beneath, and
+/// scales the rest to fit inside in proportion: a viewer's phone may draw
+/// text the sticker font lacks, or emoji before the sticker emoji font has
+/// loaded, wider or narrower than the creator's did, and stretched to the
+/// box it would come out distorted. The frames show through
+/// any other look, so it is stretched to lie on its own text there; see
+/// [SocialStickerData.canBeRedrawn] for when that matches.
+class SocialStickerCopy extends StatelessWidget {
+  const SocialStickerCopy({
+    required this.data,
+    this.countdownValue,
+    super.key,
+  });
+
+  final SocialStickerData data;
+
+  /// What a countdown shows under its title instead of its date; see
+  /// [SocialStickerView.countdownValue].
+  final String? countdownValue;
+
+  @override
+  Widget build(BuildContext context) {
+    final sticker = SocialStickerView(
+      data: data,
+      overFrames: true,
+      countdownValue: countdownValue,
+    );
+    final pill = StickerPillPalette.of(data.style).covering.background;
+    if (pill == null) return FittedBox(fit: .fill, child: sticker);
+    return CustomPaint(
+      painter: _PillPainter(
+        color: pill,
+        roundness: switch (data.kind) {
+          SocialStickerKind.soundCredit => soundCreditRoundness(data),
+          SocialStickerKind.countdown => _countdownRoundness,
+          _ => 0.5,
+        },
+      ),
+      child: FittedBox(child: sticker),
+    );
+  }
+}
+
+/// Paints a pill in [color] filling the box, the radius of its corners
+/// [roundness] of its height.
+class _PillPainter extends CustomPainter {
+  const _PillPainter({required this.color, required this.roundness});
+
+  final Color color;
+  final double roundness;
+
+  @override
+  void paint(Canvas canvas, Size size) => canvas.drawRRect(
+    RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(size.height * roundness),
+    ),
+    Paint()..color = color,
+  );
+
+  @override
+  bool shouldRepaint(_PillPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.roundness != roundness;
+}
+
 /// The widest a sticker's line of text gets before it ends in an ellipsis.
 const double _maxTextWidth = 720;
 
@@ -139,6 +207,29 @@ const double _countdownValueWidth = 440;
 
 /// The size of a countdown's date or time left.
 const double _countdownValueFontSize = 40;
+
+/// The radius of a countdown card's corners.
+const double _countdownRadius = 48;
+
+/// The size of a countdown's title: the one [StickerPillPalette.textStyle]
+/// writes in by default.
+const double _countdownTitleFontSize = 48;
+
+/// The space above and below a countdown's title and date in its card.
+const double _countdownPaddingVertical = 28;
+
+/// The space between a countdown's title and its date.
+const double _countdownSpacing = 8;
+
+/// How round a countdown card's corners are, as a share of its height: its
+/// padding, its title line and its date line, each line 1.15 of its font
+/// size high (see [StickerPillPalette.textStyle]).
+const double _countdownRoundness =
+    _countdownRadius /
+    (2 * _countdownPaddingVertical +
+        _countdownTitleFontSize * 1.15 +
+        _countdownSpacing +
+        _countdownValueFontSize * 1.15);
 
 /// A countdown: its title over its date, or over the time left the player
 /// draws in [value].
@@ -160,11 +251,14 @@ class _CountdownCard extends StatelessWidget {
         .copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
     return StickerPill(
       palette: palette,
-      radius: 48,
-      padding: const .symmetric(horizontal: 40, vertical: 28),
+      radius: _countdownRadius,
+      padding: const .symmetric(
+        horizontal: 40,
+        vertical: _countdownPaddingVertical,
+      ),
       child: Column(
         mainAxisSize: .min,
-        spacing: 8,
+        spacing: _countdownSpacing,
         children: [
           _Line(text: data.countdownTitle ?? '', style: palette.textStyle()),
           SizedBox(
@@ -283,7 +377,8 @@ class _ReplyPicture extends StatelessWidget {
 /// Unscaled by the system font size, like the sound credit's painted text:
 /// the sticker is part of the video, sized by the creator's pinch, and the
 /// player's copy of it has to match the frames at any font size. Its emoji
-/// are drawn in the sticker emoji font, which it loads when it has any.
+/// are drawn in the sticker emoji font once that is loaded, which it loads
+/// when they are all its text needs beyond the sticker font.
 class _Line extends StatefulWidget {
   const _Line({required this.text, required this.style, this.maxLines = 1});
 

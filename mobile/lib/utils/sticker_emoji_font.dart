@@ -1,5 +1,5 @@
 // ABOUTME: Loads Noto Color Emoji for sticker text, so a sticker's emoji look
-// ABOUTME: the same on every phone: in the editor, the video and its copy.
+// ABOUTME: the same on every phone once it is in: editor, video and copy.
 
 import 'dart:async';
 import 'dart:io';
@@ -69,8 +69,8 @@ Future<bool> loadStickerEmojiFont({
           .whenComplete(() => _loading = null);
 }
 
-/// Loads the sticker emoji font when one of [texts] has an emoji to draw in
-/// it; see [loadStickerEmojiFont].
+/// Loads the sticker emoji font when the emoji of one of [texts] are all it
+/// needs beyond the sticker font; see [loadStickerEmojiFont].
 Future<void> loadStickerEmojiFontFor(Iterable<String> texts) async {
   if (texts.any((text) => StickerTextGlyphs.of(text) == .emoji)) {
     await loadStickerEmojiFont();
