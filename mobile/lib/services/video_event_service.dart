@@ -5862,9 +5862,12 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
         // Use NIP71VideoKinds.addressableShortVideo since that's what Divine uses
         final replaceKey =
             '$subscriptionType:${NIP71VideoKinds.addressableShortVideo}:${mergedVideo.pubkey}:${mergedVideo.stableId}';
+        // The raw created_at, as _handleReplaceableVideoEvent records it.
+        // createdAt holds the published_at every edit re-emits, so an
+        // earlier revision would compare as newer.
         _replaceableVideoEvents[replaceKey] = (
           mergedVideo,
-          mergedVideo.createdAt,
+          mergedVideo.nostrCreatedAt,
         );
       }
     }
