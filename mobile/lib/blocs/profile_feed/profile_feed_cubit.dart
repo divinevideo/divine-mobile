@@ -376,7 +376,8 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     Emitter<ProfileFeedState> emit,
   ) async {
     if (state.status != ProfileFeedStatus.failure) return;
-    // The cold load's pin fetch and backfill failed along with it.
+    // The cold load skipped its backfill when REST failed, and its relay pin
+    // read may have failed with it.
     unawaited(_revalidatePins(null));
     await _doRefresh(emit, backfillInitialPage: true);
   }
