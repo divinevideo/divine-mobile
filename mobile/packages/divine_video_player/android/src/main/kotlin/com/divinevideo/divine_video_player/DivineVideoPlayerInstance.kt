@@ -13,6 +13,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import androidx.media3.common.C
 import androidx.media3.common.Format
@@ -137,6 +138,21 @@ internal class DivineVideoPlayerInstance(
     private val backendHandlesRotation: Boolean
         get() = legacyEntry != null ||
             (surfaceProducer?.handlesCropAndRotation() == true)
+
+    /**
+     * Whether Dart has to draw only [decoderCrop] of the texture. The
+     * SurfaceProducer's ImageReader hands Flutter the decoder's whole buffer,
+     * padding included; the legacy SurfaceTexture, a SurfaceProducer that
+     * handles crop and a GL stage all show the picture alone.
+     */
+    private val dartAppliesCrop: Boolean
+        get() = surfaceProducer?.handlesCropAndRotation() == false && !routesThroughGl
+
+    /** The codec output format [decoderCrop] was read from. Playback thread only. */
+    private var decoderOutputFormat: MediaFormat? = null
+
+    /** Where the picture sits in the decoder's buffers, when they are larger. */
+    private var decoderCrop: DecoderCrop? = null
 
     /**
      * Accumulated per-clip start offsets on the global timeline, expressed
@@ -390,10 +406,16 @@ internal class DivineVideoPlayerInstance(
 
     /**
      * Fires on the playback thread for every frame about to be rendered.
-     * Returns immediately unless a paused seek is armed, so feed playback
-     * does not enqueue a main-thread task per frame.
+     * Returns immediately unless a paused seek is armed or the decoder's
+     * output format changed, so feed playback does not enqueue a main-thread
+     * task per frame.
      */
-    private val renderedFrameListener = VideoFrameMetadataListener { _, _, _, _ ->
+    private val renderedFrameListener = VideoFrameMetadataListener { _, _, _, mediaFormat ->
+        if (mediaFormat != null && mediaFormat !== decoderOutputFormat) {
+            decoderOutputFormat = mediaFormat
+            val crop = DecoderCrop.of(mediaFormat)
+            mainHandler.post { onDecoderCropChanged(crop) }
+        }
         val armed = armedSeekGeneration
         if (!seekAwaitsFrame || armed == NO_ARMED_SEEK) return@VideoFrameMetadataListener
         mainHandler.post { onSeekFrameRendered(armed) }
@@ -2210,6 +2232,19 @@ internal class DivineVideoPlayerInstance(
         if (player?.playbackState == Player.STATE_READY) completeSeekIfPending()
     }
 
+    /** Sends a changed [decoderCrop] to Dart, which draws only that part of the texture. */
+    private fun onDecoderCropChanged(crop: DecoderCrop?) {
+        if (crop == decoderCrop) return
+        decoderCrop = crop
+        if (crop != null) {
+            DivineVideoPlayerLog.info(
+                "$logTarget decoder pads its frames: $crop",
+                name = "DivineVideoPlayer.Playback",
+            )
+        }
+        sendStateUpdate()
+    }
+
     /** Completes the pending seekTo result so Dart's await returns. */
     private fun completeSeekIfPending() {
         seekAwaitsFrame = false
@@ -2266,6 +2301,7 @@ internal class DivineVideoPlayerInstance(
             "pixelWidthHeightRatio" to if (frameEffectReportedSize != null) 1.0 else pixelWidthHeightRatio,
             "rotationDegrees" to if (frameEffectReportedSize != null) 0 else rotationDegrees,
         )
+        decoderCrop?.takeIf { dartAppliesCrop }?.let { map["textureCrop"] = it.toFractions() }
         exoPlayer.playerError?.let { error ->
             map["errorMessage"] = error.localizedMessage
                 ?: error.cause?.localizedMessage
