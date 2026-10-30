@@ -221,7 +221,8 @@ void main() {
       });
     }
     for (final (width, height) in [(180, 320), (320, 180)]) {
-      for (final motion in [.5, 1.0, 2.0, 3.0, 5.0]) {
+      // The texture repeats on a (4.49, 5.24) lattice, so larger motions alias.
+      for (final motion in [.5, 1.0, 2.0]) {
         test('edge-touching subject motion $motion is not camera drift at '
             '$width x $height', () {
           final match = PveLoopFrameMatcher().match(
