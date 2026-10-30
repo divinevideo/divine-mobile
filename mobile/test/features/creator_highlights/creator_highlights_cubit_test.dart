@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/features/creator_highlights/creator_highlight.dart';
 import 'package:openvine/features/creator_highlights/creator_highlights_cubit.dart';
 import 'package:openvine/features/creator_highlights/creator_highlights_repository.dart';
+import 'package:openvine/observability/reportable_error.dart';
 
 const _owner =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -22,6 +23,7 @@ class _Repository implements CreatorHighlightsRepository {
   final next = Completer<CreatorHighlight?>();
   int loads = 0;
   final presented = <(String, String)>[];
+  Object? presentationError;
 
   @override
   Future<CreatorHighlight?> load(String owner) {
@@ -31,12 +33,49 @@ class _Repository implements CreatorHighlightsRepository {
 
   @override
   Future<void> markPresented(String owner, String localDate) async {
+    if (presentationError case final error?) throw error;
     presented.add((owner, localDate));
+  }
+}
+
+class _ObservedCubit extends CreatorHighlightsCubit {
+  _ObservedCubit({required super.repository})
+    : super(owner: _owner, now: () => DateTime(2026, 10, 30));
+
+  final errors = <Object>[];
+
+  @override
+  void onError(Object error, StackTrace stackTrace) {
+    errors.add(error);
+    super.onError(error, stackTrace);
   }
 }
 
 void main() {
   group('refresh', () {
+    for (final error in [
+      StateError('Broken invariant'),
+      Exception('Offline'),
+    ]) {
+      test('reports $error while withholding an unavailable card', () async {
+        final repository = _Repository();
+        final cubit = _ObservedCubit(repository: repository);
+        final load = cubit.refresh();
+        repository.pending.completeError(error);
+        await load;
+        expect(cubit.state.card, isNull);
+        expect(cubit.state.loading, isFalse);
+        expect(cubit.errors, hasLength(1));
+        final reported = cubit.errors.single;
+        if (error is StateError) {
+          expect(reported, isA<Reportable<Object>>());
+          expect((reported as Reportable<Object>).error, same(error));
+        } else {
+          expect(reported, same(error));
+        }
+        await cubit.close();
+      });
+    }
     test(
       'a request crossing midnight retries before publishing dated copy',
       () async {
@@ -156,6 +195,19 @@ void main() {
   });
 
   group('presented', () {
+    test('reports storage failure without replaying the celebration', () async {
+      final repository = _Repository()
+        ..presentationError = StateError('Could not save presentation');
+      final cubit = _ObservedCubit(repository: repository);
+      repository.pending.complete(_card);
+      await cubit.refresh();
+      await cubit.presented(_card);
+      await cubit.presented(_card);
+      expect(cubit.state.card?.celebrate, isFalse);
+      expect(cubit.errors, hasLength(1));
+      expect(cubit.errors.single, isA<Reportable<Object>>());
+      await cubit.close();
+    });
     test(
       'presentation acknowledges only the loaded owner and date once',
       () async {

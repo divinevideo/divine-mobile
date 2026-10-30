@@ -86,6 +86,16 @@ void main() {
   }
 
   group('load', () {
+    test('a successful null-view response remains unknown, not zero', () async {
+      final card = await repository([
+        video(views: null),
+        video(id: other, dTag: 'two', views: 42),
+      ]).load(owner);
+      expect(card?.createdToday, 2);
+      expect(card?.creationDaysThisWeek, 1);
+      expect(card?.views, isNull);
+      expect(card?.topVideo, isNull);
+    });
     test(
       'a zero-audience original creation day earns a card automatically',
       () async {

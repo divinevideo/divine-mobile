@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/features/creator_highlights/creator_highlight.dart';
 import 'package:openvine/features/creator_highlights/creator_highlights_repository.dart';
+import 'package:openvine/observability/reportable_error.dart';
 
 class CreatorHighlightsState extends Equatable {
   const CreatorHighlightsState({this.card, this.loading = false});
@@ -66,7 +67,13 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
         emitIfOpen(CreatorHighlightsState(card: current));
         return;
       }
-    } on Object {
+    } on Object catch (error, stackTrace) {
+      if (isClosed) return;
+      addError(
+        asReportableError(error, context: 'CreatorHighlightsCubit.refresh') ??
+            error,
+        stackTrace,
+      );
       // Optional recognition must never interrupt the social notification feed.
       // Hide stale facts when their source cannot be revalidated.
       emitIfOpen(const CreatorHighlightsState());
@@ -90,7 +97,13 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
     );
     try {
       await _repository.markPresented(owner, card.localDate);
-    } on Object {
+    } on Object catch (error, stackTrace) {
+      if (isClosed) return;
+      addError(
+        asReportableError(error, context: 'CreatorHighlightsCubit.presented') ??
+            error,
+        stackTrace,
+      );
       // The in-memory claim still prevents a replay in this account session.
       // A storage failure cannot interrupt the notification feed.
     }
