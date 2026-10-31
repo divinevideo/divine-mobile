@@ -22,6 +22,7 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/layer_style.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
@@ -125,9 +126,8 @@ class _LayerOverlayControls extends StatelessWidget {
     // Info, social and interactive stickers show as they are, for as long as
     // they were placed: no split, mask, opacity or blend.
     final isStickerCard = isStickerCardLayer(layer);
-    // A video carries one poll, quiz or slider.
-    final isPoll =
-        layer != null && (SocialStickerData.of(layer)?.kind.isPoll ?? false);
+    // A video carries one interactive card.
+    final isInteractiveCard = layer != null && isInteractiveCardLayer(layer);
 
     // Every layer that takes a style can be multi-selected, to paste a style
     // onto several at once, delete them, or combine drawings or stickers, as
@@ -156,7 +156,9 @@ class _LayerOverlayControls extends StatelessWidget {
             : isSocialSticker
             ? () => _editSocialSticker(context: context)
             : null,
-        onDuplicated: isPoll ? null : () => _duplicateLayer(context: context),
+        onDuplicated: isInteractiveCard
+            ? null
+            : () => _duplicateLayer(context: context),
         onMultiSelect: canMultiSelect
             ? () => _startLayerMultiSelect(context: context)
             : null,

@@ -3417,6 +3417,190 @@ void main() {
       );
     });
 
+    group('getVideoResponses', () {
+      const responsesJson =
+          '''
+{
+  "data": [
+    {
+      "id": "abc123def456",
+      "pubkey": "$testPubkey",
+      "created_at": 1700000000,
+      "kind": 34236,
+      "d_tag": "reply-1",
+      "thumbnail": "https://example.com/thumb.jpg",
+      "video_url": "https://example.com/video.mp4"
+    },
+    {"id": "", "video_url": ""}
+  ],
+  "total": 42,
+  "pagination": {"has_more": true}
+}
+''';
+
+      Uri capturedUri() =>
+          verify(
+                () => mockHttpClient.get(
+                  captureAny(),
+                  headers: any(named: 'headers'),
+                ),
+              ).captured.single
+              as Uri;
+
+      test('reads the replies and how many there are in all', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response(responsesJson, 200));
+
+        final page = await client.getVideoResponses(
+          videoId: 'root-d',
+          type: VideoResponseType.replies,
+          limit: 5,
+        );
+
+        expect(page.total, equals(42));
+        expect(page.videos.map((v) => v.id), equals(['abc123def456']));
+        final uri = capturedUri();
+        expect(uri.path, equals('/api/videos/root-d/responses'));
+        expect(
+          uri.queryParameters,
+          equals({'type': 'replies', 'limit': '5'}),
+        );
+      });
+
+      test('asks for a chain by its hashtag', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response(responsesJson, 200));
+
+        await client.getVideoResponses(
+          videoId: 'root-d',
+          type: VideoResponseType.joined,
+          hashtag: 'desksetup',
+        );
+
+        expect(
+          capturedUri().queryParameters,
+          equals({'type': 'joined', 'limit': '20', 'tag': 'desksetup'}),
+        );
+      });
+
+      test('counts the rows of a page that names no total', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('{"data": [{}, {}]}', 200));
+
+        final page = await client.getVideoResponses(
+          videoId: 'root-d',
+          type: VideoResponseType.replies,
+        );
+
+        expect(page.total, equals(2));
+        expect(page.videos, isEmpty);
+      });
+
+      test('throws FunnelcakeNotFoundException while it is missing', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('{"error": "nope"}', 404));
+
+        await expectLater(
+          client.getVideoResponses(
+            videoId: 'root-d',
+            type: VideoResponseType.replies,
+          ),
+          throwsA(isA<FunnelcakeNotFoundException>()),
+        );
+      });
+
+      test('throws FunnelcakeApiException when the request fails', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('{"error": "boom"}', 500));
+
+        await expectLater(
+          client.getVideoResponses(
+            videoId: 'root-d',
+            type: VideoResponseType.replies,
+          ),
+          throwsA(
+            isA<FunnelcakeApiException>().having(
+              (e) => e.statusCode,
+              'statusCode',
+              500,
+            ),
+          ),
+        );
+      });
+
+      test('throws FunnelcakeTimeoutException when it times out', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenThrow(TimeoutException('slow'));
+
+        await expectLater(
+          client.getVideoResponses(
+            videoId: 'root-d',
+            type: VideoResponseType.replies,
+          ),
+          throwsA(isA<FunnelcakeTimeoutException>()),
+        );
+      });
+
+      test('throws FunnelcakeException for an unreadable answer', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('not json', 200));
+
+        await expectLater(
+          client.getVideoResponses(
+            videoId: 'root-d',
+            type: VideoResponseType.replies,
+          ),
+          throwsA(isA<FunnelcakeException>()),
+        );
+      });
+
+      test('asks nothing without a video or a chain hashtag', () async {
+        await expectLater(
+          client.getVideoResponses(
+            videoId: '',
+            type: VideoResponseType.replies,
+          ),
+          throwsA(isA<FunnelcakeException>()),
+        );
+        await expectLater(
+          client.getVideoResponses(
+            videoId: 'root-d',
+            type: VideoResponseType.joined,
+          ),
+          throwsA(isA<FunnelcakeException>()),
+        );
+        verifyNever(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        );
+      });
+
+      test(
+        'throws FunnelcakeNotConfiguredException without a base URL',
+        () async {
+          final emptyClient = FunnelcakeApiClient(
+            baseUrl: '',
+            httpClient: mockHttpClient,
+          );
+          addTearDown(emptyClient.dispose);
+
+          await expectLater(
+            emptyClient.getVideoResponses(
+              videoId: 'root-d',
+              type: VideoResponseType.replies,
+            ),
+            throwsA(isA<FunnelcakeNotConfiguredException>()),
+          );
+        },
+      );
+    });
+
     group('getVideoLikers', () {
       const testEventId =
           'abcdef1234567890abcdef1234567890'

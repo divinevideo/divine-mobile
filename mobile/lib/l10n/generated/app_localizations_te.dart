@@ -2157,6 +2157,134 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get videoStickerQuestionAnswerHint =>
+      'సమాధానం ఇవ్వడానికి ట్యాప్ చేయండి';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'సమాధానం: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'మీ వంతు';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count మంది చేరారు',
+      one: '$count మంది చేరారు',
+      zero: 'మొదట మీరే చేరండి',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'ఎవరు చేరారో చూడండి';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'మీ వంతు: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ప్రత్యుత్తరాలు',
+      one: '$count ప్రత్యుత్తరం',
+      zero: 'ఇంకా ప్రత్యుత్తరాలు లేవు',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count వీడియో ప్రత్యుత్తరాలు చూడండి',
+      one: '$count వీడియో ప్రత్యుత్తరం చూడండి',
+      zero: 'వీడియో ప్రత్యుత్తరాలు, ఇంకా ఏవీ లేవు',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn =>
+      'సమాధానం ఇవ్వడానికి సైన్ ఇన్ చేయండి.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'సమాధానం';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'మీ సమాధానం';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'మీ సమాధానం $nameకి మాత్రమే కనిపిస్తుంది. వారు దాన్ని మీ పేరు లేకుండా ఒక వీడియోలో పంచుకోవచ్చు.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'పంపండి';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'సమాధానం పంపబడింది.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'ఆ సమాధానం పంపడానికి చాలా పొడవుగా ఉంది.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'మీ సమాధానం చేరలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'పాల్గొనడానికి సైన్ ఇన్ చేయండి.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'వీడియో ప్రత్యుత్తరాలు';
+
+  @override
+  String get videoStickerRepliesEmpty => 'ఇంకా వీడియో ప్రత్యుత్తరాలు లేవు.';
+
+  @override
+  String get videoStickerRepliesLoadFailed =>
+      'ప్రత్యుత్తరాలను లోడ్ చేయడం సాధ్యపడలేదు.';
+
+  @override
+  String get videoStickerRepliesRetry => 'మళ్లీ ప్రయత్నించండి';
+
+  @override
+  String get videoStickerRepliesPin => 'పిన్ చేయండి';
+
+  @override
+  String get videoStickerRepliesUnpin => 'పిన్ తీసివేయండి';
+
+  @override
+  String get videoStickerRepliesHide => 'దాచండి';
+
+  @override
+  String get videoStickerRepliesShow => 'చూపించండి';
+
+  @override
+  String get videoStickerRepliesPinned => 'పిన్ చేయబడింది';
+
+  @override
+  String get videoStickerRepliesHidden => 'దాచబడింది';
+
+  @override
+  String get videoStickerRepliesSaveFailed =>
+      'సేవ్ చేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return '$name ఇచ్చిన ప్రత్యుత్తరాన్ని చూడండి';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'ఈ లింక్ Divine వెలుపల తెరుచుకుంటుంది. వెళ్లే ముందు చిరునామాను తనిఖీ చేయండి.';
 
@@ -4962,6 +5090,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get routeInvalidSoundId => 'చెల్లని ధ్వని ID';
 
   @override
+  String get routeInvalidQuestion => 'చెల్లని ప్రశ్న లింక్';
+
+  @override
   String get routeInvalidCategory => 'చెల్లని వర్గం';
 
   @override
@@ -6364,6 +6495,19 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get dmReelReplyComposerSemanticLabel =>
       'ఈ రీల్‌కి ప్రత్యుత్తరం ఇవ్వండి';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'మీ ప్రశ్నకు సమాధానం ఇచ్చారు: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'మీరు సమాధానం ఇచ్చారు: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'వీడియోతో సమాధానం ఇవ్వండి';
 
   @override
   String get dmReelReplyViewChat => 'చాట్‌ని వీక్షించండి';
@@ -11338,8 +11482,53 @@ class AppLocalizationsTe extends AppLocalizations {
       'వీక్షకులు సమాధానం ఇవ్వడానికి ఎమోజీని లాగుతారు, సగటున అది ఎక్కడ ఆగిందో చూస్తారు.';
 
   @override
-  String get videoEditorPollAreaHint =>
-      'వీక్షకులు నొక్కగలిగేలా పోల్స్ ఈ బాక్స్‌లోనే ఉంటాయి';
+  String get videoEditorSocialStickerQuestion => 'ప్రశ్న';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'మీ వంతు';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'ప్రత్యుత్తరాలు';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => 'నన్ను ఏదైనా అడగండి';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample =>
+      'మీ డెస్క్ సెటప్ చూపించండి';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample =>
+      'వీడియోతో ప్రత్యుత్తరం ఇవ్వండి';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'మీ ప్రశ్న';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      'ప్రజలు ఏమి చూపించాలి?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'హ్యాష్‌ట్యాగ్';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'శీర్షిక';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'సమాధానాలు మీకు ప్రైవేట్ సందేశాలుగా వస్తాయి.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'వీక్షకులు తమ సొంత వీడియోతో సమాధానం ఇస్తారు. ప్రతి సమాధానానికి ఈ హ్యాష్‌ట్యాగ్ వస్తుంది, అది మీ వీడియోకు లింక్ అవుతుంది.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'ఈ వీడియోకు వీడియోతో ఎవరు ప్రత్యుత్తరం ఇచ్చారో చూపిస్తుంది. వీక్షకులు దాన్ని ట్యాప్ చేసి ప్రత్యుత్తరాలను చూస్తారు.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'వీక్షకులు ట్యాప్ చేయగలిగేలా ఈ స్టిక్కర్ ఈ బాక్స్‌లోనే ఉంటుంది';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'స్వరం';

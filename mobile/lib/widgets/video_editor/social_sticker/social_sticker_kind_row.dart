@@ -49,12 +49,13 @@ class SocialStickerKindRow extends StatelessWidget {
 /// with its [SocialStickerKind].
 ///
 /// The reply is offered only with a [reply] to show, which a video recorded
-/// as a reply has. A poll, quiz and slider are offered only while the video
-/// has none of them, [hasPoll] being false: a video carries one.
+/// as a reply has. The interactive cards, a poll, quiz, slider, question, Add
+/// yours and replies, are offered only while the video has none of them,
+/// [hasInteractiveCard] being false: a video carries one.
 class InteractiveStickerKindRow extends StatelessWidget {
   const InteractiveStickerKindRow({
     this.reply,
-    this.hasPoll = false,
+    this.hasInteractiveCard = false,
     super.key,
   });
 
@@ -62,8 +63,8 @@ class InteractiveStickerKindRow extends StatelessWidget {
   /// replies to nothing.
   final SocialStickerData? reply;
 
-  /// Whether the video has a poll, quiz or slider already.
-  final bool hasPoll;
+  /// Whether the video has an interactive card already.
+  final bool hasInteractiveCard;
 
   @override
   Widget build(BuildContext context) {
@@ -97,9 +98,24 @@ class InteractiveStickerKindRow extends StatelessWidget {
         pollQuestion: l10n.videoEditorSocialStickerSliderSampleQuestion,
         sliderEmoji: '😋',
       ),
+      SocialStickerData.interactive(
+        SocialStickerKind.question,
+        prompt: l10n.videoEditorSocialStickerQuestionSample,
+      ),
+      SocialStickerData.interactive(
+        SocialStickerKind.addYours,
+        prompt: l10n.videoEditorSocialStickerAddYoursSample,
+        hashtag: SocialStickerData.hashtagForPrompt(
+          l10n.videoEditorSocialStickerAddYoursSample,
+        ),
+      ),
+      SocialStickerData.interactive(
+        SocialStickerKind.replies,
+        prompt: l10n.videoEditorSocialStickerRepliesSample,
+      ),
     ];
     return _SampleRow(
-      samples: [sample, ?reply, if (!hasPoll) ...polls],
+      samples: [sample, ?reply, if (!hasInteractiveCard) ...polls],
     );
   }
 }

@@ -68,6 +68,7 @@ import 'package:poll_repository/poll_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:video_responses_repository/video_responses_repository.dart';
 
 part 'repository_providers.g.dart';
 
@@ -118,6 +119,20 @@ final pollRepositoryProvider = Provider<PollRepository>((ref) {
     funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
     // Named in a vote's `e` tag, the same relay the publisher names on a poll.
     relayUrl: ref.watch(currentEnvironmentProvider).relayUrl,
+  );
+});
+
+/// The videos responding to a video, its video replies and the answers to
+/// its Add yours, read through the app's relays, and the replies its creator
+/// pinned or hid, saved as the signed-in account.
+final videoResponsesRepositoryProvider = Provider<VideoResponsesRepository>((
+  ref,
+) {
+  final authService = ref.watch(authServiceProvider);
+  return VideoResponsesRepository(
+    nostrClient: ref.watch(nostrServiceProvider),
+    signEvent: authService.createAndSignEvent,
+    funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
   );
 });
 

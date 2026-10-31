@@ -2064,6 +2064,128 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get videoStickerQuestionAnswerHint => 'ለመመለስ ይንኩ';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'መልስ፦ $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'የእርስዎ ተራ';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ተሳታፊዎች',
+      one: '$count ተሳታፊ',
+      zero: 'ቀድመው ይጀምሩ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'ተሳታፊዎችን ይመልከቱ';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'የእርስዎ ተራ፦ $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ምላሾች',
+      one: '$count ምላሽ',
+      zero: 'እስካሁን ምንም ምላሽ የለም',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count የቪዲዮ ምላሾችን ይመልከቱ',
+      one: '$count የቪዲዮ ምላሽ ይመልከቱ',
+      zero: 'የቪዲዮ ምላሾች፣ እስካሁን የሉም',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'ለመመለስ ይግቡ።';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'መልስ';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'የእርስዎ መልስ';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'መልስዎ ለ$name ብቻ ይታያል። ስምዎ ሳይጠቀስ በቪዲዮ ሊጋራ ይችላል።';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'ይላኩ';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'መልሱ ተልኳል።';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong => 'ያ መልስ ለመላክ በጣም ረጅም ነው።';
+
+  @override
+  String get videoStickerQuestionAnswerFailed => 'መልስዎ አልደረሰም። እንደገና ይሞክሩ።';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'ለመሳተፍ ይግቡ።';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'የቪዲዮ ምላሾች';
+
+  @override
+  String get videoStickerRepliesEmpty => 'እስካሁን የቪዲዮ ምላሾች የሉም።';
+
+  @override
+  String get videoStickerRepliesLoadFailed => 'ምላሾቹን መጫን አልተቻለም።';
+
+  @override
+  String get videoStickerRepliesRetry => 'እንደገና ይሞክሩ';
+
+  @override
+  String get videoStickerRepliesPin => 'ይሰኩ';
+
+  @override
+  String get videoStickerRepliesUnpin => 'ያንሱ';
+
+  @override
+  String get videoStickerRepliesHide => 'ይደብቁ';
+
+  @override
+  String get videoStickerRepliesShow => 'ያሳዩ';
+
+  @override
+  String get videoStickerRepliesPinned => 'የተሰካ';
+
+  @override
+  String get videoStickerRepliesHidden => 'የተደበቀ';
+
+  @override
+  String get videoStickerRepliesSaveFailed => 'ማስቀመጥ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'የ$nameን ምላሽ ይመልከቱ';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'ይህ ሊንክ ከDivine ውጭ ይከፈታል። ከመሄድዎ በፊት አድራሻውን ያረጋግጡ።';
 
@@ -4687,6 +4809,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get routeInvalidSoundId => 'ልክ ያልሆነ የድምጽ መታወቂያ';
 
   @override
+  String get routeInvalidQuestion => 'ልክ ያልሆነ የጥያቄ አገናኝ';
+
+  @override
   String get routeInvalidCategory => 'ልክ ያልሆነ ምድብ';
 
   @override
@@ -6028,6 +6153,19 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get dmReelReplyComposerSemanticLabel => 'ለዚህ ሪል ይመልሱ';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'ለጥያቄዎ መልስ፦ $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'የእርስዎ መልስ፦ $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'በቪዲዮ ይመልሱ';
 
   @override
   String get dmReelReplyViewChat => 'ውይይት ይመልከቱ';
@@ -10792,8 +10930,50 @@ class AppLocalizationsAm extends AppLocalizations {
       'ተመልካቾች ለመመለስ ኢሞጂውን ይጎትታሉ፣ አማካዩም የት እንደሚያርፍ ያያሉ።';
 
   @override
-  String get videoEditorPollAreaHint =>
-      'ተመልካቾች እንዲነኩት ድምፅ መስጫዎች በዚህ ሳጥን ውስጥ ይቆያሉ';
+  String get videoEditorSocialStickerQuestion => 'ጥያቄ';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'የእርስዎ ተራ';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'ምላሾች';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => 'ማንኛውንም ነገር ይጠይቁኝ';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => 'የጠረጴዛዎን አደረጃጀት ያሳዩ';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'በቪዲዮ ምላሽ ይስጡ';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'የእርስዎ ጥያቄ';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint => 'ሰዎች ምን ያሳዩ?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'ሃሽታግ';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'ርዕስ';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'መልሶች እንደ የግል መልእክት ይደርሱዎታል።';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'ተመልካቾች በራሳቸው ቪዲዮ ይመልሳሉ። እያንዳንዱ መልስ ይህን ሃሽታግ ያገኛል፣ ወደ ቪዲዮዎም ይመራል።';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'ለዚህ ቪዲዮ በቪዲዮ ምላሽ የሰጡትን ያሳያል። ተመልካቾች ምላሾቹን ለማየት ይነኩታል።';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'ተመልካቾች መንካት እንዲችሉ ይህ ተለጣፊ በዚህ ሳጥን ውስጥ ይቆያል';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'ኖታ';

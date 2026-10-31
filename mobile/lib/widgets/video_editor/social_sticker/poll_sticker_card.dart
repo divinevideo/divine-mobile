@@ -50,16 +50,17 @@ const double pollCardRadius = 56;
 const double pollCardRoundness =
     pollCardRadius / (pollCardContentWidth + 2 * pollCardPadding);
 
-/// The card every poll, quiz and slider is drawn on. It is solid, so the
-/// player's copy hides the one in the frames with the votes on it.
-const Color _cardColor = VineTheme.whiteText;
+/// The card every interactive sticker is drawn on: a poll, quiz, slider,
+/// question, Add yours or replies. It is solid, so the player's copy hides
+/// the one in the frames with the votes, who joined or the replies on it.
+const Color interactiveCardColor = VineTheme.whiteText;
 
-/// The color of a poll's text, marks and empty answers.
-const Color _ink = VineTheme.primaryDarkGreen;
+/// The color of an interactive card's text, marks and empty answers.
+const Color interactiveCardInk = VineTheme.primaryDarkGreen;
 
-/// How tall an answer of a poll or a quiz is: about 38 to 46 logical pixels on
-/// a card three fifths as wide as the frame.
-const double _answerHeight = 116;
+/// How tall an answer of a poll or a quiz is, or a question's answer field:
+/// about 38 to 46 logical pixels on a card three fifths as wide as the frame.
+const double interactiveCardRowHeight = 116;
 
 /// How large a slider's emoji is.
 const double _thumbSize = 100;
@@ -70,9 +71,9 @@ const double _barHeight = 28;
 /// The size of the mark showing where a slider stands on average.
 const double _averageMarkSize = 44;
 
-/// Text of a poll card in [fontSize].
-TextStyle _textStyle(double fontSize) => VineTheme.titleLargeFont(
-  color: _ink,
+/// Text of an interactive card in [fontSize].
+TextStyle interactiveCardTextStyle(double fontSize) => VineTheme.titleLargeFont(
+  color: interactiveCardInk,
 ).copyWith(fontSize: fontSize, height: 1.15);
 
 /// A poll, quiz or slider: its question over its answers or its scale, on a
@@ -134,7 +135,7 @@ class PollStickerCard extends StatelessWidget {
                 padding: const .only(bottom: 12),
                 child: StickerTextLine(
                   text: data.pollQuestion ?? '',
-                  style: _textStyle(54),
+                  style: interactiveCardTextStyle(54),
                   maxLines: 2,
                   textAlign: .center,
                 ),
@@ -175,7 +176,7 @@ class PollStickerCard extends StatelessWidget {
     if (overFrames) return content;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: _cardColor,
+        color: interactiveCardColor,
         borderRadius: BorderRadius.circular(pollCardRadius),
         boxShadow: const [
           BoxShadow(
@@ -218,7 +219,7 @@ class PollStickerCopy extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      painter: const _CardPainter(),
+      painter: const InteractiveCardPainter(),
       child: FittedBox(
         child: PollStickerCard(
           data: data,
@@ -234,10 +235,10 @@ class PollStickerCopy extends StatelessWidget {
   }
 }
 
-/// Paints a poll card filling the box, its corners as round for its width as
-/// [PollStickerCard]'s.
-class _CardPainter extends CustomPainter {
-  const _CardPainter();
+/// Paints an interactive card filling the box, its corners as round for its
+/// width as [PollStickerCard]'s.
+class InteractiveCardPainter extends CustomPainter {
+  const InteractiveCardPainter();
 
   @override
   void paint(Canvas canvas, Size size) => canvas.drawRRect(
@@ -245,16 +246,16 @@ class _CardPainter extends CustomPainter {
       Offset.zero & size,
       Radius.circular(size.width * pollCardRoundness),
     ),
-    Paint()..color = _cardColor,
+    Paint()..color = interactiveCardColor,
   );
 
-  // Only the answers and a slider's emoji take the pointer; a tap anywhere
-  // else on the card still reaches the player beneath.
+  // Only the card's buttons take the pointer, such as a poll's answers; a
+  // tap anywhere else on the card still reaches the player beneath.
   @override
   bool hitTest(Offset position) => false;
 
   @override
-  bool shouldRepaint(_CardPainter oldDelegate) => false;
+  bool shouldRepaint(InteractiveCardPainter oldDelegate) => false;
 }
 
 /// One answer of a poll or a quiz, a pill, and once the votes are in, the
@@ -298,13 +299,15 @@ class _Answer extends StatelessWidget {
         ? VineTheme.vineGreen
         : VineTheme.vineGreenLight;
     final answer = SizedBox(
-      height: _answerHeight,
+      height: interactiveCardRowHeight,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(_answerHeight / 2),
+        borderRadius: BorderRadius.circular(interactiveCardRowHeight / 2),
         child: Stack(
           children: [
             Positioned.fill(
-              child: ColoredBox(color: _ink.withValues(alpha: 0.06)),
+              child: ColoredBox(
+                color: interactiveCardInk.withValues(alpha: 0.06),
+              ),
             ),
             if (share != null)
               FractionallySizedBox(
@@ -321,19 +324,19 @@ class _Answer extends StatelessWidget {
                     Expanded(
                       child: StickerTextLine(
                         text: text,
-                        style: _textStyle(44),
+                        style: interactiveCardTextStyle(44),
                       ),
                     ),
                     if (isRight || isWrong)
                       DivineIcon(
                         icon: isRight ? .check : .x,
                         size: 48,
-                        color: _ink,
+                        color: interactiveCardInk,
                       ),
                     if (percent != null)
                       Text(
                         percent,
-                        style: _textStyle(42).copyWith(
+                        style: interactiveCardTextStyle(42).copyWith(
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                         textScaler: TextScaler.noScaling,
@@ -411,7 +414,10 @@ class _SliderScale extends StatelessWidget {
     final thumb = SizedBox.square(
       dimension: _thumbSize,
       child: Center(
-        child: StickerTextLine(text: emoji, style: _textStyle(84)),
+        child: StickerTextLine(
+          text: emoji,
+          style: interactiveCardTextStyle(84),
+        ),
       ),
     );
     final onSlide = this.onSlide;
@@ -434,7 +440,9 @@ class _SliderScale extends StatelessWidget {
                   textDirection: TextDirection.ltr,
                   children: [
                     Positioned.fill(
-                      child: ColoredBox(color: _ink.withValues(alpha: 0.08)),
+                      child: ColoredBox(
+                        color: interactiveCardInk.withValues(alpha: 0.08),
+                      ),
                     ),
                     if (average != null)
                       FractionallySizedBox(
@@ -459,7 +467,7 @@ class _SliderScale extends StatelessWidget {
                   dimension: _averageMarkSize,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: _cardColor,
+                      color: interactiveCardColor,
                       shape: BoxShape.circle,
                       border: Border.fromBorderSide(
                         BorderSide(color: VineTheme.vineGreen, width: 8),

@@ -2008,6 +2008,87 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Fetches the videos responding to the video [videoId] names, by its
+  /// event id or d-tag, newest first, and how many there are in all: its
+  /// video replies, or for [VideoResponseType.joined] the videos that joined
+  /// the Add yours chain it starts, which carry [hashtag].
+  ///
+  /// Throws:
+  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
+  /// - [FunnelcakeException] if the video ID is empty, or a chain has no
+  ///   hashtag.
+  /// - [FunnelcakeNotFoundException] if the API knows no such video, or does
+  ///   not offer responses yet.
+  /// - [FunnelcakeApiException] if the request fails.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] for other errors.
+  Future<VideoResponsesResponse> getVideoResponses({
+    required String videoId,
+    required VideoResponseType type,
+    String? hashtag,
+    int limit = 20,
+  }) async {
+    if (!isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+    if (videoId.isEmpty) {
+      throw const FunnelcakeException('Video ID cannot be empty');
+    }
+    if (type == VideoResponseType.joined && (hashtag?.isEmpty ?? true)) {
+      throw const FunnelcakeException('A chain needs its hashtag');
+    }
+
+    final uri =
+        Uri.parse(
+          '$_baseUrl/api/videos/${Uri.encodeComponent(videoId)}/responses',
+        ).replace(
+          queryParameters: {
+            'type': type.name,
+            'limit': limit.toString(),
+            'tag': ?hashtag,
+          },
+        );
+
+    try {
+      final response = await _get(uri);
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        final (:items, hasMore: _, nextCursor: _) = _unwrapListResponse(
+          decoded,
+        );
+        final total = decoded is Map<String, dynamic>
+            ? (decoded['total'] as num?)?.toInt()
+            : null;
+        return VideoResponsesResponse(
+          videos: items
+              .whereType<Map<String, dynamic>>()
+              .map(VideoStats.fromJson)
+              .where((v) => v.id.isNotEmpty && v.videoUrl.isNotEmpty)
+              .toList(),
+          total: total ?? items.length,
+        );
+      } else if (response.statusCode == 404) {
+        throw FunnelcakeNotFoundException(
+          resource: 'Video responses',
+          url: uri.toString(),
+        );
+      } else {
+        throw FunnelcakeApiException(
+          message: 'Failed to fetch video responses',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (e) {
+      throw FunnelcakeException('Failed to fetch video responses: $e');
+    }
+  }
+
   /// Fetches view count for a specific video.
   ///
   /// [eventId] is the Nostr event ID for the video.

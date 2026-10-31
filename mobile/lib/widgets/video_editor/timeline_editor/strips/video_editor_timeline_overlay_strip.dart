@@ -12,8 +12,8 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/layer_style.dart';
-import 'package:openvine/models/video_editor/poll_sticker_placement.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_drop_indicator_line.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_positioned_item.dart';
@@ -368,10 +368,10 @@ class _TimelineOverlayStripState extends State<TimelineOverlayStrip> {
     if (matchingItems.isEmpty) return null;
 
     final item = matchingItems.first;
-    // A layer dropped on or past the poll's row lands just above the poll,
-    // so the line shows it there.
+    // A layer dropped on or past the interactive card's row lands just above
+    // the card, so the line shows it there.
     final drop = item.type == TimelineOverlayType.layer
-        ? layerDropBehindPoll(
+        ? layerDropBehindInteractiveCard(
             items: widget.items.where((i) => i.id != item.id),
             row: info.targetRow,
             insertAbove: info.insertAbove,
@@ -402,8 +402,8 @@ class _TimelineOverlayStripState extends State<TimelineOverlayStrip> {
   void _onLongPressStart(TimelineOverlayItem item) {
     // In multi-select mode a tile only toggles on tap; dragging is disabled.
     if (widget.isLayerMultiSelectMode) return;
-    // A poll, quiz or slider stays in the front row for the whole video.
-    if (isPollTimelineItem(item)) return;
+    // An interactive card stays in the front row for the whole video.
+    if (isInteractiveCardTimelineItem(item)) return;
     final mainBloc = context.read<VideoEditorMainBloc?>();
     if (mainBloc?.state.isVolumeEditMode == true) return;
     unawaited(HapticFeedback.mediumImpact());

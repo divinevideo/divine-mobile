@@ -2110,6 +2110,131 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get videoStickerQuestionAnswerHint => 'I-tap para sumagot';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'Sagutin: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'Ikaw naman';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ang sumali',
+      one: '$count ang sumali',
+      zero: 'Mauna ka na',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel =>
+      'Tingnan kung sino ang sumali';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'Ikaw naman: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reply',
+      one: '$count reply',
+      zero: 'Wala pang reply',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Panoorin ang $count video reply',
+      one: 'Panoorin ang $count video reply',
+      zero: 'Mga video reply, wala pa',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'Mag-sign in para sumagot.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'Sumagot';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'Sagot mo';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'Si $name lang ang makakakita ng sagot mo. Puwede nila itong i-share sa isang video, nang wala ang pangalan mo.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'Ipadala';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'Naipadala ang sagot.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'Masyadong mahaba ang sagot para maipadala.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'Hindi naipadala ang sagot mo. Subukan ulit.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'Mag-sign in para sumali.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'Mga video reply';
+
+  @override
+  String get videoStickerRepliesEmpty => 'Wala pang video reply.';
+
+  @override
+  String get videoStickerRepliesLoadFailed => 'Hindi ma-load ang mga reply.';
+
+  @override
+  String get videoStickerRepliesRetry => 'Subukan ulit';
+
+  @override
+  String get videoStickerRepliesPin => 'I-pin';
+
+  @override
+  String get videoStickerRepliesUnpin => 'I-unpin';
+
+  @override
+  String get videoStickerRepliesHide => 'Itago';
+
+  @override
+  String get videoStickerRepliesShow => 'Ipakita';
+
+  @override
+  String get videoStickerRepliesPinned => 'Naka-pin';
+
+  @override
+  String get videoStickerRepliesHidden => 'Nakatago';
+
+  @override
+  String get videoStickerRepliesSaveFailed => 'Hindi nai-save. Subukan ulit.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'Panoorin ang reply ni $name';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Bubuksan ang link na ito sa labas ng Divine. Tingnan muna ang address bago ka tumuloy.';
 
@@ -4827,6 +4952,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get routeInvalidSoundId => 'Invalid na sound ID';
 
   @override
+  String get routeInvalidQuestion => 'Invalid na link ng tanong';
+
+  @override
   String get routeInvalidCategory => 'Invalid na category';
 
   @override
@@ -6212,6 +6340,19 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get dmReelReplyComposerSemanticLabel => 'Tumugon sa reel na ito';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'Sinagot ang tanong mo: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'Sinagot mo: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'Sumagot gamit ang video';
 
   @override
   String get dmReelReplyViewChat => 'Tingnan ang chat';
@@ -11129,8 +11270,54 @@ class AppLocalizationsFil extends AppLocalizations {
       'Idi-drag ng viewers ang emoji para sumagot at makikita nila kung saan ito napupunta sa average.';
 
   @override
-  String get videoEditorPollAreaHint =>
-      'Nananatili ang polls sa loob ng box na ito para ma-tap ng viewers';
+  String get videoEditorSocialStickerQuestion => 'Tanong';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'Ikaw naman';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'Mga reply';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample =>
+      'Tanungin mo ako ng kahit ano';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample =>
+      'Ipakita ang desk setup mo';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample =>
+      'Mag-reply gamit ang video';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'Tanong mo';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      'Ano ang dapat ipakita ng mga tao?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'Pamagat';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'Darating sa iyo ang mga sagot bilang private message.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'Sasagot ang viewers gamit ang sarili nilang video. Bawat sagot ay may ganitong hashtag at naka-link pabalik sa video mo.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'Ipinapakita kung sino ang nag-reply sa video na ito gamit ang video. I-tap ito ng viewers para mapanood ang mga reply.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'Nananatili ang sticker sa box na ito para ma-tap ito ng viewers';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nota';

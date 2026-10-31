@@ -19,8 +19,8 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
-import 'package:openvine/models/video_editor/poll_sticker_placement.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_snack_bar.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -703,10 +703,10 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
     required int row,
     required bool insertAbove,
   }) {
-    // Every other layer stays behind the video's poll, quiz or slider, which
+    // Every other layer stays behind the video's interactive card, which
     // keeps the last row.
     final drop = item.type == .layer
-        ? layerDropBehindPoll(
+        ? layerDropBehindInteractiveCard(
             items: context.read<TimelineOverlayBloc>().state.items.where(
               (i) => i.id != item.id,
             ),

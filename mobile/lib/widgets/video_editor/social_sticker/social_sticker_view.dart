@@ -1,5 +1,5 @@
 // ABOUTME: Draws a social sticker: an @mention, a #hashtag or a link as a pill,
-// ABOUTME: a moving sound credit, a countdown, a reply, a poll or a slider.
+// ABOUTME: a moving sound credit, a countdown, a reply, a poll or a question.
 
 import 'dart:async';
 
@@ -16,6 +16,7 @@ import 'package:openvine/utils/sound_credit_paint.dart';
 import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_pill_palette.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/interactive_sticker_card.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/poll_sticker_card.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_marks.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
@@ -82,6 +83,12 @@ class SocialStickerView extends StatelessWidget {
       data.pollQuestion ?? '',
       ?data.sliderEmoji,
     ].join(' '),
+    SocialStickerKind.question ||
+    SocialStickerKind.replies => data.prompt ?? '',
+    SocialStickerKind.addYours => [
+      data.prompt ?? '',
+      '#${data.hashtag ?? ''}',
+    ].join(' · '),
   };
 
   @override
@@ -131,6 +138,12 @@ class SocialStickerView extends StatelessWidget {
             data: data,
             overFrames: overFrames,
           ),
+          SocialStickerKind.question ||
+          SocialStickerKind.addYours ||
+          SocialStickerKind.replies => InteractiveStickerCard(
+            data: data,
+            overFrames: overFrames,
+          ),
           _ => StickerPill(
             palette: palette,
             child: StickerTextLine(
@@ -170,6 +183,9 @@ class SocialStickerCopy extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.kind.isPoll) return PollStickerCopy(data: data);
+    if (data.kind.isInteractiveCard) {
+      return InteractiveStickerCopy(data: data);
+    }
     final sticker = SocialStickerView(
       data: data,
       overFrames: true,

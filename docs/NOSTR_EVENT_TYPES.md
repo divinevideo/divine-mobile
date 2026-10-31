@@ -157,6 +157,30 @@ This document outlines the required Nostr event types (kinds) that Divine uses f
   until then, and whenever it does not answer in time, the app counts on the
   device
 
+### Kind 30078 - Video Reply Curation (NIP-78)
+**Used for:** The video reply a creator pinned to the front of the replies to
+one of their videos, and the ones they hid
+
+**Implementation:**
+- An addressable event of the creator's: `["d", "divine:replies:<video address>"]`,
+  `["a", "<video address>"]`, and per reply `["e", "<reply id>", "", "pinned"]`
+  or `["e", "<reply id>", "", "hidden"]`; empty content
+- Read and published by `mobile/packages/video_responses_repository`
+  (`RepliesCuration`); viewers see the pinned reply first and none of the
+  hidden ones on the video's replies sticker and in its replies feed
+- Kind 30078 is also used for the app's own encrypted sync and DM read-state
+  markers, which are self-addressed; those readers ignore other `d` tags
+
+### Private Answers to Question Stickers (NIP-17)
+**Used for:** A viewer's answer to the question sticker on a video
+
+**Implementation:**
+- A kind 14 NIP-17 message to the video's creator, citing the video with a
+  NIP-18 `q` tag like a shared video, plus
+  `["divine:question", "<question>", "<video event id>"]`
+- Sent by `QuestionAnswerCubit` through `DmRepository.sendSharedVideo`; never
+  sent as a plaintext kind 4 copy
+
 ## Event Subscription Requirements
 
 ### VideoEventService Subscriptions
@@ -265,6 +289,7 @@ If updating existing Divine installations:
 - **NIP-25:** Reactions (Kind 7)
 - **NIP-71:** Video Events (Kind 22)
 - **NIP-88:** Polls (Kind 1068, 1018)
+- **NIP-78:** Application-specific data (Kind 30078, video reply curation)
 
 ## Performance Considerations
 

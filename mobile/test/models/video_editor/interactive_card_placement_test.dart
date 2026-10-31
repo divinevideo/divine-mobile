@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
-import 'package:openvine/models/video_editor/poll_sticker_placement.dart';
+import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
@@ -43,7 +43,7 @@ WidgetLayer _sized(String id, Size size, {bool poll = false}) {
     id: id,
     widget: SizedBox.fromSize(size: size),
     width: size.width,
-    interaction: poll ? pollLayerInteraction() : null,
+    interaction: poll ? interactiveCardInteraction() : null,
     meta: layer.meta,
     exportConfigs: layer.exportConfigs,
   );
@@ -106,10 +106,10 @@ extension on Layer {
   String get exportConfigsId => (this as WidgetLayer).exportConfigs.id!;
 }
 
-/// Runs [keepPollInPlace] and says whether it asked to save the history.
+/// Runs [keepInteractiveCardInPlace] and says whether it asked to save the history.
 bool _keep(ProImageEditorState editor) {
   var save = false;
-  keepPollInPlace(
+  keepInteractiveCardInPlace(
     editor,
     targetAspectRatio: 9 / 16,
     onChanged: () => save = true,
@@ -118,7 +118,7 @@ bool _keep(ProImageEditorState editor) {
 }
 
 void main() {
-  group('keepPollInPlace', () {
+  group('keepInteractiveCardInPlace', () {
     testWidgets('moves a poll back on top, in the history a draft saves', (
       tester,
     ) async {
@@ -177,7 +177,7 @@ void main() {
       expect(save, isTrue);
       final placed = editor.activeLayers.single;
       expect(placed.rotation, equals(0));
-      expect(pollLayerNeedsLocking(placed), isFalse);
+      expect(interactiveCardNeedsLocking(placed), isFalse);
     });
 
     testWidgets('changes nothing once a poll stands where it should', (
@@ -204,10 +204,10 @@ void main() {
     });
   });
 
-  group('pollLayerIndexBelowTop', () {
+  group('interactiveCardIndexBelowTop', () {
     test('finds a poll with another layer above it', () {
       expect(
-        pollLayerIndexBelowTop([
+        interactiveCardIndexBelowTop([
           _layer('a'),
           _layer('p', poll: true),
           _layer('b'),
@@ -218,14 +218,14 @@ void main() {
 
     test('leaves a poll on top, and a video without one, alone', () {
       expect(
-        pollLayerIndexBelowTop([_layer('a'), _layer('p', poll: true)]),
+        interactiveCardIndexBelowTop([_layer('a'), _layer('p', poll: true)]),
         isNull,
       );
-      expect(pollLayerIndexBelowTop([_layer('a'), _layer('b')]), isNull);
+      expect(interactiveCardIndexBelowTop([_layer('a'), _layer('b')]), isNull);
     });
   });
 
-  group('layerDropBehindPoll', () {
+  group('layerDropBehindInteractiveCard', () {
     TimelineOverlayItem bar(String id, int row, {bool poll = false}) =>
         TimelineOverlayItem(
           id: id,
@@ -239,44 +239,56 @@ void main() {
     final items = [bar('a', 0), bar('p', 1, poll: true)];
 
     test('knows the bar of a poll', () {
-      expect(isPollTimelineItem(items.last), isTrue);
-      expect(isPollTimelineItem(items.first), isFalse);
+      expect(isInteractiveCardTimelineItem(items.last), isTrue);
+      expect(isInteractiveCardTimelineItem(items.first), isFalse);
     });
 
     test('keeps a drop above the poll as it is', () {
       expect(
-        layerDropBehindPoll(items: items, row: 0, insertAbove: false),
+        layerDropBehindInteractiveCard(
+          items: items,
+          row: 0,
+          insertAbove: false,
+        ),
         equals((row: 0, insertAbove: false)),
       );
       expect(
-        layerDropBehindPoll(items: items, row: 1, insertAbove: true),
+        layerDropBehindInteractiveCard(items: items, row: 1, insertAbove: true),
         equals((row: 1, insertAbove: true)),
       );
     });
 
     test('lifts a drop below the poll to its row, pushing the poll down', () {
       expect(
-        layerDropBehindPoll(items: items, row: 1, insertAbove: false),
+        layerDropBehindInteractiveCard(
+          items: items,
+          row: 1,
+          insertAbove: false,
+        ),
         equals((row: 1, insertAbove: true)),
       );
       expect(
-        layerDropBehindPoll(items: items, row: 4, insertAbove: true),
+        layerDropBehindInteractiveCard(items: items, row: 4, insertAbove: true),
         equals((row: 1, insertAbove: true)),
       );
     });
 
     test('leaves every drop alone without a poll', () {
       expect(
-        layerDropBehindPoll(items: [bar('a', 0)], row: 3, insertAbove: false),
+        layerDropBehindInteractiveCard(
+          items: [bar('a', 0)],
+          row: 3,
+          insertAbove: false,
+        ),
         equals((row: 3, insertAbove: false)),
       );
     });
   });
 
-  group('pollSafeRect', () {
+  group('interactiveCardSafeRect', () {
     test('marks the safe part of the frame an export keeps', () {
       // A 9:16 export keeps 400 by 711.1 of this body, from 44.4 down.
-      final rect = pollSafeRect(
+      final rect = interactiveCardSafeRect(
         bodySize: const Size(400, 800),
         targetAspectRatio: 9 / 16,
       );
@@ -288,22 +300,22 @@ void main() {
     });
   });
 
-  group('pollLayerNeedsLocking', () {
+  group('interactiveCardNeedsLocking', () {
     test('locks a poll that can still turn or resize, or stands turned', () {
       final free = _layer('p', poll: true);
       final locked = _layer('p', poll: true)
-        ..interaction = pollLayerInteraction();
+        ..interaction = interactiveCardInteraction();
       final turned = _layer('p', poll: true)
-        ..interaction = pollLayerInteraction()
+        ..interaction = interactiveCardInteraction()
         ..rotation = 0.3;
 
-      expect(pollLayerNeedsLocking(free), isTrue);
-      expect(pollLayerNeedsLocking(locked), isFalse);
-      expect(pollLayerNeedsLocking(turned), isTrue);
+      expect(interactiveCardNeedsLocking(free), isTrue);
+      expect(interactiveCardNeedsLocking(locked), isFalse);
+      expect(interactiveCardNeedsLocking(turned), isTrue);
     });
 
     test('lets a poll move but not turn or resize', () {
-      final interaction = pollLayerInteraction();
+      final interaction = interactiveCardInteraction();
 
       expect(interaction.enableMove, isTrue);
       expect(interaction.enableRotate, isFalse);
@@ -311,7 +323,7 @@ void main() {
     });
   });
 
-  group('fitPollIntoSafeArea', () {
+  group('fitInteractiveCardIntoSafeArea', () {
     // A 9:16 export keeps 400 by 711.1 of this body, from 44.4 down, so the
     // safe area runs from 24 to 328 across and from 165.3 to 627.6 down.
     const body = Size(400, 800);
@@ -320,7 +332,7 @@ void main() {
       Offset offset,
       Size size, {
       double rotation = 0,
-    }) => fitPollIntoSafeArea(
+    }) => fitInteractiveCardIntoSafeArea(
       offset: offset,
       size: size,
       rotation: rotation,

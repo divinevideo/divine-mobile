@@ -1455,6 +1455,157 @@
       }
     }
   },
+  "videoStickerQuestionAnswerHint": "Tap to answer",
+  "@videoStickerQuestionAnswerHint": {
+    "description": "Placeholder in the answer field drawn on a question sticker, in the video and in the player. Short."
+  },
+  "videoStickerQuestionAnswerSemanticLabel": "Answer: {question}",
+  "@videoStickerQuestionAnswerSemanticLabel": {
+    "description": "Screen-reader label of a question sticker in the player, which opens the answer screen. {question} is what the creator asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerAddYoursButton": "Add yours",
+  "@videoStickerAddYoursButton": {
+    "description": "Button on an Add yours sticker that opens the camera to answer its prompt with a video. Short; the same as the sticker's name."
+  },
+  "videoStickerAddYoursJoined": "{count, plural, =0{Be the first} =1{1 joined} other{{count} joined}}",
+  "@videoStickerAddYoursJoined": {
+    "description": "On an Add yours sticker in the player: how many people answered its prompt with a video.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoStickerAddYoursOpenSemanticLabel": "See who joined",
+  "@videoStickerAddYoursOpenSemanticLabel": {
+    "description": "Screen-reader label of the avatars and count on an Add yours sticker, which open the videos that answered it."
+  },
+  "videoStickerAddYoursJoinSemanticLabel": "Add yours: {prompt}",
+  "@videoStickerAddYoursJoinSemanticLabel": {
+    "description": "Screen-reader label of the Add yours button, which opens the camera. {prompt} is the sticker's prompt.",
+    "placeholders": {
+      "prompt": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerRepliesCount": "{count, plural, =0{No replies yet} =1{1 reply} other{{count} replies}}",
+  "@videoStickerRepliesCount": {
+    "description": "On a replies sticker in the player: how many video replies the video has.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{Video replies, none yet} =1{Watch 1 video reply} other{Watch {count} video replies}}",
+  "@videoStickerRepliesSemanticLabel": {
+    "description": "Screen-reader label of a replies sticker in the player, which opens the video replies.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoStickerQuestionSignIn": "Sign in to answer.",
+  "@videoStickerQuestionSignIn": {
+    "description": "Snackbar when someone who is not signed in taps a question sticker on a video."
+  },
+  "videoStickerQuestionAnswerTitle": "Answer",
+  "@videoStickerQuestionAnswerTitle": {
+    "description": "Title of the full-screen page where a viewer answers a question sticker."
+  },
+  "videoStickerQuestionAnswerFieldLabel": "Your answer",
+  "@videoStickerQuestionAnswerFieldLabel": {
+    "description": "Label of the field where a viewer types their answer to a question sticker."
+  },
+  "videoStickerQuestionAnswerPrivacyNote": "Only {name} sees your answer. They might share it in a video, without your name.",
+  "@videoStickerQuestionAnswerPrivacyNote": {
+    "description": "Note under the answer field: the answer goes privately to the video's creator, who can answer it in a new video showing the question and the answer but not who wrote it. {name} is the creator's display name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerQuestionAnswerSend": "Send",
+  "@videoStickerQuestionAnswerSend": {
+    "description": "Button that sends a viewer's answer to a question sticker as a private message."
+  },
+  "videoStickerQuestionAnswerSent": "Answer sent.",
+  "@videoStickerQuestionAnswerSent": {
+    "description": "Snackbar after a viewer's answer to a question sticker went out."
+  },
+  "videoStickerQuestionAnswerTooLong": "That answer is too long to send.",
+  "@videoStickerQuestionAnswerTooLong": {
+    "description": "Snackbar when a viewer's answer to a question sticker is too long for one message."
+  },
+  "videoStickerQuestionAnswerFailed": "Your answer didn't go through. Try again.",
+  "@videoStickerQuestionAnswerFailed": {
+    "description": "Snackbar when a viewer's answer to a question sticker could not be sent."
+  },
+  "videoStickerAddYoursSignIn": "Sign in to add yours.",
+  "@videoStickerAddYoursSignIn": {
+    "description": "Snackbar when someone who is not signed in taps the Add yours button on a video."
+  },
+  "videoStickerRepliesManageTitle": "Video replies",
+  "@videoStickerRepliesManageTitle": {
+    "description": "Title of the page where a creator sees the video replies to one of their videos, and pins or hides them."
+  },
+  "videoStickerRepliesEmpty": "No video replies yet.",
+  "@videoStickerRepliesEmpty": {
+    "description": "Shown on the video replies page while nobody has replied to the video with a video."
+  },
+  "videoStickerRepliesLoadFailed": "Couldn't load the replies.",
+  "@videoStickerRepliesLoadFailed": {
+    "description": "Shown on the video replies page when the replies could not be read."
+  },
+  "videoStickerRepliesRetry": "Try again",
+  "@videoStickerRepliesRetry": {
+    "description": "Button on the video replies page that reads the replies again after they could not be read."
+  },
+  "videoStickerRepliesPin": "Pin",
+  "@videoStickerRepliesPin": {
+    "description": "Button beside a video reply that puts it first in the replies viewers see. Short."
+  },
+  "videoStickerRepliesUnpin": "Unpin",
+  "@videoStickerRepliesUnpin": {
+    "description": "Button beside the pinned video reply that stops putting it first. Short."
+  },
+  "videoStickerRepliesHide": "Hide",
+  "@videoStickerRepliesHide": {
+    "description": "Button beside a video reply that leaves it out of the replies viewers see. Short."
+  },
+  "videoStickerRepliesShow": "Show",
+  "@videoStickerRepliesShow": {
+    "description": "Button beside a hidden video reply that lets viewers see it again. Short."
+  },
+  "videoStickerRepliesPinned": "Pinned",
+  "@videoStickerRepliesPinned": {
+    "description": "Label under the video reply the creator pinned first."
+  },
+  "videoStickerRepliesHidden": "Hidden",
+  "@videoStickerRepliesHidden": {
+    "description": "Label under a video reply the creator hid from viewers."
+  },
+  "videoStickerRepliesSaveFailed": "Couldn't save that. Try again.",
+  "@videoStickerRepliesSaveFailed": {
+    "description": "Snackbar when pinning or hiding a video reply could not be saved."
+  },
+  "videoStickerRepliesWatchSemanticLabel": "Watch the reply by {name}",
+  "@videoStickerRepliesWatchSemanticLabel": {
+    "description": "Screen-reader label of a video reply on the video replies page, which opens it in the full-screen player. {name} is who posted it.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "videoStickerLinkSheetBody": "This link opens outside Divine. Check the address before you go.",
   "@videoStickerLinkSheetBody": {
     "description": "Note in the sheet a link sticker on a video opens, above the link's full address: the page opens outside the app."
@@ -3189,6 +3340,10 @@
   "routeInvalidUserId": "Invalid user ID",
   "routeInvalidVideoId": "Invalid video ID",
   "routeInvalidSoundId": "Invalid sound ID",
+  "routeInvalidQuestion": "Invalid question link",
+  "@routeInvalidQuestion": {
+    "description": "Error page when a link to answer a question sticker names no creator, video or question."
+  },
   "routeInvalidCategory": "Invalid category",
   "routeNoVideosToDisplay": "No videos to display",
   "routeGoHome": "Go home",
@@ -4126,6 +4281,28 @@
   "dmReelReplyComposerSemanticLabel": "Reply to this reel",
   "@dmReelReplyComposerSemanticLabel": {
     "description": "Screen-reader label for the in-player reel reply text field."
+  },
+  "dmQuestionAnswerReceivedLabel": "Answered your question: {question}",
+  "@dmQuestionAnswerReceivedLabel": {
+    "description": "Line above a message in a conversation that answers the question sticker on one of the viewer's videos. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerSentLabel": "You answered: {question}",
+  "@dmQuestionAnswerSentLabel": {
+    "description": "Line above the viewer's own message in a conversation that answers someone's question sticker. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerWithVideo": "Answer with a video",
+  "@dmQuestionAnswerWithVideo": {
+    "description": "Button above an answer to the viewer's question sticker that opens the camera to reply with a video showing the question and the answer, without who wrote it."
   },
   "dmReelReplyViewChat": "View chat",
   "@dmReelReplyViewChat": {
@@ -8329,9 +8506,61 @@
   "@videoEditorSocialStickerSliderNote": {
     "description": "Help line in the emoji slider sticker sheet: viewers rate by dragging the emoji along the bar, then see the average of everyone's answers."
   },
-  "videoEditorPollAreaHint": "Polls stay in this box so viewers can tap them",
-  "@videoEditorPollAreaHint": {
-    "description": "Shown on the editor canvas while a poll, quiz or slider sticker is moved, inside the outlined area it must stay in."
+  "videoEditorSocialStickerQuestion": "Question",
+  "@videoEditorSocialStickerQuestion": {
+    "description": "Name of the sticker that asks viewers a question they answer in a private message to the creator; the sheet title and timeline label for it."
+  },
+  "videoEditorSocialStickerAddYours": "Add yours",
+  "@videoEditorSocialStickerAddYours": {
+    "description": "Name of the sticker with a prompt such as 'Show your desk setup' that viewers answer with a video of their own; the sheet title and timeline label for it. Same wording as the sticker's button."
+  },
+  "videoEditorSocialStickerReplies": "Replies",
+  "@videoEditorSocialStickerReplies": {
+    "description": "Name of the sticker that shows the video replies to a video and opens them; the sheet title and timeline label for it."
+  },
+  "videoEditorSocialStickerQuestionSample": "Ask me anything",
+  "@videoEditorSocialStickerQuestionSample": {
+    "description": "Question a new question sticker starts with, and the sample in the sticker sheet. The creator can change it."
+  },
+  "videoEditorSocialStickerAddYoursSample": "Show your desk setup",
+  "@videoEditorSocialStickerAddYoursSample": {
+    "description": "Made-up prompt on the sample Add yours sticker in the sticker sheet: viewers answer it with a video of their own."
+  },
+  "videoEditorSocialStickerRepliesSample": "Reply with a video",
+  "@videoEditorSocialStickerRepliesSample": {
+    "description": "Title a new replies sticker starts with, and the sample in the sticker sheet. The creator can change it."
+  },
+  "videoEditorSocialStickerQuestionHint": "Your question",
+  "@videoEditorSocialStickerQuestionHint": {
+    "description": "Label of the field where the creator types what a question sticker asks."
+  },
+  "videoEditorSocialStickerAddYoursPromptHint": "What should people show?",
+  "@videoEditorSocialStickerAddYoursPromptHint": {
+    "description": "Label of the field where the creator types the prompt of an Add yours sticker, such as 'Show your desk setup'."
+  },
+  "videoEditorSocialStickerAddYoursHashtagHint": "Hashtag",
+  "@videoEditorSocialStickerAddYoursHashtagHint": {
+    "description": "Label of the field with the hashtag every answer to an Add yours sticker shares. It starts with the prompt's words run together."
+  },
+  "videoEditorSocialStickerRepliesTitleHint": "Title",
+  "@videoEditorSocialStickerRepliesTitleHint": {
+    "description": "Label of the field where the creator types the title of a replies sticker."
+  },
+  "videoEditorSocialStickerQuestionNote": "Answers come to you as private messages.",
+  "@videoEditorSocialStickerQuestionNote": {
+    "description": "Help line in the question sticker sheet: viewers' answers arrive in the creator's messages and nobody else sees them."
+  },
+  "videoEditorSocialStickerAddYoursNote": "Viewers answer with a video of their own. Every answer gets this hashtag and links back to your video.",
+  "@videoEditorSocialStickerAddYoursNote": {
+    "description": "Help line in the Add yours sticker sheet."
+  },
+  "videoEditorSocialStickerRepliesNote": "Shows who replied to this video with a video. Viewers tap it to watch the replies.",
+  "@videoEditorSocialStickerRepliesNote": {
+    "description": "Help line in the replies sticker sheet."
+  },
+  "videoEditorInteractiveCardAreaHint": "This sticker stays in this box so viewers can tap it",
+  "@videoEditorInteractiveCardAreaHint": {
+    "description": "Line beside the outlined box shown while the creator moves a poll, quiz, slider, question, Add yours or replies sticker: the sticker can only stand inside it, clear of the feed's buttons and caption."
   },
   "videoEditorSocialStickerSoundNote": "Note",
   "@videoEditorSocialStickerSoundNote": {

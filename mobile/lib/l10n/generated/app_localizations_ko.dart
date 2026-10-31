@@ -1955,6 +1955,128 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get videoStickerQuestionAnswerHint => '탭해서 답하기';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return '답하기: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => '나도 참여';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count명 참여',
+      one: '$count명 참여',
+      zero: '첫 번째로 참여해 보세요',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => '참여한 사람 보기';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return '나도 참여: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '답글 $count개',
+      one: '답글 $count개',
+      zero: '아직 답글이 없어요',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '영상 답글 $count개 보기',
+      one: '영상 답글 $count개 보기',
+      zero: '영상 답글, 아직 없음',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => '로그인해야 답할 수 있어요.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => '답하기';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => '내 답변';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return '$name님만 내 답변을 볼 수 있어요. 내 이름 없이 영상에서 공유될 수도 있어요.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => '보내기';
+
+  @override
+  String get videoStickerQuestionAnswerSent => '답변을 보냈어요.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong => '답변이 너무 길어서 보낼 수 없어요.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed => '답변이 전송되지 않았어요. 다시 시도해 주세요.';
+
+  @override
+  String get videoStickerAddYoursSignIn => '로그인해야 참여할 수 있어요.';
+
+  @override
+  String get videoStickerRepliesManageTitle => '영상 답글';
+
+  @override
+  String get videoStickerRepliesEmpty => '아직 영상 답글이 없어요.';
+
+  @override
+  String get videoStickerRepliesLoadFailed => '답글을 불러오지 못했어요.';
+
+  @override
+  String get videoStickerRepliesRetry => '다시 시도';
+
+  @override
+  String get videoStickerRepliesPin => '고정';
+
+  @override
+  String get videoStickerRepliesUnpin => '고정 해제';
+
+  @override
+  String get videoStickerRepliesHide => '숨기기';
+
+  @override
+  String get videoStickerRepliesShow => '보이기';
+
+  @override
+  String get videoStickerRepliesPinned => '고정됨';
+
+  @override
+  String get videoStickerRepliesHidden => '숨김';
+
+  @override
+  String get videoStickerRepliesSaveFailed => '저장하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return '$name님의 답글 보기';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       '이 링크는 Divine 밖에서 열려요. 이동하기 전에 주소를 확인하세요.';
 
@@ -4524,6 +4646,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get routeInvalidSoundId => '잘못된 사운드 ID예요';
 
   @override
+  String get routeInvalidQuestion => '잘못된 질문 링크예요';
+
+  @override
   String get routeInvalidCategory => '잘못된 카테고리예요';
 
   @override
@@ -5853,6 +5978,19 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get dmReelReplyComposerSemanticLabel => '이 릴스에 답장';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return '내 질문에 답했어요: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return '내가 답한 질문: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => '영상으로 답하기';
 
   @override
   String get dmReelReplyViewChat => '채팅 보기';
@@ -10523,7 +10661,50 @@ class AppLocalizationsKo extends AppLocalizations {
       '시청자는 이모지를 끌어서 답하고 평균 위치를 볼 수 있어요.';
 
   @override
-  String get videoEditorPollAreaHint => '투표는 시청자가 누를 수 있도록 이 상자 안에 있어요';
+  String get videoEditorSocialStickerQuestion => '질문';
+
+  @override
+  String get videoEditorSocialStickerAddYours => '나도 참여';
+
+  @override
+  String get videoEditorSocialStickerReplies => '답글';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => '무엇이든 물어보세요';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => '책상 셋업을 보여 주세요';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => '영상으로 답글 달기';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => '내 질문';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      '사람들이 무엇을 보여 주면 좋을까요?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => '해시태그';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => '제목';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote => '답변은 비공개 메시지로 받아요.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      '시청자는 자기 영상으로 답해요. 모든 답변에 이 해시태그가 붙고 내 영상으로 연결돼요.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      '이 영상에 영상으로 답글을 단 사람을 보여 줘요. 시청자가 탭하면 답글을 볼 수 있어요.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      '시청자가 탭할 수 있도록 이 스티커는 이 상자 안에 있어요';
 
   @override
   String get videoEditorSocialStickerSoundNote => '음표';

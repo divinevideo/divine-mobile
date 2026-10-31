@@ -3553,6 +3553,180 @@ abstract class AppLocalizations {
   /// **'{count, plural, one{1 vote} other{{count} votes}}'**
   String videoStickerPollVoteCount(int count);
 
+  /// Placeholder in the answer field drawn on a question sticker, in the video and in the player. Short.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to answer'**
+  String get videoStickerQuestionAnswerHint;
+
+  /// Screen-reader label of a question sticker in the player, which opens the answer screen. {question} is what the creator asks.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer: {question}'**
+  String videoStickerQuestionAnswerSemanticLabel(String question);
+
+  /// Button on an Add yours sticker that opens the camera to answer its prompt with a video. Short; the same as the sticker's name.
+  ///
+  /// In en, this message translates to:
+  /// **'Add yours'**
+  String get videoStickerAddYoursButton;
+
+  /// On an Add yours sticker in the player: how many people answered its prompt with a video.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Be the first} =1{1 joined} other{{count} joined}}'**
+  String videoStickerAddYoursJoined(int count);
+
+  /// Screen-reader label of the avatars and count on an Add yours sticker, which open the videos that answered it.
+  ///
+  /// In en, this message translates to:
+  /// **'See who joined'**
+  String get videoStickerAddYoursOpenSemanticLabel;
+
+  /// Screen-reader label of the Add yours button, which opens the camera. {prompt} is the sticker's prompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Add yours: {prompt}'**
+  String videoStickerAddYoursJoinSemanticLabel(String prompt);
+
+  /// On a replies sticker in the player: how many video replies the video has.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No replies yet} =1{1 reply} other{{count} replies}}'**
+  String videoStickerRepliesCount(int count);
+
+  /// Screen-reader label of a replies sticker in the player, which opens the video replies.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Video replies, none yet} =1{Watch 1 video reply} other{Watch {count} video replies}}'**
+  String videoStickerRepliesSemanticLabel(int count);
+
+  /// Snackbar when someone who is not signed in taps a question sticker on a video.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to answer.'**
+  String get videoStickerQuestionSignIn;
+
+  /// Title of the full-screen page where a viewer answers a question sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer'**
+  String get videoStickerQuestionAnswerTitle;
+
+  /// Label of the field where a viewer types their answer to a question sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answer'**
+  String get videoStickerQuestionAnswerFieldLabel;
+
+  /// Note under the answer field: the answer goes privately to the video's creator, who can answer it in a new video showing the question and the answer but not who wrote it. {name} is the creator's display name.
+  ///
+  /// In en, this message translates to:
+  /// **'Only {name} sees your answer. They might share it in a video, without your name.'**
+  String videoStickerQuestionAnswerPrivacyNote(String name);
+
+  /// Button that sends a viewer's answer to a question sticker as a private message.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get videoStickerQuestionAnswerSend;
+
+  /// Snackbar after a viewer's answer to a question sticker went out.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer sent.'**
+  String get videoStickerQuestionAnswerSent;
+
+  /// Snackbar when a viewer's answer to a question sticker is too long for one message.
+  ///
+  /// In en, this message translates to:
+  /// **'That answer is too long to send.'**
+  String get videoStickerQuestionAnswerTooLong;
+
+  /// Snackbar when a viewer's answer to a question sticker could not be sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answer didn\'t go through. Try again.'**
+  String get videoStickerQuestionAnswerFailed;
+
+  /// Snackbar when someone who is not signed in taps the Add yours button on a video.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to add yours.'**
+  String get videoStickerAddYoursSignIn;
+
+  /// Title of the page where a creator sees the video replies to one of their videos, and pins or hides them.
+  ///
+  /// In en, this message translates to:
+  /// **'Video replies'**
+  String get videoStickerRepliesManageTitle;
+
+  /// Shown on the video replies page while nobody has replied to the video with a video.
+  ///
+  /// In en, this message translates to:
+  /// **'No video replies yet.'**
+  String get videoStickerRepliesEmpty;
+
+  /// Shown on the video replies page when the replies could not be read.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the replies.'**
+  String get videoStickerRepliesLoadFailed;
+
+  /// Button on the video replies page that reads the replies again after they could not be read.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get videoStickerRepliesRetry;
+
+  /// Button beside a video reply that puts it first in the replies viewers see. Short.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin'**
+  String get videoStickerRepliesPin;
+
+  /// Button beside the pinned video reply that stops putting it first. Short.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin'**
+  String get videoStickerRepliesUnpin;
+
+  /// Button beside a video reply that leaves it out of the replies viewers see. Short.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide'**
+  String get videoStickerRepliesHide;
+
+  /// Button beside a hidden video reply that lets viewers see it again. Short.
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get videoStickerRepliesShow;
+
+  /// Label under the video reply the creator pinned first.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned'**
+  String get videoStickerRepliesPinned;
+
+  /// Label under a video reply the creator hid from viewers.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden'**
+  String get videoStickerRepliesHidden;
+
+  /// Snackbar when pinning or hiding a video reply could not be saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save that. Try again.'**
+  String get videoStickerRepliesSaveFailed;
+
+  /// Screen-reader label of a video reply on the video replies page, which opens it in the full-screen player. {name} is who posted it.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch the reply by {name}'**
+  String videoStickerRepliesWatchSemanticLabel(String name);
+
   /// Note in the sheet a link sticker on a video opens, above the link's full address: the page opens outside the app.
   ///
   /// In en, this message translates to:
@@ -8095,6 +8269,12 @@ abstract class AppLocalizations {
   /// **'Invalid sound ID'**
   String get routeInvalidSoundId;
 
+  /// Error page when a link to answer a question sticker names no creator, video or question.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid question link'**
+  String get routeInvalidQuestion;
+
   /// No description provided for @routeInvalidCategory.
   ///
   /// In en, this message translates to:
@@ -10494,6 +10674,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reply to this reel'**
   String get dmReelReplyComposerSemanticLabel;
+
+  /// Line above a message in a conversation that answers the question sticker on one of the viewer's videos. {question} is what the sticker asks.
+  ///
+  /// In en, this message translates to:
+  /// **'Answered your question: {question}'**
+  String dmQuestionAnswerReceivedLabel(String question);
+
+  /// Line above the viewer's own message in a conversation that answers someone's question sticker. {question} is what the sticker asks.
+  ///
+  /// In en, this message translates to:
+  /// **'You answered: {question}'**
+  String dmQuestionAnswerSentLabel(String question);
+
+  /// Button above an answer to the viewer's question sticker that opens the camera to reply with a video showing the question and the answer, without who wrote it.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer with a video'**
+  String get dmQuestionAnswerWithVideo;
 
   /// Tappable action in the 'Sent · View chat' confirmation that opens the DM conversation.
   ///
@@ -18797,11 +18995,89 @@ abstract class AppLocalizations {
   /// **'Viewers drag the emoji to answer and see where it lands on average.'**
   String get videoEditorSocialStickerSliderNote;
 
-  /// Shown on the editor canvas while a poll, quiz or slider sticker is moved, inside the outlined area it must stay in.
+  /// Name of the sticker that asks viewers a question they answer in a private message to the creator; the sheet title and timeline label for it.
   ///
   /// In en, this message translates to:
-  /// **'Polls stay in this box so viewers can tap them'**
-  String get videoEditorPollAreaHint;
+  /// **'Question'**
+  String get videoEditorSocialStickerQuestion;
+
+  /// Name of the sticker with a prompt such as 'Show your desk setup' that viewers answer with a video of their own; the sheet title and timeline label for it. Same wording as the sticker's button.
+  ///
+  /// In en, this message translates to:
+  /// **'Add yours'**
+  String get videoEditorSocialStickerAddYours;
+
+  /// Name of the sticker that shows the video replies to a video and opens them; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Replies'**
+  String get videoEditorSocialStickerReplies;
+
+  /// Question a new question sticker starts with, and the sample in the sticker sheet. The creator can change it.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask me anything'**
+  String get videoEditorSocialStickerQuestionSample;
+
+  /// Made-up prompt on the sample Add yours sticker in the sticker sheet: viewers answer it with a video of their own.
+  ///
+  /// In en, this message translates to:
+  /// **'Show your desk setup'**
+  String get videoEditorSocialStickerAddYoursSample;
+
+  /// Title a new replies sticker starts with, and the sample in the sticker sheet. The creator can change it.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply with a video'**
+  String get videoEditorSocialStickerRepliesSample;
+
+  /// Label of the field where the creator types what a question sticker asks.
+  ///
+  /// In en, this message translates to:
+  /// **'Your question'**
+  String get videoEditorSocialStickerQuestionHint;
+
+  /// Label of the field where the creator types the prompt of an Add yours sticker, such as 'Show your desk setup'.
+  ///
+  /// In en, this message translates to:
+  /// **'What should people show?'**
+  String get videoEditorSocialStickerAddYoursPromptHint;
+
+  /// Label of the field with the hashtag every answer to an Add yours sticker shares. It starts with the prompt's words run together.
+  ///
+  /// In en, this message translates to:
+  /// **'Hashtag'**
+  String get videoEditorSocialStickerAddYoursHashtagHint;
+
+  /// Label of the field where the creator types the title of a replies sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get videoEditorSocialStickerRepliesTitleHint;
+
+  /// Help line in the question sticker sheet: viewers' answers arrive in the creator's messages and nobody else sees them.
+  ///
+  /// In en, this message translates to:
+  /// **'Answers come to you as private messages.'**
+  String get videoEditorSocialStickerQuestionNote;
+
+  /// Help line in the Add yours sticker sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewers answer with a video of their own. Every answer gets this hashtag and links back to your video.'**
+  String get videoEditorSocialStickerAddYoursNote;
+
+  /// Help line in the replies sticker sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows who replied to this video with a video. Viewers tap it to watch the replies.'**
+  String get videoEditorSocialStickerRepliesNote;
+
+  /// Line beside the outlined box shown while the creator moves a poll, quiz, slider, question, Add yours or replies sticker: the sticker can only stand inside it, clear of the feed's buttons and caption.
+  ///
+  /// In en, this message translates to:
+  /// **'This sticker stays in this box so viewers can tap it'**
+  String get videoEditorInteractiveCardAreaHint;
 
   /// Name of the sound credit design with a music note in front of the title and artist.
   ///

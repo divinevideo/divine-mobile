@@ -4,6 +4,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show UserProfile;
 import 'package:openvine/blocs/video_editor/social_sticker/social_sticker_cubit.dart';
@@ -332,6 +333,68 @@ void main() {
         verify: (cubit) {
           expect(cubit.state.data.pollOptions, equals(['2012', '2015']));
           expect(cubit.state.data.quizAnswer, equals(0));
+        },
+      );
+    });
+
+    group('promptChanged', () {
+      blocTest<SocialStickerCubit, SocialStickerState>(
+        'asks a question in its own words',
+        build: () => build(
+          SocialStickerData.interactive(
+            SocialStickerKind.question,
+            prompt: 'Ask me anything',
+          ),
+        ),
+        act: (cubit) => cubit.promptChanged('What should I cook?'),
+        verify: (cubit) {
+          expect(cubit.state.data.prompt, equals('What should I cook?'));
+          expect(cubit.state.canConfirm, isTrue);
+        },
+      );
+
+      blocTest<SocialStickerCubit, SocialStickerState>(
+        "keeps an Add yours's hashtag following its prompt",
+        build: () =>
+            build(SocialStickerData.interactive(SocialStickerKind.addYours)),
+        act: (cubit) => cubit
+          ..promptChanged('Show your')
+          ..promptChanged('Show your desk'),
+        verify: (cubit) {
+          expect(cubit.state.data.hashtag, equals('showyourdesk'));
+          expect(cubit.state.canConfirm, isTrue);
+        },
+      );
+
+      blocTest<SocialStickerCubit, SocialStickerState>(
+        'leaves a hashtag the creator wrote alone',
+        build: () =>
+            build(SocialStickerData.interactive(SocialStickerKind.addYours)),
+        act: (cubit) => cubit
+          ..promptChanged('Show your desk')
+          ..promptHashtagChanged('#Desks')
+          ..promptChanged('Show your desk setup'),
+        verify: (cubit) => expect(cubit.state.data.hashtag, equals('desks')),
+      );
+
+      blocTest<SocialStickerCubit, SocialStickerState>(
+        'cannot place an Add yours whose hashtag takes the post past the '
+        'most a video carries',
+        build: () => build(
+          const SocialStickerData(
+            kind: SocialStickerKind.addYours,
+            prompt: 'Show your desk',
+            hashtag: 'desksetup',
+          ),
+          otherHashtags: {
+            for (var i = 0; i < HashtagExtractor.maxHashtagsPerVideo; i++)
+              'tag$i',
+          },
+        ),
+        act: (cubit) => cubit.promptChanged('Show your desk'),
+        verify: (cubit) {
+          expect(cubit.state.isOverHashtagLimit, isTrue);
+          expect(cubit.state.canConfirm, isFalse);
         },
       );
     });

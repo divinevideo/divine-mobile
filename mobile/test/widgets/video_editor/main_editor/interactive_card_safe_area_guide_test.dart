@@ -4,11 +4,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/models/video_editor/poll_sticker_placement.dart';
-import 'package:openvine/widgets/video_editor/main_editor/poll_safe_area_guide.dart';
+import 'package:openvine/models/video_editor/interactive_card_placement.dart';
+import 'package:openvine/widgets/video_editor/main_editor/interactive_card_safe_area_guide.dart';
 
 void main() {
-  group(PollSafeAreaGuide, () {
+  group(InteractiveCardSafeAreaGuide, () {
     Future<void> pump(WidgetTester tester, {required bool isVisible}) =>
         tester.pumpWidget(
           MaterialApp(
@@ -18,7 +18,7 @@ void main() {
               child: SizedBox(
                 width: 300,
                 height: 600,
-                child: PollSafeAreaGuide(
+                child: InteractiveCardSafeAreaGuide(
                   isVisible: isVisible,
                   targetAspectRatio: 9 / 16,
                   fittedBoxScale: 1,
@@ -38,9 +38,12 @@ void main() {
         await pump(tester, isVisible: true);
 
         final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.text(l10n.videoEditorPollAreaHint), findsOneWidget);
+        expect(
+          find.text(l10n.videoEditorInteractiveCardAreaHint),
+          findsOneWidget,
+        );
         expect(opacity(tester), equals(1));
-        final box = pollSafeRect(
+        final box = interactiveCardSafeRect(
           bodySize: const Size(300, 600),
           targetAspectRatio: 9 / 16,
         );
@@ -52,7 +55,7 @@ void main() {
           ),
         );
         final shown = outline.shift(
-          -tester.getTopLeft(find.byType(PollSafeAreaGuide)),
+          -tester.getTopLeft(find.byType(InteractiveCardSafeAreaGuide)),
         );
         expect(shown.left, closeTo(box.left, 0.01));
         expect(shown.top, closeTo(box.top, 0.01));
@@ -73,7 +76,7 @@ void main() {
 
         expect(
           find.descendant(
-            of: find.byType(PollSafeAreaGuide),
+            of: find.byType(InteractiveCardSafeAreaGuide),
             matching: find.byType(IgnorePointer),
           ),
           findsWidgets,
@@ -83,7 +86,7 @@ void main() {
               .widget<IgnorePointer>(
                 find
                     .descendant(
-                      of: find.byType(PollSafeAreaGuide),
+                      of: find.byType(InteractiveCardSafeAreaGuide),
                       matching: find.byType(IgnorePointer),
                     )
                     .first,

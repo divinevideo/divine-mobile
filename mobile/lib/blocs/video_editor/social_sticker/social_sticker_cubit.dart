@@ -1,5 +1,5 @@
 // ABOUTME: Holds a social sticker while the creator sets it up: its look, the
-// ABOUTME: person, hashtag, link, sound, countdown or poll, and if it can go.
+// ABOUTME: person, hashtag, link, sound, countdown, poll or question.
 
 import 'package:clock/clock.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
@@ -181,5 +181,36 @@ class SocialStickerCubit extends Cubit<SocialStickerState> {
   /// Rates the slider with [emoji].
   void sliderEmojiPicked(String emoji) => emit(
     state.copyWith(data: state.data.copyWith(sliderEmoji: emoji)),
+  );
+
+  /// Asks [text] in a question, prompts it in an Add yours, or titles a
+  /// replies sticker with it. An Add yours whose hashtag still follows its
+  /// prompt, or has none, takes the new prompt's.
+  void promptChanged(String text) {
+    final data = state.data;
+    final hashtag = data.hashtag ?? '';
+    final followsPrompt =
+        hashtag.isEmpty ||
+        hashtag == SocialStickerData.hashtagForPrompt(data.prompt ?? '');
+    emit(
+      state.copyWith(
+        data: data.kind == SocialStickerKind.addYours && followsPrompt
+            ? data.copyWith(
+                prompt: text,
+                hashtag: SocialStickerData.hashtagForPrompt(text) ?? '',
+              )
+            : data.copyWith(prompt: text),
+      ),
+    );
+  }
+
+  /// Shares [text] among an Add yours's answers as their hashtag, the way it
+  /// would be published.
+  void promptHashtagChanged(String text) => emit(
+    state.copyWith(
+      data: state.data.copyWith(
+        hashtag: HashtagExtractor.normalizeVideoHashtag(text) ?? '',
+      ),
+    ),
   );
 }

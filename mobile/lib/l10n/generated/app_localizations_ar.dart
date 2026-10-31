@@ -2121,6 +2121,140 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get videoStickerQuestionAnswerHint => 'اللمس للإجابة';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'الإجابة: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'دورك';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مشاركة',
+      many: '$count مشاركة',
+      few: '$count مشاركات',
+      two: 'مشاركتان',
+      one: 'مشاركة واحدة',
+      zero: 'بانتظار أول مشاركة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'عرض المشاركات';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'دورك: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count رد',
+      many: '$count ردًا',
+      few: '$count ردود',
+      two: 'ردّان',
+      one: 'رد واحد',
+      zero: 'لا ردود بعد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'مشاهدة $count رد بالفيديو',
+      many: 'مشاهدة $count ردًا بالفيديو',
+      few: 'مشاهدة $count ردود بالفيديو',
+      two: 'مشاهدة ردّين بالفيديو',
+      one: 'مشاهدة رد واحد بالفيديو',
+      zero: 'ردود الفيديو، لا شيء بعد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'يلزم تسجيل الدخول للإجابة.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'الإجابة';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'إجابتك';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'لا يرى إجابتك إلا $name. قد تُشارَك في فيديو، دون ذكر اسمك.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'إرسال';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'تم إرسال الإجابة.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'الإجابة طويلة جدًا ولا يمكن إرسالها.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'تعذّر إرسال الإجابة. يُرجى المحاولة مرة أخرى.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'يلزم تسجيل الدخول للمشاركة.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'ردود الفيديو';
+
+  @override
+  String get videoStickerRepliesEmpty => 'لا توجد ردود فيديو بعد.';
+
+  @override
+  String get videoStickerRepliesLoadFailed => 'تعذّر تحميل الردود.';
+
+  @override
+  String get videoStickerRepliesRetry => 'إعادة المحاولة';
+
+  @override
+  String get videoStickerRepliesPin => 'تثبيت';
+
+  @override
+  String get videoStickerRepliesUnpin => 'إلغاء التثبيت';
+
+  @override
+  String get videoStickerRepliesHide => 'إخفاء';
+
+  @override
+  String get videoStickerRepliesShow => 'إظهار';
+
+  @override
+  String get videoStickerRepliesPinned => 'مثبّت';
+
+  @override
+  String get videoStickerRepliesHidden => 'مخفي';
+
+  @override
+  String get videoStickerRepliesSaveFailed =>
+      'تعذّر الحفظ. يُرجى المحاولة مرة أخرى.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'مشاهدة رد $name';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'يُفتح هذا الرابط خارج Divine. تحقّق من العنوان قبل أن تنتقل.';
 
@@ -4789,6 +4923,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get routeInvalidSoundId => 'مُعرِّف صوت غير صالح';
 
   @override
+  String get routeInvalidQuestion => 'رابط سؤال غير صالح';
+
+  @override
   String get routeInvalidCategory => 'فئة غير صالحة';
 
   @override
@@ -6161,6 +6298,19 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get dmReelReplyComposerSemanticLabel => 'الرد على هذا الريل';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'إجابة عن سؤالك: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'إجابتك عن: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'الرد بفيديو';
 
   @override
   String get dmReelReplyViewChat => 'عرض المحادثة';
@@ -11034,8 +11184,51 @@ class AppLocalizationsAr extends AppLocalizations {
       'يسحب المشاهدون الرمز التعبيري للإجابة ويرون أين يستقر في المتوسط.';
 
   @override
-  String get videoEditorPollAreaHint =>
-      'تبقى الاستطلاعات داخل هذا الإطار ليتمكن المشاهدون من لمسها';
+  String get videoEditorSocialStickerQuestion => 'سؤال';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'دورك';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'الردود';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => 'ما سؤالك لي؟';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => 'كيف يبدو مكتبك؟';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'الرد بفيديو';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'سؤالك';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      'ما الذي يعرضه الناس؟';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'وسم';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'العنوان';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'تصلك الإجابات في رسائل خاصة.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'يجيب المشاهدون بفيديو خاص بهم. تحمل كل إجابة هذا الوسم وتُحيل إلى فيديوك.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'يعرض ردود الفيديو على هذا الفيديو. عند لمسه يمكن مشاهدة الردود.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'يبقى الملصق داخل هذا الإطار ليتمكن المشاهدون من لمسه';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'نوتة';
