@@ -9110,7 +9110,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorEffectEightBit => '8 bits';
 
   @override
-  String get videoEditorEffectAnaglyph => 'Gafas 3D';
+  String get videoEditorEffectAnaglyph => 'Lentes 3D';
 
   @override
   String get videoEditorEffectRiso => 'Risografía';

@@ -15191,7 +15191,7 @@ abstract class AppLocalizations {
   /// **'8-Bit'**
   String get videoEditorEffectEightBit;
 
-  /// Name of a video effect: the picture is split into a red and a cyan copy side by side, like an old 3D film or comic viewed through red-cyan cardboard 3D glasses.
+  /// Name of a video effect: the picture is split into a red and a cyan copy laid over each other, slightly apart, like an old 3D film or comic viewed through red-cyan cardboard 3D glasses.
   ///
   /// In en, this message translates to:
   /// **'3D Glasses'**

@@ -1899,7 +1899,10 @@ final class ShaderVideoEffectTests: XCTestCase {
       }
       let difference = compare(effect, seconds: 0, expected)
       // Each ink's soft edge triples a filtering difference in the colour it
-      // reads; a change to the inks, the grain or the offset moves far more.
+      // reads; a change to the inks, the grain pattern or the sideways offset
+      // moves far more. The frame's red only varies across it and its grain
+      // cells are single pixels, so the vertical offset and the grain size go
+      // unseen here.
       XCTAssertLessThan(difference.share, 0.002, "intensity \(intensity)")
     }
   }

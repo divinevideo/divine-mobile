@@ -192,8 +192,8 @@ class EditorEffectType {
   /// colours.
   static const eightBit = EditorEffectType.custom(eightBitVideoEffectId);
 
-  /// 3D glasses: a red and a cyan copy of the picture, side by side, as in a
-  /// 3D film for red-cyan glasses.
+  /// 3D glasses: a red and a cyan copy of the picture laid over each other,
+  /// slightly apart, as in a 3D film for red-cyan glasses.
   static const anaglyph = EditorEffectType.custom(anaglyphVideoEffectId);
 
   /// Riso print: the picture printed in pink and blue ink on paper, grainy

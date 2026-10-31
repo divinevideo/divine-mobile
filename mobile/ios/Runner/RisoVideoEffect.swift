@@ -8,7 +8,7 @@ import pro_video_editor
 ///
 /// The pink ink takes the green out of the paper and the blue ink the red, so
 /// each lays down as much as the picture lacks of that channel; where both
-/// land they make a deep violet. Each ink covers its grain cells against
+/// land they make a deep navy. Each ink covers its grain cells against
 /// interleaved gradient noise of its own, with a soft edge, and the blue one
 /// is read a little off to the side.
 ///

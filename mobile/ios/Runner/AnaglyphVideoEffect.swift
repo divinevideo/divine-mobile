@@ -9,7 +9,7 @@ import pro_video_editor
 /// channels show it moved to the left, each mostly grey with a little of its
 /// own colour kept. The red copy lying right of the cyan one makes the picture
 /// seem to stand in front of the screen through the glasses; without them,
-/// every edge gets a red and a cyan fringe.
+/// each shape gets a red fringe on one side and a cyan one on the other.
 ///
 /// Its one param, from the Dart `CustomVideoEffect`, is `intensity` (0–1: how
 /// far apart the copies are and how far the colours turn red and cyan).
