@@ -16,6 +16,7 @@ import 'package:openvine/providers/add_yours_context_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/widgets/video_feed_item/interactive_sticker_overlay.dart';
 import 'package:video_responses_repository/video_responses_repository.dart';
 
@@ -74,6 +75,7 @@ void main() {
     late _MockVideoResponsesRepository repository;
     late _MockContentBlocklistRepository blocklist;
     late List<String> pushed;
+    late List<Object?> extras;
     late int interactions;
     late AddYoursContext? addYoursWhileOpen;
 
@@ -81,6 +83,7 @@ void main() {
       repository = _MockVideoResponsesRepository();
       blocklist = _MockContentBlocklistRepository();
       pushed = [];
+      extras = [];
       interactions = 0;
       addYoursWhileOpen = null;
       when(() => blocklist.isBlocked(any())).thenReturn(false);
@@ -144,6 +147,7 @@ void main() {
                   state: state,
                   onShown: (location, container) {
                     pushed.add(location);
+                    extras.add(state.extra);
                     addYoursWhileOpen = container.read(addYoursContextProvider);
                   },
                 ),
@@ -303,6 +307,36 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(Uri.parse(pushed.single).path, equals('/pooled-video-feed'));
+        expect(
+          extras.single,
+          isA<PooledFullscreenVideoFeedArgs>().having(
+            (args) => args.contextTitle,
+            'contextTitle',
+            l10n(tester).videoStickerRepliesManageTitle,
+          ),
+        );
+      });
+
+      testWidgets('opens the answers to an Add yours under its prompt', (
+        tester,
+      ) async {
+        await pump(tester, addYours);
+        await tester.pump();
+
+        await tester.tap(
+          find.text(l10n(tester).videoStickerAddYoursJoined(12)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(Uri.parse(pushed.single).path, equals('/pooled-video-feed'));
+        expect(
+          extras.single,
+          isA<PooledFullscreenVideoFeedArgs>().having(
+            (args) => args.contextTitle,
+            'contextTitle',
+            'Show your desk',
+          ),
+        );
       });
 
       testWidgets('opens the replies to manage for the creator', (

@@ -211,6 +211,7 @@ class _ReplyTile extends ConsumerWidget {
               feedRepository: ref.read(feedRepositoryProvider),
               videos: videos,
               index: videos.indexWhere((video) => video.id == reply.id),
+              title: l10n.videoStickerRepliesManageTitle,
               sourceDetail: 'video_replies',
             ),
             'watch the video replies',

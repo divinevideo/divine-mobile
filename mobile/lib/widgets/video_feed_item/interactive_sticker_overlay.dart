@@ -225,6 +225,10 @@ class _ResponsesSticker extends ConsumerWidget {
         context,
         feedRepository: ref.read(feedRepositoryProvider),
         videos: videos,
+        // The replies, or the answers under the prompt they answer.
+        title: region.kind == VideoStickerKind.replies
+            ? context.l10n.videoStickerRepliesManageTitle
+            : data.prompt ?? context.l10n.videoEditorSocialStickerAddYours,
         sourceDetail: region.kind == VideoStickerKind.replies
             ? 'video_replies'
             : 'add_yours',

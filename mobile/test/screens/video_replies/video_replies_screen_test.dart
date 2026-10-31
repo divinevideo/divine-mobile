@@ -2,19 +2,25 @@
 // ABOUTME: and hiding one, and what shows while they load or fail to.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_replies/video_replies_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/feed_repository_provider.dart';
+import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/video_replies/video_replies_screen.dart';
 import 'package:video_responses_repository/video_responses_repository.dart';
 
 class _MockVideoRepliesCubit extends MockCubit<VideoRepliesState>
     implements VideoRepliesCubit {}
+
+class _MockFeedRepository extends Mock implements FeedRepository {}
 
 VideoEvent _reply(int n, {String? name}) => VideoEvent(
   id: '$n'.padLeft(64, '0'),
@@ -104,6 +110,72 @@ void main() {
 
         verify(() => cubit.pinToggled(_reply(1).id)).called(1);
         verify(() => cubit.hideToggled(_reply(1).id)).called(1);
+      });
+
+      testWidgets('opens a reply in the feed under the replies title', (
+        tester,
+      ) async {
+        final opened = <Object?>[];
+        when(() => cubit.state).thenReturn(
+          VideoRepliesState(
+            status: VideoRepliesStatus.loaded,
+            replies: [
+              _reply(1, name: 'Alice'),
+              _reply(2, name: 'Bob'),
+            ],
+          ),
+        );
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, _) => BlocProvider<VideoRepliesCubit>.value(
+                value: cubit,
+                child: const VideoRepliesView(),
+              ),
+              routes: [
+                GoRoute(
+                  path: ':feed',
+                  builder: (_, state) {
+                    opened.add(state.extra);
+                    return const Scaffold();
+                  },
+                ),
+              ],
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              feedRepositoryProvider.overrideWithValue(_MockFeedRepository()),
+            ],
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Bob'));
+        await tester.pumpAndSettle();
+
+        expect(
+          opened.single,
+          isA<PooledFullscreenVideoFeedArgs>()
+              .having(
+                (args) => args.contextTitle,
+                'contextTitle',
+                l10n.videoStickerRepliesManageTitle,
+              )
+              .having(
+                (args) => args.initialVideoId,
+                'initialVideoId',
+                _reply(2).id,
+              ),
+        );
       });
 
       testWidgets('reads the replies again after they failed to load', (
