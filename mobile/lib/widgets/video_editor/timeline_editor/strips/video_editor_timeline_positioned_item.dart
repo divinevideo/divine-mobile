@@ -10,6 +10,7 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/sticker_card_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/playhead_on_keyframe_builder.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/timeline_keyframe_dot.dart';
@@ -92,7 +93,9 @@ class TimelineOverlayPositionedItem extends StatelessWidget {
 
     final y = isDragging ? baseY + dragDeltaY : baseY;
 
-    if (isSelected && !isDragging) {
+    // A sticker card shows for as long as it was placed, so it has no trim
+    // handles; see [isStickerCardLayer].
+    if (isSelected && !isDragging && !isStickerCardLayer(item.layer)) {
       return Positioned(
         left: x - trimExpansion,
         top: y,
@@ -139,6 +142,7 @@ class TimelineOverlayPositionedItem extends StatelessWidget {
           width: itemWidth,
           rowHeight: rowHeight,
           color: color,
+          isSelected: isSelected,
           isDragging: isDragging,
           // Collapsed rows are too short to mark.
           showKeyframes: !isCollapsed,
@@ -151,13 +155,15 @@ class TimelineOverlayPositionedItem extends StatelessWidget {
   }
 }
 
-/// The tile of a layer that is not selected, with its keyframes marked.
+/// The tile of a layer without trim handles, with its keyframes marked: one
+/// that is not selected, or a selected sticker card.
 class _UnselectedTile extends StatelessWidget {
   const _UnselectedTile({
     required this.item,
     required this.width,
     required this.rowHeight,
     required this.color,
+    required this.isSelected,
     required this.isDragging,
     required this.showKeyframes,
     required this.clipEdgesMs,
@@ -169,6 +175,7 @@ class _UnselectedTile extends StatelessWidget {
   final double width;
   final double rowHeight;
   final Color color;
+  final bool isSelected;
   final bool isDragging;
   final bool showKeyframes;
   final List<int> clipEdgesMs;
@@ -177,7 +184,7 @@ class _UnselectedTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tile = TimelineOverlayItemTile(
+    final plainTile = TimelineOverlayItemTile(
       item: item,
       width: width,
       height: rowHeight,
@@ -185,6 +192,20 @@ class _UnselectedTile extends StatelessWidget {
       isDragging: isDragging,
       multiSelectState: multiSelectState,
     );
+    // The frame the trim handles draw around a selected item, without them.
+    final tile = isSelected
+        ? DecoratedBox(
+            position: .foreground,
+            decoration: BoxDecoration(
+              border: .all(
+                color: VineTheme.accentYellow,
+                width: TimelineConstants.trimBorderWidth,
+              ),
+              borderRadius: .circular(TimelineConstants.thumbnailRadius),
+            ),
+            child: plainTile,
+          )
+        : plainTile;
     final keyframeTimes = showKeyframes
         ? _shownKeyframeTimes(item, item.keyframeTimes)
         : const <Duration>[];

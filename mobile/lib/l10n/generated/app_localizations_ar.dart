@@ -2085,6 +2085,42 @@ class AppLocalizationsAr extends AppLocalizations {
       'حان الوقت! انتهى العدّ التنازلي المحفوظ للتو.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'إجابة صحيحة';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'إجابة خاطئة';
+
+  @override
+  String get videoStickerPollSignInToVote => 'يلزم تسجيل الدخول للتصويت.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'لا يزال الاتصال جاريًا. يُرجى المحاولة بعد لحظات.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'تعذّر إرسال التصويت. يُرجى المحاولة مرة أخرى.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'الأصوات علنية، ويمكن لأي شخص رؤية الاختيار.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count صوت',
+      many: '$count صوتًا',
+      few: '$count أصوات',
+      two: 'صوتان',
+      one: 'صوت واحد',
+      zero: 'لا أصوات',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'يُفتح هذا الرابط خارج Divine. تحقّق من العنوان قبل أن تنتقل.';
 
@@ -10939,6 +10975,67 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'عند لمسه يرى المشاهدون ما يرد عليه الفيديو.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'استطلاع';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'اختبار';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'شريط تمرير';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'أيّهما؟';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'نعم';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'لا';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'انطلق Vine في عام…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => 'ما مدى الجوع؟';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'السؤال';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'الإجابة $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'إزالة الإجابة $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'تحديد الإجابة $number كإجابة صحيحة';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'إضافة إجابة';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'يرى المشاهدون النتائج بعد التصويت. الأصوات علنية.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'تُحدَّد الإجابة الصحيحة بعلامة الصح. يراها المشاهدون بعد اختيار إجابة.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'يسحب المشاهدون الرمز التعبيري للإجابة ويرون أين يستقر في المتوسط.';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'تبقى الاستطلاعات داخل هذا الإطار ليتمكن المشاهدون من لمسها';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'نوتة';

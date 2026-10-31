@@ -1934,6 +1934,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoStickerCountdownReminderBody => '时间到！你保存的倒计时刚刚结束。';
 
   @override
+  String get videoStickerQuizRightAnswer => '正确答案';
+
+  @override
+  String get videoStickerQuizWrongAnswer => '错误答案';
+
+  @override
+  String get videoStickerPollSignInToVote => '登录后才能投票。';
+
+  @override
+  String get videoStickerPollNotReady => '仍在连接中，请稍后再试。';
+
+  @override
+  String get videoStickerPollVoteFailed => '你的投票没有发送成功，请重试。';
+
+  @override
+  String get videoStickerPollVotesArePublic => '投票是公开的，任何人都能看到你的选择。';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 票',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody => '此链接会在 Divine 之外打开。继续之前请先核对网址。';
 
   @override
@@ -10308,6 +10336,63 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerReplyNote => '观众点一下就能看到你在回复什么。';
+
+  @override
+  String get videoEditorSocialStickerPoll => '投票';
+
+  @override
+  String get videoEditorSocialStickerQuiz => '测验';
+
+  @override
+  String get videoEditorSocialStickerSlider => '滑块';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => '选哪个？';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => '是';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => '否';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine 上线于…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => '你有多饿？';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => '提个问题';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return '答案 $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return '移除答案 $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return '将答案 $number 设为正确答案';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => '添加答案';
+
+  @override
+  String get videoEditorSocialStickerPollNote => '观众投票后即可看到结果。投票是公开的。';
+
+  @override
+  String get videoEditorSocialStickerQuizNote => '勾选正确答案。观众作答后就能看到它。';
+
+  @override
+  String get videoEditorSocialStickerSliderNote => '观众拖动表情来作答，并能看到平均落在哪里。';
+
+  @override
+  String get videoEditorPollAreaHint => '投票会留在这个框内，方便观众点击';
 
   @override
   String get videoEditorSocialStickerSoundNote => '音符';

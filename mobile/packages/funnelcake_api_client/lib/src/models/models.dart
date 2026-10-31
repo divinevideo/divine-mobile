@@ -2,6 +2,7 @@ export 'audio_reuse_policy.dart';
 export 'featured_tab_config.dart';
 export 'featured_tab_videos_response.dart';
 export 'notification_response.dart';
+export 'poll_vote_tally.dart';
 export 'recent_videos_response.dart';
 export 'relay_notification.dart';
 export 'sound_stats.dart';

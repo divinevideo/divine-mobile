@@ -2110,6 +2110,39 @@ class AppLocalizationsBg extends AppLocalizations {
       'Време е! Обратното броене, което запази, току-що приключи.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Верен отговор';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Грешен отговор';
+
+  @override
+  String get videoStickerPollSignInToVote =>
+      'Влез в профила си, за да гласуваш.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Все още се свързва. Опитай отново след малко.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Гласът ти не беше изпратен. Опитай отново.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Гласовете са публични. Всеки може да види избора ти.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count гласа',
+      one: '1 глас',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Този линк се отваря извън Divine. Провери адреса, преди да продължиш.';
 
@@ -11054,6 +11087,68 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Зрителите го докосват, за да видят на какво отговаряш.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Анкета';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Куиз';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Плъзгач';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Кое?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Да';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Не';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine стартира през…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => 'Колко ти се яде?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Задай въпрос';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Отговор $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Премахни отговор $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Отбележи отговор $number като верен';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Добави отговор';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Зрителите виждат резултатите, след като гласуват. Гласовете са публични.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Отбележи верния отговор. Зрителите го виждат, след като изберат.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Зрителите плъзгат емоджито, за да отговорят, и виждат къде средно попада.';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'Анкетите остават в тази рамка, за да могат зрителите да ги докосват';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Нота';

@@ -26,6 +26,7 @@ class VideoEditorStickerSheet extends StatelessWidget {
     this.scrollController,
     this.soundCredit,
     this.reply,
+    this.hasPoll = false,
   });
 
   final ScrollController? scrollController;
@@ -38,6 +39,10 @@ class VideoEditorStickerSheet extends StatelessWidget {
   /// The sticker showing what the video replies to, offered as an
   /// interactive sticker; `null` when it replies to nothing.
   final SocialStickerData? reply;
+
+  /// Whether the video has a poll, quiz or slider already, which leaves the
+  /// three out of the interactive stickers: a video carries one.
+  final bool hasPoll;
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +97,9 @@ class VideoEditorStickerSheet extends StatelessWidget {
               ),
             ),
           ),
-          SliverToBoxAdapter(child: InteractiveStickerKindRow(reply: reply)),
+          SliverToBoxAdapter(
+            child: InteractiveStickerKindRow(reply: reply, hasPoll: hasPoll),
+          ),
 
           SliverToBoxAdapter(
             child: Padding(

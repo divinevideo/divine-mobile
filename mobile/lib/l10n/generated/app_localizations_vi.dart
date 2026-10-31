@@ -2047,6 +2047,37 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đến giờ rồi! Đếm ngược bạn đã lưu vừa kết thúc.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Đáp án đúng';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Đáp án sai';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Đăng nhập để bình chọn.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Vẫn đang kết nối. Thử lại sau giây lát.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Phiếu bầu của bạn chưa được gửi. Hãy thử lại.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Phiếu bầu là công khai. Ai cũng có thể thấy bạn đã chọn gì.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count phiếu bầu',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Liên kết này mở bên ngoài Divine. Hãy kiểm tra địa chỉ trước khi tiếp tục.';
 
@@ -10910,6 +10941,67 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Người xem chạm vào để thấy bạn đang trả lời điều gì.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Bình chọn';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Đố vui';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Thanh trượt';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Cái nào?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Có';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Không';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine ra mắt năm…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => 'Bạn đói cỡ nào?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Đặt câu hỏi';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Câu trả lời $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Xóa câu trả lời $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Đánh dấu câu trả lời $number là đúng';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Thêm câu trả lời';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Người xem thấy kết quả sau khi bình chọn. Phiếu bầu là công khai.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Đánh dấu câu trả lời đúng. Người xem sẽ thấy sau khi chọn một đáp án.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Người xem kéo biểu tượng cảm xúc để trả lời và thấy mức trung bình.';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'Bình chọn nằm trong khung này để người xem chạm được';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nốt nhạc';

@@ -49,13 +49,21 @@ class SocialStickerKindRow extends StatelessWidget {
 /// with its [SocialStickerKind].
 ///
 /// The reply is offered only with a [reply] to show, which a video recorded
-/// as a reply has.
+/// as a reply has. A poll, quiz and slider are offered only while the video
+/// has none of them, [hasPoll] being false: a video carries one.
 class InteractiveStickerKindRow extends StatelessWidget {
-  const InteractiveStickerKindRow({this.reply, super.key});
+  const InteractiveStickerKindRow({
+    this.reply,
+    this.hasPoll = false,
+    super.key,
+  });
 
   /// The sticker showing what the video replies to, or `null` when it
   /// replies to nothing.
   final SocialStickerData? reply;
+
+  /// Whether the video has a poll, quiz or slider already.
+  final bool hasPoll;
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +75,32 @@ class InteractiveStickerKindRow extends StatelessWidget {
         ).copyWith(
           countdownTitle: context.l10n.videoEditorSocialStickerCountdownSample,
         );
-    return _SampleRow(samples: [sample, ?reply]);
+    final l10n = context.l10n;
+    final polls = [
+      SocialStickerData(
+        kind: SocialStickerKind.poll,
+        pollQuestion: l10n.videoEditorSocialStickerPollSampleQuestion,
+        pollOptions: [
+          l10n.videoEditorSocialStickerPollSampleYes,
+          l10n.videoEditorSocialStickerPollSampleNo,
+        ],
+      ),
+      // Years read the same in every language.
+      SocialStickerData(
+        kind: SocialStickerKind.quiz,
+        pollQuestion: l10n.videoEditorSocialStickerQuizSampleQuestion,
+        pollOptions: const ['2013', '2015'],
+        quizAnswer: 0,
+      ),
+      SocialStickerData(
+        kind: SocialStickerKind.slider,
+        pollQuestion: l10n.videoEditorSocialStickerSliderSampleQuestion,
+        sliderEmoji: '😋',
+      ),
+    ];
+    return _SampleRow(
+      samples: [sample, ?reply, if (!hasPoll) ...polls],
+    );
   }
 }
 

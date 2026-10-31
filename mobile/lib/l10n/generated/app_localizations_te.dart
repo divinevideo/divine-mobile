@@ -2125,6 +2125,38 @@ class AppLocalizationsTe extends AppLocalizations {
       'సమయం వచ్చింది! మీరు సేవ్ చేసిన కౌంట్‌డౌన్ ఇప్పుడే ముగిసింది.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'సరైన సమాధానం';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'తప్పు సమాధానం';
+
+  @override
+  String get videoStickerPollSignInToVote => 'ఓటు వేయడానికి సైన్ ఇన్ చేయండి.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'ఇంకా కనెక్ట్ అవుతోంది. కొద్దిసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'మీ ఓటు చేరలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'ఓట్లు పబ్లిక్‌గా ఉంటాయి. మీరు ఏమి ఎంచుకున్నారో ఎవరైనా చూడగలరు.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ఓట్లు',
+      one: '1 ఓటు',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'ఈ లింక్ Divine వెలుపల తెరుచుకుంటుంది. వెళ్లే ముందు చిరునామాను తనిఖీ చేయండి.';
 
@@ -11245,6 +11277,69 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'వీక్షకులు దాన్ని ట్యాప్ చేసి మీరు దేనికి ప్రత్యుత్తరం ఇస్తున్నారో చూస్తారు.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'పోల్';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'క్విజ్';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'స్లయిడర్';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'ఏది?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'అవును';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'కాదు';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine ప్రారంభమైన సంవత్సరం…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'మీకు ఎంత ఆకలిగా ఉంది?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'ఒక ప్రశ్న అడగండి';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'సమాధానం $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'సమాధానం $number తీసివేయండి';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'సమాధానం $numberని సరైనదిగా గుర్తించండి';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'సమాధానం జోడించండి';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'వీక్షకులు ఓటు వేసిన తర్వాత ఫలితాలు చూస్తారు. ఓట్లు పబ్లిక్‌గా ఉంటాయి.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'సరైన సమాధానాన్ని టిక్ చేయండి. వీక్షకులు ఒకటి ఎంచుకున్న తర్వాత దాన్ని చూస్తారు.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'వీక్షకులు సమాధానం ఇవ్వడానికి ఎమోజీని లాగుతారు, సగటున అది ఎక్కడ ఆగిందో చూస్తారు.';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'వీక్షకులు నొక్కగలిగేలా పోల్స్ ఈ బాక్స్‌లోనే ఉంటాయి';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'స్వరం';

@@ -2093,6 +2093,38 @@ class AppLocalizationsNl extends AppLocalizations {
       'Het is zover! Het aftellen dat je hebt bewaard is net afgelopen.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Goed antwoord';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Fout antwoord';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Log in om te stemmen.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Nog aan het verbinden. Probeer het zo opnieuw.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Je stem is niet aangekomen. Probeer het opnieuw.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Stemmen zijn openbaar. Iedereen kan zien wat je gekozen hebt.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count stemmen',
+      one: '1 stem',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Deze link opent buiten Divine. Controleer het adres voordat je verdergaat.';
 
@@ -11004,6 +11036,68 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Kijkers tikken erop om te zien waarop je reageert.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Poll';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Quiz';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Slider';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Welke?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Ja';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Nee';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine startte in…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'Hoeveel honger heb je?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Stel een vraag';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Antwoord $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Antwoord $number verwijderen';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Antwoord $number als juiste markeren';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Antwoord toevoegen';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Kijkers zien de uitslag zodra ze gestemd hebben. Stemmen zijn openbaar.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Vink het juiste antwoord aan. Kijkers zien het zodra ze er een kiezen.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Kijkers slepen de emoji om te antwoorden en zien waar die gemiddeld uitkomt.';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'Polls blijven in dit kader, zodat kijkers erop kunnen tikken';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Noot';

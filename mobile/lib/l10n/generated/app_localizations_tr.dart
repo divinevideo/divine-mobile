@@ -2016,6 +2016,38 @@ class AppLocalizationsTr extends AppLocalizations {
       'Zamanı geldi! Kaydettiğin geri sayım az önce bitti.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Doğru cevap';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Yanlış cevap';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Oy vermek için giriş yap.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Hâlâ bağlanıyor. Birazdan tekrar dene.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Verdiğin oy gönderilemedi. Tekrar dene.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Oylar herkese açık. Herkes neyi seçtiğini görebilir.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count oy',
+      one: '1 oy',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Bu bağlantı Divine dışında açılır. Devam etmeden önce adresi kontrol et.';
 
@@ -10869,6 +10901,68 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'İzleyenler dokunup neye yanıt verdiğini görür.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Anket';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Test';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Kaydırıcı';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Hangisi?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Evet';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Hayır';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine hangi yıl çıktı?';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => 'Ne kadar açsın?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Bir soru sor';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return '$number. yanıt';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return '$number. yanıtı kaldır';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return '$number. yanıtı doğru olarak işaretle';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Yanıt ekle';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'İzleyenler oy verince sonuçları görür. Oylar herkese açıktır.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Doğru yanıtı işaretle. İzleyenler bir yanıt seçince onu görür.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'İzleyenler yanıt vermek için emojiyi sürükler ve ortalamada nereye düştüğünü görür.';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'Anketler bu çerçevede kalır, böylece izleyenler dokunabilir';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nota';

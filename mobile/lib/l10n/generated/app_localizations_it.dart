@@ -2116,6 +2116,39 @@ class AppLocalizationsIt extends AppLocalizations {
       'È il momento! Il conto alla rovescia che hai salvato è appena finito.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Risposta giusta';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Risposta sbagliata';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Accedi per votare.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Connessione in corso. Riprova tra un attimo.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Il tuo voto non è arrivato. Riprova.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'I voti sono pubblici. Chiunque può vedere cosa hai scelto.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count voti',
+      many: '$count di voti',
+      one: '1 voto',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Questo link si apre fuori da Divine. Controlla l\'indirizzo prima di andare.';
 
@@ -11088,6 +11121,67 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Toccandolo, si vede a cosa stai rispondendo.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Sondaggio';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Quiz';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Slider';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Quale?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Sì';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'No';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine è nato nel…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => 'Quanta fame hai?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Fai una domanda';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Risposta $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Rimuovi la risposta $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Segna la risposta $number come giusta';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Aggiungi risposta';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Chi guarda vede i risultati dopo aver votato. I voti sono pubblici.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Spunta la risposta giusta. Chi guarda la vede dopo aver risposto.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Chi guarda trascina l\'emoji per rispondere e vede dove finisce in media.';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'I sondaggi restano in questo riquadro, così si possono toccare';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nota';

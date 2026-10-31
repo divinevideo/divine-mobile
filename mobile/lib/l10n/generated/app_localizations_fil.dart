@@ -2078,6 +2078,38 @@ class AppLocalizationsFil extends AppLocalizations {
       'Oras na! Kakatapos lang ng countdown na na-save mo.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Tamang sagot';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Maling sagot';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Mag-sign in para bumoto.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Kumokonekta pa. Subukan ulit maya-maya.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Hindi naipadala ang boto mo. Subukan ulit.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Public ang mga boto. Makikita ng kahit sino ang pinili mo.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count boto',
+      one: '$count boto',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Bubuksan ang link na ito sa labas ng Divine. Tingnan muna ang address bago ka tumuloy.';
 
@@ -11036,6 +11068,69 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'I-tap ito ng viewers para makita kung ano ang sinasagot mo.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Poll';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Quiz';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Slider';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Alin dito?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Oo';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Hindi';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Nag-launch ang Vine noong…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'Gaano ka kagutom?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Magtanong';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Sagot $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Alisin ang sagot $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Gawing tamang sagot ang sagot $number';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Magdagdag ng sagot';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Makikita ng viewers ang results pagkatapos nilang bumoto. Public ang mga boto.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'I-tick ang tamang sagot. Makikita ito ng viewers pagkatapos nilang pumili.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Idi-drag ng viewers ang emoji para sumagot at makikita nila kung saan ito napupunta sa average.';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'Nananatili ang polls sa loob ng box na ito para ma-tap ng viewers';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nota';

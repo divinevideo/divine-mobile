@@ -64,6 +64,7 @@ import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/video_moderation_status_service.dart';
 import 'package:openvine/utils/search_utils.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
+import 'package:poll_repository/poll_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -104,6 +105,20 @@ final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
     );
   });
   return repository;
+});
+
+/// The polls on videos, read through the app's relays and voted on as the
+/// signed-in account.
+final pollRepositoryProvider = Provider<PollRepository>((ref) {
+  final authService = ref.watch(authServiceProvider);
+  return PollRepository(
+    nostrClient: ref.watch(nostrServiceProvider),
+    signEvent: authService.createAndSignEvent,
+    currentPubkey: () => authService.currentPublicKeyHex,
+    funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
+    // Named in a vote's `e` tag, the same relay the publisher names on a poll.
+    relayUrl: ref.watch(currentEnvironmentProvider).relayUrl,
+  );
 });
 
 final FutureProviderFamily<List<ProfileBadgeViewData>, String>
