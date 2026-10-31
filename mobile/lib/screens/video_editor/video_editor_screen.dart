@@ -819,6 +819,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
           scrollController: scrollController,
           soundCredit: soundCredits.firstOrNull,
           reply: _replySticker,
+          hasPoll: _hasPoll,
         ),
       ),
     );
@@ -916,6 +917,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         final reply = _replySticker;
         if (reply == null) return;
         initial = reply;
+      case SocialStickerKind.poll ||
+          SocialStickerKind.quiz ||
+          SocialStickerKind.slider:
+        initial = SocialStickerData.poll(kind);
     }
     final data = await showSocialStickerSheet(
       context,
@@ -935,10 +940,18 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       category: LogCategory.video,
     );
     editor.addLayer(
-      socialStickerWidgetLayer(data, width: _newStickerWidth),
+      socialStickerWidgetLayer(
+        data,
+        width: data.kind.isPoll ? _pollStickerWidth : _newStickerWidth,
+      ),
       blockSelectLayer: true,
     );
   }
+
+  /// Whether the video has a poll, quiz or slider, of which it carries one.
+  bool get _hasPoll => (_editor?.activeLayers ?? const <Layer>[]).any(
+    (layer) => SocialStickerData.of(layer)?.kind.isPoll ?? false,
+  );
 
   /// The sticker showing what the video replies to, from the snapshot taken
   /// when the reply camera was opened, or `null` when it replies to nothing,
@@ -985,6 +998,17 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// at most 300, converted to render coordinates.
   double get _newStickerWidth =>
       min(300, (_bodySizeNotifier.value.width / 3) / _fittedBoxScale);
+
+  /// How wide a new poll, quiz or slider starts: three fifths of the video as
+  /// it shows, at most 400, so its answers can be tapped in the player and
+  /// it fits the part of the video the feed leaves clear. The video can be
+  /// narrower than the canvas body, as it is beside the timeline.
+  double get _pollStickerWidth {
+    final body = _bodySizeNotifier.value;
+    final aspectRatio = _clip?.targetAspectRatio.value ?? 9 / 16;
+    final videoWidth = min(body.width, body.height * aspectRatio);
+    return min(400, (videoWidth * 3 / 5) / _fittedBoxScale);
+  }
 
   /// How wide a reply sticker starts: two thirds of the screen, at most 400,
   /// so its comment reads without a pinch.

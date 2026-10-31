@@ -2085,6 +2085,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'It\'s time! The countdown you saved just ended.';
 
   @override
+  String get videoStickerPollSignInToVote => 'Sign in to vote.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Still connecting. Try again in a moment.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Your vote didn\'t go through. Try again.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Votes are public. Anyone can see what you picked.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count votes',
+      one: '1 vote',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'This link opens outside Divine. Check the address before you go.';
 
@@ -11052,6 +11078,68 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Viewers tap it to see what you\'re replying to.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Poll';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Quiz';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Slider';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Which one?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Yes';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'No';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine launched in…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'How hungry are you?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Ask a question';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Answer $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Remove answer $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Make answer $number the right one';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Add answer';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Viewers see the results once they vote. Votes are public.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Tick the right answer. Viewers see it once they\'ve picked one.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Viewers drag the emoji to answer and see where it lands on average.';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'Polls stay in this box so viewers can tap them';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Note';

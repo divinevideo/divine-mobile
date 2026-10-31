@@ -9,8 +9,12 @@ import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bl
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/timeline_trim_handles.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strip.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show WidgetLayer, WidgetLayerExportConfigs;
 
 void main() {
   group(TimelineOverlayStrip, () {
@@ -144,6 +148,38 @@ void main() {
         await tester.longPress(find.text('Test Layer'));
         await tester.pumpAndSettle();
         expect(draggedItem?.id, equals('item-1'));
+      });
+
+      testWidgets('keeps a poll from being picked up', (tester) async {
+        final meta = const SocialStickerData(
+          kind: SocialStickerKind.poll,
+          pollQuestion: 'Which one?',
+          pollOptions: ['Red', 'Blue'],
+        ).toMeta();
+        final poll = TimelineOverlayItem(
+          id: 'poll',
+          type: TimelineOverlayType.layer,
+          startTime: Duration.zero,
+          endTime: const Duration(seconds: 6),
+          label: 'Poll',
+          layer: WidgetLayer(
+            id: 'poll',
+            widget: const SizedBox.shrink(),
+            meta: meta,
+            exportConfigs: WidgetLayerExportConfigs(id: 'poll', meta: meta),
+          ),
+        );
+        TimelineOverlayItem? draggedItem;
+        await tester.pumpWidget(
+          buildWidget(
+            items: [poll],
+            onDragStarted: (item) => draggedItem = item,
+          ),
+        );
+
+        await tester.longPress(find.byType(TimelineOverlayItemTile));
+        await tester.pumpAndSettle();
+        expect(draggedItem, isNull);
       });
     });
 

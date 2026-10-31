@@ -59,6 +59,7 @@ nostr_sdk 20
 notification_repository 94
 people_lists_repository 95
 permissions_service 22
+poll_repository 100
 profile_repository 100
 publishing_suggestions 100
 reposts_repository 100

@@ -1,5 +1,5 @@
 // ABOUTME: Holds a social sticker while the creator sets it up: its look, the
-// ABOUTME: person, hashtag, link, sound or countdown, and if it can be placed.
+// ABOUTME: person, hashtag, link, sound, countdown or poll, and if it can go.
 
 import 'package:clock/clock.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
@@ -9,6 +9,7 @@ import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart' show UserProfile;
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:poll_repository/poll_repository.dart' show Poll;
 
 part 'social_sticker_state.dart';
 
@@ -117,5 +118,68 @@ class SocialStickerCubit extends Cubit<SocialStickerState> {
   /// Counts down to [end], a wall-clock time of the phone.
   void countdownEndChanged(DateTime end) => emit(
     state.copyWith(data: state.data.copyWith(countdownEnd: end.toUtc())),
+  );
+
+  /// Asks [text] in the poll, quiz or slider.
+  void pollQuestionChanged(String text) => emit(
+    state.copyWith(data: state.data.copyWith(pollQuestion: text)),
+  );
+
+  /// Shows [text] as the answer at [index].
+  void pollOptionChanged(int index, String text) {
+    final options = [...state.data.pollOptions];
+    if (index < 0 || index >= options.length) return;
+    options[index] = text;
+    emit(state.copyWith(data: state.data.copyWith(pollOptions: options)));
+  }
+
+  /// Adds an empty answer at the end, up to the most a poll can have.
+  void pollOptionAdded() {
+    final options = state.data.pollOptions;
+    if (options.length >= Poll.maxOptions) return;
+    emit(
+      state.copyWith(
+        data: state.data.copyWith(pollOptions: [...options, '']),
+      ),
+    );
+  }
+
+  /// Removes the answer at [index], down to the fewest a poll can have. A
+  /// quiz's right answer stays the one it was, or becomes the first when it
+  /// was the one removed.
+  void pollOptionRemoved(int index) {
+    final options = [...state.data.pollOptions];
+    if (options.length <= Poll.minOptions ||
+        index < 0 ||
+        index >= options.length) {
+      return;
+    }
+    options.removeAt(index);
+    final answer = state.data.quizAnswer;
+    emit(
+      state.copyWith(
+        data: state.data.copyWith(
+          pollOptions: options,
+          quizAnswer: answer == null
+              ? null
+              : answer == index
+              ? 0
+              : answer > index
+              ? answer - 1
+              : answer,
+        ),
+      ),
+    );
+  }
+
+  /// Makes the answer at [index] a quiz's right one.
+  void quizAnswerPicked(int index) {
+    if (index < 0 || index >= state.data.pollOptions.length) return;
+    emit(state.copyWith(data: state.data.copyWith(quizAnswer: index)));
+  }
+
+  /// Rates the slider with [emoji].
+  void sliderEmojiPicked(String emoji) => emit(
+    state.copyWith(data: state.data.copyWith(sliderEmoji: emoji)),
   );
 }

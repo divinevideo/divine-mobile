@@ -1,0 +1,25 @@
+name: poll_repository
+description: >
+  NIP-88 polls on Divine videos — the poll, quiz or slider a creator publishes
+  with a video, the votes viewers cast on it, and their tally.
+version: 0.1.0+1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  equatable: ^2.0.5
+  funnelcake_api_client:
+    path: ../funnelcake_api_client
+  meta: ^1.16.0
+  nostr_client:
+    path: ../nostr_client
+  nostr_sdk:
+    path: ../nostr_sdk
+
+dev_dependencies:
+  mocktail: ^1.0.4
+  test: ^1.26.3
+  very_good_analysis: ^10.2.0

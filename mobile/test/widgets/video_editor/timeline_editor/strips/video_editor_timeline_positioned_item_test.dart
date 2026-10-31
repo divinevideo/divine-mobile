@@ -15,11 +15,14 @@ import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/strips/timeline_trim_handles.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strip.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_positioned_item.dart';
-import 'package:pro_image_editor/pro_image_editor.dart' show WidgetLayer;
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show WidgetLayer, WidgetLayerExportConfigs;
 import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffectType;
 
 class _MockVideoEditorMainBloc
@@ -305,6 +308,123 @@ void main() {
       expect(semantics.label, isNot(contains('negativeFlash')));
 
       handle.dispose();
+    });
+
+    group('trim handles', () {
+      late _MockVideoEditorMainBloc mainBloc;
+      late _MockClipEditorBloc clipBloc;
+
+      setUp(() {
+        mainBloc = _MockVideoEditorMainBloc();
+        clipBloc = _MockClipEditorBloc();
+        when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+        when(() => clipBloc.state).thenReturn(const ClipEditorState());
+      });
+
+      Future<void> pumpSelected(WidgetTester tester, WidgetLayer layer) async {
+        final item = TimelineOverlayItem(
+          id: layer.id,
+          type: TimelineOverlayType.layer,
+          startTime: Duration.zero,
+          endTime: const Duration(seconds: 3),
+          layer: layer,
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: VideoEditorScope(
+                editorKey: GlobalKey(),
+                removeAreaKey: GlobalKey(),
+                originalClipAspectRatio: 9 / 16,
+                bodySizeNotifier: ValueNotifier(const Size(400, 600)),
+                zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
+                playTimeNotifier: ValueNotifier(Duration.zero),
+                playheadAdvancingNotifier: ValueNotifier<bool>(false),
+                fromLibrary: false,
+                onOpenCamera: () {},
+                onOpenClipsEditor: () {},
+                onAddStickers: () {},
+                onAddEditTextLayer: ([layer]) async => null,
+                onOpenMusicLibrary: () {},
+                onOpenVoiceOver: () {},
+                onOpenCaptions: () {},
+                onOpenEffects: () {},
+                child: MultiBlocProvider(
+                  providers: [
+                    BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
+                    BlocProvider<ClipEditorBloc>.value(value: clipBloc),
+                  ],
+                  child: Stack(
+                    children: [
+                      TimelineOverlayPositionedItem(
+                        item: item,
+                        isDragging: false,
+                        isSelected: true,
+                        snappedStartMs: 0,
+                        dragDeltaY: 0,
+                        rowHeight: 40,
+                        pixelsPerSecond: 100,
+                        totalDuration: const Duration(seconds: 10),
+                        clipEdgesMs: const [0, 10000],
+                        color: Colors.blue,
+                        isCollapsed: false,
+                        trimExpansion: 0,
+                        onTap: () {},
+                        onLongPressStart: () {},
+                        onLongPressMoveUpdate: (_) {},
+                        onLongPressEnd: () {},
+                        onTrimDragChanged: (_) {},
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      WidgetLayer layerWith(Map<String, dynamic> meta) => WidgetLayer(
+        id: 'layer-1',
+        widget: const SizedBox.shrink(),
+        meta: meta,
+        exportConfigs: WidgetLayerExportConfigs(id: 'layer-1', meta: meta),
+      );
+
+      testWidgets('frame a selected sticker card without trim handles', (
+        tester,
+      ) async {
+        await pumpSelected(
+          tester,
+          layerWith(
+            const SocialStickerData(
+              kind: SocialStickerKind.poll,
+              pollQuestion: 'Which one?',
+              pollOptions: ['Red', 'Blue'],
+            ).toMeta(),
+          ),
+        );
+
+        expect(find.byType(TimelineTrimHandles), findsNothing);
+        final frame = tester.widget<DecoratedBox>(
+          find.byWidgetPredicate(
+            (w) =>
+                w is DecoratedBox &&
+                w.position == DecorationPosition.foreground &&
+                (w.decoration as BoxDecoration).border?.top.color ==
+                    VineTheme.accentYellow,
+          ),
+        );
+        expect(frame, isNotNull);
+      });
+
+      testWidgets('are shown on any other selected sticker', (tester) async {
+        await pumpSelected(tester, layerWith(const {'kind': 'emoji'}));
+
+        expect(find.byType(TimelineTrimHandles), findsOneWidget);
+      });
     });
 
     group('keyframe markers', () {

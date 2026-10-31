@@ -1,5 +1,5 @@
 // ABOUTME: Tests the social sticker cubit: who a mention may name, the typed
-// ABOUTME: hashtag and its limit, the link, the sound, and the countdown.
+// ABOUTME: hashtag and its limit, the link, the sound, countdown and poll.
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
@@ -277,6 +277,62 @@ void main() {
               .having((s) => s.isCountdownOver, 'isCountdownOver', isFalse)
               .having((s) => s.canConfirm, 'canConfirm', isTrue),
         ],
+      );
+    });
+
+    group('poll', () {
+      blocTest<SocialStickerCubit, SocialStickerState>(
+        'asks the question typed with the answers typed, up to four',
+        build: () => build(SocialStickerData.poll(SocialStickerKind.poll)),
+        act: (cubit) => cubit
+          ..pollQuestionChanged('Which one?')
+          ..pollOptionChanged(0, 'Red')
+          ..pollOptionChanged(1, 'Blue')
+          ..pollOptionAdded()
+          ..pollOptionAdded()
+          ..pollOptionAdded(),
+        verify: (cubit) {
+          expect(cubit.state.data.pollOptions, equals(['Red', 'Blue', '', '']));
+          expect(cubit.state.canConfirm, isFalse);
+        },
+      );
+
+      blocTest<SocialStickerCubit, SocialStickerState>(
+        "keeps a quiz's right answer on the answer it was when another one "
+        'is removed',
+        build: () => build(
+          const SocialStickerData(
+            kind: SocialStickerKind.quiz,
+            pollQuestion: 'Vine launched in…',
+            pollOptions: ['2011', '2012', '2013'],
+            quizAnswer: 2,
+          ),
+        ),
+        act: (cubit) => cubit.pollOptionRemoved(0),
+        verify: (cubit) {
+          expect(cubit.state.data.pollOptions, equals(['2012', '2013']));
+          expect(cubit.state.data.quizAnswer, equals(1));
+        },
+      );
+
+      blocTest<SocialStickerCubit, SocialStickerState>(
+        'moves the right answer to the first when it is removed, and keeps '
+        'two answers at least',
+        build: () => build(
+          const SocialStickerData(
+            kind: SocialStickerKind.quiz,
+            pollQuestion: 'Vine launched in…',
+            pollOptions: ['2012', '2013', '2015'],
+            quizAnswer: 1,
+          ),
+        ),
+        act: (cubit) => cubit
+          ..pollOptionRemoved(1)
+          ..pollOptionRemoved(0),
+        verify: (cubit) {
+          expect(cubit.state.data.pollOptions, equals(['2012', '2015']));
+          expect(cubit.state.data.quizAnswer, equals(0));
+        },
       );
     });
   });

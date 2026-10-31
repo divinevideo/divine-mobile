@@ -395,6 +395,8 @@ class VideoPublishService {
           mentionedPubkeys: mentionedPubkeys,
           linkUrls: stickerCredits.links.toList(),
           stickerRegions: _publishedStickerRegions(draft),
+          // Published ahead of the video, whose poll sticker then points to it.
+          poll: stickerCredits.poll,
           inspiredByAddressableId: draft.inspiredByVideo?.addressableId,
           inspiredByRelayUrl: draft.inspiredByVideo?.relayUrl,
           inspiredByNpubs: draft.inspiredByNpubs,

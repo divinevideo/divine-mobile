@@ -323,6 +323,86 @@ void main() {
         );
         expect(VideoStickerRegion.fromTag(tagOf('reply', 'note1abc')), isNull);
       });
+
+      List<String> voteTag(String kind, String target, String label) => [
+        ...tagOf(kind, target),
+        '',
+        '',
+        'light',
+        label,
+      ];
+
+      test('reads a poll by its event id in lower case', () {
+        final region = VideoStickerRegion.fromTag(
+          voteTag('poll', _pubkey.toUpperCase(), 'Which one?\nRed\nBlue'),
+        );
+
+        expect(region?.kind, equals(VideoStickerKind.poll));
+        expect(region?.target, equals(_pubkey));
+        expect(region?.labelLines, equals(['Which one?', 'Red', 'Blue']));
+      });
+
+      test('takes a poll that names no event id as one with no vote', () {
+        expect(
+          VideoStickerRegion.fromTag(
+            voteTag('quiz', 'note1abc', 'Capital?\nBern\nZurich'),
+          )?.target,
+          isEmpty,
+        );
+      });
+
+      test('drops a poll without a question and two to four answers', () {
+        for (final label in [
+          '',
+          'Which one?\nRed',
+          'Which one?\nA\nB\nC\nD\nE',
+          'Which one?\n\nBlue',
+        ]) {
+          expect(
+            VideoStickerRegion.fromTag(voteTag('poll', _pubkey, label)),
+            isNull,
+            reason: label,
+          );
+        }
+      });
+
+      test('reads a slider with its question and emoji only', () {
+        expect(
+          VideoStickerRegion.fromTag(
+            voteTag('slider', _pubkey, 'How hungry?\n😋'),
+          )?.labelLines,
+          equals(['How hungry?', '😋']),
+        );
+        expect(
+          VideoStickerRegion.fromTag(
+            voteTag('slider', _pubkey, 'How hungry?\n😋\nmore'),
+          ),
+          isNull,
+        );
+      });
+    });
+
+    group('withTarget', () {
+      test('points the same sticker at another target', () {
+        const poll = VideoStickerRegion(
+          kind: VideoStickerKind.poll,
+          target: '',
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.4,
+          height: 0.3,
+          style: 'light',
+          label: 'Which one?\nRed\nBlue',
+        );
+
+        final published = poll.withTarget(_pubkey);
+
+        expect(published.target, equals(_pubkey));
+        expect(
+          published.toTag()..removeAt(2),
+          equals(poll.toTag()..removeAt(2)),
+        );
+      });
     });
 
     group('countdownEnd', () {

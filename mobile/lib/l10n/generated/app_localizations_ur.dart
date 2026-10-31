@@ -2081,6 +2081,32 @@ class AppLocalizationsUr extends AppLocalizations {
       'وقت آ گیا! آپ کی محفوظ کی ہوئی الٹی گنتی ابھی ختم ہوئی۔';
 
   @override
+  String get videoStickerPollSignInToVote => 'ووٹ دینے کے لیے سائن ان کریں۔';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'ابھی کنیکٹ ہو رہا ہے۔ تھوڑی دیر میں دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'آپ کا ووٹ نہیں پہنچا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'ووٹ عوامی ہوتے ہیں۔ کوئی بھی دیکھ سکتا ہے کہ آپ نے کیا چنا۔';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ووٹ',
+      one: '1 ووٹ',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'یہ لنک Divine سے باہر کھلتا ہے۔ آگے جانے سے پہلے ایڈریس دیکھ لیں۔';
 
@@ -10957,6 +10983,68 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'دیکھنے والے اسے ٹیپ کر کے دیکھتے ہیں کہ آپ کس کا جواب دے رہے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'پول';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'کوئز';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'سلائیڈر';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'کون سا؟';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'ہاں';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'نہیں';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine کب شروع ہوا؟';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'آپ کو کتنی بھوک لگی ہے؟';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'سوال پوچھیں';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'جواب $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'جواب $number ہٹائیں';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'جواب $number کو درست قرار دیں';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'جواب شامل کریں';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'ناظرین ووٹ دینے کے بعد نتائج دیکھتے ہیں۔ ووٹ عوامی ہوتے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'درست جواب پر نشان لگائیں۔ ناظرین جواب چننے کے بعد اسے دیکھتے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'ناظرین جواب دینے کے لیے ایموجی کو گھسیٹتے ہیں اور اوسط دیکھتے ہیں۔';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'پول اسی خانے میں رہتے ہیں تاکہ ناظرین انہیں ٹیپ کر سکیں';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'سُر';

@@ -133,6 +133,29 @@ This document outlines the required Nostr event types (kinds) that Divine uses f
 - `LikesRepository` creates Kind 7 events with "+" content (and "-" for downvotes)
 - Used for engagement metrics
 
+### Kind 1068 - Polls (NIP-88)
+**Used for:** The poll, quiz or emoji slider a creator places on a video
+
+**Implementation:**
+- Signed and published in the video's publish step, just ahead of the video;
+  the video's `sticker` tag of kind `poll`, `quiz` or `slider` names its id
+  (see `mobile/docs/NOSTR_VIDEO_EVENTS.md`)
+- Content is the question, `option` tags the answers, `polltype` is
+  `singlechoice`. A quiz adds Divine's `["answer", "<option id>"]`, a slider
+  is eleven options `0` to `100` plus Divine's `["slider", "<emoji>"]`
+- Built and read by `mobile/packages/poll_repository`
+
+### Kind 1018 - Poll Votes (NIP-88)
+**Used for:** A viewer's vote on a video's poll, quiz or slider
+
+**Implementation:**
+- `PollRepository` publishes `["e", "<poll id>", "<relay>"]` and one
+  `["response", "<option id>"]`; votes are public
+- One vote per pubkey counts, the latest, or for a quiz the first, so its
+  answer cannot be changed. Funnelcake counts them at
+  `GET /api/polls/{id}/results`; the app counts on the device only while that
+  does not answer
+
 ## Event Subscription Requirements
 
 ### VideoEventService Subscriptions
@@ -240,6 +263,7 @@ If updating existing Divine installations:
 - **NIP-18:** Reposts (Kind 16)
 - **NIP-25:** Reactions (Kind 7)
 - **NIP-71:** Video Events (Kind 22)
+- **NIP-88:** Polls (Kind 1068, 1018)
 
 ## Performance Considerations
 

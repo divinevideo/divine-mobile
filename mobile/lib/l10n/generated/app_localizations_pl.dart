@@ -2140,6 +2140,34 @@ class AppLocalizationsPl extends AppLocalizations {
       'Już czas! Zapisane odliczanie właśnie się skończyło.';
 
   @override
+  String get videoStickerPollSignInToVote => 'Zaloguj się, aby głosować.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Wciąż się łączymy. Spróbuj ponownie za chwilę.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Twój głos nie dotarł. Spróbuj ponownie.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Głosy są publiczne. Każdy może zobaczyć twój wybór.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count głosu',
+      many: '$count głosów',
+      few: '$count głosy',
+      one: '1 głos',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Ten link otwiera się poza Divine. Sprawdź adres, zanim przejdziesz dalej.';
 
@@ -11172,6 +11200,69 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Widzowie stukają w nią, żeby zobaczyć, na co odpowiadasz.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Ankieta';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Quiz';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Suwak';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Które?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Tak';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Nie';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine wystartował w…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'Jak bardzo chce ci się jeść?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Zadaj pytanie';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Odpowiedź $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Usuń odpowiedź $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Oznacz odpowiedź $number jako poprawną';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Dodaj odpowiedź';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Widzowie zobaczą wyniki po oddaniu głosu. Głosy są publiczne.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Zaznacz poprawną odpowiedź. Widzowie zobaczą ją po udzieleniu odpowiedzi.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Widzowie przeciągają emoji, aby odpowiedzieć, i widzą, gdzie średnio ląduje.';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'Ankiety zostają w tej ramce, żeby widzowie mogli je stuknąć';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nuta';

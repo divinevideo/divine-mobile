@@ -80,6 +80,7 @@ workspace:
   - packages/nostr_key_manager
   - packages/people_lists_repository
   - packages/permissions_service
+  - packages/poll_repository
   - packages/publishing_suggestions
   - packages/profile_repository
   - packages/reposts_repository
@@ -315,6 +316,9 @@ dependencies:
 
   # Permissions Service - runtime permission checks (camera, mic, photos)
   permissions_service:
+
+  # Poll Repository - NIP-88 polls, quizzes and sliders on videos
+  poll_repository:
 
   # Profile Repository - Kind 0 user metadata persistence and search
   profile_repository:

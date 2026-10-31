@@ -1926,6 +1926,29 @@ class AppLocalizationsKo extends AppLocalizations {
       '시간이 됐어요! 저장한 카운트다운이 방금 끝났어요.';
 
   @override
+  String get videoStickerPollSignInToVote => '로그인해야 투표할 수 있어요.';
+
+  @override
+  String get videoStickerPollNotReady => '아직 연결 중이에요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get videoStickerPollVoteFailed => '투표가 전송되지 않았어요. 다시 시도해 주세요.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      '투표는 공개돼요. 누구나 내가 고른 답을 볼 수 있어요.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count표',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       '이 링크는 Divine 밖에서 열려요. 이동하기 전에 주소를 확인하세요.';
 
@@ -10435,6 +10458,66 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerReplyNote => '시청자가 탭하면 무엇에 답하는지 볼 수 있어요.';
+
+  @override
+  String get videoEditorSocialStickerPoll => '투표';
+
+  @override
+  String get videoEditorSocialStickerQuiz => '퀴즈';
+
+  @override
+  String get videoEditorSocialStickerSlider => '슬라이더';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => '어떤 게 좋아요?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => '네';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => '아니요';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine이 출시된 해는…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => '얼마나 배고파요?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => '질문하기';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return '$number번 답변';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return '$number번 답변 삭제';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return '$number번 답변을 정답으로 표시';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => '답변 추가';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      '시청자는 투표한 뒤 결과를 볼 수 있어요. 투표는 공개돼요.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      '정답에 체크해 주세요. 시청자는 답을 고른 뒤 정답을 볼 수 있어요.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      '시청자는 이모지를 끌어서 답하고 평균 위치를 볼 수 있어요.';
+
+  @override
+  String get videoEditorPollAreaHint => '투표는 시청자가 누를 수 있도록 이 상자 안에 있어요';
 
   @override
   String get videoEditorSocialStickerSoundNote => '음표';
