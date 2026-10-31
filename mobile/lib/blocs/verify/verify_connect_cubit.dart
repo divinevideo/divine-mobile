@@ -278,6 +278,15 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
 
     // The return address can carry a one-time code, so it's never logged.
     final params = callback.queryParameters;
+    // The verifier's fixed reason code, not its wording, tells a cancel from a
+    // failure (divinevideo/divine-identify-verification-service#104). A cancel
+    // ends like closing the browser; any other code, an unknown one, or none
+    // at all is a failure.
+    if (params.containsKey('oauth_error') &&
+        params['oauth_error_code'] == 'cancelled') {
+      emit(state.copyWith(status: VerifyConnectStatus.editing));
+      return;
+    }
     // The refusal's text came in on the return address, so only a fixed
     // reason name is logged.
     if (params.containsKey('oauth_error')) {
