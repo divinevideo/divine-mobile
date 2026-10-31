@@ -69,6 +69,18 @@ class ScheduledSignatureTimestampException implements Exception {
       'instead of $requestedCreatedAt';
 }
 
+/// The poll a video's poll, quiz or slider sticker points to could not be
+/// signed, or no relay took it, so the video that points to it is held back.
+class PollPublishException implements Exception {
+  const PollPublishException(this.message);
+
+  /// What went wrong.
+  final String message;
+
+  @override
+  String toString() => 'PollPublishException: $message';
+}
+
 /// The authoritative Divine publish surface rejected the signed-in account.
 class AccountRestrictedPublishException implements Exception {
   const AccountRestrictedPublishException({

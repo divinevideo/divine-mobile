@@ -45,6 +45,7 @@ import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
+import 'package:openvine/models/video_editor/poll_sticker_placement.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -70,6 +71,7 @@ import 'package:openvine/widgets/video_editor/draw_editor/paint_editor_stroke_wi
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_preview.dart';
 import 'package:openvine/widgets/video_editor/main_editor/hit_test_expander.dart';
 import 'package:openvine/widgets/video_editor/main_editor/playhead_interpolator.dart';
+import 'package:openvine/widgets/video_editor/main_editor/poll_safe_area_guide.dart';
 import 'package:openvine/widgets/video_editor/main_editor/stop_motion_playback_clock.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_clip_mask_preview.dart';
@@ -684,6 +686,59 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   ImportStateHistory? _initStateHistory;
 
   bool get _isLayerBeingTransformed => _selectedLayer != null;
+
+  /// Keeps the video's poll, quiz or slider above every other layer, upright
+  /// and fixed in size ([pollLayerInteraction]), and inside [pollSafeArea],
+  /// once the frame that may have moved it is laid out. Each changes the
+  /// current history step rather than adding one, so undo goes back past the
+  /// change that moved it.
+  void _keepPollInPlace(VideoEditorScope scope) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final editor = scope.editor;
+      if (!mounted || editor == null || _isLayerBeingTransformed) return;
+      final layers = editor.activeLayers;
+      final below = pollLayerIndexBelowTop(layers);
+      if (below != null) {
+        editor.moveLayerListPosition(
+          oldIndex: below,
+          newIndex: layers.length - 1,
+          skipUpdateHistory: true,
+        );
+      }
+      final index = layers.lastIndexWhere(isPollLayer);
+      if (index < 0) return;
+      final layer = layers[index];
+      if (pollLayerNeedsLocking(layer)) {
+        layer
+          ..interaction = pollLayerInteraction()
+          ..rotation = 0;
+        editor.replaceLayer(
+          index: index,
+          layer: layer,
+          skipUpdateHistory: true,
+        );
+      }
+      final size = layer.keyInternalSize.currentContext?.size;
+      final aspectRatio = ref
+          .read(clipManagerProvider)
+          .firstClipOrNull
+          ?.targetAspectRatio
+          .value;
+      if (size == null || aspectRatio == null) return;
+      final fit = fitPollIntoSafeArea(
+        offset: layer.offset,
+        size: size,
+        rotation: layer.rotation,
+        bodySize: editor.sizesManager.bodySize,
+        targetAspectRatio: aspectRatio,
+      );
+      if (fit == null) return;
+      layer
+        ..offset += fit.shift
+        ..scale *= fit.scale;
+      editor.replaceLayer(index: index, layer: layer, skipUpdateHistory: true);
+    });
+  }
 
   Layer? _selectedLayer;
 
@@ -3477,6 +3532,20 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                       ),
                       stream: rebuildStream,
                     ),
+                    ReactiveWidget(
+                      builder: (context) {
+                        final selected = editor.selectedLayer;
+                        return PollSafeAreaGuide(
+                          isVisible:
+                              editor.isLayerBeingTransformed &&
+                              selected != null &&
+                              isPollLayer(selected),
+                          targetAspectRatio: targetAspectRatio.value,
+                          fittedBoxScale: scope.fittedBoxScale,
+                        );
+                      },
+                      stream: rebuildStream,
+                    ),
                   ];
                 },
               ),
@@ -3650,6 +3719,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                 _syncMainCapabilities(scope, bloc);
               },
               onStateHistoryChange: (_, _) {
+                _keepPollInPlace(scope);
                 _runDetached(
                   _onStateHistoryChange(scope, bloc),
                   'persist editor history',
@@ -3749,6 +3819,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
                 _wasOverRemoveArea = false;
                 bloc.add(const VideoEditorLayerInteractionEnded());
+                _keepPollInPlace(scope);
               },
               onAddLayer: (layer) {
                 Log.debug(
@@ -3757,6 +3828,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   category: LogCategory.video,
                 );
                 _syncMainCapabilities(scope, bloc);
+                _keepPollInPlace(scope);
               },
               onRemoveLayer: (layer) {
                 Log.debug(

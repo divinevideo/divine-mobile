@@ -3511,6 +3511,36 @@ abstract class AppLocalizations {
   /// **'It\'s time! The countdown you saved just ended.'**
   String get videoStickerCountdownReminderBody;
 
+  /// Snackbar when someone who is not signed in taps an answer of a poll, quiz or slider sticker on a video.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to vote.'**
+  String get videoStickerPollSignInToVote;
+
+  /// Snackbar when a signed-in viewer taps an answer of a poll, quiz or slider sticker before the app can send their vote yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Still connecting. Try again in a moment.'**
+  String get videoStickerPollNotReady;
+
+  /// Snackbar when a viewer's vote on a poll, quiz or slider sticker could not be sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Your vote didn\'t go through. Try again.'**
+  String get videoStickerPollVoteFailed;
+
+  /// Snackbar shown once, after a viewer's first vote on a poll, quiz or slider sticker, saying that votes on Divine are public.
+  ///
+  /// In en, this message translates to:
+  /// **'Votes are public. Anyone can see what you picked.'**
+  String get videoStickerPollVotesArePublic;
+
+  /// Under a poll, quiz or slider on the creator's own video: how many people voted.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 vote} other{{count} votes}}'**
+  String videoStickerPollVoteCount(int count);
+
   /// Note in the sheet a link sticker on a video opens, above the link's full address: the page opens outside the app.
   ///
   /// In en, this message translates to:
@@ -18593,7 +18623,7 @@ abstract class AppLocalizations {
   /// **'That\'s not a web address yet.'**
   String get videoEditorSocialStickerLinkInvalid;
 
-  /// Heading above the row of interactive stickers (countdown, reply) in the video editor's sticker sheet: stickers viewers can tap in the Divine player.
+  /// Heading above the row of interactive stickers (countdown, reply, poll, quiz, slider) in the video editor's sticker sheet: stickers viewers can tap in the Divine player.
   ///
   /// In en, this message translates to:
   /// **'Interactive'**
@@ -18640,6 +18670,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Viewers tap it to see what you\'re replying to.'**
   String get videoEditorSocialStickerReplyNote;
+
+  /// Name of the sticker that asks viewers a question with two to four answers they vote on; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Poll'**
+  String get videoEditorSocialStickerPoll;
+
+  /// Name of the sticker that asks viewers a question with one right answer, which they see once they pick one; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiz'**
+  String get videoEditorSocialStickerQuiz;
+
+  /// Name of the sticker where viewers rate a question by dragging an emoji along a bar; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Slider'**
+  String get videoEditorSocialStickerSlider;
+
+  /// Made-up question on the sample poll sticker in the sticker sheet. Short.
+  ///
+  /// In en, this message translates to:
+  /// **'Which one?'**
+  String get videoEditorSocialStickerPollSampleQuestion;
+
+  /// First made-up answer on the sample poll sticker in the sticker sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get videoEditorSocialStickerPollSampleYes;
+
+  /// Second made-up answer on the sample poll sticker in the sticker sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get videoEditorSocialStickerPollSampleNo;
+
+  /// Made-up question on the sample quiz sticker in the sticker sheet; its answers are the years 2013 and 2015. Keep the trailing ellipsis if it reads naturally.
+  ///
+  /// In en, this message translates to:
+  /// **'Vine launched in…'**
+  String get videoEditorSocialStickerQuizSampleQuestion;
+
+  /// Made-up question on the sample emoji slider sticker in the sticker sheet; viewers answer by dragging a 😋 along a bar.
+  ///
+  /// In en, this message translates to:
+  /// **'How hungry are you?'**
+  String get videoEditorSocialStickerSliderSampleQuestion;
+
+  /// Label of the field where the creator types the question a poll, quiz or slider sticker asks.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask a question'**
+  String get videoEditorSocialStickerPollQuestionHint;
+
+  /// Label of the field where the creator types one answer of a poll or quiz sticker, numbered from 1. The number is pre-formatted at the call site.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer {number}'**
+  String videoEditorSocialStickerPollOptionHint(String number);
+
+  /// Screen reader label of the button that removes one answer, numbered from 1, from a poll or quiz sticker. The number is pre-formatted at the call site.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove answer {number}'**
+  String videoEditorSocialStickerPollRemoveOption(String number);
+
+  /// Screen reader label of the button that marks one answer, numbered from 1, as the right answer of a quiz sticker. The number is pre-formatted at the call site.
+  ///
+  /// In en, this message translates to:
+  /// **'Make answer {number} the right one'**
+  String videoEditorSocialStickerQuizMarkRight(String number);
+
+  /// Button in the poll and quiz sticker sheet that adds another answer field, up to four.
+  ///
+  /// In en, this message translates to:
+  /// **'Add answer'**
+  String get videoEditorSocialStickerPollAddOption;
+
+  /// Help line in the poll sticker sheet: in the Divine player viewers see how everyone voted after they vote, and anyone can see who voted for what.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewers see the results once they vote. Votes are public.'**
+  String get videoEditorSocialStickerPollNote;
+
+  /// Help line in the quiz sticker sheet: the creator marks the right answer with the tick next to it, and viewers see which one was right after they answer.
+  ///
+  /// In en, this message translates to:
+  /// **'Tick the right answer. Viewers see it once they\'ve picked one.'**
+  String get videoEditorSocialStickerQuizNote;
+
+  /// Help line in the emoji slider sticker sheet: viewers rate by dragging the emoji along the bar, then see the average of everyone's answers.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewers drag the emoji to answer and see where it lands on average.'**
+  String get videoEditorSocialStickerSliderNote;
+
+  /// Shown on the editor canvas while a poll, quiz or slider sticker is moved, inside the outlined area it must stay in.
+  ///
+  /// In en, this message translates to:
+  /// **'Polls stay in this box so viewers can tap them'**
+  String get videoEditorPollAreaHint;
 
   /// Name of the sound credit design with a music note in front of the title and artist.
   ///

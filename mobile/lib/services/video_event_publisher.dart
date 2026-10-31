@@ -35,6 +35,7 @@ import 'package:openvine/services/video_publish/video_imeta_builder.dart';
 import 'package:openvine/utils/async_utils.dart';
 import 'package:openvine/utils/inspired_by_tags.dart';
 import 'package:openvine/utils/nostr_replacement_timestamp.dart';
+import 'package:poll_repository/poll_repository.dart' show Poll, PollKind;
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -209,6 +210,7 @@ class VideoEventPublisher {
     List<String> mentionedPubkeys = const [],
     List<String> linkUrls = const [],
     List<VideoStickerRegion> stickerRegions = const [],
+    Poll? poll,
     String? inspiredByAddressableId,
     String? inspiredByRelayUrl,
     List<String> inspiredByNpubs = const [],
@@ -245,6 +247,7 @@ class VideoEventPublisher {
       mentionedPubkeys: mentionedPubkeys,
       linkUrls: linkUrls,
       stickerRegions: stickerRegions,
+      poll: poll,
       inspiredByAddressableId: inspiredByAddressableId,
       inspiredByRelayUrl: inspiredByRelayUrl,
       inspiredByNpubs: inspiredByNpubs,
@@ -311,6 +314,7 @@ class VideoEventPublisher {
     List<String> mentionedPubkeys = const [],
     List<String> linkUrls = const [],
     List<VideoStickerRegion> stickerRegions = const [],
+    Poll? poll,
     Duration? thumbnailTimestamp,
     String? inspiredByAddressableId,
     String? inspiredByRelayUrl,
@@ -365,6 +369,7 @@ class VideoEventPublisher {
       mentionedPubkeys: mentionedPubkeys,
       linkUrls: linkUrls,
       stickerRegions: stickerRegions,
+      poll: poll,
       thumbnailTimestamp: thumbnailTimestamp,
       inspiredByAddressableId: inspiredByAddressableId,
       inspiredByRelayUrl: inspiredByRelayUrl,
@@ -411,6 +416,7 @@ class VideoEventPublisher {
     required List<String> mentionedPubkeys,
     required List<String> linkUrls,
     required List<VideoStickerRegion> stickerRegions,
+    required Poll? poll,
     required Duration? thumbnailTimestamp,
     required String? inspiredByAddressableId,
     required String? inspiredByRelayUrl,
@@ -462,6 +468,12 @@ class VideoEventPublisher {
         ['d', dTag],
       ];
 
+      // A scheduled post never reuses a cached event: its id is bound to the
+      // chosen time, and the cached one would be a different post.
+      final reusedEvent = scheduledAt == null
+          ? await _loadRetryableSignedEvent(upload)
+          : null;
+
       if (replyContext != null) {
         addVideoReplyTags(tags, replyContext, addReplyToFeed: addReplyToFeed);
       }
@@ -496,7 +508,12 @@ class VideoEventPublisher {
         clipSourceCredits: clipSourceCredits,
       );
       addVideoLinkTags(tags, linkUrls);
-      addVideoStickerTags(tags, stickerRegions);
+      // A poll sticker's tag needs its poll's id; it is added once the poll
+      // is out, just before the video is signed.
+      addVideoStickerTags(tags, [
+        for (final region in stickerRegions)
+          if (!region.kind.isPoll) region,
+      ]);
       // Written as true or false, so an edit keeps an explicit decline.
       tags.add(['allow_video_reuse', allowVideoReuse.toString()]);
 
@@ -569,12 +586,18 @@ class VideoEventPublisher {
         category: LogCategory.video,
       );
 
+      // A retry that sends the video signed before carries the poll it was
+      // signed with, which went out ahead of it; another would be an orphan.
+      // Otherwise the poll goes out last before the video, so a step that
+      // stops the publish earlier leaves no poll behind.
+      if (reusedEvent == null) {
+        addVideoStickerTags(
+          tags,
+          await _publishPollOf(stickerRegions, poll, authService: authService),
+        );
+      }
+
       final signWatch = Stopwatch()..start();
-      // A scheduled post never reuses a cached event: its id is bound to the
-      // chosen time, and the cached one would be a different post.
-      final reusedEvent = scheduledAt == null
-          ? await _loadRetryableSignedEvent(upload)
-          : null;
       final scheduledCreatedAt = scheduledAt == null
           ? null
           : scheduledAt.millisecondsSinceEpoch ~/ 1000;
@@ -816,6 +839,77 @@ class VideoEventPublisher {
 
   /// The signed event a failed attempt left for [upload], or `null` when
   /// there is none or it was signed under the other attribution setting.
+  /// The poll, quiz or slider sticker among [regions], pointing at [poll]
+  /// once that is published, signed through [authService]; none when there is
+  /// no such sticker.
+  ///
+  /// The poll goes out before the video that points to it, so a viewer never
+  /// finds the video without its poll. A poll sticker whose poll is missing,
+  /// or of another kind, is left out: there would be nothing to vote on. A
+  /// video carries one; any further poll sticker is left out too.
+  ///
+  /// A scheduled post's poll goes out now, ahead of the post.
+  ///
+  /// Throws a [PollPublishException] if the poll could not be signed or no
+  /// relay took it.
+  Future<List<VideoStickerRegion>> _publishPollOf(
+    List<VideoStickerRegion> regions,
+    Poll? poll, {
+    required AuthService authService,
+  }) async {
+    final pollRegion = regions
+        .where((region) => region.kind.isPoll)
+        .firstOrNull;
+    if (pollRegion == null) return const [];
+    if (poll == null || _stickerKindOf(poll.kind) != pollRegion.kind) {
+      Log.warning(
+        'Dropping a ${pollRegion.kind.name} sticker with no poll to publish',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return const [];
+    }
+    final pollId = await _publishPoll(poll, authService: authService);
+    return [pollRegion.withTarget(pollId)];
+  }
+
+  static VideoStickerKind _stickerKindOf(PollKind kind) => switch (kind) {
+    PollKind.poll => VideoStickerKind.poll,
+    PollKind.quiz => VideoStickerKind.quiz,
+    PollKind.slider => VideoStickerKind.slider,
+  };
+
+  /// Signs [poll] through [authService] and publishes it, its votes expected
+  /// on the trusted relay; the id of its event.
+  ///
+  /// Throws a [PollPublishException] if it could not be signed or no relay
+  /// took it.
+  Future<String> _publishPoll(
+    Poll poll, {
+    required AuthService authService,
+  }) async {
+    final event = await authService.createAndSignEvent(
+      kind: Poll.eventKind,
+      content: poll.question,
+      tags: poll.toTags(relayUrl: _relayPublisher.trustedRelayUrl),
+    );
+    if (event == null) {
+      throw const PollPublishException('Could not sign the poll of a video');
+    }
+    final outcome = await _relayPublisher.publishViaWebSocket(event);
+    if (outcome != EventPublishOutcome.published) {
+      throw PollPublishException(
+        'No relay took poll ${event.id}; not publishing its video',
+      );
+    }
+    Log.info(
+      'Published poll ${event.id}',
+      name: _logName,
+      category: LogCategory.video,
+    );
+    return event.id;
+  }
+
   Future<Event?> _loadRetryableSignedEvent(PendingUpload upload) async {
     final cachedEventId = upload.nostrEventId;
     if (cachedEventId == null || cachedEventId.isEmpty) {

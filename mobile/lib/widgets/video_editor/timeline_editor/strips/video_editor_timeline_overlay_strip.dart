@@ -13,6 +13,7 @@ import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bl
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/layer_style.dart';
+import 'package:openvine/models/video_editor/poll_sticker_placement.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_drop_indicator_line.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_positioned_item.dart';
@@ -391,6 +392,8 @@ class _TimelineOverlayStripState extends State<TimelineOverlayStrip> {
   void _onLongPressStart(TimelineOverlayItem item) {
     // In multi-select mode a tile only toggles on tap; dragging is disabled.
     if (widget.isLayerMultiSelectMode) return;
+    // A poll, quiz or slider stays in the front row for the whole video.
+    if (isPollTimelineItem(item)) return;
     final mainBloc = context.read<VideoEditorMainBloc?>();
     if (mainBloc?.state.isVolumeEditMode == true) return;
     unawaited(HapticFeedback.mediumImpact());
@@ -421,6 +424,7 @@ class _TimelineOverlayStripState extends State<TimelineOverlayStrip> {
     TimelineOverlayItem item,
     int displayRowCount,
   ) {
+    if (_draggingId != item.id) return;
     final pps = widget.pixelsPerSecond;
     final itemDurationMs = item.duration.inMilliseconds;
     final totalMs = widget.totalDuration.inMilliseconds;

@@ -2076,6 +2076,32 @@ class AppLocalizationsSv extends AppLocalizations {
       'Nu är det dags! Nedräkningen du sparade har precis tagit slut.';
 
   @override
+  String get videoStickerPollSignInToVote => 'Logga in för att rösta.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Ansluter fortfarande. Försök igen om en stund.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Din röst gick inte fram. Försök igen.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Röster är offentliga. Alla kan se vad du valde.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count röster',
+      one: '1 röst',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Länken öppnas utanför Divine. Kolla adressen innan du fortsätter.';
 
@@ -10952,6 +10978,69 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Tittare trycker på den för att se vad du svarar på.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Omröstning';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Quiz';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Reglage';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Vilken?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Ja';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Nej';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine lanserades år…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'Hur hungrig är du?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Ställ en fråga';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Svar $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Ta bort svar $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Markera svar $number som rätt';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Lägg till svar';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Tittarna ser resultatet när de har röstat. Röster är offentliga.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Bocka för rätt svar. Tittarna ser det när de har valt ett.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Tittarna drar emojin för att svara och ser var den hamnar i snitt.';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'Omröstningar stannar i den här rutan så att tittarna kan trycka på dem';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Not';

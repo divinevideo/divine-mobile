@@ -1952,6 +1952,61 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Fetches the votes on the NIP-88 poll [pollId], counted on the server.
+  ///
+  /// Each pubkey's vote counts once: its latest, or for a quiz its earliest,
+  /// and only when it names an option of the poll. Deleted votes and votes
+  /// from moderated accounts do not count. The answer leaves out how the
+  /// caller voted; read that from the relays.
+  ///
+  /// Throws:
+  /// - [FunnelcakeNotConfiguredException] if the API is not
+  ///   configured.
+  /// - [FunnelcakeException] if the poll ID is empty.
+  /// - [FunnelcakeNotFoundException] if the API knows no such poll.
+  /// - [FunnelcakeApiException] if the request fails.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] for other errors.
+  Future<PollVoteTally> getPollResults(String pollId) async {
+    if (!isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+
+    if (pollId.isEmpty) {
+      throw const FunnelcakeException('Poll ID cannot be empty');
+    }
+
+    final uri = Uri.parse(
+      '$_baseUrl/api/polls/${Uri.encodeComponent(pollId)}/results',
+    );
+
+    try {
+      final response = await _get(uri);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return PollVoteTally.fromJson(data);
+      } else if (response.statusCode == 404) {
+        throw FunnelcakeNotFoundException(
+          resource: 'Poll results',
+          url: uri.toString(),
+        );
+      } else {
+        throw FunnelcakeApiException(
+          message: 'Failed to fetch poll results',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (e) {
+      throw FunnelcakeException('Failed to fetch poll results: $e');
+    }
+  }
+
   /// Fetches view count for a specific video.
   ///
   /// [eventId] is the Nostr event ID for the video.

@@ -2057,6 +2057,31 @@ class AppLocalizationsMs extends AppLocalizations {
       'Sudah tiba masanya! Kira detik yang anda simpan baru sahaja tamat.';
 
   @override
+  String get videoStickerPollSignInToVote => 'Log masuk untuk mengundi.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Masih menyambung. Cuba lagi sebentar nanti.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Undian anda tidak dihantar. Cuba lagi.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Undian adalah awam. Sesiapa pun boleh melihat pilihan anda.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count undian',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Pautan ini dibuka di luar Divine. Semak alamatnya sebelum anda teruskan.';
 
@@ -10952,6 +10977,69 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Penonton ketik padanya untuk lihat apa yang anda balas.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Undian';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Kuiz';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Peluncur';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Yang mana?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Ya';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Tidak';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine dilancarkan pada tahun…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'Berapa lapar anda?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Tanya soalan';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Jawapan $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Buang jawapan $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Tandakan jawapan $number sebagai betul';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Tambah jawapan';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Penonton melihat keputusan selepas mengundi. Undian adalah awam.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Tandakan jawapan yang betul. Penonton melihatnya selepas memilih satu.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Penonton menyeret emoji untuk menjawab dan melihat purata kedudukannya.';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'Undian kekal dalam kotak ini supaya penonton boleh mengetiknya';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Not';

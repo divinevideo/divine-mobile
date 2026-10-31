@@ -2139,6 +2139,33 @@ class AppLocalizationsRo extends AppLocalizations {
       'A venit momentul! Numărătoarea inversă pe care ai salvat-o tocmai s-a încheiat.';
 
   @override
+  String get videoStickerPollSignInToVote => 'Conectează-te ca să votezi.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Încă se conectează. Încearcă din nou peste o clipă.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Votul tău nu a ajuns. Încearcă din nou.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Voturile sunt publice. Oricine poate vedea ce ai ales.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de voturi',
+      few: '$count voturi',
+      one: '1 vot',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Acest link se deschide în afara Divine. Verifică adresa înainte să continui.';
 
@@ -11175,6 +11202,69 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Cei care se uită ating stickerul și văd la ce răspunzi.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Sondaj';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Quiz';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Glisor';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Care?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Da';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Nu';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine s-a lansat în…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'Cât de foame ți-e?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Pune o întrebare';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Răspunsul $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Elimină răspunsul $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Marchează răspunsul $number drept corect';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Adaugă un răspuns';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Cei care se uită văd rezultatele după ce votează. Voturile sunt publice.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Bifează răspunsul corect. Cei care se uită îl văd după ce aleg unul.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Cei care se uită trag emoji-ul ca să răspundă și văd unde ajunge în medie.';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'Sondajele rămân în acest chenar, ca să poată fi atinse';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Notă';

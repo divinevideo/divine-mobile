@@ -2034,6 +2034,30 @@ class AppLocalizationsAm extends AppLocalizations {
       'ጊዜው ደርሷል! ያስቀመጡት የኋሊት ቆጠራ አሁን አልቋል።';
 
   @override
+  String get videoStickerPollSignInToVote => 'ድምፅ ለመስጠት ይግቡ።';
+
+  @override
+  String get videoStickerPollNotReady => 'አሁንም በመገናኘት ላይ። ትንሽ ቆይተው እንደገና ይሞክሩ።';
+
+  @override
+  String get videoStickerPollVoteFailed => 'ድምፅዎ አልደረሰም። እንደገና ይሞክሩ።';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'ድምፆች ይፋዊ ናቸው። ማንኛውም ሰው የመረጡትን ማየት ይችላል።';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ድምፆች',
+      one: '$count ድምፅ',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'ይህ ሊንክ ከDivine ውጭ ይከፈታል። ከመሄድዎ በፊት አድራሻውን ያረጋግጡ።';
 
@@ -10694,6 +10718,67 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'ተመልካቾች ሲነኩት ምን ላይ ምላሽ እንደሚሰጡ ያያሉ።';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'ድምፅ መስጫ';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'ፈተና';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'ተንሸራታች';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'የትኛው?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'አዎ';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'አይ';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine የተጀመረው በ…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => 'ምን ያህል ርቦዎታል?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'ጥያቄ ይጠይቁ';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'መልስ $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'መልስ $numberን ያስወግዱ';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'መልስ $numberን ትክክለኛ ብለው ይምረጡ';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'መልስ ያክሉ';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'ተመልካቾች ድምፅ ከሰጡ በኋላ ውጤቱን ያያሉ። ድምፆች ይፋዊ ናቸው።';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'ትክክለኛውን መልስ ምልክት ያድርጉ። ተመልካቾች መልስ ከመረጡ በኋላ ያዩታል።';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'ተመልካቾች ለመመለስ ኢሞጂውን ይጎትታሉ፣ አማካዩም የት እንደሚያርፍ ያያሉ።';
+
+  @override
+  String get videoEditorPollAreaHint =>
+      'ተመልካቾች እንዲነኩት ድምፅ መስጫዎች በዚህ ሳጥን ውስጥ ይቆያሉ';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'ኖታ';

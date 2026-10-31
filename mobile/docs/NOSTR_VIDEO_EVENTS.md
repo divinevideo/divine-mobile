@@ -133,8 +133,8 @@ conventions.
 
 The `sticker` tag's fields:
 
-- `kind` is `link`, `mention`, `hashtag`, `sound`, `place`, `countdown` or
-  `reply`.
+- `kind` is `link`, `mention`, `hashtag`, `sound`, `place`, `countdown`,
+  `reply`, `poll`, `quiz` or `slider`.
 - `target` is the full `http`/`https` address of a named host, the full hex
   pubkey, or the hashtag. A reader strips one leading `#` from a hashtag and
   lowercases it, as it does a pubkey. For `sound` it is the id the credited
@@ -148,7 +148,9 @@ The `sticker` tag's fields:
   `Zermatt, Wallis, Schweiz`, which a tap searches the viewer's map app for;
   the location sticker keeps no coordinates. For `countdown` it is the Unix
   time in seconds the countdown ends at. For `reply` it is the hex id of the
-  comment or video the video replies to.
+  comment or video the video replies to. For `poll`, `quiz` and `slider` it
+  is the hex id of the NIP-88 `kind:1068` poll event; a reader takes any
+  other target as empty, and a sticker without its poll takes no vote.
 - The area gives the sticker's centre and its size before it is turned, as
   fractions of the video frame's width (`cx`, `w`) and height (`cy`, `h`).
 - `degrees` is how far it is turned clockwise around its centre.
@@ -161,7 +163,8 @@ The `sticker` tag's fields:
   domain, a name, or a hashtag as typed; for a sound, its title, artist and line
   of lyrics, one per line; a place's name as the sticker shows it; a
   countdown's title; for a reply, the name of whom it replies to and the
-  comment, one per line.
+  comment, one per line; for a poll or a quiz, its question and then its
+  answers, and for a slider its question and then its emoji, one per line.
 
 A reader drops the whole tag when:
 
@@ -176,6 +179,8 @@ A reader drops the whole tag when:
 - a countdown is not a whole number of seconds after 1970 and before the year
   10000;
 - a reply target is not 64 hex characters;
+- a poll or a quiz has no question and two to four answers in its label, or
+  a slider no question and emoji, each on a line of its own;
 - the area is not four finite numbers, a size is not above 0 and at most 4, or
   no part of the turned sticker can reach the frame;
 - the angle is not a finite number;
@@ -254,8 +259,49 @@ The newer kinds:
   a comment, with its comments open on that comment. It is published only on a
   video that replies to its target.
 
+- `poll`, `quiz` and `slider` are a question viewers vote on, published as
+  a NIP-88 poll (see [Polls](#polls)). A video carries one. The editor offers
+  them in only the solid `light`, `brand` and `highlight` looks, so the copy
+  the Divine player draws can show the votes over the answers in the frames.
+  The player reads the poll and its votes only once the video is the one
+  playing, and shows the votes after the viewer voted; the creator sees them
+  straight away and does not vote.
+
 Older Divine versions drop a sticker tag whose `kind` they do not know, and
 then show the sticker only as it is in the frames.
+
+#### Polls
+
+A poll, quiz or slider sticker publishes a NIP-88 `kind:1068` poll event,
+signed in the video's publish step and sent just before the video, so the
+video never points to a poll the relays do not have yet. A retry that sends
+a video signed before sends no second poll: the one the video names went out
+ahead of it. A scheduled post's poll goes out at once. When no relay takes
+the poll, the video is not published either.
+
+| Tag | Format | Description |
+|-----|--------|-------------|
+| content | `"Which outfit?"` | The question. |
+| `option` | `["option", "0", "Red"]` | An answer, numbered from `0`. A slider has eleven, `0` to `100` in steps of ten, each its own value. |
+| `relay` | `["relay", "wss://relay.divine.video"]` | Where votes are expected. |
+| `polltype` | `["polltype", "singlechoice"]` | Every Divine poll is single choice. |
+| `answer` | `["answer", "1"]` | A quiz's right answer; a Divine convention other clients ignore. Anyone can read it in the raw event. |
+| `slider` | `["slider", "😋"]` | A slider's emoji; a Divine convention. Other clients show a slider as a poll of its eleven steps. |
+
+A vote is a `kind:1018` event with `["e", "<poll id>", "<relay>"]` and one
+`["response", "<option id>"]`. Votes are public: anyone can read who voted
+for what, and the app says so once, after a viewer's first vote. Divine
+counts one vote per pubkey: a pubkey's latest vote, as NIP-88 says, but for a
+quiz its first, so an answer cannot be changed. Funnelcake counts them
+(`GET /api/polls/{id}/results`) and the app then reads only the viewer's own
+vote from the relay; while Funnelcake does not answer, the app counts the
+votes a relay holds itself, read in one request of at most 5000. A poll by
+anyone but the video's
+creator, or one of another kind or with other answers than the sticker
+shows, is not the one it points to and takes no vote.
+
+Building and reading the events lives in `mobile/packages/poll_repository`;
+the player's copy is `mobile/lib/widgets/video_feed_item/poll_sticker_overlay.dart`.
 
 Before a link to a host outside `divine.video` and its subdomains opens, the
 app shows its whole domain and its address, cut after three lines, in a sheet.
