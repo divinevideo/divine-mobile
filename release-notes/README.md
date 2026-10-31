@@ -5,6 +5,34 @@ voice: direct, human, slightly playful. Follow the brand quick reference and ton
 of voice in `brand-guidelines`. Describe benefits, not commit subjects or internal
 implementation details.
 
+## Release record: 1.0.27
+
+As of October 31, 2026, **1.0.27 is the current documented release**. Start with
+the [1.0.27 release notes](1.0.27.md) or the
+[latest stable GitHub release](https://github.com/divinevideo/divine-mobile/releases/latest)
+for downloads. Keep the marketing version prominent in release titles; full
+source SHAs belong in the build-provenance line rather than the title.
+
+| Channel | Recorded availability |
+| --- | --- |
+| Google Play | 1.0.27 publication confirmed by the release owner on October 31; the track, version code and rollout percentage were not independently checked. |
+| GitHub | [1.0.27](https://github.com/divinevideo/divine-mobile/releases/tag/1.0.27): 64-bit and 32-bit ARM APKs, promoted from the original production-backend candidate without rebuilding. |
+| App Store / macOS | Availability for this version is not verified by this record; this GitHub publication contains Android APKs only. |
+
+The GitHub APK source is
+`e7eef34eecc2f1072092c35fa54a100bc370f25a`. The reviewed copy describes that
+commit, not later changes on `main`. The Google Play confirmation establishes
+the version's publication, not an independently verified store-artifact/source
+match. Publication here reuses the candidate's files without rebuilding or
+promoting a store track.
+
+Earlier `1.0.26-beta.production.*` entries remain historical testing candidates;
+there is no stable `1.0.26` GitHub tag. The earlier 1.0.24 and 1.0.25 beta entries
+remain build archives alongside their stable releases. Preserve those tags and
+downloads, give the entries short version-first titles, and link their notes
+to the stable release rather than leaving generic "early build" copy as the
+only explanation.
+
 ## Prepare the notes
 
 1. Find the **actual source commit** of the previous shipped build and the next
