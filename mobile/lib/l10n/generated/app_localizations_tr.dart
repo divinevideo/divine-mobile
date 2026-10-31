@@ -8935,6 +8935,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectComic => 'Çizgi Roman';
 
   @override
+  String get videoEditorEffectEightBit => '8-Bit';
+
+  @override
+  String get videoEditorEffectAnaglyph => '3D Gözlük';
+
+  @override
+  String get videoEditorEffectRiso => 'Riso Baskı';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Retro';
 
   @override

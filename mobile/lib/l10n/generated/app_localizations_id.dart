@@ -8927,6 +8927,15 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectComic => 'Komik';
 
   @override
+  String get videoEditorEffectEightBit => '8-Bit';
+
+  @override
+  String get videoEditorEffectAnaglyph => 'Kacamata 3D';
+
+  @override
+  String get videoEditorEffectRiso => 'Cetak Riso';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Retro';
 
   @override

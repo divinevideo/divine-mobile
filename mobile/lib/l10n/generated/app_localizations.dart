@@ -15191,6 +15191,24 @@ abstract class AppLocalizations {
   /// **'Comic'**
   String get videoEditorEffectComic;
 
+  /// Name of a video effect: the picture looks like the pixel art of early video game consoles, in large pixels and few colours. Use the term your language uses for retro 8-bit video game graphics.
+  ///
+  /// In en, this message translates to:
+  /// **'8-Bit'**
+  String get videoEditorEffectEightBit;
+
+  /// Name of a video effect: the picture is split into a red and a cyan copy laid over each other, slightly apart, like an old 3D film or comic viewed through red-cyan cardboard 3D glasses.
+  ///
+  /// In en, this message translates to:
+  /// **'3D Glasses'**
+  String get videoEditorEffectAnaglyph;
+
+  /// Name of a video effect: the picture looks printed on a risograph, in grainy pink and blue ink on paper, slightly out of register. Keep Riso or use your language's word for risograph printing.
+  ///
+  /// In en, this message translates to:
+  /// **'Riso Print'**
+  String get videoEditorEffectRiso;
+
   /// Name of a group in the video effects picker: effects that look like old media, such as VHS tape, old film or an old TV.
   ///
   /// In en, this message translates to:

@@ -8,6 +8,7 @@ import android.os.Handler
 import android.os.SystemClock
 import android.view.Surface
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
@@ -546,6 +547,39 @@ class DivineVideoPlayerInstanceTest {
         } finally {
             unmockkConstructor(Surface::class)
         }
+    }
+
+    // -- frame-effect stage install --
+
+    @Test
+    fun `installing frame effects keeps the decoder's layout until the stage draws`() {
+        every { mockProducer.surface } returns mockSurface
+        every { mockPlayer.videoFormat } returns Format.Builder().setRotationDegrees(90).build()
+        instance.enableTextureOutput(mockRegistry)
+        val playerListener = slot<Player.Listener>()
+        every { mockPlayer.addListener(capture(playerListener)) } just runs
+        val (frames, states) = listenForFrames()
+        val listener = playerListener.captured
+        listener.onVideoSizeChanged(VideoSize(1080, 1920))
+        frames.render(paddedFormat())
+
+        instance.onMethodCall(
+            MethodCall("setFrameEffects", mapOf("effects" to listOf(mapOf("id" to "comic")))),
+            mockk(relaxed = true),
+        )
+        // The re-prepare resets the size before the stage has drawn anything.
+        listener.onVideoSizeChanged(VideoSize.UNKNOWN)
+
+        // The texture still holds the decoder's sideways, padded buffer.
+        assertEquals(90, states.last()["rotationDegrees"])
+        assertEquals(paddedCrop, states.last()["textureCrop"])
+
+        listener.onRenderedFirstFrame()
+
+        assertEquals(0, states.last()["rotationDegrees"])
+        assertEquals(false, states.last().containsKey("textureCrop"))
+        assertEquals(1080, states.last()["videoWidth"])
+        assertEquals(1920, states.last()["videoHeight"])
     }
 
     @Test

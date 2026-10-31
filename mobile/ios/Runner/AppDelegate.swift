@@ -27,6 +27,9 @@ extension FlutterError: @retroactive Error {}
     ZoomBlurVideoEffect.register()
     SpinBlurVideoEffect.register()
     ComicVideoEffect.register()
+    EightBitVideoEffect.register()
+    AnaglyphVideoEffect.register()
+    RisoVideoEffect.register()
     AdjustVideoEffect.register()
     #if DEBUG
     exportScreenshotLaunchConfig()

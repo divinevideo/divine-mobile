@@ -9020,6 +9020,15 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectComic => 'Komik';
 
   @override
+  String get videoEditorEffectEightBit => '8-Bit';
+
+  @override
+  String get videoEditorEffectAnaglyph => 'Cermin Mata 3D';
+
+  @override
+  String get videoEditorEffectRiso => 'Cetakan Riso';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Retro';
 
   @override

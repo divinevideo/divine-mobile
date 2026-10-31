@@ -59,6 +59,20 @@ const spinBlurVideoEffectId = 'divine.spinBlur';
 /// the native `ComicVideoEffect` on Android, iOS and macOS.
 const comicVideoEffectId = 'divine.comic';
 
+/// The id Divine's 8-bit look is registered under with pro_video_editor, by
+/// the native `EightBitVideoEffect` on Android, iOS and macOS.
+const eightBitVideoEffectId = 'divine.eightBit';
+
+/// The id Divine's red-cyan 3D look is registered under with
+/// pro_video_editor, by the native `AnaglyphVideoEffect` on Android, iOS and
+/// macOS.
+const anaglyphVideoEffectId = 'divine.anaglyph';
+
+/// The id Divine's two-ink print look is registered under with
+/// pro_video_editor, by the native `RisoVideoEffect` on Android, iOS and
+/// macOS.
+const risoVideoEffectId = 'divine.riso';
+
 /// A group of effects the effects picker lists together, by what they do to
 /// the picture; see [EditorEffectType.category]. In picker order.
 enum EditorEffectCategory {
@@ -182,6 +196,18 @@ class EditorEffectType {
   /// Comic: flat poster colours, halftone dots and ink outlines.
   static const comic = EditorEffectType.custom(comicVideoEffectId);
 
+  /// 8-bit: the picture as early console pixel art, in chunky pixels and 256
+  /// colours.
+  static const eightBit = EditorEffectType.custom(eightBitVideoEffectId);
+
+  /// 3D glasses: a red and a cyan copy of the picture laid over each other,
+  /// slightly apart, as in a 3D film for red-cyan glasses.
+  static const anaglyph = EditorEffectType.custom(anaglyphVideoEffectId);
+
+  /// Riso print: the picture printed in pink and blue ink on paper, grainy
+  /// and slightly out of register.
+  static const riso = EditorEffectType.custom(risoVideoEffectId);
+
   /// Every type the effects editor offers, in picker order.
   static final List<EditorEffectType> values = List.unmodifiable([
     for (final type in VideoEffectType.values) EditorEffectType.builtIn(type),
@@ -208,6 +234,9 @@ class EditorEffectType {
     zoomBlur,
     spinBlur,
     comic,
+    eightBit,
+    anaglyph,
+    riso,
   ]);
 
   /// The built-in effect, or `null` for a custom one.
@@ -237,7 +266,10 @@ class EditorEffectType {
   EditorEffectCategory get category => switch (builtIn) {
     final builtIn? => _builtInVideoEffectCategory(builtIn),
     null => switch (customId) {
-      comicVideoEffectId => EditorEffectCategory.retro,
+      comicVideoEffectId ||
+      eightBitVideoEffectId ||
+      anaglyphVideoEffectId ||
+      risoVideoEffectId => EditorEffectCategory.retro,
       fisheyeVideoEffectId ||
       dropsVideoEffectId ||
       tiltShiftVideoEffectId => EditorEffectCategory.distort,
