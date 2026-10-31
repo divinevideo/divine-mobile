@@ -1,6 +1,7 @@
 // ABOUTME: Tests a poll sticker on a playing video: it reads its poll only on
 // ABOUTME: the active video, takes a vote on an answer and shows the votes.
 
+import 'package:divine_ui/divine_ui.dart' show DivineIcon;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -60,6 +61,29 @@ final Poll _poll = Poll(
   id: _pollId,
   authorPubkey: _author,
   question: 'Which one?',
+  options: const [
+    PollOption(id: '0', label: 'Red'),
+    PollOption(id: '1', label: 'Blue'),
+  ],
+);
+
+final VideoStickerRegion _quizRegion = VideoStickerRegion(
+  kind: VideoStickerKind.quiz,
+  target: _pollId,
+  centerX: 0.5,
+  centerY: 0.5,
+  width: 0.8,
+  height: 0.5,
+  style: 'light',
+  label: 'Which one?\nRed\nBlue',
+);
+
+final Poll _quiz = Poll(
+  id: _pollId,
+  authorPubkey: _author,
+  question: 'Which one?',
+  kind: PollKind.quiz,
+  answerId: '1',
   options: const [
     PollOption(id: '0', label: 'Red'),
     PollOption(id: '1', label: 'Blue'),
@@ -191,7 +215,8 @@ void main() {
         tester,
       ) async {
         await pump(tester);
-        expect(find.text('75%'), findsNothing);
+        // The votes read 100% on Red until the viewer's own moves them.
+        expect(find.text('100%'), findsNothing);
 
         await tester.tap(find.text('Blue'));
         await tester.pump();
@@ -256,6 +281,28 @@ void main() {
         await tester.pump();
 
         verify(() => repository.vote(_poll, '0')).called(1);
+      });
+
+      testWidgets('keeps a quiz right answer back until it is answered, and '
+          'takes no second answer', (tester) async {
+        when(
+          () => repository.fetchPoll(_pollId, authorPubkey: _author),
+        ).thenAnswer(
+          (_) async => PollSnapshot(poll: _quiz, results: const PollResults()),
+        );
+        await pump(tester, region: _quizRegion);
+        expect(find.byType(DivineIcon), findsNothing);
+
+        await tester.tap(find.text('Red'));
+        await tester.pump();
+        expect(find.byType(DivineIcon), findsNWidgets(2));
+
+        await tester.tap(find.text('Blue'), warnIfMissed: false);
+        await tester.pump();
+
+        verify(() => repository.vote(_quiz, '0')).called(1);
+        verifyNever(() => repository.vote(_quiz, '1'));
+        expect(playerTaps, equals(1));
       });
 
       testWidgets('votes when a screen reader activates an answer', (
