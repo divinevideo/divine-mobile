@@ -294,6 +294,31 @@ void main() {
         expect(queried(), hasLength(2));
       });
 
+      test("keeps the poll and the viewer's vote when the count read comes "
+          'back short', () async {
+        when(
+          () => funnelcake.getPollResults(_pollId),
+        ).thenThrow(const FunnelcakeTimeoutException());
+        when(() => nostrClient.queryEvents(any())).thenAnswer((
+          invocation,
+        ) async {
+          final filters = invocation.positionalArguments.first as List<Filter>;
+          return filters.any(
+                (filter) => filter.limit == PollRepository.maxVotesRead,
+              )
+              ? const <Event>[]
+              : [_pollEvent(), _vote(_viewer, '0')];
+        });
+
+        final snapshot = await repository(
+          funnelcakeApiClient: funnelcake,
+        ).fetchPoll(_pollId, authorPubkey: _author);
+
+        expect(snapshot?.poll.id, equals(_pollId));
+        expect(snapshot?.results.ownVoteId, equals('0'));
+        expect(snapshot?.results.counts, equals({'0': 1}));
+      });
+
       test('counts on the device when Funnelcake is not configured', () async {
         when(() => funnelcake.isAvailable).thenReturn(false);
         when(

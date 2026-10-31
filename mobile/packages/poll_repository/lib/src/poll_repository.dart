@@ -99,7 +99,7 @@ class PollRepository {
     if (poll == null) return null;
     _noteOwnVotes(events, pollId, viewerPubkey);
     if (tally == null) {
-      return _countOnDevice(pollId, authorPubkey, viewerPubkey);
+      return _countOnDevice(pollId, authorPubkey, viewerPubkey, known: events);
     }
     return PollSnapshot(
       poll: poll,
@@ -133,18 +133,24 @@ class PollRepository {
     }
   }
 
+  /// Counts the votes on the device. What an earlier read found is [known],
+  /// which a read that comes back short cannot lose.
   Future<PollSnapshot?> _countOnDevice(
     String pollId,
     String authorPubkey,
-    String? viewerPubkey,
-  ) async {
-    final events = await _nostrClient.queryEvents([
-      Filter(ids: [pollId], kinds: [Poll.eventKind]),
-      Filter(kinds: [Poll.voteKind], e: [pollId], limit: maxVotesRead),
-      // The viewer's own vote may be older than every vote read above.
-      if (viewerPubkey != null)
-        Filter(kinds: [Poll.voteKind], e: [pollId], authors: [viewerPubkey]),
-    ]);
+    String? viewerPubkey, {
+    List<Event> known = const [],
+  }) async {
+    final events = [
+      ...known,
+      ...await _nostrClient.queryEvents([
+        Filter(ids: [pollId], kinds: [Poll.eventKind]),
+        Filter(kinds: [Poll.voteKind], e: [pollId], limit: maxVotesRead),
+        // The viewer's own vote may be older than every vote read above.
+        if (viewerPubkey != null)
+          Filter(kinds: [Poll.voteKind], e: [pollId], authors: [viewerPubkey]),
+      ]),
+    ];
     final poll = _pollIn(events, pollId, authorPubkey);
     if (poll == null) return null;
     _noteOwnVotes(events, pollId, viewerPubkey);
