@@ -11,10 +11,13 @@ per pubkey, and publishes a viewer's vote.
 Used by: the video publish flow, which signs the poll before the video that
 points to it, and the poll, quiz and slider stickers in the player.
 
-Funnelcake counts the votes (`GET /api/polls/{id}/results`), and only the
-viewer's own vote is read from the relays. When Funnelcake is not configured
-or does not answer, the votes are counted on the device from the relays'
-`kind:1018` events instead, read in one capped request.
+Funnelcake counts the votes (`GET /api/polls/{id}/results`,
+divine-funnelcake#1414, not deployed yet), and only the viewer's own vote is
+read from the relays. Until that ships, and whenever Funnelcake is not
+configured or does not answer in time, the votes are counted on the device from
+the relays' `kind:1018` events instead, read in one capped request. That count
+can run low on a large poll and has no filter for deleted votes or moderated
+accounts.
 
 Test locally (`nostr_sdk` pulls in `dart:ui`, so `dart test` cannot run it):
 

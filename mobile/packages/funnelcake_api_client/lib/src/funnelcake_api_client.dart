@@ -1963,7 +1963,8 @@ class FunnelcakeApiClient {
   /// - [FunnelcakeNotConfiguredException] if the API is not
   ///   configured.
   /// - [FunnelcakeException] if the poll ID is empty.
-  /// - [FunnelcakeNotFoundException] if the API knows no such poll.
+  /// - [FunnelcakeNotFoundException] if the API knows no such poll or has no
+  ///   such route.
   /// - [FunnelcakeApiException] if the request fails.
   /// - [FunnelcakeTimeoutException] if the request times out.
   /// - [FunnelcakeException] for other errors.

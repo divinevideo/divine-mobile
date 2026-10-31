@@ -56,8 +56,8 @@ class PollStickerOverlay extends StatelessWidget {
   }
 }
 
-/// Provides the cubit that reads the poll for the signed-in viewer, and tells
-/// them what became of their vote.
+/// Provides the cubit that reads the poll for the viewer, and tells them what
+/// became of their vote.
 class _PollStickerScope extends ConsumerWidget {
   const _PollStickerScope({
     required this.region,

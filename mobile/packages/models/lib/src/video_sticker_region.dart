@@ -8,7 +8,7 @@ import 'package:models/src/audio_event.dart';
 import 'package:models/src/nostr_hex_utils.dart';
 import 'package:text_sanitizer/text_sanitizer.dart';
 
-/// What a tappable sticker on a video opens.
+/// What a tappable sticker on a video opens or takes a vote on.
 enum VideoStickerKind {
   /// A web page.
   link,
@@ -49,7 +49,8 @@ enum VideoStickerKind {
   bool get isPoll => this == poll || this == quiz || this == slider;
 }
 
-/// A sticker on a published video that opens what it points to when tapped.
+/// A sticker on a published video that opens what it points to when tapped,
+/// or takes a vote.
 ///
 /// The area is the sticker as it stands on the video frame: its centre and
 /// size as fractions of the frame's width and height, turned by [rotation]
@@ -63,7 +64,8 @@ enum VideoStickerKind {
 /// "0", "1500", "4200", "light", "divine.video"]`. A missing start or end
 /// means the sticker shows from the video's start or until its end; without a
 /// style and text a viewer still gets the area, just not the sticker drawn
-/// over it.
+/// over it. A poll, quiz or slider needs both: without them it shows only as
+/// it is in the frames.
 class VideoStickerRegion extends Equatable {
   /// Creates the area of a tappable sticker.
   const VideoStickerRegion({
@@ -83,7 +85,7 @@ class VideoStickerRegion extends Equatable {
   /// The name of the event tag a region is published in.
   static const String tagName = 'sticker';
 
-  /// What a tap opens.
+  /// What a tap opens or votes on.
   final VideoStickerKind kind;
 
   /// The web address, hex pubkey or hashtag (without `#`) a tap opens; for a
@@ -207,7 +209,8 @@ class VideoStickerRegion extends Equatable {
   }
 
   /// The region [tag] publishes, or `null` when it is no sticker tag or
-  /// names something a viewer could not safely open.
+  /// names something a viewer could not safely open, or is a poll, quiz or
+  /// slider whose label lays out no vote.
   static VideoStickerRegion? fromTag(List<String> tag) {
     if (tag.length < 5 || tag[0] != tagName) return null;
     final kind = VideoStickerKind.values.asNameMap()[tag[1]];

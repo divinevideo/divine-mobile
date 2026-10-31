@@ -162,8 +162,7 @@ class _LayerOverlayControls extends StatelessWidget {
             : null,
         multiSelectSemanticLabel:
             context.l10n.videoEditorSelectMultipleLayersSemanticLabel,
-        // Copy style / Paste style, for every layer but a hidden area and a
-        // detached clip; see [canCopyLayerStyle].
+        // Copy style / Paste style, for the layers [canCopyLayerStyle] allows.
         onCopyStyle: canTakeStyle ? () => _copyStyle(context: context) : null,
         copyStyleSemanticLabel:
             context.l10n.videoEditorCopyLayerStyleSemanticLabel,
@@ -195,8 +194,7 @@ class _LayerOverlayControls extends StatelessWidget {
             DetachedClipLayerData.hasChromaKey(
               DetachedClipLayerData.metaOf(layer),
             ),
-        // A shape mask, for every layer the export draws from what the canvas
-        // shows; see [canMaskLayer].
+        // A shape mask, for the layers [canMaskLayer] allows.
         onShapeMask: canMaskLayer(layer)
             ? () => _editShapeMask(context: context)
             : null,

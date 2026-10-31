@@ -148,8 +148,8 @@ class Poll extends Equatable {
     if (emoji case final emoji?) [sliderTagName, emoji],
   ];
 
-  /// The tags of a vote for [optionId] on the poll [pollId], cast on
-  /// [relayUrl].
+  /// The tags of a vote for [optionId] on the poll [pollId], naming [relayUrl]
+  /// in its `e` tag.
   static List<List<String>> voteTags(
     String pollId,
     String optionId, {
@@ -169,7 +169,8 @@ class Poll extends Equatable {
   /// question and at least [minOptions] answers.
   ///
   /// A quiz needs its answer among the answers, and a slider its emoji and
-  /// only steps on its scale; otherwise the poll reads as an ordinary one.
+  /// only whole numbers from 0 to 100 as ids; otherwise the poll reads as an
+  /// ordinary one.
   static Poll? fromEvent(Event event) {
     final question = event.content.trim();
     if (event.kind != eventKind || question.isEmpty) return null;

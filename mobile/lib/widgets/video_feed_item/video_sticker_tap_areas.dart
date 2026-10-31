@@ -147,9 +147,9 @@ Rect videoFrameRect(
 /// a tap anywhere else, and a double tap on them, reach the player beneath:
 /// a single tap on a sticker opens it, a double tap still likes the video.
 ///
-/// A poll, quiz or slider takes votes on its answers, and reads its poll
-/// only once the video [isActive]; [onVoteStarted] tells the feed a viewer
-/// started to vote.
+/// A poll, quiz or slider takes votes on its answers, which keep the pointer
+/// from the player, and reads its poll only once the video [isActive];
+/// [onVoteStarted] tells the feed a viewer started to vote.
 class VideoStickerTapAreas extends StatefulWidget {
   const VideoStickerTapAreas({
     required this.video,

@@ -153,8 +153,9 @@ This document outlines the required Nostr event types (kinds) that Divine uses f
   `["response", "<option id>"]`; votes are public
 - One vote per pubkey counts, the latest, or for a quiz the first, so its
   answer cannot be changed. Funnelcake counts them at
-  `GET /api/polls/{id}/results`; the app counts on the device only while that
-  does not answer
+  `GET /api/polls/{id}/results` (divine-funnelcake#1414, not deployed yet);
+  until then, and whenever it does not answer in time, the app counts on the
+  device
 
 ## Event Subscription Requirements
 

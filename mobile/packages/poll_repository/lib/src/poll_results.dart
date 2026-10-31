@@ -43,8 +43,9 @@ class PollResults extends Equatable {
   /// Results from counts made elsewhere, [votes] by answer id, and the
   /// viewer's own vote [ownVoteId], which replaced their [replacedVoteId].
   ///
-  /// A server's count can be a few seconds old. A vote of the viewer's it
-  /// has not counted any answer for yet still counts once, and no longer for
+  /// A server's count can be up to about 30 seconds old. A vote of the
+  /// viewer's it has not counted any answer for yet still counts once, and no
+  /// longer for
   /// the answer it replaced. A vote of theirs it may have counted already is
   /// taken as counted.
   factory PollResults.counted(
