@@ -22,9 +22,11 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/layer_style.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/models/video_editor/sticker_card_layer.dart';
 import 'package:openvine/models/video_editor/tappable_sticker_layer.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
@@ -121,6 +123,11 @@ class _LayerOverlayControls extends StatelessWidget {
         layer != null && InfoStickerData.isInfoStickerLayer(layer);
     final isSocialSticker =
         layer != null && SocialStickerData.isSocialStickerLayer(layer);
+    // Info, social and interactive stickers show as they are, for as long as
+    // they were placed: no split, mask, opacity or blend.
+    final isStickerCard = isStickerCardLayer(layer);
+    // A video carries one interactive card.
+    final isInteractiveCard = layer != null && isInteractiveCardLayer(layer);
 
     // Every layer that takes a style can be multi-selected, to paste a style
     // onto several at once, delete them, or combine drawings or stickers, as
@@ -149,14 +156,15 @@ class _LayerOverlayControls extends StatelessWidget {
             : isSocialSticker
             ? () => _editSocialSticker(context: context)
             : null,
-        onDuplicated: () => _duplicateLayer(context: context),
+        onDuplicated: isInteractiveCard
+            ? null
+            : () => _duplicateLayer(context: context),
         onMultiSelect: canMultiSelect
             ? () => _startLayerMultiSelect(context: context)
             : null,
         multiSelectSemanticLabel:
             context.l10n.videoEditorSelectMultipleLayersSemanticLabel,
-        // Copy style / Paste style, for every layer but a hidden area and a
-        // detached clip; see [canCopyLayerStyle].
+        // Copy style / Paste style, for the layers [canCopyLayerStyle] allows.
         onCopyStyle: canTakeStyle ? () => _copyStyle(context: context) : null,
         copyStyleSemanticLabel:
             context.l10n.videoEditorCopyLayerStyleSemanticLabel,
@@ -166,7 +174,7 @@ class _LayerOverlayControls extends StatelessWidget {
         canPasteStyle: hasCopiedStyle,
         pasteStyleSemanticLabel:
             context.l10n.videoEditorPasteLayerStyleSemanticLabel,
-        onSplit: () => _splitLayer(context: context),
+        onSplit: isStickerCard ? null : () => _splitLayer(context: context),
         // The way back from Detach, for a detached clip only.
         onReattach: isDetachedClip
             ? () => _reattachLayer(context: context)
@@ -188,20 +196,19 @@ class _LayerOverlayControls extends StatelessWidget {
             DetachedClipLayerData.hasChromaKey(
               DetachedClipLayerData.metaOf(layer),
             ),
-        // A shape mask, for every layer the export draws from what the canvas
-        // shows; see [canMaskLayer].
+        // A shape mask, for the layers [canMaskLayer] allows.
         onShapeMask: canMaskLayer(layer)
             ? () => _editShapeMask(context: context)
             : null,
         hasShapeMask: layer?.mask != null,
         // Opacity, for every layer but a hidden area, whose whole purpose is to
-        // hide what is beneath it.
-        onOpacity: layer == null || isCensorLayer(layer)
+        // hide what is beneath it, and a sticker card.
+        onOpacity: layer == null || isCensorLayer(layer) || isStickerCard
             ? null
             : () => _editOpacity(context: context),
         hasOpacity: layer != null && _isSeeThrough(layer),
         // Blend, for the same layers: a hidden area draws nothing to blend.
-        onBlendMode: layer == null || isCensorLayer(layer)
+        onBlendMode: layer == null || isCensorLayer(layer) || isStickerCard
             ? null
             : () => _editBlendMode(context: context),
         hasBlendMode: layer != null && layer.blendMode != BlendMode.srcOver,

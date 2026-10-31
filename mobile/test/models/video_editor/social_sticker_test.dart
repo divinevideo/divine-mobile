@@ -8,6 +8,7 @@ import 'package:models/models.dart'
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_reply_context.dart';
+import 'package:poll_repository/poll_repository.dart' show Poll;
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 const _pubkey =
@@ -64,6 +65,12 @@ void main() {
             replyImageUrl: 'https://divine.video/thumb.jpg',
             replyToVideo: true,
           ),
+          const SocialStickerData(
+            kind: SocialStickerKind.addYours,
+            prompt: 'Show your desk',
+            hashtag: 'desksetup',
+            chainRoot: '34236:$_pubkey:desk-1',
+          ),
         ];
 
         for (final sticker in stickers) {
@@ -78,7 +85,7 @@ void main() {
         );
         final unknown = const SocialStickerData(
           kind: SocialStickerKind.hashtag,
-        ).toMeta()..['socialKind'] = 'poll';
+        ).toMeta()..['socialKind'] = 'scavengerHunt';
 
         expect(SocialStickerData.fromMeta(info.toMeta()), isNull);
         expect(SocialStickerData.fromMeta(unknown), isNull);
@@ -499,6 +506,223 @@ void main() {
       });
     });
 
+    group('polls', () {
+      const quiz = SocialStickerData(
+        kind: SocialStickerKind.quiz,
+        pollQuestion: ' Vine launched in… ',
+        pollOptions: ['2013', ' 2015 '],
+        quizAnswer: 0,
+      );
+
+      test('needs a question and two to four answers, a quiz its right '
+          'one and a slider its emoji', () {
+        expect(quiz.isComplete, isTrue);
+        expect(
+          [
+            SocialStickerData.poll(SocialStickerKind.poll),
+            quiz.copyWith(pollOptions: ['2013', '  ']),
+            quiz.copyWith(pollOptions: ['1', '2', '3', '4', '5']),
+            quiz.copyWith(quizAnswer: 2),
+            const SocialStickerData(
+              kind: SocialStickerKind.slider,
+              pollQuestion: 'Hungry?',
+            ),
+          ].map((sticker) => sticker.isComplete),
+          everyElement(isFalse),
+        );
+        expect(
+          SocialStickerData.poll(
+            SocialStickerKind.slider,
+          ).copyWith(pollQuestion: 'Hungry?').isComplete,
+          isTrue,
+        );
+      });
+
+      test('takes no line break inside its question or an answer, which '
+          'would split the label into more answers', () {
+        expect(
+          [
+            quiz.copyWith(pollOptions: ['Pizza\nPasta', 'Burger']),
+            quiz.copyWith(pollQuestion: 'Vine\nlaunched in…'),
+            SocialStickerData.poll(
+              SocialStickerKind.slider,
+            ).copyWith(pollQuestion: 'How\nhungry?'),
+          ].map((sticker) => sticker.isComplete),
+          everyElement(isFalse),
+        );
+        expect(
+          quiz.copyWith(pollOptions: ['2013\n', '2015']).isComplete,
+          isTrue,
+        );
+      });
+
+      test('is published without a poll id, and its question and answers '
+          'come back from the tag', () {
+        final region = VideoStickerRegion.fromTag(
+          VideoStickerRegion(
+            kind: quiz.tapKind,
+            target: quiz.tapTarget!,
+            centerX: 0.5,
+            centerY: 0.5,
+            width: 0.6,
+            height: 0.3,
+            style: quiz.style.name,
+            label: quiz.tapLabel,
+          ).toTag(),
+        )!;
+
+        expect(region.kind, equals(VideoStickerKind.quiz));
+        expect(region.target, isEmpty);
+        expect(
+          SocialStickerData.ofRegion(region),
+          equals(
+            const SocialStickerData(
+              kind: SocialStickerKind.quiz,
+              pollQuestion: 'Vine launched in…',
+              pollOptions: ['2013', '2015'],
+            ),
+          ),
+        );
+      });
+
+      test('keeps its question, answers and right answer in a draft', () {
+        expect(SocialStickerData.fromMeta(quiz.toMeta()), equals(quiz));
+      });
+
+      test('is published as the poll it asks', () {
+        expect(
+          quiz.toPoll(),
+          equals(
+            Poll.choice(
+              question: 'Vine launched in…',
+              answers: const ['2013', '2015'],
+              answerIndex: 0,
+            ),
+          ),
+        );
+        expect(
+          const SocialStickerData(
+            kind: SocialStickerKind.slider,
+            pollQuestion: 'Hungry?',
+            sliderEmoji: '😋',
+          ).toPoll(),
+          equals(Poll.slider(question: 'Hungry?', emoji: '😋')),
+        );
+      });
+    });
+
+    group('question, Add yours and replies', () {
+      const addYours = SocialStickerData(
+        kind: SocialStickerKind.addYours,
+        prompt: ' Show your desk ',
+        hashtag: 'DeskSetup',
+      );
+      const answer = SocialStickerData(
+        kind: SocialStickerKind.addYours,
+        prompt: 'Show your desk',
+        hashtag: 'desksetup',
+        chainRoot: '34236:$_pubkey:desk-1',
+      );
+
+      test('take their one white card, like a poll', () {
+        for (final kind in [
+          SocialStickerKind.question,
+          SocialStickerKind.addYours,
+          SocialStickerKind.replies,
+        ]) {
+          expect(kind.isInteractiveCard, isTrue);
+          expect(kind.isPoll, isFalse);
+          expect(kind.styles, equals([InfoStickerStyle.light]));
+        }
+        expect(SocialStickerKind.countdown.isInteractiveCard, isFalse);
+      });
+
+      test('need what they ask on one line, an Add yours its hashtag', () {
+        expect(
+          SocialStickerData.interactive(
+            SocialStickerKind.question,
+            prompt: 'Ask me anything',
+          ).isComplete,
+          isTrue,
+        );
+        expect(addYours.isComplete, isTrue);
+        expect(
+          [
+            SocialStickerData.interactive(SocialStickerKind.question),
+            SocialStickerData.interactive(
+              SocialStickerKind.replies,
+              prompt: 'Two\nlines',
+            ),
+            SocialStickerData.interactive(
+              SocialStickerKind.replies,
+              prompt: 'x' * (SocialStickerData.maxPromptLength + 1),
+            ),
+            addYours.copyWith(hashtag: '#'),
+          ].map((sticker) => sticker.isComplete),
+          everyElement(isFalse),
+        );
+      });
+
+      test('start an Add yours hashtag from the prompt', () {
+        expect(
+          SocialStickerData.hashtagForPrompt('Show your desk setup!'),
+          equals('showyourdesksetup'),
+        );
+        expect(SocialStickerData.hashtagForPrompt('!!!'), isNull);
+      });
+
+      test('are published by what they ask, and come back from the tag', () {
+        for (final sticker in [
+          SocialStickerData.interactive(
+            SocialStickerKind.question,
+            prompt: 'Ask me anything',
+          ),
+          SocialStickerData.interactive(
+            SocialStickerKind.replies,
+            prompt: 'Reply with a video',
+          ),
+          addYours,
+          answer,
+        ]) {
+          final region = VideoStickerRegion.fromTag(
+            VideoStickerRegion(
+              kind: sticker.tapKind,
+              target: sticker.tapTarget!,
+              centerX: 0.5,
+              centerY: 0.5,
+              width: 0.6,
+              height: 0.3,
+              style: sticker.style.name,
+              label: sticker.tapLabel,
+            ).toTag(),
+          );
+
+          expect(
+            SocialStickerData.ofRegion(region!),
+            equals(
+              SocialStickerData(
+                kind: sticker.kind,
+                prompt: sticker.prompt?.trim(),
+                hashtag: sticker.kind == SocialStickerKind.addYours
+                    ? 'desksetup'
+                    : null,
+                chainRoot: sticker.chainRoot,
+              ),
+            ),
+            reason: sticker.kind.name,
+          );
+        }
+      });
+
+      test('an Add yours points at its chain, or at nothing on its first '
+          'video', () {
+        expect(addYours.tapKind, equals(VideoStickerKind.prompt));
+        expect(addYours.tapTarget, isEmpty);
+        expect(answer.tapTarget, equals('34236:$_pubkey:desk-1'));
+        expect(addYours.tapLabel, equals('Show your desk\ndesksetup'));
+      });
+    });
+
     group('withLyric', () {
       test('drops a blank line of lyrics', () {
         const credit = SocialStickerData(
@@ -554,6 +778,51 @@ void main() {
         expect(credits.hashtags, equals({'summer'}));
         expect(credits.mentionPubkeys, equals({_pubkey}));
         expect(credits.links, equals({'https://divine.video/'}));
+        expect(credits.poll, isNull);
+      });
+
+      test('carries the poll of the first poll sticker', () {
+        SocialStickerData poll(String question) => SocialStickerData(
+          kind: SocialStickerKind.poll,
+          pollQuestion: question,
+          pollOptions: const ['Red', 'Blue'],
+        );
+
+        final credits = SocialStickerCredits.of([
+          _layer(poll('First?').toMeta()),
+          _layer(poll('Second?').toMeta()),
+        ]);
+
+        expect(credits.poll?.question, equals('First?'));
+      });
+
+      test("adds an Add yours's hashtag, and nothing for a question or a "
+          'replies sticker', () {
+        final credits = SocialStickerCredits.of([
+          _layer(
+            const SocialStickerData(
+              kind: SocialStickerKind.addYours,
+              prompt: 'Show your desk',
+              hashtag: 'desksetup',
+            ).toMeta(),
+          ),
+          _layer(
+            SocialStickerData.interactive(
+              SocialStickerKind.question,
+              prompt: 'Ask me anything',
+            ).toMeta(),
+          ),
+          _layer(
+            SocialStickerData.interactive(
+              SocialStickerKind.replies,
+              prompt: 'Reply with a video',
+            ).toMeta(),
+          ),
+        ]);
+
+        expect(credits.hashtags, equals({'desksetup'}));
+        expect(credits.mentionPubkeys, isEmpty);
+        expect(credits.poll, isNull);
       });
     });
 

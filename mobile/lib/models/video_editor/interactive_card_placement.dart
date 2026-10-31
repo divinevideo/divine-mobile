@@ -1,0 +1,204 @@
+// ABOUTME: Where an interactive card may stand on a video: above every other
+// ABOUTME: layer, and inside the part of the frame the feed leaves clear.
+
+import 'dart:math' as math;
+import 'dart:ui';
+
+import 'package:openvine/extensions/layer_animation_storage.dart';
+import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:pro_image_editor/core/models/layers/layer_interaction.dart';
+import 'package:pro_image_editor/pro_image_editor.dart';
+
+/// Where an interactive card, a poll, quiz, slider, question, Add yours or
+/// replies sticker, may stand on the video, as fractions of its
+/// frame: below the feed's top bar, left of the buttons down its right side,
+/// above the name and caption under the video, and a little in from the left
+/// edge a tall phone crops. Measured against the feed on a 20:9 phone, where
+/// the top bar ends at 0.14, the buttons start at 0.86 and the name at 0.85,
+/// with some room to spare for phones that crop more. Its answers are buttons
+/// a viewer has to reach.
+const Rect interactiveCardSafeArea = Rect.fromLTRB(0.06, 0.17, 0.82, 0.82);
+
+/// Whether [layer] is an interactive card; see
+/// [SocialStickerKind.isInteractiveCard].
+bool isInteractiveCardLayer(Layer layer) =>
+    SocialStickerData.of(layer)?.kind.isInteractiveCard ?? false;
+
+/// How an interactive card may be handled on the canvas: moved, but not
+/// turned or pinched to another size. Its answers are buttons a viewer taps,
+/// so it stays upright, and only [fitInteractiveCardIntoSafeArea] changes its size.
+LayerInteraction interactiveCardInteraction() =>
+    LayerInteraction(enableRotate: false, enableScale: false);
+
+/// Whether [layer], an interactive card, can still be turned or resized,
+/// or stands turned, as one placed before [interactiveCardInteraction] may.
+bool interactiveCardNeedsLocking(Layer layer) =>
+    layer.interaction.enableRotate ||
+    layer.interaction.enableScale ||
+    layer.rotation != 0;
+
+/// [interactiveCardSafeArea] in an editor body of [bodySize], whose export of
+/// [targetAspectRatio] crops it to its frame.
+Rect interactiveCardSafeRect({
+  required Size bodySize,
+  required double targetAspectRatio,
+}) {
+  final frame = ExportLayerMapping.keptRect(bodySize, targetAspectRatio);
+  return Rect.fromLTRB(
+    frame.left + frame.width * interactiveCardSafeArea.left,
+    frame.top + frame.height * interactiveCardSafeArea.top,
+    frame.left + frame.width * interactiveCardSafeArea.right,
+    frame.top + frame.height * interactiveCardSafeArea.bottom,
+  );
+}
+
+/// Whether [item] is the timeline bar of an interactive card.
+///
+/// The bar keeps the last layer row, the layer drawn in front, and cannot be
+/// dragged out of it.
+bool isInteractiveCardTimelineItem(TimelineOverlayItem item) =>
+    item.type == TimelineOverlayType.layer &&
+    item.layer != null &&
+    isInteractiveCardLayer(item.layer!);
+
+/// Where another layer dropped on the timeline at [row] lands, so it stays
+/// behind the interactive card among [items].
+///
+/// A drop on or past the card's row takes that row and pushes the card down,
+/// so the card keeps the last row. Without a card the drop is unchanged.
+({int row, bool insertAbove}) layerDropBehindInteractiveCard({
+  required Iterable<TimelineOverlayItem> items,
+  required int row,
+  required bool insertAbove,
+}) {
+  final cardRow = items.where(isInteractiveCardTimelineItem).firstOrNull?.row;
+  if (cardRow == null || row < cardRow || (row == cardRow && insertAbove)) {
+    return (row: row, insertAbove: insertAbove);
+  }
+  return (row: cardRow, insertAbove: true);
+}
+
+/// The index of the interactive card among [layers] when another layer
+/// stands above it, or `null` when there is none or it is on top already.
+///
+/// A card stands above every other layer: nothing may cover its buttons, and
+/// the player draws the votes, who joined or the replies over them.
+int? interactiveCardIndexBelowTop(List<Layer> layers) {
+  final index = layers.lastIndexWhere(isInteractiveCardLayer);
+  return index < 0 || index == layers.length - 1 ? null : index;
+}
+
+/// Keeps the interactive card among [editor]'s layers above every other
+/// layer, upright and locked ([interactiveCardInteraction]), and inside
+/// [interactiveCardSafeArea] of an export of [targetAspectRatio].
+///
+/// Each change is made to the current history step rather than adding one, so
+/// undo goes back past the change that moved the card. No history callback
+/// fires for it, so [onChanged] is where a caller saves the history again.
+void keepInteractiveCardInPlace(
+  ProImageEditorState editor, {
+  required double? targetAspectRatio,
+  required VoidCallback onChanged,
+}) {
+  if (_placeInteractiveCard(editor, targetAspectRatio)) onChanged();
+}
+
+/// Whether [keepInteractiveCardInPlace] had anything to correct.
+bool _placeInteractiveCard(
+  ProImageEditorState editor,
+  double? targetAspectRatio,
+) {
+  var changed = false;
+  final layers = editor.activeLayers;
+  final below = interactiveCardIndexBelowTop(layers);
+  if (below != null) {
+    editor.moveLayerListPosition(
+      oldIndex: below,
+      newIndex: layers.length - 1,
+      skipUpdateHistory: true,
+    );
+    changed = true;
+  }
+  final index = layers.lastIndexWhere(isInteractiveCardLayer);
+  if (index < 0) return changed;
+  final layer = layers[index];
+  if (interactiveCardNeedsLocking(layer)) {
+    layer
+      ..interaction = interactiveCardInteraction()
+      ..rotation = 0;
+    editor.replaceLayer(index: index, layer: layer, skipUpdateHistory: true);
+    changed = true;
+  }
+  final size = layer.keyInternalSize.currentContext?.size;
+  if (size == null || targetAspectRatio == null) return changed;
+  final fit = fitInteractiveCardIntoSafeArea(
+    offset: layer.offset,
+    size: size,
+    rotation: layer.rotation,
+    bodySize: editor.sizesManager.bodySize,
+    targetAspectRatio: targetAspectRatio,
+  );
+  if (fit == null) return changed;
+  layer
+    ..offset += fit.shift
+    ..scale *= fit.scale;
+  editor.replaceLayer(index: index, layer: layer, skipUpdateHistory: true);
+  return true;
+}
+
+/// How to move and shrink a card so it lies inside [interactiveCardSafeArea]:
+/// the shift
+/// to add to its offset and the factor to scale it by, or `null` when it lies
+/// inside already.
+///
+/// The card stands [size] big, turned by [rotation], with its centre
+/// [offset] from the centre of an editor body of [bodySize], which an export
+/// of [targetAspectRatio] crops to its frame.
+({Offset shift, double scale})? fitInteractiveCardIntoSafeArea({
+  required Offset offset,
+  required Size size,
+  required double rotation,
+  required Size bodySize,
+  required double targetAspectRatio,
+}) {
+  if (size.isEmpty || bodySize.isEmpty) return null;
+  final safe = interactiveCardSafeRect(
+    bodySize: bodySize,
+    targetAspectRatio: targetAspectRatio,
+  );
+  // The box the turned card covers.
+  final cos = math.cos(rotation).abs();
+  final sin = math.sin(rotation).abs();
+  final bounds = Rect.fromCenter(
+    center: bodySize.center(Offset.zero) + offset,
+    width: size.width * cos + size.height * sin,
+    height: size.width * sin + size.height * cos,
+  );
+  // Half a unit of slack, so a card put on the edge stays where it is.
+  if (safe.inflate(0.5).contains(bounds.topLeft) &&
+      safe.inflate(0.5).contains(bounds.bottomRight)) {
+    return null;
+  }
+  final scale = math.min(
+    1.0,
+    math.min(safe.width / bounds.width, safe.height / bounds.height),
+  );
+  final shrunk = Rect.fromCenter(
+    center: bounds.center,
+    width: bounds.width * scale,
+    height: bounds.height * scale,
+  );
+  double into(double low, double high, double min, double max) => low < min
+      ? min - low
+      : high > max
+      ? max - high
+      : 0;
+  return (
+    shift: Offset(
+      into(shrunk.left, shrunk.right, safe.left, safe.right),
+      into(shrunk.top, shrunk.bottom, safe.top, safe.bottom),
+    ),
+    scale: scale,
+  );
+}

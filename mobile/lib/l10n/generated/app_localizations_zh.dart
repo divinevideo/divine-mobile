@@ -1934,6 +1934,156 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoStickerCountdownReminderBody => '时间到！你保存的倒计时刚刚结束。';
 
   @override
+  String get videoStickerQuizRightAnswer => '正确答案';
+
+  @override
+  String get videoStickerQuizWrongAnswer => '错误答案';
+
+  @override
+  String get videoStickerPollSignInToVote => '登录后才能投票。';
+
+  @override
+  String get videoStickerPollNotReady => '仍在连接中，请稍后再试。';
+
+  @override
+  String get videoStickerPollVoteFailed => '你的投票没有发送成功，请重试。';
+
+  @override
+  String get videoStickerPollVotesArePublic => '投票是公开的，任何人都能看到你的选择。';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 票',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => '点按回答';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return '回答：$question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => '轮到你了';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人已参与',
+      one: '$count 人已参与',
+      zero: '来做第一个吧',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => '看看谁参与了';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return '轮到你了：$prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 条回复',
+      one: '$count 条回复',
+      zero: '还没有回复',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '观看 $count 条视频回复',
+      one: '观看 $count 条视频回复',
+      zero: '视频回复，暂无',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => '登录后才能回答。';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => '回答';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => '你的回答';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return '只有 $name 能看到你的回答。对方可能会在视频里分享它，但不会显示你的名字。';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => '发送';
+
+  @override
+  String get videoStickerQuestionAnswerSent => '回答已发送。';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong => '回答太长，发不出去。';
+
+  @override
+  String get videoStickerQuestionAnswerFailed => '你的回答没有发送成功，请重试。';
+
+  @override
+  String get videoStickerAddYoursSignIn => '登录后才能参与。';
+
+  @override
+  String get videoStickerRepliesManageTitle => '视频回复';
+
+  @override
+  String get videoStickerRepliesEmpty => '还没有视频回复。';
+
+  @override
+  String get videoStickerRepliesLoadFailed => '无法加载回复。';
+
+  @override
+  String get videoStickerRepliesRetry => '再试一次';
+
+  @override
+  String get videoStickerRepliesPin => '置顶';
+
+  @override
+  String get videoStickerRepliesUnpin => '取消置顶';
+
+  @override
+  String get videoStickerRepliesHide => '隐藏';
+
+  @override
+  String get videoStickerRepliesShow => '显示';
+
+  @override
+  String get videoStickerRepliesPinned => '已置顶';
+
+  @override
+  String get videoStickerRepliesHidden => '已隐藏';
+
+  @override
+  String get videoStickerRepliesSaveFailed => '没能保存，再试一次。';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return '观看 $name 的回复';
+  }
+
+  @override
   String get videoStickerLinkSheetBody => '此链接会在 Divine 之外打开。继续之前请先核对网址。';
 
   @override
@@ -4456,6 +4606,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get routeInvalidSoundId => '无效的声音 ID';
 
   @override
+  String get routeInvalidQuestion => '无效的提问链接';
+
+  @override
   String get routeInvalidCategory => '无效的分类';
 
   @override
@@ -5770,6 +5923,19 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dmReelReplyComposerSemanticLabel => '回复此视频';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return '回答了你的问题：$question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return '你回答了：$question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => '用视频回答';
 
   @override
   String get dmReelReplyViewChat => '查看聊天';
@@ -10308,6 +10474,104 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerReplyNote => '观众点一下就能看到你在回复什么。';
+
+  @override
+  String get videoEditorSocialStickerPoll => '投票';
+
+  @override
+  String get videoEditorSocialStickerQuiz => '测验';
+
+  @override
+  String get videoEditorSocialStickerSlider => '滑块';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => '选哪个？';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => '是';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => '否';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine 上线于…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => '你有多饿？';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => '提个问题';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return '答案 $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return '移除答案 $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return '将答案 $number 设为正确答案';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => '添加答案';
+
+  @override
+  String get videoEditorSocialStickerPollNote => '观众投票后即可看到结果。投票是公开的。';
+
+  @override
+  String get videoEditorSocialStickerQuizNote => '勾选正确答案。观众作答后就能看到它。';
+
+  @override
+  String get videoEditorSocialStickerSliderNote => '观众拖动表情来作答，并能看到平均落在哪里。';
+
+  @override
+  String get videoEditorSocialStickerQuestion => '提问';
+
+  @override
+  String get videoEditorSocialStickerAddYours => '轮到你了';
+
+  @override
+  String get videoEditorSocialStickerReplies => '回复';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => '随便问我';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => '晒晒你的桌面布置';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => '用视频回复';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => '你的问题';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint => '想让大家展示什么？';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => '话题标签';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => '标题';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote => '回答会以私信的形式发给你。';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      '观众用自己的视频来回应。每个回应都会带上这个话题标签，并链接回你的视频。';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      '显示谁用视频回复了这个视频。观众点一下就能观看这些回复。';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint => '这个贴纸会留在这个框内，方便观众点按';
 
   @override
   String get videoEditorSocialStickerSoundNote => '音符';

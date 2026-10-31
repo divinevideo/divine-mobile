@@ -43,6 +43,7 @@ import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
@@ -69,6 +70,7 @@ import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player
 import 'package:openvine/widgets/video_editor/draw_editor/paint_editor_stroke_width.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_preview.dart';
 import 'package:openvine/widgets/video_editor/main_editor/hit_test_expander.dart';
+import 'package:openvine/widgets/video_editor/main_editor/interactive_card_safe_area_guide.dart';
 import 'package:openvine/widgets/video_editor/main_editor/playhead_interpolator.dart';
 import 'package:openvine/widgets/video_editor/main_editor/stop_motion_playback_clock.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
@@ -684,6 +686,32 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   ImportStateHistory? _initStateHistory;
 
   bool get _isLayerBeingTransformed => _selectedLayer != null;
+
+  /// Runs [keepInteractiveCardInPlace] once the frame that may have moved
+  /// the video's interactive card is laid out. The history saved for this step was exported before that frame,
+  /// and a draft posted from the library renders from it, so a correction is
+  /// saved too.
+  void _keepInteractiveCardInPlace(
+    VideoEditorScope scope,
+    VideoEditorMainBloc bloc,
+  ) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final editor = scope.editor;
+      if (!mounted || editor == null || _isLayerBeingTransformed) return;
+      keepInteractiveCardInPlace(
+        editor,
+        targetAspectRatio: ref
+            .read(clipManagerProvider)
+            .firstClipOrNull
+            ?.targetAspectRatio
+            .value,
+        onChanged: () => _runDetached(
+          _onStateHistoryChange(scope, bloc),
+          'persist interactive card placement',
+        ),
+      );
+    });
+  }
 
   Layer? _selectedLayer;
 
@@ -3477,6 +3505,20 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                       ),
                       stream: rebuildStream,
                     ),
+                    ReactiveWidget(
+                      builder: (context) {
+                        final selected = editor.selectedLayer;
+                        return InteractiveCardSafeAreaGuide(
+                          isVisible:
+                              editor.isLayerBeingTransformed &&
+                              selected != null &&
+                              isInteractiveCardLayer(selected),
+                          targetAspectRatio: targetAspectRatio.value,
+                          fittedBoxScale: scope.fittedBoxScale,
+                        );
+                      },
+                      stream: rebuildStream,
+                    ),
                   ];
                 },
               ),
@@ -3650,6 +3692,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                 _syncMainCapabilities(scope, bloc);
               },
               onStateHistoryChange: (_, _) {
+                _keepInteractiveCardInPlace(scope, bloc);
                 _runDetached(
                   _onStateHistoryChange(scope, bloc),
                   'persist editor history',
@@ -3749,6 +3792,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
                 _wasOverRemoveArea = false;
                 bloc.add(const VideoEditorLayerInteractionEnded());
+                _keepInteractiveCardInPlace(scope, bloc);
               },
               onAddLayer: (layer) {
                 Log.debug(
@@ -3757,6 +3801,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   category: LogCategory.video,
                 );
                 _syncMainCapabilities(scope, bloc);
+                _keepInteractiveCardInPlace(scope, bloc);
               },
               onRemoveLayer: (layer) {
                 Log.debug(

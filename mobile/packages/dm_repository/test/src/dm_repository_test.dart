@@ -1521,6 +1521,60 @@ void main() {
         expect(rumorEvent.content, contains('nostr:nevent1'));
       });
 
+      test('sendSharedVideo carries its extra tags after the citation, or '
+          'on the plain message without one', () async {
+        stubSendRumor(
+          (rumorEvent, recipientPubkey) async =>
+              const NIP17SendResult.failure('relay unavailable'),
+        );
+
+        final repository = createRepository();
+        const author =
+            'cccccccccccccccccccccccccccccccc'
+            'cccccccccccccccccccccccccccccccc';
+        const question = ['divine:question', 'Ask me anything'];
+
+        final _ = await repository.sendSharedVideo(
+          recipientPubkey: _validPubkeyB,
+          baseContent: 'Pizza',
+          videoKind: 34236,
+          videoAuthorPubkey: author,
+          videoDTag: 'abc',
+          additionalTags: const [question],
+        );
+        // No d-tag and no id: no citation can be built.
+        final _ = await repository.sendSharedVideo(
+          recipientPubkey: _validPubkeyB,
+          baseContent: 'Pasta',
+          videoKind: 34236,
+          videoAuthorPubkey: author,
+          additionalTags: const [question],
+        );
+
+        final rumors = verify(
+          () => mockMessageService.sendRumor(
+            rumorEvent: captureAny(named: 'rumorEvent'),
+            recipientPubkey: _validPubkeyB,
+            targetRelays: any(named: 'targetRelays'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
+          ),
+        ).captured.cast<Event>();
+
+        expect(
+          additionalTagsFromRumor(rumors.first, _validPubkeyB),
+          containsAllInOrder([
+            ['q', '34236:$author:abc', 'wss://relay.divine.video'],
+            question,
+          ]),
+        );
+        expect(
+          additionalTagsFromRumor(rumors.last, _validPubkeyB),
+          contains(equals(question)),
+        );
+      });
+
       test('persists message and conversation on success', () async {
         stubSendRumor(
           (_, recipientPubkey) async => NIP17SendResult.success(

@@ -2011,6 +2011,161 @@ class AppLocalizationsId extends AppLocalizations {
       'Sudah waktunya! Hitung mundur yang kamu simpan baru saja selesai.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Jawaban benar';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Jawaban salah';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Masuk untuk memilih.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Masih menyambungkan. Coba lagi sebentar lagi.';
+
+  @override
+  String get videoStickerPollVoteFailed => 'Suaramu tidak terkirim. Coba lagi.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Suara bersifat publik. Siapa pun bisa melihat pilihanmu.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count suara',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'Ketuk untuk menjawab';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'Jawab: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'Giliranmu';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count orang ikut',
+      one: '$count orang ikut',
+      zero: 'Jadilah yang pertama',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel =>
+      'Lihat siapa saja yang ikut';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'Giliranmu: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count balasan',
+      one: '$count balasan',
+      zero: 'Belum ada balasan',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Tonton $count balasan video',
+      one: 'Tonton $count balasan video',
+      zero: 'Balasan video, belum ada',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'Masuk untuk menjawab.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'Jawab';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'Jawabanmu';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'Hanya $name yang melihat jawabanmu. Mereka mungkin membagikannya di video, tanpa namamu.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'Kirim';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'Jawaban terkirim.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'Jawaban itu terlalu panjang untuk dikirim.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'Jawabanmu tidak terkirim. Coba lagi.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'Masuk untuk ikutan.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'Balasan video';
+
+  @override
+  String get videoStickerRepliesEmpty => 'Belum ada balasan video.';
+
+  @override
+  String get videoStickerRepliesLoadFailed => 'Balasan gagal dimuat.';
+
+  @override
+  String get videoStickerRepliesRetry => 'Coba lagi';
+
+  @override
+  String get videoStickerRepliesPin => 'Sematkan';
+
+  @override
+  String get videoStickerRepliesUnpin => 'Lepas sematan';
+
+  @override
+  String get videoStickerRepliesHide => 'Sembunyikan';
+
+  @override
+  String get videoStickerRepliesShow => 'Tampilkan';
+
+  @override
+  String get videoStickerRepliesPinned => 'Disematkan';
+
+  @override
+  String get videoStickerRepliesHidden => 'Disembunyikan';
+
+  @override
+  String get videoStickerRepliesSaveFailed => 'Gagal menyimpan. Coba lagi.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'Tonton balasan dari $name';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Tautan ini terbuka di luar Divine. Periksa alamatnya sebelum kamu lanjut.';
 
@@ -4690,6 +4845,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get routeInvalidSoundId => 'ID suara tidak valid';
 
   @override
+  String get routeInvalidQuestion => 'Tautan pertanyaan tidak valid';
+
+  @override
   String get routeInvalidCategory => 'Kategori tidak valid';
 
   @override
@@ -6063,6 +6221,19 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get dmReelReplyComposerSemanticLabel => 'Balas reel ini';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'Menjawab pertanyaanmu: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'Kamu menjawab: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'Jawab dengan video';
 
   @override
   String get dmReelReplyViewChat => 'Lihat obrolan';
@@ -10863,6 +11034,112 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Penonton mengetuknya untuk melihat apa yang kamu balas.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Polling';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Kuis';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Slider';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Yang mana?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Ya';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Tidak';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine diluncurkan tahun…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'Seberapa lapar kamu?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Ajukan pertanyaan';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Jawaban $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Hapus jawaban $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Tandai jawaban $number sebagai yang benar';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Tambah jawaban';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Penonton melihat hasilnya setelah memilih. Suara bersifat publik.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Centang jawaban yang benar. Penonton melihatnya setelah memilih jawaban.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Penonton menggeser emoji untuk menjawab dan melihat posisi rata-ratanya.';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'Pertanyaan';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'Giliranmu';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'Balasan';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => 'Tanya apa saja';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => 'Pamerin setup mejamu';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'Balas dengan video';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'Pertanyaanmu';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      'Apa yang harus ditunjukkan orang-orang?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'Judul';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'Jawaban masuk ke kamu sebagai pesan pribadi.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'Penonton menjawab dengan video mereka sendiri. Setiap jawaban mendapat hashtag ini dan tertaut ke videomu.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'Menampilkan siapa saja yang membalas video ini dengan video. Penonton mengetuknya untuk menonton balasannya.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'Stiker ini tetap di kotak ini agar penonton bisa mengetuknya';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Not';

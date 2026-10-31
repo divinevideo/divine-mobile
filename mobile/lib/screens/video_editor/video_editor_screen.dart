@@ -26,6 +26,7 @@ import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bl
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_take_placement.dart';
+import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/di/loop_alignment_dependencies.dart';
 import 'package:openvine/extensions/clip_keyframes.dart';
@@ -42,10 +43,12 @@ import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/clip_mask_window.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
+import 'package:openvine/providers/add_yours_context_provider.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -819,6 +822,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
           scrollController: scrollController,
           soundCredit: soundCredits.firstOrNull,
           reply: _replySticker,
+          hasInteractiveCard: _hasInteractiveCard,
         ),
       ),
     );
@@ -916,6 +920,22 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         final reply = _replySticker;
         if (reply == null) return;
         initial = reply;
+      case SocialStickerKind.poll ||
+          SocialStickerKind.quiz ||
+          SocialStickerKind.slider:
+        initial = SocialStickerData.poll(kind);
+      case SocialStickerKind.question:
+        initial = SocialStickerData.interactive(
+          kind,
+          prompt: context.l10n.videoEditorSocialStickerQuestionSample,
+        );
+      case SocialStickerKind.addYours:
+        initial = SocialStickerData.interactive(kind);
+      case SocialStickerKind.replies:
+        initial = SocialStickerData.interactive(
+          kind,
+          prompt: context.l10n.videoEditorSocialStickerRepliesSample,
+        );
     }
     final data = await showSocialStickerSheet(
       context,
@@ -935,10 +955,19 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       category: LogCategory.video,
     );
     editor.addLayer(
-      socialStickerWidgetLayer(data, width: _newStickerWidth),
+      socialStickerWidgetLayer(
+        data,
+        width: data.kind.isInteractiveCard
+            ? _interactiveCardWidth
+            : _newStickerWidth,
+      ),
       blockSelectLayer: true,
     );
   }
+
+  /// Whether the video has an interactive card, of which it carries one.
+  bool get _hasInteractiveCard =>
+      (_editor?.activeLayers ?? const <Layer>[]).any(isInteractiveCardLayer);
 
   /// The sticker showing what the video replies to, from the snapshot taken
   /// when the reply camera was opened, or `null` when it replies to nothing,
@@ -956,8 +985,15 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         : null;
   }
 
-  /// Places the reply sticker on a video recorded as a reply, once, when its
-  /// editing starts; the creator can move, restyle or remove it from there.
+  /// Places the sticker of what the video answers, once, when its editing
+  /// starts: the reply sticker on a video recorded as a reply, or the Add
+  /// yours it answers, whose chain the video then joins. The creator can
+  /// move, restyle or remove it from there.
+  void _placeContextStickers() {
+    _placeReplySticker();
+    _placeAddYoursSticker();
+  }
+
   void _placeReplySticker() {
     final sticker = _replySticker;
     final editor = _editor;
@@ -969,6 +1005,39 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     );
     editor.addLayer(
       socialStickerWidgetLayer(sticker, width: _replyStickerWidth),
+      blockSelectLayer: true,
+    );
+  }
+
+  /// Places the Add yours the video answers, pointing at the same chain, and
+  /// names the chain's first video as what inspired it, which is how the
+  /// chain counts the answer.
+  void _placeAddYoursSticker() {
+    final addYours = ref.read(addYoursContextProvider);
+    final editor = _editor;
+    if (addYours == null || editor == null || !mounted) return;
+    final sticker = SocialStickerData(
+      kind: SocialStickerKind.addYours,
+      prompt: addYours.prompt,
+      hashtag: addYours.hashtag,
+      chainRoot: addYours.chainRoot,
+    );
+    if (!sticker.isComplete) return;
+    Log.debug(
+      'Placing the Add yours sticker',
+      name: 'VideoEditorScreen',
+      category: LogCategory.video,
+    );
+    ref
+        .read(videoEditorProvider.notifier)
+        .setInspiredByVideo(
+          InspiredByInfo(
+            addressableId: addYours.chainRoot,
+            relayUrl: AppConstants.defaultRelayUrl,
+          ),
+        );
+    editor.addLayer(
+      socialStickerWidgetLayer(sticker, width: _interactiveCardWidth),
       blockSelectLayer: true,
     );
   }
@@ -985,6 +1054,17 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// at most 300, converted to render coordinates.
   double get _newStickerWidth =>
       min(300, (_bodySizeNotifier.value.width / 3) / _fittedBoxScale);
+
+  /// How wide a new interactive card starts: three fifths of the video as it
+  /// shows, at most 400, so its buttons can be tapped in the player and
+  /// it fits the part of the video the feed leaves clear. The video can be
+  /// narrower than the canvas body, as it is beside the timeline.
+  double get _interactiveCardWidth {
+    final body = _bodySizeNotifier.value;
+    final aspectRatio = _clip?.targetAspectRatio.value ?? 9 / 16;
+    final videoWidth = min(body.width, body.height * aspectRatio);
+    return min(400, (videoWidth * 3 / 5) / _fittedBoxScale);
+  }
 
   /// How wide a reply sticker starts: two thirds of the screen, at most 400,
   /// so its comment reads without a pinch.
@@ -1554,7 +1634,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               },
               onAddStickers: () =>
                   _runDetached(_addStickers(), 'open sticker picker'),
-              onFreshSessionReady: _placeReplySticker,
+              onFreshSessionReady: _placeContextStickers,
               onAddAudioVisualizer: () => _runDetached(
                 _addAudioVisualizer(
                   context.read<VideoEditorAudioVisualizerCubit>(),

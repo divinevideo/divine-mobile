@@ -1,5 +1,5 @@
-// ABOUTME: A social sticker (mention, hashtag, link, sound credit, countdown or
-// ABOUTME: reply), kept in its layer's meta, and what they add to the post.
+// ABOUTME: A social or interactive sticker (mention, hashtag, link, sound, poll,
+// ABOUTME: question and the like), kept in its layer's meta, and what it adds.
 
 import 'package:characters/characters.dart';
 import 'package:equatable/equatable.dart';
@@ -14,6 +14,7 @@ import 'package:models/models.dart'
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/sticker_text_glyphs.dart';
 import 'package:openvine/models/video_reply_context.dart';
+import 'package:poll_repository/poll_repository.dart' show Poll;
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// The [infoStickerLayerKindKey] value of a social sticker layer.
@@ -40,18 +41,59 @@ enum SocialStickerKind {
 
   /// The comment or video this video replies to: who wrote it and what they
   /// wrote, or the video's thumbnail. A tap opens it.
-  reply;
+  reply,
+
+  /// A question with two to four answers viewers vote on, and see the
+  /// results of once they did.
+  poll,
+
+  /// A poll with one right answer, which viewers see once they answered.
+  quiz,
+
+  /// A question viewers rate by dragging an emoji along a slider; they see
+  /// where everyone put it on average.
+  slider,
+
+  /// A question such as "Ask me anything" viewers answer in a private
+  /// message to the creator.
+  question,
+
+  /// A prompt such as "Show your desk setup" viewers answer with a video of
+  /// their own, which joins its chain by the hashtag the answers share. The
+  /// Divine player shows who joined.
+  addYours,
+
+  /// The video's video replies: the Divine player shows their avatars, how
+  /// many there are and the latest ones' thumbnails, and a tap opens them.
+  replies;
+
+  /// Whether viewers vote on the sticker.
+  bool get isPoll => this == poll || this == quiz || this == slider;
+
+  /// Whether the sticker is a card viewers act on in the player: a vote, a
+  /// question, an Add yours or the replies. A video carries one, which stays
+  /// clear of the feed's buttons and caption and above every other layer.
+  bool get isInteractiveCard =>
+      isPoll || this == question || this == addYours || this == replies;
 
   /// The looks a sticker of this kind can take, the default first.
   ///
   /// A countdown takes only solid looks, so the player's copy can hide its
-  /// date in the frames; a reply's card takes a light or a dark one.
+  /// date in the frames; the interactive cards take their one white card,
+  /// which the copy draws the votes, who joined or the replies on over the
+  /// frames; a reply's card takes a light or a dark one.
   List<InfoStickerStyle> get styles => switch (this) {
     countdown => const [
       InfoStickerStyle.light,
       InfoStickerStyle.brand,
       InfoStickerStyle.highlight,
     ],
+    poll ||
+    quiz ||
+    slider ||
+    question ||
+    addYours ||
+    replies => const [InfoStickerStyle.light],
     reply => const [InfoStickerStyle.light, InfoStickerStyle.dark],
     _ => InfoStickerStyle.pills,
   };
@@ -104,7 +146,60 @@ class SocialStickerData extends Equatable {
     this.replyText,
     this.replyImageUrl,
     this.replyToVideo = false,
+    this.pollQuestion,
+    this.pollOptions = const [],
+    this.quizAnswer,
+    this.sliderEmoji,
+    this.prompt,
+    this.chainRoot,
   });
+
+  /// A new poll or quiz of [kind] with two empty answers, or a new slider
+  /// rated with the first of [sliderEmojis].
+  factory SocialStickerData.poll(SocialStickerKind kind) => SocialStickerData(
+    kind: kind,
+    pollOptions: kind == SocialStickerKind.slider ? const [] : const ['', ''],
+    quizAnswer: kind == SocialStickerKind.quiz ? 0 : null,
+    sliderEmoji: kind == SocialStickerKind.slider ? sliderEmojis.first : null,
+  );
+
+  /// The emoji a slider can be rated with.
+  static const List<String> sliderEmojis = [
+    '😍',
+    '😂',
+    '😋',
+    '🔥',
+    '😮',
+    '😢',
+    '👏',
+    '💯',
+  ];
+
+  /// The most characters a poll's question can have.
+  static const int maxPollQuestionLength = 80;
+
+  /// The most characters an answer of a poll can have.
+  static const int maxPollOptionLength = 32;
+
+  /// A new question, Add yours or replies sticker asking or titled [prompt],
+  /// which for an Add yours shares [hashtag] among its answers.
+  factory SocialStickerData.interactive(
+    SocialStickerKind kind, {
+    String? prompt,
+    String? hashtag,
+  }) => SocialStickerData(kind: kind, prompt: prompt, hashtag: hashtag);
+
+  /// The most characters a question, an Add yours prompt or a replies
+  /// sticker's title can have.
+  static const int maxPromptLength = 80;
+
+  /// [prompt] as the hashtag an Add yours starts with: its words run
+  /// together, as a video's hashtag is written, or `null` when that makes no
+  /// hashtag.
+  static String? hashtagForPrompt(String prompt) =>
+      HashtagExtractor.normalizeVideoHashtag(
+        prompt.replaceAll(RegExp(r'[^\p{L}\p{N}]+', unicode: true), ''),
+      );
 
   /// A mention of [profile] in [style], by their handle or, without one, by
   /// their name.
@@ -309,6 +404,28 @@ class SocialStickerData extends Equatable {
   /// Whether a reply replies to a video rather than to a comment.
   final bool replyToVideo;
 
+  /// The question a poll, quiz or slider asks.
+  final String? pollQuestion;
+
+  /// The answers of a poll or a quiz, in the order they show; a new answer
+  /// starts empty.
+  final List<String> pollOptions;
+
+  /// The index among [pollOptions] of a quiz's right answer.
+  final int? quizAnswer;
+
+  /// The emoji a slider is rated with.
+  final String? sliderEmoji;
+
+  /// What a question asks, what an Add yours prompts its answers to show, or
+  /// the title of a replies sticker.
+  final String? prompt;
+
+  /// The address of the first video of the chain an Add yours answers, or
+  /// `null` when this video starts its chain. An answer carries the same
+  /// sticker with the same chain, so every video in it counts the others.
+  final String? chainRoot;
+
   /// The domain of a link's address, without `www.`, as the sticker shows
   /// it when it has no title.
   String? get linkDomain {
@@ -335,6 +452,10 @@ class SocialStickerData extends Equatable {
     lyric,
     countdownTitle,
     replyText,
+    pollQuestion,
+    ...pollOptions,
+    sliderEmoji,
+    prompt,
   ].nonNulls.join('\n');
 
   /// Whether the sticker's text is in the sticker font but for its emoji,
@@ -379,7 +500,64 @@ class SocialStickerData extends Equatable {
     SocialStickerKind.reply =>
       NostrHexUtils.isValidEventId(replyEventId?.toLowerCase() ?? '') &&
           (name?.isNotEmpty ?? false),
+    SocialStickerKind.poll ||
+    SocialStickerKind.quiz ||
+    SocialStickerKind.slider => _isCompletePoll,
+    SocialStickerKind.question || SocialStickerKind.replies => _hasPrompt,
+    SocialStickerKind.addYours =>
+      _hasPrompt &&
+          HashtagExtractor.normalizeVideoHashtag(hashtag ?? '') != null,
   };
+
+  /// Whether a question, Add yours or replies sticker has what it asks or is
+  /// titled, on one line no longer than [maxPromptLength].
+  bool get _hasPrompt {
+    final text = prompt?.trim() ?? '';
+    return text.isNotEmpty &&
+        !text.contains('\n') &&
+        text.characters.length <= maxPromptLength;
+  }
+
+  /// Whether a poll, quiz or slider has its question and what there is to
+  /// pick, a quiz its right answer, and all of it fits a sticker tag, whose
+  /// label holds the question and each answer on a line of its own.
+  bool get _isCompletePoll {
+    if (pollQuestion?.trim().isEmpty ?? true) return false;
+    if ([
+      pollQuestion!,
+      ...pollOptions,
+    ].any((text) => text.trim().contains('\n'))) {
+      return false;
+    }
+    final label = tapLabel ?? '';
+    if (label.length > VideoStickerRegion.maxLabelLength) return false;
+    if (kind == SocialStickerKind.slider) {
+      return sliderEmoji?.isNotEmpty ?? false;
+    }
+    final answers = pollOptions.map((option) => option.trim()).toList();
+    final quizAnswer = this.quizAnswer;
+    return answers.length >= Poll.minOptions &&
+        answers.length <= Poll.maxOptions &&
+        answers.every((answer) => answer.isNotEmpty) &&
+        (kind != SocialStickerKind.quiz ||
+            (quizAnswer != null &&
+                quizAnswer >= 0 &&
+                quizAnswer < answers.length));
+  }
+
+  /// The poll a poll, quiz or slider is published as, or `null` for any other
+  /// sticker or one that is not complete.
+  Poll? toPoll() {
+    if (!kind.isPoll || !isComplete) return null;
+    final question = pollQuestion!.trim();
+    return kind == SocialStickerKind.slider
+        ? Poll.slider(question: question, emoji: sliderEmoji!)
+        : Poll.choice(
+            question: question,
+            answers: [for (final option in pollOptions) option.trim()],
+            answerIndex: kind == SocialStickerKind.quiz ? quizAnswer : null,
+          );
+  }
 
   /// What a tap on the sticker opens on the published video.
   VideoStickerKind get tapKind => switch (kind) {
@@ -389,12 +567,21 @@ class SocialStickerData extends Equatable {
     SocialStickerKind.soundCredit => VideoStickerKind.sound,
     SocialStickerKind.countdown => VideoStickerKind.countdown,
     SocialStickerKind.reply => VideoStickerKind.reply,
+    SocialStickerKind.poll => VideoStickerKind.poll,
+    SocialStickerKind.quiz => VideoStickerKind.quiz,
+    SocialStickerKind.slider => VideoStickerKind.slider,
+    SocialStickerKind.question => VideoStickerKind.question,
+    SocialStickerKind.addYours => VideoStickerKind.prompt,
+    SocialStickerKind.replies => VideoStickerKind.replies,
   };
 
   /// The web address, hex pubkey or hashtag a tap on the published sticker
   /// opens; for a sound credit its sound's page id, or empty when it has
   /// none and opens the video's own sound; a countdown's end in Unix seconds;
-  /// a reply's event id; `null` when it is not complete.
+  /// a reply's event id; empty for a poll, quiz or slider, whose poll gets its
+  /// id only when it is published; an Add yours's [chainRoot], or empty when
+  /// this video starts its chain; empty for a question or a replies sticker,
+  /// which act on the video itself; `null` when it is not complete.
   String? get tapTarget => switch (kind) {
     SocialStickerKind.link => normalizeLinkUrl(url ?? ''),
     SocialStickerKind.mention =>
@@ -408,12 +595,21 @@ class SocialStickerData extends Equatable {
           ? '${countdownEnd!.millisecondsSinceEpoch ~/ Duration.millisecondsPerSecond}'
           : null,
     SocialStickerKind.reply => isComplete ? replyEventId!.toLowerCase() : null,
+    SocialStickerKind.poll ||
+    SocialStickerKind.quiz ||
+    SocialStickerKind.slider ||
+    SocialStickerKind.question ||
+    SocialStickerKind.replies => isComplete ? '' : null,
+    SocialStickerKind.addYours => isComplete ? chainRoot ?? '' : null,
   };
 
   /// The text the sticker shows, without its `@` or `#`, so the published
   /// video can draw it again over itself: for a sound credit its title,
   /// artist and line of lyrics, one per line; for a reply the name and
-  /// comment it shows, one per line.
+  /// comment it shows, one per line; for a poll or a quiz its question and
+  /// answers, and for a slider its question and emoji, one per line; what a
+  /// question asks; an Add yours's prompt and hashtag, one per line; the
+  /// title of a replies sticker.
   String? get tapLabel => switch (kind) {
     SocialStickerKind.link => linkTitle ?? linkDomain,
     SocialStickerKind.mention => name,
@@ -425,6 +621,19 @@ class SocialStickerData extends Equatable {
     ].join('\n').trimRight(),
     SocialStickerKind.countdown => countdownTitle?.trim(),
     SocialStickerKind.reply => [?name, ?replyText].join('\n'),
+    SocialStickerKind.poll || SocialStickerKind.quiz => [
+      pollQuestion?.trim() ?? '',
+      for (final option in pollOptions) option.trim(),
+    ].join('\n'),
+    SocialStickerKind.slider => [
+      pollQuestion?.trim() ?? '',
+      sliderEmoji ?? '',
+    ].join('\n'),
+    SocialStickerKind.question || SocialStickerKind.replies => prompt?.trim(),
+    SocialStickerKind.addYours => [
+      prompt?.trim() ?? '',
+      HashtagExtractor.normalizeVideoHashtag(hashtag ?? '') ?? '',
+    ].join('\n'),
   };
 
   /// Whether the sound credit [region] publishes credits [sound], read from
@@ -451,6 +660,12 @@ class SocialStickerData extends Equatable {
       VideoStickerKind.hashtag => SocialStickerKind.hashtag,
       VideoStickerKind.sound => SocialStickerKind.soundCredit,
       VideoStickerKind.countdown => SocialStickerKind.countdown,
+      VideoStickerKind.poll => SocialStickerKind.poll,
+      VideoStickerKind.quiz => SocialStickerKind.quiz,
+      VideoStickerKind.slider => SocialStickerKind.slider,
+      VideoStickerKind.question => SocialStickerKind.question,
+      VideoStickerKind.prompt => SocialStickerKind.addYours,
+      VideoStickerKind.replies => SocialStickerKind.replies,
       VideoStickerKind.place || VideoStickerKind.reply => null,
     };
     final style = InfoStickerStyle.values.asNameMap()[region.style];
@@ -487,6 +702,31 @@ class SocialStickerData extends Equatable {
         style: style,
         countdownTitle: label,
         countdownEnd: region.countdownEnd,
+      ),
+      VideoStickerKind.poll || VideoStickerKind.quiz => SocialStickerData(
+        kind: kind,
+        style: style,
+        pollQuestion: region.labelLines.first,
+        pollOptions: region.labelLines.skip(1).toList(),
+      ),
+      VideoStickerKind.slider => SocialStickerData(
+        kind: kind,
+        style: style,
+        pollQuestion: region.labelLines.first,
+        sliderEmoji: region.labelLines.last,
+      ),
+      VideoStickerKind.question ||
+      VideoStickerKind.replies => SocialStickerData(
+        kind: kind,
+        style: style,
+        prompt: label,
+      ),
+      VideoStickerKind.prompt => SocialStickerData(
+        kind: kind,
+        style: style,
+        prompt: region.labelLines.first,
+        hashtag: region.promptHashtag,
+        chainRoot: region.target.isEmpty ? null : region.target,
       ),
       VideoStickerKind.place || VideoStickerKind.reply => null,
     };
@@ -538,6 +778,12 @@ class SocialStickerData extends Equatable {
     'replyText': ?replyText,
     'replyImageUrl': ?replyImageUrl,
     if (replyToVideo) 'replyToVideo': true,
+    'pollQuestion': ?pollQuestion,
+    if (pollOptions.isNotEmpty) 'pollOptions': pollOptions,
+    'quizAnswer': ?quizAnswer,
+    'sliderEmoji': ?sliderEmoji,
+    'prompt': ?prompt,
+    'chainRoot': ?chainRoot,
   };
 
   /// This sticker with what is given changed.
@@ -554,6 +800,11 @@ class SocialStickerData extends Equatable {
     DateTime? countdownEnd,
     String? localeName,
     bool? use24HourFormat,
+    String? pollQuestion,
+    List<String>? pollOptions,
+    int? quizAnswer,
+    String? sliderEmoji,
+    String? prompt,
   }) => SocialStickerData(
     kind: kind,
     style: style ?? this.style,
@@ -575,6 +826,12 @@ class SocialStickerData extends Equatable {
     replyText: replyText,
     replyImageUrl: replyImageUrl,
     replyToVideo: replyToVideo,
+    pollQuestion: pollQuestion ?? this.pollQuestion,
+    pollOptions: pollOptions ?? this.pollOptions,
+    quizAnswer: quizAnswer ?? this.quizAnswer,
+    sliderEmoji: sliderEmoji ?? this.sliderEmoji,
+    prompt: prompt ?? this.prompt,
+    chainRoot: chainRoot,
   );
 
   /// This sound credit crediting the sound [sound] credits instead: its
@@ -669,6 +926,18 @@ class SocialStickerData extends Equatable {
       replyText: text('replyText'),
       replyImageUrl: text('replyImageUrl'),
       replyToVideo: meta['replyToVideo'] == true,
+      pollQuestion: text('pollQuestion'),
+      pollOptions: switch (meta['pollOptions']) {
+        final List<dynamic> options => options.whereType<String>().toList(),
+        _ => const [],
+      },
+      quizAnswer: switch (meta['quizAnswer']) {
+        final int index => index,
+        _ => null,
+      },
+      sliderEmoji: text('sliderEmoji'),
+      prompt: text('prompt'),
+      chainRoot: text('chainRoot'),
     );
   }
 
@@ -701,11 +970,19 @@ class SocialStickerData extends Equatable {
     replyText,
     replyImageUrl,
     replyToVideo,
+    pollQuestion,
+    pollOptions,
+    quizAnswer,
+    sliderEmoji,
+    prompt,
+    chainRoot,
   ];
 }
 
 /// What the social stickers on a video add to its post: a `t` tag for each
-/// hashtag, a mention `p` tag for each person and an `r` tag for each link.
+/// hashtag, an Add yours's included, a mention `p` tag for each person, an
+/// `r` tag for each link, and the poll its poll, quiz or slider is published
+/// as.
 ///
 /// Read from the layers whenever it is needed rather than kept on the draft,
 /// so a sticker deleted from the video takes its tag with it.
@@ -714,6 +991,7 @@ class SocialStickerCredits extends Equatable {
     this.hashtags = const {},
     this.mentionPubkeys = const {},
     this.links = const {},
+    this.poll,
   });
 
   /// The credits of the social stickers among [layers].
@@ -721,12 +999,14 @@ class SocialStickerCredits extends Equatable {
     final hashtags = <String>{};
     final mentionPubkeys = <String>{};
     final links = <String>{};
+    Poll? poll;
     for (final sticker in layers.map(SocialStickerData.of).nonNulls) {
       if (!sticker.isComplete) continue;
       switch (sticker.kind) {
         case SocialStickerKind.mention:
           mentionPubkeys.add(sticker.pubkey!.toLowerCase());
-        case SocialStickerKind.hashtag:
+        case SocialStickerKind.hashtag || SocialStickerKind.addYours:
+          // An Add yours's answers find each other by its hashtag.
           hashtags.add(
             HashtagExtractor.normalizeVideoHashtag(sticker.hashtag!)!,
           );
@@ -739,12 +1019,22 @@ class SocialStickerCredits extends Equatable {
           // A countdown adds nothing, and what a reply replies to is in the
           // event through the reply's own tags.
           break;
+        case SocialStickerKind.poll ||
+            SocialStickerKind.quiz ||
+            SocialStickerKind.slider:
+          // A video carries one; the editor offers no second.
+          poll ??= sticker.toPoll();
+        case SocialStickerKind.question || SocialStickerKind.replies:
+          // Answered in private messages, or made of the video's own
+          // replies: nothing to add to the post.
+          break;
       }
     }
     return SocialStickerCredits(
       hashtags: hashtags,
       mentionPubkeys: mentionPubkeys,
       links: links,
+      poll: poll,
     );
   }
 
@@ -757,11 +1047,15 @@ class SocialStickerCredits extends Equatable {
   /// The web addresses of the link stickers.
   final Set<String> links;
 
+  /// The poll the video's poll, quiz or slider is published as, before it is
+  /// signed.
+  final Poll? poll;
+
   /// [tags] after the stickers' hashtags, as many as a video can carry. The
   /// stickers' come first: they are drawn into the video, the others are not.
   List<String> hashtagsWith(Iterable<String> tags) =>
       HashtagExtractor.normalizeVideoHashtags([...hashtags, ...tags]);
 
   @override
-  List<Object?> get props => [hashtags, mentionPubkeys, links];
+  List<Object?> get props => [hashtags, mentionPubkeys, links, poll];
 }

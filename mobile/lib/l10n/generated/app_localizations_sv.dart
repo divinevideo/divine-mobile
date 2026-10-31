@@ -2076,6 +2076,164 @@ class AppLocalizationsSv extends AppLocalizations {
       'Nu är det dags! Nedräkningen du sparade har precis tagit slut.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Rätt svar';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Fel svar';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Logga in för att rösta.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Ansluter fortfarande. Försök igen om en stund.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Din röst gick inte fram. Försök igen.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Röster är offentliga. Alla kan se vad du valde.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count röster',
+      one: '1 röst',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'Tryck för att svara';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'Svara: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'Din tur';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count är med',
+      one: '$count är med',
+      zero: 'Bli först',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'Se vilka som är med';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'Din tur: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count svar',
+      one: '$count svar',
+      zero: 'Inga svar än',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Titta på $count videosvar',
+      one: 'Titta på $count videosvar',
+      zero: 'Videosvar, inga än',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'Logga in för att svara.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'Svara';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'Ditt svar';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'Bara $name ser ditt svar. Det kan delas i en video, utan ditt namn.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'Skicka';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'Svar skickat.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'Svaret är för långt för att skickas.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'Ditt svar gick inte fram. Försök igen.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'Logga in för att vara med.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'Videosvar';
+
+  @override
+  String get videoStickerRepliesEmpty => 'Inga videosvar än.';
+
+  @override
+  String get videoStickerRepliesLoadFailed =>
+      'Det gick inte att läsa in svaren.';
+
+  @override
+  String get videoStickerRepliesRetry => 'Försök igen';
+
+  @override
+  String get videoStickerRepliesPin => 'Fäst';
+
+  @override
+  String get videoStickerRepliesUnpin => 'Lossa';
+
+  @override
+  String get videoStickerRepliesHide => 'Dölj';
+
+  @override
+  String get videoStickerRepliesShow => 'Visa';
+
+  @override
+  String get videoStickerRepliesPinned => 'Fäst';
+
+  @override
+  String get videoStickerRepliesHidden => 'Dold';
+
+  @override
+  String get videoStickerRepliesSaveFailed =>
+      'Det gick inte att spara. Försök igen.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'Titta på svaret från $name';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Länken öppnas utanför Divine. Kolla adressen innan du fortsätter.';
 
@@ -4760,6 +4918,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get routeInvalidSoundId => 'Ogiltigt ljud-ID';
 
   @override
+  String get routeInvalidQuestion => 'Ogiltig frågelänk';
+
+  @override
   String get routeInvalidCategory => 'Ogiltig kategori';
 
   @override
@@ -6134,6 +6295,19 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get dmReelReplyComposerSemanticLabel => 'Svara på den här reelen';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'Svarade på din fråga: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'Du svarade: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'Svara med en video';
 
   @override
   String get dmReelReplyViewChat => 'Visa chatt';
@@ -10961,6 +11135,113 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Tittare trycker på den för att se vad du svarar på.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Omröstning';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Quiz';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Reglage';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Vilken?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Ja';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Nej';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine lanserades år…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'Hur hungrig är du?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Ställ en fråga';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Svar $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Ta bort svar $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Markera svar $number som rätt';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Lägg till svar';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Tittarna ser resultatet när de har röstat. Röster är offentliga.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Bocka för rätt svar. Tittarna ser det när de har valt ett.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Tittarna drar emojin för att svara och ser var den hamnar i snitt.';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'Fråga';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'Din tur';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'Svar';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample =>
+      'Fråga mig vad som helst';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample =>
+      'Visa din skrivbordssetup';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'Svara med en video';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'Din fråga';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint => 'Vad ska folk visa?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'Hashtagg';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'Titel';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'Svaren kommer till dig som privata meddelanden.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'Tittarna svarar med en egen video. Varje svar får den här hashtaggen och länkar tillbaka till din video.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'Visar vilka som har svarat på den här videon med en video. Tittarna trycker på den för att se svaren.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'Klistermärket stannar i den här rutan så att tittarna kan trycka på det';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Not';

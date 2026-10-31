@@ -1,5 +1,5 @@
-// ABOUTME: A playing video's tappable stickers (link, mention, hashtag, sound,
-// ABOUTME: place, countdown, reply), drawn sharp over its frames as buttons.
+// ABOUTME: A playing video's tappable stickers (link, mention, sound, place,
+// ABOUTME: countdown, reply, poll, question and the like), drawn over its frames.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -24,7 +24,9 @@ import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_navigation.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_feed_item/countdown_sticker_reminder.dart';
+import 'package:openvine/widgets/video_feed_item/interactive_sticker_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/link_sticker_sheet.dart';
+import 'package:openvine/widgets/video_feed_item/poll_sticker_overlay.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Opens what a tapped sticker on [video] points to; replaced in tests.
@@ -36,7 +38,10 @@ typedef VideoStickerOpener = void Function(
 
 /// Opens what [region] on [video] points to: a profile, a hashtag's feed, a
 /// sound, a link through [openVideoLink], a place in a map app, or what the
-/// video replies to; a countdown sets or removes a reminder instead.
+/// video replies to; a countdown sets or removes a reminder instead. A poll,
+/// quiz or slider takes votes on its answers instead; see
+/// [PollStickerOverlay]. A question, Add yours or replies sticker opens what
+/// its own buttons open; see [InteractiveStickerOverlay].
 void openVideoSticker(
   BuildContext context,
   VideoStickerRegion region,
@@ -106,6 +111,14 @@ void openVideoSticker(
         logName: 'VideoStickerTapAreas',
         category: LogCategory.ui,
       );
+    case VideoStickerKind.poll ||
+        VideoStickerKind.quiz ||
+        VideoStickerKind.slider ||
+        VideoStickerKind.question ||
+        VideoStickerKind.prompt ||
+        VideoStickerKind.replies:
+      // Voted on or opened through its own buttons, never as a whole.
+      break;
   }
 }
 
@@ -138,6 +151,12 @@ Rect videoFrameRect(
 /// drawn over them, it is as sharp as the app's own buttons. The buttons let
 /// a tap anywhere else, and a double tap on them, reach the player beneath:
 /// a single tap on a sticker opens it, a double tap still likes the video.
+///
+/// A poll, quiz or slider takes votes on its answers, and a question, Add
+/// yours or replies sticker opens what its buttons open; their buttons keep
+/// the pointer from the player. Each reads its poll, or who joined or
+/// replied, only once the video [isActive]. [onVoteStarted] tells the feed a
+/// viewer started to vote or tapped one.
 class VideoStickerTapAreas extends StatefulWidget {
   const VideoStickerTapAreas({
     required this.video,
@@ -145,6 +164,8 @@ class VideoStickerTapAreas extends StatefulWidget {
     this.shouldPortraitExpand = true,
     this.onOpen = openVideoSticker,
     this.canSetReminders = !kIsWeb,
+    this.isActive = true,
+    this.onVoteStarted,
     super.key,
   });
 
@@ -160,6 +181,12 @@ class VideoStickerTapAreas extends StatefulWidget {
   /// Whether a tap on a countdown can set a reminder, which the web cannot;
   /// without, a countdown is drawn with its time left and is no button.
   final bool canSetReminders;
+
+  /// Whether the video is the one the feed plays, whose polls are read.
+  final bool isActive;
+
+  /// Called when a viewer starts to vote on a poll, quiz or slider.
+  final VoidCallback? onVoteStarted;
 
   @override
   State<VideoStickerTapAreas> createState() => _VideoStickerTapAreasState();
@@ -246,11 +273,18 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
 
   /// Whether a tap on [region] has somewhere to go: a sound sticker that
   /// names no sound of its own needs the video's audio reference, which a
-  /// video whose sound was not published for reuse goes without.
-  bool _opensSomething(VideoStickerRegion region) =>
-      region.kind != VideoStickerKind.sound ||
-      region.target.isNotEmpty ||
-      widget.video.audioEventId != null;
+  /// video whose sound was not published for reuse goes without; a poll,
+  /// quiz or slider needs its poll's id, and a look its copy is drawn in.
+  bool _opensSomething(VideoStickerRegion region) => switch (region.kind) {
+    VideoStickerKind.sound =>
+      region.target.isNotEmpty || widget.video.audioEventId != null,
+    VideoStickerKind.poll || VideoStickerKind.quiz || VideoStickerKind.slider =>
+      region.target.isNotEmpty && SocialStickerData.ofRegion(region) != null,
+    VideoStickerKind.question ||
+    VideoStickerKind.prompt ||
+    VideoStickerKind.replies => SocialStickerData.ofRegion(region) != null,
+    _ => true,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -269,15 +303,24 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
           child: Stack(
             children: [
               for (final region in _shown)
-                _StickerTapArea(
-                  region: region,
-                  frame: frame,
-                  onTap:
-                      region.kind == VideoStickerKind.countdown &&
-                          !widget.canSetReminders
-                      ? null
-                      : () => widget.onOpen(context, region, widget.video),
-                ),
+                if (region.kind.isPoll || _isCard(region.kind))
+                  _CardStickerArea(
+                    region: region,
+                    frame: frame,
+                    video: widget.video,
+                    isActive: widget.isActive,
+                    onVoteStarted: widget.onVoteStarted,
+                  )
+                else
+                  _StickerTapArea(
+                    region: region,
+                    frame: frame,
+                    onTap:
+                        region.kind == VideoStickerKind.countdown &&
+                            !widget.canSetReminders
+                        ? null
+                        : () => widget.onOpen(context, region, widget.video),
+                  ),
             ],
           ),
         );
@@ -389,7 +432,72 @@ class _StickerTapArea extends StatelessWidget {
     VideoStickerKind.countdown =>
       context.l10n.videoStickerCountdownSemanticLabel,
     VideoStickerKind.reply => context.l10n.videoStickerReplySemanticLabel,
+    // Drawn by _CardStickerArea, whose buttons name themselves.
+    VideoStickerKind.poll ||
+    VideoStickerKind.quiz ||
+    VideoStickerKind.slider ||
+    VideoStickerKind.question ||
+    VideoStickerKind.prompt ||
+    VideoStickerKind.replies => region.labelLines.firstOrNull ?? '',
   };
+}
+
+/// Whether a sticker of [kind] is a card with buttons of its own other than
+/// a vote: a question, Add yours or replies.
+bool _isCard(VideoStickerKind kind) =>
+    kind == VideoStickerKind.question ||
+    kind == VideoStickerKind.prompt ||
+    kind == VideoStickerKind.replies;
+
+/// An interactive card drawn over its area, turned with it, at its exact
+/// size: a poll's answers or a question's field are its buttons, and they
+/// have to lie on the same ones in the frames.
+class _CardStickerArea extends StatelessWidget {
+  const _CardStickerArea({
+    required this.region,
+    required this.frame,
+    required this.video,
+    required this.isActive,
+    required this.onVoteStarted,
+  });
+
+  final VideoStickerRegion region;
+  final Rect frame;
+  final VideoEvent video;
+  final bool isActive;
+  final VoidCallback? onVoteStarted;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = SocialStickerData.ofRegion(region);
+    if (data == null) return const SizedBox.shrink();
+    final width = region.width * frame.width;
+    final height = region.height * frame.height;
+    return Positioned(
+      left: frame.left + region.centerX * frame.width - width / 2,
+      top: frame.top + region.centerY * frame.height - height / 2,
+      width: width,
+      height: height,
+      child: Transform.rotate(
+        angle: region.rotation,
+        child: region.kind.isPoll
+            ? PollStickerOverlay(
+                region: region,
+                video: video,
+                data: data,
+                isActive: isActive,
+                onInteraction: onVoteStarted,
+              )
+            : InteractiveStickerOverlay(
+                region: region,
+                video: video,
+                data: data,
+                isActive: isActive,
+                onInteraction: onVoteStarted,
+              ),
+      ),
+    );
+  }
 }
 
 /// A countdown drawn over itself in the frames with the time left in place

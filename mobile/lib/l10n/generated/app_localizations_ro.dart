@@ -2139,6 +2139,168 @@ class AppLocalizationsRo extends AppLocalizations {
       'A venit momentul! Numărătoarea inversă pe care ai salvat-o tocmai s-a încheiat.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Răspuns corect';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Răspuns greșit';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Conectează-te ca să votezi.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Încă se conectează. Încearcă din nou peste o clipă.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Votul tău nu a ajuns. Încearcă din nou.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Voturile sunt publice. Oricine poate vedea ce ai ales.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de voturi',
+      few: '$count voturi',
+      one: '1 vot',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'Atinge ca să răspunzi';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'Răspunde: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'Rândul tău';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de participări',
+      few: '$count participări',
+      one: '$count participare',
+      zero: 'Începe tu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'Vezi cine participă';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'Rândul tău: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de răspunsuri',
+      few: '$count răspunsuri',
+      one: '$count răspuns',
+      zero: 'Încă niciun răspuns',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Vezi $count de răspunsuri video',
+      few: 'Vezi $count răspunsuri video',
+      one: 'Vezi $count răspuns video',
+      zero: 'Răspunsuri video, încă niciunul',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'Conectează-te ca să răspunzi.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'Răspunde';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'Răspunsul tău';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'Doar $name vede răspunsul tău. L-ar putea arăta într-un videoclip, fără numele tău.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'Trimite';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'Răspuns trimis.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'Răspunsul e prea lung ca să fie trimis.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'Răspunsul tău nu a ajuns. Încearcă din nou.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'Conectează-te ca să participi.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'Răspunsuri video';
+
+  @override
+  String get videoStickerRepliesEmpty => 'Încă nu există răspunsuri video.';
+
+  @override
+  String get videoStickerRepliesLoadFailed =>
+      'Nu am putut încărca răspunsurile.';
+
+  @override
+  String get videoStickerRepliesRetry => 'Încearcă din nou';
+
+  @override
+  String get videoStickerRepliesPin => 'Fixează';
+
+  @override
+  String get videoStickerRepliesUnpin => 'Anulează fixarea';
+
+  @override
+  String get videoStickerRepliesHide => 'Ascunde';
+
+  @override
+  String get videoStickerRepliesShow => 'Arată';
+
+  @override
+  String get videoStickerRepliesPinned => 'Fixat';
+
+  @override
+  String get videoStickerRepliesHidden => 'Ascuns';
+
+  @override
+  String get videoStickerRepliesSaveFailed =>
+      'Nu am putut salva. Încearcă din nou.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'Vezi răspunsul de la $name';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Acest link se deschide în afara Divine. Verifică adresa înainte să continui.';
 
@@ -4904,6 +5066,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get routeInvalidSoundId => 'ID de sunet invalid';
 
   @override
+  String get routeInvalidQuestion => 'Link de întrebare invalid';
+
+  @override
   String get routeInvalidCategory => 'Categorie invalidă';
 
   @override
@@ -6306,6 +6471,19 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get dmReelReplyComposerSemanticLabel => 'Răspunde la acest reel';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'A răspuns la întrebarea ta: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'Ai răspuns: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'Răspunde cu un videoclip';
 
   @override
   String get dmReelReplyViewChat => 'Vezi conversația';
@@ -11184,6 +11362,113 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Cei care se uită ating stickerul și văd la ce răspunzi.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Sondaj';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Quiz';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Glisor';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Care?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Da';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Nu';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine s-a lansat în…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'Cât de foame ți-e?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Pune o întrebare';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Răspunsul $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Elimină răspunsul $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Marchează răspunsul $number drept corect';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Adaugă un răspuns';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Cei care se uită văd rezultatele după ce votează. Voturile sunt publice.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Bifează răspunsul corect. Cei care se uită îl văd după ce aleg unul.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Cei care se uită trag emoji-ul ca să răspundă și văd unde ajunge în medie.';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'Întrebare';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'Rândul tău';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'Răspunsuri';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => 'Întreabă-mă orice';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => 'Arată-ți biroul';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample =>
+      'Răspunde cu un videoclip';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'Întrebarea ta';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      'Ce să arate oamenii?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'Titlu';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'Răspunsurile îți vin ca mesaje private.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'Cei care se uită răspund cu un videoclip al lor. Fiecare răspuns primește acest hashtag și trimite înapoi la videoclipul tău.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'Arată cine a răspuns la acest videoclip cu un videoclip. Cei care se uită îl ating ca să vadă răspunsurile.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'Stickerul rămâne în acest chenar ca să-l poată atinge cei care se uită';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Notă';

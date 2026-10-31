@@ -99,7 +99,8 @@ class TimelineOverlayItemTrimmed extends TimelineOverlayEvent {
   List<Object?> get props => [itemId, isStart, startTime, endTime, startOffset];
 }
 
-/// Select an overlay item (shows trim handles).
+/// Select an overlay item (shows trim handles, or a plain frame on a sticker
+/// card).
 class TimelineOverlayItemSelected extends TimelineOverlayEvent {
   const TimelineOverlayItemSelected(this.itemId);
 

@@ -1,6 +1,7 @@
 export 'collaborator_invite_card.dart';
 export 'conversation_app_bar.dart';
 export 'dm_clip_save_scope.dart';
+export 'dm_question_answer_header.dart';
 export 'dm_video_preview_scope.dart';
 export 'empty_conversation.dart';
 export 'encrypted_video_card.dart';

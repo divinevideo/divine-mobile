@@ -2110,6 +2110,166 @@ class AppLocalizationsBg extends AppLocalizations {
       'Време е! Обратното броене, което запази, току-що приключи.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Верен отговор';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Грешен отговор';
+
+  @override
+  String get videoStickerPollSignInToVote =>
+      'Влез в профила си, за да гласуваш.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Все още се свързва. Опитай отново след малко.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Гласът ти не беше изпратен. Опитай отново.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Гласовете са публични. Всеки може да види избора ти.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count гласа',
+      one: '1 глас',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'Докосни, за да отговориш';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'Отговор: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'Твой ред';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count се включиха',
+      one: '$count се включи',
+      zero: 'Започни ти',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'Виж кой се включи';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'Твой ред: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count отговора',
+      one: '$count отговор',
+      zero: 'Още няма отговори',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Гледай $count видео отговора',
+      one: 'Гледай $count видео отговор',
+      zero: 'Видео отговори, още няма',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn =>
+      'Влез в профила си, за да отговориш.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'Отговор';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'Твоят отговор';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'Само $name вижда отговора ти. Може да го сподели във видео, без името ти.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'Изпрати';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'Отговорът е изпратен.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'Този отговор е твърде дълъг, за да се изпрати.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'Отговорът ти не беше изпратен. Опитай отново.';
+
+  @override
+  String get videoStickerAddYoursSignIn =>
+      'Влез в профила си, за да се включиш.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'Видео отговори';
+
+  @override
+  String get videoStickerRepliesEmpty => 'Още няма видео отговори.';
+
+  @override
+  String get videoStickerRepliesLoadFailed =>
+      'Отговорите не можаха да се заредят.';
+
+  @override
+  String get videoStickerRepliesRetry => 'Опитай пак';
+
+  @override
+  String get videoStickerRepliesPin => 'Закачи';
+
+  @override
+  String get videoStickerRepliesUnpin => 'Откачи';
+
+  @override
+  String get videoStickerRepliesHide => 'Скрий';
+
+  @override
+  String get videoStickerRepliesShow => 'Покажи';
+
+  @override
+  String get videoStickerRepliesPinned => 'Закачено';
+
+  @override
+  String get videoStickerRepliesHidden => 'Скрито';
+
+  @override
+  String get videoStickerRepliesSaveFailed => 'Не се запази. Опитай пак.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'Гледай отговора от $name';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Този линк се отваря извън Divine. Провери адреса, преди да продължиш.';
 
@@ -4814,6 +4974,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get routeInvalidSoundId => 'Невалиден идентификатор на звука';
 
   @override
+  String get routeInvalidQuestion => 'Невалиден линк към въпрос';
+
+  @override
   String get routeInvalidCategory => 'Невалидна категория';
 
   @override
@@ -6197,6 +6360,19 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get dmReelReplyComposerSemanticLabel => 'Отговор на този рийл';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'Отговори на въпроса ти: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'Ти отговори: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'Отговори с видео';
 
   @override
   String get dmReelReplyViewChat => 'Виж чата';
@@ -11054,6 +11230,111 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Зрителите го докосват, за да видят на какво отговаряш.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Анкета';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Куиз';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Плъзгач';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Кое?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Да';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Не';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine стартира през…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => 'Колко ти се яде?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Задай въпрос';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Отговор $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Премахни отговор $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Отбележи отговор $number като верен';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Добави отговор';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Зрителите виждат резултатите, след като гласуват. Гласовете са публични.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Отбележи верния отговор. Зрителите го виждат, след като изберат.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Зрителите плъзгат емоджито, за да отговорят, и виждат къде средно попада.';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'Въпрос';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'Твой ред';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'Отговори';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => 'Питай ме каквото искаш';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => 'Покажи бюрото си';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'Отговори с видео';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'Твоят въпрос';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      'Какво да покажат хората?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'Хаштаг';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'Заглавие';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'Отговорите идват при теб като лични съобщения.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'Зрителите отговарят със свое видео. Всеки отговор получава този хаштаг и води обратно към твоето видео.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'Показва видео отговорите на това видео. Зрителите го докосват, за да ги гледат.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'Стикерът стои в тази рамка, за да могат зрителите да го докосват';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Нота';

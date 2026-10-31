@@ -1,5 +1,5 @@
 // ABOUTME: An area of a published video a viewer can tap: a sticker that opens
-// ABOUTME: a web page, profile, hashtag, sound, place or reply, and its tag.
+// ABOUTME: a page, profile, hashtag, sound, place or replies, or takes answers.
 
 import 'dart:math' as math;
 
@@ -8,7 +8,7 @@ import 'package:models/src/audio_event.dart';
 import 'package:models/src/nostr_hex_utils.dart';
 import 'package:text_sanitizer/text_sanitizer.dart';
 
-/// What a tappable sticker on a video opens.
+/// What a tappable sticker on a video opens or takes a vote on.
 enum VideoStickerKind {
   /// A web page.
   link,
@@ -33,9 +33,41 @@ enum VideoStickerKind {
 
   /// The comment or video this video replies to, by its hex event id.
   reply,
+
+  /// A question with two to four answers a viewer votes on, by the hex id of
+  /// its NIP-88 `kind:1068` poll event.
+  poll,
+
+  /// A poll with one correct answer, which a viewer sees once they answered.
+  quiz,
+
+  /// An emoji a viewer drags along a scale from 0 to 100 to rate a question,
+  /// published as a poll of eleven steps.
+  slider,
+
+  /// A question viewers answer in a private message to the video's creator.
+  question,
+
+  /// A prompt such as "Show your desk setup" viewers answer with a video of
+  /// their own, which joins it by the hashtag the answers share and by
+  /// naming the chain's first video as what inspired it. The target is that
+  /// first video's address, or empty when this video starts the chain.
+  prompt,
+
+  /// This video's video replies: their avatars, how many there are and the
+  /// latest ones' thumbnails. A tap opens them.
+  replies;
+
+  /// Whether a viewer votes on the sticker rather than opening something.
+  bool get isPoll => this == poll || this == quiz || this == slider;
+
+  /// Whether viewers answer the sticker, by a vote, a private message or a
+  /// video of their own, rather than opening what it shows.
+  bool get takesAnswers => isPoll || this == question || this == prompt;
 }
 
-/// A sticker on a published video that opens what it points to when tapped.
+/// A sticker on a published video that opens what it points to when tapped,
+/// or takes a vote.
 ///
 /// The area is the sticker as it stands on the video frame: its centre and
 /// size as fractions of the frame's width and height, turned by [rotation]
@@ -49,7 +81,8 @@ enum VideoStickerKind {
 /// "0", "1500", "4200", "light", "divine.video"]`. A missing start or end
 /// means the sticker shows from the video's start or until its end; without a
 /// style and text a viewer still gets the area, just not the sticker drawn
-/// over it.
+/// over it. A poll, quiz or slider needs both: without them it shows only as
+/// it is in the frames.
 class VideoStickerRegion extends Equatable {
   /// Creates the area of a tappable sticker.
   const VideoStickerRegion({
@@ -69,7 +102,7 @@ class VideoStickerRegion extends Equatable {
   /// The name of the event tag a region is published in.
   static const String tagName = 'sticker';
 
-  /// What a tap opens.
+  /// What a tap opens or votes on.
   final VideoStickerKind kind;
 
   /// The web address, hex pubkey or hashtag (without `#`) a tap opens; for a
@@ -78,7 +111,10 @@ class VideoStickerRegion extends Equatable {
   /// [VideoStickerKind.place], the place's full name; for a
   /// [VideoStickerKind.countdown], the Unix time in seconds it counts down
   /// to; for a [VideoStickerKind.reply], the hex id of the comment or video
-  /// it replies to.
+  /// it replies to; for a poll, quiz or slider, the hex id of its poll event,
+  /// or empty before it is published; for a [VideoStickerKind.prompt], the
+  /// address of the chain's first video, or empty on that video itself; and
+  /// empty for a [VideoStickerKind.question] or [VideoStickerKind.replies].
   final String target;
 
   /// The sticker's centre, as a fraction of the frame's width.
@@ -111,7 +147,10 @@ class VideoStickerRegion extends Equatable {
   /// hashtag as it was typed, without its `@` or `#`; for a sound, its title,
   /// artist and line of lyrics, one per line; a place's name; a countdown's
   /// title; for a reply, the name of whom it replies to and their comment,
-  /// one per line.
+  /// one per line; for a poll or a quiz, its question and then its answers,
+  /// one per line; for a slider, its question and then its emoji; a
+  /// question's question; a prompt's prompt and then its hashtag, without
+  /// its `#`, one per line; the title of a replies sticker.
   final String? label;
 
   /// The longest [label] a tag may carry.
@@ -132,6 +171,40 @@ class VideoStickerRegion extends Equatable {
       isUtc: true,
     );
   }
+
+  /// The lines of [label], which a poll, quiz or slider shows: its question
+  /// first, then its answers or its emoji.
+  List<String> get labelLines => label?.split('\n') ?? const [];
+
+  /// The hashtag, without its `#`, a [VideoStickerKind.prompt]'s answers
+  /// share, or `null` for any other kind.
+  String? get promptHashtag =>
+      kind == VideoStickerKind.prompt ? labelLines.elementAtOrNull(1) : null;
+
+  /// The address of the first video of a [VideoStickerKind.prompt]'s chain,
+  /// [videoAddress] when this one starts it; `null` for any other kind.
+  String? promptChainRoot(String videoAddress) =>
+      kind != VideoStickerKind.prompt
+      ? null
+      : target.isEmpty
+      ? videoAddress
+      : target;
+
+  /// This region pointing at [target] instead, such as a poll's event id once
+  /// the poll is published.
+  VideoStickerRegion withTarget(String target) => VideoStickerRegion(
+    kind: kind,
+    target: target,
+    centerX: centerX,
+    centerY: centerY,
+    width: width,
+    height: height,
+    rotation: rotation,
+    start: start,
+    end: end,
+    style: style,
+    label: label,
+  );
 
   /// Whether the sticker shows at [position] of the published video.
   bool isShownAt(Duration position) {
@@ -171,7 +244,8 @@ class VideoStickerRegion extends Equatable {
   }
 
   /// The region [tag] publishes, or `null` when it is no sticker tag or
-  /// names something a viewer could not safely open.
+  /// names something a viewer could not safely open, or is a poll, quiz or
+  /// slider whose label lays out no vote.
   static VideoStickerRegion? fromTag(List<String> tag) {
     if (tag.length < 5 || tag[0] != tagName) return null;
     final kind = VideoStickerKind.values.asNameMap()[tag[1]];
@@ -197,6 +271,13 @@ class VideoStickerRegion extends Equatable {
     final style = tag.elementAtOrNull(7)?.trim() ?? '';
     // Drawn as text, which an unpaired surrogate would break.
     final label = sanitizeUtf16(tag.elementAtOrNull(8)?.trim() ?? '');
+    // A vote needs the question and what there is to pick, to lay out, and
+    // the other stickers taking answers what they ask.
+    if (kind.isPoll && !_isPollLabel(kind, label)) return null;
+    if (!kind.isPoll && kind.takesAnswers && !_isPromptLabel(kind, label)) {
+      return null;
+    }
+    if (kind == VideoStickerKind.replies && !_isOneLine(label)) return null;
     final region = VideoStickerRegion(
       kind: kind,
       target: target,
@@ -220,12 +301,66 @@ class VideoStickerRegion extends Equatable {
     for (final tag in tags) ?fromTag(tag),
   ];
 
+  /// The most answers a poll or a quiz can have.
+  static const int maxPollOptions = 4;
+
+  /// Whether [label] lays out a [kind] vote: a question and two to
+  /// [maxPollOptions] answers, or for a slider a question and its emoji, each
+  /// on a line of its own, within [maxLabelLength].
+  static bool _isPollLabel(VideoStickerKind kind, String label) {
+    final lines = label.split('\n');
+    if (label.length > maxLabelLength ||
+        lines.any((line) => line.trim().isEmpty)) {
+      return false;
+    }
+    return kind == VideoStickerKind.slider
+        ? lines.length == 2
+        : lines.length >= 3 && lines.length <= maxPollOptions + 1;
+  }
+
+  /// Whether [label] lays out a [kind] question, one line, or a prompt and
+  /// then the hashtag its answers share, within [maxLabelLength].
+  static bool _isPromptLabel(VideoStickerKind kind, String label) {
+    if (kind == VideoStickerKind.question) return _isOneLine(label);
+    final lines = label.split('\n');
+    if (lines.length != 2 || label.length > maxLabelLength) return false;
+    final [prompt, hashtag] = lines;
+    return prompt.trim().isNotEmpty && _target(.hashtag, hashtag) == hashtag;
+  }
+
+  /// Whether [label] is one line of text within [maxLabelLength].
+  static bool _isOneLine(String label) =>
+      label.trim().isNotEmpty &&
+      !label.contains('\n') &&
+      label.length <= maxLabelLength;
+
+  /// Whether [value] is the address of a video, `<kind>:<pubkey>:<d>`, the
+  /// way a prompt names its chain's first video.
+  static bool isVideoAddress(String value) {
+    final parts = value.split(':');
+    if (parts.length < 3 || value.length > maxVideoAddressLength) return false;
+    final dTag = parts.skip(2).join(':');
+    return _videoKinds.contains(parts[0]) &&
+        NostrHexUtils.isValidPubkey(parts[1]) &&
+        dTag.isNotEmpty &&
+        !dTag.contains(RegExp(r'[\u0000-\u001f\u007f]'));
+  }
+
+  /// The kinds of the addressable videos a prompt's chain can start with.
+  static const Set<String> _videoKinds = {'34235', '34236'};
+
+  /// The longest address of a video a tag may carry.
+  static const int maxVideoAddressLength = 300;
+
   /// [raw] as the target of a [kind] sticker, or `null` when it is not one:
   /// a link only to an http(s) page of a named host, a mention only to a
   /// pubkey, a hashtag only as one word, a sound only by a library or event
   /// id, and otherwise by nothing, meaning the video's own sound, a place
   /// only by a name on one line, a countdown only to a moment between 1970
-  /// and the year 10000, and a reply only to an event id.
+  /// and the year 10000, a reply only to an event id, a poll, quiz or slider
+  /// by its event id, and otherwise by nothing, meaning no vote, a prompt by
+  /// the address of its chain's first video, or by nothing when it is that
+  /// video, and a question or a replies sticker always by nothing.
   static String? _target(VideoStickerKind kind, String raw) {
     final value = raw.trim();
     switch (kind) {
@@ -274,6 +409,16 @@ class VideoStickerRegion extends Equatable {
       case VideoStickerKind.reply:
         final eventId = value.toLowerCase();
         return NostrHexUtils.isValidEventId(eventId) ? eventId : null;
+      case VideoStickerKind.poll ||
+          VideoStickerKind.quiz ||
+          VideoStickerKind.slider:
+        final eventId = value.toLowerCase();
+        return NostrHexUtils.isValidEventId(eventId) ? eventId : '';
+      case VideoStickerKind.prompt:
+        if (value.isEmpty) return '';
+        return isVideoAddress(value) ? value : null;
+      case VideoStickerKind.question || VideoStickerKind.replies:
+        return '';
     }
   }
 

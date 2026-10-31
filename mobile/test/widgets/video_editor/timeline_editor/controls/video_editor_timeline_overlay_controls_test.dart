@@ -33,8 +33,10 @@ import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/layer_style.dart';
 import 'package:openvine/models/video_editor/saved_title_style.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/providers/saved_title_style_repository_provider.dart';
 import 'package:openvine/providers/voice_effect_providers.dart';
@@ -316,6 +318,73 @@ void main() {
       // A drifting hidden area would uncover what it hides.
       expect(find.text(l10n.videoEditorKeyframesLabel), findsNothing);
       expect(find.text(l10n.videoEditorTrackLabel), findsNothing);
+    });
+
+    group('sticker cards', () {
+      WidgetLayer cardLayer(String id, Map<String, dynamic> meta) =>
+          WidgetLayer(
+            id: id,
+            widget: const SizedBox.shrink(),
+            meta: meta,
+            exportConfigs: WidgetLayerExportConfigs(id: id, meta: meta),
+          );
+
+      final cards = {
+        'social': cardLayer(
+          'social-card',
+          const SocialStickerData(
+            kind: SocialStickerKind.hashtag,
+            hashtag: 'summer',
+          ).toMeta(),
+        ),
+        'info': cardLayer(
+          'info-card',
+          const InfoStickerData(
+            kind: InfoStickerKind.weather,
+            localeName: 'en',
+          ).toMeta(),
+        ),
+      };
+
+      for (final MapEntry(key: name, value: layer) in cards.entries) {
+        testWidgets('offers no split, mask, opacity, blend or style for an '
+            '$name sticker', (tester) async {
+          final item = TimelineOverlayItem(
+            id: layer.id,
+            type: TimelineOverlayType.layer,
+            startTime: Duration.zero,
+            endTime: const Duration(seconds: 3),
+            layer: layer,
+          );
+          final editor = _MockProImageEditorState();
+          final mainBloc = _MockVideoEditorMainBloc();
+          when(() => editor.activeLayers).thenReturn([
+            layer,
+            cardLayer('other-card', layer.meta!),
+          ]);
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+          await tester.pumpWidget(buildWithEditor(item, editor, mainBloc));
+
+          expect(find.text(l10n.videoEditorDeleteLabel), findsOneWidget);
+          expect(find.text(l10n.videoEditorSplitLabel), findsNothing);
+          expect(find.text(l10n.videoEditorShapeMaskLabel), findsNothing);
+          expect(find.text(l10n.videoEditorOpacityLabel), findsNothing);
+          expect(find.text(l10n.videoEditorBlendLabel), findsNothing);
+          expect(
+            find.bySemanticsLabel(
+              l10n.videoEditorCopyLayerStyleSemanticLabel,
+            ),
+            findsNothing,
+          );
+          expect(
+            find.bySemanticsLabel(
+              l10n.videoEditorPasteLayerStyleSemanticLabel,
+            ),
+            findsNothing,
+          );
+        });
+      }
     });
 
     group('audio visualizer', () {

@@ -1916,6 +1916,156 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoStickerCountdownReminderBody => '時間です！保存したカウントダウンが終了しました。';
 
   @override
+  String get videoStickerQuizRightAnswer => '正解';
+
+  @override
+  String get videoStickerQuizWrongAnswer => '不正解';
+
+  @override
+  String get videoStickerPollSignInToVote => '投票するにはログインしてください。';
+
+  @override
+  String get videoStickerPollNotReady => '接続中です。少し待ってからもう一度お試しください。';
+
+  @override
+  String get videoStickerPollVoteFailed => '投票を送信できませんでした。もう一度お試しください。';
+
+  @override
+  String get videoStickerPollVotesArePublic => '投票は公開されます。誰でもあなたの選択を見られます。';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count票',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'タップして回答';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return '回答: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'あなたの番';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count人が参加',
+      one: '$count人が参加',
+      zero: '最初に参加しましょう',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => '参加した人を見る';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'あなたの番: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '返信$count件',
+      one: '返信$count件',
+      zero: 'まだ返信はありません',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '動画の返信$count件を見る',
+      one: '動画の返信$count件を見る',
+      zero: '動画の返信、まだありません',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => '回答するにはログインしてください。';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => '回答';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'あなたの回答';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return '回答は$nameさんにだけ表示されます。あなたの名前を伏せて、動画で紹介されることがあります。';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => '送信';
+
+  @override
+  String get videoStickerQuestionAnswerSent => '回答を送信しました。';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong => '回答が長すぎて送信できません。';
+
+  @override
+  String get videoStickerQuestionAnswerFailed => '回答を送信できませんでした。もう一度お試しください。';
+
+  @override
+  String get videoStickerAddYoursSignIn => '参加するにはログインしてください。';
+
+  @override
+  String get videoStickerRepliesManageTitle => '動画の返信';
+
+  @override
+  String get videoStickerRepliesEmpty => '動画の返信はまだありません。';
+
+  @override
+  String get videoStickerRepliesLoadFailed => '返信を読み込めませんでした。';
+
+  @override
+  String get videoStickerRepliesRetry => 'もう一回';
+
+  @override
+  String get videoStickerRepliesPin => 'ピン留め';
+
+  @override
+  String get videoStickerRepliesUnpin => 'ピン留めを解除';
+
+  @override
+  String get videoStickerRepliesHide => '非表示';
+
+  @override
+  String get videoStickerRepliesShow => '表示';
+
+  @override
+  String get videoStickerRepliesPinned => 'ピン留め済み';
+
+  @override
+  String get videoStickerRepliesHidden => '非表示中';
+
+  @override
+  String get videoStickerRepliesSaveFailed => '保存できませんでした。もう一度お試しください。';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return '$nameさんの返信を見る';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'このリンクはDivineの外で開きます。移動する前にアドレスを確認してください。';
 
@@ -4479,6 +4629,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get routeInvalidSoundId => '無効なサウンド ID';
 
   @override
+  String get routeInvalidQuestion => '無効な質問リンク';
+
+  @override
   String get routeInvalidCategory => '無効なカテゴリ';
 
   @override
@@ -5803,6 +5956,19 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get dmReelReplyComposerSemanticLabel => 'このリールに返信';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'あなたの質問への回答: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return '回答した質問: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => '動画で回答';
 
   @override
   String get dmReelReplyViewChat => 'チャットを見る';
@@ -10416,6 +10582,107 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerReplyNote => '視聴者がタップすると、返信先が表示されます。';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'アンケート';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'クイズ';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'スライダー';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'どれ？';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'はい';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'いいえ';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vineが始まったのは…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => 'お腹のすき具合は？';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => '質問を入力';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return '回答$number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return '回答$numberを削除';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return '回答$numberを正解にする';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => '回答を追加';
+
+  @override
+  String get videoEditorSocialStickerPollNote => '視聴者は投票後に結果を見られます。投票は公開されます。';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      '正解にチェックを入れてください。視聴者は回答後に正解を見られます。';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      '視聴者は絵文字をドラッグして回答し、平均の位置を見られます。';
+
+  @override
+  String get videoEditorSocialStickerQuestion => '質問';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'あなたの番';
+
+  @override
+  String get videoEditorSocialStickerReplies => '返信';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => 'なんでも聞いてください';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => 'デスク周りを見せてください';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => '動画で返信';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'あなたの質問';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint => 'みんなに何を見せてもらいますか？';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'ハッシュタグ';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'タイトル';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote => '回答はプライベートメッセージで届きます。';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      '視聴者は自分の動画で回答します。すべての回答にこのハッシュタグが付き、あなたの動画にリンクされます。';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'この動画に動画で返信した人を表示します。視聴者がタップすると返信を見られます。';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      '視聴者がタップできるよう、このステッカーは枠の中に配置されます';
 
   @override
   String get videoEditorSocialStickerSoundNote => '音符';

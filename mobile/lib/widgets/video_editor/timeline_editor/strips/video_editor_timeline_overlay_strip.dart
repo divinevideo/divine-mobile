@@ -12,6 +12,7 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/layer_style.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_drop_indicator_line.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_item.dart';
@@ -105,7 +106,8 @@ class TimelineOverlayStrip extends StatefulWidget {
   /// Whether the strip is in collapsed mode (single-row summary).
   final bool isCollapsed;
 
-  /// ID of the currently selected item (shows trim handles).
+  /// ID of the currently selected item (shows trim handles, or a plain frame on
+  /// a sticker card).
   final String? selectedItemId;
 
   /// Whether the timeline is in layer multi-select mode. While active, tiles
@@ -366,15 +368,24 @@ class _TimelineOverlayStripState extends State<TimelineOverlayStrip> {
     if (matchingItems.isEmpty) return null;
 
     final item = matchingItems.first;
-    if (!_wouldOverlapAt(item, info.newStartMs, info.targetRow)) {
+    // A layer dropped on or past the interactive card's row lands just above
+    // the card, so the line shows it there.
+    final drop = item.type == TimelineOverlayType.layer
+        ? layerDropBehindInteractiveCard(
+            items: widget.items.where((i) => i.id != item.id),
+            row: info.targetRow,
+            insertAbove: info.insertAbove,
+          )
+        : (row: info.targetRow, insertAbove: info.insertAbove);
+    if (!_wouldOverlapAt(item, info.newStartMs, drop.row)) {
       return null;
     }
 
     // Above: line at the top of the target row.
     // Below: line at the bottom of the target row.
-    return info.insertAbove
-        ? info.targetRow * _effectiveRowHeight
-        : (info.targetRow + 1) * _effectiveRowHeight;
+    return drop.insertAbove
+        ? drop.row * _effectiveRowHeight
+        : (drop.row + 1) * _effectiveRowHeight;
   }
 
   // -- Long-press drag callbacks -------------------------------------------
@@ -391,6 +402,8 @@ class _TimelineOverlayStripState extends State<TimelineOverlayStrip> {
   void _onLongPressStart(TimelineOverlayItem item) {
     // In multi-select mode a tile only toggles on tap; dragging is disabled.
     if (widget.isLayerMultiSelectMode) return;
+    // An interactive card stays in the front row for the whole video.
+    if (isInteractiveCardTimelineItem(item)) return;
     final mainBloc = context.read<VideoEditorMainBloc?>();
     if (mainBloc?.state.isVolumeEditMode == true) return;
     unawaited(HapticFeedback.mediumImpact());
@@ -421,6 +434,7 @@ class _TimelineOverlayStripState extends State<TimelineOverlayStrip> {
     TimelineOverlayItem item,
     int displayRowCount,
   ) {
+    if (_draggingId != item.id) return;
     final pps = widget.pixelsPerSecond;
     final itemDurationMs = item.duration.inMilliseconds;
     final totalMs = widget.totalDuration.inMilliseconds;

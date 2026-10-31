@@ -2081,6 +2081,163 @@ class AppLocalizationsUr extends AppLocalizations {
       'وقت آ گیا! آپ کی محفوظ کی ہوئی الٹی گنتی ابھی ختم ہوئی۔';
 
   @override
+  String get videoStickerQuizRightAnswer => 'درست جواب';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'غلط جواب';
+
+  @override
+  String get videoStickerPollSignInToVote => 'ووٹ دینے کے لیے سائن ان کریں۔';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'ابھی کنیکٹ ہو رہا ہے۔ تھوڑی دیر میں دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'آپ کا ووٹ نہیں پہنچا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'ووٹ عوامی ہوتے ہیں۔ کوئی بھی دیکھ سکتا ہے کہ آپ نے کیا چنا۔';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ووٹ',
+      one: '1 ووٹ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'جواب دینے کے لیے ٹیپ کریں';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'جواب: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'آپ کی باری';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count نے حصہ لیا',
+      one: '$count نے حصہ لیا',
+      zero: 'پہلے آپ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'دیکھیں کس نے حصہ لیا';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'آپ کی باری: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count جوابات',
+      one: '$count جواب',
+      zero: 'ابھی کوئی جواب نہیں',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ویڈیو جوابات دیکھیں',
+      one: '$count ویڈیو جواب دیکھیں',
+      zero: 'ویڈیو جوابات، ابھی کوئی نہیں',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'جواب دینے کے لیے سائن ان کریں۔';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'جواب دیں';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'آپ کا جواب';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'آپ کا جواب صرف $name دیکھ سکتے ہیں۔ وہ اسے کسی ویڈیو میں، آپ کے نام کے بغیر، شیئر کر سکتے ہیں۔';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'بھیجیں';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'جواب بھیج دیا گیا۔';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'یہ جواب بھیجنے کے لیے بہت لمبا ہے۔';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'آپ کا جواب نہیں پہنچا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'حصہ لینے کے لیے سائن ان کریں۔';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'ویڈیو جوابات';
+
+  @override
+  String get videoStickerRepliesEmpty => 'ابھی کوئی ویڈیو جواب نہیں۔';
+
+  @override
+  String get videoStickerRepliesLoadFailed => 'جوابات لوڈ نہیں ہو سکے۔';
+
+  @override
+  String get videoStickerRepliesRetry => 'دوبارہ کوشش کریں';
+
+  @override
+  String get videoStickerRepliesPin => 'پن کریں';
+
+  @override
+  String get videoStickerRepliesUnpin => 'پن ہٹائیں';
+
+  @override
+  String get videoStickerRepliesHide => 'چھپائیں';
+
+  @override
+  String get videoStickerRepliesShow => 'دکھائیں';
+
+  @override
+  String get videoStickerRepliesPinned => 'پن شدہ';
+
+  @override
+  String get videoStickerRepliesHidden => 'چھپا ہوا';
+
+  @override
+  String get videoStickerRepliesSaveFailed =>
+      'محفوظ نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return '$name کا جواب دیکھیں';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'یہ لنک Divine سے باہر کھلتا ہے۔ آگے جانے سے پہلے ایڈریس دیکھ لیں۔';
 
@@ -4777,6 +4934,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get routeInvalidSoundId => 'غلط آواز ID';
 
   @override
+  String get routeInvalidQuestion => 'سوال کا لنک غلط ہے';
+
+  @override
   String get routeInvalidCategory => 'غلط زمرہ';
 
   @override
@@ -6147,6 +6307,19 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get dmReelReplyComposerSemanticLabel => 'اس ریل کو جواب دیں';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'آپ کے سوال کا جواب دیا: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'آپ نے جواب دیا: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'ویڈیو سے جواب دیں';
 
   @override
   String get dmReelReplyViewChat => 'چیٹ دیکھیں';
@@ -10957,6 +11130,111 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'دیکھنے والے اسے ٹیپ کر کے دیکھتے ہیں کہ آپ کس کا جواب دے رہے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'پول';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'کوئز';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'سلائیڈر';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'کون سا؟';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'ہاں';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'نہیں';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine کب شروع ہوا؟';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'آپ کو کتنی بھوک لگی ہے؟';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'سوال پوچھیں';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'جواب $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'جواب $number ہٹائیں';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'جواب $number کو درست قرار دیں';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'جواب شامل کریں';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'ناظرین ووٹ دینے کے بعد نتائج دیکھتے ہیں۔ ووٹ عوامی ہوتے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'درست جواب پر نشان لگائیں۔ ناظرین جواب چننے کے بعد اسے دیکھتے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'ناظرین جواب دینے کے لیے ایموجی کو گھسیٹتے ہیں اور اوسط دیکھتے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'سوال';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'آپ کی باری';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'جوابات';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => 'مجھ سے کچھ بھی پوچھیں';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample =>
+      'اپنا ڈیسک سیٹ اپ دکھائیں';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'ویڈیو سے جواب دیں';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'آپ کا سوال';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint => 'لوگ کیا دکھائیں؟';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'ہیش ٹیگ';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'عنوان';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'جوابات آپ کو نجی پیغامات کے طور پر ملتے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'ناظرین اپنی ویڈیو کے ساتھ جواب دیتے ہیں۔ ہر جواب کو یہ ہیش ٹیگ ملتا ہے اور وہ آپ کی ویڈیو سے لنک ہوتا ہے۔';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'دکھاتا ہے کہ کس نے اس ویڈیو کا جواب ویڈیو سے دیا۔ ناظرین جوابات دیکھنے کے لیے اسے ٹیپ کرتے ہیں۔';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'یہ اسٹیکر اسی خانے میں رہتا ہے تاکہ ناظرین اسے ٹیپ کر سکیں';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'سُر';

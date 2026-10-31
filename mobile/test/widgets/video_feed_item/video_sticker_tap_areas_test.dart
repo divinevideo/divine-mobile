@@ -22,6 +22,7 @@ import 'package:openvine/services/notification_service.dart';
 import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_pill_palette.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
+import 'package:openvine/widgets/video_feed_item/interactive_sticker_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/link_sticker_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
 import 'package:openvine/widgets/video_feed_item/video_sticker_tap_areas.dart';
@@ -251,6 +252,7 @@ void main() {
       List<VideoStickerRegion> regions, {
       String? audioEventId,
       bool canSetReminders = true,
+      bool isActive = true,
     }) async {
       tester.view.physicalSize = const Size(360, 640);
       tester.view.devicePixelRatio = 1;
@@ -283,6 +285,7 @@ void main() {
                     controller: controller,
                     onOpen: (_, region, _) => opened.add(region),
                     canSetReminders: canSetReminders,
+                    isActive: isActive,
                   ),
                 ),
               ],
@@ -453,6 +456,31 @@ void main() {
         await tester.pump();
 
         expect(find.bySemanticsLabel(label), findsOneWidget);
+      });
+
+      testWidgets('draws a question, Add yours or replies sticker as its card '
+          'with its own buttons, not as one button', (tester) async {
+        VideoStickerRegion card(VideoStickerKind kind, String label) =>
+            VideoStickerRegion(
+              kind: kind,
+              target: '',
+              centerX: 0.5,
+              centerY: 0.5,
+              width: 0.6,
+              height: 0.3,
+              style: 'light',
+              label: label,
+            );
+        await pump(tester, [
+          card(VideoStickerKind.question, 'Ask me anything'),
+          card(VideoStickerKind.prompt, 'Show your desk\ndesksetup'),
+          card(VideoStickerKind.replies, 'Reply with a video'),
+        ], isActive: false);
+
+        expect(find.byType(InteractiveStickerOverlay), findsNWidgets(3));
+        await tester.tap(find.text('Ask me anything'), warnIfMissed: false);
+        await tester.pump(kDoubleTapTimeout);
+        expect(opened, isEmpty);
       });
 
       testWidgets('draws the sticker sharp over its area', (tester) async {

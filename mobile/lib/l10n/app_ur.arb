@@ -1,5 +1,71 @@
 {
   "@@locale": "ur",
+  "videoEditorSocialStickerPoll": "پول",
+  "videoEditorSocialStickerQuiz": "کوئز",
+  "videoEditorSocialStickerSlider": "سلائیڈر",
+  "videoEditorSocialStickerPollSampleQuestion": "کون سا؟",
+  "videoEditorSocialStickerPollSampleYes": "ہاں",
+  "videoEditorSocialStickerPollSampleNo": "نہیں",
+  "videoEditorSocialStickerQuizSampleQuestion": "Vine کب شروع ہوا؟",
+  "videoEditorSocialStickerSliderSampleQuestion": "آپ کو کتنی بھوک لگی ہے؟",
+  "videoEditorSocialStickerPollQuestionHint": "سوال پوچھیں",
+  "videoEditorSocialStickerPollOptionHint": "جواب {number}",
+  "videoEditorSocialStickerPollRemoveOption": "جواب {number} ہٹائیں",
+  "videoEditorSocialStickerQuizMarkRight": "جواب {number} کو درست قرار دیں",
+  "videoEditorSocialStickerPollAddOption": "جواب شامل کریں",
+  "videoEditorSocialStickerPollNote": "ناظرین ووٹ دینے کے بعد نتائج دیکھتے ہیں۔ ووٹ عوامی ہوتے ہیں۔",
+  "videoEditorSocialStickerQuizNote": "درست جواب پر نشان لگائیں۔ ناظرین جواب چننے کے بعد اسے دیکھتے ہیں۔",
+  "videoEditorSocialStickerSliderNote": "ناظرین جواب دینے کے لیے ایموجی کو گھسیٹتے ہیں اور اوسط دیکھتے ہیں۔",
+  "videoStickerQuizRightAnswer": "درست جواب",
+  "videoStickerQuizWrongAnswer": "غلط جواب",
+  "videoEditorSocialStickerQuestion": "سوال",
+  "videoEditorSocialStickerAddYours": "آپ کی باری",
+  "videoEditorSocialStickerReplies": "جوابات",
+  "videoEditorSocialStickerQuestionSample": "مجھ سے کچھ بھی پوچھیں",
+  "videoEditorSocialStickerAddYoursSample": "اپنا ڈیسک سیٹ اپ دکھائیں",
+  "videoEditorSocialStickerRepliesSample": "ویڈیو سے جواب دیں",
+  "videoEditorSocialStickerQuestionHint": "آپ کا سوال",
+  "videoEditorSocialStickerAddYoursPromptHint": "لوگ کیا دکھائیں؟",
+  "videoEditorSocialStickerAddYoursHashtagHint": "ہیش ٹیگ",
+  "videoEditorSocialStickerRepliesTitleHint": "عنوان",
+  "videoEditorSocialStickerQuestionNote": "جوابات آپ کو نجی پیغامات کے طور پر ملتے ہیں۔",
+  "videoEditorSocialStickerAddYoursNote": "ناظرین اپنی ویڈیو کے ساتھ جواب دیتے ہیں۔ ہر جواب کو یہ ہیش ٹیگ ملتا ہے اور وہ آپ کی ویڈیو سے لنک ہوتا ہے۔",
+  "videoEditorSocialStickerRepliesNote": "دکھاتا ہے کہ کس نے اس ویڈیو کا جواب ویڈیو سے دیا۔ ناظرین جوابات دیکھنے کے لیے اسے ٹیپ کرتے ہیں۔",
+  "videoEditorInteractiveCardAreaHint": "یہ اسٹیکر اسی خانے میں رہتا ہے تاکہ ناظرین اسے ٹیپ کر سکیں",
+  "videoStickerPollSignInToVote": "ووٹ دینے کے لیے سائن ان کریں۔",
+  "videoStickerPollNotReady": "ابھی کنیکٹ ہو رہا ہے۔ تھوڑی دیر میں دوبارہ کوشش کریں۔",
+  "videoStickerPollVoteFailed": "آپ کا ووٹ نہیں پہنچا۔ دوبارہ کوشش کریں۔",
+  "videoStickerPollVotesArePublic": "ووٹ عوامی ہوتے ہیں۔ کوئی بھی دیکھ سکتا ہے کہ آپ نے کیا چنا۔",
+  "videoStickerPollVoteCount": "{count, plural, one{1 ووٹ} other{{count} ووٹ}}",
+  "videoStickerQuestionAnswerHint": "جواب دینے کے لیے ٹیپ کریں",
+  "videoStickerQuestionAnswerSemanticLabel": "جواب: {question}",
+  "videoStickerAddYoursButton": "آپ کی باری",
+  "videoStickerAddYoursJoined": "{count, plural, =0{پہلے آپ} =1{{count} نے حصہ لیا} other{{count} نے حصہ لیا}}",
+  "videoStickerAddYoursOpenSemanticLabel": "دیکھیں کس نے حصہ لیا",
+  "videoStickerAddYoursJoinSemanticLabel": "آپ کی باری: {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{ابھی کوئی جواب نہیں} =1{{count} جواب} other{{count} جوابات}}",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{ویڈیو جوابات، ابھی کوئی نہیں} =1{{count} ویڈیو جواب دیکھیں} other{{count} ویڈیو جوابات دیکھیں}}",
+  "videoStickerQuestionSignIn": "جواب دینے کے لیے سائن ان کریں۔",
+  "videoStickerQuestionAnswerTitle": "جواب دیں",
+  "videoStickerQuestionAnswerFieldLabel": "آپ کا جواب",
+  "videoStickerQuestionAnswerPrivacyNote": "آپ کا جواب صرف {name} دیکھ سکتے ہیں۔ وہ اسے کسی ویڈیو میں، آپ کے نام کے بغیر، شیئر کر سکتے ہیں۔",
+  "videoStickerQuestionAnswerSend": "بھیجیں",
+  "videoStickerQuestionAnswerSent": "جواب بھیج دیا گیا۔",
+  "videoStickerQuestionAnswerTooLong": "یہ جواب بھیجنے کے لیے بہت لمبا ہے۔",
+  "videoStickerQuestionAnswerFailed": "آپ کا جواب نہیں پہنچا۔ دوبارہ کوشش کریں۔",
+  "videoStickerAddYoursSignIn": "حصہ لینے کے لیے سائن ان کریں۔",
+  "videoStickerRepliesManageTitle": "ویڈیو جوابات",
+  "videoStickerRepliesEmpty": "ابھی کوئی ویڈیو جواب نہیں۔",
+  "videoStickerRepliesLoadFailed": "جوابات لوڈ نہیں ہو سکے۔",
+  "videoStickerRepliesRetry": "دوبارہ کوشش کریں",
+  "videoStickerRepliesPin": "پن کریں",
+  "videoStickerRepliesUnpin": "پن ہٹائیں",
+  "videoStickerRepliesHide": "چھپائیں",
+  "videoStickerRepliesShow": "دکھائیں",
+  "videoStickerRepliesPinned": "پن شدہ",
+  "videoStickerRepliesHidden": "چھپا ہوا",
+  "videoStickerRepliesSaveFailed": "محفوظ نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+  "videoStickerRepliesWatchSemanticLabel": "{name} کا جواب دیکھیں",
   "devOptionsClipRecovery": "کلپ کی بازیابی",
   "devOptionsClipRecoveryDescription": "کسی دوسرے اکاؤنٹ کے تحت محفوظ ریکارڈنگز اور ایسی ویڈیو فائلیں تلاش کرتا ہے جن کا اب کوئی اندراج حوالہ نہیں دیتا۔",
   "devOptionsClipRecoveryScan": "اسکین کریں",
@@ -2350,6 +2416,7 @@
   "routeInvalidUserId": "غلط صارف ID",
   "routeInvalidVideoId": "غلط ویڈیو ID",
   "routeInvalidSoundId": "غلط آواز ID",
+  "routeInvalidQuestion": "سوال کا لنک غلط ہے",
   "routeInvalidCategory": "غلط زمرہ",
   "routeNoVideosToDisplay": "دکھانے کے لیے کوئی ویڈیو نہیں",
   "routeGoHome": "ہوم پر جائیں",
@@ -3017,6 +3084,28 @@
   "dmReelReplyComposerSemanticLabel": "اس ریل کو جواب دیں",
   "@dmReelReplyComposerSemanticLabel": {
     "description": "Screen-reader label for the in-player reel reply text field."
+  },
+  "dmQuestionAnswerReceivedLabel": "آپ کے سوال کا جواب دیا: {question}",
+  "@dmQuestionAnswerReceivedLabel": {
+    "description": "Line above a message in a conversation that answers the question sticker on one of the viewer's videos. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerSentLabel": "آپ نے جواب دیا: {question}",
+  "@dmQuestionAnswerSentLabel": {
+    "description": "Line above the viewer's own message in a conversation that answers someone's question sticker. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerWithVideo": "ویڈیو سے جواب دیں",
+  "@dmQuestionAnswerWithVideo": {
+    "description": "Button above an answer to the viewer's question sticker that opens the camera to reply with a video showing the question and the answer, without who wrote it."
   },
   "dmReelReplyViewChat": "چیٹ دیکھیں",
   "@dmReelReplyViewChat": {

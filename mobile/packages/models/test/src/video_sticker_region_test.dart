@@ -323,6 +323,176 @@ void main() {
         );
         expect(VideoStickerRegion.fromTag(tagOf('reply', 'note1abc')), isNull);
       });
+
+      List<String> voteTag(String kind, String target, String label) => [
+        ...tagOf(kind, target),
+        '',
+        '',
+        'light',
+        label,
+      ];
+
+      test('reads a poll by its event id in lower case', () {
+        final region = VideoStickerRegion.fromTag(
+          voteTag('poll', _pubkey.toUpperCase(), 'Which one?\nRed\nBlue'),
+        );
+
+        expect(region?.kind, equals(VideoStickerKind.poll));
+        expect(region?.target, equals(_pubkey));
+        expect(region?.labelLines, equals(['Which one?', 'Red', 'Blue']));
+      });
+
+      test('takes a poll that names no event id as one with no vote', () {
+        expect(
+          VideoStickerRegion.fromTag(
+            voteTag('quiz', 'note1abc', 'Capital?\nBern\nZurich'),
+          )?.target,
+          isEmpty,
+        );
+      });
+
+      test('drops a poll without a question and two to four answers', () {
+        for (final label in [
+          '',
+          'Which one?\nRed',
+          'Which one?\nA\nB\nC\nD\nE',
+          'Which one?\n\nBlue',
+        ]) {
+          expect(
+            VideoStickerRegion.fromTag(voteTag('poll', _pubkey, label)),
+            isNull,
+            reason: label,
+          );
+        }
+      });
+
+      test('reads a slider with its question and emoji only', () {
+        expect(
+          VideoStickerRegion.fromTag(
+            voteTag('slider', _pubkey, 'How hungry?\n😋'),
+          )?.labelLines,
+          equals(['How hungry?', '😋']),
+        );
+        expect(
+          VideoStickerRegion.fromTag(
+            voteTag('slider', _pubkey, 'How hungry?\n😋\nmore'),
+          ),
+          isNull,
+        );
+      });
+
+      test('reads a question by its question alone', () {
+        final region = VideoStickerRegion.fromTag(
+          voteTag('question', _pubkey, 'Ask me anything'),
+        );
+
+        expect(region?.kind, equals(VideoStickerKind.question));
+        expect(region?.target, isEmpty);
+        expect(region?.label, equals('Ask me anything'));
+      });
+
+      test('drops a question that asks nothing or more than one line', () {
+        for (final label in ['', 'Ask me\nanything']) {
+          expect(
+            VideoStickerRegion.fromTag(voteTag('question', '', label)),
+            isNull,
+            reason: label,
+          );
+        }
+      });
+
+      test('reads a prompt by its chain and the hashtag answers share', () {
+        const address = '34236:$_pubkey:desk-1';
+        final region = VideoStickerRegion.fromTag(
+          voteTag('prompt', address, 'Show your desk\ndesksetup'),
+        );
+
+        expect(region?.kind, equals(VideoStickerKind.prompt));
+        expect(region?.target, equals(address));
+        expect(region?.promptHashtag, equals('desksetup'));
+        expect(
+          region?.promptChainRoot('34236:$_pubkey:other'),
+          equals(address),
+        );
+      });
+
+      test('takes a prompt naming no chain as the start of its own', () {
+        final region = VideoStickerRegion.fromTag(
+          voteTag('prompt', '', 'Show your desk\ndesksetup'),
+        );
+        const own = '34236:$_pubkey:desk-1';
+
+        expect(region?.target, isEmpty);
+        expect(region?.promptChainRoot(own), equals(own));
+      });
+
+      test('drops a prompt with no video address or no hashtag', () {
+        for (final (target, label) in [
+          ('note1abc', 'Show your desk\ndesksetup'),
+          ('1:$_pubkey:d', 'Show your desk\ndesksetup'),
+          ('34236:$_pubkey:', 'Show your desk\ndesksetup'),
+          ('', 'Show your desk'),
+          ('', 'Show your desk\ndesk setup'),
+          ('', '\ndesksetup'),
+        ]) {
+          expect(
+            VideoStickerRegion.fromTag(voteTag('prompt', target, label)),
+            isNull,
+            reason: '$target $label',
+          );
+        }
+      });
+
+      test('reads a replies sticker by its title, pointing at nothing', () {
+        final region = VideoStickerRegion.fromTag(
+          voteTag('replies', _pubkey, 'Reply with a video'),
+        );
+
+        expect(region?.kind, equals(VideoStickerKind.replies));
+        expect(region?.target, isEmpty);
+        expect(
+          VideoStickerRegion.fromTag(voteTag('replies', '', '')),
+          isNull,
+        );
+      });
+    });
+
+    group('VideoStickerKind', () {
+      test('takes answers on votes, questions and prompts only', () {
+        expect(
+          VideoStickerKind.values.where((kind) => kind.takesAnswers),
+          equals([
+            VideoStickerKind.poll,
+            VideoStickerKind.quiz,
+            VideoStickerKind.slider,
+            VideoStickerKind.question,
+            VideoStickerKind.prompt,
+          ]),
+        );
+      });
+    });
+
+    group('withTarget', () {
+      test('points the same sticker at another target', () {
+        const poll = VideoStickerRegion(
+          kind: VideoStickerKind.poll,
+          target: '',
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.4,
+          height: 0.3,
+          style: 'light',
+          label: 'Which one?\nRed\nBlue',
+        );
+
+        final published = poll.withTarget(_pubkey);
+
+        expect(published.target, equals(_pubkey));
+        expect(
+          published.toTag()..removeAt(2),
+          equals(poll.toTag()..removeAt(2)),
+        );
+      });
     });
 
     group('countdownEnd', () {

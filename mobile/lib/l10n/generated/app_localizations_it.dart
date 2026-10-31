@@ -2116,6 +2116,168 @@ class AppLocalizationsIt extends AppLocalizations {
       'È il momento! Il conto alla rovescia che hai salvato è appena finito.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Risposta giusta';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Risposta sbagliata';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Accedi per votare.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Connessione in corso. Riprova tra un attimo.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Il tuo voto non è arrivato. Riprova.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'I voti sono pubblici. Chiunque può vedere cosa hai scelto.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count voti',
+      many: '$count di voti',
+      one: '1 voto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'Tocca per rispondere';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'Rispondi: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'Tocca a te';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count partecipazioni',
+      many: '$count di partecipazioni',
+      one: '$count partecipazione',
+      zero: 'Inizia tu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'Vedi chi ha partecipato';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'Tocca a te: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count risposte',
+      many: '$count di risposte',
+      one: '$count risposta',
+      zero: 'Ancora nessuna risposta',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Guarda $count video risposte',
+      many: 'Guarda $count di video risposte',
+      one: 'Guarda $count video risposta',
+      zero: 'Video risposte, ancora nessuna',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'Accedi per rispondere.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'Rispondi';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'La tua risposta';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'Solo $name vede la tua risposta. Potrebbe condividerla in un video, senza il tuo nome.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'Invia';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'Risposta inviata.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'Questa risposta è troppo lunga da inviare.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'La tua risposta non è arrivata. Riprova.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'Accedi per partecipare.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'Video risposte';
+
+  @override
+  String get videoStickerRepliesEmpty => 'Ancora nessuna video risposta.';
+
+  @override
+  String get videoStickerRepliesLoadFailed =>
+      'Impossibile caricare le risposte.';
+
+  @override
+  String get videoStickerRepliesRetry => 'Riprova';
+
+  @override
+  String get videoStickerRepliesPin => 'Fissa';
+
+  @override
+  String get videoStickerRepliesUnpin => 'Non fissare più';
+
+  @override
+  String get videoStickerRepliesHide => 'Nascondi';
+
+  @override
+  String get videoStickerRepliesShow => 'Mostra';
+
+  @override
+  String get videoStickerRepliesPinned => 'Fissata';
+
+  @override
+  String get videoStickerRepliesHidden => 'Nascosta';
+
+  @override
+  String get videoStickerRepliesSaveFailed =>
+      'Salvataggio non riuscito. Riprova.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'Guarda la risposta di $name';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Questo link si apre fuori da Divine. Controlla l\'indirizzo prima di andare.';
 
@@ -4823,6 +4985,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get routeInvalidSoundId => 'ID audio non valido';
 
   @override
+  String get routeInvalidQuestion => 'Link della domanda non valido';
+
+  @override
   String get routeInvalidCategory => 'Categoria non valida';
 
   @override
@@ -6213,6 +6378,19 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get dmReelReplyComposerSemanticLabel => 'Rispondi a questo reel';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'Ha risposto alla tua domanda: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'Hai risposto: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'Rispondi con un video';
 
   @override
   String get dmReelReplyViewChat => 'Vedi chat';
@@ -11088,6 +11266,112 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Toccandolo, si vede a cosa stai rispondendo.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Sondaggio';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Quiz';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Slider';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Quale?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Sì';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'No';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine è nato nel…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => 'Quanta fame hai?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Fai una domanda';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Risposta $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Rimuovi la risposta $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Segna la risposta $number come giusta';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Aggiungi risposta';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Chi guarda vede i risultati dopo aver votato. I voti sono pubblici.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Spunta la risposta giusta. Chi guarda la vede dopo aver risposto.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Chi guarda trascina l\'emoji per rispondere e vede dove finisce in media.';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'Domanda';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'Tocca a te';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'Risposte';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample =>
+      'Chiedimi qualsiasi cosa';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample =>
+      'Mostra la tua postazione';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'Rispondi con un video';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'La tua domanda';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      'Cosa devono mostrare le persone?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'Titolo';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'Le risposte ti arrivano come messaggi privati.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'Chi guarda risponde con un proprio video. Ogni risposta riceve questo hashtag e rimanda al tuo video.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'Mostra chi ha risposto a questo video con un video. Chi guarda lo tocca per vedere le risposte.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'Questo sticker resta in questo riquadro così chi guarda può toccarlo';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nota';

@@ -2047,6 +2047,161 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đến giờ rồi! Đếm ngược bạn đã lưu vừa kết thúc.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Đáp án đúng';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Đáp án sai';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Đăng nhập để bình chọn.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Vẫn đang kết nối. Thử lại sau giây lát.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Phiếu bầu của bạn chưa được gửi. Hãy thử lại.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Phiếu bầu là công khai. Ai cũng có thể thấy bạn đã chọn gì.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count phiếu bầu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'Chạm để trả lời';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'Trả lời: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'Đến lượt bạn';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count người đã tham gia',
+      one: '$count người đã tham gia',
+      zero: 'Hãy là người đầu tiên',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'Xem ai đã tham gia';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'Đến lượt bạn: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count phản hồi',
+      one: '$count phản hồi',
+      zero: 'Chưa có phản hồi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Xem $count video phản hồi',
+      one: 'Xem $count video phản hồi',
+      zero: 'Video phản hồi, chưa có',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'Đăng nhập để trả lời.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'Trả lời';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'Câu trả lời của bạn';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'Chỉ $name thấy câu trả lời của bạn. Họ có thể chia sẻ nó trong một video, không kèm tên bạn.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'Gửi';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'Đã gửi câu trả lời.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'Câu trả lời này quá dài để gửi.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'Câu trả lời của bạn chưa được gửi. Hãy thử lại.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'Đăng nhập để tham gia.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'Video phản hồi';
+
+  @override
+  String get videoStickerRepliesEmpty => 'Chưa có video phản hồi nào.';
+
+  @override
+  String get videoStickerRepliesLoadFailed => 'Không tải được các phản hồi.';
+
+  @override
+  String get videoStickerRepliesRetry => 'Thử lại';
+
+  @override
+  String get videoStickerRepliesPin => 'Ghim';
+
+  @override
+  String get videoStickerRepliesUnpin => 'Bỏ ghim';
+
+  @override
+  String get videoStickerRepliesHide => 'Ẩn';
+
+  @override
+  String get videoStickerRepliesShow => 'Hiện';
+
+  @override
+  String get videoStickerRepliesPinned => 'Đã ghim';
+
+  @override
+  String get videoStickerRepliesHidden => 'Đã ẩn';
+
+  @override
+  String get videoStickerRepliesSaveFailed => 'Không lưu được. Thử lại nhé.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'Xem phản hồi của $name';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Liên kết này mở bên ngoài Divine. Hãy kiểm tra địa chỉ trước khi tiếp tục.';
 
@@ -4729,6 +4884,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get routeInvalidSoundId => 'ID âm thanh không hợp lệ';
 
   @override
+  String get routeInvalidQuestion => 'Liên kết câu hỏi không hợp lệ';
+
+  @override
   String get routeInvalidCategory => 'Danh mục không hợp lệ';
 
   @override
@@ -6102,6 +6260,19 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get dmReelReplyComposerSemanticLabel => 'Trả lời reel này';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'Đã trả lời câu hỏi của bạn: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'Bạn đã trả lời: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'Trả lời bằng video';
 
   @override
   String get dmReelReplyViewChat => 'Xem trò chuyện';
@@ -10910,6 +11081,112 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoEditorSocialStickerReplyNote =>
       'Người xem chạm vào để thấy bạn đang trả lời điều gì.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Bình chọn';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Đố vui';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Thanh trượt';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Cái nào?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Có';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Không';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine ra mắt năm…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => 'Bạn đói cỡ nào?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Đặt câu hỏi';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Câu trả lời $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Xóa câu trả lời $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Đánh dấu câu trả lời $number là đúng';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Thêm câu trả lời';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Người xem thấy kết quả sau khi bình chọn. Phiếu bầu là công khai.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Đánh dấu câu trả lời đúng. Người xem sẽ thấy sau khi chọn một đáp án.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Người xem kéo biểu tượng cảm xúc để trả lời và thấy mức trung bình.';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'Câu hỏi';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'Đến lượt bạn';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'Phản hồi';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample =>
+      'Hỏi mình bất cứ điều gì';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample =>
+      'Khoe góc làm việc của bạn';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'Phản hồi bằng video';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'Câu hỏi của bạn';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      'Mọi người nên khoe gì?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'Tiêu đề';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'Câu trả lời sẽ đến với bạn dưới dạng tin nhắn riêng.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'Người xem trả lời bằng video của riêng họ. Mỗi câu trả lời đều có hashtag này và liên kết về video của bạn.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'Hiển thị những ai đã phản hồi video này bằng video. Người xem chạm vào để xem các phản hồi.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'Nhãn dán này nằm trong khung này để người xem có thể chạm vào';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nốt nhạc';

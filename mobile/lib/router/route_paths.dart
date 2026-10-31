@@ -101,6 +101,8 @@ abstract final class RoutePaths {
   static const subtitleEditor = '/subtitle-edit';
   static const accountStatus = '/settings/account-status';
   static const accountStatusSubpath = 'account-status';
+  static const questionAnswerBase = '/question-answer';
+  static const questionAnswer = '$questionAnswerBase/:pubkey';
   static const supportCenter = '/support-center';
   static const supportReportBug = '/support-center/report-bug';
   static const videoDetailBase = '/video';
@@ -108,6 +110,8 @@ abstract final class RoutePaths {
   static const videoMetadata = '/video-metadata';
   static const videoMetadataEdit = '/video-edit';
   static const videoRecorder = '/video-recorder';
+  static const videoRepliesBase = '/video-replies';
+  static const videoReplies = '$videoRepliesBase/:videoId';
   static const welcome = '/welcome';
   static const welcomeLoginOptions = '/welcome/login-options';
   static const welcomeResetPassword = '$welcomeLoginOptions/reset-password';
@@ -191,6 +195,9 @@ abstract final class RoutePaths {
       '$profile/$npub/$index';
   static String profileForNpub(String npub) => '$profile/$npub';
 
+  static String questionAnswerFor(String pubkey) =>
+      '$questionAnswerBase/${Uri.encodeComponent(pubkey)}';
+
   static String profileUnavailablePinsForNpub(String npub) =>
       '$profile/$npub/unavailable-pins';
   static String soundDetailForId(String id) =>
@@ -200,6 +207,8 @@ abstract final class RoutePaths {
   static String videoDetailForId(String id) =>
       '$videoDetailBase/${Uri.encodeComponent(id)}';
   static String videoFeedForIndex(int index) => '/home/$index';
+  static String videoRepliesFor(String videoId) =>
+      '$videoRepliesBase/${Uri.encodeComponent(videoId)}';
   static String videoMetadataEditFor(String videoId) =>
       '$videoMetadataEdit/${Uri.encodeComponent(videoId)}';
 }

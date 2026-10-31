@@ -1,5 +1,71 @@
 {
   "@@locale": "vi",
+  "videoEditorSocialStickerPoll": "Bình chọn",
+  "videoEditorSocialStickerQuiz": "Đố vui",
+  "videoEditorSocialStickerSlider": "Thanh trượt",
+  "videoEditorSocialStickerPollSampleQuestion": "Cái nào?",
+  "videoEditorSocialStickerPollSampleYes": "Có",
+  "videoEditorSocialStickerPollSampleNo": "Không",
+  "videoEditorSocialStickerQuizSampleQuestion": "Vine ra mắt năm…",
+  "videoEditorSocialStickerSliderSampleQuestion": "Bạn đói cỡ nào?",
+  "videoEditorSocialStickerPollQuestionHint": "Đặt câu hỏi",
+  "videoEditorSocialStickerPollOptionHint": "Câu trả lời {number}",
+  "videoEditorSocialStickerPollRemoveOption": "Xóa câu trả lời {number}",
+  "videoEditorSocialStickerQuizMarkRight": "Đánh dấu câu trả lời {number} là đúng",
+  "videoEditorSocialStickerPollAddOption": "Thêm câu trả lời",
+  "videoEditorSocialStickerPollNote": "Người xem thấy kết quả sau khi bình chọn. Phiếu bầu là công khai.",
+  "videoEditorSocialStickerQuizNote": "Đánh dấu câu trả lời đúng. Người xem sẽ thấy sau khi chọn một đáp án.",
+  "videoEditorSocialStickerSliderNote": "Người xem kéo biểu tượng cảm xúc để trả lời và thấy mức trung bình.",
+  "videoStickerQuizRightAnswer": "Đáp án đúng",
+  "videoStickerQuizWrongAnswer": "Đáp án sai",
+  "videoEditorSocialStickerQuestion": "Câu hỏi",
+  "videoEditorSocialStickerAddYours": "Đến lượt bạn",
+  "videoEditorSocialStickerReplies": "Phản hồi",
+  "videoEditorSocialStickerQuestionSample": "Hỏi mình bất cứ điều gì",
+  "videoEditorSocialStickerAddYoursSample": "Khoe góc làm việc của bạn",
+  "videoEditorSocialStickerRepliesSample": "Phản hồi bằng video",
+  "videoEditorSocialStickerQuestionHint": "Câu hỏi của bạn",
+  "videoEditorSocialStickerAddYoursPromptHint": "Mọi người nên khoe gì?",
+  "videoEditorSocialStickerAddYoursHashtagHint": "Hashtag",
+  "videoEditorSocialStickerRepliesTitleHint": "Tiêu đề",
+  "videoEditorSocialStickerQuestionNote": "Câu trả lời sẽ đến với bạn dưới dạng tin nhắn riêng.",
+  "videoEditorSocialStickerAddYoursNote": "Người xem trả lời bằng video của riêng họ. Mỗi câu trả lời đều có hashtag này và liên kết về video của bạn.",
+  "videoEditorSocialStickerRepliesNote": "Hiển thị những ai đã phản hồi video này bằng video. Người xem chạm vào để xem các phản hồi.",
+  "videoEditorInteractiveCardAreaHint": "Nhãn dán này nằm trong khung này để người xem có thể chạm vào",
+  "videoStickerPollSignInToVote": "Đăng nhập để bình chọn.",
+  "videoStickerPollNotReady": "Vẫn đang kết nối. Thử lại sau giây lát.",
+  "videoStickerPollVoteFailed": "Phiếu bầu của bạn chưa được gửi. Hãy thử lại.",
+  "videoStickerPollVotesArePublic": "Phiếu bầu là công khai. Ai cũng có thể thấy bạn đã chọn gì.",
+  "videoStickerPollVoteCount": "{count, plural, other{{count} phiếu bầu}}",
+  "videoStickerQuestionAnswerHint": "Chạm để trả lời",
+  "videoStickerQuestionAnswerSemanticLabel": "Trả lời: {question}",
+  "videoStickerAddYoursButton": "Đến lượt bạn",
+  "videoStickerAddYoursJoined": "{count, plural, =0{Hãy là người đầu tiên} =1{{count} người đã tham gia} other{{count} người đã tham gia}}",
+  "videoStickerAddYoursOpenSemanticLabel": "Xem ai đã tham gia",
+  "videoStickerAddYoursJoinSemanticLabel": "Đến lượt bạn: {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{Chưa có phản hồi} =1{{count} phản hồi} other{{count} phản hồi}}",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{Video phản hồi, chưa có} =1{Xem {count} video phản hồi} other{Xem {count} video phản hồi}}",
+  "videoStickerQuestionSignIn": "Đăng nhập để trả lời.",
+  "videoStickerQuestionAnswerTitle": "Trả lời",
+  "videoStickerQuestionAnswerFieldLabel": "Câu trả lời của bạn",
+  "videoStickerQuestionAnswerPrivacyNote": "Chỉ {name} thấy câu trả lời của bạn. Họ có thể chia sẻ nó trong một video, không kèm tên bạn.",
+  "videoStickerQuestionAnswerSend": "Gửi",
+  "videoStickerQuestionAnswerSent": "Đã gửi câu trả lời.",
+  "videoStickerQuestionAnswerTooLong": "Câu trả lời này quá dài để gửi.",
+  "videoStickerQuestionAnswerFailed": "Câu trả lời của bạn chưa được gửi. Hãy thử lại.",
+  "videoStickerAddYoursSignIn": "Đăng nhập để tham gia.",
+  "videoStickerRepliesManageTitle": "Video phản hồi",
+  "videoStickerRepliesEmpty": "Chưa có video phản hồi nào.",
+  "videoStickerRepliesLoadFailed": "Không tải được các phản hồi.",
+  "videoStickerRepliesRetry": "Thử lại",
+  "videoStickerRepliesPin": "Ghim",
+  "videoStickerRepliesUnpin": "Bỏ ghim",
+  "videoStickerRepliesHide": "Ẩn",
+  "videoStickerRepliesShow": "Hiện",
+  "videoStickerRepliesPinned": "Đã ghim",
+  "videoStickerRepliesHidden": "Đã ẩn",
+  "videoStickerRepliesSaveFailed": "Không lưu được. Thử lại nhé.",
+  "videoStickerRepliesWatchSemanticLabel": "Xem phản hồi của {name}",
   "devOptionsClipRecovery": "Khôi phục clip",
   "devOptionsClipRecoveryDescription": "Tìm các bản ghi được lưu dưới tài khoản khác và các tệp video không còn mục nào tham chiếu tới.",
   "devOptionsClipRecoveryScan": "Quét",
@@ -2350,6 +2416,7 @@
   "routeInvalidUserId": "ID người dùng không hợp lệ",
   "routeInvalidVideoId": "ID video không hợp lệ",
   "routeInvalidSoundId": "ID âm thanh không hợp lệ",
+  "routeInvalidQuestion": "Liên kết câu hỏi không hợp lệ",
   "routeInvalidCategory": "Danh mục không hợp lệ",
   "routeNoVideosToDisplay": "Không có video nào để hiển thị",
   "routeGoHome": "Về trang chủ",
@@ -3017,6 +3084,28 @@
   "dmReelReplyComposerSemanticLabel": "Trả lời reel này",
   "@dmReelReplyComposerSemanticLabel": {
     "description": "Screen-reader label for the in-player reel reply text field."
+  },
+  "dmQuestionAnswerReceivedLabel": "Đã trả lời câu hỏi của bạn: {question}",
+  "@dmQuestionAnswerReceivedLabel": {
+    "description": "Line above a message in a conversation that answers the question sticker on one of the viewer's videos. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerSentLabel": "Bạn đã trả lời: {question}",
+  "@dmQuestionAnswerSentLabel": {
+    "description": "Line above the viewer's own message in a conversation that answers someone's question sticker. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerWithVideo": "Trả lời bằng video",
+  "@dmQuestionAnswerWithVideo": {
+    "description": "Button above an answer to the viewer's question sticker that opens the camera to reply with a video showing the question and the answer, without who wrote it."
   },
   "dmReelReplyViewChat": "Xem trò chuyện",
   "@dmReelReplyViewChat": {

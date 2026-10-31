@@ -133,6 +133,54 @@ This document outlines the required Nostr event types (kinds) that Divine uses f
 - `LikesRepository` creates Kind 7 events with "+" content (and "-" for downvotes)
 - Used for engagement metrics
 
+### Kind 1068 - Polls (NIP-88)
+**Used for:** The poll, quiz or emoji slider a creator places on a video
+
+**Implementation:**
+- Signed and published in the video's publish step, just ahead of the video;
+  the video's `sticker` tag of kind `poll`, `quiz` or `slider` names its id
+  (see `mobile/docs/NOSTR_VIDEO_EVENTS.md`)
+- Content is the question, `option` tags the answers, `polltype` is
+  `singlechoice`. A quiz adds Divine's `["answer", "<option id>"]`, a slider
+  is eleven options `0` to `100` plus Divine's `["slider", "<emoji>"]`
+- Built and read by `mobile/packages/poll_repository`
+
+### Kind 1018 - Poll Votes (NIP-88)
+**Used for:** A viewer's vote on a video's poll, quiz or slider
+
+**Implementation:**
+- `PollRepository` publishes `["e", "<poll id>", "<relay>"]` and one
+  `["response", "<option id>"]`; votes are public
+- One vote per pubkey counts, the latest, or for a quiz the first, so its
+  answer cannot be changed. Funnelcake counts them at
+  `GET /api/polls/{id}/results` (divine-funnelcake#1414, not deployed yet);
+  until then, and whenever it does not answer in time, the app counts on the
+  device
+
+### Kind 30078 - Video Reply Curation (NIP-78)
+**Used for:** The video reply a creator pinned to the front of the replies to
+one of their videos, and the ones they hid
+
+**Implementation:**
+- An addressable event of the creator's: `["d", "divine:replies:<video address>"]`,
+  `["a", "<video address>"]`, and per reply `["e", "<reply id>", "", "pinned"]`
+  or `["e", "<reply id>", "", "hidden"]`; empty content
+- Read and published by `mobile/packages/video_responses_repository`
+  (`RepliesCuration`); viewers see the pinned reply first and none of the
+  hidden ones on the video's replies sticker and in its replies feed
+- Kind 30078 is also used for the app's own encrypted sync and DM read-state
+  markers, which are self-addressed; those readers ignore other `d` tags
+
+### Private Answers to Question Stickers (NIP-17)
+**Used for:** A viewer's answer to the question sticker on a video
+
+**Implementation:**
+- A kind 14 NIP-17 message to the video's creator, citing the video with a
+  NIP-18 `q` tag like a shared video, plus
+  `["divine:question", "<question>", "<video event id>"]`
+- Sent by `QuestionAnswerCubit` through `DmRepository.sendSharedVideo`; never
+  sent as a plaintext kind 4 copy
+
 ## Event Subscription Requirements
 
 ### VideoEventService Subscriptions
@@ -240,6 +288,8 @@ If updating existing Divine installations:
 - **NIP-18:** Reposts (Kind 16)
 - **NIP-25:** Reactions (Kind 7)
 - **NIP-71:** Video Events (Kind 22)
+- **NIP-88:** Polls (Kind 1068, 1018)
+- **NIP-78:** Application-specific data (Kind 30078, video reply curation)
 
 ## Performance Considerations
 

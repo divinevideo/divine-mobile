@@ -4,6 +4,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -24,6 +25,9 @@ WidgetLayer socialStickerWidgetLayer(
     width: width,
     widget: SocialStickerView(data: data),
     meta: meta,
+    interaction: data.kind.isInteractiveCard
+        ? interactiveCardInteraction()
+        : null,
     exportConfigs: WidgetLayerExportConfigs(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       meta: meta,
