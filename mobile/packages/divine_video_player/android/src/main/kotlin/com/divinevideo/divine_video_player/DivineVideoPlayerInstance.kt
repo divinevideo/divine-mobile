@@ -246,6 +246,24 @@ internal class DivineVideoPlayerInstance(
     private val frameEffectReportedSize: Size?
         get() = if (routesThroughGl) frameEffectOutputSize else null
 
+    /** What [sendStateUpdate] tells Dart about the shape of the picture. */
+    private data class PictureLayout(
+        val width: Int,
+        val height: Int,
+        val pixelWidthHeightRatio: Double,
+        val rotationDegrees: Int,
+        val textureCrop: DecoderCrop?,
+    )
+
+    /**
+     * The layout reported before the frame-effect stage was installed, kept
+     * until the stage draws its first frame. Until then the texture holds the
+     * decoder's last buffer, which a SurfaceProducer that leaves crop and
+     * rotation to Dart shows unrotated: switching Dart to the stage's upright
+     * layout at once turned that frame sideways.
+     */
+    private var preEffectLayout: PictureLayout? = null
+
     /** The buffer size the output surface was set to for frame effects. */
     private var frameEffectSurfaceSize: Size? = null
 
@@ -1743,9 +1761,11 @@ internal class DivineVideoPlayerInstance(
                 mainHandler.post { if (frameEffectsState === created) startFrameEffectsFill() }
             }
         }
+        val exoPlayer = player
+        // Read while the frames still bypass the stage.
+        if (existing == null && exoPlayer != null) preEffectLayout = currentPictureLayout()
         state.setConfigs(configs)
         frameEffectsState = state
-        val exoPlayer = player
         if (exoPlayer != null) {
             if (existing == null) installFrameEffects(exoPlayer, state)
             updateFrameEffectWindows()
@@ -2271,6 +2291,7 @@ internal class DivineVideoPlayerInstance(
         }
 
         val totalDurationMs = computeTotalDuration(exoPlayer)
+        val layout = preEffectLayout ?: currentPictureLayout()
 
         val statusString = when {
             exoPlayer.playerError != null -> "error"
@@ -2293,15 +2314,12 @@ internal class DivineVideoPlayerInstance(
             "volume" to volume,
             "playbackSpeed" to speed,
             "isFirstFrameRendered" to firstFrameRendered,
-            // With frame effects, Media3 reports no video size (b/292111083)
-            // and its pipeline hands over upright frames: report the display
-            // size it draws, unrotated.
-            "videoWidth" to (frameEffectReportedSize?.width ?: videoWidth),
-            "videoHeight" to (frameEffectReportedSize?.height ?: videoHeight),
-            "pixelWidthHeightRatio" to if (frameEffectReportedSize != null) 1.0 else pixelWidthHeightRatio,
-            "rotationDegrees" to if (frameEffectReportedSize != null) 0 else rotationDegrees,
+            "videoWidth" to layout.width,
+            "videoHeight" to layout.height,
+            "pixelWidthHeightRatio" to layout.pixelWidthHeightRatio,
+            "rotationDegrees" to layout.rotationDegrees,
         )
-        decoderCrop?.takeIf { dartAppliesCrop }?.let { map["textureCrop"] = it.toFractions() }
+        layout.textureCrop?.let { map["textureCrop"] = it.toFractions() }
         exoPlayer.playerError?.let { error ->
             map["errorMessage"] = error.localizedMessage
                 ?: error.cause?.localizedMessage
@@ -2309,6 +2327,22 @@ internal class DivineVideoPlayerInstance(
             map["errorCode"] = errorCodeFor(error)
         }
         sink.success(map)
+    }
+
+    /** The layout of the frames the player draws now. */
+    private fun currentPictureLayout(): PictureLayout {
+        // With frame effects, Media3 reports no video size (b/292111083)
+        // and its pipeline hands over upright frames: report the display
+        // size it draws, unrotated.
+        val glSize = frameEffectReportedSize
+        if (glSize != null) return PictureLayout(glSize.width, glSize.height, 1.0, 0, null)
+        return PictureLayout(
+            videoWidth,
+            videoHeight,
+            pixelWidthHeightRatio,
+            rotationDegrees,
+            decoderCrop?.takeIf { dartAppliesCrop },
+        )
     }
 
     /** Human-readable name for a media3 `PLAY_WHEN_READY_CHANGE_REASON_*`. */
@@ -2723,6 +2757,9 @@ internal class DivineVideoPlayerInstance(
 
         override fun onRenderedFirstFrame() {
             firstFrameRendered = true
+            // Fires for the first frame after a re-prepare, playing or paused,
+            // so a frame-effect stage installed since has drawn by now.
+            preEffectLayout = null
             // A frame reached the surface, so whatever contention caused a
             // prior decoder error has cleared — allow the full retry budget
             // again for any future error.
