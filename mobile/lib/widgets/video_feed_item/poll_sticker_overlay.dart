@@ -97,7 +97,9 @@ class _PollStickerScope extends ConsumerWidget {
             VideoStickerKind.slider => PollKind.slider,
             _ => PollKind.poll,
           },
-          answerCount: data.pollOptions.length,
+          question: data.pollQuestion ?? '',
+          answers: data.pollOptions,
+          emoji: data.sliderEmoji,
         );
         runDetached(
           cubit.load(),
