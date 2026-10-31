@@ -8,6 +8,7 @@ import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
@@ -37,6 +38,7 @@ import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/account_storage_exception.dart';
+import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
@@ -893,7 +895,7 @@ void main() {
     );
 
     testWidgets(
-      'foreign primary snapshot cannot be restored for the old owner',
+      'foreign primary snapshot cannot be restored for a primary slot owner',
       (tester) async {
         final initial = await pumpHost(tester);
         final receipt = currentAuthService.committedAccountActivationReceipt!;
@@ -1663,12 +1665,28 @@ void main() {
     });
   });
 
-  // A Keycast account that signs over RPC never writes the primary key slot, so
-  // it still holds the key of the local account that last wrote it.
+  // A Divine OAuth account never writes the primary key slot, so the slot still
+  // holds the key of the local account that last wrote it. That key belongs to
+  // a third account here, neither the one leaving nor the switch target.
   group('outgoing primary key ownership', () {
-    final otherAccountKeys = SecureKeyContainer.fromPrivateKeyHex('1' * 64);
+    final otherAccountKeys = SecureKeyContainer.fromPrivateKeyHex('3' * 64);
+    late _FakeFlutterSecureStorage secureStorage;
 
-    Future<void> signInLeavingAccountOverRpc(WidgetTester tester) async {
+    // Signs the leaving account in over the device's key storage, which
+    // already holds the other account's primary key.
+    Future<void> signInLeavingDivineAccount(
+      WidgetTester tester, {
+      bool keyInIdentitySlot = false,
+    }) async {
+      keyStorage.primary = otherAccountKeys;
+      if (keyInIdentitySlot) {
+        // A fresh container: disposing the setUp account wipes leavingKeys.
+        keyStorage.identityKeys[leavingNpub] =
+            SecureKeyContainer.fromPrivateKeyHex(
+              '2' * 64,
+            );
+      }
+      secureStorage = _FakeFlutterSecureStorage();
       final discovery = _MockDiscovery();
       when(() => discovery.discoverRelays(any())).thenAnswer(
         (_) async => RelayDiscoveryResult.failure('No network in swap tests'),
@@ -1678,9 +1696,10 @@ void main() {
           deviceScope.sharedPreferences,
         ),
         backgroundActivityManager: BackgroundActivityManager(),
-        keyStorage: _FakeSecureKeyStorage(),
+        keyStorage: keyStorage,
         relayDiscoveryService: discovery,
         profileCheckIndexerUrl: 'unsupported://profile.invalid',
+        flutterSecureStorage: secureStorage,
       );
       // Native storage settles on real async, as in the suite's setUp.
       await tester.runAsync(() async {
@@ -1696,14 +1715,55 @@ void main() {
         await currentAuthService.dispose();
       });
       expect(remoteSigner.currentPublicKeyHex, equals(leavingHex));
-      expect(remoteSigner.canExportLocalNsec, isFalse);
+      expect(
+        remoteSigner.currentIdentity,
+        isA<KeycastNostrIdentity>().having(
+          (identity) => identity.signsWithLocalKey,
+          'signsWithLocalKey',
+          keyInIdentitySlot,
+        ),
+      );
       currentAuthService = remoteSigner;
     }
 
     testWidgets('switches away from a remote-signer account while another '
         'account owns the primary key', (tester) async {
-      await signInLeavingAccountOverRpc(tester);
-      keyStorage.primary = otherAccountKeys;
+      await signInLeavingDivineAccount(tester);
+      final initial = await pumpHost(tester);
+      final resolve = liveAccountContainer(initial);
+
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async {},
+        ),
+      );
+      await tester.pump();
+
+      expect(resolve(), isNot(same(initial)));
+      expect(
+        resolve().read(authServiceProvider).currentPublicKeyHex,
+        equals(targetHex),
+      );
+      // With no key on the device, the archived session is the only way back.
+      final archived = secureStorage.data['keycast_session_$leavingHex'];
+      expect(archived, isNotNull);
+      expect(
+        KeycastSession.fromJson(
+          jsonDecode(archived!) as Map<String, dynamic>,
+        ).userPubkey,
+        equals(leavingHex),
+      );
+    });
+
+    testWidgets('switches away from a divine.video account that keeps its key '
+        'in its identity slot while another account owns the primary key', (
+      tester,
+    ) async {
+      await signInLeavingDivineAccount(tester, keyInIdentitySlot: true);
       final initial = await pumpHost(tester);
       final resolve = liveAccountContainer(initial);
 
@@ -1727,8 +1787,7 @@ void main() {
 
     testWidgets('restores the other account primary key when the sign-in '
         'fails', (tester) async {
-      await signInLeavingAccountOverRpc(tester);
-      keyStorage.primary = otherAccountKeys;
+      await signInLeavingDivineAccount(tester);
       final initial = await pumpHost(tester);
       final resolve = liveAccountContainer(initial);
 
@@ -1738,41 +1797,28 @@ void main() {
           controller: controller,
           currentAuthService: currentAuthService,
           account: account,
-          signIn: (_, _) async => throw _FakeSignInException(),
+          signIn: (_, _) async {
+            keyStorage.primary = keyStorage.target;
+            throw _FakeSignInException();
+          },
         ),
         expected: throwsA(isA<_FakeSignInException>()),
       );
       await tester.pump();
 
       expect(resolve(), same(initial));
-      expect(keyStorage.restoredPrimary, same(otherAccountKeys));
+      expect(keyStorage.primary, same(otherAccountKeys));
       expect(currentAuthService.calls, equals(['archive', 'restore']));
-    });
-
-    testWidgets('refuses to switch a local-key account whose primary key '
-        'belongs to another account', (tester) async {
-      keyStorage.primary = otherAccountKeys;
-      final initial = await pumpHost(tester);
-      final resolve = liveAccountContainer(initial);
-      var signInAttempted = false;
-
-      await driveSwap(
-        swapAccount(
-          deviceScope: deviceScope,
-          controller: controller,
-          currentAuthService: currentAuthService,
-          account: account,
-          signIn: (_, _) async => signInAttempted = true,
-        ),
-        expected: throwsA(isA<AccountStorageException>()),
+      final restored = currentAuthService.committedAccountActivationReceipt;
+      expect(restored?.isCurrent, isTrue);
+      expect(restored?.ownerPubkey, equals(leavingHex));
+      expect(currentAuthService.isAuthenticated, isTrue);
+      expect(
+        AccountActivationCoordinator.forPreferences(
+          deviceScope.sharedPreferences,
+        ).hasUnresolvedActivation,
+        isFalse,
       );
-      await tester.pump();
-
-      expect(signInAttempted, isFalse);
-      expect(resolve(), same(initial));
-      // Nothing was retired, so there was nothing to roll back.
-      expect(currentAuthService.calls, equals(['archive']));
-      expect(keyStorage.restoredPrimary, isNull);
     });
   });
 
@@ -2008,6 +2054,7 @@ class _FakeAuthService extends AuthService {
     required super.keyStorage,
     required super.relayDiscoveryService,
     required super.profileCheckIndexerUrl,
+    super.flutterSecureStorage,
   });
 
   final calls = <String>[];
@@ -2038,6 +2085,7 @@ class _FakeAuthService extends AuthService {
 
 class _FakeSecureKeyStorage extends SecureKeyStorage {
   SecureKeyContainer? primary;
+  final identityKeys = <String, SecureKeyContainer>{};
   SecureKeyContainer? restoredPrimary;
   final _target = SecureKeyContainer.fromPrivateKeyHex('1' * 64);
   SecureKeyContainer? restorationTarget;
@@ -2049,7 +2097,7 @@ class _FakeSecureKeyStorage extends SecureKeyStorage {
   Future<void> initialize() async {}
   @override
   Future<SecureKeyContainer?> getIdentityKeyContainer(String npub) async =>
-      npub == target.npub ? target : null;
+      identityKeys[npub] ?? (npub == target.npub ? target : null);
   @override
   Future<bool> switchToIdentity(String npub) async {
     primary = target;
@@ -2094,4 +2142,50 @@ class _FakeSecureKeyStorage extends SecureKeyStorage {
       await resume.future;
     }
   }
+}
+
+/// Keeps a test's signer credentials out of the process-wide secure storage
+/// mock, which later suites in the same isolate would otherwise inherit.
+class _FakeFlutterSecureStorage extends Fake implements FlutterSecureStorage {
+  final Map<String, String> data = {};
+
+  @override
+  Future<String?> read({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => data[key];
+
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (value == null) {
+      data.remove(key);
+    } else {
+      data[key] = value;
+    }
+  }
+
+  @override
+  Future<void> delete({
+    required String key,
+    IOSOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    MacOsOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => data.remove(key);
 }
