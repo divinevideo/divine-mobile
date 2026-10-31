@@ -2,6 +2,7 @@
 // ABOUTME: Validates rendering, item tapping, collapse mode, and trim handles.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -11,6 +12,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/timeline_trim_handles.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_drop_indicator_line.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strip.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
@@ -180,6 +182,54 @@ void main() {
         await tester.longPress(find.byType(TimelineOverlayItemTile));
         await tester.pumpAndSettle();
         expect(draggedItem, isNull);
+      });
+
+      testWidgets('shows a layer dragged past the poll landing above it', (
+        tester,
+      ) async {
+        final meta = const SocialStickerData(
+          kind: SocialStickerKind.poll,
+          pollQuestion: 'Which one?',
+          pollOptions: ['Red', 'Blue'],
+        ).toMeta();
+        final poll = TimelineOverlayItem(
+          id: 'poll',
+          type: TimelineOverlayType.layer,
+          startTime: Duration.zero,
+          endTime: const Duration(seconds: 30),
+          row: 1,
+          label: 'Poll',
+          layer: WidgetLayer(
+            id: 'poll',
+            widget: const SizedBox.shrink(),
+            meta: meta,
+            exportConfigs: WidgetLayerExportConfigs(id: 'poll', meta: meta),
+          ),
+        );
+        await tester.pumpWidget(
+          buildWidget(items: [testItem, poll], rowCount: 2),
+        );
+
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.text('Test Layer')),
+        );
+        await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+        // Past the poll's row, into the empty row under it.
+        await gesture.moveBy(
+          const Offset(0, TimelineConstants.overlayRowHeight * 1.6),
+        );
+        await tester.pump();
+
+        expect(
+          tester
+              .widget<TimelineDropIndicatorLine>(
+                find.byType(TimelineDropIndicatorLine),
+              )
+              .lineY,
+          equals(TimelineConstants.overlayRowHeight),
+        );
+        await gesture.up();
+        await tester.pumpAndSettle();
       });
     });
 

@@ -367,15 +367,24 @@ class _TimelineOverlayStripState extends State<TimelineOverlayStrip> {
     if (matchingItems.isEmpty) return null;
 
     final item = matchingItems.first;
-    if (!_wouldOverlapAt(item, info.newStartMs, info.targetRow)) {
+    // A layer dropped on or past the poll's row lands just above the poll,
+    // so the line shows it there.
+    final drop = item.type == TimelineOverlayType.layer
+        ? layerDropBehindPoll(
+            items: widget.items.where((i) => i.id != item.id),
+            row: info.targetRow,
+            insertAbove: info.insertAbove,
+          )
+        : (row: info.targetRow, insertAbove: info.insertAbove);
+    if (!_wouldOverlapAt(item, info.newStartMs, drop.row)) {
       return null;
     }
 
     // Above: line at the top of the target row.
     // Below: line at the bottom of the target row.
-    return info.insertAbove
-        ? info.targetRow * _effectiveRowHeight
-        : (info.targetRow + 1) * _effectiveRowHeight;
+    return drop.insertAbove
+        ? drop.row * _effectiveRowHeight
+        : (drop.row + 1) * _effectiveRowHeight;
   }
 
   // -- Long-press drag callbacks -------------------------------------------
