@@ -8565,6 +8565,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'ズームブラー';
 
   @override
+  String get videoEditorEffectSpinBlur => 'スピンブラー';
+
+  @override
   String get videoEditorEffectComic => 'コミック';
 
   @override

@@ -9014,6 +9014,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Kabur Zum';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Kabur Putar';
+
+  @override
   String get videoEditorEffectComic => 'Komik';
 
   @override

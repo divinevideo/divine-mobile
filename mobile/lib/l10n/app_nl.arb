@@ -2627,6 +2627,7 @@
   "videoEditorEffectBalloons": "Ballonnen",
   "videoEditorEffectTiltShift": "Tilt-shift",
   "videoEditorEffectZoomBlur": "Zoomvervaging",
+  "videoEditorEffectSpinBlur": "Draaivervaging",
   "videoEditorEffectComic": "Strip",
   "videoEditorEffectEightBit": "8-bit",
   "videoEditorEffectAnaglyph": "3D-bril",

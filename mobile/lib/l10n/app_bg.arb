@@ -2868,6 +2868,7 @@
   "videoEditorEffectBalloons": "Балони",
   "videoEditorEffectTiltShift": "Тилт-шифт",
   "videoEditorEffectZoomBlur": "Зум размазване",
+  "videoEditorEffectSpinBlur": "Ротационно размазване",
   "videoEditorEffectComic": "Комикс",
   "videoEditorEffectEightBit": "8-битов",
   "videoEditorEffectAnaglyph": "3D очила",

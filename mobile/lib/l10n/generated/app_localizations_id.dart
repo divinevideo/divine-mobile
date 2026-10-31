@@ -8921,6 +8921,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Blur Zoom';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Blur Putar';
+
+  @override
   String get videoEditorEffectComic => 'Komik';
 
   @override

@@ -15179,6 +15179,12 @@ abstract class AppLocalizations {
   /// **'Zoom Blur'**
   String get videoEditorEffectZoomBlur;
 
+  /// Name of a video effect: the picture streaks around its centre, as if the camera turned during the shot.
+  ///
+  /// In en, this message translates to:
+  /// **'Spin Blur'**
+  String get videoEditorEffectSpinBlur;
+
   /// Name of a video effect: the picture looks like a printed comic book, with flat colours, halftone dots and ink outlines.
   ///
   /// In en, this message translates to:

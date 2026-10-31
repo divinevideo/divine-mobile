@@ -51,6 +51,10 @@ const tiltShiftVideoEffectId = 'divine.tiltShift';
 /// the native `ZoomBlurVideoEffect` on Android, iOS and macOS.
 const zoomBlurVideoEffectId = 'divine.zoomBlur';
 
+/// The id Divine's spin blur is registered under with pro_video_editor, by
+/// the native `SpinBlurVideoEffect` on Android, iOS and macOS.
+const spinBlurVideoEffectId = 'divine.spinBlur';
+
 /// The id Divine's comic look is registered under with pro_video_editor, by
 /// the native `ComicVideoEffect` on Android, iOS and macOS.
 const comicVideoEffectId = 'divine.comic';
@@ -185,6 +189,10 @@ class EditorEffectType {
   /// on the beat.
   static const zoomBlur = EditorEffectType.custom(zoomBlurVideoEffectId);
 
+  /// Spin blur: the picture streaks around its centre, all the time or on
+  /// the beat.
+  static const spinBlur = EditorEffectType.custom(spinBlurVideoEffectId);
+
   /// Comic: flat poster colours, halftone dots and ink outlines.
   static const comic = EditorEffectType.custom(comicVideoEffectId);
 
@@ -224,6 +232,7 @@ class EditorEffectType {
     embers,
     tiltShift,
     zoomBlur,
+    spinBlur,
     comic,
     eightBit,
     anaglyph,
@@ -243,11 +252,11 @@ class EditorEffectType {
   bool get isFlashing => builtIn != null && isFlashingVideoEffect(builtIn!);
 
   /// Whether this type can fire on the beat; see [canFireOnBeat]. Of the
-  /// custom effects only the zoom blur has a hit; the others play all through
-  /// their window.
+  /// custom effects only the zoom blur and the spin blur have a hit; the
+  /// others play all through their window.
   bool get supportsOnBeat => builtIn != null
       ? canFireOnBeat(builtIn!)
-      : customId == zoomBlurVideoEffectId;
+      : customId == zoomBlurVideoEffectId || customId == spinBlurVideoEffectId;
 
   /// The category the effects picker lists this type under.
   ///
@@ -265,7 +274,9 @@ class EditorEffectType {
       dropsVideoEffectId ||
       tiltShiftVideoEffectId => EditorEffectCategory.distort,
       lightLeakVideoEffectId => EditorEffectCategory.light,
-      echoVideoEffectId || zoomBlurVideoEffectId => EditorEffectCategory.motion,
+      echoVideoEffectId ||
+      zoomBlurVideoEffectId ||
+      spinBlurVideoEffectId => EditorEffectCategory.motion,
       snowVideoEffectId ||
       rainVideoEffectId ||
       leavesVideoEffectId ||

@@ -1745,12 +1745,13 @@ final class DropsVideoEffectTests: XCTestCase {
   }
 }
 
-/// Light leak, particles, tilt-shift, zoom blur, comic, 8-bit, 3D glasses and
-/// riso print are drawn with Metal kernels on iOS and macOS (`ShaderVideoEffect`), and with the same shaders in
-/// GLSL on Android and in the effects picker (`shaders/*.frag`). These tests
-/// check every pixel each kernel draws against its shader's formulas computed
-/// here on the CPU, so a change to one copy that is not made to the others
-/// fails, and so does a kernel that reads its textures upside down.
+/// Light leak, particles, tilt-shift, zoom blur, spin blur, comic, 8-bit, 3D
+/// glasses and riso print are drawn with Metal kernels on iOS and macOS
+/// (`ShaderVideoEffect`), and with the same shaders in GLSL on Android and in
+/// the effects picker (`shaders/*.frag`). These tests check every pixel each
+/// kernel draws against its shader's formulas computed here on the CPU, so a
+/// change to one copy that is not made to the others fails, and so does a
+/// kernel that reads its textures upside down.
 ///
 /// The CPU copies spell out every type and keep each statement short: Swift
 /// type-checks a long arithmetic expression over overloaded functions such as
@@ -1852,6 +1853,17 @@ final class ShaderVideoEffectTests: XCTestCase {
     }
   }
 
+  func testSpinBlurDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = SpinBlurVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.spinBlur(px, py, strength: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity)")
+    }
+  }
+
   func testComicDrawsWhatTheAndroidShaderDraws() {
     for intensity in [1.0, 0.45] {
       let effect = ComicVideoEffect(params: ["intensity": intensity])
@@ -1913,6 +1925,7 @@ final class ShaderVideoEffectTests: XCTestCase {
       ParticlesVideoEffect(style: .snow, params: ["intensity": 0]),
       TiltShiftVideoEffect(params: ["intensity": 0]),
       ZoomBlurVideoEffect(params: ["intensity": 0]),
+      SpinBlurVideoEffect(params: ["intensity": 0]),
       ComicVideoEffect(params: ["intensity": 0]),
       EightBitVideoEffect(params: ["intensity": 0]),
       AnaglyphVideoEffect(params: ["intensity": 0]),
@@ -1924,20 +1937,20 @@ final class ShaderVideoEffectTests: XCTestCase {
     }
   }
 
-  func testZoomBlurOnTheBeatFadesEachHitOutOverHalfASecond() {
-    let beats: [Int64]? = ZoomBlurHits.beats(["beatsUs": [1_200_000, 200_000]])
+  func testBlurOnTheBeatFadesEachHitOutOverHalfASecond() {
+    let beats: [Int64]? = BlurHits.beats(["beatsUs": [1_200_000, 200_000]])
     XCTAssertEqual(beats, [200_000, 1_200_000])
-    XCTAssertNil(ZoomBlurHits.beats(["intensity": 0.5]))
+    XCTAssertNil(BlurHits.beats(["intensity": 0.5]))
     let cases: [(Int64, Double)] = [
       (0, 0), (200_000, 0.8), (450_000, 0.2), (699_999, 0), (1_200_000, 0.8),
       (1_325_000, 0.45),
     ]
     for (time, expected) in cases {
-      let strength: Double = ZoomBlurHits.strength(
+      let strength: Double = BlurHits.strength(
         intensity: 0.8, beatsUs: beats, effectTimeUs: time)
       XCTAssertEqual(strength, expected, accuracy: 1e-5, "\(time) us")
     }
-    let allThrough: Double = ZoomBlurHits.strength(
+    let allThrough: Double = BlurHits.strength(
       intensity: 0.8, beatsUs: nil, effectTimeUs: 123)
     XCTAssertEqual(allThrough, 0.8)
   }
@@ -2609,6 +2622,25 @@ final class ShaderVideoEffectTests: XCTestCase {
       for k in 0..<3 { color[k] += more[k] }
     }
     for k in 0..<3 { color[k] /= 32 }
+    return color
+  }
+
+  private func spinBlur(_ px: Double, _ py: Double, strength: Double) -> [Double] {
+    let cx: Double = Double(width) / 2
+    let cy: Double = Double(height) / 2
+    let dx: Double = px - cx
+    let dy: Double = py - cy
+    let jitter: Double = noise(px, py)
+    var color = [Double](repeating: 0, count: 3)
+    for i in 0..<32 {
+      let share: Double = (Double(i) + jitter) / 32
+      let angle: Double = 0.22 * strength * (share - 0.5)
+      let s: Double = sin(angle)
+      let k: Double = cos(angle)
+      let more: [Double] = tap(cx + dx * k - dy * s, cy + dx * s + dy * k)
+      for c in 0..<3 { color[c] += more[c] }
+    }
+    for c in 0..<3 { color[c] /= 32 }
     return color
   }
 

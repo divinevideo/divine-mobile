@@ -6381,6 +6381,10 @@
   "@videoEditorEffectZoomBlur": {
     "description": "Name of a video effect: the picture streaks outward from its centre, as if the camera zoomed in during the shot."
   },
+  "videoEditorEffectSpinBlur": "Spin Blur",
+  "@videoEditorEffectSpinBlur": {
+    "description": "Name of a video effect: the picture streaks around its centre, as if the camera turned during the shot."
+  },
   "videoEditorEffectComic": "Comic",
   "@videoEditorEffectComic": {
     "description": "Name of a video effect: the picture looks like a printed comic book, with flat colours, halftone dots and ink outlines."

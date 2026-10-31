@@ -9012,6 +9012,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'زوم بلر';
 
   @override
+  String get videoEditorEffectSpinBlur => 'اسپن بلر';
+
+  @override
   String get videoEditorEffectComic => 'کامک';
 
   @override

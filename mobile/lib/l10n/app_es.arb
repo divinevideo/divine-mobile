@@ -2635,6 +2635,7 @@
   "videoEditorEffectBalloons": "Globos",
   "videoEditorEffectTiltShift": "Tilt-shift",
   "videoEditorEffectZoomBlur": "Desenfoque de zoom",
+  "videoEditorEffectSpinBlur": "Desenfoque de giro",
   "videoEditorEffectComic": "Cómic",
   "videoEditorEffectEightBit": "8 bits",
   "videoEditorEffectAnaglyph": "Lentes 3D",

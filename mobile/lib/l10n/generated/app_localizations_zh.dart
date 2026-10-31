@@ -8489,6 +8489,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectZoomBlur => '变焦模糊';
 
   @override
+  String get videoEditorEffectSpinBlur => '旋转模糊';
+
+  @override
   String get videoEditorEffectComic => '漫画';
 
   @override

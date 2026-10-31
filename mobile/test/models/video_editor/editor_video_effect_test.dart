@@ -1034,7 +1034,7 @@ void main() {
         for (final type in EditorEffectType.values)
           if (type.customId != null) type,
       ];
-      expect(custom, hasLength(25));
+      expect(custom, hasLength(26));
       for (final type in custom) {
         final effect = EditorVideoEffect.of(
           id: 'x',
@@ -1048,8 +1048,17 @@ void main() {
       }
     });
 
-    test('only the zoom blur of the custom effects fires on the beat', () {
+    test('only the zoom blur and the spin blur of the custom effects fire on '
+        'the beat', () {
       expect(EditorEffectType.zoomBlur.supportsOnBeat, isTrue);
+      final spinBlur = EditorVideoEffect.of(
+        id: 'spin',
+        type: EditorEffectType.spinBlur,
+        intensity: 0.5,
+        onBeat: true,
+      );
+      expect(spinBlur.onBeat, isTrue);
+      expect(spinBlur.custom!.params[EditorVideoEffect.onBeatParam], isTrue);
       for (final type in [
         EditorEffectType.echo,
         EditorEffectType.drops,

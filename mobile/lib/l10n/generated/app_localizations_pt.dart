@@ -9090,6 +9090,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Desfoque de zoom';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Desfoque de giro';
+
+  @override
   String get videoEditorEffectComic => 'Quadrinhos';
 
   @override
