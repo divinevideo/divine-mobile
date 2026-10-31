@@ -262,6 +262,33 @@ void main() {
       });
     });
 
+    test('a background transition gets its own retries after long failure', () {
+      fakeAsync((async) {
+        final backgroundAttempts = <int>[];
+        final coordinator = NotificationActivitySessionCoordinator(
+          send: (_, update, _) async {
+            if (update.state == NotificationActivityState.background) {
+              backgroundAttempts.add(async.elapsed.inSeconds);
+            }
+            throw const FunnelcakeApiException(
+              message: 'Service unavailable',
+              statusCode: 503,
+            );
+          },
+        );
+        addTearDown(coordinator.dispose);
+        coordinator.setAccount(owner: owner, ready: true);
+        coordinator.setForeground(true);
+        async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 120));
+        coordinator.setForeground(false);
+        async.flushMicrotasks();
+        async.elapse(const Duration(minutes: 10));
+
+        expect(backgroundAttempts, [120, 125, 140, 170, 230]);
+      });
+    });
+
     test(
       'newer background supersedes an in-flight foreground and its retry',
       () {

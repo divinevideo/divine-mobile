@@ -103,9 +103,11 @@ class NotificationActivitySessionCoordinator {
       _stopTimers();
       return;
     }
+    // A real transition starts its own backoff; heartbeats keep the failing one.
     if (!isHeartbeat) {
       _retry?.cancel();
       _retry = null;
+      _retryCount = 0;
     }
     // Offline visits still advance their epoch, even without emitted updates.
     _sequence = _visit > _sequence ? _visit : _sequence + 1;
