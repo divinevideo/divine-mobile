@@ -17,6 +17,34 @@ DmMessage _messageWith(List<List<String>> tags) => DmMessage(
 
 void main() {
   group(DmMessage, () {
+    group('answeredQuestion', () {
+      test('reads the question and video a private answer names', () {
+        final message = _messageWith([
+          ['q', '34236:${'d' * 64}:video-d', 'wss://relay.divine.video'],
+          [DmMessage.questionTagName, ' Ask me anything ', 'e' * 64],
+        ]);
+
+        expect(message.answeredQuestion, equals('Ask me anything'));
+        expect(message.answeredVideoId, equals('e' * 64));
+      });
+
+      test('reads none from any other message', () {
+        for (final tags in [
+          <List<String>>[],
+          [
+            [DmMessage.questionTagName],
+          ],
+          [
+            [DmMessage.questionTagName, '  '],
+          ],
+        ]) {
+          final message = _messageWith(tags);
+          expect(message.answeredQuestion, isNull, reason: '$tags');
+          expect(message.answeredVideoId, isNull, reason: '$tags');
+        }
+      });
+    });
+
     group('isMarkedSensitive', () {
       for (final (shape, tags) in [
         (

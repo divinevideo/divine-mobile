@@ -16,14 +16,56 @@
   "videoEditorSocialStickerPollNote": "Penonton melihat keputusan selepas mengundi. Undian adalah awam.",
   "videoEditorSocialStickerQuizNote": "Tandakan jawapan yang betul. Penonton melihatnya selepas memilih satu.",
   "videoEditorSocialStickerSliderNote": "Penonton menyeret emoji untuk menjawab dan melihat purata kedudukannya.",
-  "videoEditorPollAreaHint": "Undian kekal dalam kotak ini supaya penonton boleh mengetiknya",
   "videoStickerQuizRightAnswer": "Jawapan betul",
   "videoStickerQuizWrongAnswer": "Jawapan salah",
+  "videoEditorSocialStickerQuestion": "Soalan",
+  "videoEditorSocialStickerAddYours": "Giliran anda",
+  "videoEditorSocialStickerReplies": "Balasan",
+  "videoEditorSocialStickerQuestionSample": "Tanya saya apa sahaja",
+  "videoEditorSocialStickerAddYoursSample": "Tunjukkan susunan meja anda",
+  "videoEditorSocialStickerRepliesSample": "Balas dengan video",
+  "videoEditorSocialStickerQuestionHint": "Soalan anda",
+  "videoEditorSocialStickerAddYoursPromptHint": "Apa yang patut orang tunjukkan?",
+  "videoEditorSocialStickerAddYoursHashtagHint": "Hashtag",
+  "videoEditorSocialStickerRepliesTitleHint": "Tajuk",
+  "videoEditorSocialStickerQuestionNote": "Jawapan sampai kepada anda sebagai mesej peribadi.",
+  "videoEditorSocialStickerAddYoursNote": "Penonton menjawab dengan video mereka sendiri. Setiap jawapan mendapat hashtag ini dan dipautkan kembali ke video anda.",
+  "videoEditorSocialStickerRepliesNote": "Menunjukkan siapa yang membalas video ini dengan video. Penonton ketik padanya untuk menonton balasan.",
+  "videoEditorInteractiveCardAreaHint": "Pelekat ini kekal dalam kotak ini supaya penonton boleh mengetiknya",
   "videoStickerPollSignInToVote": "Log masuk untuk mengundi.",
   "videoStickerPollNotReady": "Masih menyambung. Cuba lagi sebentar nanti.",
   "videoStickerPollVoteFailed": "Undian anda tidak dihantar. Cuba lagi.",
   "videoStickerPollVotesArePublic": "Undian adalah awam. Sesiapa pun boleh melihat pilihan anda.",
   "videoStickerPollVoteCount": "{count, plural, other{{count} undian}}",
+  "videoStickerQuestionAnswerHint": "Ketik untuk menjawab",
+  "videoStickerQuestionAnswerSemanticLabel": "Jawab: {question}",
+  "videoStickerAddYoursButton": "Giliran anda",
+  "videoStickerAddYoursJoined": "{count, plural, =0{Jadilah yang pertama} =1{{count} orang menyertai} other{{count} orang menyertai}}",
+  "videoStickerAddYoursOpenSemanticLabel": "Lihat siapa yang menyertai",
+  "videoStickerAddYoursJoinSemanticLabel": "Giliran anda: {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{Belum ada balasan} =1{{count} balasan} other{{count} balasan}}",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{Balasan video, belum ada} =1{Tonton {count} balasan video} other{Tonton {count} balasan video}}",
+  "videoStickerQuestionSignIn": "Log masuk untuk menjawab.",
+  "videoStickerQuestionAnswerTitle": "Jawab",
+  "videoStickerQuestionAnswerFieldLabel": "Jawapan anda",
+  "videoStickerQuestionAnswerPrivacyNote": "Hanya {name} yang melihat jawapan anda. Mereka mungkin berkongsinya dalam video, tanpa nama anda.",
+  "videoStickerQuestionAnswerSend": "Hantar",
+  "videoStickerQuestionAnswerSent": "Jawapan dihantar.",
+  "videoStickerQuestionAnswerTooLong": "Jawapan itu terlalu panjang untuk dihantar.",
+  "videoStickerQuestionAnswerFailed": "Jawapan anda tidak dihantar. Cuba lagi.",
+  "videoStickerAddYoursSignIn": "Log masuk untuk menyertai.",
+  "videoStickerRepliesManageTitle": "Balasan video",
+  "videoStickerRepliesEmpty": "Belum ada balasan video.",
+  "videoStickerRepliesLoadFailed": "Tidak dapat memuatkan balasan.",
+  "videoStickerRepliesRetry": "Cuba lagi",
+  "videoStickerRepliesPin": "Semat",
+  "videoStickerRepliesUnpin": "Buang sematan",
+  "videoStickerRepliesHide": "Sembunyikan",
+  "videoStickerRepliesShow": "Tunjuk",
+  "videoStickerRepliesPinned": "Disemat",
+  "videoStickerRepliesHidden": "Disembunyikan",
+  "videoStickerRepliesSaveFailed": "Tidak dapat disimpan. Cuba lagi.",
+  "videoStickerRepliesWatchSemanticLabel": "Tonton balasan daripada {name}",
   "devOptionsClipRecovery": "Pemulihan klip",
   "devOptionsClipRecoveryDescription": "Mencari rakaman yang disimpan di bawah akaun lain dan fail video yang tidak lagi dirujuk oleh mana-mana entri.",
   "devOptionsClipRecoveryScan": "Imbas",
@@ -2374,6 +2416,7 @@
   "routeInvalidUserId": "ID pengguna tidak sah",
   "routeInvalidVideoId": "ID video tidak sah",
   "routeInvalidSoundId": "ID bunyi tidak sah",
+  "routeInvalidQuestion": "Pautan soalan tidak sah",
   "routeInvalidCategory": "Kategori tidak sah",
   "routeNoVideosToDisplay": "Tiada video untuk dipaparkan",
   "routeGoHome": "Ke laman utama",
@@ -3041,6 +3084,28 @@
   "dmReelReplyComposerSemanticLabel": "Balas kepada reel ini",
   "@dmReelReplyComposerSemanticLabel": {
     "description": "Screen-reader label for the in-player reel reply text field."
+  },
+  "dmQuestionAnswerReceivedLabel": "Menjawab soalan anda: {question}",
+  "@dmQuestionAnswerReceivedLabel": {
+    "description": "Line above a message in a conversation that answers the question sticker on one of the viewer's videos. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerSentLabel": "Anda menjawab: {question}",
+  "@dmQuestionAnswerSentLabel": {
+    "description": "Line above the viewer's own message in a conversation that answers someone's question sticker. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerWithVideo": "Jawab dengan video",
+  "@dmQuestionAnswerWithVideo": {
+    "description": "Button above an answer to the viewer's question sticker that opens the camera to reply with a video showing the question and the answer, without who wrote it."
   },
   "dmReelReplyViewChat": "Lihat sembang",
   "@dmReelReplyViewChat": {

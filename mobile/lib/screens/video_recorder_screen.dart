@@ -53,6 +53,7 @@ abstract final class CreationEntryPoint {
   static const cameraFab = 'camera_fab';
   static const library = 'library';
   static const videoReply = 'video_reply';
+  static const addYours = 'add_yours';
   static const quickAction = 'quick_action';
   static const postPublish = 'post_publish';
   static const editor = 'editor';
@@ -63,6 +64,7 @@ abstract final class CreationEntryPoint {
     cameraFab ||
     library ||
     videoReply ||
+    addYours ||
     quickAction ||
     postPublish ||
     editor => value!,

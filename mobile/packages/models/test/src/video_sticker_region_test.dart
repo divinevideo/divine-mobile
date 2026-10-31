@@ -380,6 +380,96 @@ void main() {
           isNull,
         );
       });
+
+      test('reads a question by its question alone', () {
+        final region = VideoStickerRegion.fromTag(
+          voteTag('question', _pubkey, 'Ask me anything'),
+        );
+
+        expect(region?.kind, equals(VideoStickerKind.question));
+        expect(region?.target, isEmpty);
+        expect(region?.label, equals('Ask me anything'));
+      });
+
+      test('drops a question that asks nothing or more than one line', () {
+        for (final label in ['', 'Ask me\nanything']) {
+          expect(
+            VideoStickerRegion.fromTag(voteTag('question', '', label)),
+            isNull,
+            reason: label,
+          );
+        }
+      });
+
+      test('reads a prompt by its chain and the hashtag answers share', () {
+        const address = '34236:$_pubkey:desk-1';
+        final region = VideoStickerRegion.fromTag(
+          voteTag('prompt', address, 'Show your desk\ndesksetup'),
+        );
+
+        expect(region?.kind, equals(VideoStickerKind.prompt));
+        expect(region?.target, equals(address));
+        expect(region?.promptHashtag, equals('desksetup'));
+        expect(
+          region?.promptChainRoot('34236:$_pubkey:other'),
+          equals(address),
+        );
+      });
+
+      test('takes a prompt naming no chain as the start of its own', () {
+        final region = VideoStickerRegion.fromTag(
+          voteTag('prompt', '', 'Show your desk\ndesksetup'),
+        );
+        const own = '34236:$_pubkey:desk-1';
+
+        expect(region?.target, isEmpty);
+        expect(region?.promptChainRoot(own), equals(own));
+      });
+
+      test('drops a prompt with no video address or no hashtag', () {
+        for (final (target, label) in [
+          ('note1abc', 'Show your desk\ndesksetup'),
+          ('1:$_pubkey:d', 'Show your desk\ndesksetup'),
+          ('34236:$_pubkey:', 'Show your desk\ndesksetup'),
+          ('', 'Show your desk'),
+          ('', 'Show your desk\ndesk setup'),
+          ('', '\ndesksetup'),
+        ]) {
+          expect(
+            VideoStickerRegion.fromTag(voteTag('prompt', target, label)),
+            isNull,
+            reason: '$target $label',
+          );
+        }
+      });
+
+      test('reads a replies sticker by its title, pointing at nothing', () {
+        final region = VideoStickerRegion.fromTag(
+          voteTag('replies', _pubkey, 'Reply with a video'),
+        );
+
+        expect(region?.kind, equals(VideoStickerKind.replies));
+        expect(region?.target, isEmpty);
+        expect(
+          VideoStickerRegion.fromTag(voteTag('replies', '', '')),
+          isNull,
+        );
+      });
+    });
+
+    group('VideoStickerKind', () {
+      test('takes answers on votes, questions and prompts only', () {
+        expect(
+          VideoStickerKind.values.where((kind) => kind.takesAnswers),
+          equals([
+            VideoStickerKind.poll,
+            VideoStickerKind.quiz,
+            VideoStickerKind.slider,
+            VideoStickerKind.question,
+            VideoStickerKind.prompt,
+          ]),
+        );
+      });
     });
 
     group('withTarget', () {

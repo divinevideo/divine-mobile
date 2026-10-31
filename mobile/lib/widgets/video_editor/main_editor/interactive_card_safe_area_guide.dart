@@ -1,26 +1,27 @@
-// ABOUTME: Outlines where a poll, quiz or slider may stand while it is moved,
+// ABOUTME: Outlines where an interactive card may stand while it is moved,
 // ABOUTME: so one let go outside the box is not pulled back without a reason.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/models/video_editor/poll_sticker_placement.dart';
+import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 
-/// The box a poll, quiz or slider may stand in ([pollSafeRect]), outlined on
-/// the canvas while the poll is moved, with a line saying why.
+/// The box an interactive card, such as a poll or a question, may stand in
+/// ([interactiveCardSafeRect]), outlined on the canvas while the card is
+/// moved, with a line saying why.
 ///
-/// A poll let go outside the box moves back into it; with the box in sight,
+/// A card let go outside the box moves back into it; with the box in sight,
 /// that reads as the rule it is.
-class PollSafeAreaGuide extends StatelessWidget {
+class InteractiveCardSafeAreaGuide extends StatelessWidget {
   /// Creates the guide.
-  const PollSafeAreaGuide({
+  const InteractiveCardSafeAreaGuide({
     required this.isVisible,
     required this.targetAspectRatio,
     required this.fittedBoxScale,
     super.key,
   });
 
-  /// Whether a poll is being moved.
+  /// Whether an interactive card is being moved.
   final bool isVisible;
 
   /// The aspect ratio of the exported video.
@@ -42,7 +43,7 @@ class PollSafeAreaGuide extends StatelessWidget {
         opacity: isVisible ? 1 : 0,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final box = pollSafeRect(
+            final box = interactiveCardSafeRect(
               bodySize: constraints.biggest,
               targetAspectRatio: targetAspectRatio,
             );
@@ -61,7 +62,7 @@ class PollSafeAreaGuide extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Under the box, clear of a poll let go inside it.
+                // Under the box, clear of a card let go inside it.
                 Positioned(
                   left: box.left,
                   top: box.bottom + 8 * unit,
@@ -69,7 +70,9 @@ class PollSafeAreaGuide extends StatelessWidget {
                   child: Center(
                     child: Transform.scale(
                       scale: unit,
-                      child: _Hint(text: context.l10n.videoEditorPollAreaHint),
+                      child: _Hint(
+                        text: context.l10n.videoEditorInteractiveCardAreaHint,
+                      ),
                     ),
                   ),
                 ),

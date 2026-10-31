@@ -2378,6 +2378,12 @@ class _MessageList extends StatelessWidget {
                 ? CrossAxisAlignment.end
                 : CrossAxisAlignment.start,
             children: [
+              if (message.answeredQuestion != null)
+                DmQuestionAnswerHeader(
+                  message: message,
+                  isSent: isSent,
+                  viewerPubkey: currentPubkey,
+                ),
               bubble,
               // One combined reaction pill (distinct emoji glyphs + reactor
               // avatars) for both 1:1 and group; tapping it opens the

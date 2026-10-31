@@ -146,6 +146,8 @@ final _locations = <String, List<String>>{
   'subtitleEditorFor': [RoutePaths.subtitleEditorFor(_eventId)],
   'videoDetailForId': [RoutePaths.videoDetailForId(_eventId)],
   'videoFeedForIndex': [RoutePaths.videoFeedForIndex(0)],
+  'videoRepliesFor': [RoutePaths.videoRepliesFor(_eventId)],
+  'questionAnswerFor': [RoutePaths.questionAnswerFor(_pubkeyHex)],
   'videoMetadataEditFor': [RoutePaths.videoMetadataEditFor(_eventId)],
 };
 
@@ -165,6 +167,11 @@ const _notLocations = {
   'subtitleEditor',
   'videoDetailBase',
   'videoMetadataEdit',
+  'questionAnswerBase',
+  'videoRepliesBase',
+  // Route patterns with a placeholder; their builders are checked instead.
+  'questionAnswer',
+  'videoReplies',
   // Child-route segments, registered relative to their parent route.
   'accountStatusSubpath',
   'addSoundSubpath',

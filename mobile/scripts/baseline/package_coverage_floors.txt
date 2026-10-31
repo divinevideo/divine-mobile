@@ -73,5 +73,6 @@ upload_repository 40
 user_ranking 100
 verifier_client 76
 video_event_cache 0
+video_responses_repository 100
 videos_repository 100
 voice_effects 100

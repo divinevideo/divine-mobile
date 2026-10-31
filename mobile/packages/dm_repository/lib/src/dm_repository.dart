@@ -7267,6 +7267,9 @@ class DmRepository {
   /// legacy plaintext kind-4 copy (recommended for shares — see the caller in
   /// `VideoSharingService`).
   ///
+  /// [additionalTags] ride on the rumor after the citation, such as the
+  /// question a viewer answers with a question sticker's answer.
+  ///
   /// Throws the same errors as [sendMessage].
   @useResult
   Future<NIP17SendResult> sendSharedVideo({
@@ -7278,6 +7281,7 @@ class DmRepository {
     String? videoEventId,
     String? relayHint,
     String? replyToId,
+    List<List<String>> additionalTags = const [],
     bool skipNip04Fallback = false,
     bool backgroundDelivery = false,
   }) async {
@@ -7306,6 +7310,7 @@ class DmRepository {
         recipientPubkey: recipientPubkey,
         content: baseContent,
         replyToId: replyToId,
+        additionalTags: additionalTags,
         backgroundDelivery: backgroundDelivery,
         skipNip04Fallback: skipNip04Fallback,
       );
@@ -7314,7 +7319,7 @@ class DmRepository {
     return sendMessage(
       recipientPubkey: recipientPubkey,
       content: '$baseContent\n${citation.nostrUri}',
-      additionalTags: [citation.qTag],
+      additionalTags: [citation.qTag, ...additionalTags],
       replyToId: replyToId,
       backgroundDelivery: backgroundDelivery,
       skipNip04Fallback: skipNip04Fallback,

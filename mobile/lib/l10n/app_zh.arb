@@ -16,14 +16,56 @@
   "videoEditorSocialStickerPollNote": "观众投票后即可看到结果。投票是公开的。",
   "videoEditorSocialStickerQuizNote": "勾选正确答案。观众作答后就能看到它。",
   "videoEditorSocialStickerSliderNote": "观众拖动表情来作答，并能看到平均落在哪里。",
-  "videoEditorPollAreaHint": "投票会留在这个框内，方便观众点击",
   "videoStickerQuizRightAnswer": "正确答案",
   "videoStickerQuizWrongAnswer": "错误答案",
+  "videoEditorSocialStickerQuestion": "提问",
+  "videoEditorSocialStickerAddYours": "轮到你了",
+  "videoEditorSocialStickerReplies": "回复",
+  "videoEditorSocialStickerQuestionSample": "随便问我",
+  "videoEditorSocialStickerAddYoursSample": "晒晒你的桌面布置",
+  "videoEditorSocialStickerRepliesSample": "用视频回复",
+  "videoEditorSocialStickerQuestionHint": "你的问题",
+  "videoEditorSocialStickerAddYoursPromptHint": "想让大家展示什么？",
+  "videoEditorSocialStickerAddYoursHashtagHint": "话题标签",
+  "videoEditorSocialStickerRepliesTitleHint": "标题",
+  "videoEditorSocialStickerQuestionNote": "回答会以私信的形式发给你。",
+  "videoEditorSocialStickerAddYoursNote": "观众用自己的视频来回应。每个回应都会带上这个话题标签，并链接回你的视频。",
+  "videoEditorSocialStickerRepliesNote": "显示谁用视频回复了这个视频。观众点一下就能观看这些回复。",
+  "videoEditorInteractiveCardAreaHint": "这个贴纸会留在这个框内，方便观众点按",
   "videoStickerPollSignInToVote": "登录后才能投票。",
   "videoStickerPollNotReady": "仍在连接中，请稍后再试。",
   "videoStickerPollVoteFailed": "你的投票没有发送成功，请重试。",
   "videoStickerPollVotesArePublic": "投票是公开的，任何人都能看到你的选择。",
   "videoStickerPollVoteCount": "{count, plural, other{{count} 票}}",
+  "videoStickerQuestionAnswerHint": "点按回答",
+  "videoStickerQuestionAnswerSemanticLabel": "回答：{question}",
+  "videoStickerAddYoursButton": "轮到你了",
+  "videoStickerAddYoursJoined": "{count, plural, =0{来做第一个吧} =1{{count} 人已参与} other{{count} 人已参与}}",
+  "videoStickerAddYoursOpenSemanticLabel": "看看谁参与了",
+  "videoStickerAddYoursJoinSemanticLabel": "轮到你了：{prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{还没有回复} =1{{count} 条回复} other{{count} 条回复}}",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{视频回复，暂无} =1{观看 {count} 条视频回复} other{观看 {count} 条视频回复}}",
+  "videoStickerQuestionSignIn": "登录后才能回答。",
+  "videoStickerQuestionAnswerTitle": "回答",
+  "videoStickerQuestionAnswerFieldLabel": "你的回答",
+  "videoStickerQuestionAnswerPrivacyNote": "只有 {name} 能看到你的回答。对方可能会在视频里分享它，但不会显示你的名字。",
+  "videoStickerQuestionAnswerSend": "发送",
+  "videoStickerQuestionAnswerSent": "回答已发送。",
+  "videoStickerQuestionAnswerTooLong": "回答太长，发不出去。",
+  "videoStickerQuestionAnswerFailed": "你的回答没有发送成功，请重试。",
+  "videoStickerAddYoursSignIn": "登录后才能参与。",
+  "videoStickerRepliesManageTitle": "视频回复",
+  "videoStickerRepliesEmpty": "还没有视频回复。",
+  "videoStickerRepliesLoadFailed": "无法加载回复。",
+  "videoStickerRepliesRetry": "再试一次",
+  "videoStickerRepliesPin": "置顶",
+  "videoStickerRepliesUnpin": "取消置顶",
+  "videoStickerRepliesHide": "隐藏",
+  "videoStickerRepliesShow": "显示",
+  "videoStickerRepliesPinned": "已置顶",
+  "videoStickerRepliesHidden": "已隐藏",
+  "videoStickerRepliesSaveFailed": "没能保存，再试一次。",
+  "videoStickerRepliesWatchSemanticLabel": "观看 {name} 的回复",
   "devOptionsClipRecovery": "片段恢复",
   "devOptionsClipRecoveryDescription": "查找存储在其他账号下的录制内容，以及已无任何记录引用的视频文件。",
   "devOptionsClipRecoveryScan": "扫描",
@@ -2374,6 +2416,7 @@
   "routeInvalidUserId": "无效的用户 ID",
   "routeInvalidVideoId": "无效的视频 ID",
   "routeInvalidSoundId": "无效的声音 ID",
+  "routeInvalidQuestion": "无效的提问链接",
   "routeInvalidCategory": "无效的分类",
   "routeNoVideosToDisplay": "没有可显示的视频",
   "routeGoHome": "回到首页",
@@ -3041,6 +3084,28 @@
   "dmReelReplyComposerSemanticLabel": "回复此视频",
   "@dmReelReplyComposerSemanticLabel": {
     "description": "Screen-reader label for the in-player reel reply text field."
+  },
+  "dmQuestionAnswerReceivedLabel": "回答了你的问题：{question}",
+  "@dmQuestionAnswerReceivedLabel": {
+    "description": "Line above a message in a conversation that answers the question sticker on one of the viewer's videos. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerSentLabel": "你回答了：{question}",
+  "@dmQuestionAnswerSentLabel": {
+    "description": "Line above the viewer's own message in a conversation that answers someone's question sticker. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerWithVideo": "用视频回答",
+  "@dmQuestionAnswerWithVideo": {
+    "description": "Button above an answer to the viewer's question sticker that opens the camera to reply with a video showing the question and the answer, without who wrote it."
   },
   "dmReelReplyViewChat": "查看聊天",
   "@dmReelReplyViewChat": {
