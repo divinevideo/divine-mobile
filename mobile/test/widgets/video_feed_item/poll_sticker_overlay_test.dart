@@ -336,6 +336,18 @@ void main() {
         handle.dispose();
       });
 
+      testWidgets('reads the poll to a screen reader at the card, not as a '
+          'label of the whole video', (tester) async {
+        final handle = tester.ensureSemantics();
+        await pump(tester, session: ready(_author));
+        await tester.pump();
+
+        final node = tester.getSemantics(find.text('Which one?'));
+        expect(node.rect.size, equals(const Size(300, 240)));
+        expect(node.label, startsWith('Which one?'));
+        handle.dispose();
+      });
+
       testWidgets('votes when a screen reader activates an answer', (
         tester,
       ) async {
