@@ -1034,7 +1034,7 @@ void main() {
         for (final type in EditorEffectType.values)
           if (type.customId != null) type,
       ];
-      expect(custom, hasLength(22));
+      expect(custom, hasLength(25));
       for (final type in custom) {
         final effect = EditorVideoEffect.of(
           id: 'x',
@@ -1125,6 +1125,22 @@ void main() {
       for (final category in EditorEffectCategory.values) {
         expect(category.types, isNotEmpty, reason: category.name);
       }
+    });
+
+    test('lists the swirl, ripple and fluted glass under distort, after '
+        'the tilt-shift', () {
+      expect(EditorEffectCategory.distort.types, [
+        const EditorEffectType.builtIn(VideoEffectType.mirror),
+        const EditorEffectType.builtIn(VideoEffectType.kaleidoscope),
+        const EditorEffectType.builtIn(VideoEffectType.splitScreen),
+        const EditorEffectType.builtIn(VideoEffectType.wave),
+        EditorEffectType.fisheye,
+        EditorEffectType.drops,
+        EditorEffectType.tiltShift,
+        EditorEffectType.swirl,
+        EditorEffectType.ripple,
+        EditorEffectType.flutedGlass,
+      ]);
     });
   });
 }

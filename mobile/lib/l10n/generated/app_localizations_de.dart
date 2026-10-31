@@ -9131,6 +9131,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorEffectComic => 'Comic';
 
   @override
+  String get videoEditorEffectSwirl => 'Strudel';
+
+  @override
+  String get videoEditorEffectRipple => 'Wellenringe';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'Riffelglas';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Retro';
 
   @override

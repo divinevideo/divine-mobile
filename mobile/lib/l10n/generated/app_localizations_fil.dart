@@ -9077,6 +9077,15 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectComic => 'Komiks';
 
   @override
+  String get videoEditorEffectSwirl => 'Swirl';
+
+  @override
+  String get videoEditorEffectRipple => 'Ripple';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'Fluted Glass';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Retro';
 
   @override

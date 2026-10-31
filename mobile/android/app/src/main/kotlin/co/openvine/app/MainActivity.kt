@@ -18,8 +18,11 @@ import co.openvine.app.videoeffects.ComicVideoEffect
 import co.openvine.app.videoeffects.DropsVideoEffect
 import co.openvine.app.videoeffects.EchoVideoEffect
 import co.openvine.app.videoeffects.FisheyeVideoEffect
+import co.openvine.app.videoeffects.FlutedGlassVideoEffect
 import co.openvine.app.videoeffects.LightLeakVideoEffect
 import co.openvine.app.videoeffects.ParticlesVideoEffect
+import co.openvine.app.videoeffects.RippleVideoEffect
+import co.openvine.app.videoeffects.SwirlVideoEffect
 import co.openvine.app.videoeffects.TiltShiftVideoEffect
 import co.openvine.app.videoeffects.ZoomBlurVideoEffect
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -112,6 +115,9 @@ class MainActivity : FlutterFragmentActivity() {
         LightLeakVideoEffect.register()
         ParticlesVideoEffect.register()
         TiltShiftVideoEffect.register()
+        SwirlVideoEffect.register()
+        RippleVideoEffect.register()
+        FlutedGlassVideoEffect.register()
         ZoomBlurVideoEffect.register()
         ComicVideoEffect.register()
         AdjustVideoEffect.register()

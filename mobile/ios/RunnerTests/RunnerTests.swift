@@ -1745,9 +1745,10 @@ final class DropsVideoEffectTests: XCTestCase {
   }
 }
 
-/// Light leak, particles, tilt-shift, zoom blur and comic are drawn with Metal
-/// kernels on iOS and macOS (`ShaderVideoEffect`), and with the same shaders in
-/// GLSL on Android and in the effects picker (`shaders/*.frag`). These tests
+/// Light leak, particles, tilt-shift, swirl, ripple, fluted glass, zoom blur
+/// and comic are drawn with Metal kernels on iOS and macOS
+/// (`ShaderVideoEffect`), and with the same shaders in GLSL on Android and in
+/// the effects picker (`shaders/*.frag`). These tests
 /// check every pixel each kernel draws against its shader's formulas computed
 /// here on the CPU, so a change to one copy that is not made to the others
 /// fails, and so does a kernel that reads its textures upside down.
@@ -1866,11 +1867,50 @@ final class ShaderVideoEffectTests: XCTestCase {
     }
   }
 
+  func testSwirlDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = SwirlVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.swirl(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity)")
+    }
+  }
+
+  func testRippleDrawsWhatTheAndroidShaderDraws() {
+    for (intensity, seconds) in [(1.0, 0.0), (0.6, 1.5), (0.8, 41.9)] {
+      let effect = RippleVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.ripple(px, py, intensity: intensity, seconds: seconds)
+      }
+      let difference = compare(effect, seconds: seconds, expected)
+      // The crests light the frame by up to 12%, which scales the GPU's
+      // filtering and half-float rounding with it; a change to the rings, the
+      // push or the light moves far more.
+      XCTAssertLessThan(difference.worst, 0.004, "intensity \(intensity), \(seconds) s")
+    }
+  }
+
+  func testFlutedGlassDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = FlutedGlassVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.flutedGlass(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity)")
+    }
+  }
+
   func testLeavesTheFrameAloneAtNoIntensity() {
     let effects: [ShaderVideoEffect] = [
       LightLeakVideoEffect(params: ["intensity": 0]),
       ParticlesVideoEffect(style: .snow, params: ["intensity": 0]),
       TiltShiftVideoEffect(params: ["intensity": 0]),
+      SwirlVideoEffect(params: ["intensity": 0]),
+      RippleVideoEffect(params: ["intensity": 0]),
+      FlutedGlassVideoEffect(params: ["intensity": 0]),
       ZoomBlurVideoEffect(params: ["intensity": 0]),
       ComicVideoEffect(params: ["intensity": 0]),
     ]
@@ -2550,6 +2590,51 @@ final class ShaderVideoEffectTests: XCTestCase {
       let vivid: Double = luma + (color[k] - luma) * (1 + 0.4 * intensity)
       out[k] = clamp((vivid - 0.5) * (1 + 0.12 * intensity) + 0.5)
     }
+    return out
+  }
+
+  private func swirl(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let cx: Double = Double(width) / 2
+    let cy: Double = Double(height) / 2
+    let dx: Double = px - cx
+    let dy: Double = py - cy
+    let w: Double = max(1 - hypot(dx, dy) / (0.5 * Double(min(width, height))), 0)
+    let angle: Double = 3 * intensity * w * w
+    let co: Double = cos(angle)
+    let si: Double = sin(angle)
+    return tap(cx + co * dx - si * dy, cy + si * dx + co * dy)
+  }
+
+  private func ripple(_ px: Double, _ py: Double, intensity: Double, seconds t: Double)
+    -> [Double]
+  {
+    let cx: Double = Double(width) / 2
+    let cy: Double = Double(height) / 2
+    let dx: Double = px - cx
+    let dy: Double = py - cy
+    let r: Double = hypot(dx, dy)
+    let s = Double(min(width, height))
+    let phase: Double = 6.2832 * fract(r / (0.1 * s) - fract(t * 0.75))
+    let fade: Double = smoothstep(0, 0.2 * s, r)
+    let push: Double = 0.012 * s * intensity * fade * sin(phase)
+    let zoom: Double = 1 - 0.025 * intensity
+    let reach: Double = push / max(r, 0.001)
+    let color: [Double] = tap(cx + dx * zoom + dx * reach, cy + dy * zoom + dy * reach)
+    let light: Double = 1 + 0.12 * intensity * fade * cos(phase)
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 { out[k] = clamp(color[k] * light) }
+    return out
+  }
+
+  private func flutedGlass(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let rib: Double = 0.08 * Double(min(width, height))
+    let across: Double = fract((px - 0.5 * Double(width)) / rib + 0.5) - 0.5
+    let x: Double = abs(px + 1.5 * intensity * across * rib)
+    let color: [Double] = tap(Double(width) - abs(Double(width) - x), py)
+    let shade: Double = 1 - 0.6 * intensity * across * across
+    let glint: Double = 1 - smoothstep(0, 0.15, abs(across + 0.22))
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 { out[k] = clamp(color[k] * shade + 0.1 * intensity * glint) }
     return out
   }
 

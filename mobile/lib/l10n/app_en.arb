@@ -6385,6 +6385,18 @@
   "@videoEditorEffectComic": {
     "description": "Name of a video effect: the picture looks like a printed comic book, with flat colours, halftone dots and ink outlines."
   },
+  "videoEditorEffectSwirl": "Swirl",
+  "@videoEditorEffectSwirl": {
+    "description": "Name of a video effect: the picture twists around its centre, as if stirred."
+  },
+  "videoEditorEffectRipple": "Ripple",
+  "@videoEditorEffectRipple": {
+    "description": "Name of a video effect: rings spread out from the centre of the picture, like ripples on water after a stone drops in."
+  },
+  "videoEditorEffectFlutedGlass": "Fluted Glass",
+  "@videoEditorEffectFlutedGlass": {
+    "description": "Name of a video effect: the picture is seen through ribbed (fluted or reeded) glass, made of upright ribs that each show a squeezed slice of it."
+  },
   "videoEditorEffectCategoryRetro": "Retro",
   "@videoEditorEffectCategoryRetro": {
     "description": "Name of a group in the video effects picker: effects that look like old media, such as VHS tape, old film or an old TV."
