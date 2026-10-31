@@ -246,23 +246,31 @@ class _PollStickerViewState extends State<_PollStickerView> {
           ? (value) => _slideEnd(state, value)
           : null,
     );
-    if (!ready || !widget.isAuthor) return copy;
-    // Under the card rather than in it, which keeps the size of the copy in
-    // the frames.
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        copy,
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: FractionalTranslation(
-            translation: const Offset(0, 1.25),
-            child: Center(child: _VoteCount(count: state.results.total)),
-          ),
-        ),
-      ],
+    // Its own node, so a screen reader reads the question and the answered
+    // answers at the card rather than as a label of the whole video.
+    return Semantics(
+      container: true,
+      child: !ready || !widget.isAuthor
+          ? copy
+          // Under the card rather than in it, which keeps the size of the
+          // copy in the frames.
+          : Stack(
+              clipBehavior: Clip.none,
+              children: [
+                copy,
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: FractionalTranslation(
+                    translation: const Offset(0, 1.25),
+                    child: Center(
+                      child: _VoteCount(count: state.results.total),
+                    ),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
