@@ -44,6 +44,8 @@ class _QuestionFieldState extends State<_QuestionField> {
         filled: true,
         autofocus: widget.autofocus,
         labelText: context.l10n.videoEditorSocialStickerPollQuestionHint,
+        // One line: the sticker's label puts each answer on a line of its own.
+        maxLines: 1,
         maxLength: SocialStickerData.maxPollQuestionLength,
         textInputAction: widget.onNext == null ? .done : .next,
         onEditingComplete: widget.onNext,
@@ -146,6 +148,7 @@ class _SocialStickerPollFieldsState extends State<SocialStickerPollFields> {
                     semanticLabel: l10n.videoEditorSocialStickerQuizMarkRight(
                       '${index + 1}',
                     ),
+                    semanticToggled: quizAnswer == index,
                     onPressed: () => cubit.quizAnswerPicked(index),
                   ),
                 Expanded(
@@ -159,6 +162,7 @@ class _SocialStickerPollFieldsState extends State<SocialStickerPollFields> {
                     labelText: l10n.videoEditorSocialStickerPollOptionHint(
                       '${index + 1}',
                     ),
+                    maxLines: 1,
                     maxLength: SocialStickerData.maxPollOptionLength,
                     textInputAction: index == _controllers.length - 1
                         ? .done
