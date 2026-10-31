@@ -14535,4 +14535,41 @@ class AppLocalizationsJa extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get creatorHighlightLabel => '今日のハイライト';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return '今日つくった動画：$count本。';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle => 'あなたらしさが、今週を少し彩りました。';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return '今週、創作した日数：$count日。この調子で続けましょう。';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '今週投稿した動画の、これまでの合計再生回数：$countString回。';
+  }
+
+  @override
+  String get creatorHighlightTopVideo => '今週投稿した動画で最も再生された動画';
+
+  @override
+  String get creatorHighlightCreate => 'もう一本つくる';
+
+  @override
+  String get creatorHighlightAnalytics => '自分の統計を見る';
+
+  @override
+  String get creatorHighlightWatch => '動画を見る';
 }

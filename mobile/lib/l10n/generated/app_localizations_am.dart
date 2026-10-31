@@ -14899,4 +14899,41 @@ class AppLocalizationsAm extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get creatorHighlightLabel => 'የዛሬ ድምቀትዎ';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'ዛሬ የፈጠሯቸው ቪዲዮዎች፦ $count።';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle => 'በዚህ ሳምንት ከእርስዎ የሆነ ነገር ትንሽ ተጨምሯል።';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'በዚህ ሳምንት የፈጠሩባቸው ቀናት፦ $count። ይቀጥሉ።';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'በዚህ ሳምንት ያሳተሟቸው ቪዲዮዎች እስካሁን ያገኟቸው ጠቅላላ እይታዎች፦ $countString።';
+  }
+
+  @override
+  String get creatorHighlightTopVideo => 'በዚህ ሳምንት ካሳተሟቸው ቪዲዮዎች በብዛት የታየው';
+
+  @override
+  String get creatorHighlightCreate => 'ሌላ ይፍጠሩ';
+
+  @override
+  String get creatorHighlightAnalytics => 'ስታቲስቲክስዎን ይመልከቱ';
+
+  @override
+  String get creatorHighlightWatch => 'ቪዲዮውን ይመልከቱ';
 }

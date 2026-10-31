@@ -25514,6 +25514,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Organizer time: {deadline} ({timeZone})'**
   String challengeOrganizerTime(String deadline, String timeZone);
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'Your daily highlight'**
+  String get creatorHighlightLabel;
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{You made something today.} other{You made {count} videos today.}}'**
+  String creatorHighlightCreatedToday(int count);
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'Your week has a little more you in it.'**
+  String get creatorHighlightWeekTitle;
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{One creative day this week. Keep going.} other{{count} creative days this week. Keep going.}}'**
+  String creatorHighlightCreationDays(int count);
+
+  /// Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} view on videos you posted this week, so far.} other{{count} views on videos you posted this week, so far.}}'**
+  String creatorHighlightWeeklyViews(int count);
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'Most-watched of this week’s videos'**
+  String get creatorHighlightTopVideo;
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'Make another'**
+  String get creatorHighlightCreate;
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'See your stats'**
+  String get creatorHighlightAnalytics;
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch video'**
+  String get creatorHighlightWatch;
 }
 
 class _AppLocalizationsDelegate

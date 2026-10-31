@@ -37,7 +37,13 @@ import 'package:unified_logger/unified_logger.dart';
 @visibleForTesting
 class NotificationsView extends ConsumerStatefulWidget {
   /// Creates a [NotificationsView].
-  const NotificationsView({super.key});
+  const NotificationsView({this.header, this.onRefresh, super.key});
+
+  /// Optional account-private content in the same scroll flow as notifications.
+  final Widget? header;
+
+  /// Refreshes optional content independently of the social feed.
+  final VoidCallback? onRefresh;
 
   @override
   ConsumerState<NotificationsView> createState() => _NotificationsViewState();
@@ -85,7 +91,8 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
           // Hard failure path. The bloc gates `failure` on
           // `notifications.isEmpty`, so we only land here when the cache
           // is also empty.
-          if (state.status == NotificationFeedStatus.failure) {
+          if (state.status == NotificationFeedStatus.failure &&
+              widget.header == null) {
             return _FailureBody(
               onRetry: () => context.read<NotificationFeedBloc>().add(
                 const NotificationFeedRefreshed(),
@@ -106,11 +113,13 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                   color: VineTheme.onPrimary,
                   backgroundColor: VineTheme.vineGreen,
                   onRefresh: () async {
+                    widget.onRefresh?.call();
                     context.read<NotificationFeedBloc>().add(
                       const NotificationFeedRefreshed(),
                     );
                   },
                   child: _NotificationList(
+                    header: widget.header,
                     notifications: state.notifications,
                     isLoadingMore: state.isLoadingMore,
                     hasMore: state.hasMore,
@@ -146,7 +155,8 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
           // to a spinner. Cold start keeps `status == initial` until the
           // first refresh resolves, so this still covers the empty-cache
           // launch.
-          if (state.status == NotificationFeedStatus.initial) {
+          if (state.status == NotificationFeedStatus.initial &&
+              widget.header == null) {
             return const Center(
               child: DivineCircularProgressIndicator(
                 color: VineTheme.vineGreen,
@@ -165,11 +175,28 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
                 color: VineTheme.onPrimary,
                 backgroundColor: VineTheme.vineGreen,
                 onRefresh: () async {
+                  widget.onRefresh?.call();
                   context.read<NotificationFeedBloc>().add(
                     const NotificationFeedRefreshed(),
                   );
                 },
-                child: _ScrollableEmptyState(controller: _scrollController),
+                child: _ScrollableEmptyState(
+                  controller: _scrollController,
+                  header: widget.header,
+                  body: state.status == NotificationFeedStatus.failure
+                      ? _FailureBody(
+                          onRetry: () => context
+                              .read<NotificationFeedBloc>()
+                              .add(const NotificationFeedRefreshed()),
+                        )
+                      : state.status == NotificationFeedStatus.initial
+                      ? const Center(
+                          child: DivineCircularProgressIndicator(
+                            color: VineTheme.vineGreen,
+                          ),
+                        )
+                      : const NotificationEmptyState(),
+                ),
               ),
               Positioned(
                 top: 0,
@@ -530,23 +557,25 @@ class _RevalidationBar extends StatelessWidget {
 }
 
 class _ScrollableEmptyState extends StatelessWidget {
-  const _ScrollableEmptyState({required this.controller});
+  const _ScrollableEmptyState({
+    required this.controller,
+    required this.body,
+    this.header,
+  });
 
   final ScrollController controller;
+  final Widget body;
+  final Widget? header;
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        controller: controller,
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: SizedBox(
-          height: constraints.maxHeight,
-          child: const NotificationEmptyState(),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => CustomScrollView(
+    controller: controller,
+    physics: const AlwaysScrollableScrollPhysics(),
+    slivers: [
+      if (header != null) SliverToBoxAdapter(child: header),
+      SliverFillRemaining(hasScrollBody: false, child: body),
+    ],
+  );
 }
 
 class _FailureBody extends StatelessWidget {
@@ -599,8 +628,10 @@ class _NotificationList extends StatelessWidget {
     required this.onFollowBack,
     required this.showRefreshErrorBanner,
     required this.onRetryRefresh,
+    this.header,
   });
 
+  final Widget? header;
   final List<NotificationItem> notifications;
   final bool isLoadingMore;
   final bool hasMore;
@@ -624,8 +655,10 @@ class _NotificationList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final headerOffset = header == null ? 0 : 1;
     final bannerOffset = showRefreshErrorBanner ? 1 : 0;
     final itemCount =
+        headerOffset +
         bannerOffset +
         notifications.length +
         (isLoadingMore && hasMore ? 1 : 0);
@@ -635,10 +668,11 @@ class _NotificationList extends StatelessWidget {
       controller: scrollController,
       itemCount: itemCount,
       itemBuilder: (context, index) {
-        if (showRefreshErrorBanner && index == 0) {
+        if (header != null && index == 0) return header!;
+        if (showRefreshErrorBanner && index == headerOffset) {
           return _RefreshErrorBanner(onRetry: onRetryRefresh);
         }
-        final dataIndex = index - bannerOffset;
+        final dataIndex = index - headerOffset - bannerOffset;
 
         // Loading indicator at bottom.
         if (dataIndex >= notifications.length) {

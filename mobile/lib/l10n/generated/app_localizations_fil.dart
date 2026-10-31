@@ -15394,4 +15394,43 @@ class AppLocalizationsFil extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get creatorHighlightLabel => 'Highlight mo ngayong araw';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'Mga video na ginawa mo ngayon: $count.';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle =>
+      'May dagdag na bahagi mo sa linggong ito.';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'Mga araw na gumawa ka ngayong linggo: $count. Tuloy lang.';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Kabuuang views sa ngayon ng mga video na pinost mo ngayong linggo: $countString.';
+  }
+
+  @override
+  String get creatorHighlightTopVideo =>
+      'Pinakapinanood sa mga video na pinost mo ngayong linggo';
+
+  @override
+  String get creatorHighlightCreate => 'Gumawa pa';
+
+  @override
+  String get creatorHighlightAnalytics => 'Tingnan ang stats mo';
+
+  @override
+  String get creatorHighlightWatch => 'Panoorin ang video';
 }

@@ -15416,4 +15416,43 @@ class AppLocalizationsPt extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get creatorHighlightLabel => 'Seu destaque do dia';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'Vídeos que você criou hoje: $count.';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle =>
+      'Esta semana tem um pouco mais de você.';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'Dias de criação nesta semana: $count. Continue assim.';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Visualizações totais até agora dos vídeos que você publicou nesta semana: $countString.';
+  }
+
+  @override
+  String get creatorHighlightTopVideo =>
+      'O mais assistido entre os vídeos que você publicou nesta semana';
+
+  @override
+  String get creatorHighlightCreate => 'Crie outro';
+
+  @override
+  String get creatorHighlightAnalytics => 'Veja suas estatísticas';
+
+  @override
+  String get creatorHighlightWatch => 'Assista ao vídeo';
 }

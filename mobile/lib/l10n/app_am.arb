@@ -6182,5 +6182,57 @@
   "videoEditorLoopRepairProgress": "ዙርህን በማስተካከል ላይ…",
   "videoEditorLoopRepairTrimmed": "ሉፑ ተስተካክሏል። {seconds} ሰከንድ ተወግዷል።",
   "notificationFromDivine": "ከDivine",
-  "announcementUnavailable": "ይህ ማስታወቂያ ከእንግዲህ የለም።"
+  "announcementUnavailable": "ይህ ማስታወቂያ ከእንግዲህ የለም።",
+  "creatorHighlightLabel": "የዛሬ ድምቀትዎ",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "ዛሬ የፈጠሯቸው ቪዲዮዎች፦ {count}።",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "በዚህ ሳምንት ከእርስዎ የሆነ ነገር ትንሽ ተጨምሯል።",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "በዚህ ሳምንት የፈጠሩባቸው ቀናት፦ {count}። ይቀጥሉ።",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "በዚህ ሳምንት ያሳተሟቸው ቪዲዮዎች እስካሁን ያገኟቸው ጠቅላላ እይታዎች፦ {count}።",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "በዚህ ሳምንት ካሳተሟቸው ቪዲዮዎች በብዛት የታየው",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "ሌላ ይፍጠሩ",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "ስታቲስቲክስዎን ይመልከቱ",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "ቪዲዮውን ይመልከቱ",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

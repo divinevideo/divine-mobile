@@ -6129,5 +6129,57 @@
   "videoEditorLoopRepairProgress": "جارٍ محاذاة الحلقة…",
   "videoEditorLoopRepairTrimmed": "تم تنعيم التكرار. أُزيلت {seconds} ث.",
   "notificationFromDivine": "من Divine",
-  "announcementUnavailable": "لم يعد هذا الإعلان متاحًا."
+  "announcementUnavailable": "لم يعد هذا الإعلان متاحًا.",
+  "creatorHighlightLabel": "أبرز لحظات يومك",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "عدد فيديوهاتك اليوم: {count}.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "هذا الأسبوع يحمل المزيد منك.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "أيام الإبداع هذا الأسبوع: {count}. لنواصل الإبداع.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "إجمالي مشاهدات فيديوهاتك المنشورة هذا الأسبوع حتى الآن: {count}.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "الأكثر مشاهدة بين فيديوهاتك المنشورة هذا الأسبوع",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "إنشاء فيديو آخر",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "عرض إحصاءاتك",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "مشاهدة الفيديو",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

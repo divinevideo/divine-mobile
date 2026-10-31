@@ -15587,4 +15587,43 @@ class AppLocalizationsPl extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get creatorHighlightLabel => 'Twój moment dnia';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'Twoje dzisiejsze filmy: $count.';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle =>
+      'W tym tygodniu jest trochę więcej ciebie.';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'Dni twórczości w tym tygodniu: $count. Twórz dalej.';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Łączna liczba wyświetleń do tej pory filmów opublikowanych przez ciebie w tym tygodniu: $countString.';
+  }
+
+  @override
+  String get creatorHighlightTopVideo =>
+      'Najczęściej oglądany z twoich filmów opublikowanych w tym tygodniu';
+
+  @override
+  String get creatorHighlightCreate => 'Stwórz kolejny';
+
+  @override
+  String get creatorHighlightAnalytics => 'Zobacz swoje statystyki';
+
+  @override
+  String get creatorHighlightWatch => 'Obejrzyj film';
 }
