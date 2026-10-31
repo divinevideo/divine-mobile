@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "勾选正确答案。观众作答后就能看到它。",
   "videoEditorSocialStickerSliderNote": "观众拖动表情来作答，并能看到平均落在哪里。",
   "videoEditorPollAreaHint": "投票会留在这个框内，方便观众点击",
+  "videoStickerQuizRightAnswer": "正确答案",
+  "videoStickerQuizWrongAnswer": "错误答案",
   "videoStickerPollSignInToVote": "登录后才能投票。",
   "videoStickerPollNotReady": "仍在连接中，请稍后再试。",
   "videoStickerPollVoteFailed": "你的投票没有发送成功，请重试。",

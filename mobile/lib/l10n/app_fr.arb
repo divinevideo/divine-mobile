@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "Coche la bonne réponse. Les spectateurs la voient après avoir répondu.",
   "videoEditorSocialStickerSliderNote": "Les spectateurs font glisser l'emoji pour répondre et voient où il atterrit en moyenne.",
   "videoEditorPollAreaHint": "Les sondages restent dans ce cadre pour qu'on puisse les toucher",
+  "videoStickerQuizRightAnswer": "Bonne réponse",
+  "videoStickerQuizWrongAnswer": "Mauvaise réponse",
   "videoStickerPollSignInToVote": "Connecte-toi pour voter.",
   "videoStickerPollNotReady": "Connexion en cours. Réessaie dans un instant.",
   "videoStickerPollVoteFailed": "Ton vote n'est pas passé. Réessaie.",

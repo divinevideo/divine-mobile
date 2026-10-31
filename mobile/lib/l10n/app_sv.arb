@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "Bocka för rätt svar. Tittarna ser det när de har valt ett.",
   "videoEditorSocialStickerSliderNote": "Tittarna drar emojin för att svara och ser var den hamnar i snitt.",
   "videoEditorPollAreaHint": "Omröstningar stannar i den här rutan så att tittarna kan trycka på dem",
+  "videoStickerQuizRightAnswer": "Rätt svar",
+  "videoStickerQuizWrongAnswer": "Fel svar",
   "videoStickerPollSignInToVote": "Logga in för att rösta.",
   "videoStickerPollNotReady": "Ansluter fortfarande. Försök igen om en stund.",
   "videoStickerPollVoteFailed": "Din röst gick inte fram. Försök igen.",

@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "I-tick ang tamang sagot. Makikita ito ng viewers pagkatapos nilang pumili.",
   "videoEditorSocialStickerSliderNote": "Idi-drag ng viewers ang emoji para sumagot at makikita nila kung saan ito napupunta sa average.",
   "videoEditorPollAreaHint": "Nananatili ang polls sa loob ng box na ito para ma-tap ng viewers",
+  "videoStickerQuizRightAnswer": "Tamang sagot",
+  "videoStickerQuizWrongAnswer": "Maling sagot",
   "videoStickerPollSignInToVote": "Mag-sign in para bumoto.",
   "videoStickerPollNotReady": "Kumokonekta pa. Subukan ulit maya-maya.",
   "videoStickerPollVoteFailed": "Hindi naipadala ang boto mo. Subukan ulit.",

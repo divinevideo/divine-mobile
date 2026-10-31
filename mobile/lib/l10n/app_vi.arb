@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "Đánh dấu câu trả lời đúng. Người xem sẽ thấy sau khi chọn một đáp án.",
   "videoEditorSocialStickerSliderNote": "Người xem kéo biểu tượng cảm xúc để trả lời và thấy mức trung bình.",
   "videoEditorPollAreaHint": "Bình chọn nằm trong khung này để người xem chạm được",
+  "videoStickerQuizRightAnswer": "Đáp án đúng",
+  "videoStickerQuizWrongAnswer": "Đáp án sai",
   "videoStickerPollSignInToVote": "Đăng nhập để bình chọn.",
   "videoStickerPollNotReady": "Vẫn đang kết nối. Thử lại sau giây lát.",
   "videoStickerPollVoteFailed": "Phiếu bầu của bạn chưa được gửi. Hãy thử lại.",

@@ -2034,6 +2034,12 @@ class AppLocalizationsAm extends AppLocalizations {
       'ጊዜው ደርሷል! ያስቀመጡት የኋሊት ቆጠራ አሁን አልቋል።';
 
   @override
+  String get videoStickerQuizRightAnswer => 'ትክክለኛ መልስ';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'የተሳሳተ መልስ';
+
+  @override
   String get videoStickerPollSignInToVote => 'ድምፅ ለመስጠት ይግቡ።';
 
   @override

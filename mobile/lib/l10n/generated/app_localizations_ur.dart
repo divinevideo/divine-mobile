@@ -2081,6 +2081,12 @@ class AppLocalizationsUr extends AppLocalizations {
       'وقت آ گیا! آپ کی محفوظ کی ہوئی الٹی گنتی ابھی ختم ہوئی۔';
 
   @override
+  String get videoStickerQuizRightAnswer => 'درست جواب';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'غلط جواب';
+
+  @override
   String get videoStickerPollSignInToVote => 'ووٹ دینے کے لیے سائن ان کریں۔';
 
   @override

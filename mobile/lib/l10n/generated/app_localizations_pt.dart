@@ -2102,6 +2102,12 @@ class AppLocalizationsPt extends AppLocalizations {
       'Chegou a hora! A contagem regressiva que você salvou acabou de terminar.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Resposta certa';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Resposta errada';
+
+  @override
   String get videoStickerPollSignInToVote => 'Entre para votar.';
 
   @override

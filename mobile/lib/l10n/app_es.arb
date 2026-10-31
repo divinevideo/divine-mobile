@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "Marcá la respuesta correcta. Quienes miren la ven cuando eligen una.",
   "videoEditorSocialStickerSliderNote": "Quienes miren arrastran el emoji para responder y ven dónde queda en promedio.",
   "videoEditorPollAreaHint": "Las encuestas quedan dentro de este recuadro para que se puedan tocar",
+  "videoStickerQuizRightAnswer": "Respuesta correcta",
+  "videoStickerQuizWrongAnswer": "Respuesta incorrecta",
   "videoStickerPollSignInToVote": "Iniciá sesión para votar.",
   "videoStickerPollNotReady": "Todavía conectando. Probá de nuevo en un momento.",
   "videoStickerPollVoteFailed": "Tu voto no se envió. Probá de nuevo.",

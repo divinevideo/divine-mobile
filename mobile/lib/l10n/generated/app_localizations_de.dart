@@ -2112,6 +2112,12 @@ class AppLocalizationsDe extends AppLocalizations {
       'Es ist so weit! Dein gespeicherter Countdown ist gerade abgelaufen.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Richtige Antwort';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Falsche Antwort';
+
+  @override
   String get videoStickerPollSignInToVote => 'Melde dich an, um abzustimmen.';
 
   @override

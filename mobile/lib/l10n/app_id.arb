@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "Centang jawaban yang benar. Penonton melihatnya setelah memilih jawaban.",
   "videoEditorSocialStickerSliderNote": "Penonton menggeser emoji untuk menjawab dan melihat posisi rata-ratanya.",
   "videoEditorPollAreaHint": "Polling tetap di dalam kotak ini agar penonton bisa mengetuknya",
+  "videoStickerQuizRightAnswer": "Jawaban benar",
+  "videoStickerQuizWrongAnswer": "Jawaban salah",
   "videoStickerPollSignInToVote": "Masuk untuk memilih.",
   "videoStickerPollNotReady": "Masih menyambungkan. Coba lagi sebentar lagi.",
   "videoStickerPollVoteFailed": "Suaramu tidak terkirim. Coba lagi.",

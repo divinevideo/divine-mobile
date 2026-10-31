@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "Spunta la risposta giusta. Chi guarda la vede dopo aver risposto.",
   "videoEditorSocialStickerSliderNote": "Chi guarda trascina l'emoji per rispondere e vede dove finisce in media.",
   "videoEditorPollAreaHint": "I sondaggi restano in questo riquadro, così si possono toccare",
+  "videoStickerQuizRightAnswer": "Risposta giusta",
+  "videoStickerQuizWrongAnswer": "Risposta sbagliata",
   "videoStickerPollSignInToVote": "Accedi per votare.",
   "videoStickerPollNotReady": "Connessione in corso. Riprova tra un attimo.",
   "videoStickerPollVoteFailed": "Il tuo voto non è arrivato. Riprova.",

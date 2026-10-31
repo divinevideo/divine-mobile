@@ -1926,6 +1926,12 @@ class AppLocalizationsKo extends AppLocalizations {
       '시간이 됐어요! 저장한 카운트다운이 방금 끝났어요.';
 
   @override
+  String get videoStickerQuizRightAnswer => '정답';
+
+  @override
+  String get videoStickerQuizWrongAnswer => '오답';
+
+  @override
   String get videoStickerPollSignInToVote => '로그인해야 투표할 수 있어요.';
 
   @override

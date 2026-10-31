@@ -2011,6 +2011,12 @@ class AppLocalizationsId extends AppLocalizations {
       'Sudah waktunya! Hitung mundur yang kamu simpan baru saja selesai.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Jawaban benar';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Jawaban salah';
+
+  @override
   String get videoStickerPollSignInToVote => 'Masuk untuk memilih.';
 
   @override

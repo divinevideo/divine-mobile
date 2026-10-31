@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "正解にチェックを入れてください。視聴者は回答後に正解を見られます。",
   "videoEditorSocialStickerSliderNote": "視聴者は絵文字をドラッグして回答し、平均の位置を見られます。",
   "videoEditorPollAreaHint": "アンケートは視聴者がタップできるよう、この枠の中に置かれます",
+  "videoStickerQuizRightAnswer": "正解",
+  "videoStickerQuizWrongAnswer": "不正解",
   "videoStickerPollSignInToVote": "投票するにはログインしてください。",
   "videoStickerPollNotReady": "接続中です。少し待ってからもう一度お試しください。",
   "videoStickerPollVoteFailed": "投票を送信できませんでした。もう一度お試しください。",

@@ -2110,6 +2110,12 @@ class AppLocalizationsBg extends AppLocalizations {
       'Време е! Обратното броене, което запази, току-що приключи.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Верен отговор';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Грешен отговор';
+
+  @override
   String get videoStickerPollSignInToVote =>
       'Влез в профила си, за да гласуваш.';
 

@@ -2139,6 +2139,12 @@ class AppLocalizationsRo extends AppLocalizations {
       'A venit momentul! Numărătoarea inversă pe care ai salvat-o tocmai s-a încheiat.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Răspuns corect';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Răspuns greșit';
+
+  @override
   String get videoStickerPollSignInToVote => 'Conectează-te ca să votezi.';
 
   @override

@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "Marque a resposta certa. Quem assiste a vê depois de responder.",
   "videoEditorSocialStickerSliderNote": "Quem assiste arrasta o emoji para responder e vê onde ele fica na média.",
   "videoEditorPollAreaHint": "As enquetes ficam neste quadro para que dê para tocar nelas",
+  "videoStickerQuizRightAnswer": "Resposta certa",
+  "videoStickerQuizWrongAnswer": "Resposta errada",
   "videoStickerPollSignInToVote": "Entre para votar.",
   "videoStickerPollNotReady": "Ainda conectando. Tente de novo em instantes.",
   "videoStickerPollVoteFailed": "Seu voto não foi enviado. Tente de novo.",

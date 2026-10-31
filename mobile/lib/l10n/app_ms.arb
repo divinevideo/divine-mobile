@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "Tandakan jawapan yang betul. Penonton melihatnya selepas memilih satu.",
   "videoEditorSocialStickerSliderNote": "Penonton menyeret emoji untuk menjawab dan melihat purata kedudukannya.",
   "videoEditorPollAreaHint": "Undian kekal dalam kotak ini supaya penonton boleh mengetiknya",
+  "videoStickerQuizRightAnswer": "Jawapan betul",
+  "videoStickerQuizWrongAnswer": "Jawapan salah",
   "videoStickerPollSignInToVote": "Log masuk untuk mengundi.",
   "videoStickerPollNotReady": "Masih menyambung. Cuba lagi sebentar nanti.",
   "videoStickerPollVoteFailed": "Undian anda tidak dihantar. Cuba lagi.",

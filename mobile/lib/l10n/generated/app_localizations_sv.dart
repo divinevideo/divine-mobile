@@ -2076,6 +2076,12 @@ class AppLocalizationsSv extends AppLocalizations {
       'Nu är det dags! Nedräkningen du sparade har precis tagit slut.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Rätt svar';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Fel svar';
+
+  @override
   String get videoStickerPollSignInToVote => 'Logga in för att rösta.';
 
   @override

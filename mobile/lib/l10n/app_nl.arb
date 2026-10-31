@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "Vink het juiste antwoord aan. Kijkers zien het zodra ze er een kiezen.",
   "videoEditorSocialStickerSliderNote": "Kijkers slepen de emoji om te antwoorden en zien waar die gemiddeld uitkomt.",
   "videoEditorPollAreaHint": "Polls blijven in dit kader, zodat kijkers erop kunnen tikken",
+  "videoStickerQuizRightAnswer": "Goed antwoord",
+  "videoStickerQuizWrongAnswer": "Fout antwoord",
   "videoStickerPollSignInToVote": "Log in om te stemmen.",
   "videoStickerPollNotReady": "Nog aan het verbinden. Probeer het zo opnieuw.",
   "videoStickerPollVoteFailed": "Je stem is niet aangekomen. Probeer het opnieuw.",

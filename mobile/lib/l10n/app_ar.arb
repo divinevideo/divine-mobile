@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "تُحدَّد الإجابة الصحيحة بعلامة الصح. يراها المشاهدون بعد اختيار إجابة.",
   "videoEditorSocialStickerSliderNote": "يسحب المشاهدون الرمز التعبيري للإجابة ويرون أين يستقر في المتوسط.",
   "videoEditorPollAreaHint": "تبقى الاستطلاعات داخل هذا الإطار ليتمكن المشاهدون من لمسها",
+  "videoStickerQuizRightAnswer": "إجابة صحيحة",
+  "videoStickerQuizWrongAnswer": "إجابة خاطئة",
   "videoStickerPollSignInToVote": "يلزم تسجيل الدخول للتصويت.",
   "videoStickerPollNotReady": "لا يزال الاتصال جاريًا. يُرجى المحاولة بعد لحظات.",
   "videoStickerPollVoteFailed": "تعذّر إرسال التصويت. يُرجى المحاولة مرة أخرى.",

@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "Отбележи верния отговор. Зрителите го виждат, след като изберат.",
   "videoEditorSocialStickerSliderNote": "Зрителите плъзгат емоджито, за да отговорят, и виждат къде средно попада.",
   "videoEditorPollAreaHint": "Анкетите остават в тази рамка, за да могат зрителите да ги докосват",
+  "videoStickerQuizRightAnswer": "Верен отговор",
+  "videoStickerQuizWrongAnswer": "Грешен отговор",
   "videoStickerPollSignInToVote": "Влез в профила си, за да гласуваш.",
   "videoStickerPollNotReady": "Все още се свързва. Опитай отново след малко.",
   "videoStickerPollVoteFailed": "Гласът ти не беше изпратен. Опитай отново.",
