@@ -344,6 +344,8 @@ class _Answer extends StatelessWidget {
       button: true,
       selected: isOwn,
       label: percent == null ? text : '$text, $percent',
+      // Excluding the subtree takes the detector's own tap action with it.
+      onTap: onTap,
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

@@ -228,6 +228,20 @@ void main() {
         verify(() => repository.vote(_poll, '0')).called(1);
       });
 
+      testWidgets('votes when a screen reader activates an answer', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await pump(tester);
+        await tester.pump();
+
+        tester.semantics.tap(find.semantics.byLabel('Red'));
+        await tester.pump();
+        handle.dispose();
+
+        verify(() => repository.vote(_poll, '0')).called(1);
+      });
+
       testWidgets('rates a slider where the emoji is let go', (tester) async {
         final slider = Poll.slider(question: 'Hungry?', emoji: '😋');
         when(
