@@ -71,6 +71,8 @@ void main() {
     late VideoEventPublisher publisher;
     late List<Event> broadcast;
     late bool relaysTakePolls;
+    late bool signsVideos;
+    late int clock;
 
     setUpAll(() {
       registerFallbackValue(_FakeEvent());
@@ -89,6 +91,8 @@ void main() {
       personalEventCache = _MockPersonalEventCacheService();
       broadcast = <Event>[];
       relaysTakePolls = true;
+      signsVideos = true;
+      clock = 1700000100;
 
       publisher = VideoEventPublisher(
         uploadManager: uploadManager,
@@ -138,15 +142,18 @@ void main() {
           tags: any(named: 'tags'),
           createdAt: any(named: 'createdAt'),
         ),
-      ).thenAnswer(
-        (invocation) async => Event(
+      ).thenAnswer((invocation) async {
+        final kind = invocation.namedArguments[#kind] as int;
+        if (kind != Poll.eventKind && !signsVideos) return null;
+        return Event(
           ownerPubkey,
-          invocation.namedArguments[#kind] as int,
+          kind,
           invocation.namedArguments[#tags] as List<List<String>>,
           invocation.namedArguments[#content] as String,
-          createdAt: 1700000100,
-        )..sig = 'signature',
-      );
+          // Like a real signer: stamped now unless told otherwise.
+          createdAt: invocation.namedArguments[#createdAt] as int? ?? clock++,
+        )..sig = 'signature';
+      });
     });
 
     tearDown(() {
@@ -159,7 +166,7 @@ void main() {
       localVideoPath: '',
       nostrPubkey: ownerPubkey,
       status: UploadStatus.readyToPublish,
-      createdAt: DateTime.now(),
+      createdAt: DateTime.utc(2026, 10, 30, 12),
       videoId: stableId,
       title: 'Outfits',
       cdnUrl: 'https://cdn.example.com/video.mp4',
@@ -215,6 +222,34 @@ void main() {
       );
 
       expect(broadcast.single.id, equals(cached.id));
+    });
+
+    test('signs the same poll again when a retry has to sign its video '
+        'again', () async {
+      signsVideos = false;
+      expect(
+        await publisher.publishDirectUpload(
+          upload(),
+          stickerRegions: const [pollRegion],
+          poll: poll,
+        ),
+        isFalse,
+      );
+      final firstPoll = broadcast.single;
+
+      signsVideos = true;
+      expect(
+        await publisher.publishDirectUpload(
+          upload(),
+          stickerRegions: const [pollRegion],
+          poll: poll,
+        ),
+        isTrue,
+      );
+
+      final [retriedPoll, video] = broadcast.sublist(1);
+      expect(retriedPoll.id, equals(firstPoll.id));
+      expect(stickersOf(video).single.target, equals(firstPoll.id));
     });
 
     test('keeps the video back when no relay takes its poll', () async {
