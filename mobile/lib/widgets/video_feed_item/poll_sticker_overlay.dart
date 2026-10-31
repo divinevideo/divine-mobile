@@ -77,8 +77,14 @@ class _PollStickerScope extends ConsumerWidget {
     final session = ref.watch(nostrSessionProvider);
     final viewer = session.pubkey;
     return BlocProvider(
-      // Another account has its own vote to show.
-      key: ValueKey((repository, region.target, viewer)),
+      // Another account has its own vote to show, and a read made before the
+      // relays were up found nothing.
+      key: ValueKey((
+        repository,
+        region.target,
+        viewer,
+        session.isReadyForActiveClient,
+      )),
       create: (_) {
         final cubit = PollStickerCubit(
           repository: repository,
