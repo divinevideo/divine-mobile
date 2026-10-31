@@ -41,8 +41,10 @@ class CameraPermissionBloc
     extends Bloc<CameraPermissionEvent, CameraPermissionState> {
   CameraPermissionBloc({
     required PermissionsService permissionsService,
+    bool requestGalleryPermission = true,
     @visibleForTesting bool? skipLinuxBypass,
   }) : _permissionsService = permissionsService,
+       _requestGalleryPermission = requestGalleryPermission,
        _skipLinuxBypass = skipLinuxBypass ?? false,
        super(const CameraPermissionInitial()) {
     on<CameraPermissionRequest>(_onRequest, transformer: restartable());
@@ -51,6 +53,9 @@ class CameraPermissionBloc
   }
 
   final PermissionsService _permissionsService;
+
+  // Private capture flows never save to the gallery and need no access to it.
+  final bool _requestGalleryPermission;
   final bool _skipLinuxBypass;
 
   Future<void> _onRequest(
@@ -73,35 +78,44 @@ class CameraPermissionBloc
     // by Equatable and the caller can't tell the request finished.
     emit(const CameraPermissionLoading());
 
+    // A cancelled request must release its handler even when the native
+    // dialog never resolves. Its late result must not start another prompt.
+    await emit.onEach(
+      _requestPermissions(emit).asStream(),
+      onData: (state) {
+        if (state != null) emit(state);
+      },
+    );
+  }
+
+  Future<CameraPermissionState?> _requestPermissions(
+    Emitter<CameraPermissionState> emit,
+  ) async {
     try {
       final cameraStatus = await _permissionsService.requestCameraPermission();
-
+      if (emit.isDone) return null;
       if (cameraStatus != PermissionStatus.granted) {
-        // Surface the resolved status so the caller can re-prompt (canRequest)
-        // or send the user to Settings (requiresSettings) instead of silently
-        // bouncing back to the feed.
-        emit(CameraPermissionLoaded(_cameraStatusFromPermission(cameraStatus)));
-        return;
+        return CameraPermissionLoaded(
+          _cameraStatusFromPermission(cameraStatus),
+        );
       }
 
       final microphoneStatus = await _permissionsService
           .requestMicrophonePermission();
-
+      if (emit.isDone) return null;
       if (microphoneStatus != PermissionStatus.granted) {
-        emit(
-          CameraPermissionLoaded(_cameraStatusFromPermission(microphoneStatus)),
+        return CameraPermissionLoaded(
+          _cameraStatusFromPermission(microphoneStatus),
         );
-        return;
       }
 
-      // Note: Gallery permission is optional. We don't block recording if
-      // gallery access is denied - the video will still upload, just won't
-      // be saved locally.
-      await _permissionsService.requestGalleryPermission();
-
-      emit(const CameraPermissionLoaded(CameraPermissionStatus.authorized));
-    } catch (e) {
-      emit(const CameraPermissionError());
+      // Gallery is optional and private captures never request access to it.
+      if (_requestGalleryPermission) {
+        await _permissionsService.requestGalleryPermission();
+      }
+      return const CameraPermissionLoaded(CameraPermissionStatus.authorized);
+    } catch (_) {
+      return const CameraPermissionError();
     }
   }
 

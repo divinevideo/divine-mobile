@@ -6129,5 +6129,8 @@
   "videoEditorLoopRepairProgress": "جارٍ محاذاة الحلقة…",
   "videoEditorLoopRepairTrimmed": "تم تنعيم التكرار. أُزيلت {seconds} ث.",
   "notificationFromDivine": "من Divine",
-  "announcementUnavailable": "لم يعد هذا الإعلان متاحًا."
+  "announcementUnavailable": "لم يعد هذا الإعلان متاحًا.",
+  "minorAccountReviewVideoSubmittedBody": "تم إرسال الفيديو للمراجعة.",
+  "minorAccountReviewVideoSubmittedTitle": "تم إرسال الفيديو",
+  "minorAccountReviewRecordConsentPrivacyBody": "يُرسل الفيديو بشكل خاص إلى فريقي الدعم والثقة والسلامة في Divine لمراجعته. لن يُنشر أو يُشارك مع مستخدمين آخرين."
 }

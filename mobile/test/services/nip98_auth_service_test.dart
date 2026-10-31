@@ -5,6 +5,7 @@
 import 'dart:convert';
 
 import 'package:clock/clock.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
@@ -41,6 +42,73 @@ void main() {
 
     tearDown(() {
       service.dispose();
+    });
+
+    group('binary payload hashes', () {
+      setUp(() {
+        when(() => mockAuthService.isAuthenticated).thenReturn(true);
+        _stubSignEvent(mockAuthService);
+      });
+
+      test('signs a supplied digest without hashing its text again', () async {
+        final digest = sha256.convert([0, 128, 255]).toString();
+        final token = await service.createAuthToken(
+          url: 'https://api.test/upload',
+          method: HttpMethod.post,
+          payloadHash: digest,
+        );
+        expect(
+          token!.signedEvent.tags.singleWhere((tag) => tag[0] == 'payload'),
+          ['payload', digest],
+        );
+      });
+
+      test('never reuses a token for a different binary body', () async {
+        final first = await service.createAuthToken(
+          url: 'https://api.test/upload',
+          method: HttpMethod.post,
+          payloadHash: sha256.convert([0, 128]).toString(),
+        );
+        final second = await service.createAuthToken(
+          url: 'https://api.test/upload',
+          method: HttpMethod.post,
+          payloadHash: sha256.convert([0, 255]).toString(),
+        );
+        expect(first, isNotNull);
+        expect(second, isNotNull);
+        expect(identical(first, second), isFalse);
+        expect(first!.signedEvent.tags, isNot(second!.signedEvent.tags));
+      });
+
+      test(
+        'rejects conflicting, malformed, and bodyless hash inputs',
+        () async {
+          final hash = sha256.convert([1]).toString();
+          for (final (method, payload, digest) in [
+            (HttpMethod.post, 'body', hash),
+            (HttpMethod.post, null, 'invalid'),
+            (HttpMethod.get, null, hash),
+          ]) {
+            expect(
+              await service.createAuthToken(
+                url: 'https://api.test/upload',
+                method: method,
+                payload: payload,
+                payloadHash: digest,
+              ),
+              isNull,
+            );
+          }
+          verifyNever(
+            () => mockAuthService.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          );
+        },
+      );
     });
 
     group('URL normalization', () {

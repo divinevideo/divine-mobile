@@ -68,6 +68,9 @@ final _locations = <String, List<String>>{
   'likedVideos': [RoutePaths.likedVideos],
   'messageRequests': [RoutePaths.messageRequests],
   'minorAccountReview': [RoutePaths.minorAccountReview],
+  'minorAccountReviewConsentRecord': [
+    RoutePaths.minorAccountReviewConsentRecord,
+  ],
   'monetizationLinksSettings': [RoutePaths.monetizationLinksSettings],
   'nip05Settings': [RoutePaths.nip05Settings],
   'nostrConnect': [RoutePaths.nostrConnect],

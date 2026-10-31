@@ -9049,5 +9049,8 @@
   "videoEditorLoopRepairProgress": "మీ లూప్‌ను సమలేఖనం చేస్తున్నాం…",
   "videoEditorLoopRepairTrimmed": "లూప్ సాఫీగా మారింది. {seconds} సె. తొలగించాం.",
   "notificationFromDivine": "Divine నుండి",
-  "announcementUnavailable": "ఈ ప్రకటన ఇకపై అందుబాటులో లేదు."
+  "announcementUnavailable": "ఈ ప్రకటన ఇకపై అందుబాటులో లేదు.",
+  "minorAccountReviewVideoSubmittedBody": "మీ వీడియో సమీక్ష కోసం సమర్పించబడింది.",
+  "minorAccountReviewVideoSubmittedTitle": "వీడియో సమర్పించబడింది",
+  "minorAccountReviewRecordConsentPrivacyBody": "మీ వీడియో సమీక్ష కోసం Divine మద్దతు మరియు నమ్మకం, భద్రత బృందాలకు ప్రైవేట్‌గా పంపబడుతుంది. ఇది ప్రచురించబడదు లేదా ఇతర వినియోగదారులతో పంచుకోబడదు."
 }

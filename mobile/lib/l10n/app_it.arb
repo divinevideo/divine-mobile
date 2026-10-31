@@ -6129,5 +6129,8 @@
   "videoEditorLoopRepairProgress": "Allineamento del loop…",
   "videoEditorLoopRepairTrimmed": "Loop reso più fluido. Rimossi {seconds} s.",
   "notificationFromDivine": "Da Divine",
-  "announcementUnavailable": "Questo annuncio non è più disponibile."
+  "announcementUnavailable": "Questo annuncio non è più disponibile.",
+  "minorAccountReviewVideoSubmittedBody": "Il tuo video è stato inviato per la revisione.",
+  "minorAccountReviewVideoSubmittedTitle": "Video inviato",
+  "minorAccountReviewRecordConsentPrivacyBody": "Il tuo video viene inviato privatamente ai team di assistenza e di fiducia e sicurezza di Divine per la revisione. Non viene pubblicato né condiviso con altri utenti."
 }

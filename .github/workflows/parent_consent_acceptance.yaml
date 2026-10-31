@@ -1,0 +1,119 @@
+name: Parent Consent Acceptance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "mobile/integration_test/consent/**"
+      - "mobile/tool/consent_acceptance*.dart"
+      - "mobile/lib/screens/minor_account_review_*.dart"
+      - "mobile/lib/blocs/minor_consent_capture/**"
+      - "mobile/lib/repositories/minor_account_review_repository.dart"
+      - "mobile/lib/providers/minor_account_review_providers.dart"
+      - "mobile/lib/services/api_service.dart"
+      - "mobile/lib/services/nip98_auth_service.dart"
+      - "mobile/lib/services/consent_upload*.dart"
+      - "mobile/lib/services/minor_consent_recorder.dart"
+      - "mobile/lib/services/video_recorder/camera/**"
+      - "mobile/lib/utils/consent_upload*.dart"
+      - "mobile/packages/divine_camera/**"
+      - "local_stack/consent_acceptance/**"
+      - "local_stack/profile.sh"
+      - ".github/workflows/parent_consent_acceptance.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    name: Real client, local storage and native recording
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      DISPLAY: ":99"
+      E2E_PREBUILT_APK: ${{ github.workspace }}/mobile/build/app/outputs/flutter-apk/app-debug.apk
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check out the matching backend candidate
+        uses: actions/checkout@v7
+        with:
+          repository: divinevideo/divine-relay-manager
+          ref: 85d5015785b97d8d0082d3aa3743dbe395ac90ba
+          path: .consent-backend
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: stable
+          cache: true
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.14.3"
+          cache-provider: basic
+      - name: Install backend and client dependencies
+        run: |
+          # Matches the pinned backend's CI: its unused Vitest worker-pool
+          # dependency still declares a Vitest 3 peer while tests use Vitest 4.
+          npm ci --legacy-peer-deps --prefix .consent-backend/worker
+          cd mobile
+          flutter pub get
+      - name: Exercise real client and Worker HTTP contract
+        run: |
+          python3 local_stack/consent_acceptance/test_profile.py
+          python3 local_stack/consent_acceptance/run.py .consent-backend
+      - name: Build the exact native test before starting the emulator
+        run: |
+          mkdir -p "$HOME/.gradle"
+          cat >> "$HOME/.gradle/gradle.properties" <<'GRADLE'
+          org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=768m -XX:ReservedCodeCacheSize=256m -XX:+HeapDumpOnOutOfMemoryError
+          org.gradle.workers.max=2
+          org.gradle.daemon=false
+          kotlin.compiler.execution.strategy=in-process
+          kotlin.daemon.jvmargs=-Xmx1g
+          GRADLE
+          free -h
+          cd mobile
+          flutter build apk --debug --target-platform android-x64 --dart-define=DEFAULT_ENV=LOCAL --target integration_test/consent/native_consent_capture_test.dart
+          cd android
+          ./gradlew --stop
+          free -h
+      - name: Enable Linux emulator acceleration and display
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-consent-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          Xvfb :99 -screen 0 1280x1024x24 > "$RUNNER_TEMP/consent-display.log" 2>&1 &
+      - name: Record and submit an emulator-camera video
+        uses: reactivecircus/android-emulator-runner@4c44018e59b437e86cdfc41da381398f93ed8808 # v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          cores: 2
+          ram-size: 2048M
+          emulator-options: -no-window -gpu host -no-snapshot -no-boot-anim -camera-front emulated -camera-back emulated
+          disable-animations: true
+          script: python3 local_stack/consent_acceptance/run.py .consent-backend --native
+      - name: Upload synthetic acceptance diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: parent-consent-acceptance
+          path: |
+            mobile/test_reports/*.jsonl
+            ${{ runner.temp }}/consent-worker.log
+            ${{ runner.temp }}/consent-display.log
+          if-no-files-found: ignore

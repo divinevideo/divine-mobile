@@ -3,17 +3,31 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/services/api_service.dart';
+import 'package:openvine/services/consent_upload_session.dart';
+import 'package:openvine/services/minor_account_review_override_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MockApiService extends Mock implements ApiService {}
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  registerFallbackValue(ConsentUploadSession());
+
   group('MinorAccountReviewRepository', () {
     late MockApiService apiService;
+    late MinorAccountReviewOverrideService overrideService;
     late MinorAccountReviewRepository repository;
 
-    setUp(() {
+    setUp(() async {
       apiService = MockApiService();
-      repository = MinorAccountReviewRepository(apiService: apiService);
+      SharedPreferences.setMockInitialValues({});
+      overrideService = MinorAccountReviewOverrideService(
+        prefs: await SharedPreferences.getInstance(),
+      );
+      repository = MinorAccountReviewRepository(
+        apiService: apiService,
+        overrideService: overrideService,
+      );
     });
 
     test('returns parsed restricted status from API', () async {
@@ -100,5 +114,264 @@ void main() {
         ),
       ).called(1);
     });
+
+    group('submitParentConsent', () {
+      for (final (description, band, resolution) in [
+        ('a 16-plus case', 'age_16_plus_claimed', 'parent_video_or_email'),
+        ('a case without the video option', 'age_13_15', 'support_review_only'),
+      ]) {
+        test(
+          'uploads nothing into $description from the start endpoint',
+          () async {
+            when(() => apiService.startGreenlight()).thenAnswer(
+              (_) async => {
+                'restriction': {'status': 'active'},
+                'minorReviewCase': {
+                  'id': 'wrong-case',
+                  'state': 'open_reported',
+                  'suspectedAgeBand': band,
+                  'allowedResolution': resolution,
+                },
+              },
+            );
+            await expectLater(
+              repository.submitParentConsent(
+                caseId: null,
+                email: 'parent@example.com',
+                videoPath: '/tmp/consent.mp4',
+              ),
+              throwsA(isA<ApiException>()),
+            );
+            verifyNever(
+              () => apiService.submitMinorAccountReviewParentConsent(
+                caseId: any(named: 'caseId'),
+                email: any(named: 'email'),
+                videoPath: any(named: 'videoPath'),
+              ),
+            );
+          },
+        );
+      }
+      test(
+        'starts a real case before uploading a self-started consent video',
+        () async {
+          when(() => apiService.startGreenlight()).thenAnswer(
+            (_) async => {
+              'restriction': {'status': 'active'},
+              'minorReviewCase': {
+                'id': 'application-1',
+                'state': 'open_reported',
+                'suspectedAgeBand': 'age_13_15',
+                'allowedResolution': 'parent_video_or_email',
+              },
+            },
+          );
+          String? uploadedCase;
+          when(
+            () => apiService.submitMinorAccountReviewParentConsent(
+              caseId: any(named: 'caseId'),
+              email: any(named: 'email'),
+              videoPath: any(named: 'videoPath'),
+            ),
+          ).thenAnswer((invocation) async {
+            uploadedCase = invocation.namedArguments[#caseId] as String;
+          });
+          await repository.submitParentConsent(
+            caseId: null,
+            email: 'parent@example.com',
+            videoPath: '/tmp/consent.mp4',
+          );
+          expect(uploadedCase, 'application-1');
+        },
+      );
+
+      test('retries reuse the first started case and upload session', () async {
+        final submission = ParentConsentSubmission();
+        addTearDown(submission.dispose);
+        when(() => apiService.startGreenlight()).thenAnswer(
+          (_) async => {
+            'restriction': {'status': 'active'},
+            'minorReviewCase': {
+              'id': 'application-1',
+              'state': 'open_reported',
+              'suspectedAgeBand': 'age_13_15',
+              'allowedResolution': 'parent_video_or_email',
+            },
+          },
+        );
+        var attempts = 0;
+        when(
+          () => apiService.submitMinorAccountReviewParentConsent(
+            caseId: 'application-1',
+            email: 'parent@example.com',
+            videoPath: '/tmp/consent.mp4',
+            session: any(named: 'session'),
+          ),
+        ).thenAnswer((_) async {
+          if (attempts++ == 0) throw const ApiException('offline');
+        });
+        Future<void> submit() => repository.submitParentConsent(
+          caseId: null,
+          email: 'parent@example.com',
+          videoPath: '/tmp/consent.mp4',
+          submission: submission,
+        );
+        await expectLater(submit(), throwsA(isA<ApiException>()));
+        await submit();
+        verify(() => apiService.startGreenlight()).called(1);
+        expect(attempts, 2);
+      });
+
+      test(
+        'rejects an ineligible case returned by the start endpoint',
+        () async {
+          when(() => apiService.startGreenlight()).thenAnswer(
+            (_) async => {
+              'restriction': {'status': 'active'},
+              'minorReviewCase': {
+                'id': 'wrong-case',
+                'state': 'open_reported',
+                'suspectedAgeBand': 'under_13',
+                'allowedResolution': 'support_email_only',
+              },
+            },
+          );
+          await expectLater(
+            repository.submitParentConsent(
+              caseId: null,
+              email: 'parent@example.com',
+              videoPath: '/tmp/consent.mp4',
+            ),
+            throwsA(isA<ApiException>()),
+          );
+        },
+      );
+
+      test('forwards caseId, email and videoPath to ApiService', () async {
+        when(
+          () => apiService.submitMinorAccountReviewParentConsent(
+            caseId: any(named: 'caseId'),
+            email: any(named: 'email'),
+            videoPath: any(named: 'videoPath'),
+          ),
+        ).thenAnswer((_) async {});
+
+        await repository.submitParentConsent(
+          caseId: 'case-1',
+          email: 'parent@example.com',
+          videoPath: '/tmp/consent.mp4',
+        );
+
+        verify(
+          () => apiService.submitMinorAccountReviewParentConsent(
+            caseId: 'case-1',
+            email: 'parent@example.com',
+            videoPath: '/tmp/consent.mp4',
+          ),
+        ).called(1);
+      });
+
+      test(
+        'advances a matching developer override instead of the API',
+        () async {
+          await overrideService.setOverride(_overrideForCase('case-1'));
+
+          await repository.submitParentConsent(
+            caseId: 'case-1',
+            email: 'parent@example.com',
+            videoPath: '/tmp/consent.mp4',
+            localReceipt: const MinorReviewInstructions(
+              title: 'Received',
+              body: 'We have your video.',
+            ),
+          );
+
+          final stored = overrideService.getOverride()!.currentCase!;
+          expect(stored.state, MinorReviewCaseState.submittedForReview);
+          expect(stored.instructions.title, 'Received');
+          verifyNever(
+            () => apiService.submitMinorAccountReviewParentConsent(
+              caseId: any(named: 'caseId'),
+              email: any(named: 'email'),
+              videoPath: any(named: 'videoPath'),
+            ),
+          );
+        },
+      );
+
+      test('calls the API when the override describes another case', () async {
+        when(
+          () => apiService.submitMinorAccountReviewParentConsent(
+            caseId: any(named: 'caseId'),
+            email: any(named: 'email'),
+            videoPath: any(named: 'videoPath'),
+          ),
+        ).thenAnswer((_) async {});
+        await overrideService.setOverride(_overrideForCase('some-other-case'));
+
+        await repository.submitParentConsent(
+          caseId: 'case-1',
+          email: 'parent@example.com',
+          videoPath: '/tmp/consent.mp4',
+          localReceipt: const MinorReviewInstructions(
+            title: 'Received',
+            body: 'We have your video.',
+          ),
+        );
+
+        expect(
+          overrideService.getOverride()!.currentCase!.state,
+          MinorReviewCaseState.restrictedPendingParentalConsent,
+        );
+        verify(
+          () => apiService.submitMinorAccountReviewParentConsent(
+            caseId: 'case-1',
+            email: 'parent@example.com',
+            videoPath: '/tmp/consent.mp4',
+          ),
+        ).called(1);
+      });
+    });
+
+    test('parent contact advances a matching developer override', () async {
+      await overrideService.setOverride(_overrideForCase('mar_123'));
+
+      await repository.submitParentContact(
+        caseId: 'mar_123',
+        email: 'parent@example.com',
+        localReceipt: const MinorReviewInstructions(
+          title: 'Received',
+          body: 'We have your email.',
+        ),
+      );
+
+      expect(
+        overrideService.getOverride()!.currentCase!.state,
+        MinorReviewCaseState.submittedForReview,
+      );
+      verifyNever(
+        () => apiService.submitMinorAccountReviewParentContact(
+          caseId: any(named: 'caseId'),
+          email: any(named: 'email'),
+        ),
+      );
+    });
   });
+}
+
+MinorAccountReviewStatus _overrideForCase(String caseId) {
+  return MinorAccountReviewStatus(
+    restrictionStatus: AccountRestrictionStatus.restrictedMinorReview,
+    currentCase: MinorReviewCase(
+      id: caseId,
+      state: MinorReviewCaseState.restrictedPendingParentalConsent,
+      suspectedAgeBand: SuspectedAgeBand.age13To15,
+      allowedResolution: MinorReviewResolutionType.parentVideoOrEmail,
+      instructions: const MinorReviewInstructions(
+        title: 'Account review required',
+        body: 'We need parental consent information.',
+      ),
+      supportEmail: 'support@divine.video',
+    ),
+  );
 }

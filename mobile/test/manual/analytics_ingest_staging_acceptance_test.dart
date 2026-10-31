@@ -295,6 +295,7 @@ class _ThrowawayKeyNip98AuthService extends Fake implements Nip98AuthService {
     required String url,
     required HttpMethod method,
     String? payload,
+    String? payloadHash,
     bool reuseCached = true,
   }) async {
     final now = DateTime.now();
@@ -306,7 +307,10 @@ class _ThrowawayKeyNip98AuthService extends Fake implements Nip98AuthService {
         ['u', url],
         ['method', method.value],
         ['created_at', '$createdAt'],
-        ['payload', sha256.convert(utf8.encode(payload ?? '')).toString()],
+        [
+          'payload',
+          payloadHash ?? sha256.convert(utf8.encode(payload ?? '')).toString(),
+        ],
       ],
       '',
       createdAt: createdAt,

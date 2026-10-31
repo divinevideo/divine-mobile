@@ -6129,5 +6129,8 @@
   "videoEditorLoopRepairProgress": "Dein Loop wird ausgerichtet…",
   "videoEditorLoopRepairTrimmed": "Loop geglättet. {seconds} s entfernt.",
   "notificationFromDivine": "Von Divine",
-  "announcementUnavailable": "Diese Mitteilung ist nicht mehr verfügbar."
+  "announcementUnavailable": "Diese Mitteilung ist nicht mehr verfügbar.",
+  "minorAccountReviewVideoSubmittedBody": "Dein Video wurde zur Prüfung eingereicht.",
+  "minorAccountReviewVideoSubmittedTitle": "Video eingereicht",
+  "minorAccountReviewRecordConsentPrivacyBody": "Dein Video wird vertraulich an die Teams für Support sowie Vertrauen und Sicherheit von Divine zur Prüfung gesendet. Es wird nicht veröffentlicht oder mit anderen Nutzern geteilt."
 }
