@@ -450,9 +450,16 @@ class SocialStickerData extends Equatable {
   };
 
   /// Whether a poll, quiz or slider has its question and what there is to
-  /// pick, a quiz its right answer, and all of it fits a sticker tag.
+  /// pick, a quiz its right answer, and all of it fits a sticker tag, whose
+  /// label holds the question and each answer on a line of its own.
   bool get _isCompletePoll {
     if (pollQuestion?.trim().isEmpty ?? true) return false;
+    if ([
+      pollQuestion!,
+      ...pollOptions,
+    ].any((text) => text.trim().contains('\n'))) {
+      return false;
+    }
     final label = tapLabel ?? '';
     if (label.length > VideoStickerRegion.maxLabelLength) return false;
     if (kind == SocialStickerKind.slider) {

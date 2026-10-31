@@ -55,6 +55,35 @@ void main() {
         await tester.pump();
         expect(hasFocus(2), isTrue);
       });
+
+      testWidgets('keeps a pasted answer on one line', (tester) async {
+        final cubit = SocialStickerCubit(
+          initial: SocialStickerData.poll(SocialStickerKind.poll),
+          blocklistRepository: _MockContentBlocklistRepository(),
+        );
+        addTearDown(cubit.close);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: VineTheme.theme,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: BlocProvider.value(
+                value: cubit,
+                child: const SingleChildScrollView(
+                  child: SocialStickerPollFields(),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.enterText(find.byType(EditableText).at(0), 'Dinner\n?');
+        await tester.enterText(find.byType(EditableText).at(1), 'Pizza\nPasta');
+
+        expect(cubit.state.data.pollQuestion, isNot(contains('\n')));
+        expect(cubit.state.data.pollOptions.first, isNot(contains('\n')));
+      });
     });
   });
 }

@@ -532,6 +532,24 @@ void main() {
         );
       });
 
+      test('takes no line break inside its question or an answer, which '
+          'would split the label into more answers', () {
+        expect(
+          [
+            quiz.copyWith(pollOptions: ['Pizza\nPasta', 'Burger']),
+            quiz.copyWith(pollQuestion: 'Vine\nlaunched in…'),
+            SocialStickerData.poll(
+              SocialStickerKind.slider,
+            ).copyWith(pollQuestion: 'How\nhungry?'),
+          ].map((sticker) => sticker.isComplete),
+          everyElement(isFalse),
+        );
+        expect(
+          quiz.copyWith(pollOptions: ['2013\n', '2015']).isComplete,
+          isTrue,
+        );
+      });
+
       test('is published without a poll id, and its question and answers '
           'come back from the tag', () {
         final region = VideoStickerRegion.fromTag(
