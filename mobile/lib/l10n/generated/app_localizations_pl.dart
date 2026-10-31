@@ -9221,6 +9221,15 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorEffectComic => 'Komiks';
 
   @override
+  String get videoEditorEffectEightBit => '8-bit';
+
+  @override
+  String get videoEditorEffectAnaglyph => 'Okulary 3D';
+
+  @override
+  String get videoEditorEffectRiso => 'Risograf';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Retro';
 
   @override

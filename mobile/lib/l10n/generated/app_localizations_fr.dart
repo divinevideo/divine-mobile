@@ -9148,6 +9148,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorEffectComic => 'BD';
 
   @override
+  String get videoEditorEffectEightBit => '8 bits';
+
+  @override
+  String get videoEditorEffectAnaglyph => 'Lunettes 3D';
+
+  @override
+  String get videoEditorEffectRiso => 'Risographie';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Rétro';
 
   @override
