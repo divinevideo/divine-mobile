@@ -9140,6 +9140,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'Riffelglas';
 
   @override
+  String get videoEditorEffectEightBit => '8-Bit';
+
+  @override
+  String get videoEditorEffectAnaglyph => '3D-Brille';
+
+  @override
+  String get videoEditorEffectRiso => 'Riso-Druck';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Retro';
 
   @override

@@ -8981,6 +8981,15 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'Kính gân';
 
   @override
+  String get videoEditorEffectEightBit => '8-bit';
+
+  @override
+  String get videoEditorEffectAnaglyph => 'Kính 3D';
+
+  @override
+  String get videoEditorEffectRiso => 'In Riso';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Retro';
 
   @override

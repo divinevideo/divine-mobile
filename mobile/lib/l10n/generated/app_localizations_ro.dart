@@ -9230,6 +9230,15 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'Sticlă striată';
 
   @override
+  String get videoEditorEffectEightBit => '8 biți';
+
+  @override
+  String get videoEditorEffectAnaglyph => 'Ochelari 3D';
+
+  @override
+  String get videoEditorEffectRiso => 'Risografie';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Retro';
 
   @override

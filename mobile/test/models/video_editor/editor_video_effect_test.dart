@@ -1034,7 +1034,7 @@ void main() {
         for (final type in EditorEffectType.values)
           if (type.customId != null) type,
       ];
-      expect(custom, hasLength(25));
+      expect(custom, hasLength(28));
       for (final type in custom) {
         final effect = EditorVideoEffect.of(
           id: 'x',
@@ -1140,6 +1140,22 @@ void main() {
         EditorEffectType.swirl,
         EditorEffectType.ripple,
         EditorEffectType.flutedGlass,
+      ]);
+    });
+
+    test('lists the tape, film, screen and print looks under retro, the ones '
+        'Divine draws after the built-in ones', () {
+      expect(EditorEffectCategory.retro.types, [
+        const EditorEffectType.builtIn(VideoEffectType.vhs),
+        const EditorEffectType.builtIn(VideoEffectType.tvStatic),
+        const EditorEffectType.builtIn(VideoEffectType.oldFilm),
+        const EditorEffectType.builtIn(VideoEffectType.filmGrain),
+        const EditorEffectType.builtIn(VideoEffectType.signalInterference),
+        const EditorEffectType.builtIn(VideoEffectType.crt),
+        EditorEffectType.comic,
+        EditorEffectType.eightBit,
+        EditorEffectType.anaglyph,
+        EditorEffectType.riso,
       ]);
     });
   });

@@ -562,15 +562,18 @@ flutter:
   # picker; the others draw the tiles of Divine's own effects in the effects
   # picker.
   shaders:
+    - shaders/anaglyph.frag
     - shaders/chroma_key.frag
     - shaders/comic.frag
     - shaders/drops.frag
+    - shaders/eight_bit.frag
     - shaders/fisheye.frag
     - shaders/fluted_glass.frag
     - shaders/light_leak.frag
     - shaders/light_leak_transition.frag
     - shaders/particles.frag
     - shaders/ripple.frag
+    - shaders/riso.frag
     - shaders/swirl.frag
     - shaders/tilt_shift.frag
     - shaders/zoom_blur.frag

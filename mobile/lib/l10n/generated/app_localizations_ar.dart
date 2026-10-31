@@ -9024,6 +9024,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'زجاج مضلّع';
 
   @override
+  String get videoEditorEffectEightBit => '8 بت';
+
+  @override
+  String get videoEditorEffectAnaglyph => 'نظارات ثلاثية الأبعاد';
+
+  @override
+  String get videoEditorEffectRiso => 'طباعة ريسو';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'ريترو';
 
   @override

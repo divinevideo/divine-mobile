@@ -9130,6 +9130,15 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'Vetro cannettato';
 
   @override
+  String get videoEditorEffectEightBit => '8 bit';
+
+  @override
+  String get videoEditorEffectAnaglyph => 'Occhiali 3D';
+
+  @override
+  String get videoEditorEffectRiso => 'Risografia';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Retrò';
 
   @override

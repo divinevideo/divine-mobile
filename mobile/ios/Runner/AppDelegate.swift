@@ -29,6 +29,9 @@ extension FlutterError: @retroactive Error {}
     FlutedGlassVideoEffect.register()
     ZoomBlurVideoEffect.register()
     ComicVideoEffect.register()
+    EightBitVideoEffect.register()
+    AnaglyphVideoEffect.register()
+    RisoVideoEffect.register()
     AdjustVideoEffect.register()
     #if DEBUG
     exportScreenshotLaunchConfig()

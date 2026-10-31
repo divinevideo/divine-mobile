@@ -8577,6 +8577,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'モールガラス';
 
   @override
+  String get videoEditorEffectEightBit => '8ビット';
+
+  @override
+  String get videoEditorEffectAnaglyph => '3Dメガネ';
+
+  @override
+  String get videoEditorEffectRiso => 'リソグラフ';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'レトロ';
 
   @override

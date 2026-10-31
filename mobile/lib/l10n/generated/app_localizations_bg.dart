@@ -9104,6 +9104,15 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'Оребрено стъкло';
 
   @override
+  String get videoEditorEffectEightBit => '8-битов';
+
+  @override
+  String get videoEditorEffectAnaglyph => '3D очила';
+
+  @override
+  String get videoEditorEffectRiso => 'Ризограф';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Ретро';
 
   @override

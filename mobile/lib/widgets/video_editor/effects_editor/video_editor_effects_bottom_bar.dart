@@ -252,6 +252,15 @@ ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
     values: const [1.0],
   ),
   comicVideoEffectId => (asset: 'shaders/comic.frag', values: const [1.0]),
+  eightBitVideoEffectId => (
+    asset: 'shaders/eight_bit.frag',
+    values: const [1.0],
+  ),
+  anaglyphVideoEffectId => (
+    asset: 'shaders/anaglyph.frag',
+    values: const [1.0],
+  ),
+  risoVideoEffectId => (asset: 'shaders/riso.frag', values: const [1.0]),
   _ => null,
 };
 
@@ -387,6 +396,9 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
     flutedGlassVideoEffectId => context.l10n.videoEditorEffectFlutedGlass,
     zoomBlurVideoEffectId => context.l10n.videoEditorEffectZoomBlur,
     comicVideoEffectId => context.l10n.videoEditorEffectComic,
+    eightBitVideoEffectId => context.l10n.videoEditorEffectEightBit,
+    anaglyphVideoEffectId => context.l10n.videoEditorEffectAnaglyph,
+    risoVideoEffectId => context.l10n.videoEditorEffectRiso,
     _ => context.l10n.videoEditorEffectEcho,
   };
 }

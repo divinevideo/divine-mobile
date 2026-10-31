@@ -9086,6 +9086,15 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectFlutedGlass => 'Fluted Glass';
 
   @override
+  String get videoEditorEffectEightBit => '8-Bit';
+
+  @override
+  String get videoEditorEffectAnaglyph => '3D Glasses';
+
+  @override
+  String get videoEditorEffectRiso => 'Riso Print';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Retro';
 
   @override
