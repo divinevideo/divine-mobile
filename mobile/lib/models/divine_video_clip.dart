@@ -937,6 +937,7 @@ class DivineVideoClip {
         ],
       if (libraryTitle != null) 'libraryTitle': libraryTitle,
       'durationMs': duration.inMilliseconds,
+      ..._subMillisecondJson('durationUs', duration),
       'recordedAt': recordedAt.toIso8601String(),
       'thumbnailPath': thumbnailPath != null
           ? p.basename(thumbnailPath!)
@@ -950,7 +951,9 @@ class DivineVideoClip {
           ? p.basename(ghostFramePath!)
           : null,
       'trimStartMs': trimStart.inMilliseconds,
+      ..._subMillisecondJson('trimStartUs', trimStart),
       'trimEndMs': trimEnd.inMilliseconds,
+      ..._subMillisecondJson('trimEndUs', trimEnd),
       if (sourceStartOffset > Duration.zero)
         'sourceStartOffsetMs': sourceStartOffset.inMilliseconds,
       if (minTrimStart > Duration.zero)
@@ -1065,7 +1068,7 @@ class DivineVideoClip {
               Duration.zero,
               (sum, frame) => sum + frame.duration,
             )
-          : Duration(milliseconds: durationMs),
+          : _durationFromJson(json, 'duration'),
       recordedAt: DateTime.parse(rawRecordedAt),
       thumbnailPath: resolvePath(
         json['thumbnailPath'] as String?,
@@ -1091,8 +1094,8 @@ class DivineVideoClip {
         documentsPath,
         useOriginalPath: useOriginalPath,
       ),
-      trimStart: Duration(milliseconds: (json['trimStartMs'] as int?) ?? 0),
-      trimEnd: Duration(milliseconds: (json['trimEndMs'] as int?) ?? 0),
+      trimStart: _durationFromJson(json, 'trimStart'),
+      trimEnd: _durationFromJson(json, 'trimEnd'),
       sourceStartOffset: Duration(
         milliseconds: (json['sourceStartOffsetMs'] as int?) ?? 0,
       ),
@@ -1234,6 +1237,27 @@ class DivineVideoClip {
         if (credit.authorPubkey.isNotEmpty && seen.add(credit.identityKey))
           credit,
     ]);
+  }
+
+  /// [value] under [key] in microseconds, or nothing when the matching
+  /// `…Ms` field already holds it exactly.
+  ///
+  /// Recordings and dragged trims are not whole milliseconds, and a clip read
+  /// back from the `…Ms` fields alone came out up to 2 ms longer. Over a few
+  /// clips that moved the composition end far enough that a sound which
+  /// covered it no longer grew onto a clip added after a draft was reopened.
+  static Map<String, int> _subMillisecondJson(String key, Duration value) => {
+    if (value.inMicroseconds % Duration.microsecondsPerMillisecond != 0)
+      key: value.inMicroseconds,
+  };
+
+  /// The `<name>Us` field of [json], falling back to `<name>Ms` for clips
+  /// written before it existed or that fall on a whole millisecond.
+  static Duration _durationFromJson(Map<String, dynamic> json, String name) {
+    if (json['${name}Us'] case final int micros) {
+      return Duration(microseconds: micros);
+    }
+    return Duration(milliseconds: (json['${name}Ms'] as int?) ?? 0);
   }
 
   /// Parses a persisted [ClipTransition], degrading to `null` (a hard cut) when
