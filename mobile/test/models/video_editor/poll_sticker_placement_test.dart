@@ -1,10 +1,13 @@
 // ABOUTME: Tests where a poll, quiz or slider may stand on a video: above the
 // ABOUTME: other layers, and moved or shrunk into the part the feed leaves clear.
 
+import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/poll_sticker_placement.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
@@ -29,7 +32,178 @@ WidgetLayer _layer(String id, {bool poll = false}) {
   );
 }
 
+final Uint8List _png = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+);
+
+/// A poll or a hashtag that takes up [size] on the real editor's canvas.
+WidgetLayer _sized(String id, Size size, {bool poll = false}) {
+  final layer = _layer(id, poll: poll);
+  return WidgetLayer(
+    id: id,
+    widget: SizedBox.fromSize(size: size),
+    width: size.width,
+    interaction: poll ? pollLayerInteraction() : null,
+    meta: layer.meta,
+    exportConfigs: layer.exportConfigs,
+  );
+}
+
+Future<ProImageEditorState> _pumpEditor(WidgetTester tester) async {
+  final key = GlobalKey<ProImageEditorState>();
+  await tester.pumpWidget(
+    MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: ProImageEditor.memory(
+        _png,
+        key: key,
+        configs: const ProImageEditorConfigs(
+          progressIndicatorConfigs: ProgressIndicatorConfigs(
+            widgets: ProgressIndicatorWidgets(
+              circularProgressIndicator: SizedBox.shrink(),
+            ),
+          ),
+          imageGeneration: ImageGenerationConfigs(
+            enableIsolateGeneration: false,
+            enableBackgroundGeneration: false,
+          ),
+        ),
+        callbacks: ProImageEditorCallbacks(
+          onImageEditingComplete: (Uint8List bytes) async {},
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  final editor = key.currentState!;
+  await tester.runAsync(editor.decodeImage);
+  await tester.pumpAndSettle();
+  return editor;
+}
+
+/// The ids of the layers a draft would restore from [editor]'s saved history.
+Future<List<String>> _savedLayerIds(ProImageEditorState editor) async {
+  final exported = await editor.exportStateHistory(
+    configs: const ExportEditorConfigs(
+      historySpan: .currentAndBackward,
+      enableMinify: false,
+    ),
+  );
+  final history = ImportStateHistory.fromMap(
+    await exported.toMap(),
+    configs: ImportEditorConfigs(
+      widgetLoader: (id, {meta}) => const SizedBox(),
+    ),
+  );
+  return [
+    for (final layer in history.stateHistory[history.editorPosition].layers)
+      layer.exportConfigsId,
+  ];
+}
+
+extension on Layer {
+  String get exportConfigsId => (this as WidgetLayer).exportConfigs.id!;
+}
+
+/// Runs [keepPollInPlace] and says whether it asked to save the history.
+bool _keep(ProImageEditorState editor) {
+  var save = false;
+  keepPollInPlace(
+    editor,
+    targetAspectRatio: 9 / 16,
+    onChanged: () => save = true,
+  );
+  return save;
+}
+
 void main() {
+  group('keepPollInPlace', () {
+    testWidgets('moves a poll back on top, in the history a draft saves', (
+      tester,
+    ) async {
+      final editor = await _pumpEditor(tester);
+      editor
+        ..addLayer(
+          _sized('p', const Size(100, 80), poll: true),
+          blockSelectLayer: true,
+        )
+        ..addLayer(_sized('a', const Size(100, 80)), blockSelectLayer: true);
+      await tester.pumpAndSettle();
+      expect(
+        await tester.runAsync(() => _savedLayerIds(editor)),
+        equals(['p', 'a']),
+      );
+
+      final save = _keep(editor);
+
+      expect(save, isTrue);
+      expect(
+        await tester.runAsync(() => _savedLayerIds(editor)),
+        equals(['a', 'p']),
+      );
+    });
+
+    testWidgets('moves and shrinks a poll let go outside the box', (
+      tester,
+    ) async {
+      final editor = await _pumpEditor(tester);
+      final poll = _sized('p', const Size(300, 200), poll: true)
+        ..offset = const Offset(200, 200);
+      editor.addLayer(poll, blockSelectLayer: true);
+      await tester.pumpAndSettle();
+
+      final save = _keep(editor);
+      await tester.pumpAndSettle();
+
+      expect(save, isTrue);
+      final placed = editor.activeLayers.single;
+      expect(placed.scale, lessThan(1));
+      expect(placed.offset.dx, lessThan(200));
+    });
+
+    testWidgets('sets upright and locks a poll that stands turned', (
+      tester,
+    ) async {
+      final editor = await _pumpEditor(tester);
+      editor.addLayer(
+        _sized('p', const Size(100, 80), poll: true)..rotation = 0.5,
+        blockSelectLayer: true,
+      );
+      await tester.pumpAndSettle();
+
+      final save = _keep(editor);
+
+      expect(save, isTrue);
+      final placed = editor.activeLayers.single;
+      expect(placed.rotation, equals(0));
+      expect(pollLayerNeedsLocking(placed), isFalse);
+    });
+
+    testWidgets('changes nothing once a poll stands where it should', (
+      tester,
+    ) async {
+      final editor = await _pumpEditor(tester);
+      editor.addLayer(
+        _sized('p', const Size(100, 80), poll: true),
+        blockSelectLayer: true,
+      );
+      await tester.pumpAndSettle();
+      _keep(editor);
+      await tester.pumpAndSettle();
+
+      expect(_keep(editor), isFalse);
+    });
+
+    testWidgets('changes nothing without a poll', (tester) async {
+      final editor = await _pumpEditor(tester);
+      editor.addLayer(_sized('a', const Size(100, 80)), blockSelectLayer: true);
+      await tester.pumpAndSettle();
+
+      expect(_keep(editor), isFalse);
+    });
+  });
+
   group('pollLayerIndexBelowTop', () {
     test('finds a poll with another layer above it', () {
       expect(

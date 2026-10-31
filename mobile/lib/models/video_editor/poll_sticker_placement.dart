@@ -84,6 +84,61 @@ int? pollLayerIndexBelowTop(List<Layer> layers) {
   return index < 0 || index == layers.length - 1 ? null : index;
 }
 
+/// Keeps the poll, quiz or slider among [editor]'s layers above every other
+/// layer, upright and locked ([pollLayerInteraction]), and inside
+/// [pollSafeArea] of an export of [targetAspectRatio].
+///
+/// Each change is made to the current history step rather than adding one, so
+/// undo goes back past the change that moved the poll. No history callback
+/// fires for it, so [onChanged] is where a caller saves the history again.
+void keepPollInPlace(
+  ProImageEditorState editor, {
+  required double? targetAspectRatio,
+  required VoidCallback onChanged,
+}) {
+  if (_placePoll(editor, targetAspectRatio)) onChanged();
+}
+
+/// Whether [keepPollInPlace] had anything to correct.
+bool _placePoll(ProImageEditorState editor, double? targetAspectRatio) {
+  var changed = false;
+  final layers = editor.activeLayers;
+  final below = pollLayerIndexBelowTop(layers);
+  if (below != null) {
+    editor.moveLayerListPosition(
+      oldIndex: below,
+      newIndex: layers.length - 1,
+      skipUpdateHistory: true,
+    );
+    changed = true;
+  }
+  final index = layers.lastIndexWhere(isPollLayer);
+  if (index < 0) return changed;
+  final layer = layers[index];
+  if (pollLayerNeedsLocking(layer)) {
+    layer
+      ..interaction = pollLayerInteraction()
+      ..rotation = 0;
+    editor.replaceLayer(index: index, layer: layer, skipUpdateHistory: true);
+    changed = true;
+  }
+  final size = layer.keyInternalSize.currentContext?.size;
+  if (size == null || targetAspectRatio == null) return changed;
+  final fit = fitPollIntoSafeArea(
+    offset: layer.offset,
+    size: size,
+    rotation: layer.rotation,
+    bodySize: editor.sizesManager.bodySize,
+    targetAspectRatio: targetAspectRatio,
+  );
+  if (fit == null) return changed;
+  layer
+    ..offset += fit.shift
+    ..scale *= fit.scale;
+  editor.replaceLayer(index: index, layer: layer, skipUpdateHistory: true);
+  return true;
+}
+
 /// How to move and shrink a poll so it lies inside [pollSafeArea]: the shift
 /// to add to its offset and the factor to scale it by, or `null` when it lies
 /// inside already.
