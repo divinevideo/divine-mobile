@@ -291,7 +291,8 @@ class VideoEventPublisher {
   /// (#3538). Nothing about it is persisted here either — a future-dated
   /// event must never enter the publish-retry channel, which would broadcast
   /// it as "now". [expirationTimestamp] is then expected to be relative to
-  /// [scheduledAt] already.
+  /// [scheduledAt] already. A [poll] the video points to is the exception:
+  /// it is broadcast at once, ahead of the held video.
   ///
   /// Throws:
   ///
@@ -593,7 +594,12 @@ class VideoEventPublisher {
       if (reusedEvent == null) {
         addVideoStickerTags(
           tags,
-          await _publishPollOf(stickerRegions, poll, authService: authService),
+          await _publishPollOf(
+            stickerRegions,
+            poll,
+            upload: upload,
+            authService: authService,
+          ),
         );
       }
 
@@ -837,11 +843,9 @@ class VideoEventPublisher {
     );
   }
 
-  /// The signed event a failed attempt left for [upload], or `null` when
-  /// there is none or it was signed under the other attribution setting.
   /// The poll, quiz or slider sticker among [regions], pointing at [poll]
-  /// once that is published, signed through [authService]; none when there is
-  /// no such sticker.
+  /// once that is published for [upload], signed through [authService]; none
+  /// when there is no such sticker.
   ///
   /// The poll goes out before the video that points to it, so a viewer never
   /// finds the video without its poll. A poll sticker whose poll is missing,
@@ -855,6 +859,7 @@ class VideoEventPublisher {
   Future<List<VideoStickerRegion>> _publishPollOf(
     List<VideoStickerRegion> regions,
     Poll? poll, {
+    required PendingUpload upload,
     required AuthService authService,
   }) async {
     final pollRegion = regions
@@ -869,7 +874,11 @@ class VideoEventPublisher {
       );
       return const [];
     }
-    final pollId = await _publishPoll(poll, authService: authService);
+    final pollId = await _publishPoll(
+      poll,
+      upload: upload,
+      authService: authService,
+    );
     return [pollRegion.withTarget(pollId)];
   }
 
@@ -882,16 +891,24 @@ class VideoEventPublisher {
   /// Signs [poll] through [authService] and publishes it, its votes expected
   /// on the trusted relay; the id of its event.
   ///
+  /// The poll is stamped with when [upload] began, so an attempt that has to
+  /// sign it again, because the video signed with it was not kept for a
+  /// retry, signs the same event, and the relays keep one poll.
+  ///
   /// Throws a [PollPublishException] if it could not be signed or no relay
   /// took it.
   Future<String> _publishPoll(
     Poll poll, {
+    required PendingUpload upload,
     required AuthService authService,
   }) async {
     final event = await authService.createAndSignEvent(
       kind: Poll.eventKind,
       content: poll.question,
       tags: poll.toTags(relayUrl: _relayPublisher.trustedRelayUrl),
+      createdAt:
+          upload.createdAt.millisecondsSinceEpoch ~/
+          Duration.millisecondsPerSecond,
     );
     if (event == null) {
       throw const PollPublishException('Could not sign the poll of a video');
@@ -910,6 +927,8 @@ class VideoEventPublisher {
     return event.id;
   }
 
+  /// The signed event a failed attempt left for [upload], or `null` when
+  /// there is none or it was signed under the other attribution setting.
   Future<Event?> _loadRetryableSignedEvent(PendingUpload upload) async {
     final cachedEventId = upload.nostrEventId;
     if (cachedEventId == null || cachedEventId.isEmpty) {
