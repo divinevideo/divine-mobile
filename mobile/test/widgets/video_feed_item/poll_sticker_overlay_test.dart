@@ -28,6 +28,8 @@ class _Session extends NostrSession {
 
   @override
   NostrSessionReadiness build() => _readiness;
+
+  void become(NostrSessionReadiness next) => state = next;
 }
 
 final String _author = 'a' * 64;
@@ -101,6 +103,7 @@ void main() {
       WidgetTester tester, {
       bool isActive = true,
       NostrSessionReadiness? session,
+      _Session? sessionNotifier,
       VideoStickerRegion? region,
     }) async {
       final shown = region ?? _region;
@@ -110,7 +113,7 @@ void main() {
             pollRepositoryProvider.overrideWithValue(repository),
             sharedPreferencesProvider.overrideWithValue(preferences),
             nostrSessionProvider.overrideWith(
-              () => _Session(session ?? ready(_viewer)),
+              () => sessionNotifier ?? _Session(session ?? ready(_viewer)),
             ),
           ],
           child: MaterialApp(
@@ -225,6 +228,33 @@ void main() {
         await tester.pump();
 
         expect(playerTaps, equals(1));
+        verify(() => repository.vote(_poll, '0')).called(1);
+      });
+
+      testWidgets('reads the poll again once the relays are up', (
+        tester,
+      ) async {
+        when(
+          () => repository.fetchPoll(_pollId, authorPubkey: _author),
+        ).thenAnswer((_) async => null);
+        final session = _Session(
+          NostrSessionReadiness.identityKnown(pubkey: _viewer),
+        );
+        await pump(tester, sessionNotifier: session);
+        await tester.pump();
+
+        when(
+          () => repository.fetchPoll(_pollId, authorPubkey: _author),
+        ).thenAnswer(
+          (_) async => PollSnapshot(poll: _poll, results: const PollResults()),
+        );
+        session.become(ready(_viewer));
+        await tester.pump();
+        await tester.pump();
+
+        await tester.tap(find.text('Red'));
+        await tester.pump();
+
         verify(() => repository.vote(_poll, '0')).called(1);
       });
 
