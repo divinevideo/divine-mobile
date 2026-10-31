@@ -4,6 +4,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:poll_repository/poll_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -112,7 +113,15 @@ class PollStickerCubit extends Cubit<PollStickerState>
         state.copyWith(results: before, voteStatus: PollVoteStatus.failed),
       );
       return;
+    } catch (error, stackTrace) {
+      addError(Reportable(error, context: 'voted'), stackTrace);
+      emitIfOpen(
+        state.copyWith(results: before, voteStatus: PollVoteStatus.failed),
+      );
+      return;
     }
+    // Gone with the video: the note is kept for a vote the viewer sees go out.
+    if (isClosed) return;
     final isFirstVote = !(_preferences.getBool(publicNoteShownKey) ?? false);
     if (isFirstVote) await _preferences.setBool(publicNoteShownKey, true);
     emitIfOpen(

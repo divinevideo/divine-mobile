@@ -13,7 +13,6 @@ dependencies:
   equatable: ^2.0.5
   funnelcake_api_client:
     path: ../funnelcake_api_client
-  meta: ^1.16.0
   nostr_client:
     path: ../nostr_client
   nostr_sdk:
