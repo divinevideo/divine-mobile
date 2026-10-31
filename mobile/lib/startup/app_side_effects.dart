@@ -9,6 +9,7 @@ import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/feed_playback_performance_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
+import 'package:openvine/providers/notification_activity_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/relay_list_repository_provider.dart';
 import 'package:openvine/providers/relay_providers.dart';
@@ -115,6 +116,7 @@ class AppRootSideEffects extends ConsumerWidget {
     // launch pays construction only and never requests notification permission.
     ref.watch(notificationPreferencesDirtySyncBridgeProvider);
     ref.watch(pushNotificationSyncProvider);
+    ref.watch(notificationActivitySyncProvider);
 
     return child;
   }

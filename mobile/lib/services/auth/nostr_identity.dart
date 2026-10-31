@@ -59,6 +59,12 @@ sealed class NostrIdentity implements NostrSigner {
   /// returning it, so the flag is a guarantee about the returned event, not
   /// merely the capability that a local key exists.
   bool get signsWithLocalKey;
+
+  /// Signs passive work only when this identity cannot surface approval UI.
+  Future<Event?> signEventWithoutUserInteraction(Event event) async {
+    if (!signsWithLocalKey && !signsRemotelyNonInteractive) return null;
+    return signEvent(event);
+  }
 }
 
 /// A Keycast RPC fallback returned an event without a valid signature.
@@ -522,6 +528,13 @@ class AmberNostrIdentity extends NostrIdentity {
 
   @override
   Future<Event?> signEvent(Event event) => _amberSigner.signEvent(event);
+
+  @override
+  Future<Event?> signEventWithoutUserInteraction(Event event) async {
+    final signer = _amberSigner;
+    if (signer is! AndroidNostrSigner) return null;
+    return signer.signEventWithoutUserInteraction(event);
+  }
 
   /// NIP-55 (Amber Android) does not expose canonical-payload signing —
   /// only event signing. C2PA creator-binding is therefore not available

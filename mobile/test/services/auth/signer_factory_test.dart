@@ -215,6 +215,74 @@ void main() {
     });
 
     group('createAndSignEvent', () {
+      test(
+        'noninteractive mode never invokes a human-approved signer',
+        () async {
+          final remote = _MockNostrSigner();
+          final identities = <NostrIdentity>[
+            BunkerNostrIdentity(pubkey: testPublicKey, remoteSigner: remote),
+            Nip07NostrIdentity(pubkey: testPublicKey, nip07Signer: remote),
+            AmberNostrIdentity(pubkey: testPublicKey, amberSigner: remote),
+          ];
+          for (final identity in identities) {
+            final result = await SignerFactory().createAndSignEvent(
+              identity: identity,
+              authSource: AuthenticationSource.importedKeys,
+              kind: 27235,
+              content: '',
+              allowUserInteraction: false,
+            );
+            expect(result, isNull);
+          }
+          verifyNever(() => remote.signEvent(any()));
+        },
+      );
+
+      test(
+        'noninteractive local signing preserves validation and ownership',
+        () async {
+          final container = SecureKeyContainer.fromPrivateKeyHex(
+            testPrivateKey,
+          );
+          addTearDown(container.dispose);
+          final event = await SignerFactory().createAndSignEvent(
+            identity: LocalNostrIdentity(keyContainer: container),
+            authSource: AuthenticationSource.importedKeys,
+            kind: 27235,
+            content: '',
+            allowUserInteraction: false,
+          );
+          expect(event?.pubkey, testPublicKey);
+          expect(event?.isSigned, isTrue);
+          expect(event?.isValid, isTrue);
+        },
+      );
+
+      test(
+        'noninteractive Keycast RPC signing retains remote verification',
+        () async {
+          final rpc = _MockNostrSigner();
+          when(() => rpc.signEvent(any())).thenAnswer((invocation) async {
+            final event = invocation.positionalArguments.single as Event;
+            event.sign(testPrivateKey);
+            return event;
+          });
+          final event = await SignerFactory().createAndSignEvent(
+            identity: KeycastNostrIdentity(
+              pubkey: testPublicKey,
+              rpcSigner: rpc,
+            ),
+            authSource: AuthenticationSource.importedKeys,
+            kind: 27235,
+            content: '',
+            allowUserInteraction: false,
+          );
+          expect(event?.pubkey, testPublicKey);
+          expect(event?.isSigned, isTrue);
+          expect(event?.isValid, isTrue);
+        },
+      );
+
       late List<_ReportedError> reported;
       late SignerFactory factory;
 

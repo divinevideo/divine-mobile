@@ -8,12 +8,21 @@
 // constructed with a known pubkey on the restore path, so no intent round-trip
 // is needed.
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:nostr_client/nostr_client.dart' show Nip89ClientTag;
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/nip98_auth_service.dart';
+import 'package:openvine/services/notification_activity_sender.dart';
+import 'package:openvine/services/notification_activity_session_coordinator.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -77,6 +86,78 @@ void main() {
     });
 
     group('restore via initialize()', () {
+      test(
+        'passive visits and heartbeats cannot launch an Amber lifecycle loop',
+        () async {
+          channels.secureStorage['amber_pubkey'] = freshPubkeyHex();
+          SharedPreferences.setMockInitialValues({
+            'authentication_source': 'amber',
+            kKnownAccountsKey: '[]',
+          });
+          debugDefaultTargetPlatformOverride = TargetPlatform.android;
+          final auth = createAuthService();
+          addTearDown(auth.dispose);
+          await ignoringDiscoveryErrors(auth.initialize);
+          expect(auth.currentIdentity, isA<AmberNostrIdentity>());
+          await Nip89ClientTag.setEnabled(enabled: false);
+          addTearDown(Nip89ClientTag.resetForTest);
+          final nip98 = Nip98AuthService(authService: auth);
+          addTearDown(nip98.dispose);
+          var httpRequests = 0;
+          final transport = MockClient((_) async {
+            httpRequests++;
+            return http.Response('', 204);
+          });
+          addTearDown(transport.close);
+          final client = FunnelcakeApiClient(
+            baseUrl: 'https://api.example.com',
+            httpClient: transport,
+          );
+          addTearDown(client.dispose);
+          final sender = NotificationActivitySender(
+            client: client,
+            authService: nip98,
+          );
+          var launches = 0;
+          final updates = <NotificationActivityUpdate>[];
+          fakeAsync((async) {
+            late NotificationActivitySessionCoordinator coordinator;
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+                .setMockMethodCallHandler(
+                  const MethodChannel('nostrmoPlugin'),
+                  (call) async {
+                    if (call.method == 'startActivityForResult') {
+                      launches++;
+                      if (launches < 3) {
+                        coordinator.setForeground(false);
+                        coordinator.setForeground(true);
+                      }
+                    }
+                    return null;
+                  },
+                );
+            coordinator = NotificationActivitySessionCoordinator(
+              send: (owner, update, current) {
+                updates.add(update);
+                return sender.send(owner, update, current);
+              },
+            );
+            coordinator.setAccount(
+              owner: auth.currentPublicKeyHex,
+              ready: true,
+            );
+            coordinator.setForeground(true);
+            async.flushMicrotasks();
+            async.elapse(const Duration(minutes: 3));
+            coordinator.dispose();
+          });
+          expect(updates.length, greaterThan(1));
+          expect(updates.map((update) => update.visit).toSet(), {1});
+          expect(launches, 0);
+          expect(httpRequests, 0);
+        },
+      );
+
       test(
         'reconnects an Amber account into an AmberNostrIdentity',
         () async {

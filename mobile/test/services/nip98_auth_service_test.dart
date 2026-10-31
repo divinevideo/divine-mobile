@@ -2,16 +2,21 @@
 // ABOUTME: Tests URL normalization, query param preservation, caching, and
 // token creation
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:clock/clock.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 
 class MockAuthService extends Mock implements AuthService {}
+
+class _MockKeycastIdentity extends Mock implements KeycastNostrIdentity {}
 
 /// Sets up the mock to return an event whose tags match the requested
 /// URL and method, so `_validateAuthEvent` passes inside the service.
@@ -31,6 +36,54 @@ void _stubSignEvent(MockAuthService mock) {
 
 void main() {
   group(Nip98AuthService, () {
+    test('only noninteractive remote signing is bounded', () {
+      for (final allowUserInteraction in [false, true]) {
+        fakeAsync((async) {
+          final auth = MockAuthService();
+          final identity = _MockKeycastIdentity();
+          when(() => identity.signsRemotelyNonInteractive).thenReturn(true);
+          when(() => auth.isAuthenticated).thenReturn(true);
+          when(() => auth.currentPublicKeyHex).thenReturn('a' * 64);
+          when(() => auth.currentIdentity).thenReturn(identity);
+          final signing = Completer<Event?>();
+          when(
+            () => auth.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+              allowUserInteraction: allowUserInteraction,
+            ),
+          ).thenAnswer((_) => signing.future);
+          final service = Nip98AuthService(
+            authService: auth,
+            elapsed: () => async.elapsed,
+          );
+          var completed = false;
+          Nip98Token? result;
+          unawaited(
+            service
+                .createAuthToken(
+                  url: 'https://api.example.com/activity',
+                  method: HttpMethod.post,
+                  allowUserInteraction: allowUserInteraction,
+                )
+                .then((token) {
+                  completed = true;
+                  result = token;
+                }),
+          );
+          async.flushMicrotasks();
+          async.elapse(const Duration(seconds: 14));
+          expect(completed, isFalse);
+          async.elapse(const Duration(seconds: 2));
+          expect(completed, !allowUserInteraction);
+          expect(result, isNull);
+          service.dispose();
+        });
+      }
+    });
+
     late MockAuthService mockAuthService;
     late Nip98AuthService service;
 

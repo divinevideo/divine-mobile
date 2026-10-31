@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
@@ -12,6 +13,7 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// Only HTTPS responses to authenticated requests can adjust the signing clock.
 /// Redirects are not followed: the signature is bound to the original URL.
+/// Autonomous transports disable user interaction for clock-recovery signing.
 class Nip98HttpClient extends http.BaseClient {
   Nip98HttpClient({
     required http.Client inner,
@@ -19,10 +21,12 @@ class Nip98HttpClient extends http.BaseClient {
     required Uri trustedOrigin,
     Duration retryBudget = const Duration(seconds: 15),
     Duration Function()? elapsed,
+    bool allowUserInteraction = true,
   }) : _inner = inner,
        _authService = authService,
        _trustedOrigin = trustedOrigin.origin,
-       _retryBudget = retryBudget {
+       _retryBudget = retryBudget,
+       _allowUserInteraction = allowUserInteraction {
     final stopwatch = Stopwatch()..start();
     _elapsed = elapsed ?? () => stopwatch.elapsed;
   }
@@ -32,6 +36,7 @@ class Nip98HttpClient extends http.BaseClient {
   final String _trustedOrigin;
   final Duration _retryBudget;
   late final Duration Function() _elapsed;
+  final bool _allowUserInteraction;
   bool _closed = false;
   // Avoid starting a mutation retry just before the caller's timeout. This
   // reserves room for transport work, without claiming to cancel sent requests.
@@ -47,6 +52,9 @@ class Nip98HttpClient extends http.BaseClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (!_requestIsCurrent(request)) {
+      throw http.ClientException('Request is no longer current', request.url);
+    }
     final started = _elapsed();
     final authorization = request.headers['Authorization'];
     if (request is! http.Request ||
@@ -88,7 +96,12 @@ class Nip98HttpClient extends http.BaseClient {
 
     final owner = _signedOwner(authorization);
     final method = HttpMethod.parse(request.method);
-    final blocked = _retryBlockedReason(owner, method, _elapsed() - started);
+    final blocked = _retryBlockedReason(
+      request,
+      owner,
+      method,
+      _elapsed() - started,
+    );
     if (blocked != null) {
       _logRecovery('retry skipped: $blocked');
       return originalResponse;
@@ -100,13 +113,22 @@ class Nip98HttpClient extends http.BaseClient {
       _logRecovery('retry skipped: request body is not UTF-8');
       return originalResponse;
     }
-    final token = await _authService.createAuthToken(
-      url: request.url.toString(),
-      method: method!,
-      payload: payload,
-      reuseCached: false,
-    );
+    final token = _allowUserInteraction
+        ? await _authService.createAuthToken(
+            url: request.url.toString(),
+            method: method!,
+            payload: payload,
+            reuseCached: false,
+          )
+        : await _authService.createAuthToken(
+            url: request.url.toString(),
+            method: method!,
+            payload: payload,
+            reuseCached: false,
+            allowUserInteraction: false,
+          );
     final blockedAfterSigning = _retryBlockedReason(
+      request,
       owner,
       method,
       _elapsed() - started,
@@ -133,10 +155,12 @@ class Nip98HttpClient extends http.BaseClient {
   }
 
   String? _retryBlockedReason(
+    http.BaseRequest request,
     String? owner,
     HttpMethod? method,
     Duration elapsed,
   ) {
+    if (!_requestIsCurrent(request)) return 'request is no longer current';
     if (_closed) return 'transport closed';
     if (owner == null) return 'signed owner unavailable';
     if (method == null) return 'unsupported HTTP method';
@@ -148,6 +172,9 @@ class Nip98HttpClient extends http.BaseClient {
     }
     return null;
   }
+
+  bool _requestIsCurrent(http.BaseRequest request) =>
+      request is! GuardedHttpRequest || request.isCurrent();
 
   bool _learnTime(Uri uri, http.StreamedResponse response) {
     final date = response.headers['date'];

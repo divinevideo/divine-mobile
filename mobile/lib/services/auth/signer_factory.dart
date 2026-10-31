@@ -234,6 +234,7 @@ class SignerFactory {
     required String content,
     List<List<String>>? tags,
     int? createdAt,
+    bool allowUserInteraction = true,
   }) async {
     try {
       // 1. Prepare event metadata and tags
@@ -275,7 +276,9 @@ class SignerFactory {
         name: 'SignerFactory',
         category: LogCategory.auth,
       );
-      final signedEvent = await identity.signEvent(event);
+      final signedEvent = allowUserInteraction
+          ? await identity.signEvent(event)
+          : await identity.signEventWithoutUserInteraction(event);
 
       // 3. Post-Signing Validation
       if (signedEvent == null) {

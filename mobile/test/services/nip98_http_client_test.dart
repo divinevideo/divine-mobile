@@ -73,6 +73,65 @@ void main() {
 
     tearDown(() => service.dispose());
 
+    test('a retired guarded request never reaches the transport', () async {
+      var attempts = 0;
+      final client = Nip98HttpClient(
+        authService: service,
+        trustedOrigin: uri,
+        inner: MockClient((_) async {
+          attempts++;
+          return http.Response('{}', 200);
+        }),
+      );
+      addTearDown(client.close);
+
+      await expectLater(
+        client.send(GuardedHttpRequest('GET', uri, isCurrent: () => false)),
+        throwsA(isA<http.ClientException>()),
+      );
+      expect(attempts, 0);
+    });
+
+    test('retirement before recovery prevents corrected signing', () async {
+      var current = true;
+      var attempts = 0;
+      final client = Nip98HttpClient(
+        authService: service,
+        trustedOrigin: uri,
+        inner: MockClient((_) async {
+          attempts++;
+          current = false;
+          return http.Response(
+            '{"error":"Auth failed: event timestamp is in the future"}',
+            401,
+            headers: {'date': 'Thu, 08 Oct 2026 19:00:00 GMT'},
+          );
+        }),
+      );
+      addTearDown(client.close);
+      final token = await service.createAuthToken(
+        url: uri.toString(),
+        method: HttpMethod.get,
+      );
+      final request = GuardedHttpRequest('GET', uri, isCurrent: () => current)
+        ..headers['Authorization'] = token!.authorizationHeader;
+
+      final response = await http.Response.fromStream(
+        await client.send(request),
+      );
+
+      expect(response.statusCode, 401);
+      expect(attempts, 1);
+      verify(
+        () => auth.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
+        ),
+      ).called(1);
+    });
+
     test(
       'a clock 30 seconds fast recovers from a future-timestamp 401',
       () async {
