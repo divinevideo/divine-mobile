@@ -47,6 +47,18 @@ const balloonsVideoEffectId = 'divine.balloons';
 /// the native `TiltShiftVideoEffect` on Android, iOS and macOS.
 const tiltShiftVideoEffectId = 'divine.tiltShift';
 
+/// The id Divine's swirl is registered under with pro_video_editor, by the
+/// native `SwirlVideoEffect` on Android, iOS and macOS.
+const swirlVideoEffectId = 'divine.swirl';
+
+/// The id Divine's ripple is registered under with pro_video_editor, by the
+/// native `RippleVideoEffect` on Android, iOS and macOS.
+const rippleVideoEffectId = 'divine.ripple';
+
+/// The id Divine's fluted glass is registered under with pro_video_editor, by
+/// the native `FlutedGlassVideoEffect` on Android, iOS and macOS.
+const flutedGlassVideoEffectId = 'divine.flutedGlass';
+
 /// The id Divine's zoom blur is registered under with pro_video_editor, by
 /// the native `ZoomBlurVideoEffect` on Android, iOS and macOS.
 const zoomBlurVideoEffectId = 'divine.zoomBlur';
@@ -181,6 +193,18 @@ class EditorEffectType {
   /// like a miniature.
   static const tiltShift = EditorEffectType.custom(tiltShiftVideoEffectId);
 
+  /// Swirl: the picture twists around its centre, most in the middle and not
+  /// at all from half its shorter side out.
+  static const swirl = EditorEffectType.custom(swirlVideoEffectId);
+
+  /// Ripple: rings spread out from the centre, as on water after a stone
+  /// drops in.
+  static const ripple = EditorEffectType.custom(rippleVideoEffectId);
+
+  /// Fluted glass: the picture is seen through ribbed glass, each rib showing
+  /// a squeezed slice of it.
+  static const flutedGlass = EditorEffectType.custom(flutedGlassVideoEffectId);
+
   /// Zoom blur: the picture streaks outward from its centre, all the time or
   /// on the beat.
   static const zoomBlur = EditorEffectType.custom(zoomBlurVideoEffectId);
@@ -223,6 +247,9 @@ class EditorEffectType {
     fireflies,
     embers,
     tiltShift,
+    swirl,
+    ripple,
+    flutedGlass,
     zoomBlur,
     comic,
     eightBit,
@@ -263,7 +290,10 @@ class EditorEffectType {
       risoVideoEffectId => EditorEffectCategory.retro,
       fisheyeVideoEffectId ||
       dropsVideoEffectId ||
-      tiltShiftVideoEffectId => EditorEffectCategory.distort,
+      tiltShiftVideoEffectId ||
+      swirlVideoEffectId ||
+      rippleVideoEffectId ||
+      flutedGlassVideoEffectId => EditorEffectCategory.distort,
       lightLeakVideoEffectId => EditorEffectCategory.light,
       echoVideoEffectId || zoomBlurVideoEffectId => EditorEffectCategory.motion,
       snowVideoEffectId ||

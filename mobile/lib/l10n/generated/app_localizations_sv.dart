@@ -9011,6 +9011,15 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectComic => 'Serie';
 
   @override
+  String get videoEditorEffectSwirl => 'Virvel';
+
+  @override
+  String get videoEditorEffectRipple => 'Krusning';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'Räfflat glas';
+
+  @override
   String get videoEditorEffectEightBit => '8-bitars';
 
   @override

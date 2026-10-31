@@ -22,6 +22,9 @@
 		960CE7DEA255575B6D5E6016 /* TiltShiftVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3C7A619738432CD04F0D5B2 /* TiltShiftVideoEffect.swift */; };
 		3022EC47C146DD5616AECD1C /* ZoomBlurVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACBE0FACDF9FD247E54F0256 /* ZoomBlurVideoEffect.swift */; };
 		768CADD7E65FAEA3BBE0BDD6 /* ComicVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDBBD1276DE7929A25452428 /* ComicVideoEffect.swift */; };
+		EB372E11C2741863261D5FF4 /* SwirlVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 715D6E5659F04EC57C302EAE /* SwirlVideoEffect.swift */; };
+		5B915AFFF6946D0B5618AAE1 /* RippleVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9916875E6F93F6EC0C193663 /* RippleVideoEffect.swift */; };
+		C6EE28CDADF84677B9B0832C /* FlutedGlassVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77358128B37775028E0C5A8D /* FlutedGlassVideoEffect.swift */; };
 		B9B5C812774B10BFFDB3B6B4 /* EightBitVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = B88A20642EA46A86199B5636 /* EightBitVideoEffect.swift */; };
 		A02F891F3B3263D54D54ADED /* AnaglyphVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DA314775520081EF37670FE /* AnaglyphVideoEffect.swift */; };
 		2E4C63F3BB9F74C5994D2BC2 /* RisoVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B0E391A2AD90BB4C5B817CC /* RisoVideoEffect.swift */; };
@@ -114,6 +117,9 @@
 		B3C7A619738432CD04F0D5B2 /* TiltShiftVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TiltShiftVideoEffect.swift; sourceTree = "<group>"; };
 		ACBE0FACDF9FD247E54F0256 /* ZoomBlurVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ZoomBlurVideoEffect.swift; sourceTree = "<group>"; };
 		DDBBD1276DE7929A25452428 /* ComicVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ComicVideoEffect.swift; sourceTree = "<group>"; };
+		715D6E5659F04EC57C302EAE /* SwirlVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SwirlVideoEffect.swift; sourceTree = "<group>"; };
+		9916875E6F93F6EC0C193663 /* RippleVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RippleVideoEffect.swift; sourceTree = "<group>"; };
+		77358128B37775028E0C5A8D /* FlutedGlassVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FlutedGlassVideoEffect.swift; sourceTree = "<group>"; };
 		B88A20642EA46A86199B5636 /* EightBitVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EightBitVideoEffect.swift; sourceTree = "<group>"; };
 		6DA314775520081EF37670FE /* AnaglyphVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnaglyphVideoEffect.swift; sourceTree = "<group>"; };
 		6B0E391A2AD90BB4C5B817CC /* RisoVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RisoVideoEffect.swift; sourceTree = "<group>"; };
@@ -315,6 +321,9 @@
 				B3C7A619738432CD04F0D5B2 /* TiltShiftVideoEffect.swift */,
 				ACBE0FACDF9FD247E54F0256 /* ZoomBlurVideoEffect.swift */,
 				DDBBD1276DE7929A25452428 /* ComicVideoEffect.swift */,
+				715D6E5659F04EC57C302EAE /* SwirlVideoEffect.swift */,
+				9916875E6F93F6EC0C193663 /* RippleVideoEffect.swift */,
+				77358128B37775028E0C5A8D /* FlutedGlassVideoEffect.swift */,
 				B88A20642EA46A86199B5636 /* EightBitVideoEffect.swift */,
 				6DA314775520081EF37670FE /* AnaglyphVideoEffect.swift */,
 				6B0E391A2AD90BB4C5B817CC /* RisoVideoEffect.swift */,
@@ -754,6 +763,9 @@
 				960CE7DEA255575B6D5E6016 /* TiltShiftVideoEffect.swift in Sources */,
 				3022EC47C146DD5616AECD1C /* ZoomBlurVideoEffect.swift in Sources */,
 				768CADD7E65FAEA3BBE0BDD6 /* ComicVideoEffect.swift in Sources */,
+				EB372E11C2741863261D5FF4 /* SwirlVideoEffect.swift in Sources */,
+				5B915AFFF6946D0B5618AAE1 /* RippleVideoEffect.swift in Sources */,
+				C6EE28CDADF84677B9B0832C /* FlutedGlassVideoEffect.swift in Sources */,
 				B9B5C812774B10BFFDB3B6B4 /* EightBitVideoEffect.swift in Sources */,
 				A02F891F3B3263D54D54ADED /* AnaglyphVideoEffect.swift in Sources */,
 				2E4C63F3BB9F74C5994D2BC2 /* RisoVideoEffect.swift in Sources */,

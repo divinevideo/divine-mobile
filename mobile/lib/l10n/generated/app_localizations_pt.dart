@@ -9093,6 +9093,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorEffectComic => 'Quadrinhos';
 
   @override
+  String get videoEditorEffectSwirl => 'Redemoinho';
+
+  @override
+  String get videoEditorEffectRipple => 'Ondulação';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'Vidro canelado';
+
+  @override
   String get videoEditorEffectEightBit => '8 bits';
 
   @override
