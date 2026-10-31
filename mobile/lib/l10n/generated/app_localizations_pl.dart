@@ -2140,6 +2140,12 @@ class AppLocalizationsPl extends AppLocalizations {
       'Już czas! Zapisane odliczanie właśnie się skończyło.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Poprawna odpowiedź';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Błędna odpowiedź';
+
+  @override
   String get videoStickerPollSignInToVote => 'Zaloguj się, aby głosować.';
 
   @override

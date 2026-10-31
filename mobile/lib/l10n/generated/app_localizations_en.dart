@@ -2085,6 +2085,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'It\'s time! The countdown you saved just ended.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Right answer';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Wrong answer';
+
+  @override
   String get videoStickerPollSignInToVote => 'Sign in to vote.';
 
   @override

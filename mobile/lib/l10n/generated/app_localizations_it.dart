@@ -2116,6 +2116,12 @@ class AppLocalizationsIt extends AppLocalizations {
       'È il momento! Il conto alla rovescia che hai salvato è appena finito.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Risposta giusta';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Risposta sbagliata';
+
+  @override
   String get videoStickerPollSignInToVote => 'Accedi per votare.';
 
   @override

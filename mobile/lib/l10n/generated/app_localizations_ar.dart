@@ -2085,6 +2085,12 @@ class AppLocalizationsAr extends AppLocalizations {
       'حان الوقت! انتهى العدّ التنازلي المحفوظ للتو.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'إجابة صحيحة';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'إجابة خاطئة';
+
+  @override
   String get videoStickerPollSignInToVote => 'يلزم تسجيل الدخول للتصويت.';
 
   @override

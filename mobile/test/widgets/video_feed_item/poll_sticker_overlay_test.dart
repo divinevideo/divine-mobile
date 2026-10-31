@@ -305,6 +305,37 @@ void main() {
         expect(playerTaps, equals(1));
       });
 
+      testWidgets('tells a screen reader how a quiz answer did', (
+        tester,
+      ) async {
+        when(
+          () => repository.fetchPoll(_pollId, authorPubkey: _author),
+        ).thenAnswer(
+          (_) async => PollSnapshot(poll: _quiz, results: const PollResults()),
+        );
+        final handle = tester.ensureSemantics();
+        await pump(tester, region: _quizRegion);
+
+        await tester.tap(find.text('Red'));
+        await tester.pump();
+        await tester.pump();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          tester.takeAnnouncements().single.message,
+          equals(l10n.videoStickerQuizWrongAnswer),
+        );
+        expect(
+          find.bySemanticsLabel(RegExp(l10n.videoStickerQuizRightAnswer)),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(RegExp(l10n.videoStickerQuizWrongAnswer)),
+          findsOneWidget,
+        );
+        handle.dispose();
+      });
+
       testWidgets('votes when a screen reader activates an answer', (
         tester,
       ) async {

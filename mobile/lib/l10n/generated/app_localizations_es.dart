@@ -2105,6 +2105,12 @@ class AppLocalizationsEs extends AppLocalizations {
       '¡Llegó el momento! La cuenta regresiva que guardaste acaba de terminar.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Respuesta correcta';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Respuesta incorrecta';
+
+  @override
   String get videoStickerPollSignInToVote => 'Iniciá sesión para votar.';
 
   @override

@@ -2125,6 +2125,12 @@ class AppLocalizationsTe extends AppLocalizations {
       'సమయం వచ్చింది! మీరు సేవ్ చేసిన కౌంట్‌డౌన్ ఇప్పుడే ముగిసింది.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'సరైన సమాధానం';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'తప్పు సమాధానం';
+
+  @override
   String get videoStickerPollSignInToVote => 'ఓటు వేయడానికి సైన్ ఇన్ చేయండి.';
 
   @override

@@ -1934,6 +1934,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoStickerCountdownReminderBody => '时间到！你保存的倒计时刚刚结束。';
 
   @override
+  String get videoStickerQuizRightAnswer => '正确答案';
+
+  @override
+  String get videoStickerQuizWrongAnswer => '错误答案';
+
+  @override
   String get videoStickerPollSignInToVote => '登录后才能投票。';
 
   @override

@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "Zaznacz poprawną odpowiedź. Widzowie zobaczą ją po udzieleniu odpowiedzi.",
   "videoEditorSocialStickerSliderNote": "Widzowie przeciągają emoji, aby odpowiedzieć, i widzą, gdzie średnio ląduje.",
   "videoEditorPollAreaHint": "Ankiety zostają w tej ramce, żeby widzowie mogli je stuknąć",
+  "videoStickerQuizRightAnswer": "Poprawna odpowiedź",
+  "videoStickerQuizWrongAnswer": "Błędna odpowiedź",
   "videoStickerPollSignInToVote": "Zaloguj się, aby głosować.",
   "videoStickerPollNotReady": "Wciąż się łączymy. Spróbuj ponownie za chwilę.",
   "videoStickerPollVoteFailed": "Twój głos nie dotarł. Spróbuj ponownie.",

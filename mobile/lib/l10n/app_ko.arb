@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "정답에 체크해 주세요. 시청자는 답을 고른 뒤 정답을 볼 수 있어요.",
   "videoEditorSocialStickerSliderNote": "시청자는 이모지를 끌어서 답하고 평균 위치를 볼 수 있어요.",
   "videoEditorPollAreaHint": "투표는 시청자가 누를 수 있도록 이 상자 안에 있어요",
+  "videoStickerQuizRightAnswer": "정답",
+  "videoStickerQuizWrongAnswer": "오답",
   "videoStickerPollSignInToVote": "로그인해야 투표할 수 있어요.",
   "videoStickerPollNotReady": "아직 연결 중이에요. 잠시 후 다시 시도해 주세요.",
   "videoStickerPollVoteFailed": "투표가 전송되지 않았어요. 다시 시도해 주세요.",

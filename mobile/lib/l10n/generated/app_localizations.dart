@@ -3511,6 +3511,18 @@ abstract class AppLocalizations {
   /// **'It\'s time! The countdown you saved just ended.'**
   String get videoStickerCountdownReminderBody;
 
+  /// Said by a screen reader of the right answer of a quiz sticker on a video, once the viewer has answered.
+  ///
+  /// In en, this message translates to:
+  /// **'Right answer'**
+  String get videoStickerQuizRightAnswer;
+
+  /// Said by a screen reader of the wrong answer a viewer picked on a quiz sticker on a video.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong answer'**
+  String get videoStickerQuizWrongAnswer;
+
   /// Snackbar when someone who is not signed in taps an answer of a poll, quiz or slider sticker on a video.
   ///
   /// In en, this message translates to:

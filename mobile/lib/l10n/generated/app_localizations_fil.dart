@@ -2078,6 +2078,12 @@ class AppLocalizationsFil extends AppLocalizations {
       'Oras na! Kakatapos lang ng countdown na na-save mo.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Tamang sagot';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Maling sagot';
+
+  @override
   String get videoStickerPollSignInToVote => 'Mag-sign in para bumoto.';
 
   @override

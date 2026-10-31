@@ -2047,6 +2047,12 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đến giờ rồi! Đếm ngược bạn đã lưu vừa kết thúc.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Đáp án đúng';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Đáp án sai';
+
+  @override
   String get videoStickerPollSignInToVote => 'Đăng nhập để bình chọn.';
 
   @override

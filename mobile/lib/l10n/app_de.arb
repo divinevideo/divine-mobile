@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "Hak die richtige Antwort ab. Zuschauer sehen sie, sobald sie geantwortet haben.",
   "videoEditorSocialStickerSliderNote": "Zuschauer ziehen das Emoji, um zu antworten, und sehen, wo es im Schnitt landet.",
   "videoEditorPollAreaHint": "Umfragen bleiben in diesem Rahmen, damit alle sie antippen können",
+  "videoStickerQuizRightAnswer": "Richtige Antwort",
+  "videoStickerQuizWrongAnswer": "Falsche Antwort",
   "videoStickerPollSignInToVote": "Melde dich an, um abzustimmen.",
   "videoStickerPollNotReady": "Verbindung wird noch aufgebaut. Versuch es gleich noch mal.",
   "videoStickerPollVoteFailed": "Deine Stimme ist nicht angekommen. Versuch es noch mal.",

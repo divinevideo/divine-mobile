@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "Bifează răspunsul corect. Cei care se uită îl văd după ce aleg unul.",
   "videoEditorSocialStickerSliderNote": "Cei care se uită trag emoji-ul ca să răspundă și văd unde ajunge în medie.",
   "videoEditorPollAreaHint": "Sondajele rămân în acest chenar, ca să poată fi atinse",
+  "videoStickerQuizRightAnswer": "Răspuns corect",
+  "videoStickerQuizWrongAnswer": "Răspuns greșit",
   "videoStickerPollSignInToVote": "Conectează-te ca să votezi.",
   "videoStickerPollNotReady": "Încă se conectează. Încearcă din nou peste o clipă.",
   "videoStickerPollVoteFailed": "Votul tău nu a ajuns. Încearcă din nou.",

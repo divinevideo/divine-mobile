@@ -2016,6 +2016,12 @@ class AppLocalizationsTr extends AppLocalizations {
       'Zamanı geldi! Kaydettiğin geri sayım az önce bitti.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Doğru cevap';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Yanlış cevap';
+
+  @override
   String get videoStickerPollSignInToVote => 'Oy vermek için giriş yap.';
 
   @override

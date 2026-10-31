@@ -1916,6 +1916,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoStickerCountdownReminderBody => '時間です！保存したカウントダウンが終了しました。';
 
   @override
+  String get videoStickerQuizRightAnswer => '正解';
+
+  @override
+  String get videoStickerQuizWrongAnswer => '不正解';
+
+  @override
   String get videoStickerPollSignInToVote => '投票するにはログインしてください。';
 
   @override

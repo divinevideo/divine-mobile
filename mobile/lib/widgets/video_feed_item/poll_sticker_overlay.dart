@@ -14,6 +14,7 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/poll_sticker_card.dart';
 import 'package:poll_repository/poll_repository.dart' show PollKind;
 import 'package:unified_logger/unified_logger.dart';
@@ -117,6 +118,17 @@ class _PollStickerScope extends ConsumerWidget {
               l10n.videoStickerPollVotesArePublic,
             _ => null,
           };
+          if (state.voteStatus == PollVoteStatus.sent &&
+              state.poll?.kind == PollKind.quiz) {
+            announceDetached(
+              context,
+              state.ownAnswerIndex == state.rightAnswerIndex
+                  ? l10n.videoStickerQuizRightAnswer
+                  : l10n.videoStickerQuizWrongAnswer,
+              description: 'announce how a quiz answer did',
+              logName: 'PollStickerOverlay',
+            );
+          }
           if (message == null) return;
           ScaffoldMessenger.maybeOf(
             context,

@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart' show NumberFormat;
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 
@@ -284,6 +285,13 @@ class _Answer extends StatelessWidget {
         : NumberFormat.percentPattern(
             Localizations.maybeLocaleOf(context)?.toString(),
           ).format(share);
+    // Only the player has votes, and with them a quiz's outcome to say.
+    final outcome = isRight
+        ? context.l10n.videoStickerQuizRightAnswer
+        : isWrong
+        ? context.l10n.videoStickerQuizWrongAnswer
+        : null;
+    final label = [text, ?percent, ?outcome].join(', ');
     final fill = isWrong
         ? VineTheme.error.withValues(alpha: 0.35)
         : isRight || (isOwn && !isWrong)
@@ -339,11 +347,14 @@ class _Answer extends StatelessWidget {
       ),
     );
     final onTap = this.onTap;
-    if (onTap == null) return answer;
+    if (onTap == null) {
+      if (percent == null) return answer;
+      return Semantics(label: label, excludeSemantics: true, child: answer);
+    }
     return Semantics(
       button: true,
       selected: isOwn,
-      label: percent == null ? text : '$text, $percent',
+      label: label,
       // Excluding the subtree takes the detector's own tap action with it.
       onTap: onTap,
       excludeSemantics: true,

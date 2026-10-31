@@ -17,6 +17,8 @@
   "videoEditorSocialStickerQuizNote": "ትክክለኛውን መልስ ምልክት ያድርጉ። ተመልካቾች መልስ ከመረጡ በኋላ ያዩታል።",
   "videoEditorSocialStickerSliderNote": "ተመልካቾች ለመመለስ ኢሞጂውን ይጎትታሉ፣ አማካዩም የት እንደሚያርፍ ያያሉ።",
   "videoEditorPollAreaHint": "ተመልካቾች እንዲነኩት ድምፅ መስጫዎች በዚህ ሳጥን ውስጥ ይቆያሉ",
+  "videoStickerQuizRightAnswer": "ትክክለኛ መልስ",
+  "videoStickerQuizWrongAnswer": "የተሳሳተ መልስ",
   "videoStickerPollSignInToVote": "ድምፅ ለመስጠት ይግቡ።",
   "videoStickerPollNotReady": "አሁንም በመገናኘት ላይ። ትንሽ ቆይተው እንደገና ይሞክሩ።",
   "videoStickerPollVoteFailed": "ድምፅዎ አልደረሰም። እንደገና ይሞክሩ።",

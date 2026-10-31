@@ -2093,6 +2093,12 @@ class AppLocalizationsNl extends AppLocalizations {
       'Het is zover! Het aftellen dat je hebt bewaard is net afgelopen.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Goed antwoord';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Fout antwoord';
+
+  @override
   String get videoStickerPollSignInToVote => 'Log in om te stemmen.';
 
   @override

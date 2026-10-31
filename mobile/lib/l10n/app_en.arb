@@ -1422,6 +1422,14 @@
   "@videoStickerCountdownReminderBody": {
     "description": "Text of the notification a viewer gets when a countdown they set a reminder for ends; the countdown's title is the notification's title."
   },
+  "videoStickerQuizRightAnswer": "Right answer",
+  "@videoStickerQuizRightAnswer": {
+    "description": "Said by a screen reader of the right answer of a quiz sticker on a video, once the viewer has answered."
+  },
+  "videoStickerQuizWrongAnswer": "Wrong answer",
+  "@videoStickerQuizWrongAnswer": {
+    "description": "Said by a screen reader of the wrong answer a viewer picked on a quiz sticker on a video."
+  },
   "videoStickerPollSignInToVote": "Sign in to vote.",
   "@videoStickerPollSignInToVote": {
     "description": "Snackbar when someone who is not signed in taps an answer of a poll, quiz or slider sticker on a video."

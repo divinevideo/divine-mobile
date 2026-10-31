@@ -2123,6 +2123,12 @@ class AppLocalizationsFr extends AppLocalizations {
       'C\'est l\'heure ! Le compte à rebours que tu as enregistré vient de se terminer.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Bonne réponse';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Mauvaise réponse';
+
+  @override
   String get videoStickerPollSignInToVote => 'Connecte-toi pour voter.';
 
   @override

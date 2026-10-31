@@ -2057,6 +2057,12 @@ class AppLocalizationsMs extends AppLocalizations {
       'Sudah tiba masanya! Kira detik yang anda simpan baru sahaja tamat.';
 
   @override
+  String get videoStickerQuizRightAnswer => 'Jawapan betul';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Jawapan salah';
+
+  @override
   String get videoStickerPollSignInToVote => 'Log masuk untuk mengundi.';
 
   @override
