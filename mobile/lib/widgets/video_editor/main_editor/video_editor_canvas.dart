@@ -687,56 +687,26 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
   bool get _isLayerBeingTransformed => _selectedLayer != null;
 
-  /// Keeps the video's poll, quiz or slider above every other layer, upright
-  /// and fixed in size ([pollLayerInteraction]), and inside [pollSafeArea],
-  /// once the frame that may have moved it is laid out. Each changes the
-  /// current history step rather than adding one, so undo goes back past the
-  /// change that moved it.
-  void _keepPollInPlace(VideoEditorScope scope) {
+  /// Runs [keepPollInPlace] once the frame that may have moved the poll is
+  /// laid out. The history saved for this step was exported before that frame,
+  /// and a draft posted from the library renders from it, so a correction is
+  /// saved too.
+  void _keepPollInPlace(VideoEditorScope scope, VideoEditorMainBloc bloc) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final editor = scope.editor;
       if (!mounted || editor == null || _isLayerBeingTransformed) return;
-      final layers = editor.activeLayers;
-      final below = pollLayerIndexBelowTop(layers);
-      if (below != null) {
-        editor.moveLayerListPosition(
-          oldIndex: below,
-          newIndex: layers.length - 1,
-          skipUpdateHistory: true,
-        );
-      }
-      final index = layers.lastIndexWhere(isPollLayer);
-      if (index < 0) return;
-      final layer = layers[index];
-      if (pollLayerNeedsLocking(layer)) {
-        layer
-          ..interaction = pollLayerInteraction()
-          ..rotation = 0;
-        editor.replaceLayer(
-          index: index,
-          layer: layer,
-          skipUpdateHistory: true,
-        );
-      }
-      final size = layer.keyInternalSize.currentContext?.size;
-      final aspectRatio = ref
-          .read(clipManagerProvider)
-          .firstClipOrNull
-          ?.targetAspectRatio
-          .value;
-      if (size == null || aspectRatio == null) return;
-      final fit = fitPollIntoSafeArea(
-        offset: layer.offset,
-        size: size,
-        rotation: layer.rotation,
-        bodySize: editor.sizesManager.bodySize,
-        targetAspectRatio: aspectRatio,
+      keepPollInPlace(
+        editor,
+        targetAspectRatio: ref
+            .read(clipManagerProvider)
+            .firstClipOrNull
+            ?.targetAspectRatio
+            .value,
+        onChanged: () => _runDetached(
+          _onStateHistoryChange(scope, bloc),
+          'persist poll placement',
+        ),
       );
-      if (fit == null) return;
-      layer
-        ..offset += fit.shift
-        ..scale *= fit.scale;
-      editor.replaceLayer(index: index, layer: layer, skipUpdateHistory: true);
     });
   }
 
@@ -3719,7 +3689,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                 _syncMainCapabilities(scope, bloc);
               },
               onStateHistoryChange: (_, _) {
-                _keepPollInPlace(scope);
+                _keepPollInPlace(scope, bloc);
                 _runDetached(
                   _onStateHistoryChange(scope, bloc),
                   'persist editor history',
@@ -3819,7 +3789,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
                 _wasOverRemoveArea = false;
                 bloc.add(const VideoEditorLayerInteractionEnded());
-                _keepPollInPlace(scope);
+                _keepPollInPlace(scope, bloc);
               },
               onAddLayer: (layer) {
                 Log.debug(
@@ -3828,7 +3798,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   category: LogCategory.video,
                 );
                 _syncMainCapabilities(scope, bloc);
-                _keepPollInPlace(scope);
+                _keepPollInPlace(scope, bloc);
               },
               onRemoveLayer: (layer) {
                 Log.debug(
