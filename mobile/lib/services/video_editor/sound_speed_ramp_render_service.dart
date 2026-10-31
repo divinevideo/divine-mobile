@@ -45,8 +45,13 @@ class SoundSpeedRampRenderService {
   /// Sources copied or downloaded for a render, deleted by [clear].
   final _fetchedPaths = <String>{};
 
-  /// Bumped by [clear]; a render started under an older one discards itself.
-  int _generation = 0;
+  /// Replaced by [clear]; a render started under an older one discards itself.
+  /// No two services share one and every file carries it in its name, so a
+  /// render landing for a closed editor only ever replaces or deletes its own
+  /// file, never a reopened editor's file of the same window.
+  int _generation = _nextGeneration++;
+
+  static int _nextGeneration = 0;
 
   /// The windows the timeline plays, which are never evicted.
   Set<String> _retained = const {};
@@ -113,7 +118,7 @@ class SoundSpeedRampRenderService {
       final directory = Directory('${(await _directory()).path}/sound_ramps');
       if (!directory.existsSync()) directory.createSync(recursive: true);
       final hash = sha256.convert(utf8.encode(key)).toString();
-      output = '${directory.path}/$hash.wav';
+      output = '${directory.path}/$hash-$generation.wav';
       final scratch = '$output.tmp.wav';
       await _proVideoEditor.mergeAudioToFile(
         scratch,
@@ -183,7 +188,7 @@ class SoundSpeedRampRenderService {
   /// sources fetched for them. A render still running deletes its file when
   /// it lands.
   void clear() {
-    _generation++;
+    _generation = _nextGeneration++;
     [..._cache.values, ..._fetchedPaths].forEach(_deleteQuietly);
     _cache.clear();
     _inFlight.clear();

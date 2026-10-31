@@ -232,6 +232,30 @@ void main() {
           isEmpty,
         );
       });
+
+      test(
+        "leaves a reopened editor's file alone when its old render lands",
+        () async {
+          holdMerge = Completer<void>();
+          final stale = service.render(rampedSound());
+          await pumpEventQueue();
+          service.clear();
+          final oldMerge = holdMerge!;
+          holdMerge = null;
+          final reopened = SoundSpeedRampRenderService(
+            proVideoEditor: editor,
+            directory: () async => directory,
+          );
+          addTearDown(reopened.clear);
+
+          final path = await reopened.render(rampedSound());
+          oldMerge.complete();
+
+          expect(await stale, isNull);
+          expect(reopened.cached(rampedSound()), path);
+          expect(File(path!).existsSync(), isTrue);
+        },
+      );
     });
   });
 }
