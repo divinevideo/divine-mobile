@@ -7420,5 +7420,9 @@
   "videoEditorLoopRepairProgress": "آپ کا لوپ سیدھا کیا جا رہا ہے…",
   "videoEditorLoopRepairTrimmed": "لوپ ہموار ہو گیا۔ {seconds} سیکنڈ ہٹا دیے گئے۔",
   "notificationFromDivine": "Divine کی طرف سے",
-  "announcementUnavailable": "یہ اعلان اب دستیاب نہیں ہے۔"
+  "announcementUnavailable": "یہ اعلان اب دستیاب نہیں ہے۔",
+  "badgeSubscribeAction": "بیج سبسکرائب کریں",
+  "badgeSubscribedAction": "سبسکرائب کر لیا",
+  "badgeAcceptedHoldersTitle": "بیج قبول کرنے والے",
+  "badgeSubscriptionLoadError": "آپ کی بیج سبسکرپشنز لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کریں۔"
 }

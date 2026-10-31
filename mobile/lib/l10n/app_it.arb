@@ -6129,5 +6129,9 @@
   "videoEditorLoopRepairProgress": "Allineamento del loop…",
   "videoEditorLoopRepairTrimmed": "Loop reso più fluido. Rimossi {seconds} s.",
   "notificationFromDivine": "Da Divine",
-  "announcementUnavailable": "Questo annuncio non è più disponibile."
+  "announcementUnavailable": "Questo annuncio non è più disponibile.",
+  "badgeSubscribedAction": "Iscritto",
+  "badgeSubscribeAction": "Iscriviti al badge",
+  "badgeAcceptedHoldersTitle": "Persone che hanno accettato il badge",
+  "badgeSubscriptionLoadError": "Impossibile caricare i tuoi abbonamenti ai badge. Riprova."
 }

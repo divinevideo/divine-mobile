@@ -6129,5 +6129,9 @@
   "videoEditorLoopRepairProgress": "Alineando tu bucle…",
   "videoEditorLoopRepairTrimmed": "Bucle suavizado. Se quitaron {seconds} s.",
   "notificationFromDivine": "De Divine",
-  "announcementUnavailable": "Este anuncio ya no está disponible."
+  "announcementUnavailable": "Este anuncio ya no está disponible.",
+  "badgeSubscribedAction": "Suscrito",
+  "badgeSubscribeAction": "Suscribirse a la insignia",
+  "badgeAcceptedHoldersTitle": "Personas que aceptaron la insignia",
+  "badgeSubscriptionLoadError": "No se pudieron cargar tus suscripciones a insignias. Inténtalo de nuevo."
 }

@@ -7420,5 +7420,9 @@
   "videoEditorLoopRepairProgress": "正在对齐循环…",
   "videoEditorLoopRepairTrimmed": "循环已优化。已移除 {seconds} 秒。",
   "notificationFromDivine": "来自 Divine",
-  "announcementUnavailable": "此公告已不可用。"
+  "announcementUnavailable": "此公告已不可用。",
+  "badgeSubscribeAction": "订阅徽章",
+  "badgeSubscribedAction": "已订阅",
+  "badgeAcceptedHoldersTitle": "已接受徽章的人",
+  "badgeSubscriptionLoadError": "无法加载你的徽章订阅。请重试。"
 }

@@ -14535,4 +14535,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'バッジを購読';
+
+  @override
+  String get badgeSubscribedAction => '購読中';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'バッジを承認した人';
+
+  @override
+  String get badgeSubscriptionLoadError => 'バッジの購読を読み込めませんでした。もう一度お試しください。';
 }

@@ -5156,5 +5156,9 @@
   "videoEditorLoopRepairProgress": "Inihahanay ang loop mo…",
   "videoEditorLoopRepairTrimmed": "Mas maayos na ang loop. Inalis ang {seconds} s.",
   "notificationFromDivine": "Mula sa Divine",
-  "announcementUnavailable": "Hindi na available ang anunsyong ito."
+  "announcementUnavailable": "Hindi na available ang anunsyong ito.",
+  "badgeSubscribedAction": "Naka-subscribe",
+  "badgeSubscribeAction": "Mag-subscribe sa badge",
+  "badgeAcceptedHoldersTitle": "Mga tumanggap ng badge",
+  "badgeSubscriptionLoadError": "Hindi ma-load ang iyong mga subscription sa badge. Subukan muli."
 }

@@ -6129,5 +6129,9 @@
   "videoEditorLoopRepairProgress": "Se aliniază bucla…",
   "videoEditorLoopRepairTrimmed": "Buclă netezită. S-au eliminat {seconds} s.",
   "notificationFromDivine": "De la Divine",
-  "announcementUnavailable": "Acest anunț nu mai este disponibil."
+  "announcementUnavailable": "Acest anunț nu mai este disponibil.",
+  "badgeSubscribedAction": "Abonat",
+  "badgeSubscribeAction": "Abonează-te la insignă",
+  "badgeAcceptedHoldersTitle": "Persoane care au acceptat insigna",
+  "badgeSubscriptionLoadError": "Abonamentele tale la insigne nu au putut fi încărcate. Încearcă din nou."
 }

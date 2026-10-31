@@ -14899,4 +14899,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'ባጁን ተከተል';
+
+  @override
+  String get badgeSubscribedAction => 'ተከትለዋል';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'ባጁን የተቀበሉ';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'የባጅ ምዝገባዎችዎን መጫን አልተቻለም። እንደገና ይሞክሩ።';
 }

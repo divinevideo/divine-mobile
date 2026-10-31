@@ -6129,5 +6129,9 @@
   "videoEditorLoopRepairProgress": "Döngün hizalanıyor…",
   "videoEditorLoopRepairTrimmed": "Döngü yumuşatıldı. {seconds} sn kaldırıldı.",
   "notificationFromDivine": "Divine’dan",
-  "announcementUnavailable": "Bu duyuru artık kullanılamıyor."
+  "announcementUnavailable": "Bu duyuru artık kullanılamıyor.",
+  "badgeSubscribedAction": "Abone olundu",
+  "badgeSubscribeAction": "Rozete abone ol",
+  "badgeAcceptedHoldersTitle": "Rozeti kabul edenler",
+  "badgeSubscriptionLoadError": "Rozet aboneliklerin yüklenemedi. Tekrar dene."
 }

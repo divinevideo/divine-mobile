@@ -15574,4 +15574,21 @@ class AppLocalizationsRo extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Abonează-te la insignă';
+
+  @override
+  String get badgeSubscribedAction => 'Abonat';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Persoane care au acceptat insigna';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'Abonamentele tale la insigne nu au putut fi încărcate. Încearcă din nou.';
 }

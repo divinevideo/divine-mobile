@@ -6129,5 +6129,9 @@
   "videoEditorLoopRepairProgress": "Menyelaraskan loop…",
   "videoEditorLoopRepairTrimmed": "Loop diperhalus. {seconds} dtk dihapus.",
   "notificationFromDivine": "Dari Divine",
-  "announcementUnavailable": "Pengumuman ini sudah tidak tersedia."
+  "announcementUnavailable": "Pengumuman ini sudah tidak tersedia.",
+  "badgeSubscribedAction": "Diikuti",
+  "badgeSubscribeAction": "Ikuti lencana",
+  "badgeAcceptedHoldersTitle": "Pemegang lencana yang menerima",
+  "badgeSubscriptionLoadError": "Langganan lencana kamu tidak dapat dimuat. Coba lagi."
 }

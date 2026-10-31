@@ -6129,5 +6129,9 @@
   "videoEditorLoopRepairProgress": "Alignement de ta boucle…",
   "videoEditorLoopRepairTrimmed": "Boucle lissée. {seconds} s retirées.",
   "notificationFromDivine": "De Divine",
-  "announcementUnavailable": "Cette annonce n’est plus disponible."
+  "announcementUnavailable": "Cette annonce n’est plus disponible.",
+  "badgeSubscribedAction": "Abonné",
+  "badgeSubscribeAction": "S’abonner au badge",
+  "badgeAcceptedHoldersTitle": "Titulaires ayant accepté le badge",
+  "badgeSubscriptionLoadError": "Impossible de charger tes abonnements aux badges. Réessaie."
 }

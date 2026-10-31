@@ -9049,5 +9049,9 @@
   "videoEditorLoopRepairProgress": "మీ లూప్‌ను సమలేఖనం చేస్తున్నాం…",
   "videoEditorLoopRepairTrimmed": "లూప్ సాఫీగా మారింది. {seconds} సె. తొలగించాం.",
   "notificationFromDivine": "Divine నుండి",
-  "announcementUnavailable": "ఈ ప్రకటన ఇకపై అందుబాటులో లేదు."
+  "announcementUnavailable": "ఈ ప్రకటన ఇకపై అందుబాటులో లేదు.",
+  "badgeSubscribeAction": "బ్యాడ్జ్‌ను సబ్‌స్క్రైబ్ చేయండి",
+  "badgeSubscribedAction": "సబ్‌స్క్రైబ్ చేశారు",
+  "badgeAcceptedHoldersTitle": "బ్యాడ్జ్‌ను అంగీకరించినవారు",
+  "badgeSubscriptionLoadError": "మీ బ్యాడ్జ్ సబ్‌స్క్రిప్షన్‌లను లోడ్ చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి."
 }

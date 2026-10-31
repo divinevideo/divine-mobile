@@ -6129,5 +6129,9 @@
   "videoEditorLoopRepairProgress": "Alinhando seu loop…",
   "videoEditorLoopRepairTrimmed": "Loop suavizado. {seconds} s removidos.",
   "notificationFromDivine": "Da Divine",
-  "announcementUnavailable": "Este anúncio não está mais disponível."
+  "announcementUnavailable": "Este anúncio não está mais disponível.",
+  "badgeSubscribedAction": "A seguir",
+  "badgeSubscribeAction": "Seguir emblema",
+  "badgeAcceptedHoldersTitle": "Pessoas que aceitaram o emblema",
+  "badgeSubscriptionLoadError": "Não foi possível carregar suas assinaturas de emblemas. Tente novamente."
 }

@@ -6129,5 +6129,9 @@
   "videoEditorLoopRepairProgress": "Dein Loop wird ausgerichtet…",
   "videoEditorLoopRepairTrimmed": "Loop geglättet. {seconds} s entfernt.",
   "notificationFromDivine": "Von Divine",
-  "announcementUnavailable": "Diese Mitteilung ist nicht mehr verfügbar."
+  "announcementUnavailable": "Diese Mitteilung ist nicht mehr verfügbar.",
+  "badgeSubscribedAction": "Abonniert",
+  "badgeSubscribeAction": "Abzeichen abonnieren",
+  "badgeAcceptedHoldersTitle": "Personen mit angenommenem Abzeichen",
+  "badgeSubscriptionLoadError": "Deine Abzeichen-Abonnements konnten nicht geladen werden. Versuche es erneut."
 }

@@ -6246,5 +6246,9 @@
   "videoEditorLoopRepairProgress": "Подравняване на цикъла…",
   "videoEditorLoopRepairTrimmed": "Цикълът е изгладен. Премахнати са {seconds} сек.",
   "notificationFromDivine": "От Divine",
-  "announcementUnavailable": "Това съобщение вече не е налично."
+  "announcementUnavailable": "Това съобщение вече не е налично.",
+  "badgeSubscribedAction": "Абониран",
+  "badgeSubscribeAction": "Абониране за значката",
+  "badgeAcceptedHoldersTitle": "Приели значката",
+  "badgeSubscriptionLoadError": "Абонаментите ви за значки не можаха да се заредят. Опитайте отново."
 }

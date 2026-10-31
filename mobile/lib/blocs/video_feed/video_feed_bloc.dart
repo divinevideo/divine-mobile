@@ -71,6 +71,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     HomeFeedCache? homeFeedCache,
     EnrichVideos? enrichVideos,
     FeedTuningRepository? feedTuningRepository,
+    Future<Iterable<String>> Function()? badgeAuthors,
+    Stream<void>? badgeSubscriptionChanges,
   }) : _videosRepository = videosRepository,
        _followRepository = followRepository,
        _curatedListRepository = curatedListRepository,
@@ -84,6 +86,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
        _feedTracker = feedTracker,
        _enrichVideos = enrichVideos,
        _feedTuningRepository = feedTuningRepository,
+       _badgeAuthors = badgeAuthors,
+       _badgeSubscriptionChanges = badgeSubscriptionChanges,
        _resumeManager = HomeFeedResumeManager(
          cache: homeFeedCache ?? const HomeFeedCache(),
          videosRepository: videosRepository,
@@ -116,6 +120,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       _onFollowedPeopleListsChanged,
       transformer: concurrent(),
     );
+    on<VideoFeedBadgeSubscriptionsChanged>(_onBadgeSubscriptionsChanged);
     on<VideoFeedBlocklistChanged>(_onBlocklistChanged);
     on<VideoFeedActiveIndexChanged>(_onActiveIndexChanged);
     on<VideoFeedEnrichmentReady>(_onEnrichmentReady);
@@ -140,6 +145,19 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   final FeedPerformanceTracker? _feedTracker;
   final EnrichVideos? _enrichVideos;
   final FeedTuningRepository? _feedTuningRepository;
+  final Future<Iterable<String>> Function()? _badgeAuthors;
+  final Stream<void>? _badgeSubscriptionChanges;
+  StreamSubscription<void>? _badgeSubscriptionsSubscription;
+
+  late final _followingFeed = FollowingVideoFeedSession(
+    videosRepository: _videosRepository,
+    directAuthors: () => _followRepository.followingPubkeys,
+    waitForDirectAuthors: () => _followRepository.initialized,
+    directAuthorsKnown: () => _followRepository.isFollowingConfirmedByRelay,
+    confirmDirectAuthors: _followRepository.refreshFollowingForFeed,
+    badgeAuthors: _badgeAuthors,
+    userPubkey: _userPubkey,
+  );
 
   /// Owns the cross-restart cache serve / splice / resume-persist logic.
   final HomeFeedResumeManager _resumeManager;
@@ -251,7 +269,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   bool _canEmitForSource(
     VideoFeedSource source,
     Emitter<VideoFeedBlocState> emit,
-  ) => !emit.isDone && state.source == source;
+  ) => !_isClosing && !emit.isDone && state.source == source;
 
   bool _shouldEnrichSource(VideoFeedSource source) =>
       // Subscribed-list rows are loaded from locally held event IDs and are
@@ -343,8 +361,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
           category: LogCategory.system,
         );
       }
-      if (emit.isDone) return;
+      if (_isClosing || emit.isDone) return;
       await _hashtagsSubscription?.cancel();
+      if (_isClosing || emit.isDone) return;
       _hashtagsSubscription = hashtagRepository.subscriptionsStream.listen((
         tags,
       ) {
@@ -462,6 +481,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         ? storedSource
         : null;
 
+    if (_isClosing || emit.isDone) return;
     final subscribedLists = _curatedListRepository.getSubscribedLists();
 
     emit(
@@ -482,6 +502,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     if (emit.isDone || _isClosing) return;
     _followedPeopleListsSubscription = _watchFollowedPeopleLists();
     _refreshFollowedPeopleLists();
+    await _badgeSubscriptionsSubscription?.cancel();
+    if (emit.isDone || _isClosing) return;
+    _badgeSubscriptionsSubscription = _badgeSubscriptionChanges?.listen(
+      (_) => addIfOpen(const VideoFeedBadgeSubscriptionsChanged()),
+    );
     await _loadVideos(source, emit, feedLoad: feedLoad, revalidate: true);
     if (emit.isDone || _isClosing) return;
 
@@ -491,7 +516,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     if (state.source == source &&
         source.type == VideoFeedSourceType.following) {
       final currentFollowing = _followRepository.followingPubkeys;
-      if (currentFollowing.isEmpty && state.videos.isEmpty) {
+      if (currentFollowing.isEmpty &&
+          !_followingFeed.hasBadgeAuthors &&
+          state.videos.isEmpty &&
+          state.status == VideoFeedStatus.success) {
         emit(
           state.copyWith(
             status: VideoFeedStatus.success,
@@ -700,6 +728,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     _followingSubscription = null;
     _curatedListsSubscription = null;
     _followedPeopleListsSubscription = null;
+    await _badgeSubscriptionsSubscription?.cancel();
+    _badgeSubscriptionsSubscription = null;
     return super.close();
   }
 
@@ -894,6 +924,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
                   .reduce((a, b) => a < b ? a : b)
             : null,
         paginationCursor: usesCursor ? state.paginationCursor : null,
+        paginationGeneration: paginationGeneration,
       );
       if (!_canEmitForSource(source, emit) ||
           paginationGeneration != _paginationGeneration) {
@@ -983,6 +1014,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         return;
       }
 
+      if (e is FollowingReadSuperseded) {
+        emit(state.copyWith(isLoadingMore: false));
+        return;
+      }
       Log.error(
         'VideoFeedBloc: Failed to load more videos - $e',
         name: 'VideoFeedBloc',
@@ -1104,7 +1139,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     if (state.status == VideoFeedStatus.loading) return;
 
     // Empty follow list → show "follow someone" CTA.
-    if (event.followingPubkeys.isEmpty) {
+    if (event.followingPubkeys.isEmpty && !_followingFeed.hasBadgeAuthors) {
       emit(
         state.copyWith(
           status: VideoFeedStatus.success,
@@ -1119,15 +1154,33 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     }
 
     // Silent refresh — keep current videos visible, replace when done.
-    // Starting the load discards the page a load-more is still fetching, and a
-    // failed refresh emits nothing, so the flag that page holds is released
-    // here as every other path that starts a load does.
-    if (state.isLoadingMore) emit(state.copyWith(isLoadingMore: false));
     final feedLoad = _feedTracker?.startFeedLoad(
       state.source.mode.name,
       reason: FeedLoadReason.refresh,
     );
     await _loadVideos(state.source, emit, feedLoad: feedLoad, skipCache: true);
+  }
+
+  /// Reloads Following after the account changes its badge subscriptions.
+  ///
+  /// A silent refresh like [_onFollowingListChanged]: the first page
+  /// re-resolves the subscribed holders and starts a new merged pager.
+  Future<void> _onBadgeSubscriptionsChanged(
+    VideoFeedBadgeSubscriptionsChanged event,
+    Emitter<VideoFeedBlocState> emit,
+  ) async {
+    if (state.source.type != VideoFeedSourceType.following) return;
+    final feedLoad = _feedTracker?.startFeedLoad(
+      state.source.mode.name,
+      reason: FeedLoadReason.refresh,
+    );
+    await _loadVideos(
+      state.source,
+      emit,
+      feedLoad: feedLoad,
+      skipCache: true,
+      preserveCurrentVideo: true,
+    );
   }
 
   /// Reconciles the active feed with current curated-list subscriptions.
@@ -1506,11 +1559,23 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     FeedLoadHandle? feedLoad,
     bool skipCache = false,
     bool revalidate = false,
+    bool preserveCurrentVideo = false,
     List<VideoEvent>? prefetchedCachedVideos,
     bool startsNewFeedSession = false,
   }) async {
+    final continuesBadgeSnapshot =
+        !startsNewFeedSession &&
+        source.type == VideoFeedSourceType.following &&
+        state.source == source &&
+        state.status == VideoFeedStatus.success &&
+        state.paginationCursor != null &&
+        _followingFeed.hasBadgeAuthors;
     final generation = ++_loadGeneration;
-    _paginationGeneration++;
+    // Retire a still-visible badge page only when its replacement commits.
+    if (!continuesBadgeSnapshot) {
+      _paginationGeneration++;
+      if (state.isLoadingMore) emit(state.copyWith(isLoadingMore: false));
+    }
     final nextFeedSessionRevision = startsNewFeedSession
         ? state.feedSessionRevision + 1
         : state.feedSessionRevision;
@@ -1556,7 +1621,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       // replace the rest with fresh results, so fresh content appears right
       // after the current video. The active controller is preserved by
       // InfiniteVideoFeed's common-prefix handling, so it does not restart.
-      final displayedVideos = servedCache
+      final displayedVideos = servedCache || preserveCurrentVideo
           ? _resumeManager.splice(
               existing: state.videos,
               fresh: validVideos,
@@ -1818,6 +1883,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     String? paginationCursor,
     bool skipCache = false,
     bool revalidate = false,
+    int? paginationGeneration,
   }) => switch (source.type) {
     VideoFeedSourceType.forYou =>
       paginationCursor == null
@@ -1833,10 +1899,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
               skipCache: skipCache,
               revalidate: revalidate,
             ),
-    VideoFeedSourceType.following => _videosRepository.getHomeFeedVideos(
-      authors: _followRepository.followingPubkeys,
-      userPubkey: _userPubkey,
+    VideoFeedSourceType.following => _fetchFollowingWithBadges(
       cursor: paginationCursor,
+      paginationGeneration: paginationGeneration,
     ),
     VideoFeedSourceType.subscribedHashtag => _fetchHashtagVideos(
       source.hashtag!,
@@ -1895,6 +1960,23 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     return HomeFeedResult(
       videos: result.videos.where((video) => seen.add(video.id)).toList(),
       hasMore: false,
+    );
+  }
+
+  Future<HomeFeedResult> _fetchFollowingWithBadges({
+    String? cursor,
+    int? paginationGeneration,
+  }) {
+    final requestSequence = _loadGeneration;
+    return _followingFeed.loadPage(
+      cursor: cursor,
+      ownsRequest: () =>
+          requestSequence == _loadGeneration &&
+          (paginationGeneration == null ||
+              paginationGeneration == _paginationGeneration) &&
+          !_isClosing &&
+          !isClosed,
+      isActive: () => !_isClosing && !isClosed,
     );
   }
 

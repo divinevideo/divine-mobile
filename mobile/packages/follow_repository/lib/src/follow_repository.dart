@@ -3330,6 +3330,13 @@ class FollowRepository {
   /// overwriting. It also bounds what a follow tap costs.
   static const _contactListReadTimeout = Duration(seconds: 3);
 
+  /// Establishes whether the current direct-follow list is safe for a feed read.
+  ///
+  /// A settled empty relay answer permits an account without a kind 3 to use
+  /// badge subscriptions. It does not confirm an unfollow or change
+  /// [isFollowingConfirmedByRelay]. Inconclusive reads remain retryable.
+  Future<bool> refreshFollowingForFeed() => _refreshCurrentUserContactList();
+
   /// Re-read our own kind 3 and report whether the answer was conclusive.
   ///
   /// Returns `false` when no relay settled the query — a timeout, or a
@@ -3346,7 +3353,7 @@ class FollowRepository {
   /// arrives as a timeout rather than as an empty answer.
   Future<bool> _refreshCurrentUserContactList() async {
     final pubkey = _nostrClient.publicKey;
-    if (pubkey.isEmpty) return false;
+    if (!_nostrClient.hasKeys || pubkey.isEmpty) return false;
 
     final result = await _nostrClient.queryEventsDetailed(
       [
@@ -3355,6 +3362,11 @@ class FollowRepository {
       requireAllRelaysSettled: true,
       timeout: _contactListReadTimeout,
     );
+    if (!_nostrClient.hasKeys ||
+        _nostrClient.publicKey != pubkey ||
+        _followingSubject.isClosed) {
+      return false;
+    }
 
     Event? newest;
     for (final event in result.events) {

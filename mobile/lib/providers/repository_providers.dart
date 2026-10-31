@@ -27,6 +27,7 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
@@ -75,6 +76,7 @@ final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
   final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
   final accountWrites = ref.watch(accountStateWriteBarrierProvider);
   final accountClosers = <Future<void> Function()>[];
+  var subscriptionAccount = authService.currentPublicKeyHex;
   final repository = BadgeRepository(
     nostrClient: ref.watch(nostrServiceProvider),
     sharedPreferences: ref.watch(sharedPreferencesProvider),
@@ -84,6 +86,23 @@ final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
     onAccountCreated: (owner, close) {
       accountClosers.add(accountWrites.register(owner, close));
     },
+    sessionChanges: authService.authStateStream
+        .where((state) {
+          final account = authService.currentPublicKeyHex;
+          // The repository checks account ownership at each read boundary.
+          // Only sign-out needs a separate signal for same-account re-login.
+          // An upgrade nudge or a queued predecessor transition must not reset
+          // a successor account's read that has already started.
+          final ended =
+              state == AuthState.unauthenticated &&
+              (account == subscriptionAccount ||
+                  account == null ||
+                  account.isEmpty);
+          subscriptionAccount = account;
+          return ended;
+        })
+        .map((_) {}),
+    definitionRelayUrl: ref.watch(currentEnvironmentProvider).relayUrl,
     // Read through the repository rather than a snapshot: the hide buckets
     // are mutated in place, so a block made after this provider was built
     // still takes effect on the next badge load.
@@ -98,7 +117,7 @@ final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
       );
     }
     runProviderDetached(
-      repository.closeAccountState(),
+      repository.dispose(),
       'close badge repository',
       logName: 'BadgeRepository',
     );

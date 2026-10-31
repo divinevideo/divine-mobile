@@ -15448,4 +15448,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Suscribirse a la insignia';
+
+  @override
+  String get badgeSubscribedAction => 'Suscrito';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Personas que aceptaron la insignia';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'No se pudieron cargar tus suscripciones a insignias. Inténtalo de nuevo.';
 }

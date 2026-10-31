@@ -15211,4 +15211,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Theo dõi huy hiệu';
+
+  @override
+  String get badgeSubscribedAction => 'Đang theo dõi';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Người đã chấp nhận huy hiệu';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'Không thể tải các đăng ký huy hiệu của bạn. Hãy thử lại.';
 }

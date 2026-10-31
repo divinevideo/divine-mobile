@@ -6129,5 +6129,9 @@
   "videoEditorLoopRepairProgress": "Je loop wordt uitgelijnd…",
   "videoEditorLoopRepairTrimmed": "Loop verbeterd. {seconds} s verwijderd.",
   "notificationFromDivine": "Van Divine",
-  "announcementUnavailable": "Deze aankondiging is niet meer beschikbaar."
+  "announcementUnavailable": "Deze aankondiging is niet meer beschikbaar.",
+  "badgeSubscribedAction": "Volgend",
+  "badgeSubscribeAction": "Badge volgen",
+  "badgeAcceptedHoldersTitle": "Geaccepteerde badgehouders",
+  "badgeSubscriptionLoadError": "Je badge-abonnementen konden niet worden geladen. Probeer het opnieuw."
 }

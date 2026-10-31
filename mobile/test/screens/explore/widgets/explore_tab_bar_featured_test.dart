@@ -76,7 +76,7 @@ void main() {
       await pumpBar(tester, const ExploreTabsState());
 
       expect(find.text(_l10n.exploreTabFeatured), findsNothing);
-      expect(find.byType(Tab), findsNWidgets(4));
+      expect(find.byType(Tab), findsNWidgets(5));
     });
 
     testWidgets('light tab selection uses a dark green indicator', (

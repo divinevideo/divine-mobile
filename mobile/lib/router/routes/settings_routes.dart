@@ -18,6 +18,7 @@ import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
+import 'package:openvine/screens/badges/badge_videos_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/blossom_settings_screen.dart';
 import 'package:openvine/screens/clip_recovery_screen.dart';
@@ -50,6 +51,8 @@ import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/feature_request_dialog.dart';
+
+part 'settings_routes.g.dart';
 
 List<RouteBase> settingsRoutes(Ref ref) {
   return [
@@ -118,6 +121,7 @@ List<RouteBase> settingsRoutes(Ref ref) {
         (coordinate) => BadgeDetailScreen(coordinate: coordinate),
       ),
     ),
+    ...$appRoutes,
     GoRoute(
       path: BadgeEditorScreen.editPath,
       name: BadgeEditorScreen.editRouteName,
@@ -360,4 +364,26 @@ String? accountCredentialsRedirectIfUnavailable(Ref ref) {
   final source = ref.read(authServiceProvider).authenticationSource;
   if (source == AuthenticationSource.divineOAuth) return null;
   return GeneralSettingsScreen.path;
+}
+
+/// Videos from a badge’s accepted holders, with optional in-session holder data.
+@TypedGoRoute<BadgeVideosRouteData>(
+  path: BadgeVideosScreen.path,
+  name: BadgeVideosScreen.routeName,
+)
+class BadgeVideosRouteData extends GoRouteData with $BadgeVideosRouteData {
+  const BadgeVideosRouteData({required this.naddr, this.$extra});
+
+  final String naddr;
+  final Object? $extra;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    final coordinate = BadgeCoordinate.tryParse(naddr);
+    if (coordinate == null) return const BadgesScreen();
+    return BadgeVideosScreen(
+      coordinate: coordinate,
+      seed: extraAs<BadgeVideosSeed>($extra),
+    );
+  }
 }

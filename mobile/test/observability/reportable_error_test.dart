@@ -1,6 +1,7 @@
 // ABOUTME: Tests for ReportableError marker, Reportable<T> wrapper, and the
 // ABOUTME: npub/nsec sanitizer that runs over both halves of that toString().
 
+import 'package:badge_repository/badge_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
@@ -96,6 +97,18 @@ void main() {
   });
 
   group('asReportableError', () {
+    test('declined badge signatures remain local operational failures', () {
+      const error = BadgeSigningException('badge subscriptions');
+      expect(asReportableError(error, context: 'badge subscribe'), isNull);
+      expect(error.toString(), contains('badge subscriptions'));
+    });
+
+    test('incomplete badge reads remain local network failures', () {
+      const error = BadgeReadIncompleteException('badge read incomplete');
+      expect(asReportableError(error, context: 'badge load'), isNull);
+      expect(error.toString(), contains('badge read incomplete'));
+    });
+
     test('preserves explicitly reportable errors', () {
       final error = Reportable(Exception('invariant'), context: 'test');
 

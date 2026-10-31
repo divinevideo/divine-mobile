@@ -6182,5 +6182,9 @@
   "videoEditorLoopRepairProgress": "ዙርህን በማስተካከል ላይ…",
   "videoEditorLoopRepairTrimmed": "ሉፑ ተስተካክሏል። {seconds} ሰከንድ ተወግዷል።",
   "notificationFromDivine": "ከDivine",
-  "announcementUnavailable": "ይህ ማስታወቂያ ከእንግዲህ የለም።"
+  "announcementUnavailable": "ይህ ማስታወቂያ ከእንግዲህ የለም።",
+  "badgeSubscribedAction": "ተከትለዋል",
+  "badgeSubscribeAction": "ባጁን ተከተል",
+  "badgeAcceptedHoldersTitle": "ባጁን የተቀበሉ",
+  "badgeSubscriptionLoadError": "የባጅ ምዝገባዎችዎን መጫን አልተቻለም። እንደገና ይሞክሩ።"
 }

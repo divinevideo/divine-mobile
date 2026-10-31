@@ -6129,5 +6129,9 @@
   "videoEditorLoopRepairProgress": "Wyrównywanie pętli…",
   "videoEditorLoopRepairTrimmed": "Pętla wygładzona. Usunięto {seconds} s.",
   "notificationFromDivine": "Od Divine",
-  "announcementUnavailable": "To ogłoszenie nie jest już dostępne."
+  "announcementUnavailable": "To ogłoszenie nie jest już dostępne.",
+  "badgeSubscribedAction": "Subskrybujesz",
+  "badgeSubscribeAction": "Subskrybuj odznakę",
+  "badgeAcceptedHoldersTitle": "Osoby, które przyjęły odznakę",
+  "badgeSubscriptionLoadError": "Nie udało się wczytać twoich subskrypcji odznak. Spróbuj ponownie."
 }

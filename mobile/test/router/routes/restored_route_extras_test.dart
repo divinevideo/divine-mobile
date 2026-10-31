@@ -1,3 +1,4 @@
+import 'package:badge_repository/badge_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +19,8 @@ import 'package:openvine/router/widgets/following_screen_router.dart';
 import 'package:openvine/router/widgets/other_profile_screen_router.dart';
 import 'package:openvine/router/widgets/sound_detail_loader.dart';
 import 'package:openvine/screens/apps/app_detail_screen.dart';
+import 'package:openvine/screens/badges/badge_videos_screen.dart';
+import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/creator_analytics_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
@@ -566,6 +569,74 @@ void main() {
             .having((s) => s.pubkey, 'pubkey', pubkeyHex)
             .having((s) => s.displayName, 'displayName', isNull),
       );
+    });
+
+    group('badge video route', () {
+      const coordinate = BadgeCoordinate(
+        pubkey: pubkeyHex,
+        identifier: 'daily',
+      );
+      final seed = BadgeVideosSeed(
+        coordinate: coordinate,
+        holders: {pubkeyHex},
+      );
+
+      test('typed location matches the full coordinate link', () {
+        final location = BadgeVideosRouteData(naddr: coordinate.toNaddr())
+            .location;
+        expect(location, BadgeVideosScreen.pathFor(coordinate));
+        final router = GoRouter(routes: withRef(settingsRoutes));
+        addTearDown(router.dispose);
+        final match = router.configuration.findMatch(Uri.parse(location));
+        expect(match.isError, isFalse);
+        expect(match.last.route.name, BadgeVideosScreen.routeName);
+      });
+
+      for (final (label, extra) in <(String, Object?)>[
+        ('cold link', null),
+        (
+          'restored map',
+          {
+            'holders': [pubkeyHex],
+          },
+        ),
+        ('warm seed', seed),
+      ]) {
+        testWidgets('builds the coordinate from the URL with $label', (
+          tester,
+        ) async {
+          final route = _routeNamed(
+            withRef(settingsRoutes),
+            BadgeVideosScreen.routeName,
+          );
+          late BadgeVideosScreen screen;
+          await _buildWithContext(tester, (context) {
+            screen = route.builder!(
+              context,
+              _FakeGoRouterState(
+                location: BadgeVideosScreen.pathFor(coordinate),
+                pathParameters: {'naddr': coordinate.toNaddr()},
+                extra: extra,
+              ),
+            ) as BadgeVideosScreen;
+          });
+          expect(screen.coordinate, coordinate);
+          expect(screen.seed, identical(extra, seed) ? same(seed) : isNull);
+        });
+      }
+
+      testWidgets('invalid coordinates retain the badge-dashboard fallback', (
+        tester,
+      ) async {
+        final screen = await buildFromUrl(
+          tester,
+          withRef(settingsRoutes),
+          BadgeVideosScreen.routeName,
+          location: '/badges/b/invalid/videos',
+          pathParameters: const {'naddr': 'invalid'},
+        );
+        expect(screen, isA<BadgesScreen>());
+      });
     });
 
     testWidgets('builds $AccountStatusScreen without the publish hint', (

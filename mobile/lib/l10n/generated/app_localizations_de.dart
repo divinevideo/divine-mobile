@@ -15446,4 +15446,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Abzeichen abonnieren';
+
+  @override
+  String get badgeSubscribedAction => 'Abonniert';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Personen mit angenommenem Abzeichen';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'Deine Abzeichen-Abonnements konnten nicht geladen werden. Versuche es erneut.';
 }

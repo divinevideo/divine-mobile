@@ -14549,4 +14549,20 @@ class AppLocalizationsKo extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => '배지 구독';
+
+  @override
+  String get badgeSubscribedAction => '구독 중';
+
+  @override
+  String get badgeAcceptedHoldersTitle => '배지를 수락한 사람';
+
+  @override
+  String get badgeSubscriptionLoadError => '배지 구독을 불러오지 못했어요. 다시 시도해 주세요.';
 }

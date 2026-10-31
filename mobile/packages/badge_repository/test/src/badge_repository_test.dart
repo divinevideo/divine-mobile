@@ -7,9 +7,41 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+typedef _SubscriptionRead = ({
+  List<Event> events,
+  bool timedOut,
+  bool noRelays,
+});
+
+const _SubscriptionRead _emptySubscriptionRead = (
+  events: <Event>[],
+  timedOut: false,
+  noRelays: false,
+);
+
 class _MockNostrClient extends Mock implements NostrClient {}
 
 void main() {
+  group(BadgeReadIncompleteException, () {
+    test('signing refusal keeps its diagnostic message in local logs', () {
+      const error = BadgeSigningException('signing declined');
+      expect(error.toString(), 'BadgeSigningException: signing declined');
+    });
+
+    test('incomplete reads use a diagnostic exception instead of an Error', () {
+      const failure = BadgeReadIncompleteException(
+        'badge definitions incomplete',
+      );
+      expect(failure, isA<Exception>());
+      expect(failure, isNot(isA<Error>()));
+      expect(failure.message, 'badge definitions incomplete');
+      expect(
+        failure.toString(),
+        'BadgeReadIncompleteException: badge definitions incomplete',
+      );
+    });
+  });
+
   group('BadgeRepository', () {
     late _MockNostrClient nostrClient;
     late SharedPreferences preferences;
@@ -21,6 +53,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Filter());
       registerFallbackValue(_event(id: _eventId(999), pubkey: _pubkey(999)));
     });
 
@@ -34,6 +67,15 @@ void main() {
       lastSignedEvent = () => signedEvent;
 
       when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => []);
+      when(
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: true,
+          acceptRelayClosedWhenOthersAnswered: true,
+        ),
+      ).thenAnswer(
+        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+      );
       when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
         invocation,
       ) async {
@@ -57,15 +99,22 @@ void main() {
         onAccountCreated: (owner, close) => accountClosers[owner] = close,
         sharedPreferences: preferences,
         currentPubkey: () => _pubkey(1),
-        signEvent: ({required kind, required content, required tags}) async {
-          return signedEvent = _event(
-            id: _eventId(900 + kind),
-            pubkey: _pubkey(1),
-            kind: kind,
-            tags: tags,
-            content: content,
-          );
-        },
+        signEvent:
+            ({
+              required kind,
+              required content,
+              required tags,
+              createdAt,
+            }) async {
+              return signedEvent = _event(
+                id: _eventId(900 + kind),
+                pubkey: _pubkey(1),
+                kind: kind,
+                tags: tags,
+                content: content,
+                createdAt: createdAt ?? 1000,
+              );
+            },
       );
     });
 
@@ -104,6 +153,27 @@ void main() {
         await statuses.close();
       },
     );
+
+    test('dispose closes account state listeners', () async {
+      final events = StreamController<Event>.broadcast();
+      final statuses =
+          StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+      when(() => nostrClient.subscribe(any())).thenAnswer((_) => events.stream);
+      when(
+        () => nostrClient.relayStatusStream,
+      ).thenAnswer((_) => statuses.stream);
+      addTearDown(() async {
+        await repository.closeAccountState();
+        await events.close();
+        await statuses.close();
+      });
+      await repository.startAccountState();
+      expect(events.hasListener, isTrue);
+      expect(statuses.hasListener, isTrue);
+      await repository.dispose();
+      expect(events.hasListener, isFalse);
+      expect(statuses.hasListener, isFalse);
+    });
 
     test(
       'local account key enumeration isolates complete compatibility inputs',
@@ -180,6 +250,2507 @@ void main() {
       await loading;
       expect(startedBeforeAwards, isTrue);
     });
+
+    test('an exhausted budget never starts a holder walk', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily',
+      );
+      await repository.setSubscription(coordinate, subscribed: true);
+      await expectLater(
+        repository.loadSubscribedHolders(timeout: Duration.zero),
+        throwsA(isA<TimeoutException>()),
+      );
+      verifyNever(
+        () => nostrClient.readAllEvents(any(), timeout: any(named: 'timeout')),
+      );
+    });
+
+    test(
+      'expired current profiles do not start a legacy profile read',
+      () async {
+        final coordinate = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'daily',
+        );
+        await repository.setSubscription(coordinate, subscribed: true);
+        final started = Completer<void>();
+        final profiles = Completer<PagedQueryResult>();
+        final kinds = <int>[];
+        _stubPagedReads(nostrClient, (invocation) {
+          final filter = invocation.positionalArguments.single as Filter;
+          kinds.add(filter.kinds!.single);
+          if (filter.kinds!.contains(EventKind.profileBadges)) {
+            started.complete();
+            return profiles.future;
+          }
+          return Future.value(
+            PagedQueryResult(
+              events: filter.kinds!.contains(EventKind.badgeAward)
+                  ? [
+                      _awardEvent(
+                        id: _eventId(751),
+                        issuerPubkey: coordinate.pubkey,
+                        definitionCoordinate: coordinate.value,
+                        recipients: [_pubkey(10)],
+                      ),
+                    ]
+                  : [],
+              isComplete: true,
+              pages: 1,
+            ),
+          );
+        });
+        final walk = repository.loadSubscribedHolders(
+          timeout: const Duration(seconds: 1),
+        );
+        final expired = expectLater(walk, throwsA(isA<TimeoutException>()));
+        await Future.any<void>([started.future, walk.then<void>((_) {})]);
+        await expired;
+        profiles.complete(
+          const PagedQueryResult(events: [], isComplete: true, pages: 1),
+        );
+        await pumpEventQueue();
+        expect(kinds, [
+          EventKind.badgeAward,
+          EventKind.eventDeletion,
+          EventKind.profileBadges,
+        ]);
+      },
+    );
+
+    test(
+      'each subscribed holder read receives only the remaining budget',
+      () async {
+        final coordinate = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'daily',
+        );
+        await repository.setSubscription(coordinate, subscribed: true);
+        final budgets = <Duration?>[];
+        Future<PagedQueryResult> answer(Invocation invocation) async {
+          budgets.add(invocation.namedArguments[#timeout] as Duration?);
+          final filter = invocation.positionalArguments.single as Filter;
+          return PagedQueryResult(
+            events: filter.kinds!.contains(EventKind.badgeAward)
+                ? [
+                    _awardEvent(
+                      id: _eventId(750),
+                      issuerPubkey: coordinate.pubkey,
+                      definitionCoordinate: coordinate.value,
+                      recipients: [_pubkey(10)],
+                    ),
+                  ]
+                : [],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+
+        _stubPagedReads(nostrClient, answer);
+        when(
+          () =>
+              nostrClient.readAllEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(answer);
+        await repository.loadSubscribedHolders(
+          timeout: const Duration(seconds: 1),
+        );
+        expect(budgets, hasLength(4));
+        expect(budgets, everyElement(isNotNull));
+        for (final budget in budgets) {
+          expect(budget, lessThanOrEqualTo(const Duration(seconds: 1)));
+          expect(budget, greaterThan(Duration.zero));
+        }
+        for (var i = 1; i < budgets.length; i++) {
+          expect(budgets[i], lessThanOrEqualTo(budgets[i - 1]!));
+        }
+      },
+    );
+
+    test(
+      'rapid unsubscribe supersedes the observed subscription event',
+      () async {
+        final coordinate = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'daily',
+        );
+        await repository.setSubscription(coordinate, subscribed: true);
+        final subscribedEvent = lastSignedEvent()!;
+        await repository.setSubscription(coordinate, subscribed: false);
+        final unsubscribedEvent = lastSignedEvent()!;
+        expect(
+          unsubscribedEvent.createdAt,
+          greaterThan(subscribedEvent.createdAt),
+        );
+        expect(
+          await repository.loadSubscriptions(requireComplete: true),
+          isEmpty,
+        );
+      },
+    );
+
+    group('subscription mutation ordering', () {
+      late String account;
+      late StreamController<void> sessions;
+      late List<Event> publications;
+
+      setUp(() {
+        account = _pubkey(1);
+        sessions = StreamController<void>.broadcast();
+        publications = [];
+        var revision = 0;
+        repository = BadgeRepository(
+          nostrClient: nostrClient,
+          signer: () => dismissalSigner,
+          sharedPreferences: preferences,
+          currentPubkey: () => account,
+          sessionChanges: sessions.stream,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async {
+                return _event(
+                  id: _eventId(800000 + revision++),
+                  pubkey: account,
+                  kind: kind,
+                  tags: tags,
+                  createdAt: createdAt ?? 1000,
+                );
+              },
+        );
+        addTearDown(repository.dispose);
+        addTearDown(sessions.close);
+      });
+
+      final first = BadgeCoordinate(pubkey: _pubkey(2), identifier: 'first');
+      final second = BadgeCoordinate(pubkey: _pubkey(2), identifier: 'second');
+
+      test('overlapping edits preserve both successful selections', () async {
+        final started = Completer<void>();
+        final accepted = Completer<PublishOutcome>();
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((call) {
+          final event = call.positionalArguments.single as Event;
+          publications.add(event);
+          if (publications.length == 1) {
+            started.complete();
+            return accepted.future;
+          }
+          return Future.value(_acceptedPublishOutcome(event));
+        });
+        final savingFirst = repository.setSubscription(first, subscribed: true);
+        await started.future;
+        final savingSecond = repository.setSubscription(
+          second,
+          subscribed: true,
+        );
+        await pumpEventQueue();
+        final publishedBeforeAcknowledgement = publications.length;
+        accepted.complete(_acceptedPublishOutcome(publications.first));
+        expect(await savingFirst, {first});
+        expect(await savingSecond, {first, second});
+        expect(publishedBeforeAcknowledgement, 1);
+        expect(
+          publications.last.createdAt,
+          greaterThan(publications.first.createdAt),
+        );
+        expect(await repository.loadSubscriptions(requireComplete: true), {
+          first,
+          second,
+        });
+      });
+
+      test('queued unsubscribe applies after the pending subscribe', () async {
+        final started = Completer<void>();
+        final accepted = Completer<PublishOutcome>();
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((call) {
+          final event = call.positionalArguments.single as Event;
+          publications.add(event);
+          if (publications.length == 1) {
+            started.complete();
+            return accepted.future;
+          }
+          return Future.value(_acceptedPublishOutcome(event));
+        });
+        final subscribing = repository.setSubscription(first, subscribed: true);
+        await started.future;
+        final unsubscribing = repository.setSubscription(
+          first,
+          subscribed: false,
+        );
+        await pumpEventQueue();
+        accepted.complete(_acceptedPublishOutcome(publications.first));
+        await subscribing;
+        expect(await unsubscribing, isEmpty);
+        expect(
+          await repository.loadSubscriptions(requireComplete: true),
+          isEmpty,
+        );
+      });
+
+      test('a failed edit releases the next queued edit', () async {
+        final started = Completer<void>();
+        final accepted = Completer<PublishOutcome>();
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((call) {
+          final event = call.positionalArguments.single as Event;
+          publications.add(event);
+          if (publications.length == 1) {
+            started.complete();
+            return accepted.future;
+          }
+          return Future.value(_acceptedPublishOutcome(event));
+        });
+        final savingFirst = repository.setSubscription(first, subscribed: true);
+        final rejected = expectLater(savingFirst, throwsA(isA<Exception>()));
+        await started.future;
+        final savingSecond = repository.setSubscription(
+          second,
+          subscribed: true,
+        );
+        accepted.completeError(Exception('relay unavailable'));
+        await rejected;
+        expect(await savingSecond, {second});
+        expect(await repository.loadSubscriptions(requireComplete: true), {
+          second,
+        });
+      });
+
+      test(
+        'late old-account acknowledgement cannot erase the active account cache',
+        () async {
+          final started = Completer<void>();
+          final accepted = Completer<PublishOutcome>();
+          when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((call) {
+            final event = call.positionalArguments.single as Event;
+            publications.add(event);
+            if (event.pubkey == _pubkey(1)) {
+              started.complete();
+              return accepted.future;
+            }
+            return Future.value(_acceptedPublishOutcome(event));
+          });
+          final savingFirst = repository.setSubscription(
+            first,
+            subscribed: true,
+          );
+          await started.future;
+          account = _pubkey(3);
+          expect(await repository.setSubscription(second, subscribed: true), {
+            second,
+          });
+          accepted.complete(_acceptedPublishOutcome(publications.first));
+          await savingFirst;
+          expect(await repository.loadSubscriptions(requireComplete: true), {
+            second,
+          });
+        },
+      );
+
+      for (final boundary in ['new session', 'dispose']) {
+        test('queued edits do not cross $boundary', () async {
+          final started = Completer<void>();
+          final accepted = Completer<PublishOutcome>();
+          when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((call) {
+            final event = call.positionalArguments.single as Event;
+            publications.add(event);
+            if (publications.length == 1) {
+              started.complete();
+              return accepted.future;
+            }
+            return Future.value(_acceptedPublishOutcome(event));
+          });
+          final savingFirst = repository.setSubscription(
+            first,
+            subscribed: true,
+          );
+          await started.future;
+          final savingSecond = repository.setSubscription(
+            second,
+            subscribed: true,
+          );
+          final rejected = expectLater(
+            savingSecond,
+            throwsA(isA<BadgeReadIncompleteException>()),
+          );
+          if (boundary == 'dispose') {
+            await repository.dispose();
+          } else {
+            sessions.add(null);
+            await pumpEventQueue();
+          }
+          accepted.complete(_acceptedPublishOutcome(publications.first));
+          await savingFirst;
+          await rejected;
+          expect(publications, hasLength(1));
+          if (boundary != 'dispose') {
+            expect(
+              await repository.loadSubscriptions(requireComplete: true),
+              isEmpty,
+            );
+          }
+        });
+      }
+    });
+
+    test('announces a saved subscription change', () async {
+      // Following listens for this to reload only its own feed.
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      final changes = <void>[];
+      final subscription = repository.subscriptionChanges.listen(changes.add);
+      addTearDown(subscription.cancel);
+
+      await repository.setSubscription(coordinate, subscribed: true);
+      await pumpEventQueue();
+
+      expect(changes, hasLength(1));
+    });
+
+    test(
+      'accepted subscription completes when disposed during publication',
+      () async {
+        final coordinate = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'daily-diviner',
+        );
+        final publishing = Completer<void>();
+        final accepted = Completer<PublishOutcome>();
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
+          invocation,
+        ) {
+          publishing.complete();
+          return accepted.future;
+        });
+        final saving = repository.setSubscription(coordinate, subscribed: true);
+        await publishing.future;
+        await repository.dispose();
+        accepted.complete(_acceptedPublishOutcome(lastSignedEvent()!));
+        expect(await saving, {coordinate});
+      },
+    );
+
+    group('review regression boundaries', () {
+      test(
+        'completed subscription reads tolerate terminal refusals after another relay answered',
+        () async {
+          final coordinate = BadgeCoordinate(
+            pubkey: _pubkey(2),
+            identifier: 'daily',
+          );
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+          );
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: [
+                _event(
+                  id: _eventId(700),
+                  pubkey: _pubkey(1),
+                  kind: EventKind.appSpecificData,
+                  tags: [
+                    ['d', 'divine.badge_subscriptions'],
+                    ['a', coordinate.value],
+                  ],
+                ),
+              ],
+              timedOut: false,
+              noRelays: false,
+            ),
+          );
+          expect(await repository.loadSubscriptions(requireComplete: true), {
+            coordinate,
+          });
+        },
+      );
+
+      test(
+        'subscription signing refusal is an expected exception and never publishes',
+        () async {
+          final unsigned = BadgeRepository(
+            nostrClient: nostrClient,
+            signer: () => dismissalSigner,
+            sharedPreferences: preferences,
+            currentPubkey: () => _pubkey(1),
+            signEvent:
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async => null,
+          );
+          await expectLater(
+            unsigned.setSubscription(
+              BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
+              subscribed: true,
+            ),
+            throwsA(isA<Exception>()),
+          );
+          verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        },
+      );
+
+      test(
+        'timed out holder walks do not start deletion or profile reads after awards arrive',
+        () async {
+          final coordinate = BadgeCoordinate(
+            pubkey: _pubkey(2),
+            identifier: 'daily',
+          );
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: [
+                _event(
+                  id: _eventId(701),
+                  pubkey: _pubkey(1),
+                  kind: EventKind.appSpecificData,
+                  tags: [
+                    ['d', 'divine.badge_subscriptions'],
+                    ['a', coordinate.value],
+                  ],
+                ),
+              ],
+              timedOut: false,
+              noRelays: false,
+            ),
+          );
+          final started = Completer<void>();
+          final awards = Completer<PagedQueryResult>();
+          final filters = <Filter>[];
+          _stubPagedReads(nostrClient, (invocation) {
+            final filter = invocation.positionalArguments.single as Filter;
+            filters.add(filter);
+            if (filter.kinds!.contains(EventKind.badgeAward)) {
+              started.complete();
+              return awards.future;
+            }
+            return Future.value(
+              const PagedQueryResult(events: [], isComplete: true, pages: 1),
+            );
+          });
+          final walk = repository.loadSubscribedHolders(
+            timeout: const Duration(milliseconds: 10),
+          );
+          final expired = expectLater(walk, throwsA(isA<TimeoutException>()));
+          await started.future;
+          await expired;
+          awards.complete(
+            PagedQueryResult(
+              events: [
+                _awardEvent(
+                  id: _eventId(702),
+                  issuerPubkey: coordinate.pubkey,
+                  definitionCoordinate: coordinate.value,
+                  recipients: [_pubkey(10)],
+                ),
+              ],
+              isComplete: true,
+              pages: 1,
+            ),
+          );
+          await pumpEventQueue();
+          expect(filters, hasLength(1));
+        },
+      );
+
+      test(
+        'accepted holder reads exclude malformed awarded pubkeys and retain legacy acceptance',
+        () async {
+          final coordinate = BadgeCoordinate(
+            pubkey: _pubkey(2),
+            identifier: 'daily',
+          );
+          final queriedAuthors = <String>[];
+          _stubPagedReads(nostrClient, (
+            invocation,
+          ) async {
+            final filter = invocation.positionalArguments.single as Filter;
+            if (filter.kinds!.contains(EventKind.badgeAward)) {
+              return PagedQueryResult(
+                events: [
+                  _awardEvent(
+                    id: _eventId(703),
+                    issuerPubkey: coordinate.pubkey,
+                    definitionCoordinate: coordinate.value,
+                    recipients: [_pubkey(10), 'invalid-key'],
+                  ),
+                ],
+                isComplete: true,
+                pages: 1,
+              );
+            }
+            if (filter.kinds!.contains(EventKind.profileBadges) ||
+                filter.kinds!.contains(EventKind.badgeSet)) {
+              queriedAuthors.addAll(filter.authors!);
+            }
+            if (filter.kinds!.contains(EventKind.badgeSet)) {
+              return PagedQueryResult(
+                events: [
+                  _event(
+                    id: _eventId(704),
+                    pubkey: _pubkey(10),
+                    kind: EventKind.badgeSet,
+                    tags: [
+                      ['d', 'profile_badges'],
+                      ['a', coordinate.value],
+                      ['e', _eventId(703)],
+                    ],
+                  ),
+                ],
+                isComplete: true,
+                pages: 1,
+              );
+            }
+            return const PagedQueryResult(
+              events: [],
+              isComplete: true,
+              pages: 1,
+            );
+          });
+          expect(await repository.loadAcceptedHolders(coordinate), {
+            _pubkey(10),
+          });
+          expect(queriedAuthors, isNot(contains('invalid-key')));
+        },
+      );
+    });
+
+    group('subscription signing ownership', () {
+      test(
+        'a queued account switch cannot publish a completed subscription read',
+        () async {
+          var account = _pubkey(1);
+          var signerCalls = 0;
+          final pending = Completer<_SubscriptionRead>();
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
+            ),
+          ).thenAnswer((_) => pending.future);
+          final scoped = BadgeRepository(
+            nostrClient: nostrClient,
+            signer: () => dismissalSigner,
+            sharedPreferences: preferences,
+            currentPubkey: () => account,
+            signEvent:
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async {
+                  signerCalls++;
+                  return _event(
+                    id: _eventId(705),
+                    pubkey: account,
+                    kind: kind,
+                    tags: tags,
+                  );
+                },
+          );
+          addTearDown(scoped.dispose);
+          final saving = scoped.setSubscription(
+            BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
+            subscribed: true,
+          );
+          final rejected = expectLater(
+            saving,
+            throwsA(isA<BadgeReadIncompleteException>()),
+          );
+          // The read and signer start for A. The queued account change runs
+          // before the asynchronous signer result reaches the publisher.
+          final switching = pending.future.then((_) => account = _pubkey(3));
+          pending.complete(_emptySubscriptionRead);
+          await switching;
+          await rejected;
+          expect(signerCalls, 1);
+          verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        },
+      );
+
+      test(
+        'a signer returning a different author cannot publish the snapshot',
+        () async {
+          final scoped = BadgeRepository(
+            nostrClient: nostrClient,
+            signer: () => dismissalSigner,
+            sharedPreferences: preferences,
+            currentPubkey: () => _pubkey(1),
+            signEvent:
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async => _event(
+                  id: _eventId(706),
+                  pubkey: _pubkey(3),
+                  kind: kind,
+                  tags: tags,
+                ),
+          );
+          addTearDown(scoped.dispose);
+          await expectLater(
+            scoped.setSubscription(
+              BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
+              subscribed: true,
+            ),
+            throwsA(isA<BadgeReadIncompleteException>()),
+          );
+          verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        },
+      );
+
+      for (final boundary in [
+        'account switch',
+        'same account new session',
+        'dispose',
+      ]) {
+        test(
+          'does not begin publication after $boundary while signing',
+          () async {
+            var account = _pubkey(1);
+            final sessions = StreamController<void>.broadcast();
+            addTearDown(sessions.close);
+            final signing = Completer<void>();
+            final signed = Completer<Event?>();
+            final scoped = BadgeRepository(
+              nostrClient: nostrClient,
+              signer: () => dismissalSigner,
+              sharedPreferences: preferences,
+              currentPubkey: () => account,
+              sessionChanges: sessions.stream,
+              signEvent:
+                  ({
+                    required kind,
+                    required content,
+                    required tags,
+                    createdAt,
+                  }) {
+                    signing.complete();
+                    return signed.future;
+                  },
+            );
+            final saving = scoped.setSubscription(
+              BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
+              subscribed: true,
+            );
+            final rejected = expectLater(
+              saving,
+              throwsA(isA<BadgeReadIncompleteException>()),
+            );
+            await signing.future;
+            switch (boundary) {
+              case 'account switch':
+                account = _pubkey(3);
+              case 'same account new session':
+                sessions.add(null);
+                await pumpEventQueue();
+              case 'dispose':
+                await scoped.dispose();
+            }
+            signed.complete(
+              _event(
+                id: _eventId(704),
+                pubkey: _pubkey(1),
+                kind: EventKind.appSpecificData,
+                tags: [
+                  ['d', 'divine.badge_subscriptions'],
+                  ['a', '30009:${_pubkey(2)}:daily'],
+                ],
+              ),
+            );
+            await rejected;
+            verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+            if (boundary != 'dispose') await scoped.dispose();
+          },
+        );
+      }
+    });
+
+    test('dispose closes the subscription change stream', () async {
+      final done = repository.subscriptionChanges.isEmpty;
+
+      await repository.dispose();
+
+      expect(await done, isTrue);
+    });
+
+    test('subscriptions publish a public addressable event and sync', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+
+      final saved = await repository.setSubscription(
+        coordinate,
+        subscribed: true,
+      );
+
+      expect(saved, {coordinate});
+      expect(lastSignedEvent()?.kind, EventKind.appSpecificData);
+      expect(lastSignedEvent()?.tags, [
+        ['d', 'divine.badge_subscriptions'],
+        ['a', coordinate.value],
+      ]);
+      expect(await repository.loadSubscriptions(), {coordinate});
+
+      final published = lastSignedEvent()!;
+      when(() => nostrClient.queryEvents(any())).thenAnswer(
+        (_) async => [published],
+      );
+      final otherDevice = BadgeRepository(
+        nostrClient: nostrClient,
+        signer: () => dismissalSigner,
+        sharedPreferences: preferences,
+        currentPubkey: () => _pubkey(1),
+        signEvent:
+            ({
+              required kind,
+              required content,
+              required tags,
+              createdAt,
+            }) async => null,
+      );
+      expect(await otherDevice.loadSubscriptions(), {coordinate});
+    });
+
+    test('subscription mutation refuses a partial relay read', () async {
+      when(
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: true,
+          acceptRelayClosedWhenOthersAnswered: true,
+        ),
+      ).thenAnswer(
+        (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+      );
+
+      await expectLater(
+        repository.setSubscription(
+          BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily-diviner'),
+          subscribed: true,
+        ),
+        throwsA(isA<BadgeReadIncompleteException>()),
+      );
+      verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+    });
+
+    test('subscriptions prefer the newest event and can be removed', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      final older = _event(
+        id: _eventId(1),
+        pubkey: _pubkey(1),
+        kind: EventKind.appSpecificData,
+        createdAt: 999,
+        tags: [
+          ['d', 'divine.badge_subscriptions'],
+        ],
+      );
+      final newer = _event(
+        id: _eventId(2),
+        pubkey: _pubkey(1),
+        kind: EventKind.appSpecificData,
+        tags: [
+          ['d', 'divine.badge_subscriptions'],
+          ['a', coordinate.value],
+        ],
+      );
+      when(() => nostrClient.queryEvents(any())).thenAnswer(
+        (_) async => [older, newer],
+      );
+      expect(await repository.loadSubscriptions(), {coordinate});
+
+      await repository.setSubscription(coordinate, subscribed: true);
+      when(() => nostrClient.queryEvents(any())).thenAnswer(
+        (_) async => [older],
+      );
+      expect(await repository.loadSubscriptions(), {coordinate});
+
+      final sameSecondHigherId = _event(
+        id: _eventId(900000),
+        pubkey: _pubkey(1),
+        kind: EventKind.appSpecificData,
+        tags: [
+          ['d', 'divine.badge_subscriptions'],
+        ],
+      );
+      when(() => nostrClient.queryEvents(any())).thenAnswer(
+        (_) async => [sameSecondHigherId],
+      );
+      expect(await repository.loadSubscriptions(), {coordinate});
+
+      expect(
+        await repository.setSubscription(coordinate, subscribed: false),
+        isEmpty,
+      );
+      expect(lastSignedEvent()?.tags, [
+        ['d', 'divine.badge_subscriptions'],
+      ]);
+    });
+
+    test('loads the latest definitions from curated issuers', () async {
+      final issuer = _pubkey(2);
+      final secondIssuer = _pubkey(3);
+      _stubPagedReads(nostrClient, (
+        invocation,
+      ) async {
+        final filter = invocation.positionalArguments.single as Filter;
+        final author = filter.authors!.single;
+        return PagedQueryResult(
+          events: author == issuer
+              ? [
+                  _definitionEvent(
+                    pubkey: issuer,
+                    dTag: 'daily',
+                    name: 'Old name',
+                    id: _eventId(10),
+                    createdAt: 900,
+                  ),
+                  _definitionEvent(
+                    pubkey: issuer,
+                    dTag: 'daily',
+                    name: 'Daily',
+                    id: _eventId(11),
+                  ),
+                ]
+              : [
+                  _definitionEvent(
+                    pubkey: secondIssuer,
+                    dTag: 'weekly',
+                    name: 'Weekly',
+                    id: _eventId(12),
+                  ),
+                ],
+          isComplete: true,
+          pages: 1,
+        );
+      });
+
+      final definitions = await repository.loadDefinitionsByIssuers([
+        'not-a-pubkey',
+        issuer,
+        issuer,
+        secondIssuer,
+      ]);
+
+      expect(definitions.map((definition) => definition.name), [
+        'Daily',
+        'Weekly',
+      ]);
+      verify(
+        () => nostrClient.readAllEvents(any(), timeout: any(named: 'timeout')),
+      ).called(2);
+    });
+
+    test('rejects an incomplete curated definition walk', () async {
+      _stubPagedReads(
+        nostrClient,
+        (_) async => const PagedQueryResult(
+          events: [],
+          isComplete: false,
+          pages: 1,
+        ),
+      );
+
+      await expectLater(
+        repository.loadDefinitionsByIssuers([_pubkey(2)]),
+        throwsA(isA<BadgeReadIncompleteException>()),
+      );
+    });
+
+    test('reads curated definitions from the public relay', () async {
+      final publicRepository = BadgeRepository(
+        nostrClient: nostrClient,
+        signer: () => dismissalSigner,
+        sharedPreferences: preferences,
+        currentPubkey: () => null,
+        signEvent:
+            ({
+              required kind,
+              required content,
+              required tags,
+              createdAt,
+            }) async => null,
+        definitionRelayUrl: 'wss://relay.example',
+      );
+      when(
+        () => nostrClient.readAllEvents(
+          any(),
+          tempRelays: ['wss://relay.example'],
+        ),
+      ).thenAnswer(
+        (_) async => PagedQueryResult(
+          events: [
+            _definitionEvent(pubkey: _pubkey(2), dTag: 'daily', name: 'Daily'),
+          ],
+          isComplete: true,
+          pages: 1,
+        ),
+      );
+
+      final definitions = await publicRepository.loadDefinitionsByIssuers([
+        _pubkey(2),
+      ]);
+
+      expect(definitions.single.dTag, 'daily');
+      verify(
+        () => nostrClient.readAllEvents(
+          any(),
+          tempRelays: ['wss://relay.example'],
+        ),
+      ).called(1);
+    });
+
+    group('withoutHiddenPubkeys', () {
+      test('drops hidden accounts and keeps the order', () {
+        final filtering = BadgeRepository(
+          nostrClient: nostrClient,
+          signer: () => dismissalSigner,
+          sharedPreferences: preferences,
+          currentPubkey: () => _pubkey(1),
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
+          isHiddenPubkey: (pubkey) => pubkey == _pubkey(11),
+        );
+
+        expect(
+          filtering.withoutHiddenPubkeys([
+            _pubkey(12),
+            _pubkey(11),
+            _pubkey(10),
+          ]),
+          [_pubkey(12), _pubkey(10)],
+        );
+      });
+
+      test('keeps every account without a hidden-account reader', () {
+        expect(repository.withoutHiddenPubkeys([_pubkey(10)]), [_pubkey(10)]);
+      });
+    });
+
+    group('loadSubscribedHolders', () {
+      group('verified empty session', () {
+        void deferRead(Completer<_SubscriptionRead> pending) {
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
+            ),
+          ).thenAnswer((_) => pending.future);
+        }
+
+        Event subscription() => _event(
+          id: _eventId(700),
+          pubkey: _pubkey(1),
+          kind: EventKind.appSpecificData,
+          tags: [
+            ['d', 'divine.badge_subscriptions'],
+            ['a', '30009:${_pubkey(2)}:daily'],
+          ],
+        );
+
+        test(
+          'returns verified empty immediately and deduplicates revalidation',
+          () async {
+            await repository.loadSubscribedHolders();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = 0;
+            final first = repository.loadSubscribedHolders().then(
+              (_) => completed++,
+            );
+            final second = repository.loadSubscribedHolders().then(
+              (_) => completed++,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await Future.wait([first, second]);
+            expect(completedBeforeRead, 2);
+            verify(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
+              ),
+            ).called(2);
+          },
+        );
+
+        test('a partial read cannot seed the empty shortcut', () async {
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
+            ),
+          ).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+          );
+          await expectLater(
+            repository.loadSubscribedHolders(),
+            throwsA(isA<BadgeReadIncompleteException>()),
+          );
+          final pending = Completer<_SubscriptionRead>();
+          deferRead(pending);
+          var completed = false;
+          final retry = repository.loadSubscribedHolders().then(
+            (_) => completed = true,
+          );
+          await pumpEventQueue();
+          final completedBeforeRead = completed;
+          pending.complete(_emptySubscriptionRead);
+          await retry;
+          expect(completedBeforeRead, isFalse);
+        });
+
+        test(
+          'background read failure revokes the shortcut without emitting a refresh',
+          () async {
+            final changes = <void>[];
+            final listener = repository.subscriptionChanges.listen(changes.add);
+            addTearDown(listener.cancel);
+            await repository.loadSubscribedHolders();
+            final revalidation = Completer<_SubscriptionRead>();
+            deferRead(revalidation);
+            var completed = false;
+            final cached = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeFailure = completed;
+            revalidation.completeError(
+              const BadgeReadIncompleteException('relay unavailable'),
+            );
+            await cached;
+            await pumpEventQueue();
+            final retryRead = Completer<_SubscriptionRead>();
+            deferRead(retryRead);
+            var retried = false;
+            final retry = repository.loadSubscribedHolders().then(
+              (_) => retried = true,
+            );
+            await pumpEventQueue();
+            final retriedBeforeRead = retried;
+            retryRead.complete(_emptySubscriptionRead);
+            await retry;
+            expect(completedBeforeFailure, isTrue);
+            expect(retriedBeforeRead, isFalse);
+            expect(changes, isEmpty);
+          },
+        );
+
+        test(
+          'foreground discovery after a failed recheck returns holders without a refresh',
+          () async {
+            final changes = <void>[];
+            final listener = repository.subscriptionChanges.listen(changes.add);
+            addTearDown(listener.cancel);
+            await repository.loadSubscribedHolders();
+            final revalidation = Completer<_SubscriptionRead>();
+            deferRead(revalidation);
+            await repository.loadSubscribedHolders();
+            revalidation.completeError(
+              const BadgeReadIncompleteException('relay unavailable'),
+            );
+            await pumpEventQueue();
+            final coordinate = '30009:${_pubkey(2)}:daily';
+            when(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
+              ),
+            ).thenAnswer(
+              (_) async => (
+                events: [subscription()],
+                timedOut: false,
+                noRelays: false,
+              ),
+            );
+            _stubPagedReads(nostrClient, (
+              call,
+            ) async {
+              final filter = call.positionalArguments.single as Filter;
+              return PagedQueryResult(
+                events: switch (filter.kinds?.single) {
+                  EventKind.badgeAward => [
+                    _event(
+                      id: _eventId(710),
+                      pubkey: _pubkey(2),
+                      kind: EventKind.badgeAward,
+                      tags: [
+                        ['a', coordinate],
+                        ['p', _pubkey(3)],
+                      ],
+                    ),
+                  ],
+                  EventKind.profileBadges => [
+                    _event(
+                      id: _eventId(711),
+                      pubkey: _pubkey(3),
+                      kind: EventKind.profileBadges,
+                      tags: [
+                        ['a', coordinate],
+                        ['e', _eventId(710)],
+                      ],
+                    ),
+                  ],
+                  _ => <Event>[],
+                },
+                isComplete: true,
+                pages: 1,
+              );
+            });
+            expect(await repository.loadSubscribedHolders(), {_pubkey(3)});
+            await pumpEventQueue();
+            expect(changes, isEmpty);
+          },
+        );
+
+        test(
+          'repeated slow reads notify only the first undelivered discovery',
+          () async {
+            final changes = <void>[];
+            final listener = repository.subscriptionChanges.listen(changes.add);
+            addTearDown(listener.cancel);
+            final positive = (
+              events: [subscription()],
+              timedOut: false,
+              noRelays: false,
+            );
+            _stubPagedReads(
+              nostrClient,
+              (_) async => const PagedQueryResult(
+                events: [],
+                isComplete: true,
+                pages: 1,
+              ),
+            );
+            for (var attempt = 0; attempt < 3; attempt++) {
+              final pending = Completer<_SubscriptionRead>();
+              deferRead(pending);
+              await expectLater(
+                repository.loadSubscribedHolders(timeout: Duration.zero),
+                throwsA(isA<TimeoutException>()),
+              );
+              pending.complete(positive);
+              await pumpEventQueue();
+              expect(changes, hasLength(1));
+            }
+          },
+        );
+
+        test(
+          'subscribed badges with zero holders are not an absence proof',
+          () async {
+            when(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
+              ),
+            ).thenAnswer(
+              (_) async =>
+                  (events: [subscription()], timedOut: false, noRelays: false),
+            );
+            _stubPagedReads(
+              nostrClient,
+              (_) async => const PagedQueryResult(
+                events: [],
+                isComplete: true,
+                pages: 1,
+              ),
+            );
+            expect(await repository.loadSubscribedHolders(), isEmpty);
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final next = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await next;
+            expect(completedBeforeRead, isFalse);
+          },
+        );
+
+        test(
+          'newly observed subscriptions invalidate an empty proof and notify once',
+          () async {
+            await repository.loadSubscribedHolders();
+            final changes = <void>[];
+            final listener = repository.subscriptionChanges.listen(changes.add);
+            addTearDown(listener.cancel);
+            when(
+              () => nostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [subscription()]);
+            expect(await repository.loadSubscriptions(), isNotEmpty);
+            expect(await repository.loadSubscriptions(), isNotEmpty);
+            await pumpEventQueue();
+            _stubPagedReads(
+              nostrClient,
+              (_) async => const PagedQueryResult(
+                events: [],
+                isComplete: true,
+                pages: 1,
+              ),
+            );
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final next = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await next;
+            expect(completedBeforeRead, isFalse);
+            expect(changes, hasLength(1));
+          },
+        );
+
+        test(
+          'eventless reads cannot forget a known signed subscription',
+          () async {
+            when(
+              () => nostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [subscription()]);
+            await repository.loadSubscriptions();
+            _stubPagedReads(
+              nostrClient,
+              (_) async => const PagedQueryResult(
+                events: [],
+                isComplete: true,
+                pages: 1,
+              ),
+            );
+            expect(await repository.loadSubscribedHolders(), isEmpty);
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final next = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await next;
+            expect(completedBeforeRead, isFalse);
+            verify(
+              () => nostrClient.readAllEvents(
+                any(),
+                timeout: any(named: 'timeout'),
+              ),
+            ).called(2);
+          },
+        );
+
+        test('local edits preserve the newest observed signed list', () async {
+          when(
+            () => nostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => [subscription()]);
+          await repository.loadSubscriptions();
+          final added = BadgeCoordinate(
+            pubkey: _pubkey(3),
+            identifier: 'weekly',
+          );
+          final saved = await repository.setSubscription(
+            added,
+            subscribed: true,
+          );
+          expect(saved, {
+            BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
+            added,
+          });
+          expect(
+            lastSignedEvent()!.tags,
+            contains(equals(['a', '30009:${_pubkey(2)}:daily'])),
+          );
+          expect(lastSignedEvent()!.tags, contains(equals(['a', added.value])));
+        });
+
+        test(
+          'an older empty result cannot overwrite a newly observed subscription',
+          () async {
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            final oldRead = repository.loadSubscribedHolders();
+            _stubPagedReads(
+              nostrClient,
+              (_) async => const PagedQueryResult(
+                events: [],
+                isComplete: true,
+                pages: 1,
+              ),
+            );
+            when(
+              () => nostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [subscription()]);
+            await repository.loadSubscriptions();
+            pending.complete(_emptySubscriptionRead);
+            expect(await oldRead, isEmpty);
+            verify(
+              () => nostrClient.readAllEvents(
+                any(),
+                timeout: any(named: 'timeout'),
+              ),
+            ).called(1);
+            final nextRead = Completer<_SubscriptionRead>();
+            deferRead(nextRead);
+            var completed = false;
+            final next = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            nextRead.complete(_emptySubscriptionRead);
+            await next;
+            expect(completedBeforeRead, isFalse);
+          },
+        );
+
+        test(
+          'an empty read after the caller deadline cannot seed a shortcut',
+          () async {
+            final late = Completer<_SubscriptionRead>();
+            deferRead(late);
+            await expectLater(
+              repository.loadSubscribedHolders(timeout: Duration.zero),
+              throwsA(isA<TimeoutException>()),
+            );
+            late.complete(_emptySubscriptionRead);
+            await pumpEventQueue();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final retry = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await retry;
+            expect(completedBeforeRead, isFalse);
+          },
+        );
+
+        test(
+          'local edits revoke the shortcut before publication completes',
+          () async {
+            await repository.loadSubscribedHolders();
+            final publishing = Completer<PublishOutcome>();
+            when(
+              () => nostrClient.publishEventAwaitOk(any()),
+            ).thenAnswer((_) => publishing.future);
+            final edit = repository.setSubscription(
+              BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
+              subscribed: true,
+            );
+            await pumpEventQueue();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final load = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await load;
+            final nextRead = Completer<_SubscriptionRead>();
+            deferRead(nextRead);
+            var nextCompleted = false;
+            final next = repository.loadSubscribedHolders().then(
+              (_) => nextCompleted = true,
+            );
+            await pumpEventQueue();
+            final completedDuringEdit = nextCompleted;
+            nextRead.complete(_emptySubscriptionRead);
+            await next;
+            publishing.complete(_acceptedPublishOutcome(lastSignedEvent()!));
+            await edit;
+            expect(completedBeforeRead, isFalse);
+            expect(completedDuringEdit, isFalse);
+          },
+        );
+
+        test(
+          'an old account read cannot warm or invalidate the successor',
+          () async {
+            var account = _pubkey(1);
+            final scoped = BadgeRepository(
+              nostrClient: nostrClient,
+              signer: () => dismissalSigner,
+              sharedPreferences: preferences,
+              currentPubkey: () => account,
+              signEvent:
+                  ({
+                    required kind,
+                    required content,
+                    required tags,
+                    createdAt,
+                  }) async => null,
+            );
+            addTearDown(scoped.dispose);
+            await scoped.loadSubscribedHolders();
+            final oldPending = Completer<_SubscriptionRead>();
+            deferRead(oldPending);
+            final oldCached = scoped.loadSubscribedHolders();
+            await pumpEventQueue();
+            account = _pubkey(3);
+            when(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
+              ),
+            ).thenAnswer((_) async => _emptySubscriptionRead);
+            await scoped.loadSubscribedHolders();
+            oldPending.completeError(
+              const BadgeReadIncompleteException('old account unavailable'),
+            );
+            await oldCached;
+            await pumpEventQueue();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final current = scoped.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await current;
+            expect(completedBeforeRead, isTrue);
+          },
+        );
+
+        test(
+          'an old account edit cannot revoke the successor empty proof',
+          () async {
+            var account = _pubkey(1);
+            final scoped = BadgeRepository(
+              nostrClient: nostrClient,
+              signer: () => dismissalSigner,
+              sharedPreferences: preferences,
+              currentPubkey: () => account,
+              signEvent:
+                  ({
+                    required kind,
+                    required content,
+                    required tags,
+                    createdAt,
+                  }) async => _event(
+                    id: _eventId(701),
+                    pubkey: account,
+                    kind: kind,
+                    tags: tags,
+                  ),
+            );
+            addTearDown(scoped.dispose);
+            await scoped.loadSubscribedHolders();
+            final publishing = Completer<PublishOutcome>();
+            Event? published;
+            when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
+              call,
+            ) {
+              published = call.positionalArguments.single as Event;
+              return publishing.future;
+            });
+            final edit = scoped.setSubscription(
+              BadgeCoordinate(pubkey: _pubkey(2), identifier: 'daily'),
+              subscribed: true,
+            );
+            await pumpEventQueue();
+            account = _pubkey(3);
+            await scoped.loadSubscribedHolders();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final current = scoped.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final beforeOldEdit = completed;
+            pending.complete(_emptySubscriptionRead);
+            await current;
+            publishing.complete(_acceptedPublishOutcome(published!));
+            await edit;
+            final nextRead = Completer<_SubscriptionRead>();
+            deferRead(nextRead);
+            var nextCompleted = false;
+            final next = scoped.loadSubscribedHolders().then(
+              (_) => nextCompleted = true,
+            );
+            await pumpEventQueue();
+            final afterOldEdit = nextCompleted;
+            nextRead.complete(_emptySubscriptionRead);
+            await next;
+            expect(beforeOldEdit, isTrue);
+            expect(afterOldEdit, isTrue);
+          },
+        );
+
+        test(
+          'a session reset rejects an in-flight absence proof for the same account',
+          () async {
+            final resets = StreamController<void>.broadcast();
+            addTearDown(resets.close);
+            final scoped = BadgeRepository(
+              nostrClient: nostrClient,
+              signer: () => dismissalSigner,
+              sharedPreferences: preferences,
+              currentPubkey: () => _pubkey(1),
+              signEvent:
+                  ({
+                    required kind,
+                    required content,
+                    required tags,
+                    createdAt,
+                  }) async => null,
+              sessionChanges: resets.stream,
+            );
+            addTearDown(scoped.dispose);
+            final oldRead = Completer<_SubscriptionRead>();
+            deferRead(oldRead);
+            final rejected = expectLater(
+              scoped.loadSubscribedHolders(),
+              throwsA(isA<BadgeReadIncompleteException>()),
+            );
+            resets.add(null);
+            await pumpEventQueue();
+            oldRead.complete(_emptySubscriptionRead);
+            await rejected;
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final current = scoped.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await current;
+            expect(completedBeforeRead, isFalse);
+          },
+        );
+
+        test(
+          'late timed-out discovery revokes a newer eventless empty proof',
+          () async {
+            await repository.loadSubscribedHolders();
+            final late = Completer<_SubscriptionRead>();
+            deferRead(late);
+            await repository.loadSubscribedHolders(timeout: Duration.zero);
+            await pumpEventQueue();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final current = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await current;
+            final changes = <void>[];
+            final listener = repository.subscriptionChanges.listen(changes.add);
+            addTearDown(listener.cancel);
+            late.complete((
+              events: [subscription()],
+              timedOut: false,
+              noRelays: false,
+            ));
+            await pumpEventQueue();
+            _stubPagedReads(
+              nostrClient,
+              (_) async => const PagedQueryResult(
+                events: [],
+                isComplete: true,
+                pages: 1,
+              ),
+            );
+            final nextRead = Completer<_SubscriptionRead>();
+            deferRead(nextRead);
+            var nextCompleted = false;
+            final next = repository.loadSubscribedHolders().then(
+              (_) => nextCompleted = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRevalidation = nextCompleted;
+            nextRead.complete(_emptySubscriptionRead);
+            await next;
+            expect(completedBeforeRead, isFalse);
+            expect(completedBeforeRevalidation, isFalse);
+            expect(changes, hasLength(1));
+            final laterRead = Completer<_SubscriptionRead>();
+            deferRead(laterRead);
+            var laterCompleted = false;
+            final later = repository.loadSubscribedHolders().then(
+              (_) => laterCompleted = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeLaterRead = laterCompleted;
+            laterRead.complete(_emptySubscriptionRead);
+            await later;
+            expect(completedBeforeLaterRead, isFalse);
+          },
+        );
+
+        for (final (emptyCreatedAt, emptyId) in [(2000, 702), (1000, 699)]) {
+          test(
+            'a newer signed empty list supersedes a late old subscription: $emptyCreatedAt/$emptyId',
+            () async {
+              await repository.loadSubscribedHolders();
+              final late = Completer<_SubscriptionRead>();
+              deferRead(late);
+              await repository.loadSubscribedHolders(timeout: Duration.zero);
+              await pumpEventQueue();
+              final empty = _event(
+                id: _eventId(emptyId),
+                pubkey: _pubkey(1),
+                kind: EventKind.appSpecificData,
+                createdAt: emptyCreatedAt,
+                tags: [
+                  ['d', 'divine.badge_subscriptions'],
+                ],
+              );
+              when(
+                () => nostrClient.queryEventsDetailed(
+                  any(),
+                  requireAllRelaysSettled: true,
+                  acceptRelayClosedWhenOthersAnswered: true,
+                ),
+              ).thenAnswer(
+                (_) async =>
+                    (events: [empty], timedOut: false, noRelays: false),
+              );
+              await repository.loadSubscribedHolders();
+              final changes = <void>[];
+              final listener = repository.subscriptionChanges.listen(
+                changes.add,
+              );
+              addTearDown(listener.cancel);
+              late.complete((
+                events: [subscription()],
+                timedOut: false,
+                noRelays: false,
+              ));
+              await pumpEventQueue();
+              final pending = Completer<_SubscriptionRead>();
+              deferRead(pending);
+              var completed = false;
+              final next = repository.loadSubscribedHolders().then(
+                (_) => completed = true,
+              );
+              await pumpEventQueue();
+              final completedBeforeRead = completed;
+              pending.complete(_emptySubscriptionRead);
+              await next;
+              expect(completedBeforeRead, isTrue);
+              expect(changes, isEmpty);
+            },
+          );
+        }
+
+        test(
+          'switching accounts during holder reads rejects the old holder result',
+          () async {
+            var account = _pubkey(1);
+            final scoped = BadgeRepository(
+              nostrClient: nostrClient,
+              signer: () => dismissalSigner,
+              sharedPreferences: preferences,
+              currentPubkey: () => account,
+              signEvent:
+                  ({
+                    required kind,
+                    required content,
+                    required tags,
+                    createdAt,
+                  }) async => null,
+            );
+            addTearDown(scoped.dispose);
+            when(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
+              ),
+            ).thenAnswer(
+              (_) async =>
+                  (events: [subscription()], timedOut: false, noRelays: false),
+            );
+            final holders = Completer<PagedQueryResult>();
+            when(
+              () => nostrClient.readAllEvents(
+                any(),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer((_) => holders.future);
+            final rejected = expectLater(
+              scoped.loadSubscribedHolders(),
+              throwsA(isA<BadgeReadIncompleteException>()),
+            );
+            await pumpEventQueue();
+            account = _pubkey(3);
+            holders.complete(
+              const PagedQueryResult(events: [], isComplete: true, pages: 1),
+            );
+            await rejected;
+          },
+        );
+
+        test(
+          'an obsolete background failure cannot revoke a newer absence proof',
+          () async {
+            await repository.loadSubscribedHolders();
+            final obsolete = Completer<_SubscriptionRead>();
+            deferRead(obsolete);
+            await repository.loadSubscribedHolders();
+            when(
+              () => nostrClient.queryEvents(any()),
+            ).thenAnswer((_) async => [subscription()]);
+            await repository.loadSubscriptions();
+            when(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+                acceptRelayClosedWhenOthersAnswered: true,
+              ),
+            ).thenAnswer(
+              (_) async => (
+                events: [
+                  _event(
+                    id: _eventId(703),
+                    pubkey: _pubkey(1),
+                    kind: EventKind.appSpecificData,
+                    createdAt: 2000,
+                    tags: [
+                      ['d', 'divine.badge_subscriptions'],
+                    ],
+                  ),
+                ],
+                timedOut: false,
+                noRelays: false,
+              ),
+            );
+            await repository.loadSubscribedHolders();
+            obsolete.completeError(
+              const BadgeReadIncompleteException('obsolete failure'),
+            );
+            await pumpEventQueue();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            var completed = false;
+            final cached = repository.loadSubscribedHolders().then(
+              (_) => completed = true,
+            );
+            await pumpEventQueue();
+            final completedBeforeRead = completed;
+            pending.complete(_emptySubscriptionRead);
+            await cached;
+            expect(completedBeforeRead, isTrue);
+          },
+        );
+
+        test(
+          'disposing during revalidation observes late errors without notification',
+          () async {
+            await repository.loadSubscribedHolders();
+            final pending = Completer<_SubscriptionRead>();
+            deferRead(pending);
+            final cached = repository.loadSubscribedHolders();
+            await pumpEventQueue();
+            await repository.dispose();
+            pending.completeError(
+              const BadgeReadIncompleteException('disposed read'),
+            );
+            await cached;
+            await pumpEventQueue();
+          },
+        );
+      });
+
+      test('is empty without a signed-in account', () async {
+        final signedOut = BadgeRepository(
+          nostrClient: nostrClient,
+          signer: () => dismissalSigner,
+          sharedPreferences: preferences,
+          currentPubkey: () => null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
+        );
+
+        expect(await signedOut.loadSubscribedHolders(), isEmpty);
+        verifyNever(() => nostrClient.queryEvents(any()));
+      });
+
+      test('fails rather than reading a timed-out subscription list as '
+          'empty', () async {
+        // Following falls back to direct follows on an error; an empty set
+        // would instead hide the subscription without a trace.
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+            acceptRelayClosedWhenOthersAnswered: true,
+          ),
+        ).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+        );
+
+        await expectLater(
+          repository.loadSubscribedHolders(),
+          throwsA(isA<BadgeReadIncompleteException>()),
+        );
+      });
+
+      test(
+        'bounds concurrent holder walks and stops scheduling after timeout',
+        () async {
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              acceptRelayClosedWhenOthersAnswered: true,
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: [
+                _event(
+                  id: _eventId(1),
+                  pubkey: _pubkey(1),
+                  kind: EventKind.appSpecificData,
+                  tags: [
+                    ['d', 'divine.badge_subscriptions'],
+                    for (var i = 0; i < 6; i++)
+                      [
+                        'a',
+                        BadgeCoordinate(
+                          pubkey: _pubkey(2),
+                          identifier: 'badge-$i',
+                        ).value,
+                      ],
+                  ],
+                ),
+              ],
+              timedOut: false,
+              noRelays: false,
+            ),
+          );
+          final pending = Completer<PagedQueryResult>();
+          var reads = 0;
+          _stubPagedReads(nostrClient, (_) {
+            reads++;
+            return pending.future;
+          });
+          await expectLater(
+            repository.loadSubscribedHolders(
+              timeout: const Duration(milliseconds: 10),
+            ),
+            throwsA(isA<TimeoutException>()),
+          );
+          expect(reads, 2);
+          pending.complete(
+            const PagedQueryResult(events: [], isComplete: true, pages: 1),
+          );
+          await pumpEventQueue();
+          expect(reads, 2);
+        },
+      );
+
+      test('unions the accepted holders of every subscribed badge', () async {
+        final daily = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'daily-diviner',
+        );
+        final weekly = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'weekly-diviner',
+        );
+        final holderOf = {
+          daily.value: [_pubkey(10), _pubkey(11)],
+          weekly.value: [_pubkey(11), _pubkey(12)],
+        };
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+            acceptRelayClosedWhenOthersAnswered: true,
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: [
+              _event(
+                id: _eventId(1),
+                pubkey: _pubkey(1),
+                kind: EventKind.appSpecificData,
+                tags: [
+                  ['d', 'divine.badge_subscriptions'],
+                  ['a', daily.value],
+                  ['a', weekly.value],
+                ],
+              ),
+            ],
+            timedOut: false,
+            noRelays: false,
+          ),
+        );
+        _stubPagedReads(nostrClient, (
+          invocation,
+        ) async {
+          final filter = invocation.positionalArguments.single as Filter;
+          if (filter.kinds?.contains(EventKind.badgeAward) == true) {
+            final badge = filter.a!.single;
+            return PagedQueryResult(
+              events: [
+                _awardEvent(
+                  id: _eventId(badge == daily.value ? 100 : 101),
+                  issuerPubkey: _pubkey(2),
+                  definitionCoordinate: badge,
+                  recipients: holderOf[badge]!,
+                ),
+              ],
+              isComplete: true,
+              pages: 1,
+            );
+          }
+          if (filter.kinds?.contains(EventKind.profileBadges) == true) {
+            return PagedQueryResult(
+              events: [
+                for (final pubkey in filter.authors ?? const <String>[])
+                  _profileBadgesEvent(
+                    id: _eventId(
+                      500 +
+                          [
+                            _pubkey(10),
+                            _pubkey(11),
+                            _pubkey(12),
+                          ].indexOf(pubkey),
+                    ),
+                    pubkey: pubkey,
+                    tags: [
+                      for (final entry in holderOf.entries)
+                        if (entry.value.contains(pubkey)) ...[
+                          ['a', entry.key],
+                          [
+                            'e',
+                            _eventId(entry.key == daily.value ? 100 : 101),
+                          ],
+                        ],
+                    ],
+                  ),
+              ],
+              isComplete: true,
+              pages: 1,
+            );
+          }
+          return const PagedQueryResult(
+            events: [],
+            isComplete: true,
+            pages: 1,
+          );
+        });
+
+        expect(await repository.loadSubscribedHolders(), {
+          _pubkey(10),
+          _pubkey(11),
+          _pubkey(12),
+        });
+      });
+    });
+
+    test(
+      'accepted holders include recipients beyond a 200-event page',
+      () async {
+        final coordinate = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'daily-diviner',
+        );
+        final recipients = [for (var i = 10; i < 215; i++) _pubkey(i)];
+        _stubPagedReads(nostrClient, (
+          invocation,
+        ) async {
+          final filter = invocation.positionalArguments.single as Filter;
+          if (filter.kinds?.contains(EventKind.eventDeletion) == true) {
+            return const PagedQueryResult(
+              events: [],
+              isComplete: true,
+              pages: 1,
+            );
+          }
+          if (filter.kinds?.contains(EventKind.profileBadges) == true) {
+            return PagedQueryResult(
+              events: [
+                for (final pubkey in filter.authors ?? const <String>[])
+                  _profileBadgesEvent(
+                    id: _eventId(500 + recipients.indexOf(pubkey)),
+                    pubkey: pubkey,
+                    tags: [
+                      ['a', coordinate.value],
+                      ['e', _eventId(100 + recipients.indexOf(pubkey))],
+                    ],
+                  ),
+              ],
+              isComplete: true,
+              pages: 1,
+            );
+          }
+          if (filter.kinds?.contains(EventKind.badgeSet) == true) {
+            return const PagedQueryResult(
+              events: [],
+              isComplete: true,
+              pages: 1,
+            );
+          }
+          return PagedQueryResult(
+            events: [
+              for (var i = 0; i < recipients.length; i++)
+                _awardEvent(
+                  id: _eventId(i + 100),
+                  issuerPubkey: coordinate.pubkey,
+                  definitionCoordinate: coordinate.value,
+                  recipients: [recipients[i]],
+                ),
+            ],
+            isComplete: true,
+            pages: 2,
+          );
+        });
+        final holders = await repository.loadAcceptedHolders(coordinate);
+
+        expect(holders, recipients.toSet());
+      },
+    );
+
+    test('accepted holders ignore awards and revocations the issuer did not '
+        'sign', () async {
+      // The relay filters on authors, but a relay that ignores the filter
+      // must not let a stranger add holders to a curated badge or revoke
+      // real ones.
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      _stubPagedReads(nostrClient, (
+        invocation,
+      ) async {
+        final filter = invocation.positionalArguments.single as Filter;
+        if (filter.kinds?.contains(EventKind.badgeAward) == true) {
+          return PagedQueryResult(
+            events: [
+              _awardEvent(
+                id: _eventId(100),
+                issuerPubkey: coordinate.pubkey,
+                definitionCoordinate: coordinate.value,
+                recipients: [_pubkey(10)],
+              ),
+              _awardEvent(
+                id: _eventId(101),
+                issuerPubkey: _pubkey(3),
+                definitionCoordinate: coordinate.value,
+                recipients: [_pubkey(11)],
+              ),
+            ],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+        if (filter.kinds?.contains(EventKind.eventDeletion) == true) {
+          return PagedQueryResult(
+            events: [
+              _event(
+                id: _eventId(200),
+                pubkey: _pubkey(3),
+                kind: EventKind.eventDeletion,
+                tags: [
+                  ['e', _eventId(100)],
+                ],
+              ),
+            ],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+        if (filter.kinds?.contains(EventKind.profileBadges) == true) {
+          return PagedQueryResult(
+            events: [
+              for (final pubkey in filter.authors ?? const <String>[])
+                _profileBadgesEvent(
+                  id: _eventId(
+                    500 +
+                        [_pubkey(10), _pubkey(11), _pubkey(12)].indexOf(pubkey),
+                  ),
+                  pubkey: pubkey,
+                  tags: [
+                    ['a', coordinate.value],
+                    [
+                      'e',
+                      _eventId(pubkey == _pubkey(10) ? 100 : 101),
+                    ],
+                  ],
+                ),
+            ],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+        return const PagedQueryResult(events: [], isComplete: true, pages: 1);
+      });
+
+      expect(await repository.loadAcceptedHolders(coordinate), {_pubkey(10)});
+    });
+
+    test('Explore definitions ignore events the issuer did not sign', () async {
+      _stubPagedReads(
+        nostrClient,
+        (_) async => PagedQueryResult(
+          events: [
+            _event(
+              id: _eventId(300),
+              pubkey: _pubkey(3),
+              kind: EventKind.badgeDefinition,
+              tags: [
+                ['d', 'lookalike'],
+                ['name', 'Lookalike'],
+              ],
+            ),
+          ],
+          isComplete: true,
+          pages: 1,
+        ),
+      );
+
+      expect(await repository.loadDefinitionsByIssuers([_pubkey(2)]), isEmpty);
+    });
+
+    test('accepted holders leave out accounts hidden for the viewer', () async {
+      // Blocked, muted and platform-blocklisted accounts stay out of this
+      // public list and its follow buttons, as they do in other user lists.
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      final viewer = BadgeRepository(
+        nostrClient: nostrClient,
+        signer: () => dismissalSigner,
+        sharedPreferences: preferences,
+        currentPubkey: () => _pubkey(1),
+        signEvent:
+            ({
+              required kind,
+              required content,
+              required tags,
+              createdAt,
+            }) async => null,
+        isHiddenPubkey: (pubkey) => pubkey == _pubkey(11),
+      );
+      _stubPagedReads(nostrClient, (
+        invocation,
+      ) async {
+        final filter = invocation.positionalArguments.single as Filter;
+        if (filter.kinds?.contains(EventKind.badgeAward) == true) {
+          return PagedQueryResult(
+            events: [
+              _awardEvent(
+                id: _eventId(100),
+                issuerPubkey: coordinate.pubkey,
+                definitionCoordinate: coordinate.value,
+                recipients: [_pubkey(10), _pubkey(11)],
+              ),
+            ],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+        if (filter.kinds?.contains(EventKind.profileBadges) == true) {
+          return PagedQueryResult(
+            events: [
+              for (final pubkey in filter.authors ?? const <String>[])
+                _profileBadgesEvent(
+                  id: _eventId(
+                    500 +
+                        [_pubkey(10), _pubkey(11), _pubkey(12)].indexOf(pubkey),
+                  ),
+                  pubkey: pubkey,
+                  tags: [
+                    ['a', coordinate.value],
+                    ['e', _eventId(100)],
+                  ],
+                ),
+            ],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+        return const PagedQueryResult(events: [], isComplete: true, pages: 1);
+      });
+
+      expect(await viewer.loadAcceptedHolders(coordinate), {_pubkey(10)});
+    });
+
+    test('accepted holders reject an incomplete relay walk', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      _stubPagedReads(nostrClient, (_) async {
+        return const PagedQueryResult(
+          events: [],
+          isComplete: false,
+          pages: 1,
+        );
+      });
+
+      await expectLater(
+        repository.loadAcceptedHolders(coordinate),
+        throwsA(isA<BadgeReadIncompleteException>()),
+      );
+    });
+
+    test('accepted holders reject an incomplete profile read', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      _stubPagedReads(nostrClient, (
+        invocation,
+      ) async {
+        final filter = invocation.positionalArguments.single as Filter;
+        if (filter.kinds?.contains(EventKind.badgeAward) == true) {
+          return PagedQueryResult(
+            events: [
+              _awardEvent(
+                id: _eventId(50),
+                issuerPubkey: coordinate.pubkey,
+                definitionCoordinate: coordinate.value,
+                recipients: [_pubkey(3)],
+              ),
+            ],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+        return PagedQueryResult(
+          events: const [],
+          isComplete: filter.kinds?.contains(EventKind.profileBadges) != true,
+          pages: 1,
+        );
+      });
+
+      await expectLater(
+        repository.loadAcceptedHolders(coordinate),
+        throwsA(isA<BadgeReadIncompleteException>()),
+      );
+    });
+
+    test('accepted holders reject an incomplete legacy profile read', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      _stubPagedReads(nostrClient, (
+        invocation,
+      ) async {
+        final filter = invocation.positionalArguments.single as Filter;
+        if (filter.kinds?.contains(EventKind.badgeAward) == true) {
+          return PagedQueryResult(
+            events: [
+              _awardEvent(
+                id: _eventId(50),
+                issuerPubkey: coordinate.pubkey,
+                definitionCoordinate: coordinate.value,
+                recipients: [_pubkey(3)],
+              ),
+            ],
+            isComplete: true,
+            pages: 1,
+          );
+        }
+        return PagedQueryResult(
+          events: const [],
+          isComplete: filter.kinds?.contains(EventKind.badgeSet) != true,
+          pages: 1,
+        );
+      });
+
+      await expectLater(
+        repository.loadAcceptedHolders(coordinate),
+        throwsA(isA<BadgeReadIncompleteException>()),
+      );
+    });
+
+    test('accepted holders reject an incomplete revocation read', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      _stubPagedReads(nostrClient, (
+        invocation,
+      ) async {
+        final filter = invocation.positionalArguments.single as Filter;
+        final isDeletion =
+            filter.kinds?.contains(EventKind.eventDeletion) == true;
+        return PagedQueryResult(
+          events: isDeletion
+              ? []
+              : [
+                  _awardEvent(
+                    id: _eventId(50),
+                    issuerPubkey: coordinate.pubkey,
+                    definitionCoordinate: coordinate.value,
+                    recipients: [_pubkey(3)],
+                  ),
+                ],
+          isComplete: !isDeletion,
+          pages: 1,
+        );
+      });
+
+      await expectLater(
+        repository.loadAcceptedHolders(coordinate),
+        throwsA(isA<BadgeReadIncompleteException>()),
+      );
+    });
+
+    test('accepted holders exclude issuer-revoked accepted awards', () async {
+      final coordinate = BadgeCoordinate(
+        pubkey: _pubkey(2),
+        identifier: 'daily-diviner',
+      );
+      final award = _awardEvent(
+        id: _eventId(50),
+        issuerPubkey: coordinate.pubkey,
+        definitionCoordinate: coordinate.value,
+        recipients: [_pubkey(3)],
+      );
+      var revoked = true;
+      _stubPagedReads(nostrClient, (
+        invocation,
+      ) async {
+        final filter = invocation.positionalArguments.single as Filter;
+        final events = switch (filter.kinds?.single) {
+          EventKind.badgeAward => [award],
+          EventKind.eventDeletion =>
+            revoked
+                ? [
+                    _event(
+                      id: _eventId(51),
+                      pubkey: coordinate.pubkey,
+                      kind: EventKind.eventDeletion,
+                      tags: [
+                        ['e', award.id],
+                      ],
+                    ),
+                  ]
+                : <Event>[],
+          EventKind.profileBadges => [
+            _profileBadgesEvent(
+              id: _eventId(52),
+              pubkey: _pubkey(3),
+              tags: [
+                ['a', coordinate.value],
+                ['e', award.id],
+              ],
+            ),
+          ],
+          _ => <Event>[],
+        };
+        return PagedQueryResult(events: events, isComplete: true, pages: 1);
+      });
+      expect(await repository.loadAcceptedHolders(coordinate), isEmpty);
+      revoked = false;
+      expect(await repository.loadAcceptedHolders(coordinate), {_pubkey(3)});
+    });
+
+    test(
+      'accepted holders exclude a recipient whose newest profile removed the badge',
+      () async {
+        final coordinate = BadgeCoordinate(
+          pubkey: _pubkey(2),
+          identifier: 'daily-diviner',
+        );
+        final award = _awardEvent(
+          id: _eventId(50),
+          issuerPubkey: coordinate.pubkey,
+          definitionCoordinate: coordinate.value,
+          recipients: [_pubkey(3)],
+        );
+        _stubPagedReads(nostrClient, (
+          invocation,
+        ) async {
+          final filter = invocation.positionalArguments.single as Filter;
+          return PagedQueryResult(
+            events: switch (filter.kinds?.single) {
+              EventKind.badgeAward => [award],
+              EventKind.profileBadges => [
+                _profileBadgesEvent(
+                  id: _eventId(51),
+                  pubkey: _pubkey(3),
+                  tags: [
+                    ['a', coordinate.value],
+                    ['e', award.id],
+                  ],
+                ),
+                _profileBadgesEvent(
+                  id: _eventId(52),
+                  pubkey: _pubkey(3),
+                  createdAt: 2000,
+                  tags: [],
+                ),
+              ],
+              _ => <Event>[],
+            },
+            isComplete: true,
+            pages: 1,
+          );
+        });
+        expect(await repository.loadAcceptedHolders(coordinate), isEmpty);
+      },
+    );
 
     test('loadAwardedBadges marks awards accepted by profile badges', () async {
       final award = _awardEvent(
@@ -649,8 +3220,13 @@ void main() {
         signer: () => dismissalSigner,
         sharedPreferences: await SharedPreferences.getInstance(),
         currentPubkey: () => _pubkey(1),
-        signEvent: ({required kind, required content, required tags}) async =>
-            _event(
+        signEvent:
+            ({
+              required kind,
+              required content,
+              required tags,
+              createdAt,
+            }) async => _event(
               id: _eventId(901 + kind),
               pubkey: _pubkey(1),
               kind: kind,
@@ -900,8 +3476,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => _pubkey(1),
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
           isHiddenPubkey: (pubkey) => pubkey == _pubkey(3),
         );
       });
@@ -1516,29 +4097,37 @@ void main() {
       },
     );
 
-    test('acceptAward throws a StateError when signing fails', () async {
-      final failingRepository = BadgeRepository(
-        nostrClient: nostrClient,
-        signer: () => dismissalSigner,
-        sharedPreferences: preferences,
-        currentPubkey: () => _pubkey(1),
-        signEvent: ({required kind, required content, required tags}) async =>
-            null,
-      );
-      final award = _awardEvent(
-        id: _eventId(44),
-        issuerPubkey: _pubkey(2),
-        definitionCoordinate: '30009:${_pubkey(2)}:daily-diviner',
-        recipients: [_pubkey(1)],
-      );
+    test(
+      'acceptAward throws a BadgeSigningException when signing fails',
+      () async {
+        final failingRepository = BadgeRepository(
+          nostrClient: nostrClient,
+          signer: () => dismissalSigner,
+          sharedPreferences: preferences,
+          currentPubkey: () => _pubkey(1),
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
+        );
+        final award = _awardEvent(
+          id: _eventId(44),
+          issuerPubkey: _pubkey(2),
+          definitionCoordinate: '30009:${_pubkey(2)}:daily-diviner',
+          recipients: [_pubkey(1)],
+        );
 
-      await expectLater(
-        failingRepository.acceptAward(
-          BadgeAwardViewData(award: Nip58BadgeParser.parseAward(award)!),
-        ),
-        throwsA(isA<StateError>()),
-      );
-    });
+        await expectLater(
+          failingRepository.acceptAward(
+            BadgeAwardViewData(award: Nip58BadgeParser.parseAward(award)!),
+          ),
+          throwsA(isA<BadgeSigningException>()),
+        );
+      },
+    );
 
     test(
       'acceptAward throws a BadgePublishException when no relay accepts',
@@ -1588,8 +4177,13 @@ void main() {
         signer: () => dismissalSigner,
         sharedPreferences: preferences,
         currentPubkey: () => null,
-        signEvent: ({required kind, required content, required tags}) async =>
-            _event(
+        signEvent:
+            ({
+              required kind,
+              required content,
+              required tags,
+              createdAt,
+            }) async => _event(
               id: _eventId(946),
               pubkey: _pubkey(1),
               kind: kind,
@@ -1832,8 +4426,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -2113,8 +4712,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -2191,8 +4795,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -2431,8 +5040,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
         _stubQueries(nostrClient, {
           'awardsFor:${coordinate.value}': [
@@ -2765,8 +5379,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -2781,14 +5400,19 @@ void main() {
         );
       });
 
-      test('throws a StateError when signing fails', () async {
+      test('throws a BadgeSigningException when signing fails', () async {
         final unsigned = BadgeRepository(
           nostrClient: nostrClient,
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => _pubkey(1),
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -2800,7 +5424,7 @@ void main() {
             ),
           ),
           throwsA(
-            isA<StateError>().having(
+            isA<BadgeSigningException>().having(
               (error) => error.message,
               'message',
               'Could not sign badge definition event',
@@ -2818,7 +5442,12 @@ void main() {
             sharedPreferences: preferences,
             currentPubkey: () => _pubkey(1),
             signEvent:
-                ({required kind, required content, required tags}) async =>
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async =>
                     _event(id: _eventId(80), pubkey: _pubkey(1), kind: kind),
           );
 
@@ -2921,8 +5550,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -2934,14 +5568,19 @@ void main() {
         );
       });
 
-      test('throws a StateError when signing fails', () async {
+      test('throws a BadgeSigningException when signing fails', () async {
         final unsigned = BadgeRepository(
           nostrClient: nostrClient,
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => _pubkey(1),
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -2950,7 +5589,7 @@ void main() {
             recipientPubkeys: [_pubkey(2)],
           ),
           throwsA(
-            isA<StateError>().having(
+            isA<BadgeSigningException>().having(
               (error) => error.message,
               'message',
               'Could not sign badge award event',
@@ -2968,7 +5607,12 @@ void main() {
             sharedPreferences: preferences,
             currentPubkey: () => _pubkey(1),
             signEvent:
-                ({required kind, required content, required tags}) async =>
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async =>
                     _event(id: _eventId(81), pubkey: _pubkey(1), kind: kind),
           );
 
@@ -3366,8 +6010,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -3506,8 +6155,13 @@ void main() {
           signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
-          signEvent: ({required kind, required content, required tags}) async =>
-              null,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
         );
 
         await expectLater(
@@ -3666,6 +6320,17 @@ void main() {
       },
     );
   });
+}
+
+// Exercise both public holder walks and subscribed walks with a remaining budget.
+void _stubPagedReads(
+  _MockNostrClient client,
+  Future<PagedQueryResult> Function(Invocation) answer,
+) {
+  when(() => client.readAllEvents(any())).thenAnswer(answer);
+  when(
+    () => client.readAllEvents(any(), timeout: any(named: 'timeout')),
+  ).thenAnswer(answer);
 }
 
 /// Stubs [NostrClient.queryEvents] with answer-keyed canned events and

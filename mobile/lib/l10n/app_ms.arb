@@ -7420,5 +7420,9 @@
   "videoEditorLoopRepairProgress": "Menjajarkan gelung anda…",
   "videoEditorLoopRepairTrimmed": "Gelung dilancarkan. {seconds} s dibuang.",
   "notificationFromDivine": "Daripada Divine",
-  "announcementUnavailable": "Pengumuman ini tidak lagi tersedia."
+  "announcementUnavailable": "Pengumuman ini tidak lagi tersedia.",
+  "badgeSubscribeAction": "Langgan lencana",
+  "badgeSubscribedAction": "Melanggan",
+  "badgeAcceptedHoldersTitle": "Pemegang lencana yang menerima",
+  "badgeSubscriptionLoadError": "Langganan lencana anda tidak dapat dimuatkan. Cuba lagi."
 }

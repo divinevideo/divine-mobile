@@ -15159,4 +15159,21 @@ class AppLocalizationsId extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Ikuti lencana';
+
+  @override
+  String get badgeSubscribedAction => 'Diikuti';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Pemegang lencana yang menerima';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'Langganan lencana kamu tidak dapat dimuat. Coba lagi.';
 }

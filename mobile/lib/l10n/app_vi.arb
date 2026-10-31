@@ -7420,5 +7420,9 @@
   "videoEditorLoopRepairProgress": "Đang căn chỉnh vòng lặp…",
   "videoEditorLoopRepairTrimmed": "Đã làm mượt vòng lặp. Đã cắt {seconds} giây.",
   "notificationFromDivine": "Từ Divine",
-  "announcementUnavailable": "Thông báo này không còn khả dụng."
+  "announcementUnavailable": "Thông báo này không còn khả dụng.",
+  "badgeSubscribeAction": "Theo dõi huy hiệu",
+  "badgeSubscribedAction": "Đang theo dõi",
+  "badgeAcceptedHoldersTitle": "Người đã chấp nhận huy hiệu",
+  "badgeSubscriptionLoadError": "Không thể tải các đăng ký huy hiệu của bạn. Hãy thử lại."
 }
