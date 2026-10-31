@@ -187,7 +187,9 @@ A reader drops the whole tag when:
 - a time is not a whole number of milliseconds of zero or more, or the end is
   not after the start.
 
-A label longer than 300 characters is dropped and the button kept.
+A label longer than 300 characters is dropped and the button kept; a poll,
+quiz or slider whose label is that long is dropped as a whole, as its label
+is what the player draws its answers from.
 
 The sticker is also part of the video's frames, so other clients still show
 it. Divine draws it again from `style` and `label` over the one in the frames,
@@ -261,8 +263,8 @@ The newer kinds:
 
 - `poll`, `quiz` and `slider` are a question viewers vote on, published as
   a NIP-88 poll (see [Polls](#polls)). A video carries one. The editor offers
-  them in only the solid `light`, `brand` and `highlight` looks, so the copy
-  the Divine player draws can show the votes over the answers in the frames.
+  them in only the solid `light` look, a white card, so the copy the Divine
+  player draws can show the votes over the answers in the frames.
   The player reads the poll and its votes only once the video is the one
   playing, and shows the votes after the viewer voted; the creator sees them
   straight away and does not vote.
@@ -276,8 +278,10 @@ A poll, quiz or slider sticker publishes a NIP-88 `kind:1068` poll event,
 signed in the video's publish step and sent just before the video, so the
 video never points to a poll the relays do not have yet. A retry that sends
 a video signed before sends no second poll: the one the video names went out
-ahead of it. A scheduled post's poll goes out at once. When no relay takes
-the poll, the video is not published either.
+ahead of it. A retry that has to sign the video again signs the same poll
+again, stamped with when the upload began, so the relays keep one. A
+scheduled post's poll goes out at once. When no relay takes the poll, the
+video is not published either.
 
 | Tag | Format | Description |
 |-----|--------|-------------|
@@ -292,10 +296,13 @@ A vote is a `kind:1018` event with `["e", "<poll id>", "<relay>"]` and one
 `["response", "<option id>"]`. Votes are public: anyone can read who voted
 for what, and the app says so once, after a viewer's first vote. Divine
 counts one vote per pubkey: a pubkey's latest vote, as NIP-88 says, but for a
-quiz its first, so an answer cannot be changed. Funnelcake counts them
+quiz its first, so an answer cannot be changed. A vote that changes an
+earlier one is stamped at least a second after it, so the change wins even
+within the same second. Funnelcake counts them
 (`GET /api/polls/{id}/results`) and the app then reads only the viewer's own
 vote from the relay; while Funnelcake does not answer, the app counts the
-votes a relay holds itself, read in one request of at most 5000. A poll by
+votes a relay holds itself, read in one request of at most 5000 along with
+the viewer's own. A poll by
 anyone but the video's
 creator, or one of another kind or with other answers than the sticker
 shows, is not the one it points to and takes no vote.
