@@ -68,7 +68,8 @@ class PollStickerCubit extends Cubit<PollStickerState>
         authorPubkey: authorPubkey,
       );
     } catch (error, stackTrace) {
-      // The relays could not be read; the sticker stays as the frames show it.
+      // Unexpected: a read no relay answers finds no poll rather than throwing.
+      // The sticker stays as the frames show it.
       addError(error, stackTrace);
       emitIfOpen(state.copyWith(status: PollStickerStatus.unavailable));
       return;

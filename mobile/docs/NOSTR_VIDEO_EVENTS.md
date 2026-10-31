@@ -194,7 +194,8 @@ is what the player draws its answers from.
 The sticker is also part of the video's frames, so other clients still show
 it. Divine draws it again from `style` and `label` over the one in the frames,
 in the same area, sharp at the screen's resolution, and makes it the button;
-without both fields it only places the button. The copy draws only what
+without both fields it only places the button, and a poll, quiz or slider
+shows only as it is in the frames, taking no votes. The copy draws only what
 covers: the text, and the pill's fill and border where they are solid. A
 see-through fill, a glow or a shadow is in the frames already and would come
 out twice as strong.
@@ -279,8 +280,10 @@ signed in the video's publish step and sent just before the video, so the
 video never points to a poll the relays do not have yet. A retry that sends
 a video signed before sends no second poll: the one the video names went out
 ahead of it. A retry that has to sign the video again signs the same poll
-again, stamped with when the upload began, so the relays keep one. A
-scheduled post's poll goes out at once. When no relay takes the poll, the
+again, stamped with when the upload began, so the relays keep one; only an
+upload that starts over, or a change to client attribution in between, leaves
+a second poll behind. A scheduled post's poll goes out at once. When no relay
+takes the poll, the
 video is not published either.
 
 | Tag | Format | Description |
@@ -299,13 +302,15 @@ counts one vote per pubkey: a pubkey's latest vote, as NIP-88 says, but for a
 quiz its first, so an answer cannot be changed. A vote that changes an
 earlier one is stamped at least a second after it, so the change wins even
 within the same second. Funnelcake counts them
-(`GET /api/polls/{id}/results`) and the app then reads only the viewer's own
-vote from the relay; while Funnelcake does not answer, the app counts the
-votes a relay holds itself, read in one request of at most 5000 along with
-the viewer's own. A poll by
-anyone but the video's
-creator, or one of another kind or with other answers than the sticker
-shows, is not the one it points to and takes no vote.
+(`GET /api/polls/{id}/results`, divine-funnelcake#1414, not deployed yet) and
+the app then reads only the viewer's own vote from the relay. Until that
+ships, and whenever Funnelcake does not answer within three seconds of the
+relay, the app counts the votes a relay holds itself, read in one request of
+at most 5000 within the read's five-second limit, along with the viewer's own.
+That count can run low on a large poll and has no filter for deleted votes or
+moderated accounts. A poll by anyone but the video's creator, of another kind,
+or asking or offering anything else than the sticker shows, is not the one it
+points to and takes no vote.
 
 Building and reading the events lives in `mobile/packages/poll_repository`;
 the player's copy is `mobile/lib/widgets/video_feed_item/poll_sticker_overlay.dart`.

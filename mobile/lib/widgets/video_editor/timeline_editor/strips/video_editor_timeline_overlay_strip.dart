@@ -106,7 +106,8 @@ class TimelineOverlayStrip extends StatefulWidget {
   /// Whether the strip is in collapsed mode (single-row summary).
   final bool isCollapsed;
 
-  /// ID of the currently selected item (shows trim handles).
+  /// ID of the currently selected item (shows trim handles, or a plain frame on
+  /// a sticker card).
   final String? selectedItemId;
 
   /// Whether the timeline is in layer multi-select mode. While active, tiles

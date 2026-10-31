@@ -280,8 +280,9 @@ class VideoEventPublisher {
   /// keep a publish in flight for 20s+, which is the window where the
   /// duplicates were minted.
   ///
-  /// Returns `false` when the event could not be signed or broadcast, and
-  /// when `selectedAudio`'s reuse consent could not be verified — the legacy
+  /// Returns `false` when the event or its poll could not be signed or
+  /// broadcast, and when `selectedAudio`'s reuse consent could not be
+  /// verified — the legacy
   /// source-video lookup cannot tell a refusal from an unreachable relay, so
   /// it is treated as a transport failure a retry can clear.
   ///
@@ -855,7 +856,7 @@ class VideoEventPublisher {
   /// A scheduled post's poll goes out now, ahead of the post.
   ///
   /// Throws a [PollPublishException] if the poll could not be signed or no
-  /// relay took it.
+  /// relay took it, and lets an [AccountRestrictedPublishException] through.
   Future<List<VideoStickerRegion>> _publishPollOf(
     List<VideoStickerRegion> regions,
     Poll? poll, {
@@ -893,10 +894,11 @@ class VideoEventPublisher {
   ///
   /// The poll is stamped with when [upload] began, so an attempt that has to
   /// sign it again, because the video signed with it was not kept for a
-  /// retry, signs the same event, and the relays keep one poll.
+  /// retry, signs the same event, and the relays keep one poll. An upload that
+  /// starts over, or a change to client attribution, signs another.
   ///
   /// Throws a [PollPublishException] if it could not be signed or no relay
-  /// took it.
+  /// took it, and lets an [AccountRestrictedPublishException] through.
   Future<String> _publishPoll(
     Poll poll, {
     required PendingUpload upload,

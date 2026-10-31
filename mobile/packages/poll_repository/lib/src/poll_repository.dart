@@ -40,13 +40,14 @@ class PollVoteException implements Exception {
 /// Funnelcake counts the votes when it can, and the relays then only tell the
 /// viewer's own. When Funnelcake is not configured or does not answer, the
 /// votes are counted here from the `kind:1018` events the relays hold, read in
-/// one request of at most [maxVotesRead].
+/// one request of at most [maxVotesRead]. A read that runs out of time returns
+/// what arrived, so a large poll can count low.
 class PollRepository {
   /// Creates the repository, reading and publishing through [nostrClient],
   /// signing votes with [signEvent] and telling the viewer's own vote by
   /// [currentPubkey]. [funnelcakeApiClient] counts the votes when given.
-  /// Votes name [relayUrl] as where they are cast. [now] is the Nostr time a
-  /// vote is stamped with by default.
+  /// Votes name [relayUrl] in their `e` tag. [now] is the Nostr time a vote is
+  /// stamped with by default.
   PollRepository({
     required NostrClient nostrClient,
     required PollEventSigner signEvent,
@@ -80,8 +81,9 @@ class PollRepository {
   /// before counting on the device, so a slow server holds back no poll.
   static const Duration serverCountWait = Duration(seconds: 3);
 
-  /// The poll [pollId] names and the votes on it, or `null` when no relay
-  /// has a poll of that id by [authorPubkey], the one whose video shows it.
+  /// The poll [pollId] names and the votes on it, or `null` when no relay that
+  /// answered has a poll of that id by [authorPubkey], the one whose video
+  /// shows it. A read no relay answered in time looks the same.
   Future<PollSnapshot?> fetchPoll(
     String pollId, {
     required String authorPubkey,
@@ -135,7 +137,8 @@ class PollRepository {
     try {
       return await client.getPollResults(pollId);
     } on FunnelcakeException {
-      // Counting on the device answers the same question, only slower.
+      // The device count stands in: capped, and without the server's filters
+      // for deleted votes and moderated accounts.
       return null;
     }
   }

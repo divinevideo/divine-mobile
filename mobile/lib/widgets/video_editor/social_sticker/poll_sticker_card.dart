@@ -57,8 +57,8 @@ const Color _cardColor = VineTheme.whiteText;
 /// The color of a poll's text, marks and empty answers.
 const Color _ink = VineTheme.primaryDarkGreen;
 
-/// How tall an answer of a poll or a quiz is, tall enough to tap on a card
-/// three fifths of a phone wide.
+/// How tall an answer of a poll or a quiz is: about 38 to 46 logical pixels on
+/// a card three fifths as wide as the frame.
 const double _answerHeight = 116;
 
 /// How large a slider's emoji is.

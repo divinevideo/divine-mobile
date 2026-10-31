@@ -61,8 +61,7 @@ class PollSafeAreaGuide extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Under the box, where a poll cannot stand, so the line never
-                // covers the poll it explains.
+                // Under the box, clear of a poll let go inside it.
                 Positioned(
                   left: box.left,
                   top: box.bottom + 8 * unit,

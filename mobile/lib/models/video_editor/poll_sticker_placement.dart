@@ -25,7 +25,7 @@ bool isPollLayer(Layer layer) =>
 
 /// How a poll, quiz or slider may be handled on the canvas: moved, but not
 /// turned or pinched to another size. Its answers are buttons a viewer taps,
-/// so it stays upright and as large as it was placed.
+/// so it stays upright, and only [fitPollIntoSafeArea] changes its size.
 LayerInteraction pollLayerInteraction() =>
     LayerInteraction(enableRotate: false, enableScale: false);
 
