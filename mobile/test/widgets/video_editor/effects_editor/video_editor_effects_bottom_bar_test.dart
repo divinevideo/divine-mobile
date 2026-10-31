@@ -413,6 +413,26 @@ void main() {
       });
     });
 
+    testWidgets('names every effect differently', (tester) async {
+      await tester.pumpWidget(buildWidget());
+      final context = tester.element(find.byType(VideoEditorEffectsBottomBar));
+
+      final labels = [
+        for (final type in EditorEffectType.values)
+          videoEffectLabel(context, type),
+      ];
+
+      expect(labels.toSet(), hasLength(labels.length));
+      expect(
+        labels,
+        containsAll([
+          l10n.videoEditorEffectEightBit,
+          l10n.videoEditorEffectAnaglyph,
+          l10n.videoEditorEffectRiso,
+        ]),
+      );
+    });
+
     test('draws the tile of every effect Divine renders but the echo with '
         'its shader', () {
       for (final type in EditorEffectType.values) {

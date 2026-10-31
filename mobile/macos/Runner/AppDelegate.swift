@@ -17,6 +17,9 @@ class AppDelegate: FlutterAppDelegate {
     TiltShiftVideoEffect.register()
     ZoomBlurVideoEffect.register()
     ComicVideoEffect.register()
+    EightBitVideoEffect.register()
+    AnaglyphVideoEffect.register()
+    RisoVideoEffect.register()
     AdjustVideoEffect.register()
     // CameraMacOSPlugin removed - Flutter now has native macOS camera support
   }

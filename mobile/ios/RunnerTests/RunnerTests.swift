@@ -1745,8 +1745,8 @@ final class DropsVideoEffectTests: XCTestCase {
   }
 }
 
-/// Light leak, particles, tilt-shift, zoom blur and comic are drawn with Metal
-/// kernels on iOS and macOS (`ShaderVideoEffect`), and with the same shaders in
+/// Light leak, particles, tilt-shift, zoom blur, comic, 8-bit, 3D glasses and
+/// riso print are drawn with Metal kernels on iOS and macOS (`ShaderVideoEffect`), and with the same shaders in
 /// GLSL on Android and in the effects picker (`shaders/*.frag`). These tests
 /// check every pixel each kernel draws against its shader's formulas computed
 /// here on the CPU, so a change to one copy that is not made to the others
@@ -1866,6 +1866,44 @@ final class ShaderVideoEffectTests: XCTestCase {
     }
   }
 
+  func testEightBitDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = EightBitVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.eightBit(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      // A cell whose colour lies right on a dither threshold can take either
+      // level, on the GPU and here; a change to the cells, the dither or the
+      // palette moves far more.
+      XCTAssertLessThan(difference.share, 0.002, "intensity \(intensity)")
+    }
+  }
+
+  func testAnaglyphDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = AnaglyphVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.anaglyph(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity)")
+    }
+  }
+
+  func testRisoDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = RisoVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.riso(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      // Each ink's soft edge triples a filtering difference in the colour it
+      // reads; a change to the inks, the grain or the offset moves far more.
+      XCTAssertLessThan(difference.share, 0.002, "intensity \(intensity)")
+    }
+  }
+
   func testLeavesTheFrameAloneAtNoIntensity() {
     let effects: [ShaderVideoEffect] = [
       LightLeakVideoEffect(params: ["intensity": 0]),
@@ -1873,6 +1911,9 @@ final class ShaderVideoEffectTests: XCTestCase {
       TiltShiftVideoEffect(params: ["intensity": 0]),
       ZoomBlurVideoEffect(params: ["intensity": 0]),
       ComicVideoEffect(params: ["intensity": 0]),
+      EightBitVideoEffect(params: ["intensity": 0]),
+      AnaglyphVideoEffect(params: ["intensity": 0]),
+      RisoVideoEffect(params: ["intensity": 0]),
     ]
     for effect in effects {
       let output = effect.render(frame, history: [], timeUs: 0, effectTimeUs: 1_000_000)
@@ -2602,6 +2643,80 @@ final class ShaderVideoEffectTests: XCTestCase {
       out[k] = color[k] + (comic - color[k]) * intensity
     }
     return out
+  }
+
+  /// One step of the 8-bit's ordered dither.
+  private func bayer(_ ax: Double, _ ay: Double) -> Double {
+    let x: Double = ax.rounded(.down)
+    let y: Double = ay.rounded(.down)
+    return fract(x * 0.5 + y * y * 0.75)
+  }
+
+  private func eightBit(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let cell: Double = max(1, s / 100)
+    let ix: Double = (px / cell).rounded(.down)
+    let iy: Double = (py / cell).rounded(.down)
+    let cx: Double = (ix + 0.5) * cell
+    let cy: Double = (iy + 0.5) * cell
+    let q: Double = 0.25 * cell
+    let color: [Double] = tap(px, py)
+    let corners: [(Double, Double)] = [(-q, -q), (q, -q), (-q, q), (q, q)]
+    var block = [Double](repeating: 0, count: 3)
+    for (dx, dy) in corners {
+      let more: [Double] = tap(cx + dx, cy + dy)
+      for k in 0..<3 { block[k] += 0.25 * more[k] }
+    }
+    let threshold: Double = 0.25 * bayer(0.5 * ix, 0.5 * iy) + bayer(ix, iy)
+    let levels: [Double] = [7, 7, 3]
+    var shade = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let level: Double = (block[k] * levels[k] + threshold).rounded(.down)
+      shade[k] = min(max(level, 0), levels[k]) / levels[k]
+    }
+    return mix(color, shade, intensity)
+  }
+
+  private func anaglyph(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let shift: Double = 0.014 * s * intensity
+    let color: [Double] = tap(px, py)
+    let left: [Double] = tap(px - shift, py)
+    let right: [Double] = tap(px + shift, py)
+    let leftLuma: Double = luma(left)
+    let rightLuma: Double = luma(right)
+    let stereo: [Double] = [
+      leftLuma + (left[0] - leftLuma) * 0.3,
+      rightLuma + (right[1] - rightLuma) * 0.3,
+      rightLuma + (right[2] - rightLuma) * 0.3,
+    ]
+    return mix(color, stereo, intensity)
+  }
+
+  /// How much of a grain cell an ink of `density` covers, against its noise.
+  private func cover(_ density: Double, _ threshold: Double) -> Double {
+    clamp((density - 0.15 - 0.7 * threshold) / 0.3 + 0.5)
+  }
+
+  private func riso(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let size: Double = max(1, s / 360)
+    let gx: Double = (px / size).rounded(.down)
+    let gy: Double = (py / size).rounded(.down)
+    let color: [Double] = tap(px, py)
+    let slipped: [Double] = tap(px + 0.006 * s, py - 0.004 * s)
+    let pink: Double = cover(1 - color[1], noise(gx, gy))
+    let blue: Double = cover(1 - slipped[0], noise(gx + 19, gy + 7))
+    let paper: [Double] = [0.96, 0.94, 0.9]
+    let pinkInk: [Double] = [1, 0.28, 0.69]
+    let blueInk: [Double] = [0, 0.47, 0.75]
+    var riso = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let throughPink: Double = 1 + (pinkInk[k] - 1) * pink
+      let throughBlue: Double = 1 + (blueInk[k] - 1) * blue
+      riso[k] = paper[k] * throughPink * throughBlue
+    }
+    return mix(color, riso, intensity)
   }
 }
 

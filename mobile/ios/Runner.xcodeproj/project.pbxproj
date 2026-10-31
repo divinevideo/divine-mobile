@@ -22,6 +22,9 @@
 		960CE7DEA255575B6D5E6016 /* TiltShiftVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3C7A619738432CD04F0D5B2 /* TiltShiftVideoEffect.swift */; };
 		3022EC47C146DD5616AECD1C /* ZoomBlurVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACBE0FACDF9FD247E54F0256 /* ZoomBlurVideoEffect.swift */; };
 		768CADD7E65FAEA3BBE0BDD6 /* ComicVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDBBD1276DE7929A25452428 /* ComicVideoEffect.swift */; };
+		B9B5C812774B10BFFDB3B6B4 /* EightBitVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = B88A20642EA46A86199B5636 /* EightBitVideoEffect.swift */; };
+		A02F891F3B3263D54D54ADED /* AnaglyphVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DA314775520081EF37670FE /* AnaglyphVideoEffect.swift */; };
+		2E4C63F3BB9F74C5994D2BC2 /* RisoVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B0E391A2AD90BB4C5B817CC /* RisoVideoEffect.swift */; };
 		AD1A57E0B7D24F3E9A8C2C12 /* AdjustVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD1A57E0B7D24F3E9A8C2C11 /* AdjustVideoEffect.swift */; };
 		4538A593ED259ADE95BE0F82 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9F614F010AAECBECA4DA109 /* Foundation.framework */; };
 		4F86E81FB269DE72E2131EBC /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E86217C65C2A7ED5885FDC2 /* NotificationService.swift */; };
@@ -111,6 +114,9 @@
 		B3C7A619738432CD04F0D5B2 /* TiltShiftVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TiltShiftVideoEffect.swift; sourceTree = "<group>"; };
 		ACBE0FACDF9FD247E54F0256 /* ZoomBlurVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ZoomBlurVideoEffect.swift; sourceTree = "<group>"; };
 		DDBBD1276DE7929A25452428 /* ComicVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ComicVideoEffect.swift; sourceTree = "<group>"; };
+		B88A20642EA46A86199B5636 /* EightBitVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EightBitVideoEffect.swift; sourceTree = "<group>"; };
+		6DA314775520081EF37670FE /* AnaglyphVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnaglyphVideoEffect.swift; sourceTree = "<group>"; };
+		6B0E391A2AD90BB4C5B817CC /* RisoVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RisoVideoEffect.swift; sourceTree = "<group>"; };
 		AD1A57E0B7D24F3E9A8C2C11 /* AdjustVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdjustVideoEffect.swift; sourceTree = "<group>"; };
 		0E3A100F5AEE1456DCC23B03 /* Pods-Runner.debug-divineuitests.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug-divineuitests.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug-divineuitests.xcconfig"; sourceTree = "<group>"; };
 		0F9089E8B21DD51EA95A008F /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
@@ -309,6 +315,9 @@
 				B3C7A619738432CD04F0D5B2 /* TiltShiftVideoEffect.swift */,
 				ACBE0FACDF9FD247E54F0256 /* ZoomBlurVideoEffect.swift */,
 				DDBBD1276DE7929A25452428 /* ComicVideoEffect.swift */,
+				B88A20642EA46A86199B5636 /* EightBitVideoEffect.swift */,
+				6DA314775520081EF37670FE /* AnaglyphVideoEffect.swift */,
+				6B0E391A2AD90BB4C5B817CC /* RisoVideoEffect.swift */,
 				AD1A57E0B7D24F3E9A8C2C11 /* AdjustVideoEffect.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				1D777AEE1B05282C0928DE2F /* PrivacyInfo.xcprivacy */,
@@ -745,6 +754,9 @@
 				960CE7DEA255575B6D5E6016 /* TiltShiftVideoEffect.swift in Sources */,
 				3022EC47C146DD5616AECD1C /* ZoomBlurVideoEffect.swift in Sources */,
 				768CADD7E65FAEA3BBE0BDD6 /* ComicVideoEffect.swift in Sources */,
+				B9B5C812774B10BFFDB3B6B4 /* EightBitVideoEffect.swift in Sources */,
+				A02F891F3B3263D54D54ADED /* AnaglyphVideoEffect.swift in Sources */,
+				2E4C63F3BB9F74C5994D2BC2 /* RisoVideoEffect.swift in Sources */,
 				AD1A57E0B7D24F3E9A8C2C12 /* AdjustVideoEffect.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 			);
