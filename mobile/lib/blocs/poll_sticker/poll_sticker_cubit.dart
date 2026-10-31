@@ -1,6 +1,7 @@
 // ABOUTME: Loads the poll a poll, quiz or slider sticker on a playing video
 // ABOUTME: points to, with the votes on it, and casts the viewer's vote.
 
+import 'package:collection/collection.dart' show ListEquality;
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
@@ -15,16 +16,18 @@ part 'poll_sticker_state.dart';
 class PollStickerCubit extends Cubit<PollStickerState>
     with CloseGuardedEmit<PollStickerState> {
   /// Reads the poll [pollId] by [authorPubkey], whose video shows it, through
-  /// [repository]. The sticker in the video is a [kind] with [answerCount]
-  /// answers; a poll of another kind or with other answers is not the one it
-  /// shows, and reads as unavailable.
+  /// [repository]. The sticker in the video is a [kind] asking [question], with
+  /// [answers] or a slider's [emoji]; a poll of another kind, or asking or
+  /// offering anything else, is not the one it shows, and reads as unavailable.
   PollStickerCubit({
     required PollRepository repository,
     required SharedPreferences preferences,
     required this.pollId,
     required this.authorPubkey,
     required this.kind,
-    required this.answerCount,
+    required this.question,
+    this.answers = const [],
+    this.emoji,
   }) : _repository = repository,
        _preferences = preferences,
        super(const PollStickerState());
@@ -41,9 +44,14 @@ class PollStickerCubit extends Cubit<PollStickerState>
   /// What the sticker in the video is.
   final PollKind kind;
 
-  /// How many answers the sticker in the video shows; a slider's steps do
-  /// not count.
-  final int answerCount;
+  /// The question the sticker in the video asks.
+  final String question;
+
+  /// The answers the sticker in the video shows; a slider shows none.
+  final List<String> answers;
+
+  /// The emoji a slider in the video is rated with.
+  final String? emoji;
 
   /// Set once the viewer was told that votes are public, after their first.
   static const String publicNoteShownKey = 'poll_votes_public_note_shown';
@@ -79,11 +87,17 @@ class PollStickerCubit extends Cubit<PollStickerState>
     );
   }
 
-  /// Whether [poll] is the one the sticker shows: of its kind, and for a
-  /// poll or a quiz with as many answers.
+  /// Whether [poll] is the one the sticker shows, so a vote goes to the answer
+  /// the viewer sees: of its kind, asking the same, and with the same answers
+  /// or emoji.
   bool _isShownPoll(Poll poll) =>
       poll.kind == kind &&
-      (kind == PollKind.slider || poll.options.length == answerCount);
+      poll.question == question &&
+      (kind == PollKind.slider
+          ? poll.emoji == emoji
+          : const ListEquality<String>().equals([
+              for (final option in poll.options) option.label,
+            ], answers));
 
   /// Votes for [optionId] as the viewer.
   ///

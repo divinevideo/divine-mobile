@@ -6,7 +6,10 @@ import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show VideoStickerRegion;
+import 'package:nostr_sdk/nostr_sdk.dart' show Event;
 import 'package:openvine/blocs/poll_sticker/poll_sticker_cubit.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:poll_repository/poll_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -51,15 +54,21 @@ void main() {
       preferences = await SharedPreferences.getInstance();
     });
 
-    PollStickerCubit build({PollKind kind = PollKind.poll, int answers = 2}) =>
-        PollStickerCubit(
-          repository: repository,
-          preferences: preferences,
-          pollId: _pollId,
-          authorPubkey: _author,
-          kind: kind,
-          answerCount: answers,
-        );
+    PollStickerCubit build({Poll? shows}) {
+      final shown = shows ?? _poll;
+      return PollStickerCubit(
+        repository: repository,
+        preferences: preferences,
+        pollId: _pollId,
+        authorPubkey: _author,
+        kind: shown.kind,
+        question: shown.question,
+        answers: shown.kind == PollKind.slider
+            ? const []
+            : [for (final option in shown.options) option.label],
+        emoji: shown.emoji,
+      );
+    }
 
     void stubFetch(Poll poll, [PollResults results = const PollResults()]) =>
         when(
@@ -90,6 +99,133 @@ void main() {
         expect: () => const [
           PollStickerState(status: PollStickerStatus.unavailable),
         ],
+      );
+
+      blocTest<PollStickerCubit, PollStickerState>(
+        'is unavailable for a poll whose answers differ from the sticker',
+        setUp: () => stubFetch(
+          _published(
+            Poll.choice(question: 'Which one?', answers: const ['Blue', 'Red']),
+          ),
+        ),
+        build: build,
+        act: (cubit) => cubit.load(),
+        expect: () => const [
+          PollStickerState(status: PollStickerStatus.unavailable),
+        ],
+      );
+
+      blocTest<PollStickerCubit, PollStickerState>(
+        'is unavailable for a poll that asks something else than the sticker',
+        setUp: () => stubFetch(
+          _published(
+            Poll.choice(question: 'Why?', answers: const ['Red', 'Blue']),
+          ),
+        ),
+        build: build,
+        act: (cubit) => cubit.load(),
+        expect: () => const [
+          PollStickerState(status: PollStickerStatus.unavailable),
+        ],
+      );
+
+      blocTest<PollStickerCubit, PollStickerState>(
+        'is unavailable for a slider rated with another emoji',
+        setUp: () => stubFetch(
+          _published(Poll.slider(question: 'Hungry?', emoji: '🔥')),
+        ),
+        build: () => build(
+          shows: _published(Poll.slider(question: 'Hungry?', emoji: '😋')),
+        ),
+        act: (cubit) => cubit.load(),
+        expect: () => const [
+          PollStickerState(status: PollStickerStatus.unavailable),
+        ],
+      );
+
+      group('with what the app publishes', () {
+        /// A cubit reading [data] the way a viewer does: the sticker from the
+        /// tag the video carries, the poll from the event published with it.
+        PollStickerCubit buildFrom(SocialStickerData data) {
+          final region = VideoStickerRegion.fromTag(
+            VideoStickerRegion(
+              kind: data.tapKind,
+              target: _pollId,
+              centerX: 0.5,
+              centerY: 0.5,
+              width: 0.6,
+              height: 0.4,
+              style: data.style.name,
+              label: data.tapLabel,
+            ).toTag(),
+          )!;
+          final shown = SocialStickerData.ofRegion(region)!;
+          final published = data.toPoll()!;
+          final poll = Poll.fromEvent(
+            Event.fromJson({
+              'id': _pollId,
+              'pubkey': _author,
+              'created_at': 1000,
+              'kind': Poll.eventKind,
+              'tags': published.toTags(),
+              'content': published.question,
+              'sig': '',
+            }),
+          )!;
+          stubFetch(poll);
+          return PollStickerCubit(
+            repository: repository,
+            preferences: preferences,
+            pollId: _pollId,
+            authorPubkey: _author,
+            kind: poll.kind,
+            question: shown.pollQuestion ?? '',
+            answers: shown.pollOptions,
+            emoji: shown.sliderEmoji,
+          );
+        }
+
+        for (final data in const [
+          SocialStickerData(
+            kind: SocialStickerKind.poll,
+            pollQuestion: '  Which one? 🔥 ',
+            pollOptions: [' Red ', '😋 Blue', 'Grün'],
+          ),
+          SocialStickerData(
+            kind: SocialStickerKind.quiz,
+            pollQuestion: 'Vine launched in…',
+            pollOptions: ['2013', ' 2015'],
+            quizAnswer: 0,
+          ),
+          SocialStickerData(
+            kind: SocialStickerKind.slider,
+            pollQuestion: ' Hungry? ',
+            sliderEmoji: '😋',
+          ),
+        ]) {
+          blocTest<PollStickerCubit, PollStickerState>(
+            'reads a ${data.kind.name} as the one its sticker shows',
+            build: () => buildFrom(data),
+            act: (cubit) => cubit.load(),
+            verify: (cubit) {
+              expect(cubit.state.status, equals(PollStickerStatus.ready));
+            },
+          );
+        }
+      });
+
+      blocTest<PollStickerCubit, PollStickerState>(
+        'reads the slider the sticker shows',
+        setUp: () => stubFetch(
+          _published(Poll.slider(question: 'Hungry?', emoji: '😋')),
+        ),
+        build: () => build(
+          shows: _published(Poll.slider(question: 'Hungry?', emoji: '😋')),
+        ),
+        act: (cubit) => cubit.load(),
+        verify: (cubit) {
+          expect(cubit.state.status, equals(PollStickerStatus.ready));
+        },
       );
 
       blocTest<PollStickerCubit, PollStickerState>(
@@ -227,7 +363,7 @@ void main() {
           _quiz,
           const PollResults(counts: {'1': 1}, ownVoteId: '1'),
         ),
-        build: () => build(kind: PollKind.quiz),
+        build: () => build(shows: _quiz),
         act: (cubit) async {
           await cubit.load();
           await cubit.voted('0');
