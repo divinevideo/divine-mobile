@@ -4,7 +4,7 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' show NumberFormat;
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 
@@ -81,6 +81,8 @@ TextStyle _textStyle(double fontSize) => VineTheme.titleLargeFont(
 /// The player lays it over them again [overFrames], without the shadow that
 /// is in the frames already, with the [results] once they are in, and takes
 /// votes through [onAnswer], or for a slider [onSlide] and [onSlideEnd].
+/// Over the frames only the answers and a slider's emoji take
+/// the pointer; a tap anywhere else reaches the player beneath.
 class PollStickerCard extends StatelessWidget {
   const PollStickerCard({
     required this.data,
@@ -116,30 +118,18 @@ class PollStickerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final results = this.results;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: _cardColor,
-        borderRadius: BorderRadius.circular(pollCardRadius),
-        boxShadow: overFrames
-            ? null
-            : const [
-                BoxShadow(
-                  color: VineTheme.scrim15,
-                  blurRadius: 40,
-                  offset: Offset(0, 12),
-                ),
-              ],
-      ),
-      child: Padding(
-        padding: const .all(pollCardPadding),
-        child: SizedBox(
-          width: pollCardContentWidth,
-          child: Column(
-            mainAxisSize: .min,
-            crossAxisAlignment: .stretch,
-            spacing: 16,
-            children: [
-              Padding(
+    final content = Padding(
+      padding: const .all(pollCardPadding),
+      child: SizedBox(
+        width: pollCardContentWidth,
+        child: Column(
+          mainAxisSize: .min,
+          crossAxisAlignment: .stretch,
+          spacing: 16,
+          children: [
+            IgnorePointer(
+              ignoring: overFrames,
+              child: Padding(
                 padding: const .only(bottom: 12),
                 child: StickerTextLine(
                   text: data.pollQuestion ?? '',
@@ -148,17 +138,22 @@ class PollStickerCard extends StatelessWidget {
                   textAlign: .center,
                 ),
               ),
-              if (data.kind == SocialStickerKind.slider)
-                _SliderScale(
-                  emoji: data.sliderEmoji ?? '',
-                  value: sliderValue,
-                  average: results?.average,
-                  onSlide: onSlide,
-                  onSlideEnd: onSlideEnd,
-                )
-              else
-                for (final (index, answer) in data.pollOptions.indexed)
-                  _Answer(
+            ),
+            if (data.kind == SocialStickerKind.slider)
+              _SliderScale(
+                question: data.pollQuestion ?? '',
+                emoji: data.sliderEmoji ?? '',
+                value: sliderValue,
+                average: results?.average,
+                passesTaps: overFrames,
+                onSlide: onSlide,
+                onSlideEnd: onSlideEnd,
+              )
+            else
+              for (final (index, answer) in data.pollOptions.indexed)
+                IgnorePointer(
+                  ignoring: overFrames && onAnswer == null,
+                  child: _Answer(
                     text: answer,
                     share: results?.shares.elementAtOrNull(index),
                     isOwn: results?.ownAnswer == index,
@@ -169,10 +164,27 @@ class PollStickerCard extends StatelessWidget {
                         results?.rightAnswer != index,
                     onTap: onAnswer == null ? null : () => onAnswer!(index),
                   ),
-            ],
-          ),
+                ),
+          ],
         ),
       ),
+    );
+    // Over the frames the copy's painter draws the card, which a decoration
+    // here would hit-test as a whole and keep the player's taps from.
+    if (overFrames) return content;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: _cardColor,
+        borderRadius: BorderRadius.circular(pollCardRadius),
+        boxShadow: const [
+          BoxShadow(
+            color: VineTheme.scrim15,
+            blurRadius: 40,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: content,
     );
   }
 }
@@ -344,18 +356,27 @@ class _Answer extends StatelessWidget {
 
 /// A slider's bar with its emoji on it, which the viewer drags along, and
 /// once there are votes, where everyone put it on average.
+///
+/// It runs from left to right in every language, as it does in the frames.
 class _SliderScale extends StatelessWidget {
   const _SliderScale({
+    required this.question,
     required this.emoji,
     required this.value,
     required this.average,
+    required this.passesTaps,
     required this.onSlide,
     required this.onSlideEnd,
   });
 
+  /// What the slider asks, which names it to a screen reader.
+  final String question;
   final String emoji;
   final double value;
   final double? average;
+
+  /// Whether a tap off the emoji reaches what is beneath.
+  final bool passesTaps;
   final ValueChanged<double>? onSlide;
   final ValueChanged<double>? onSlideEnd;
 
@@ -385,26 +406,31 @@ class _SliderScale extends StatelessWidget {
     return SizedBox(
       height: _thumbSize,
       child: Stack(
+        textDirection: TextDirection.ltr,
         children: [
           Positioned(
             left: _thumbSize / 2,
             right: _thumbSize / 2,
             top: (_thumbSize - _barHeight) / 2,
             height: _barHeight,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(_barHeight / 2),
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: ColoredBox(color: _ink.withValues(alpha: 0.08)),
-                  ),
-                  if (average != null)
-                    FractionallySizedBox(
-                      widthFactor: average.clamp(0, 1),
-                      heightFactor: 1,
-                      child: const ColoredBox(color: VineTheme.vineGreen),
+            child: IgnorePointer(
+              ignoring: passesTaps,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(_barHeight / 2),
+                child: Stack(
+                  textDirection: TextDirection.ltr,
+                  children: [
+                    Positioned.fill(
+                      child: ColoredBox(color: _ink.withValues(alpha: 0.08)),
                     ),
-                ],
+                    if (average != null)
+                      FractionallySizedBox(
+                        widthFactor: average.clamp(0, 1),
+                        heightFactor: 1,
+                        child: const ColoredBox(color: VineTheme.vineGreen),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -414,14 +440,17 @@ class _SliderScale extends StatelessWidget {
                   average.clamp(0, 1) * _travel +
                   (_thumbSize - _averageMarkSize) / 2,
               top: (_thumbSize - _averageMarkSize) / 2,
-              child: const SizedBox.square(
-                dimension: _averageMarkSize,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: _cardColor,
-                    shape: BoxShape.circle,
-                    border: Border.fromBorderSide(
-                      BorderSide(color: VineTheme.vineGreen, width: 8),
+              child: IgnorePointer(
+                ignoring: passesTaps,
+                child: const SizedBox.square(
+                  dimension: _averageMarkSize,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: _cardColor,
+                      shape: BoxShape.circle,
+                      border: Border.fromBorderSide(
+                        BorderSide(color: VineTheme.vineGreen, width: 8),
+                      ),
                     ),
                   ),
                 ),
@@ -431,9 +460,10 @@ class _SliderScale extends StatelessWidget {
             left: value.clamp(0, 1) * _travel,
             top: 0,
             child: onSlide == null || onSlideEnd == null
-                ? thumb
+                ? IgnorePointer(ignoring: passesTaps, child: thumb)
                 : Semantics(
                     slider: true,
+                    label: question,
                     value: '${(value * 100).round()}',
                     increasedValue:
                         '${((value + 0.1).clamp(0, 1) * 100).round()}',

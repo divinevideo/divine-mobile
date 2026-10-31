@@ -69,6 +69,7 @@ void main() {
     late _MockPollRepository repository;
     late SharedPreferences preferences;
     late int interactions;
+    late int playerTaps;
 
     setUpAll(() => registerFallbackValue(_poll));
 
@@ -77,6 +78,7 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       preferences = await SharedPreferences.getInstance();
       interactions = 0;
+      playerTaps = 0;
       when(
         () => repository.fetchPoll(_pollId, authorPubkey: _author),
       ).thenAnswer(
@@ -115,18 +117,30 @@ void main() {
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
-              body: Center(
-                child: SizedBox(
-                  width: 300,
-                  height: 240,
-                  child: PollStickerOverlay(
-                    region: shown,
-                    video: _video,
-                    data: SocialStickerData.ofRegion(shown)!,
-                    isActive: isActive,
-                    onInteraction: () => interactions++,
+              // The player's gesture surface is the sticker's sibling in the
+              // feed, beneath it.
+              body: Stack(
+                children: [
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => playerTaps++,
+                    ),
                   ),
-                ),
+                  Center(
+                    child: SizedBox(
+                      width: 300,
+                      height: 240,
+                      child: PollStickerOverlay(
+                        region: shown,
+                        video: _video,
+                        data: SocialStickerData.ofRegion(shown)!,
+                        isActive: isActive,
+                        onInteraction: () => interactions++,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -162,8 +176,10 @@ void main() {
           ),
           findsOneWidget,
         );
-        await tester.tap(find.text('Blue'));
+        // The creator's answers are no buttons; the tap reaches the player.
+        await tester.tapAt(tester.getCenter(find.text('Blue')));
         verifyNever(() => repository.vote(any(), any()));
+        expect(playerTaps, equals(1));
       });
     });
 
@@ -197,6 +213,19 @@ void main() {
           ),
           findsOneWidget,
         );
+      });
+
+      testWidgets('lets a tap off the answers reach the player beneath', (
+        tester,
+      ) async {
+        await pump(tester);
+
+        await tester.tapAt(tester.getCenter(find.text('Which one?')));
+        await tester.tap(find.text('Red'));
+        await tester.pump();
+
+        expect(playerTaps, equals(1));
+        verify(() => repository.vote(_poll, '0')).called(1);
       });
 
       testWidgets('rates a slider where the emoji is let go', (tester) async {
