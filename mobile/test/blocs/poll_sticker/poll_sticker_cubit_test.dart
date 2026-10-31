@@ -1,10 +1,13 @@
 // ABOUTME: Tests the poll behind a sticker on a playing video: reading it with
 // ABOUTME: its votes, and the viewer's vote shown at once or taken back.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/poll_sticker/poll_sticker_cubit.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:poll_repository/poll_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -36,33 +39,33 @@ final Poll _quiz = _published(
 );
 
 void main() {
-  late _MockPollRepository repository;
-  late SharedPreferences preferences;
-
-  setUpAll(() => registerFallbackValue(_poll));
-
-  setUp(() async {
-    repository = _MockPollRepository();
-    SharedPreferences.setMockInitialValues({});
-    preferences = await SharedPreferences.getInstance();
-  });
-
-  PollStickerCubit build({PollKind kind = PollKind.poll, int answers = 2}) =>
-      PollStickerCubit(
-        repository: repository,
-        preferences: preferences,
-        pollId: _pollId,
-        authorPubkey: _author,
-        kind: kind,
-        answerCount: answers,
-      );
-
-  void stubFetch(Poll poll, [PollResults results = const PollResults()]) =>
-      when(
-        () => repository.fetchPoll(_pollId, authorPubkey: _author),
-      ).thenAnswer((_) async => PollSnapshot(poll: poll, results: results));
-
   group(PollStickerCubit, () {
+    late _MockPollRepository repository;
+    late SharedPreferences preferences;
+
+    setUpAll(() => registerFallbackValue(_poll));
+
+    setUp(() async {
+      repository = _MockPollRepository();
+      SharedPreferences.setMockInitialValues({});
+      preferences = await SharedPreferences.getInstance();
+    });
+
+    PollStickerCubit build({PollKind kind = PollKind.poll, int answers = 2}) =>
+        PollStickerCubit(
+          repository: repository,
+          preferences: preferences,
+          pollId: _pollId,
+          authorPubkey: _author,
+          kind: kind,
+          answerCount: answers,
+        );
+
+    void stubFetch(Poll poll, [PollResults results = const PollResults()]) =>
+        when(
+          () => repository.fetchPoll(_pollId, authorPubkey: _author),
+        ).thenAnswer((_) async => PollSnapshot(poll: poll, results: results));
+
     group('load', () {
       blocTest<PollStickerCubit, PollStickerState>(
         'reads the poll with its votes',
@@ -168,6 +171,55 @@ void main() {
         },
         errors: () => [isA<PollVoteException>()],
       );
+
+      blocTest<PollStickerCubit, PollStickerState>(
+        'takes the vote back and reports whatever else stops it',
+        setUp: () {
+          stubFetch(_poll, const PollResults(counts: {'0': 1}));
+          when(
+            () => repository.vote(any(), any()),
+          ).thenThrow(StateError('signer gone'));
+        },
+        build: build,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.voted('1');
+        },
+        verify: (cubit) {
+          expect(cubit.state.voteStatus, equals(PollVoteStatus.failed));
+          expect(
+            cubit.state.results,
+            equals(const PollResults(counts: {'0': 1})),
+          );
+        },
+        errors: () => [
+          isA<Reportable<Object>>().having(
+            (error) => error.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        ],
+      );
+
+      test('keeps the note for a later vote when the video is gone before '
+          'the vote went out', () async {
+        stubFetch(_poll);
+        final sent = Completer<void>();
+        when(() => repository.vote(any(), any()))
+            .thenAnswer((_) => sent.future);
+        final cubit = build();
+        await cubit.load();
+
+        final voting = cubit.voted('1');
+        await cubit.close();
+        sent.complete();
+        await voting;
+
+        expect(
+          preferences.getBool(PollStickerCubit.publicNoteShownKey),
+          isNull,
+        );
+      });
 
       blocTest<PollStickerCubit, PollStickerState>(
         'keeps the answer a quiz was given',

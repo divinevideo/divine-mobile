@@ -64,9 +64,73 @@ void main() {
       });
 
       test("keeps a count that already holds the viewer's vote", () {
-        final results = PollResults.counted(const {'1': 5}, ownVoteId: '1');
+        final results = PollResults.counted(
+          const {'0': 2, '1': 5},
+          ownVoteId: '1',
+          replacedVoteId: '0',
+        );
 
-        expect(results.counts, equals({'1': 5}));
+        expect(results.counts, equals({'0': 2, '1': 5}));
+      });
+
+      test("takes the viewer's vote the count lacks off the answer it "
+          'replaced', () {
+        final results = PollResults.counted(
+          const {'0': 1, '2': 4},
+          ownVoteId: '1',
+          replacedVoteId: '0',
+        );
+
+        expect(results.counts, equals({'1': 1, '2': 4}));
+        expect(results.total, equals(5));
+      });
+    });
+
+    group('replacedPick', () {
+      test('is what the viewer picked before their latest vote', () {
+        expect(
+          PollResults.replacedPick(poll, [
+            _vote(1, '2', createdAt: 3000),
+            _vote(2, '1', createdAt: 2500),
+            _vote(1, '0'),
+            _vote(1, '1', createdAt: 2000),
+          ], viewerPubkey: _hex(1)),
+          equals('1'),
+        );
+      });
+
+      test('is nothing for a single vote or one picking the same', () {
+        expect(
+          PollResults.replacedPick(poll, [
+            _vote(1, '0'),
+          ], viewerPubkey: _hex(1)),
+          isNull,
+        );
+        expect(
+          PollResults.replacedPick(poll, [
+            _vote(1, '0'),
+            _vote(1, '0', createdAt: 2000),
+          ], viewerPubkey: _hex(1)),
+          isNull,
+        );
+      });
+
+      test('is nothing for a quiz, whose first answer holds', () {
+        final quiz = _withId(
+          Poll.choice(
+            question: 'Capital?',
+            answers: const ['Zurich', 'Bern'],
+            answerIndex: 1,
+          ),
+        );
+
+        expect(
+          PollResults.replacedPick(quiz, [
+            _vote(1, '0'),
+            _vote(1, '1', createdAt: 2000),
+          ], viewerPubkey: _hex(1)),
+          isNull,
+        );
       });
     });
 
@@ -81,6 +145,16 @@ void main() {
 
         expect(results.counts, equals({'1': 2, '2': 1}));
         expect(results.total, equals(3));
+      });
+
+      test('counts the latest vote whatever order the votes come in', () {
+        // Relays answer newest first.
+        final results = PollResults.tally(poll, [
+          _vote(1, '1', createdAt: 2000),
+          _vote(1, '0'),
+        ]);
+
+        expect(results.counts, equals({'1': 1}));
       });
 
       test('settles two votes of the same second by their id', () {
@@ -105,8 +179,13 @@ void main() {
           _vote(1, '0'),
           _vote(1, '1', createdAt: 2000),
         ]);
+        final newestFirst = PollResults.tally(quiz, [
+          _vote(1, '1', createdAt: 2000),
+          _vote(1, '0'),
+        ]);
 
         expect(results.counts, equals({'0': 1}));
+        expect(newestFirst.counts, equals({'0': 1}));
       });
 
       test('counts only the first response of a vote', () {

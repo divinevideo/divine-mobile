@@ -26,19 +26,12 @@ class PollResults extends Equatable {
     final counted = <String, Event>{};
     final picks = <String, String>{};
     for (final vote in votes) {
-      if (vote.kind != Poll.voteKind) continue;
-      final repliesToPoll = vote.tags.any(
-        (tag) => tag.length >= 2 && tag[0] == 'e' && tag[1] == poll.id,
-      );
-      if (!repliesToPoll) continue;
-      final response = vote.tags
-          .where((tag) => tag.length >= 2 && tag[0] == 'response')
-          .firstOrNull;
-      if (response == null || !poll.hasOption(response[1])) continue;
+      final pick = _pickOf(poll, vote);
+      if (pick == null) continue;
       final previous = counted[vote.pubkey];
       if (previous != null && !_replaces(vote, previous, poll.kind)) continue;
       counted[vote.pubkey] = vote;
-      picks[vote.pubkey] = response[1];
+      picks[vote.pubkey] = pick;
     }
     final counts = <String, int>{};
     for (final pick in picks.values) {
@@ -48,25 +41,80 @@ class PollResults extends Equatable {
   }
 
   /// Results from counts made elsewhere, [votes] by answer id, and the
-  /// viewer's own vote [ownVoteId].
+  /// viewer's own vote [ownVoteId], which replaced their [replacedVoteId].
   ///
-  /// A server's count can be a few seconds old, so a vote of the viewer's it
-  /// has not seen yet still counts once.
-  factory PollResults.counted(Map<String, int> votes, {String? ownVoteId}) {
+  /// A server's count can be a few seconds old. A vote of the viewer's it
+  /// has not counted any answer for yet still counts once, and no longer for
+  /// the answer it replaced. A vote of theirs it may have counted already is
+  /// taken as counted.
+  factory PollResults.counted(
+    Map<String, int> votes, {
+    String? ownVoteId,
+    String? replacedVoteId,
+  }) {
     final counts = {
       for (final MapEntry(key: optionId, value: count) in votes.entries)
         if (count > 0) optionId: count,
     };
-    if (ownVoteId != null) counts[ownVoteId] ??= 1;
+    if (ownVoteId != null && !counts.containsKey(ownVoteId)) {
+      counts[ownVoteId] = 1;
+      if (replacedVoteId != null) {
+        final left = (counts[replacedVoteId] ?? 0) - 1;
+        if (left > 0) {
+          counts[replacedVoteId] = left;
+        } else {
+          counts.remove(replacedVoteId);
+        }
+      }
+    }
     return PollResults(counts: counts, ownVoteId: ownVoteId);
   }
 
+  /// What [viewerPubkey] picked on [poll] among [votes] with the vote before
+  /// the one that counts, or `null` when that one is their only vote, picks
+  /// the same, or [poll] is a quiz, whose first vote counts.
+  static String? replacedPick(
+    Poll poll,
+    Iterable<Event> votes, {
+    required String viewerPubkey,
+  }) {
+    if (poll.kind == PollKind.quiz) return null;
+    final own = [
+      for (final vote in votes)
+        if (vote.pubkey == viewerPubkey && _pickOf(poll, vote) != null) vote,
+    ]..sort(_order);
+    if (own.length < 2) return null;
+    final latest = _pickOf(poll, own.last);
+    final before = _pickOf(poll, own[own.length - 2]);
+    return before == latest ? null : before;
+  }
+
+  /// The answer [vote] picks on [poll], or `null` when it is no vote on it or
+  /// names no answer of it. Following NIP-88, only its first `response` tag
+  /// counts.
+  static String? _pickOf(Poll poll, Event vote) {
+    if (vote.kind != Poll.voteKind) return null;
+    final repliesToPoll = vote.tags.any(
+      (tag) => tag.length >= 2 && tag[0] == 'e' && tag[1] == poll.id,
+    );
+    if (!repliesToPoll) return null;
+    final response = vote.tags
+        .where((tag) => tag.length >= 2 && tag[0] == 'response')
+        .firstOrNull;
+    if (response == null || !poll.hasOption(response[1])) return null;
+    return response[1];
+  }
+
+  /// Orders votes from the same pubkey by when they were cast, the event id
+  /// deciding a tie.
+  static int _order(Event a, Event b) => a.createdAt != b.createdAt
+      ? a.createdAt.compareTo(b.createdAt)
+      : a.id.compareTo(b.id);
+
   /// Whether [vote] counts in place of [previous] from the same pubkey: the
-  /// later one, or for a quiz the earlier, with the event id deciding a tie.
+  /// later one, or for a quiz the earlier.
   static bool _replaces(Event vote, Event previous, PollKind kind) {
-    final order = vote.createdAt != previous.createdAt
-        ? vote.createdAt.compareTo(previous.createdAt)
-        : vote.id.compareTo(previous.id);
+    final order = _order(vote, previous);
     return kind == PollKind.quiz ? order < 0 : order > 0;
   }
 

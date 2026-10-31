@@ -116,7 +116,8 @@ final pollRepositoryProvider = Provider<PollRepository>((ref) {
     signEvent: authService.createAndSignEvent,
     currentPubkey: () => authService.currentPublicKeyHex,
     funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
-    relayUrl: AppConstants.defaultRelayUrl,
+    // The relay the video's poll names, so its votes are cast there.
+    relayUrl: ref.watch(currentEnvironmentProvider).relayUrl,
   );
 });
 

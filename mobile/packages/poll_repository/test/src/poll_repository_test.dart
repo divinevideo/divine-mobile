@@ -34,15 +34,16 @@ Event _pollEvent({String? pubkey, String? id}) => Event.fromJson({
   'sig': '',
 });
 
-Event _vote(String voter, String optionId) => Event.fromJson({
-  'id': _hex(voter.hashCode + optionId.hashCode),
-  'pubkey': voter,
-  'created_at': 2000,
-  'kind': Poll.voteKind,
-  'tags': Poll.voteTags(_pollId, optionId),
-  'content': '',
-  'sig': '',
-});
+Event _vote(String voter, String optionId, {int createdAt = 2000}) =>
+    Event.fromJson({
+      'id': _hex(voter.hashCode + optionId.hashCode + createdAt),
+      'pubkey': voter,
+      'created_at': createdAt,
+      'kind': Poll.voteKind,
+      'tags': Poll.voteTags(_pollId, optionId),
+      'content': '',
+      'sig': '',
+    });
 
 PublishOutcome _outcome({required bool accepted}) => PublishOutcome(
   eventId: _hex(5),
@@ -53,8 +54,12 @@ PublishOutcome _outcome({required bool accepted}) => PublishOutcome(
 
 void main() {
   late _MockNostrClient nostrClient;
-  late List<({int kind, String content, List<List<String>> tags})> signed;
+  late List<
+    ({int kind, String content, List<List<String>> tags, int? createdAt})
+  >
+  signed;
   late Event? signedEvent;
+  late int now;
 
   setUpAll(() {
     registerFallbackValue(<Filter>[]);
@@ -65,6 +70,7 @@ void main() {
     nostrClient = _MockNostrClient();
     signed = [];
     signedEvent = _vote(_viewer, '1');
+    now = 1500;
   });
 
   PollRepository repository({
@@ -77,13 +83,17 @@ void main() {
           required kind,
           required content,
           required tags,
+          createdAt,
         }) async {
-          signed.add((kind: kind, content: content, tags: tags));
+          signed.add(
+            (kind: kind, content: content, tags: tags, createdAt: createdAt),
+          );
           return signedEvent;
         },
     currentPubkey: () => viewer == _viewerKey ? _viewer : viewer,
     funnelcakeApiClient: funnelcakeApiClient,
     relayUrl: _relay,
+    now: () => now,
   );
 
   group(PollRepository, () {
@@ -108,10 +118,53 @@ void main() {
         final filters =
             verify(() => nostrClient.queryEvents(captureAny())).captured.single
                 as List<Filter>;
+        expect(filters, hasLength(3));
         expect(filters.first.ids, equals([_pollId]));
-        expect(filters.last.kinds, equals([Poll.voteKind]));
+        expect(filters[1].kinds, equals([Poll.voteKind]));
+        expect(filters[1].e, equals([_pollId]));
+        expect(filters[1].limit, equals(PollRepository.maxVotesRead));
+        expect(filters.last.authors, equals([_viewer]));
         expect(filters.last.e, equals([_pollId]));
-        expect(filters.last.limit, equals(PollRepository.maxVotesRead));
+      });
+
+      test("finds the viewer's own vote among more votes than one read "
+          'takes', () async {
+        when(() => nostrClient.queryEvents(any())).thenAnswer((
+          invocation,
+        ) async {
+          final filters = invocation.positionalArguments.first as List<Filter>;
+          // The capped read misses the viewer's old vote; their own read
+          // does not.
+          return [
+            _pollEvent(),
+            _vote(_hex(3), '0'),
+            if (filters.any((filter) => filter.authors?.single == _viewer))
+              _vote(_viewer, '1', createdAt: 1100),
+          ];
+        });
+
+        final snapshot = await repository().fetchPoll(
+          _pollId,
+          authorPubkey: _author,
+        );
+
+        expect(snapshot?.results.ownVoteId, equals('1'));
+      });
+
+      test('reads no own vote for a viewer who is not signed in', () async {
+        when(
+          () => nostrClient.queryEvents(any()),
+        ).thenAnswer((_) async => [_pollEvent(), _vote(_hex(3), '0')]);
+
+        final snapshot = await repository(
+          viewer: null,
+        ).fetchPoll(_pollId, authorPubkey: _author);
+
+        expect(snapshot?.results.ownVoteId, isNull);
+        final filters =
+            verify(() => nostrClient.queryEvents(captureAny())).captured.single
+                as List<Filter>;
+        expect(filters, hasLength(2));
       });
 
       test('finds no poll published by someone else than the video '
@@ -178,6 +231,27 @@ void main() {
         expect(snapshot?.results.ownVoteId, equals('1'));
       });
 
+      test("moves a changed vote of the viewer's that Funnelcake has not seen "
+          'yet off the answer it replaced', () async {
+        when(() => funnelcake.getPollResults(_pollId)).thenAnswer(
+          (_) async => const PollVoteTally(votes: {'0': 4}, voters: 4),
+        );
+        when(() => nostrClient.queryEvents(any())).thenAnswer(
+          (_) async => [
+            _pollEvent(),
+            _vote(_viewer, '0', createdAt: 1900),
+            _vote(_viewer, '1'),
+          ],
+        );
+
+        final snapshot = await repository(
+          funnelcakeApiClient: funnelcake,
+        ).fetchPoll(_pollId, authorPubkey: _author);
+
+        expect(snapshot?.results.counts, equals({'0': 3, '1': 1}));
+        expect(snapshot?.results.ownVoteId, equals('1'));
+      });
+
       test('reads only the poll for a viewer who is not signed in', () async {
         when(() => funnelcake.getPollResults(_pollId)).thenAnswer(
           (_) async => const PollVoteTally(votes: {'1': 2}, voters: 2),
@@ -204,7 +278,9 @@ void main() {
           invocation,
         ) async {
           final filters = invocation.positionalArguments.first as List<Filter>;
-          return filters.last.limit == PollRepository.maxVotesRead
+          return filters.any(
+                (filter) => filter.limit == PollRepository.maxVotesRead,
+              )
               ? [_pollEvent(), _vote(_hex(3), '1'), _vote(_viewer, '0')]
               : [_pollEvent(), _vote(_viewer, '0')];
         });
@@ -265,7 +341,97 @@ void main() {
           signed.single.tags,
           equals(Poll.voteTags(_pollId, '1', relayUrl: _relay)),
         );
+        expect(signed.single.createdAt, isNull);
         verify(() => nostrClient.publishEventAwaitOk(signedEvent!)).called(1);
+      });
+
+      test('stamps a changed vote after the one it changes, even within '
+          'the same second', () async {
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        final subject = repository();
+        final poll = Poll.fromEvent(_pollEvent())!;
+        // The first vote is signed at 2000, while the clock reads 1500.
+        await subject.vote(poll, '1');
+
+        await subject.vote(poll, '0');
+
+        expect(signed.last.createdAt, equals(2001));
+      });
+
+      test(
+        'stamps a changed vote now once the vote it changes is older',
+        () async {
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+          when(
+            () => nostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => [_pollEvent(), _vote(_viewer, '1')]);
+          final subject = repository();
+          final poll = (await subject.fetchPoll(
+            _pollId,
+            authorPubkey: _author,
+          ))!.poll;
+          now = 3000;
+
+          await subject.vote(poll, '0');
+
+          expect(signed.single.createdAt, equals(3000));
+        },
+      );
+
+      test("stamps a vote after the viewer's own vote read with the "
+          'poll', () async {
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        when(() => nostrClient.queryEvents(any())).thenAnswer(
+          (_) async => [
+            _pollEvent(),
+            _vote(_viewer, '1'),
+            _vote(_viewer, '0', createdAt: 1800),
+            // Another viewer's later vote, and one on another poll.
+            _vote(_hex(3), '0', createdAt: 2500),
+            Event.fromJson({
+              'id': _hex(77),
+              'pubkey': _viewer,
+              'created_at': 2600,
+              'kind': Poll.voteKind,
+              'tags': Poll.voteTags(_hex(101), '0'),
+              'content': '',
+              'sig': '',
+            }),
+          ],
+        );
+        final subject = repository();
+        final poll = (await subject.fetchPoll(
+          _pollId,
+          authorPubkey: _author,
+        ))!.poll;
+
+        await subject.vote(poll, '0');
+
+        expect(signed.single.createdAt, equals(2001));
+      });
+
+      test('fails when the vote cannot be sent', () async {
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenThrow(Exception('socket closed'));
+        final poll = Poll.fromEvent(_pollEvent())!;
+
+        await expectLater(
+          repository().vote(poll, '0'),
+          throwsA(
+            isA<PollVoteException>().having(
+              (e) => e.message,
+              'message',
+              contains('socket closed'),
+            ),
+          ),
+        );
       });
 
       test('refuses an answer the poll does not have', () async {
