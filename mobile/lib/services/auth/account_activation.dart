@@ -66,6 +66,12 @@ class AccountRollbackAuthority {
 
   String get ownerPubkey => _identity.pubkey;
 
+  /// Whether the owner signs with a private key held on this device.
+  ///
+  /// A remote signer (Keycast RPC, Amber, a bunker) never writes the primary
+  /// key slot, so that slot can still hold another account's key.
+  bool get signsWithLocalKey => _keys.hasPrivateKey;
+
   bool get isCurrent =>
       !_auth._activation.disposed &&
       _auth._activation.generation == _generation &&

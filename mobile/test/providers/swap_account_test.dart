@@ -10,6 +10,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -1662,6 +1663,119 @@ void main() {
     });
   });
 
+  // A Keycast account that signs over RPC never writes the primary key slot, so
+  // it still holds the key of the local account that last wrote it.
+  group('outgoing primary key ownership', () {
+    final otherAccountKeys = SecureKeyContainer.fromPrivateKeyHex('1' * 64);
+
+    Future<void> signInLeavingAccountOverRpc(WidgetTester tester) async {
+      final discovery = _MockDiscovery();
+      when(() => discovery.discoverRelays(any())).thenAnswer(
+        (_) async => RelayDiscoveryResult.failure('No network in swap tests'),
+      );
+      final remoteSigner = _FakeAuthService(
+        userDataCleanupService: UserDataCleanupService(
+          deviceScope.sharedPreferences,
+        ),
+        backgroundActivityManager: BackgroundActivityManager(),
+        keyStorage: _FakeSecureKeyStorage(),
+        relayDiscoveryService: discovery,
+        profileCheckIndexerUrl: 'unsupported://profile.invalid',
+      );
+      // Native storage settles on real async, as in the suite's setUp.
+      await tester.runAsync(() async {
+        await remoteSigner.signInWithDivineOAuth(
+          KeycastSession(
+            bunkerUrl: 'https://keycast.example.com',
+            accessToken: 'access_token',
+            expiresAt: DateTime.now().add(const Duration(hours: 1)),
+            refreshToken: 'refresh_token',
+            userPubkey: leavingHex,
+          ),
+        );
+        await currentAuthService.dispose();
+      });
+      expect(remoteSigner.currentPublicKeyHex, equals(leavingHex));
+      expect(remoteSigner.canExportLocalNsec, isFalse);
+      currentAuthService = remoteSigner;
+    }
+
+    testWidgets('switches away from a remote-signer account while another '
+        'account owns the primary key', (tester) async {
+      await signInLeavingAccountOverRpc(tester);
+      keyStorage.primary = otherAccountKeys;
+      final initial = await pumpHost(tester);
+      final resolve = liveAccountContainer(initial);
+
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async {},
+        ),
+      );
+      await tester.pump();
+
+      expect(resolve(), isNot(same(initial)));
+      expect(
+        resolve().read(authServiceProvider).currentPublicKeyHex,
+        equals(targetHex),
+      );
+    });
+
+    testWidgets('restores the other account primary key when the sign-in '
+        'fails', (tester) async {
+      await signInLeavingAccountOverRpc(tester);
+      keyStorage.primary = otherAccountKeys;
+      final initial = await pumpHost(tester);
+      final resolve = liveAccountContainer(initial);
+
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => throw _FakeSignInException(),
+        ),
+        expected: throwsA(isA<_FakeSignInException>()),
+      );
+      await tester.pump();
+
+      expect(resolve(), same(initial));
+      expect(keyStorage.restoredPrimary, same(otherAccountKeys));
+      expect(currentAuthService.calls, equals(['archive', 'restore']));
+    });
+
+    testWidgets('refuses to switch a local-key account whose primary key '
+        'belongs to another account', (tester) async {
+      keyStorage.primary = otherAccountKeys;
+      final initial = await pumpHost(tester);
+      final resolve = liveAccountContainer(initial);
+      var signInAttempted = false;
+
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => signInAttempted = true,
+        ),
+        expected: throwsA(isA<AccountStorageException>()),
+      );
+      await tester.pump();
+
+      expect(signInAttempted, isFalse);
+      expect(resolve(), same(initial));
+      // Nothing was retired, so there was nothing to roll back.
+      expect(currentAuthService.calls, equals(['archive']));
+      expect(keyStorage.restoredPrimary, isNull);
+    });
+  });
+
   // The leaving account's DM repository keeps draining relay history into the
   // DeviceScope-shared database, and the identity-change cleanup that wipes
   // that database runs from the INCOMING container — where
@@ -1958,6 +2072,9 @@ class _FakeSecureKeyStorage extends SecureKeyStorage {
   Future<SecureKeyContainer?> getKeyContainer() async {
     return primary;
   }
+
+  @override
+  Future<bool> hasKeys() async => primary != null;
 
   @override
   Future<void> restorePrimaryKeyContainer(

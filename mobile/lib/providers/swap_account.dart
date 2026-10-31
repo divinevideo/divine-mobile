@@ -311,11 +311,15 @@ Future<void> swapAccount({
     CuratedListService? suspendedOutgoingLists;
     try {
       // Capture only while the original identity and rendered host still own
-      // the device. A foreign cached key cannot authorize rollback storage.
+      // the device. A local-key identity owns the primary slot, so a foreign
+      // key there means storage diverged. A remote signer never writes the
+      // slot: another account's key there is expected, and the rollback puts
+      // it back as it was.
       previousPrimary = await keyStorage.getKeyContainer();
       ensureOutgoingCurrent();
       rollbackAuthority.ensureCurrent();
       if (previousPrimary != null &&
+          rollbackAuthority.signsWithLocalKey &&
           previousPrimary.publicKeyHex != rollbackAuthority.ownerPubkey) {
         throw const AccountStorageException(
           'Outgoing primary identity does not match its owner',
