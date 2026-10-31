@@ -9092,6 +9092,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Зум размазване';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Ротационно размазване';
+
+  @override
   String get videoEditorEffectComic => 'Комикс';
 
   @override

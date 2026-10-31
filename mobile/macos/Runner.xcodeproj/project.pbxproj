@@ -39,6 +39,7 @@
 		D10CF4A4F16A28D77A2562BE /* ParticlesVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = B21FA6EBE080CFE86289163E /* ParticlesVideoEffect.swift */; };
 		765648DCE1580C79DFD2D8C2 /* TiltShiftVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0DC7138111CEE574C94DA0 /* TiltShiftVideoEffect.swift */; };
 		80C7EABC180F0BC7AEB6D29B /* ZoomBlurVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C0F8A8FD7366FA259B65803 /* ZoomBlurVideoEffect.swift */; };
+		CF75E49118A7711563ABB72A /* SpinBlurVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F5EB3DDB3E60DAFD729E6C7 /* SpinBlurVideoEffect.swift */; };
 		53E431152DE7CCEAA6128B73 /* ComicVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 268780AB3698779D32F72134 /* ComicVideoEffect.swift */; };
 		AD1A57E1C8E35A4FAB9D3D23 /* AdjustVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD1A57E1C8E35A4FAB9D3D22 /* AdjustVideoEffect.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
@@ -106,6 +107,7 @@
 		B21FA6EBE080CFE86289163E /* ParticlesVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ParticlesVideoEffect.swift; path = ../ios/Runner/ParticlesVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		AA0DC7138111CEE574C94DA0 /* TiltShiftVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TiltShiftVideoEffect.swift; path = ../ios/Runner/TiltShiftVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		2C0F8A8FD7366FA259B65803 /* ZoomBlurVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ZoomBlurVideoEffect.swift; path = ../ios/Runner/ZoomBlurVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		3F5EB3DDB3E60DAFD729E6C7 /* SpinBlurVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpinBlurVideoEffect.swift; path = ../ios/Runner/SpinBlurVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		268780AB3698779D32F72134 /* ComicVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ComicVideoEffect.swift; path = ../ios/Runner/ComicVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		AD1A57E1C8E35A4FAB9D3D22 /* AdjustVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AdjustVideoEffect.swift; path = ../ios/Runner/AdjustVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
@@ -221,6 +223,7 @@
 				B21FA6EBE080CFE86289163E /* ParticlesVideoEffect.swift */,
 				AA0DC7138111CEE574C94DA0 /* TiltShiftVideoEffect.swift */,
 				2C0F8A8FD7366FA259B65803 /* ZoomBlurVideoEffect.swift */,
+				3F5EB3DDB3E60DAFD729E6C7 /* SpinBlurVideoEffect.swift */,
 				268780AB3698779D32F72134 /* ComicVideoEffect.swift */,
 				AD1A57E1C8E35A4FAB9D3D22 /* AdjustVideoEffect.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
@@ -520,6 +523,7 @@
 				D10CF4A4F16A28D77A2562BE /* ParticlesVideoEffect.swift in Sources */,
 				765648DCE1580C79DFD2D8C2 /* TiltShiftVideoEffect.swift in Sources */,
 				80C7EABC180F0BC7AEB6D29B /* ZoomBlurVideoEffect.swift in Sources */,
+				CF75E49118A7711563ABB72A /* SpinBlurVideoEffect.swift in Sources */,
 				53E431152DE7CCEAA6128B73 /* ComicVideoEffect.swift in Sources */,
 				AD1A57E1C8E35A4FAB9D3D23 /* AdjustVideoEffect.swift in Sources */,
 				2DD63C4A2E00A62100B40DED /* NativeCameraPlugin.swift in Sources */,

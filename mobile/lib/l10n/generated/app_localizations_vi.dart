@@ -8969,6 +8969,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Mờ phóng to';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Mờ xoay';
+
+  @override
   String get videoEditorEffectComic => 'Truyện tranh';
 
   @override

@@ -2627,6 +2627,7 @@
   "videoEditorEffectBalloons": "Palloncini",
   "videoEditorEffectTiltShift": "Tilt-shift",
   "videoEditorEffectZoomBlur": "Sfocatura zoom",
+  "videoEditorEffectSpinBlur": "Sfocatura rotatoria",
   "videoEditorEffectComic": "Fumetto",
   "videoEditorEffectCategoryRetro": "Retrò",
   "videoEditorEffectCategoryGlitch": "Glitch",

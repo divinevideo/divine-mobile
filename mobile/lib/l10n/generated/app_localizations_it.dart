@@ -9118,6 +9118,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Sfocatura zoom';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Sfocatura rotatoria';
+
+  @override
   String get videoEditorEffectComic => 'Fumetto';
 
   @override

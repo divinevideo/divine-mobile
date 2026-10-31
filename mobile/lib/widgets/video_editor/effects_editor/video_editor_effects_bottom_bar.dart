@@ -242,6 +242,10 @@ ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
     asset: 'shaders/zoom_blur.frag',
     values: const [1.0],
   ),
+  spinBlurVideoEffectId => (
+    asset: 'shaders/spin_blur.frag',
+    values: const [1.0],
+  ),
   comicVideoEffectId => (asset: 'shaders/comic.frag', values: const [1.0]),
   _ => null,
 };
@@ -374,6 +378,7 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
     balloonsVideoEffectId => context.l10n.videoEditorEffectBalloons,
     tiltShiftVideoEffectId => context.l10n.videoEditorEffectTiltShift,
     zoomBlurVideoEffectId => context.l10n.videoEditorEffectZoomBlur,
+    spinBlurVideoEffectId => context.l10n.videoEditorEffectSpinBlur,
     comicVideoEffectId => context.l10n.videoEditorEffectComic,
     _ => context.l10n.videoEditorEffectEcho,
   };

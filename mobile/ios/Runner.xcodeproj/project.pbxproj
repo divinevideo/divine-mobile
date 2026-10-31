@@ -21,6 +21,7 @@
 		471F845B0AF47A6A09F7F2B5 /* ParticlesVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2243434A8B856B12D3B4AAE /* ParticlesVideoEffect.swift */; };
 		960CE7DEA255575B6D5E6016 /* TiltShiftVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3C7A619738432CD04F0D5B2 /* TiltShiftVideoEffect.swift */; };
 		3022EC47C146DD5616AECD1C /* ZoomBlurVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACBE0FACDF9FD247E54F0256 /* ZoomBlurVideoEffect.swift */; };
+		0B964F187C63C761CEA07B49 /* SpinBlurVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE6BDF245745076FFA57D130 /* SpinBlurVideoEffect.swift */; };
 		768CADD7E65FAEA3BBE0BDD6 /* ComicVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDBBD1276DE7929A25452428 /* ComicVideoEffect.swift */; };
 		AD1A57E0B7D24F3E9A8C2C12 /* AdjustVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD1A57E0B7D24F3E9A8C2C11 /* AdjustVideoEffect.swift */; };
 		4538A593ED259ADE95BE0F82 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9F614F010AAECBECA4DA109 /* Foundation.framework */; };
@@ -110,6 +111,7 @@
 		C2243434A8B856B12D3B4AAE /* ParticlesVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ParticlesVideoEffect.swift; sourceTree = "<group>"; };
 		B3C7A619738432CD04F0D5B2 /* TiltShiftVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TiltShiftVideoEffect.swift; sourceTree = "<group>"; };
 		ACBE0FACDF9FD247E54F0256 /* ZoomBlurVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ZoomBlurVideoEffect.swift; sourceTree = "<group>"; };
+		FE6BDF245745076FFA57D130 /* SpinBlurVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SpinBlurVideoEffect.swift; sourceTree = "<group>"; };
 		DDBBD1276DE7929A25452428 /* ComicVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ComicVideoEffect.swift; sourceTree = "<group>"; };
 		AD1A57E0B7D24F3E9A8C2C11 /* AdjustVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdjustVideoEffect.swift; sourceTree = "<group>"; };
 		0E3A100F5AEE1456DCC23B03 /* Pods-Runner.debug-divineuitests.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug-divineuitests.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug-divineuitests.xcconfig"; sourceTree = "<group>"; };
@@ -308,6 +310,7 @@
 				C2243434A8B856B12D3B4AAE /* ParticlesVideoEffect.swift */,
 				B3C7A619738432CD04F0D5B2 /* TiltShiftVideoEffect.swift */,
 				ACBE0FACDF9FD247E54F0256 /* ZoomBlurVideoEffect.swift */,
+				FE6BDF245745076FFA57D130 /* SpinBlurVideoEffect.swift */,
 				DDBBD1276DE7929A25452428 /* ComicVideoEffect.swift */,
 				AD1A57E0B7D24F3E9A8C2C11 /* AdjustVideoEffect.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
@@ -744,6 +747,7 @@
 				471F845B0AF47A6A09F7F2B5 /* ParticlesVideoEffect.swift in Sources */,
 				960CE7DEA255575B6D5E6016 /* TiltShiftVideoEffect.swift in Sources */,
 				3022EC47C146DD5616AECD1C /* ZoomBlurVideoEffect.swift in Sources */,
+				0B964F187C63C761CEA07B49 /* SpinBlurVideoEffect.swift in Sources */,
 				768CADD7E65FAEA3BBE0BDD6 /* ComicVideoEffect.swift in Sources */,
 				AD1A57E0B7D24F3E9A8C2C12 /* AdjustVideoEffect.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,

@@ -9218,6 +9218,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Rozmycie zoomu';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Rozmycie obrotowe';
+
+  @override
   String get videoEditorEffectComic => 'Komiks';
 
   @override

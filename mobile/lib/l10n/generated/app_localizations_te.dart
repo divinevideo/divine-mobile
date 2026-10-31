@@ -9264,6 +9264,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'జూమ్ బ్లర్';
 
   @override
+  String get videoEditorEffectSpinBlur => 'స్పిన్ బ్లర్';
+
+  @override
   String get videoEditorEffectComic => 'కామిక్';
 
   @override

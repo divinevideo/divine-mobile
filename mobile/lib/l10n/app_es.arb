@@ -2635,6 +2635,7 @@
   "videoEditorEffectBalloons": "Globos",
   "videoEditorEffectTiltShift": "Tilt-shift",
   "videoEditorEffectZoomBlur": "Desenfoque de zoom",
+  "videoEditorEffectSpinBlur": "Desenfoque de giro",
   "videoEditorEffectComic": "Cómic",
   "videoEditorEffectCategoryRetro": "Retro",
   "videoEditorEffectCategoryGlitch": "Glitch",

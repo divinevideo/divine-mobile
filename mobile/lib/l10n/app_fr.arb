@@ -2627,6 +2627,7 @@
   "videoEditorEffectBalloons": "Ballons",
   "videoEditorEffectTiltShift": "Tilt-shift",
   "videoEditorEffectZoomBlur": "Flou de zoom",
+  "videoEditorEffectSpinBlur": "Flou de rotation",
   "videoEditorEffectComic": "BD",
   "videoEditorEffectCategoryRetro": "Rétro",
   "videoEditorEffectCategoryGlitch": "Glitch",
