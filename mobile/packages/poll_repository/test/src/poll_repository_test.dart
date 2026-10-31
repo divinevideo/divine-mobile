@@ -1,6 +1,9 @@
 // ABOUTME: Tests reading a video's poll with its votes, counted by Funnelcake
 // ABOUTME: or on the device, and publishing a viewer's vote on it.
 
+import 'dart:async';
+
+import 'package:fake_async/fake_async.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -317,6 +320,32 @@ void main() {
         expect(snapshot?.poll.id, equals(_pollId));
         expect(snapshot?.results.ownVoteId, equals('0'));
         expect(snapshot?.results.counts, equals({'0': 1}));
+      });
+
+      test('stops waiting for a slow Funnelcake and counts on the device', () {
+        fakeAsync((async) {
+          when(
+            () => funnelcake.getPollResults(_pollId),
+          ).thenAnswer((_) => Completer<PollVoteTally>().future);
+          when(
+            () => nostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => [_pollEvent(), _vote(_hex(3), '1')]);
+
+          PollSnapshot? snapshot;
+          unawaited(
+            repository(funnelcakeApiClient: funnelcake)
+                .fetchPoll(_pollId, authorPubkey: _author)
+                .then((value) => snapshot = value),
+          );
+
+          async.elapse(
+            PollRepository.serverCountWait - const Duration(milliseconds: 1),
+          );
+          expect(snapshot, isNull);
+
+          async.elapse(const Duration(milliseconds: 1));
+          expect(snapshot?.results.counts, equals({'1': 1}));
+        });
       });
 
       test('counts on the device when Funnelcake is not configured', () async {

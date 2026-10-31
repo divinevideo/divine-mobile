@@ -76,6 +76,10 @@ class PollRepository {
   /// The most votes one read asks for, the most the Divine relays answer.
   static const int maxVotesRead = 5000;
 
+  /// How long a read waits for Funnelcake's count once the relays answered,
+  /// before counting on the device, so a slow server holds back no poll.
+  static const Duration serverCountWait = Duration(seconds: 3);
+
   /// The poll [pollId] names and the votes on it, or `null` when no relay
   /// has a poll of that id by [authorPubkey], the one whose video shows it.
   Future<PollSnapshot?> fetchPoll(
@@ -95,7 +99,10 @@ class PollRepository {
         Filter(kinds: [Poll.voteKind], e: [pollId], authors: [viewerPubkey]),
     ]);
     final poll = _pollIn(events, pollId, authorPubkey);
-    final tally = await serverTally;
+    final tally = await serverTally.timeout(
+      serverCountWait,
+      onTimeout: () => null,
+    );
     if (poll == null) return null;
     _noteOwnVotes(events, pollId, viewerPubkey);
     if (tally == null) {
