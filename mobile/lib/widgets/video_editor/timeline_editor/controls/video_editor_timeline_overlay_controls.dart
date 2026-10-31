@@ -1,6 +1,7 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
@@ -8,6 +9,7 @@ import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubi
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/extensions/layer_mask_keyframes.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
@@ -815,7 +817,7 @@ class _SoundOverlayControls extends StatelessWidget {
         track?.originalSource != null,
         track?.hasVoiceProcessing ?? false,
         !(track?.equalizer.isNone ?? true),
-        (track?.playbackSpeed ?? 1) != 1,
+        track?.changesSpeed ?? false,
         track?.isVoiceOver ?? false,
         track?.ducksUnderVoiceOver ?? false,
       );
@@ -1028,9 +1030,9 @@ class _SoundOverlayControls extends StatelessWidget {
     live?.value = null;
   }
 
-  /// Opens the speed sheet of the sound. A confirmed speed becomes one undo
-  /// step, with the sound's window rescaled to play the same stretch of it;
-  /// see [audioAtSpeed].
+  /// Opens the speed sheet of the sound. A confirmed speed or speed curve
+  /// becomes one undo step, with the sound's window rescaled to play the same
+  /// stretch of it; see [audioAtSpeed] and [audioAlongSpeedRamp].
   Future<void> _changeSpeed({required BuildContext context}) async {
     final editor = VideoEditorScope.of(context).editor;
     if (editor == null) return;
@@ -1047,35 +1049,47 @@ class _SoundOverlayControls extends StatelessWidget {
       isScrollControlled: true,
       body: VideoEditorClipSpeedSheet(
         initialSpeed: sound.playbackSpeed,
+        initialRamp: sound.speedRamp,
+        sourceDuration: sound.playedSourceSpan,
         title: context.l10n.videoEditorSoundSpeedSheetTitle,
-        offerCurve: false,
       ),
     );
-    final speed = switch (choice) {
-      ConstantClipSpeed(:final speed) => speed,
-      RampClipSpeed() || null => null,
-    };
-    if (speed == null || !context.mounted) return;
+    if (choice == null || !context.mounted) return;
 
-    // The slider steps in floating point; store the step it landed on, so a
-    // sound set back to 1x is exactly 1x again.
-    final newSpeed = (speed * 100).round() / 100;
     // Re-read the tracks after the async gap: another edit (an undo, a
     // finished extraction) may have changed them while the sheet was open.
     final tracks = editor.stateManager.audioTracks;
     final current = tracks.where((t) => t.id == item.id).firstOrNull;
-    if (current == null || current.playbackSpeed == newSpeed) return;
+    if (current == null) return;
 
     final compositionEnd = context.read<ClipEditorBloc>().state.totalDuration;
+    final AudioEvent updated;
+    switch (choice) {
+      case ConstantClipSpeed(:final speed):
+        // The slider steps in floating point; store the step it landed on,
+        // so a sound set back to 1x is exactly 1x again.
+        final newSpeed = (speed * 100).round() / 100;
+        if (current.speedRamp == null && current.playbackSpeed == newSpeed) {
+          return;
+        }
+        updated = audioAtSpeed(
+          current,
+          newSpeed,
+          compositionEnd: compositionEnd,
+        );
+      case RampClipSpeed(:final ramp):
+        if (current.speedRamp == ramp) return;
+        updated = audioAlongSpeedRamp(
+          current,
+          ramp,
+          compositionEnd: compositionEnd,
+        );
+    }
     editor.addHistory(
       meta: {
         ...editor.stateManager.activeMeta,
         VideoEditorConstants.audioStateHistoryKey: tracks
-            .map(
-              (t) => t.id == item.id
-                  ? audioAtSpeed(t, newSpeed, compositionEnd: compositionEnd)
-                  : t,
-            )
+            .map((t) => t.id == item.id ? updated : t)
             .map((e) => e.toJson())
             .toList(),
       },
@@ -1209,20 +1223,30 @@ class _SoundOverlayControls extends StatelessWidget {
     final track = tracks[trackIdx];
     // The tail starts as much further into the sound as the head plays of it,
     // which at a speed other than 1 is more or less than its timeline length.
-    final offsetShift = track.sourceSpanOf(splitAt - item.startTime);
+    final offsetShift = track.sourceOffsetAt(splitAt - item.startTime);
     // The fade in stays with the head and the fade out with the tail: the cut
     // itself is a new edge, which starts and ends at full volume.
-    final second = track.copyWith(
+    var second = track.copyWith(
       id: _copyId(item.id),
       startOffset: track.startOffset + offsetShift,
       startTime: splitAt,
       endTime: item.endTime,
       fadeInDuration: Duration.zero,
     );
-    final first = track.copyWith(
+    var first = track.copyWith(
       endTime: splitAt,
       fadeOutDuration: Duration.zero,
     );
+    // A ramp is cut in two, so every moment keeps its speed and its place.
+    if (track.speedRamp != null) {
+      final span = track.playedSourceSpan ?? offsetShift;
+      first = first.withSpeedRamp(
+        track.speedRampBetween(Duration.zero, offsetShift),
+      );
+      second = second.withSpeedRamp(
+        track.speedRampBetween(offsetShift, span),
+      );
+    }
 
     final updatedTracks = List.of(tracks)
       ..[trackIdx] = first

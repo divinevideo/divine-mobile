@@ -10,7 +10,10 @@ import 'package:models/models.dart'
     show AudioEvent, AudioSourceKind, VoiceEffect, VoiceFilter;
 import 'package:openvine/blocs/video_editor/voice_effect/voice_effect_bloc.dart';
 import 'package:openvine/blocs/video_editor/voice_effect/voice_effect_preset.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/services/video_editor/voice_effect_service.dart';
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show VideoSpeedRamp, VideoSpeedRampPoint;
 import 'package:sound_service/sound_service.dart';
 
 class _MockVoiceEffectService extends Mock implements VoiceEffectService {}
@@ -32,6 +35,15 @@ const _songId =
     'a1b2c3d4e5f6a7b8c9d0a1b2c3d4e5f6a7b8c9d0a1b2c3d4e5f6a7b8c9d0a1b2-100';
 
 final _now = DateTime.fromMicrosecondsSinceEpoch(1700000000000000);
+
+/// Twice as fast through the window's first half, half as fast through the
+/// second: on average 0.8x.
+const _fastThenSlow = VideoSpeedRamp([
+  VideoSpeedRampPoint(position: 0, speed: 2),
+  VideoSpeedRampPoint(position: 0.5, speed: 2),
+  VideoSpeedRampPoint(position: 0.5 + 1e-9, speed: 0.5),
+  VideoSpeedRampPoint(position: 1, speed: 0.5),
+]);
 
 /// A take on the timeline from 1 s to 3 s, playing its source from 0.5 s.
 AudioEvent _recording() => AudioEvent(
@@ -102,6 +114,7 @@ void main() {
       registerFallbackValue(const AudioSourceConfig.file(''));
       registerFallbackValue(Duration.zero);
       registerFallbackValue(_takeSource);
+      registerFallbackValue((Duration _) => 1.0);
     });
 
     setUp(() {
@@ -546,6 +559,96 @@ void main() {
           expect(bloc.state.status, VoiceEffectStatus.failure);
         },
         errors: () => [isA<VoiceEffectException>()],
+      );
+    });
+
+    group('speed ramp', () {
+      /// The take from 1 s to 3 s along the ramp: 1.6 s of it.
+      AudioEvent rampedTake() => _recording().withSpeedRamp(_fastThenSlow);
+
+      setUp(
+        () => when(
+          () => player.setSpeedCurve(any()),
+        ).thenAnswer((_) async {}),
+      );
+
+      blocTest<VoiceEffectBloc, VoiceEffectState>(
+        'loops the stretch a ramped take plays, along its ramp',
+        build: () => build(rampedTake()),
+        act: (bloc) => bloc.add(const VoiceEffectSettingsChanged()),
+        verify: (_) {
+          final config =
+              verify(() => player.setClip(captureAny())).captured.single
+                  as AudioSourceConfig;
+          expect(config.start, const Duration(milliseconds: 500));
+          expect(
+            (config.end! - const Duration(milliseconds: 2100)).inMicroseconds
+                .abs(),
+            lessThanOrEqualTo(1),
+          );
+          final speedAt =
+              verify(() => player.setSpeedCurve(captureAny())).captured.single
+                  as double Function(Duration);
+          expect(speedAt(const Duration(milliseconds: 100)), 2);
+          expect(speedAt(const Duration(milliseconds: 1500)), 0.5);
+          verifyNever(() => player.setSpeed(any()));
+        },
+      );
+
+      blocTest<VoiceEffectBloc, VoiceEffectState>(
+        'keeps the ramp with the processed sound',
+        setUp: () => when(
+          () => service.process(
+            source: _takeSource,
+            effect: _robot,
+            noiseReduction: false,
+          ),
+        ).thenAnswer((_) async => (path: _robotTake, mimeType: 'audio/wav')),
+        build: () => build(rampedTake()),
+        act: (bloc) async {
+          bloc.add(
+            const VoiceEffectSettingsChanged(effect: _robot, audition: false),
+          );
+          await pumpEventQueue();
+          bloc.add(const VoiceEffectApplyRequested());
+        },
+        verify: (bloc) {
+          final result = bloc.state.result!;
+          expect(result.url, _robotTake);
+          expect(result.speedRamp, _fastThenSlow);
+          expect(result.playbackSpeed, 1);
+        },
+      );
+
+      blocTest<VoiceEffectBloc, VoiceEffectState>(
+        'gives way to the speed of a preset that has one',
+        setUp: () => stubAudition('/tmp/audition_1.wav'),
+        build: () => build(rampedTake()),
+        act: (bloc) async {
+          bloc.add(
+            const VoiceEffectSettingsChanged(
+              preset: VoiceEffectPreset.slowedReverb,
+            ),
+          );
+          await pumpEventQueue();
+          when(
+            () => service.process(
+              source: _takeSource,
+              effect: VoiceEffectPreset.slowedReverb.effect,
+              noiseReduction: false,
+            ),
+          ).thenAnswer(
+            (_) async => (path: '/docs/slowed.wav', mimeType: 'audio/wav'),
+          );
+          bloc.add(const VoiceEffectApplyRequested());
+        },
+        verify: (bloc) {
+          verify(() => player.setSpeed(0.8)).called(1);
+          verifyNever(() => player.setSpeedCurve(any()));
+          final result = bloc.state.result!;
+          expect(result.speedRamp, isNull);
+          expect(result.playbackSpeed, 0.8);
+        },
       );
     });
 

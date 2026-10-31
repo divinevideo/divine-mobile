@@ -10,6 +10,17 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show VideoSpeedRamp, VideoSpeedRampPoint;
+
+/// Twice as fast through the audio's first half, half as fast through the
+/// second: the first half takes a fifth of the time.
+const _fastThenSlow = VideoSpeedRamp([
+  VideoSpeedRampPoint(position: 0, speed: 2),
+  VideoSpeedRampPoint(position: 0.5, speed: 2),
+  VideoSpeedRampPoint(position: 0.5 + 1e-9, speed: 0.5),
+  VideoSpeedRampPoint(position: 1, speed: 0.5),
+]);
 
 void main() {
   group(WaveformConstants, () {
@@ -63,6 +74,7 @@ void main() {
       Duration fadeOut = Duration.zero,
       Duration? audibleDuration,
       double playbackSpeed = 1,
+      VideoSpeedRamp? speedRamp,
     }) {
       return StereoWaveformPainter(
         leftChannel: leftChannel ?? Float32List(0),
@@ -79,6 +91,7 @@ void main() {
         fadeOut: fadeOut,
         audibleDuration: audibleDuration,
         playbackSpeed: playbackSpeed,
+        speedRamp: speedRamp,
       );
     }
 
@@ -87,6 +100,17 @@ void main() {
         final left = Float32List.fromList([0.5]);
         final painter = createPainter(leftChannel: left);
         final other = createPainter(leftChannel: left, playbackSpeed: 2);
+
+        expect(painter.shouldRepaint(other), isTrue);
+      });
+
+      test('returns true when speedRamp changes', () {
+        final left = Float32List.fromList([0.5]);
+        final painter = createPainter(leftChannel: left);
+        final other = createPainter(
+          leftChannel: left,
+          speedRamp: _fastThenSlow,
+        );
 
         expect(painter.shouldRepaint(other), isTrue);
       });
@@ -512,6 +536,44 @@ void main() {
 
         expect(normal[at7s], ceilingBar(at7s));
         expect(fast[at7s].height, lessThan(ceilingBar(at7s).height));
+      });
+
+      testWidgets('spreads the bars of a ramped sound along its ramp', (
+        tester,
+      ) async {
+        Future<List<RRect>> barsAlong(VideoSpeedRamp? ramp) async {
+          final render = await pumpPainter(
+            tester,
+            createPainter(
+              // Loud through the first half of the audio, silent after.
+              leftChannel: Float32List.fromList([
+                ...List.filled(32, 0.5),
+                ...List.filled(32, 0.0),
+              ]),
+              speedRamp: ramp,
+            ),
+          );
+          final bars = <RRect>[];
+          expect(
+            render,
+            paints..everything((method, arguments) {
+              if (method == #drawRRect) bars.add(arguments.first as RRect);
+              return true;
+            }),
+          );
+          return bars;
+        }
+
+        // Without the ramp the loud half fills half the width; along it,
+        // the fast half plays in a fifth of the time.
+        final constant = await barsAlong(null);
+        final ramped = await barsAlong(_fastThenSlow);
+        final at10 = (ramped.length * 0.1).floor();
+        final at30 = (ramped.length * 0.3).floor();
+
+        expect(constant[at30], ceilingBar(at30));
+        expect(ramped[at10], ceilingBar(at10));
+        expect(ramped[at30], barAt(at30, WaveformConstants.minBarHeight));
       });
 
       testWidgets('keeps a near-silent source below the band', (tester) async {

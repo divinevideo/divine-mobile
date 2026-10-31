@@ -28,6 +28,7 @@ import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_take_placement.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/di/loop_alignment_dependencies.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/extensions/clip_keyframes.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
@@ -1374,7 +1375,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     final healed = editor.stateManager.audioTracks.map((track) {
       final secs = resolved[track.id];
       if (secs == null) return track;
-      // How long the whole sound plays on the timeline at its speed.
+      // How long the whole sound plays on the timeline at its speed or ramp.
       final audioDuration = track.timelineSpanOf(
         Duration(milliseconds: (secs * 1000).toInt()),
       );

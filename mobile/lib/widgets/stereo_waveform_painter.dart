@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/models/video_editor/audio_fade.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoSpeedRamp;
 
 /// Constants for waveform bar rendering.
 abstract final class WaveformConstants {
@@ -85,6 +86,7 @@ class StereoWaveformPainter extends CustomPainter {
     this.fadeOut = Duration.zero,
     this.audibleDuration,
     this.playbackSpeed = 1,
+    this.speedRamp,
   });
 
   /// Left channel amplitude data.
@@ -141,6 +143,41 @@ class StereoWaveformPainter extends CustomPainter {
   /// [maxDuration] and [startOffset] are audio time. A sound played twice as
   /// fast fades in over twice as much of its drawn audio.
   final double playbackSpeed;
+
+  /// The curve the audio plays along over [maxDuration] of it, starting at
+  /// [startOffset], instead of [playbackSpeed]. The bars follow it, so a
+  /// stretch played slowly takes more of the width, and the fades stay where
+  /// they sound. `null` at a constant speed.
+  final VideoSpeedRamp? speedRamp;
+
+  /// How long [visibleMs] of the drawn audio plays, in milliseconds.
+  double _playbackMsOf(double visibleMs, double maxMs) {
+    final ramp = speedRamp;
+    if (ramp == null) return visibleMs / playbackSpeed;
+    return ramp
+            .sourceToOutput(_ms(visibleMs), sourceDuration: _ms(maxMs))
+            .inMicroseconds /
+        1000;
+  }
+
+  /// Where the drawn audio is at [playbackShare] of [visiblePlaybackMs], as
+  /// a share of [visibleMs].
+  double _audioShareAt(
+    double playbackShare, {
+    required double visiblePlaybackMs,
+    required double visibleMs,
+    required double maxMs,
+  }) {
+    final ramp = speedRamp;
+    if (ramp == null) return playbackShare;
+    final source = ramp.outputToSource(
+      _ms(playbackShare * visiblePlaybackMs),
+      sourceDuration: _ms(maxMs),
+    );
+    return source.inMicroseconds / 1000 / visibleMs;
+  }
+
+  static Duration _ms(double ms) => Duration(microseconds: (ms * 1000).round());
 
   /// Computed step (width + spacing) for each bar.
   double get _barStep => barWidth + barSpacing;
@@ -218,7 +255,9 @@ class StereoWaveformPainter extends CustomPainter {
 
     // How much of the bar should be filled with waveform
     // (1.0 if available audio >= maxDuration, less if shorter)
-    final barFillRatio = visibleMs / maxMs;
+    final barFillRatio = speedRamp == null
+        ? visibleMs / maxMs
+        : _playbackMsOf(visibleMs, maxMs) / _playbackMsOf(maxMs, maxMs);
 
     // Calculate sample offset and visible sample count
     final sampleOffset = ((offsetMs / audioMs) * leftChannel.length).floor();
@@ -248,6 +287,7 @@ class StereoWaveformPainter extends CustomPainter {
       sampleOffset: sampleOffset,
       progressX: progressX,
       visibleMs: visibleMs,
+      maxMs: maxMs,
     );
 
     // Draw placeholder bars for remaining empty space (if audio < maxDuration)
@@ -310,11 +350,12 @@ class StereoWaveformPainter extends CustomPainter {
     required int sampleOffset,
     required double progressX,
     required double visibleMs,
+    required double maxMs,
   }) {
     final barCount = (waveformWidth / _barStep).floor();
     final hasFade = fadeIn > Duration.zero || fadeOut > Duration.zero;
-    // The fades are playback time; the drawn audio plays this much faster.
-    final visiblePlaybackMs = visibleMs / playbackSpeed;
+    // The fades are playback time; the drawn audio plays faster or slower.
+    final visiblePlaybackMs = _playbackMsOf(visibleMs, maxMs);
     final visibleLength = Duration(
       microseconds: (visiblePlaybackMs * 1000).round(),
     );
@@ -331,9 +372,16 @@ class StereoWaveformPainter extends CustomPainter {
     for (var i = 0; i < barCount; i++) {
       final x = i * _barStep;
 
-      // Map bar position to sample index within visible samples, offset by startOffset
+      // Map bar position to sample index within visible samples, offset by
+      // startOffset; the bars sit evenly in playback time.
+      final audioShare = _audioShareAt(
+        i / barCount,
+        visiblePlaybackMs: visiblePlaybackMs,
+        visibleMs: visibleMs,
+        maxMs: maxMs,
+      );
       final sampleIndex =
-          sampleOffset + ((i / barCount) * visibleSampleCount).floor();
+          sampleOffset + (audioShare * visibleSampleCount).floor();
 
       // Normalize and curve the raw samples into 0.0-1.0 display amplitudes.
       final leftAmp = sampleIndex < leftSamples.length
@@ -401,6 +449,7 @@ class StereoWaveformPainter extends CustomPainter {
         oldDelegate.fadeIn != fadeIn ||
         oldDelegate.fadeOut != fadeOut ||
         oldDelegate.audibleDuration != audibleDuration ||
-        oldDelegate.playbackSpeed != playbackSpeed;
+        oldDelegate.playbackSpeed != playbackSpeed ||
+        oldDelegate.speedRamp != speedRamp;
   }
 }

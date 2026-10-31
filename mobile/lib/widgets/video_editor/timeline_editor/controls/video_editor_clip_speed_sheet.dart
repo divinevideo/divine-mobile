@@ -1,5 +1,5 @@
 // ABOUTME: Bottom sheet for the speed of the selected clip or sound: one
-// ABOUTME: constant speed from presets or a slider, or a clip's speed curve.
+// ABOUTME: constant speed from presets or a slider, or a speed curve.
 
 import 'dart:math' as math;
 
@@ -33,7 +33,6 @@ class VideoEditorClipSpeedSheet extends StatefulWidget {
     this.title,
     this.initialRamp,
     this.sourceDuration,
-    this.offerCurve = true,
   });
 
   final double initialSpeed;
@@ -41,16 +40,13 @@ class VideoEditorClipSpeedSheet extends StatefulWidget {
   /// The sheet's title; the clip speed title when `null`.
   final String? title;
 
-  /// The clip's speed curve; the sheet opens on the curve when set.
+  /// The clip's or sound's speed curve; the sheet opens on the curve when
+  /// set.
   final VideoSpeedRamp? initialRamp;
 
-  /// The trimmed clip's source length, for the resulting length shown under
-  /// the controls; hidden when null.
+  /// The source length the trimmed clip or the sound's window plays, for the
+  /// resulting length shown under the controls; hidden when null.
   final Duration? sourceDuration;
-
-  /// Whether a speed curve can be chosen besides a constant speed. A sound
-  /// only plays at one speed, so its sheet leaves the curve out.
-  final bool offerCurve;
 
   @override
   State<VideoEditorClipSpeedSheet> createState() =>
@@ -79,7 +75,7 @@ class _VideoEditorClipSpeedSheetState extends State<VideoEditorClipSpeedSheet> {
     if (initialRamp != null && ClipSpeedRampPreset.of(initialRamp) == null) {
       _customRamp = initialRamp;
     }
-    _curveMode = ValueNotifier(widget.offerCurve && initialRamp != null);
+    _curveMode = ValueNotifier(initialRamp != null);
   }
 
   @override
@@ -152,11 +148,10 @@ class _VideoEditorClipSpeedSheetState extends State<VideoEditorClipSpeedSheet> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 16,
               children: [
-                if (widget.offerCurve)
-                  _SpeedModeToggle(
-                    curveMode: curveMode,
-                    onChanged: (value) => _curveMode.value = value,
-                  ),
+                _SpeedModeToggle(
+                  curveMode: curveMode,
+                  onChanged: (value) => _curveMode.value = value,
+                ),
                 if (curveMode)
                   _SpeedCurveControls(
                     ramp: _ramp,

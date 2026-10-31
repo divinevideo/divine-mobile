@@ -8,6 +8,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:models/models.dart' show AudioEvent, AudioSourceKind;
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
@@ -50,7 +51,8 @@ class BeatSourcePart extends Equatable {
 
   /// A speed that changes while the part plays, instead of [speed]; it runs
   /// along [rampLength] of [media] from [rampStart], the clip's trimmed
-  /// window, which the part may be only a stretch of.
+  /// window or the stretch a sound's window plays, which the part may be only
+  /// a stretch of.
   final VideoSpeedRamp? speedRamp;
 
   /// Where in [media] [speedRamp] starts.
@@ -173,7 +175,7 @@ BeatSourcePart? soundSourcePartFor(
   final end = soundEnd != null && soundEnd > sound.startTime
       ? (soundEnd < videoEnd ? soundEnd : videoEnd)
       : videoEnd;
-  var to = sound.startOffset + sound.sourceSpanOf(end - sound.startTime);
+  var to = sound.startOffset + sound.sourceOffsetAt(end - sound.startTime);
   final seconds = sound.duration;
   final fileLength = seconds == null
       ? null
@@ -190,6 +192,9 @@ BeatSourcePart? soundSourcePartFor(
     to: to,
     at: sound.startTime,
     speed: sound.playbackSpeed,
+    speedRamp: sound.speedRamp,
+    rampStart: sound.startOffset,
+    rampLength: sound.playedSourceSpan ?? to - sound.startOffset,
   );
 }
 

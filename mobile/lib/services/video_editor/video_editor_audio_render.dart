@@ -4,6 +4,7 @@
 import 'dart:io';
 
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/video_editor/audio_render_window.dart';
@@ -309,18 +310,25 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
     }
     final (:startTime, :endTime) = window;
     final event = eventsById[track.id];
+    final speedRamp = event?.speedRamp;
+    // A ramp runs over the stretch of the sound its window plays, so that
+    // stretch has to end where the window does, not at the end of the file.
+    final rampSpan = speedRamp == null ? null : event?.playedSourceSpan;
     final resolvedTrack = VideoAudioTrack(
       path: audioPath,
       startTime: startTime,
       endTime: endTime,
       audioStartTime: track.audioStartTime,
-      audioEndTime: track.audioEndTime,
+      audioEndTime: rampSpan == null
+          ? track.audioEndTime
+          : (track.audioStartTime ?? Duration.zero) + rampSpan,
       loop: track.loop,
       volume: track.volume,
       fadeInDuration: event?.fadeInDuration ?? Duration.zero,
       fadeOutDuration: event?.fadeOutDuration ?? Duration.zero,
       equalizer: event?.equalizer.toRenderEqualizer(),
       playbackSpeed: event?.playbackSpeed ?? 1.0,
+      speedRamp: speedRamp,
       volumeCurve: duckingCurves[track.id],
     );
     audioTracks.add(resolvedTrack);
@@ -332,7 +340,7 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
       '${_durationMs(resolvedTrack.audioEndTime)}], '
       'fade=[${_durationMs(resolvedTrack.fadeInDuration)}, '
       '${_durationMs(resolvedTrack.fadeOutDuration)}], '
-      'speed=${resolvedTrack.playbackSpeed}, '
+      'speed=${resolvedTrack.speedRamp ?? resolvedTrack.playbackSpeed}, '
       '${switch (resolvedTrack.volumeCurve) {
         final curve? => 'ducking=${curve.points.length} points, ',
         null => '',

@@ -43,6 +43,7 @@ class AudioClipPlayer {
   final RemoteAudioFileLoader _remoteAudioFileLoader;
   File? _cachedRemoteFile;
   Uri? _cachedRemoteUri;
+  StreamSubscription<Duration>? _speedCurveSubscription;
 
   /// playing (i.e. reaches the end without being stopped manually).
   ///
@@ -116,11 +117,43 @@ class AudioClipPlayer {
   /// Plays the clip [speed] times as fast at unchanged pitch: `2` plays it
   /// in half the time. Positions passed to [seek] stay positions in the clip.
   Future<void> setSpeed(double speed) async {
+    await _stopSpeedCurve();
     await _audioPlayer.setSpeed(speed);
+  }
+
+  /// Plays the clip at the speed [speedAt] gives for its position in the
+  /// clip, at unchanged pitch, until [setSpeed] or another curve replaces it.
+  ///
+  /// The speed changes whenever the player reports a new position, several
+  /// times a second: close enough to audition a speed ramp, not sample-exact.
+  Future<void> setSpeedCurve(double Function(Duration position) speedAt) async {
+    await _stopSpeedCurve();
+    var current = speedAt(_audioPlayer.position);
+    await _audioPlayer.setSpeed(current);
+    _speedCurveSubscription = _audioPlayer.positionStream.listen((position) {
+      final speed = speedAt(position);
+      if (speed == current) return;
+      current = speed;
+      unawaited(
+        _audioPlayer.setSpeed(speed).catchError((Object error) {
+          Log.warning(
+            'Speed curve step failed: $error',
+            name: 'AudioClipPlayer',
+            category: LogCategory.video,
+          );
+        }),
+      );
+    });
+  }
+
+  Future<void> _stopSpeedCurve() async {
+    await _speedCurveSubscription?.cancel();
+    _speedCurveSubscription = null;
   }
 
   /// Releases all resources held by the underlying player.
   Future<void> dispose() async {
+    await _stopSpeedCurve();
     try {
       await _audioPlayer.dispose();
     } on Exception catch (e) {
