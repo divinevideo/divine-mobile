@@ -1386,7 +1386,7 @@ class _QuotedVideoCard extends ConsumerWidget {
     final primaryColor = isSent ? _sentBubbleInk : context.vineColors.onSurface;
     final secondaryColor = isSent
         ? _sentBubbleInk
-        : context.vineColors.onSurfaceMuted;
+        : context.vineColors.secondaryText;
     final primaryLabel = hasTitle ? title : (authorName ?? '');
     final showSecondary =
         hasTitle && authorName != null && authorName.isNotEmpty;
@@ -1492,7 +1492,7 @@ class _QuotedVideoUnavailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSent ? _sentBubbleInk : context.vineColors.onSurfaceMuted;
+    final color = isSent ? _sentBubbleInk : context.vineColors.secondaryText;
     return _QuotedVideoFrame(
       isSent: isSent,
       child: Row(

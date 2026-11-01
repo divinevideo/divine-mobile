@@ -428,7 +428,7 @@ void main() {
           });
         });
 
-        for (final (side, isSent) in [('sent', true)]) {
+        for (final (side, isSent) in [('sent', true), ('received', false)]) {
           group('quoted video on a $side bubble', () {
             testWidgets('keeps the title and author readable', (tester) async {
               resolveQuotedVideo();
