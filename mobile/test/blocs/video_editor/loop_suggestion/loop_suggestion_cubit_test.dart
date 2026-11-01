@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:loop_alignment_repository/loop_alignment_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _Repository extends Mock implements LoopAlignmentRepository {}
 
@@ -35,7 +36,8 @@ void main() {
     registerFallbackValue(_input('fallback'));
     registerFallbackValue(const LoopRepairResult(status: .noMatch));
   });
-  setUp(() {
+  setUp(() async {
+    await LogCaptureService().clearAllLogs();
     repository = _Repository();
     when(() => repository.cancel(any())).thenAnswer((_) async {});
     when(() => repository.discard(any())).thenAnswer((_) async {});
@@ -58,10 +60,17 @@ void main() {
               onProgress: any(named: 'onProgress'),
             ),
           ).thenAnswer((_) async => result);
+          const revision = 'rev-0b7d2f';
           final cubit = LoopSuggestionCubit(repository: repository);
           addTearDown(cubit.close);
-          await cubit.fix(_input('one'));
+          await cubit.fix(_input(revision));
           expect(cubit.state.status, entry.value);
+          final logs = (await LogCaptureService().getAllLogsAsText()).join(
+            '\n',
+          );
+          expect(logs, contains('status=${entry.key.name}'));
+          expect(logs, isNot(contains('/documents/clip.mp4')));
+          expect(logs, isNot(contains(revision)));
           cubit.resultHandled();
           expect(cubit.state.status, LoopSuggestionStatus.idle);
         },
@@ -149,7 +158,7 @@ void main() {
       verify(() => repository.discard(late)).called(1);
     });
     for (final error in [
-      const LoopAlignmentFailure('decode'),
+      const LoopAlignmentFailure('decode /documents/clip.mp4'),
       const LoopAlignmentTimeout(),
     ]) {
       blocTest<LoopSuggestionCubit, LoopSuggestionState>(
@@ -164,7 +173,7 @@ void main() {
           ).thenThrow(error);
           return LoopSuggestionCubit(repository: repository);
         },
-        act: (cubit) => cubit.fix(_input('one')),
+        act: (cubit) => cubit.fix(_input('rev-0b7d2f')),
         expect: () => [
           isA<LoopSuggestionState>().having(
             (s) => s.status,
@@ -180,6 +189,14 @@ void main() {
           ),
         ],
         errors: () => [error],
+        verify: (_) async {
+          final logs = (await LogCaptureService().getAllLogsAsText()).join(
+            '\n',
+          );
+          expect(logs, contains('type=${error.runtimeType}'));
+          expect(logs, isNot(contains('/documents/clip.mp4')));
+          expect(logs, isNot(contains('rev-0b7d2f')));
+        },
       );
     }
     blocTest<LoopSuggestionCubit, LoopSuggestionState>(
