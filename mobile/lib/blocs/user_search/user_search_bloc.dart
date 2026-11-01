@@ -656,5 +656,8 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
 
   void _onCleared(UserSearchCleared event, Emitter<UserSearchState> emit) {
     emit(const UserSearchState());
+    // This event is outside the query's debounce, so it cancels nothing there.
+    // An empty query replaces one still waiting and ends the running search.
+    addIfOpen(const UserSearchQueryChanged(''));
   }
 }

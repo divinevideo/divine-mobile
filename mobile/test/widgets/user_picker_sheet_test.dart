@@ -387,6 +387,70 @@ void main() {
       );
     });
 
+    // #10017: a clear must win over a search that has not started yet.
+    group('clearing the search', () {
+      testWidgets('starts no search when the field is cleared before the '
+          'debounce ends', (tester) async {
+        final repository = _createMockProfileRepository(
+          searchResults: [
+            UserProfile(
+              pubkey: 'b' * 64,
+              displayName: 'Bob',
+              rawData: const {},
+              createdAt: DateTime(2026),
+              eventId: 'e' * 64,
+            ),
+          ],
+        );
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              nostrSessionProvider.overrideWith(_TestNostrSession.new),
+              userRankingSignalsLoaderProvider.overrideWithValue(rankingLoader),
+              _noVanishedProfiles,
+              profileRepositoryProvider.overrideWithValue(repository),
+              followRepositoryProvider.overrideWithValue(
+                _createMockFollowRepository(),
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: UserPickerSheet(
+                  title: 'Title',
+                  filterMode: UserPickerFilterMode.allUsers,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.enterText(find.byType(TextField), 'bo');
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.enterText(find.byType(TextField), '');
+        await tester.pump(const Duration(milliseconds: 400));
+        // The search stream's own completion needs a real turn to land.
+        await tester.runAsync(() async {});
+        await tester.pump();
+        await tester.runAsync(() async {});
+        await tester.pump();
+
+        expect(find.text('Bob'), findsNothing);
+        verifyNever(
+          () => repository.searchUsersProgressive(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+            hasVideos: any(named: 'hasVideos'),
+            boostPubkeys: any(named: 'boostPubkeys'),
+            cancellationToken: any(named: 'cancellationToken'),
+          ),
+        );
+      });
+    });
+
     group('renders', () {
       testWidgets(
         'stored nonmutual collaborator can be removed',

@@ -637,8 +637,9 @@ void main() {
 
         expect(find.text('No users found'), findsOneWidget);
 
-        // Clear the search
+        // Clear the search, and let its debounced empty query land.
         await tester.enterText(find.byType(TextField), '');
+        await tester.pump(const Duration(milliseconds: 400));
         await tester.pumpAndSettle();
 
         // Should return to contacts (empty state in this case)
