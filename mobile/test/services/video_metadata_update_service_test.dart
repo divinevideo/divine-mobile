@@ -811,6 +811,36 @@ void main() {
         },
       );
 
+      test(
+        'keeps an empty title tag on an untitled video so the relay '
+        'accepts the replacement',
+        () async {
+          final video = _testVideo(
+            extraTags: const [
+              ['title', ''],
+              ['summary', 'Old description'],
+            ],
+          );
+
+          final result = await service.updateVideo(
+            originalVideo: video,
+            editorState: VideoEditorProviderState(
+              title: '   ',
+              description: 'New description',
+            ),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateSuccess>());
+          expect(
+            capturedTags.where((tag) => tag.first == 'title'),
+            equals([
+              ['title', ''],
+            ]),
+          );
+        },
+      );
+
       test('drops an over-long hashtag when the video is edited', () async {
         final pastedList = 'VineHashtagsMasterList' * 10;
         final video = _testVideo(
