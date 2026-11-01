@@ -15,6 +15,7 @@ import '../../../../helpers/test_provider_overrides.dart';
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
 const _time = '2:30 PM';
+const _videoShare = 'https://divine.video/video/abc123';
 
 /// Composites the fills behind [element], nearest first, out to the first
 /// opaque one: what the text is actually drawn on, washes included.
@@ -47,6 +48,15 @@ void _expectReadable(String what, Color ink, Color fill) {
     reason: '$what measured ${ratio.toStringAsFixed(2)}:1',
   );
   expect(VineThemeColors.debugFallbackCount, 0);
+}
+
+/// Fails when a fixture stopped parsing as a video, which would otherwise
+/// measure a text bubble and pass.
+void _expectOnMediaCard(WidgetTester tester) {
+  final colors = Theme.of(
+    tester.element(find.byType(MessageBubble)),
+  ).extension<VineThemeColors>()!;
+  expect(_fillBehind(tester.element(find.text(_time))), colors.mediaCard);
 }
 
 void _expectTextReadable(WidgetTester tester, String what, String text) {
@@ -122,6 +132,34 @@ void main() {
               ),
             );
 
+            _expectTextReadable(tester, 'time', _time);
+          });
+
+          testWidgets('is readable on a sent video card', (tester) async {
+            await pumpBubble(
+              tester,
+              const MessageBubble(
+                message: _videoShare,
+                timestamp: _time,
+                isSent: true,
+              ),
+            );
+
+            _expectOnMediaCard(tester);
+            _expectTextReadable(tester, 'time', _time);
+          });
+
+          testWidgets('is readable on a received video card', (tester) async {
+            await pumpBubble(
+              tester,
+              const MessageBubble(
+                message: _videoShare,
+                timestamp: _time,
+                isSent: false,
+              ),
+            );
+
+            _expectOnMediaCard(tester);
             _expectTextReadable(tester, 'time', _time);
           });
         });

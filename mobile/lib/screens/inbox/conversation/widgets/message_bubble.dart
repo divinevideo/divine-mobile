@@ -551,7 +551,9 @@ class _MessageBubbleState extends State<MessageBubble> {
                                 child: Text(
                                   timestamp,
                                   style: VineTheme.labelSmallFont(
-                                    color: isSent && !hasMediaCard
+                                    color: hasMediaCard
+                                        ? context.vineColors.secondaryText
+                                        : isSent
                                         ? VineTheme.onPrimary
                                         : context.vineColors.onSurfaceMuted,
                                   ),
