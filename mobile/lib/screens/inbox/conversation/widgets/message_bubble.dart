@@ -165,7 +165,7 @@ const double _videoCardRadius = 16;
 ///
 /// Text bubbles — sent (right-aligned): primaryAccessible background;
 /// received (left-aligned): surfaceContainer background. Shared-video
-/// bubbles use a neutral dark frame (neutral10) in both directions so the
+/// bubbles use a neutral themed frame (mediaCard) in both directions so the
 /// thumbnail reads as a media card, matching the Figma
 /// `part/video thumbnail` share bubble.
 ///
@@ -393,6 +393,9 @@ class _MessageBubbleState extends State<MessageBubble> {
     // Both media cards share the neutral frame, the card-width cap, and the
     // standalone grouping.
     final hasMediaCard = hasVideo || hasEncryptedVideo;
+    // A sent media card sits on the neutral frame, so being sent does not say
+    // what is behind the text.
+    final isOnSentFill = isSent && !hasMediaCard;
     final effectiveIsFirstInGroup = hasMediaCard || isFirstInGroup;
     final effectiveIsLastInGroup = hasMediaCard || isLastInGroup;
     // Shared by the bubble itself and the failed/blocked status line below
@@ -592,7 +595,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                                   padding: const EdgeInsets.only(top: 8),
                                   child: _MessageText(
                                     message: personalMessage,
-                                    isSent: isSent,
+                                    isOnSentFill: isOnSentFill,
                                     dmReplyContext: dmReplyContext,
                                   ),
                                 ),
@@ -601,7 +604,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                                   padding: const EdgeInsets.only(top: 8),
                                   child: _MessageText(
                                     message: textAfterUrl,
-                                    isSent: isSent,
+                                    isOnSentFill: isOnSentFill,
                                     dmReplyContext: dmReplyContext,
                                   ),
                                 ),
@@ -621,7 +624,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                               if (quotedReplyText.isNotEmpty)
                                 _MessageText(
                                   message: quotedReplyText,
-                                  isSent: isSent,
+                                  isOnSentFill: isOnSentFill,
                                   dmReplyContext: dmReplyContext,
                                 ),
                             ],
@@ -629,7 +632,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                               Padding(
                                 padding: const EdgeInsets.only(top: 6),
                                 child: _MessageExpansionControls(
-                                  isSent: isSent,
+                                  isOnSentFill: isOnSentFill,
                                   canShowMore:
                                       _displaySlice.hasMore &&
                                       _visibleCodeUnitLimit <
@@ -757,7 +760,7 @@ class _SenderName extends StatelessWidget {
 
 class _MessageExpansionControls extends StatelessWidget {
   const _MessageExpansionControls({
-    required this.isSent,
+    required this.isOnSentFill,
     required this.canShowMore,
     required this.canShowLess,
     required this.reachedHardLimit,
@@ -765,7 +768,7 @@ class _MessageExpansionControls extends StatelessWidget {
     required this.onShowLess,
   });
 
-  final bool isSent;
+  final bool isOnSentFill;
   final bool canShowMore;
   final bool canShowLess;
   final bool reachedHardLimit;
@@ -778,7 +781,9 @@ class _MessageExpansionControls extends StatelessWidget {
     // accent green measures 1.4:1 — invisible. Mirror [_MessageText]'s link
     // rule: white on sent bubbles, the palette accent on received ones.
     final actionStyle = VineTheme.bodySmallFont(
-      color: isSent ? VineTheme.whiteText : context.vineColors.accentPositive,
+      color: isOnSentFill
+          ? VineTheme.whiteText
+          : context.vineColors.accentPositive,
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -806,9 +811,9 @@ class _MessageExpansionControls extends StatelessWidget {
             child: Text(
               context.l10n.dmMessageDisplayLimitReached,
               style: VineTheme.bodySmallFont(
-                color: isSent
+                color: isOnSentFill
                     ? VineTheme.whiteText.withValues(alpha: 0.7)
-                    : context.vineColors.onSurfaceMuted,
+                    : context.vineColors.secondaryText,
               ),
             ),
           ),
@@ -891,12 +896,12 @@ class _RetractionIndicator extends StatelessWidget {
 class _MessageText extends ConsumerStatefulWidget {
   const _MessageText({
     required this.message,
-    required this.isSent,
+    required this.isOnSentFill,
     this.dmReplyContext,
   });
 
   final String message;
-  final bool isSent;
+  final bool isOnSentFill;
   final DmReplyContext? dmReplyContext;
 
   @override
@@ -913,11 +918,13 @@ class _MessageTextState extends ConsumerState<_MessageText> {
     // modes, so their text stays white; received bubbles sit on the themed
     // surfaceContainer and follow the palette.
     final defaultStyle = VineTheme.bodyMediumFont(
-      color: widget.isSent ? VineTheme.whiteText : context.vineColors.onSurface,
+      color: widget.isOnSentFill
+          ? VineTheme.whiteText
+          : context.vineColors.onSurface,
     );
-    // The primary green reads cleanly on the received bubble; on the sent
+    // The primary green reads cleanly on themed fills; on the sent
     // bubble it would sit green-on-green, so links there stay white.
-    final linkColor = widget.isSent
+    final linkColor = widget.isOnSentFill
         ? VineTheme.whiteText
         : context.vineColors.link;
     final referenceStyle = defaultStyle.copyWith(
@@ -926,9 +933,9 @@ class _MessageTextState extends ConsumerState<_MessageText> {
       decorationColor: linkColor,
     );
     // The sent bubble keeps the fixed green, so a translucent white wash
-    // reads there; the received bubble follows the palette and takes an
+    // reads there; themed fills follow the palette and take an
     // on-surface wash so the code chip stays visible in both modes.
-    final codeBackground = widget.isSent
+    final codeBackground = widget.isOnSentFill
         ? VineTheme.whiteText.withValues(alpha: 0.18)
         : context.vineColors.onSurface.withValues(alpha: 0.10);
     final codeStyle = VineTheme.codeFont(color: defaultStyle.color);

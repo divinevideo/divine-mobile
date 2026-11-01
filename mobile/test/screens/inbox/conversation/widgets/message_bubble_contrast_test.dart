@@ -5,8 +5,10 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_bubble.dart';
+import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../../../helpers/contrast.dart';
@@ -40,6 +42,34 @@ Color _fillBehind(Element element) {
   );
 }
 
+/// The effective style of the leaf span painting [needle]. The root of a
+/// `RichText` carries the inherited default, which says nothing about the leaf.
+TextStyle _leafStyle(RichText richText, String needle) {
+  TextStyle? found;
+  void walk(InlineSpan span, TextStyle inherited) {
+    final style = inherited.merge(span.style);
+    if (span is TextSpan) {
+      if (span.text?.contains(needle) ?? false) found ??= style;
+      for (final child in span.children ?? const <InlineSpan>[]) {
+        walk(child, style);
+      }
+    }
+  }
+
+  walk(richText.text, const TextStyle());
+  expect(found, isNotNull, reason: 'no span paints "$needle"');
+  return found!;
+}
+
+Element _richTextElement(WidgetTester tester, String needle) => tester.element(
+  find
+      .byWidgetPredicate(
+        (widget) =>
+            widget is RichText && widget.text.toPlainText().contains(needle),
+      )
+      .first,
+);
+
 void _expectReadable(String what, Color ink, Color fill) {
   final ratio = contrastRatio(ink, fill);
   expect(
@@ -68,8 +98,29 @@ void _expectTextReadable(WidgetTester tester, String what, String text) {
   );
 }
 
+void _expectSpanReadable(WidgetTester tester, String what, String needle) {
+  final element = _richTextElement(tester, needle);
+  _expectReadable(
+    what,
+    _leafStyle(element.widget as RichText, needle).color!,
+    _fillBehind(element),
+  );
+}
+
+void _expectCodeReadable(WidgetTester tester, String needle) {
+  final element = _richTextElement(tester, needle);
+  final style = _leafStyle(element.widget as RichText, needle);
+  _expectReadable(
+    'code',
+    style.color!,
+    Color.alphaBlend(style.background!.color, _fillBehind(element)),
+  );
+}
+
 void main() {
   group('$MessageBubble text contrast', () {
+    final strings = AppLocalizationsEn();
+
     for (final (appearance, theme) in [
       ('light', VineTheme.lightTheme),
       ('dark', VineTheme.theme),
@@ -162,6 +213,127 @@ void main() {
             _expectOnMediaCard(tester);
             _expectTextReadable(tester, 'time', _time);
           });
+        });
+
+        group('sent video card', () {
+          testWidgets('keeps a personal note readable', (tester) async {
+            await pumpBubble(
+              tester,
+              const MessageBubble(
+                message: 'note under video\n\n"Title"\n\n$_videoShare',
+                timestamp: _time,
+                isSent: true,
+              ),
+            );
+
+            _expectOnMediaCard(tester);
+            _expectSpanReadable(tester, 'note', 'note under video');
+          });
+
+          testWidgets('keeps text after the link readable', (tester) async {
+            await pumpBubble(
+              tester,
+              const MessageBubble(
+                message: '$_videoShare\n\ntext after the link',
+                timestamp: _time,
+                isSent: true,
+              ),
+            );
+
+            _expectOnMediaCard(tester);
+            _expectSpanReadable(tester, 'text', 'text after the link');
+          });
+
+          testWidgets('keeps the show more control readable', (tester) async {
+            await pumpBubble(
+              tester,
+              MessageBubble(
+                message: '$_videoShare\n\n${'a' * dmInitialDisplayCodeUnits}',
+                timestamp: _time,
+                isSent: true,
+              ),
+            );
+
+            _expectOnMediaCard(tester);
+            _expectTextReadable(
+              tester,
+              'show more',
+              strings.profileShowMore,
+            );
+          });
+
+          testWidgets('keeps a link readable', (tester) async {
+            await pumpBubble(
+              tester,
+              const MessageBubble(
+                message: 'see https://example.com\n\n"Title"\n\n$_videoShare',
+                timestamp: _time,
+                isSent: true,
+              ),
+            );
+
+            _expectOnMediaCard(tester);
+            _expectSpanReadable(tester, 'link', 'example.com');
+          });
+
+          testWidgets('keeps a code run readable on its chip', (tester) async {
+            await pumpBubble(
+              tester,
+              const MessageBubble(
+                message: 'run `snip` now\n\n"Title"\n\n$_videoShare',
+                timestamp: _time,
+                isSent: true,
+              ),
+            );
+
+            _expectOnMediaCard(tester);
+            _expectCodeReadable(tester, 'snip');
+          });
+
+          testWidgets('keeps the unavailable caption readable', (tester) async {
+            await pumpBubble(
+              tester,
+              const MessageBubble(
+                message: _videoShare,
+                timestamp: _time,
+                isSent: true,
+              ),
+            );
+
+            _expectOnMediaCard(tester);
+            _expectTextReadable(
+              tester,
+              'unavailable',
+              strings.notificationsVideoUnavailable,
+            );
+          });
+        });
+
+        group('video card with the display limit reached', () {
+          for (final (side, isSent) in [('sent', true), ('received', false)]) {
+            testWidgets('keeps the limit caption readable when $side', (
+              tester,
+            ) async {
+              await pumpBubble(
+                tester,
+                MessageBubble(
+                  message: '$_videoShare\n\n${'a' * dmMaxDisplayCodeUnits}',
+                  timestamp: _time,
+                  isSent: isSent,
+                ),
+              );
+              await tester.ensureVisible(find.text(strings.profileShowMore));
+              await tester.tap(find.text(strings.profileShowMore));
+              await tester.pump();
+
+              _expectOnMediaCard(tester);
+              _expectTextReadable(
+                tester,
+                'limit caption',
+                strings.dmMessageDisplayLimitReached,
+              );
+            });
+          }
         });
       });
     }
