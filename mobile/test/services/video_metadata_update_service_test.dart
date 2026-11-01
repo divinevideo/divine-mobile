@@ -1479,7 +1479,14 @@ void main() {
             initialCollaboratorPubkeys: const {},
           );
 
-          expect(result, isA<VideoUpdateFailure>());
+          expect(
+            result,
+            isA<VideoUpdateFailure>().having(
+              (f) => f.reason,
+              'reason',
+              VideoMetadataUpdateError.generic,
+            ),
+          );
           verifyNever(
             () => mockPersonalEventCacheService.cacheUserEvent(any()),
           );
