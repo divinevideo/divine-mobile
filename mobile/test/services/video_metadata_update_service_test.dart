@@ -45,6 +45,7 @@ const _ownerPubkey =
 VideoEvent _testVideo({
   List<List<String>> extraTags = const [],
   int? eventCreatedAt,
+  String? title = 'Test Video Title',
 }) {
   return VideoEvent(
     id: 'event-id',
@@ -53,7 +54,7 @@ VideoEvent _testVideo({
     content: 'Test video content',
     timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
     videoUrl: 'https://cdn.example.com/video.mp4',
-    title: 'Test Video Title',
+    title: title,
     vineId: 'video-d-tag',
     eventCreatedAt: eventCreatedAt,
     nostrEventTags: [
@@ -816,6 +817,7 @@ void main() {
         'accepts the replacement',
         () async {
           final video = _testVideo(
+            title: null,
             extraTags: const [
               ['title', ''],
               ['summary', 'Old description'],
