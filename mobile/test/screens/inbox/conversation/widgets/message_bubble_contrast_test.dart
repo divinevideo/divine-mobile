@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_bubble.dart';
@@ -17,7 +18,14 @@ import '../../../../helpers/test_provider_overrides.dart';
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
 const _time = '2:30 PM';
+const _testHexPubkey =
+    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 const _videoShare = 'https://divine.video/video/abc123';
+const _quotedRef = DmSharedVideoRef(
+  coordinateOrId: '34236:$_testHexPubkey:vid',
+  videoKind: DmSharedVideoKind.addressableShortVideo,
+  authorPubkey: _testHexPubkey,
+);
 
 /// Composites the fills behind [element], nearest first, out to the first
 /// opaque one: what the text is actually drawn on, washes included.
@@ -157,6 +165,24 @@ void main() {
           );
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 100));
+        }
+
+        void resolveQuotedVideo() {
+          when(
+            () => videosRepository.fetchVideoWithStatsForRouteId(
+              any(),
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).thenAnswer(
+            (_) async => VideoEvent(
+              id: _testHexPubkey,
+              pubkey: _testHexPubkey,
+              createdAt: 1757385263,
+              content: 'Test',
+              timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
+              title: 'Quoted Title',
+            ),
+          );
         }
 
         group('time label', () {
@@ -335,6 +361,116 @@ void main() {
             });
           }
         });
+
+        group('sent text bubble', () {
+          testWidgets('keeps the message text readable', (tester) async {
+            await pumpBubble(
+              tester,
+              const MessageBubble(
+                message: 'hello there',
+                timestamp: _time,
+                isSent: true,
+              ),
+            );
+
+            _expectSpanReadable(tester, 'message', 'hello there');
+          });
+
+          testWidgets('keeps a link readable', (tester) async {
+            await pumpBubble(
+              tester,
+              const MessageBubble(
+                message: 'see https://example.com today',
+                timestamp: _time,
+                isSent: true,
+              ),
+            );
+
+            _expectSpanReadable(tester, 'link', 'example.com');
+          });
+
+          testWidgets('keeps a code run readable on its chip', (tester) async {
+            await pumpBubble(
+              tester,
+              const MessageBubble(
+                message: 'run `snip` now',
+                timestamp: _time,
+                isSent: true,
+              ),
+            );
+
+            _expectCodeReadable(tester, 'snip');
+          });
+
+          testWidgets('keeps the expansion controls readable', (tester) async {
+            await pumpBubble(
+              tester,
+              MessageBubble(
+                message: 'a' * (dmMaxDisplayCodeUnits + 1),
+                timestamp: _time,
+                isSent: true,
+              ),
+            );
+            await tester.ensureVisible(find.text(strings.profileShowMore));
+            await tester.tap(find.text(strings.profileShowMore));
+            await tester.pump();
+
+            _expectTextReadable(
+              tester,
+              'show less',
+              strings.profileShowLess,
+            );
+            _expectTextReadable(
+              tester,
+              'limit caption',
+              strings.dmMessageDisplayLimitReached,
+            );
+          });
+        });
+
+        for (final (side, isSent) in [('sent', true)]) {
+          group('quoted video on a $side bubble', () {
+            testWidgets('keeps the title and author readable', (tester) async {
+              resolveQuotedVideo();
+              await pumpBubble(
+                tester,
+                MessageBubble(
+                  message: 'reply text',
+                  timestamp: _time,
+                  isSent: isSent,
+                  quotedVideoRef: _quotedRef,
+                ),
+              );
+
+              _expectTextReadable(tester, 'title', 'Quoted Title');
+              _expectTextReadable(
+                tester,
+                'author',
+                UserProfile.defaultDisplayNameFor(_testHexPubkey),
+              );
+            });
+
+            testWidgets('keeps the unavailable caption readable', (
+              tester,
+            ) async {
+              await pumpBubble(
+                tester,
+                MessageBubble(
+                  message: 'reply text',
+                  timestamp: _time,
+                  isSent: isSent,
+                  quotedVideoRef: _quotedRef,
+                ),
+              );
+
+              _expectTextReadable(
+                tester,
+                'unavailable',
+                strings.notificationsVideoUnavailable,
+              );
+            });
+          });
+        }
       });
     }
   });

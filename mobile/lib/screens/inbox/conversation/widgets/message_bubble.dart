@@ -161,6 +161,10 @@ const double _videoCardHeight = 350;
 /// `part/video thumbnail` component's radius/16.
 const double _videoCardRadius = 16;
 
+/// Text on a sent bubble's fixed [VineTheme.primaryAccessible] fill: 5.95:1 in
+/// both appearances, where white measures 3.17:1.
+const Color _sentBubbleInk = VineTheme.onPrimary;
+
 /// A single chat message bubble.
 ///
 /// Text bubbles — sent (right-aligned): primaryAccessible background;
@@ -488,11 +492,11 @@ class _MessageBubbleState extends State<MessageBubble> {
                   // Deliberately NOT dimmed for an unconfirmed retraction.
                   // `Opacity` here composites the text and its own fill toward
                   // the page together, so the ratio between them collapses:
-                  // white on primaryAccessible measures 3.17:1 at full
-                  // opacity and 1.94:1 at 0.55 over the light message list.
-                  // Any dimming makes an already-marginal pair worse, so the
-                  // state is carried by [_RetractionIndicator] and its
-                  // semantics instead of by contrast.
+                  // the sent ink on primaryAccessible measures 5.95:1 at full
+                  // opacity and 2.27:1 at 0.55 over the light message list.
+                  // Dimming that far fails the bar, so the state is carried by
+                  // [_RetractionIndicator] and its semantics instead of by
+                  // contrast.
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     // Hangs from the sender's side, so a caption wider than a
@@ -557,7 +561,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                                     color: hasMediaCard
                                         ? context.vineColors.secondaryText
                                         : isSent
-                                        ? VineTheme.onPrimary
+                                        ? _sentBubbleInk
                                         : context.vineColors.onSurfaceMuted,
                                   ),
                                 ),
@@ -779,11 +783,9 @@ class _MessageExpansionControls extends StatelessWidget {
   Widget build(BuildContext context) {
     // The sent bubble keeps the fixed primaryAccessible green, where the
     // accent green measures 1.4:1 — invisible. Mirror [_MessageText]'s link
-    // rule: white on sent bubbles, the palette accent on received ones.
+    // rule: the fixed ink on sent bubbles, the palette accent elsewhere.
     final actionStyle = VineTheme.bodySmallFont(
-      color: isOnSentFill
-          ? VineTheme.whiteText
-          : context.vineColors.accentPositive,
+      color: isOnSentFill ? _sentBubbleInk : context.vineColors.accentPositive,
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -812,7 +814,7 @@ class _MessageExpansionControls extends StatelessWidget {
               context.l10n.dmMessageDisplayLimitReached,
               style: VineTheme.bodySmallFont(
                 color: isOnSentFill
-                    ? VineTheme.whiteText.withValues(alpha: 0.7)
+                    ? _sentBubbleInk
                     : context.vineColors.secondaryText,
               ),
             ),
@@ -915,17 +917,17 @@ class _MessageTextState extends ConsumerState<_MessageText> {
   @override
   Widget build(BuildContext context) {
     // Sent bubbles keep the fixed primaryAccessible green in both appearance
-    // modes, so their text stays white; received bubbles sit on the themed
-    // surfaceContainer and follow the palette.
+    // modes, so their text takes the fixed ink; received bubbles and media
+    // cards sit on themed fills and follow the palette.
     final defaultStyle = VineTheme.bodyMediumFont(
       color: widget.isOnSentFill
-          ? VineTheme.whiteText
+          ? _sentBubbleInk
           : context.vineColors.onSurface,
     );
     // The primary green reads cleanly on themed fills; on the sent
-    // bubble it would sit green-on-green, so links there stay white.
+    // bubble it would sit green-on-green, so links there take the fixed ink.
     final linkColor = widget.isOnSentFill
-        ? VineTheme.whiteText
+        ? _sentBubbleInk
         : context.vineColors.link;
     final referenceStyle = defaultStyle.copyWith(
       color: linkColor,
@@ -1248,9 +1250,7 @@ class _QuotedVideoFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = isSent
-        ? VineTheme.whiteText
-        : context.vineColors.accentPositive;
+    final accent = isSent ? _sentBubbleInk : context.vineColors.accentPositive;
     final frame = SizedBox(
       width: _quotedPreviewWidth,
       child: DecoratedBox(
@@ -1383,11 +1383,9 @@ class _QuotedVideoCard extends ConsumerWidget {
       AsyncError() => UserProfile.defaultDisplayNameFor(video.pubkey),
       AsyncLoading() => null,
     };
-    final primaryColor = isSent
-        ? VineTheme.whiteText
-        : context.vineColors.onSurface;
+    final primaryColor = isSent ? _sentBubbleInk : context.vineColors.onSurface;
     final secondaryColor = isSent
-        ? VineTheme.whiteText.withValues(alpha: 0.7)
+        ? _sentBubbleInk
         : context.vineColors.onSurfaceMuted;
     final primaryLabel = hasTitle ? title : (authorName ?? '');
     final showSecondary =
@@ -1494,9 +1492,7 @@ class _QuotedVideoUnavailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isSent
-        ? VineTheme.whiteText
-        : context.vineColors.onSurfaceMuted;
+    final color = isSent ? _sentBubbleInk : context.vineColors.onSurfaceMuted;
     return _QuotedVideoFrame(
       isSent: isSent,
       child: Row(
