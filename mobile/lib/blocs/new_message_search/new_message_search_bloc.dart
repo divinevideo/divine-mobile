@@ -58,7 +58,9 @@ class NewMessageSearchBloc
     UserRankingSignalsLoader loader,
     String owner,
   ) {
-    if (snapshot == null) return const NewMessageSearchState();
+    if (snapshot == null) {
+      return const NewMessageSearchState(isLoadingContacts: true);
+    }
     bool eligible(String key) =>
         !pubkeysEqual(key, owner) && loader.isEligible(key);
     List<UserProfile> keep(List<UserProfile> profiles) =>
@@ -111,11 +113,31 @@ class NewMessageSearchBloc
     final eligiblePubkeys = signals == null
         ? pubkeys.where(_rankingSignalsLoader.isEligible)
         : pubkeys.where(signals.containsKey);
-    final results = await Future.wait(
-      eligiblePubkeys.map(
-        (pubkey) => repository.getCachedProfile(pubkey: pubkey),
-      ),
-    );
+    final List<UserProfile?> results;
+    try {
+      results = await Future.wait(
+        eligiblePubkeys.map(
+          (pubkey) => repository.getCachedProfile(pubkey: pubkey),
+        ),
+      );
+    } catch (error, stackTrace) {
+      addError(
+        asReportableError(error, context: '_onStarted') ?? error,
+        stackTrace,
+      );
+      // Nothing more is coming, so no later clear may wait on these contacts.
+      if (!emit.isDone) {
+        emitIfOpen(
+          state.copyWith(
+            status: state.status == NewMessageSearchStatus.loadingContacts
+                ? NewMessageSearchStatus.idle
+                : state.status,
+            isLoadingContacts: false,
+          ),
+        );
+      }
+      return;
+    }
     if (isClosed || emit.isDone) return;
     final profiles = {
       for (final profile in results.whereType<UserProfile>())
@@ -150,6 +172,7 @@ class NewMessageSearchBloc
                   : state.status,
               contacts: [for (final pubkey in ordered) profiles[pubkey]!],
               rankingSignals: Map.unmodifiable(signals ?? const {}),
+              isLoadingContacts: false,
             ),
           ),
         )) {
@@ -168,14 +191,7 @@ class NewMessageSearchBloc
     if (query.isEmpty ||
         query.length < minSearchQueryLength ||
         NostrKeyUtils.containsPrivateKey(query)) {
-      emit(
-        state.copyWith(
-          status: NewMessageSearchStatus.idle,
-          query: '',
-          results: const [],
-          networkResults: const [],
-        ),
-      );
+      emit(_withoutSearch());
       return;
     }
 
@@ -200,7 +216,8 @@ class NewMessageSearchBloc
         sortBy: profileSearchSortFollowers,
       )).where((profile) => !_isSelf(profile.pubkey)).toList();
 
-      if (emit.isDone) return;
+      // Also dropped when the field was cleared while this was running.
+      if (emit.isDone || state.query != query) return;
       Log.debug(
         'Query "$query": ${networkResults.length} network results',
         name: 'NewMessageSearchBloc',
@@ -216,7 +233,7 @@ class NewMessageSearchBloc
         ),
       );
     } on Exception {
-      if (emit.isDone) return;
+      if (emit.isDone || state.query != query) return;
       // On failure, keep the filtered local contacts visible
       emitIfOpen(state.copyWith(status: NewMessageSearchStatus.searchFailure));
     }
@@ -226,15 +243,21 @@ class NewMessageSearchBloc
     NewMessageSearchCleared event,
     Emitter<NewMessageSearchState> emit,
   ) {
-    emit(
-      state.copyWith(
-        status: NewMessageSearchStatus.idle,
-        query: '',
-        results: const [],
-        networkResults: const [],
-      ),
-    );
+    emit(_withoutSearch());
+    // This event is outside the query's debounce, so it cancels nothing there.
+    // An empty query replaces one still waiting and ends the running search.
+    addIfOpen(const NewMessageSearchQueryChanged(''));
   }
+
+  /// [state] with no search in it, back on the spinner while contacts load.
+  NewMessageSearchState _withoutSearch() => state.copyWith(
+    status: state.isLoadingContacts
+        ? NewMessageSearchStatus.loadingContacts
+        : NewMessageSearchStatus.idle,
+    query: '',
+    results: const [],
+    networkResults: const [],
+  );
 
   void _onGroupModeChanged(
     NewMessageSearchGroupModeChanged event,
