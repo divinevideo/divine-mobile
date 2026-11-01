@@ -6,6 +6,7 @@ import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/constants/search_constants.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:stream_transform/stream_transform.dart';
@@ -98,6 +99,11 @@ class HashtagSearchBloc extends Bloc<HashtagSearchEvent, HashtagSearchState> {
         status: HashtagSearchStatus.loading,
         query: query,
         resultCount: null,
+        // Paging belongs to the previous query. Left set, it would ask for a
+        // page of this one, at the wrong offset, before its first page lands.
+        offset: 0,
+        hasMore: false,
+        isLoadingMore: false,
       ),
     );
 
@@ -108,6 +114,9 @@ class HashtagSearchBloc extends Bloc<HashtagSearchEvent, HashtagSearchState> {
         query: query,
         limit: _pageSize,
       );
+
+      // The search was cleared while this was running.
+      if (state.query != query) return;
 
       if (feedLoad != null) {
         _feedTracker?.markFirstVideosReceived(feedLoad, results.length);
@@ -128,6 +137,7 @@ class HashtagSearchBloc extends Bloc<HashtagSearchEvent, HashtagSearchState> {
         _feedTracker?.markFeedDisplayed(feedLoad, results.length);
       }
     } on Exception catch (e) {
+      if (state.query != query) return;
       // Defensive: repository.searchHashtags should never throw per its
       // contract, but we guard against unexpected violations to avoid
       // unhandled exceptions in the UI.
@@ -148,14 +158,18 @@ class HashtagSearchBloc extends Bloc<HashtagSearchEvent, HashtagSearchState> {
   ) async {
     if (!state.hasMore || state.isLoadingMore || state.query.isEmpty) return;
 
+    final query = state.query;
     emit(state.copyWith(isLoadingMore: true));
 
     try {
       final moreResults = await _hashtagRepository.searchHashtags(
-        query: state.query,
+        query: query,
         limit: _pageSize,
         offset: state.offset,
       );
+
+      // The page belongs to a search that has since been replaced or cleared.
+      if (state.query != query) return;
 
       final existing = state.results.toSet();
       final deduped = moreResults.where((r) => !existing.contains(r)).toList();
@@ -180,5 +194,8 @@ class HashtagSearchBloc extends Bloc<HashtagSearchEvent, HashtagSearchState> {
     Emitter<HashtagSearchState> emit,
   ) {
     emit(const HashtagSearchState());
+    // This event is outside the query's debounce, so it cancels nothing there.
+    // An empty query replaces one still waiting and ends the running search.
+    addIfOpen(const HashtagSearchQueryChanged(''));
   }
 }
