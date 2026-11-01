@@ -4,6 +4,7 @@ import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/comments/comment_composer/reportable_sites.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
@@ -591,6 +592,9 @@ class CommentComposerBloc
     Emitter<CommentComposerState> emit,
   ) {
     emit(state.copyWith(mentionQuery: '', mentionSuggestions: const []));
+    // This event is handled apart from the search, so it cancels nothing there.
+    // An empty search ends the one running, which would reopen the list.
+    addIfOpen(const MentionSearchRequested(''));
   }
 
   void _onOutboxConsumed(

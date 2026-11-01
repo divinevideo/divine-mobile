@@ -3,8 +3,11 @@
 // ABOUTME: placeholders signalled through ComposerOutbox. Asserts #4478 cache
 // ABOUTME: fix: rootAddressableId threaded into postComment and deleteComment.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show UserProfile;
@@ -735,6 +738,75 @@ void main() {
               .having((s) => s.mentionSuggestions, 'suggestions', isEmpty),
         ],
       );
+
+      // #10017: dismissing the list has to win over a search started before it.
+      group('MentionSuggestionsCleared with a search under way', () {
+        UserProfile mentionProfile(String seed, String name) => UserProfile(
+          pubkey: validId(seed),
+          displayName: name,
+          rawData: const {},
+          createdAt: DateTime(2026),
+          eventId: validId('event$seed'),
+        );
+
+        test('stays closed when the remote backfill returns', () {
+          fakeAsync((async) {
+            final remote = Completer<List<UserProfile>>();
+            when(
+              () => mockProfileRepository.getCachedProfiles(
+                pubkeys: any(named: 'pubkeys'),
+              ),
+            ).thenAnswer((_) async => [mentionProfile('author', 'Alice')]);
+            when(
+              () => mockProfileRepository.searchUsersFromApi(
+                query: any(named: 'query'),
+                limit: any(named: 'limit'),
+                offset: any(named: 'offset'),
+                sortBy: any(named: 'sortBy'),
+                hasVideos: any(named: 'hasVideos'),
+              ),
+            ).thenAnswer((_) => remote.future);
+            final bloc = createBloc();
+            bloc.add(const MentionSearchRequested('al'));
+            async.flushMicrotasks();
+            expect(bloc.state.mentionSuggestions, hasLength(1));
+
+            bloc.add(const MentionSuggestionsCleared());
+            async.flushMicrotasks();
+            remote.complete([mentionProfile('albert', 'Albert')]);
+            async.flushMicrotasks();
+
+            expect(bloc.state.mentionSuggestions, isEmpty);
+            expect(bloc.state.mentionQuery, isEmpty);
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+
+        test('stays closed when the local lookup returns', () {
+          fakeAsync((async) {
+            final local = Completer<List<UserProfile>>();
+            when(
+              () => mockProfileRepository.getCachedProfiles(
+                pubkeys: any(named: 'pubkeys'),
+              ),
+            ).thenAnswer((_) => local.future);
+            final bloc = createBloc();
+            bloc.add(const MentionSearchRequested('al'));
+            async.flushMicrotasks();
+
+            bloc.add(const MentionSuggestionsCleared());
+            async.flushMicrotasks();
+            local.complete([mentionProfile('author', 'Alice')]);
+            async.flushMicrotasks();
+
+            expect(bloc.state.mentionSuggestions, isEmpty);
+            expect(bloc.state.mentionQuery, isEmpty);
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+      });
 
       blocTest<CommentComposerBloc, CommentComposerState>(
         'MentionRegistered appends to activeMentions and bindings',
