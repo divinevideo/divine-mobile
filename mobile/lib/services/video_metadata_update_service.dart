@@ -7,7 +7,6 @@ import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart'
     show ClipSourceCredit, VideoEvent, clipSourceCreditTagMarker;
-import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_metadata_update_error.dart';
@@ -16,6 +15,7 @@ import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_event_tag_source.dart';
+import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:openvine/utils/collaborator_tags.dart';
 import 'package:openvine/utils/inspired_by_tags.dart';
 import 'package:openvine/utils/nostr_replacement_timestamp.dart';
@@ -229,7 +229,7 @@ sendPostPublishCollaboratorInvites({
 /// - Extracts video URLs from the original event's imeta tags.
 /// - Optionally uploads a new thumbnail to Blossom.
 /// - Assembles the replacement NIP-71 Nostr event.
-/// - Signs and publishes the event.
+/// - Signs the event and publishes it, succeeding only once a relay accepts it.
 /// - Updates the in-process event caches.
 /// - Sends post-publish collaborator invites.
 ///
@@ -238,20 +238,20 @@ class VideoMetadataUpdateService {
   const VideoMetadataUpdateService({
     required AuthService authService,
     required BlossomUploadService blossomService,
-    required NostrClient nostrService,
+    required SignedEventRelayPublisher relayPublisher,
     required PersonalEventCacheService personalEventCache,
     required VideoEventService videoEventService,
     required CollaboratorInviteService collaboratorInviteService,
   }) : _authService = authService,
        _blossomService = blossomService,
-       _nostrService = nostrService,
+       _relayPublisher = relayPublisher,
        _personalEventCache = personalEventCache,
        _videoEventService = videoEventService,
        _collaboratorInviteService = collaboratorInviteService;
 
   final AuthService _authService;
   final BlossomUploadService _blossomService;
-  final NostrClient _nostrService;
+  final SignedEventRelayPublisher _relayPublisher;
   final PersonalEventCacheService _personalEventCache;
   final VideoEventService _videoEventService;
   final CollaboratorInviteService _collaboratorInviteService;
@@ -472,18 +472,20 @@ class VideoMetadataUpdateService {
         );
       }
 
-      final publishResult = await _nostrService.publishEvent(event);
-      if (publishResult is! PublishSuccess) {
+      // Waits for a relay's NIP-01 `OK`: a socket write alone is not
+      // acceptance, and a rejected edit must not be reported or cached as
+      // published.
+      final outcome = await _relayPublisher.publishViaWebSocket(event);
+      if (outcome != EventPublishOutcome.published) {
         throw const _VideoUpdateException(
           VideoMetadataUpdateError.publishRejected,
-          'Failed to publish updated event',
+          'No relay accepted the updated event',
         );
       }
-      final publishedEvent = publishResult.event;
 
-      _personalEventCache.cacheUserEvent(publishedEvent);
+      _personalEventCache.cacheUserEvent(event);
 
-      final updatedVideoEvent = VideoEvent.fromNostrEvent(publishedEvent);
+      final updatedVideoEvent = VideoEvent.fromNostrEvent(event);
       _videoEventService.updateVideoEvent(updatedVideoEvent);
 
       final inviteFailureCount = await _sendCollaboratorInvites(
