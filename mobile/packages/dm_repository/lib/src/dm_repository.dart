@@ -4168,15 +4168,28 @@ class DmRepository {
         // Cross-device DM read-state marker (#4977). Route only Divine's read
         // marker d-tag to the reconciler before the DM-only kinds gate so it is
         // never rendered as a message, then record it terminally so it is not
-        // re-decrypted every launch. Other app-specific self-wraps must remain
-        // unrecorded so future/foreign kind-30078 handlers can still process
-        // them instead of losing them to the processed-wrap ledger.
+        // re-decrypted every launch. The account's own other app-data wraps
+        // stay unrecorded so a future handler can still process them instead
+        // of losing them to the processed-wrap ledger. Another account's
+        // can never be this account's app data, so those are recorded too.
+        // #10023.
         if (rumor.kind == EventKind.appSpecificData) {
           if (_hasReadMarkerDTag(rumor)) {
             await _reconcileReadMarker(rumor);
             await _recordProcessedWrap(
               giftWrapEvent.id,
               ownerPubkey: ownerPubkey,
+            );
+          } else if (rumor.pubkey != ownerPubkey) {
+            await _recordProcessedWrap(
+              giftWrapEvent.id,
+              ownerPubkey: ownerPubkey,
+            );
+            Log.debug(
+              'Ignoring kind-30078 app data ${rumor.id} (gift wrap '
+              '${giftWrapEvent.id}) from ${pubkeyForLogs(rumor.pubkey)}: it '
+              'is not app data this account wrote',
+              category: LogCategory.system,
             );
           }
           return;
