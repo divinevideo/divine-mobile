@@ -10,6 +10,7 @@ import 'package:iap_repository/iap_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/auth/secure_account_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
@@ -74,6 +75,41 @@ void main() {
         expect(
           Navigator.of(tester.element(find.byType(ProfileActionsSheetContent))),
           same(rootNavigator),
+        );
+      });
+
+      testWidgets('holds the bottom-sheet video owner while it is open', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildApp(actions: [ProfileActionType.completeProfile]),
+        );
+        final overlay = ProviderScope.containerOf(
+          tester.element(find.text('Open')),
+          listen: false,
+        );
+        expect(
+          overlay.read(overlayVisibilityProvider).isBottomSheetOpen,
+          isFalse,
+        );
+
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(
+          overlay.read(overlayVisibilityProvider).isBottomSheetOpen,
+          isTrue,
+        );
+
+        await tester.tap(
+          find.text(
+            lookupAppLocalizations(const Locale('en')).profileMaybeLaterLabel,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(ProfileActionsSheetContent), findsNothing);
+        expect(
+          overlay.read(overlayVisibilityProvider).isBottomSheetOpen,
+          isFalse,
         );
       });
     });
