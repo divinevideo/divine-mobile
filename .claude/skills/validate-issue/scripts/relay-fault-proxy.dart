@@ -367,7 +367,11 @@ Future<void> main(List<String> args) async {
               if (wait > Duration.zero) await Future<void>.delayed(wait);
               action = 'delayed ${hold}ms';
             }
-            if (clientClosed || client.closeCode != null) {
+            if (stalled) {
+              // The --stall-after-ms timer can fire while a frame is held.
+              action = 'dropped: stalled';
+              copies = 0;
+            } else if (clientClosed || client.closeCode != null) {
               action = 'dropped: client closed';
               copies = 0;
             } else {

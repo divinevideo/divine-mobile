@@ -568,6 +568,24 @@ Future<void> main() async {
     },
   );
 
+  await scenario(
+    '--stall-after-ms also stops a frame still being held',
+    ['--delay-ms', '700', '--stall-after-ms', '300'],
+    (proxy) async {
+      final client = await proxy.connect();
+      client.send(['REQ', 's1', <String, Object?>{}]);
+      _expect(
+        await _within(() => proxy.eventsNamed('stalled').isNotEmpty),
+        'the connection should stall',
+      );
+      await _quiet(900);
+      _expect(
+        client.frames.isEmpty,
+        'a frame held across the stall was delivered: ${client.frames}',
+      );
+    },
+  );
+
   await scenario('numbers each connection in the order it opens', [], (
     proxy,
   ) async {
