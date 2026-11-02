@@ -173,7 +173,27 @@ production.
       --drop-ok 1 > <scratch>/proxy.jsonl </dev/null &      # then point the client at ws://localhost:47801
   ```
 
-  To put the app behind it, start the local stack (`mise run local_up` from `mobile/`; for the iOS simulator export `BLOSSOM_PUBLIC_URL=http://localhost:43003` first, per `AGENTS.md`), use `--upstream ws://localhost:47777` (the stack's relay, `localRelayPort` in `mobile/lib/models/environment_config.dart`), run the app with `DEFAULT_ENV=LOCAL`, and add `ws://localhost:47801` in the app's relay settings. Not yet run with the app as the client: so far `nak`, `websocat` and the plain `dart:io` client in the selftest have connected through it.
+  To put the app behind it, the environment decides how. In every non-production environment the app accepts only relays on the environment's own host (`lib/services/nostr_service_factory.dart`), so under STAGING it takes `relay.staging.divine.video` and nothing else: a loopback proxy cannot be added there. Under `DEFAULT_ENV=LOCAL` the host is `localhost`, the default relay is `ws://localhost:47777` and the REST API shares that port (`mobile/lib/models/environment_config.dart`):
+
+  - **No local stack.** Run the proxy with `--listen 47777` and any `--upstream`, for example `wss://relay.staging.divine.video`. The app's own default relay now goes through it, and nothing needs adding in the settings. Plain HTTP to that port is forwarded too, so REST reads work.
+  - **With the local stack** (`mise run local_up` from `mobile/`; for the iOS simulator export `BLOSSOM_PUBLIC_URL=http://localhost:43003` first, per `AGENTS.md`): `--upstream ws://localhost:47777` (`localRelayPort`), the proxy on 47801, and add `ws://localhost:47801` in the app's relay settings. This route has not been run.
+
+  **Run with the app** on 2026-11-02: iOS 27.0 simulator, debug, the first route above, staging relay upstream.
+
+  - A signed-out app opens no relay WebSocket (every protected route redirects to the welcome screen, and the log says `relays: 0`). Account creation was not tried, because it writes. A session without a real account: import a throwaway key with `c.read(authServiceProvider).importFromHex(…)` through `evaluate`, post-frame, the expression read from a 0600 file on stdin and never in argv, and grep the run's logs for the key afterwards (0).
+  - **Signing in writes on its own**: five kind 3083 and one kind 10002 event in the first seconds, then a kind 22236 about every 15 s. Run with `--reject-event <prefix> --reject-event-count 100000` as a write guard and compare `rejected-with-OK-false` with what the app tried. The app logged each as `OK accepted=false (reason=rate-limited)`.
+  - Plain HTTP through the proxy carries the method, path, query and `Accept` header only, no body and no `Authorization`: the `…/bulk` lookups answered 415 and authenticated endpoints 401, so REST writes cannot pass, and some REST on screen is partial.
+  - The app's relay log throttles itself (`Further requestSettlement warning diagnostics suppressed until …`), so a burst of refusals leaves one line. Count frames at the proxy.
+
+  | Fault | What the app did |
+  |---|---|
+  | proxy process ended (abrupt drop) | `Stream closed by remote`, `Reconnecting in 2s (attempt 1/4)`, `Re-issuing 10 saved relay requests`; all 10 answered |
+  | `--close-after 8` (close frame 4000) | the same path, reconnected about 2 s later |
+  | `--never-eose` (events flow, no EOSE) | after 10 s `Full-settlement request … ended inconclusively`; 5 s later `Relay sent no response during the settlement window; reconnecting`; the 10 REQs re-sent |
+  | `--stall-after 6`, REQs outstanding | the same settlement-window reconnect within about 5 s of the stall; the next connection settled normally. An idle half-open socket, with no REQ outstanding, was not tried |
+  | `--close-req auth-required`, 6 REQs, no AUTH challenge first | none re-sent in 45 s; one `Relay closed request … (reason=auth-required)` line. A real relay sends the challenge first, which this fault does not |
+
+  Not run with the app: `--drop-ok`, `--delay-ok-ms`, `--drop-event` and `--duplicate-event` (they need an app write to get through, which the guard prevents), and anything on a phone.
 
   | Flag | Reproduces |
   |---|---|

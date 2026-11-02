@@ -39,6 +39,10 @@
 //                           socket open: a half-open connection
 //   --stall-after-count K   how many connections get that (default 1)
 // Other:
+//   (plain HTTP)            forwarded with its method, path, query and Accept header
+//                           only: no body and no Authorization, so a request that
+//                           needs a body answers 415 and an authenticated
+//                           endpoint 401
 //   --bind-all              listen on every interface (a phone on the LAN), not just loopback
 //   --max-seconds S         exit after S seconds (default 1800) so it cannot outlive the session
 //
