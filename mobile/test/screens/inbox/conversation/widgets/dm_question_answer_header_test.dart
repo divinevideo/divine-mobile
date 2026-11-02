@@ -5,20 +5,38 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/question_answer/question_answer_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_reply_context.dart';
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/dm_question_answer_header.dart';
+import 'package:videos_repository/videos_repository.dart';
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
 
 final String _creator = 'c' * 64;
 final String _videoId = 'e' * 64;
+
+/// The creator's video the answer cites, as the relays have it.
+VideoEvent _cited({String? pubkey, String dTag = 'video-d', String? id}) =>
+    VideoEvent(
+      id: id ?? _videoId,
+      pubkey: pubkey ?? _creator,
+      createdAt: 1757385000,
+      content: '',
+      timestamp: DateTime.utc(2026),
+      vineId: dTag,
+      addressableDTag: dTag,
+    );
 
 DmMessage _answer({
   String? author,
   String question = 'Ask me anything',
   String answer = 'Pizza',
+  String? questionVideoId,
   List<List<String>>? extraTags,
 }) => DmMessage(
   id: 'a' * 64,
@@ -28,7 +46,7 @@ DmMessage _answer({
   createdAt: 1757385263,
   giftWrapId: 'f' * 64,
   tags: [
-    [DmMessage.questionTagName, question, _videoId],
+    [DmMessage.questionTagName, question, questionVideoId ?? _videoId],
     ...?extraTags,
   ],
   sharedVideoRef: DmSharedVideoRef(
@@ -47,6 +65,7 @@ void main() {
         expect(
           DmQuestionAnswerHeader.replyContextFor(
             _answer(),
+            citedVideo: _cited(),
             creatorPubkey: _creator,
           ),
           equals(
@@ -71,6 +90,7 @@ void main() {
             question: 'Q\uD800${'x' * 400}',
             answer: 'A' * (QuestionAnswerCubit.maxAnswerLength + 100),
           ),
+          citedVideo: _cited(),
           creatorPubkey: _creator,
         )!;
 
@@ -89,6 +109,29 @@ void main() {
         expect(
           DmQuestionAnswerHeader.replyContextFor(
             _answer(author: 'd' * 64),
+            citedVideo: _cited(pubkey: 'd' * 64),
+            creatorPubkey: _creator,
+          ),
+          isNull,
+        );
+      });
+
+      test('roots the reply at the cited video, not the id beside the '
+          'question', () {
+        final context = DmQuestionAnswerHeader.replyContextFor(
+          _answer(questionVideoId: '9' * 64),
+          citedVideo: _cited(),
+          creatorPubkey: _creator,
+        );
+
+        expect(context?.rootEventId, equals(_videoId));
+      });
+
+      test('answers nothing with a video that is not the one cited', () {
+        expect(
+          DmQuestionAnswerHeader.replyContextFor(
+            _answer(),
+            citedVideo: _cited(dTag: 'another-d'),
             creatorPubkey: _creator,
           ),
           isNull,
@@ -97,6 +140,18 @@ void main() {
     });
 
     group('renders', () {
+      late _MockVideosRepository videosRepository;
+
+      setUp(() {
+        videosRepository = _MockVideosRepository();
+        when(
+          () => videosRepository.fetchVideoWithStatsForRouteId(
+            any(),
+            fallbackRouteIds: any(named: 'fallbackRouteIds'),
+          ),
+        ).thenAnswer((_) async => _cited());
+      });
+
       Future<void> pump(
         WidgetTester tester, {
         required bool isSent,
@@ -129,7 +184,15 @@ void main() {
         addTearDown(router.dispose);
         await tester.pumpWidget(
           UncontrolledProviderScope(
-            container: container ?? ProviderContainer(),
+            container:
+                container ??
+                ProviderContainer(
+                  overrides: [
+                    videosRepositoryProvider.overrideWithValue(
+                      videosRepository,
+                    ),
+                  ],
+                ),
             child: MaterialApp.router(
               routerConfig: router,
               localizationsDelegates: appLocalizationsDelegates,
@@ -142,7 +205,11 @@ void main() {
       testWidgets('what the creator was asked, and a reply with a video', (
         tester,
       ) async {
-        final container = ProviderContainer();
+        final container = ProviderContainer(
+          overrides: [
+            videosRepositoryProvider.overrideWithValue(videosRepository),
+          ],
+        );
         addTearDown(container.dispose);
         final pushed = <String>[];
         await pump(
@@ -152,6 +219,7 @@ void main() {
           container: container,
         );
 
+        await tester.pump();
         expect(
           find.text(l10n.dmQuestionAnswerReceivedLabel('Ask me anything')),
           findsOneWidget,
@@ -164,6 +232,25 @@ void main() {
           container.read(videoReplyContextProvider)?.replyToName,
           equals('Ask me anything'),
         );
+      });
+
+      testWidgets('no reply with a video when the cited video is gone', (
+        tester,
+      ) async {
+        when(
+          () => videosRepository.fetchVideoWithStatsForRouteId(
+            any(),
+            fallbackRouteIds: any(named: 'fallbackRouteIds'),
+          ),
+        ).thenAnswer((_) async => null);
+        await pump(tester, isSent: false);
+        await tester.pump();
+
+        expect(
+          find.text(l10n.dmQuestionAnswerReceivedLabel('Ask me anything')),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.dmQuestionAnswerWithVideo), findsNothing);
       });
 
       testWidgets('what the viewer answered, with nothing to reply', (

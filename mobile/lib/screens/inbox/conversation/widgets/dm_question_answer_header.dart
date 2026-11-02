@@ -2,15 +2,19 @@
 // ABOUTME: and for the video's creator the button that answers it with a video.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart'
-    show DmMessage, NIP71VideoKinds, VideoStickerRegion;
+    show DmMessage, DmSharedVideoRef, VideoEvent, VideoStickerRegion;
 import 'package:openvine/blocs/question_answer/question_answer_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_reply_context.dart';
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
+import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/video_link_preview_cubit.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -53,21 +57,27 @@ class DmQuestionAnswerHeader extends ConsumerWidget {
   static String _bounded(String text, int maxCodeUnits) =>
       StringUtils.sanitizeUtf16(sliceDmDisplayText(text, maxCodeUnits).text);
 
-  /// What a video answering [message] replies to: the creator's video, with
-  /// the question and the answer, its citation line left out, on its reply
-  /// sticker. `null` when [message] names no video of [creatorPubkey]'s.
+  /// What a video answering [message] replies to: [citedVideo], the video
+  /// [message] cites, read from the relays, with the question and the
+  /// answer, its citation line left out, on its reply sticker.
+  ///
+  /// The citation alone names the video: the id the sender put beside the
+  /// question is not checked against it, so a reply never lands on another
+  /// video. `null` when [citedVideo] is not the cited video, or it is not
+  /// [creatorPubkey]'s.
   static VideoReplyContext? replyContextFor(
     DmMessage message, {
+    required VideoEvent citedVideo,
     required String? creatorPubkey,
   }) {
     final question = questionOf(message);
-    final videoId = message.answeredVideoId;
-    final video = message.sharedVideoRef;
+    final citation = message.sharedVideoRef;
+    final creator = creatorPubkey?.toLowerCase();
     if (question == null ||
-        videoId == null ||
-        video == null ||
-        creatorPubkey == null ||
-        video.authorPubkey?.toLowerCase() != creatorPubkey.toLowerCase()) {
+        citation == null ||
+        creator == null ||
+        citedVideo.pubkey.toLowerCase() != creator ||
+        !_cites(citation, citedVideo)) {
       return null;
     }
     final answer = _bounded(
@@ -79,23 +89,87 @@ class DmQuestionAnswerHeader extends ConsumerWidget {
       QuestionAnswerCubit.maxAnswerLength,
     );
     return VideoReplyContext(
-      rootEventId: videoId,
-      rootEventKind: NIP71VideoKinds.addressableShortVideo,
-      rootAuthorPubkey: creatorPubkey.toLowerCase(),
-      rootAddressableId: video.isAddressable ? video.coordinateOrId : null,
+      rootEventId: citedVideo.id,
+      rootEventKind: citation.videoKind.kind,
+      rootAuthorPubkey: creator,
+      rootAddressableId: citation.isAddressable
+          ? citation.coordinateOrId
+          : null,
       replyToName: question,
       replyToText: answer.isEmpty ? null : answer,
     );
   }
 
+  /// Whether [citation] names [video]: by its address, or by its event id.
+  static bool _cites(DmSharedVideoRef citation, VideoEvent video) {
+    if (!citation.isAddressable) {
+      return citation.coordinateOrId.toLowerCase() == video.id.toLowerCase();
+    }
+    final author = citation.coordinateOrId.split(':')[1].toLowerCase();
+    return author == video.pubkey.toLowerCase() &&
+        citation.dTag != null &&
+        citation.dTag == video.addressableDTag;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final citation = message.sharedVideoRef;
+    final viewer = viewerPubkey?.toLowerCase();
+    final target = isSent || citation == null || viewer == null
+        ? null
+        : resolveDmVideoTarget(content: '', sharedVideoRef: citation);
+    // Only the video's creator answers with a video, so only they read it.
+    if (target == null || target.authorPubkey?.toLowerCase() != viewer) {
+      return _QuestionAnswerLabel(message: message, isSent: isSent);
+    }
+    // Re-keyed on the repository, which is rebuilt when the viewer's
+    // preferences change.
+    final videosRepository = ref.watch(videosRepositoryProvider);
+    return BlocProvider(
+      key: ValueKey(videosRepository),
+      create: (_) => VideoLinkPreviewCubit(
+        videoStableId: target.stableId,
+        videosRepository: videosRepository,
+        authorPubkey: target.authorPubkey,
+        videoKind: target.videoKind,
+      ),
+      child: BlocBuilder<VideoLinkPreviewCubit, VideoLinkPreviewState>(
+        builder: (context, state) => _QuestionAnswerLabel(
+          message: message,
+          isSent: isSent,
+          replyContext: switch (state) {
+            VideoLinkPreviewResolved(:final video) => replyContextFor(
+              message,
+              citedVideo: video,
+              creatorPubkey: viewer,
+            ),
+            _ => null,
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// The question [message] answers, and the button answering it with a video
+/// replying as [replyContext] says, when there is one.
+class _QuestionAnswerLabel extends ConsumerWidget {
+  const _QuestionAnswerLabel({
+    required this.message,
+    required this.isSent,
+    this.replyContext,
+  });
+
+  final DmMessage message;
+  final bool isSent;
+  final VideoReplyContext? replyContext;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final colors = context.vineColors;
-    final question = questionOf(message) ?? '';
-    final replyContext = isSent
-        ? null
-        : replyContextFor(message, creatorPubkey: viewerPubkey);
+    final question = DmQuestionAnswerHeader.questionOf(message) ?? '';
+    final replyContext = this.replyContext;
     return Padding(
       padding: const .fromLTRB(16, 8, 16, 0),
       child: Column(
