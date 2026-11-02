@@ -822,6 +822,21 @@ T _resolve<T>(FakeAsync async, Future<T> future) {
   return value;
 }
 
+/// The outgoing NIP-04 recovery read, `authors:[self]` kind 4: the only read
+/// these stubs answer. The deletion recovery pass (#9468) is answered apart.
+final Matcher _nip04RecoveryRead = isA<List<nostr_filter.Filter>>().having(
+  (filters) => filters.single.authors,
+  'authors',
+  isNotNull,
+);
+
+/// The deletion recovery read, `#p:[self]` kind 5 (#9468).
+final Matcher _deletionRecoveryRead = isA<List<nostr_filter.Filter>>().having(
+  (filters) => filters.single.kinds,
+  'kinds',
+  equals([EventKind.eventDeletion]),
+);
+
 void main() {
   group(DmRepository, () {
     late _MockNostrClient mockNostrClient;
@@ -1177,7 +1192,9 @@ void main() {
     // The outgoing-NIP-04 recovery pass (#5304) reads through `readEvents`
     // once the gift-wrap drain reaches the end. Answered and empty: the
     // account sent no NIP-04, so the pass lets the drain complete.
-    void stubNip04RecoveryAnsweredEmpty() =>
+    /// Answers both end-of-drain recovery reads, outgoing NIP-04 and
+    /// deletions, as settled and empty.
+    void stubRecoveryPassesAnsweredEmpty() =>
         when(
           () => mockNostrClient.readEvents(
             any(),
@@ -2533,7 +2550,7 @@ void main() {
             ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
           // Track persist concurrency on the actual write inside the
           // transaction. Persists run under the event lock, so a yield here
           // would expose any overlap — there must be none.
@@ -2771,7 +2788,7 @@ void main() {
             ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
         });
 
         test(
@@ -3402,6 +3419,8 @@ void main() {
         late _FakeDmSyncState syncState;
         Completer<void>? pageGate;
         late bool pageCapped;
+        late List<nostr_filter.Filter> deletionPages;
+        late List<Event> Function(nostr_filter.Filter filter) answerDeletions;
 
         const window = 1690000000 - 2 * 86400;
 
@@ -3410,6 +3429,8 @@ void main() {
           pageGate = null;
           pageCapped = false;
           pages = [];
+          deletionPages = [];
+          answerDeletions = (_) => const <Event>[];
           poolRelays = ['wss://a.example', 'wss://b.example'];
           answerPage = (_) =>
               (events: <Event>[], timedOut: true, noRelays: false);
@@ -3462,6 +3483,15 @@ void main() {
                 (invocation.positionalArguments.first
                         as List<nostr_filter.Filter>)
                     .single;
+            // The kind-5 read paired with each page (#9468) is answered and
+            // recorded apart: most of these tests are about the DM reads.
+            if (filter.kinds!.contains(EventKind.eventDeletion)) {
+              deletionPages.add(filter);
+              return QueryResult(
+                events: answerDeletions(filter),
+                endedBy: QueryEnd.complete,
+              );
+            }
             pages.add((
               filter: filter,
               relays: invocation.namedArguments[#tempRelays] as List<String>?,
@@ -3515,6 +3545,65 @@ void main() {
               until: 1700000200,
             ),
           ]);
+          await repository.stopListening();
+        });
+
+        test('resumes where the DMs stopped when the deletions reach further '
+            'back', () async {
+          when(
+            () => mockDirectMessagesDao.hasGiftWrap(any()),
+          ).thenAnswer((_) async => true);
+          when(
+            () => mockDirectMessagesDao.getMessageById(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => null);
+          // A relay returning two events per read, holding three DMs and one
+          // deletion far below them.
+          final dms = [
+            for (final (i, at) in [1700000100, 1700000090, 1700000080].indexed)
+              createGiftWrapEvent(id: '${i + 1}' * 64, createdAt: at),
+          ];
+          final deletion = Event.fromJson({
+            'id': 'd' * 64,
+            'pubkey': 'b' * 64,
+            'created_at': 1699990000,
+            'kind': EventKind.eventDeletion,
+            'tags': [
+              ['e', 'e' * 64],
+              ['p', _validPubkeyA],
+            ],
+            'content': '',
+            'sig': '',
+          });
+          bool within(nostr_filter.Filter filter, Event event) =>
+              event.createdAt <= filter.until! &&
+              event.createdAt >= (filter.since ?? 0);
+          answerPage = (filter) => (
+            events: dms.where((e) => within(filter, e)).take(2).toList(),
+            timedOut: false,
+            noRelays: false,
+          );
+          answerDeletions = (filter) =>
+              [deletion].where((e) => within(filter, e)).toList();
+          syncState.debt.add(
+            const DmCatchUpDebt(
+              relay: 'wss://a.example',
+              floor: window,
+              until: 1700000100,
+            ),
+          );
+          final repository = await start();
+
+          final untils = pages.map((page) => page.filter.until).toList();
+          expect(
+            untils.take(3),
+            [1700000100, 1700000090, 1700000080],
+            reason: 'the second page stepped past a DM the relay still held',
+          );
+          expect(deletionPages, isNotEmpty);
+          expect(syncState.debt, isEmpty);
           await repository.stopListening();
         });
 
@@ -7521,7 +7610,7 @@ void main() {
         'history drain targets the own kind-10050 inbox relays as tempRelays',
         () async {
           final capturedDrainTempRelays = <List<String>?>[];
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
           // The own kind-10050 resolve (#8212) and the drain pages (#8209)
           // both read through queryEventsDetailed, so one stub serves both and
           // branches on the filter.
@@ -7578,7 +7667,7 @@ void main() {
           var memoReads = 0;
           final drainLegs = <List<String>?>[];
           final controller = StreamController<Event>();
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
           when(
             () => mockNostrClient.subscribe(
               any(),
@@ -7646,7 +7735,7 @@ void main() {
           var resolveQueries = 0;
           final capturedDrainTempRelays = <List<String>?>[];
           final controller = StreamController<Event>();
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
           when(
             () => mockNostrClient.subscribe(
               any(),
@@ -8916,7 +9005,7 @@ void main() {
 
     group('backfillHistoryIfNeeded', () {
       setUp(stubReadCursorRowMatched);
-      setUp(stubNip04RecoveryAnsweredEmpty);
+      setUp(stubRecoveryPassesAnsweredEmpty);
       // A deferred drain arms a relay-status listener (#8550). Default to a
       // pool with nothing connected and a stream that never speaks, so the
       // deferral tests below exercise the deferral itself; the resume tests
@@ -9090,7 +9179,7 @@ void main() {
           expect(giftWrapPages, everyElement(equals((true, false))));
           verify(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: true,
@@ -9342,7 +9431,7 @@ void main() {
           final capturedFilters = <nostr_filter.Filter>[];
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -9540,7 +9629,7 @@ void main() {
           var nip04Pages = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -9690,7 +9779,7 @@ void main() {
           // "nothing to recover" and the drain must NOT be marked complete.
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -9758,7 +9847,7 @@ void main() {
           var nip04Pages = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -10443,7 +10532,7 @@ void main() {
           final error = StateError('bad recovery state');
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -10470,7 +10559,7 @@ void main() {
         () async {
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11252,7 +11341,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11285,6 +11374,46 @@ void main() {
         });
       });
 
+      test('confirms an ambiguous refusal of the deletion pass on a deferred '
+          'retry', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var deletionReads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(that: _deletionRecoveryRead),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            deletionReads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {'wss://unavailable.example': 'error'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(deletionReads, 1);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(deletionReads, 2);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
       test('settles a terminal NIP-04 refusal on first sight', () {
         fakeAsync((async) {
           stubRelayStatus(
@@ -11293,7 +11422,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11332,7 +11461,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11408,7 +11537,7 @@ void main() {
             var nip04Reads = 0;
             when(
               () => mockNostrClient.readEvents(
-                any(),
+                any(that: _nip04RecoveryRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: any(named: 'useCache'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11444,7 +11573,7 @@ void main() {
         await LogCaptureService().clearAllLogs();
         when(
           () => mockNostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11494,7 +11623,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11554,7 +11683,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11602,7 +11731,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11658,7 +11787,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11702,7 +11831,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11750,7 +11879,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11797,7 +11926,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11863,7 +11992,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11945,7 +12074,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12051,7 +12180,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12130,7 +12259,7 @@ void main() {
             );
             when(
               () => mockNostrClient.readEvents(
-                any(),
+                any(that: _nip04RecoveryRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: any(named: 'useCache'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12203,7 +12332,7 @@ void main() {
           );
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12252,7 +12381,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12297,7 +12426,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12357,7 +12486,7 @@ void main() {
           var giftWrapPages = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12619,7 +12748,7 @@ void main() {
           var nip04Pages = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12708,7 +12837,7 @@ void main() {
 
     group('history drain batch decryption (#5391)', () {
       setUp(stubNoCrossProtocolTwinAvailable);
-      setUp(stubNip04RecoveryAnsweredEmpty);
+      setUp(stubRecoveryPassesAnsweredEmpty);
 
       // A new recipient keypair per test so the real NIP-44 unwrap in the
       // batched decrypt worker succeeds (the shared _validPubkey* constants
