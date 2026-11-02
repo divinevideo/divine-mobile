@@ -10,10 +10,13 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
+import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
+import androidx.media3.exoplayer.video.VideoRendererEventListener
 
 /**
  * Builds the audio path with the loop declick fade in it (#6468), and the
- * per-clip equalizer when [setClipEqualizer] asked for one.
+ * per-clip equalizer when [setClipEqualizer] asked for one. The video path
+ * gets a [KnownOutputSizeVideoRenderer] in place of the stock renderer.
  *
  * The processors have to be injected at construction because
  * `DefaultAudioSink`'s processor chain is fixed once the sink is built, and
@@ -94,6 +97,45 @@ internal class LoopDeclickRenderersFactory(
             eventListener,
             audioSink,
             processor,
+        )
+    }
+
+    override fun buildVideoRenderers(
+        context: Context,
+        extensionRendererMode: Int,
+        mediaCodecSelector: MediaCodecSelector,
+        enableDecoderFallback: Boolean,
+        eventHandler: Handler,
+        eventListener: VideoRendererEventListener,
+        allowedVideoJoiningTimeMs: Long,
+        out: ArrayList<Renderer>,
+    ) {
+        val start = out.size
+        super.buildVideoRenderers(
+            context,
+            extensionRendererMode,
+            mediaCodecSelector,
+            enableDecoderFallback,
+            eventHandler,
+            eventListener,
+            allowedVideoJoiningTimeMs,
+            out,
+        )
+        val index = (start until out.size).firstOrNull {
+            out[it].javaClass == MediaCodecVideoRenderer::class.java
+        } ?: return
+        // Mirrors the stock renderer's config; no experimental video options
+        // are set here, so builder defaults match. Re-check on a Media3 bump.
+        // Prewarming would need buildSecondaryVideoRenderer overridden too.
+        out[index] = KnownOutputSizeVideoRenderer(
+            MediaCodecVideoRenderer.Builder(context)
+                .setCodecAdapterFactory(codecAdapterFactory)
+                .setMediaCodecSelector(mediaCodecSelector)
+                .setAllowedJoiningTimeMs(allowedVideoJoiningTimeMs)
+                .setEnableDecoderFallback(enableDecoderFallback)
+                .setEventHandler(eventHandler)
+                .setEventListener(eventListener)
+                .setMaxDroppedFramesToNotify(MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY),
         )
     }
 }
