@@ -15,7 +15,8 @@ import androidx.media3.exoplayer.video.VideoRendererEventListener
 
 /**
  * Builds the audio path with the loop declick fade in it (#6468), and the
- * per-clip equalizer when [setClipEqualizer] asked for one.
+ * per-clip equalizer when [setClipEqualizer] asked for one. The video path
+ * gets a [KnownOutputSizeVideoRenderer] in place of the stock renderer.
  *
  * The processors have to be injected at construction because
  * `DefaultAudioSink`'s processor chain is fixed once the sink is built, and
