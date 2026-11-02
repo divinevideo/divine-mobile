@@ -22,7 +22,7 @@ import 'package:uuid/uuid.dart';
 ///
 /// Clips live in the `clips` table, which also holds the clips of drafts, so
 /// a clip can have a library row and an autosave-draft copy. Trashing,
-/// restoring, deleting, filing and archiving a clip write both. Trash,
+/// restoring, hard-deleting, filing and archiving a clip write both. Trash,
 /// category and archive state are columns on those rows. The whole feature
 /// is described in `mobile/docs/CLIP_LIBRARY.md`.
 class ClipLibraryService {
