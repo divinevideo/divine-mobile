@@ -9095,6 +9095,15 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectComic => 'Комикс';
 
   @override
+  String get videoEditorEffectSwirl => 'Вихър';
+
+  @override
+  String get videoEditorEffectRipple => 'Вълнички';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'Оребрено стъкло';
+
+  @override
   String get videoEditorEffectEightBit => '8-битов';
 
   @override

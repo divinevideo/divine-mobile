@@ -15185,6 +15185,24 @@ abstract class AppLocalizations {
   /// **'Comic'**
   String get videoEditorEffectComic;
 
+  /// Name of a video effect: the picture twists around its centre, as if stirred.
+  ///
+  /// In en, this message translates to:
+  /// **'Swirl'**
+  String get videoEditorEffectSwirl;
+
+  /// Name of a video effect: rings spread out from the centre of the picture, like ripples on water after a stone drops in.
+  ///
+  /// In en, this message translates to:
+  /// **'Ripple'**
+  String get videoEditorEffectRipple;
+
+  /// Name of a video effect: the picture is seen through ribbed (fluted or reeded) glass, made of upright ribs that each show a squeezed slice of it.
+  ///
+  /// In en, this message translates to:
+  /// **'Fluted Glass'**
+  String get videoEditorEffectFlutedGlass;
+
   /// Name of a video effect: the picture looks like the pixel art of early video game consoles, in large pixels and few colours. Use the term your language uses for retro 8-bit video game graphics.
   ///
   /// In en, this message translates to:

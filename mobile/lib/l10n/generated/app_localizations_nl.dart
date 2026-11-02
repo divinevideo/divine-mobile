@@ -9055,6 +9055,15 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectComic => 'Strip';
 
   @override
+  String get videoEditorEffectSwirl => 'Draaikolk';
+
+  @override
+  String get videoEditorEffectRipple => 'Rimpeling';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'Ribbelglas';
+
+  @override
   String get videoEditorEffectEightBit => '8-bit';
 
   @override
