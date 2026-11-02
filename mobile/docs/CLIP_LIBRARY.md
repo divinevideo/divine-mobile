@@ -84,7 +84,7 @@ The bloc and the library screen enforce these rules:
 - A selection holds clips of one aspect ratio, and the grid disables every other shape. In the editor's add-clips picker that is the shape of the timeline's first clip; elsewhere it is the shape of the first clip selected. The split-screen cell picker is the exception, below.
 - The recorder opens the library showing only its mode's type (`LibraryClipTypeFilter`). The direct-message picker and the chroma-key picker show video clips only.
 - In the editor's add-clips picker, clips already on the timeline are pre-selected and cannot be deselected (`disabledClipIds`). The split-screen cell picker pre-selects nothing. Opened from the recorder, the library pre-selects the takes of the recording session, which can be deselected, and opens in selection mode.
-- A split-screen cell picker accepts clips of any shape, since each one is cropped to the cell (`allowsMixedAspectRatios`). It allows no more clips than the layout has free cells (`maxSelectedClips`); with one free cell, a tap swaps the pick.
+- A split-screen cell picker accepts clips of any shape, since each one is cropped to the cell (the screen sets `allowsMixedAspectRatios` when it is given a `cropGuideAspectRatio`). It allows no more clips than the layout has free cells (`maxSelectedClips`); with one free cell, a tap swaps the pick.
 - Delete and organize act only on selected clips the current filter shows. Clips selected under another filter stay selected and are left alone. Saving to the gallery also acts only on the clips shown, but then clears the whole selection, and opening the selection in the editor uses all of it.
 
 ## Trash
