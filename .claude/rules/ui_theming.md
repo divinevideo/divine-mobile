@@ -719,10 +719,19 @@ library is imported.
   the neighbours warm for fast resume, so it is not interchangeable with a
   page owner: the condition is
   `shouldRetainPlayer => isBottomSheetOpen && !isPageOpen`, so holding a page
-  owner and a sheet owner at once loses the retention. Both open on the root
-  navigator, so they cover the bottom navigation: the first forwards
-  `useRootNavigator` and defaults it to `true`, and the second takes none and
-  inherits `VineBottomSheet.show`'s `true` default.
+  owner and a sheet owner at once loses the retention. Both helpers open on
+  the root navigator by default, so they cover the bottom navigation: the
+  first forwards `useRootNavigator` (default `true`), and the second takes
+  none and inherits `VineBottomSheet.show`'s `true` default.
+
+A sheet opened from a tab page is on the root navigator, not the tab's own.
+Close it from a context inside the sheet, for example
+`Navigator.of(context).pop(value)` in the sheet body, never from a
+`Navigator.of(context)` resolved before `show`: that navigator is the tab's,
+so the pop targets the page beneath the sheet and the sheet stays open. When
+the pop has to be resolved before the opener unmounts, resolve
+`Navigator.of(context, rootNavigator: true)`, as `ProfileHeaderWidget` does
+for its session-expired sheet.
 
 `pushWithVideoPause` releases its owner from `push(...).whenComplete(...)`,
 which runs on a **pop** alone: a `go()`-style dismissal — the Android back
