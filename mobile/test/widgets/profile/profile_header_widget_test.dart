@@ -807,10 +807,21 @@ void main() {
           }),
         );
         addTearDown(client.dispose);
+        final prefs = await SharedPreferences.getInstance();
+        if (!read) {
+          // A repository starts from its cached read, and earlier tests leave
+          // theirs under the same pubkey, so an unread one starts without it.
+          const key = 'divine_supporter_entitlement:$testUserHex';
+          final cached = prefs.getString(key);
+          await prefs.remove(key);
+          addTearDown(() async {
+            if (cached != null) await prefs.setString(key, cached);
+          });
+        }
         final repository = SupporterRepository(
           pubkey: testUserHex,
           validator: StubEntitlementValidator(),
-          prefs: await SharedPreferences.getInstance(),
+          prefs: prefs,
           apiClient: client,
         );
         addTearDown(repository.dispose);
