@@ -110,6 +110,99 @@ void main() {
         ).called(1),
       );
 
+      group('with a pin older than the replies read', () {
+        setUp(() {
+          when(
+            () => repository.fetchReplies(
+              videoId: any(named: 'videoId'),
+              videoAddress: any(named: 'videoAddress'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                VideoResponses(total: 10, videos: [_video(1), _video(2)]),
+          );
+          when(
+            () => repository.fetchCuration(
+              creatorPubkey: _creator,
+              videoAddress: rootAddress,
+            ),
+          ).thenAnswer((_) async => RepliesCuration(pinnedId: _hex(9)));
+        });
+
+        blocTest<StickerResponsesCubit, StickerResponsesState>(
+          'reads the pinned reply on its own and shows it first',
+          setUp: () => when(
+            () => repository.fetchReply(
+              _hex(9),
+              videoId: root.id,
+              videoAddress: rootAddress,
+            ),
+          ).thenAnswer((_) async => _video(9)),
+          build: () => build(_region(VideoStickerKind.replies)),
+          act: (cubit) => cubit.load(),
+          skip: 1,
+          expect: () => [
+            StickerResponsesState(
+              status: StickerResponsesStatus.loaded,
+              total: 10,
+              videos: [_video(9), _video(1), _video(2)],
+              curation: RepliesCuration(pinnedId: _hex(9)),
+            ),
+          ],
+        );
+
+        blocTest<StickerResponsesCubit, StickerResponsesState>(
+          'shows the replies read when the pinned one is gone',
+          setUp: () => when(
+            () => repository.fetchReply(
+              _hex(9),
+              videoId: root.id,
+              videoAddress: rootAddress,
+            ),
+          ).thenAnswer((_) async => null),
+          build: () => build(_region(VideoStickerKind.replies)),
+          act: (cubit) => cubit.load(),
+          skip: 1,
+          expect: () => [
+            StickerResponsesState(
+              status: StickerResponsesStatus.loaded,
+              total: 10,
+              videos: [_video(1), _video(2)],
+              curation: RepliesCuration(pinnedId: _hex(9)),
+            ),
+          ],
+        );
+
+        blocTest<StickerResponsesCubit, StickerResponsesState>(
+          'leaves out a pinned reply the feeds leave out, and its count',
+          setUp: () {
+            when(
+              () => repository.fetchReply(
+                _hex(9),
+                videoId: root.id,
+                videoAddress: rootAddress,
+              ),
+            ).thenAnswer((_) async => _video(9));
+            filter = (videos) => [
+              for (final video in videos)
+                if (video.id != _hex(9)) video,
+            ];
+          },
+          build: () => build(_region(VideoStickerKind.replies)),
+          act: (cubit) => cubit.load(),
+          skip: 1,
+          expect: () => [
+            StickerResponsesState(
+              status: StickerResponsesStatus.loaded,
+              total: 9,
+              videos: [_video(1), _video(2)],
+              curation: RepliesCuration(pinnedId: _hex(9)),
+            ),
+          ],
+        );
+      });
+
       blocTest<StickerResponsesCubit, StickerResponsesState>(
         'keeps the warnings the filter puts on a response, to blur it',
         setUp: () {

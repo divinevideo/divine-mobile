@@ -30,7 +30,7 @@ class RepliesCuration extends Equatable {
       final String id;
       if (tag[0] == 'e' && NostrHexUtils.isValidEventId(tag[1].toLowerCase())) {
         id = tag[1].toLowerCase();
-      } else if (tag[0] == 'a' && _isAddress(tag[1])) {
+      } else if (tag[0] == 'a' && isAddress(tag[1])) {
         id = tag[1];
       } else {
         continue;
@@ -65,7 +65,7 @@ class RepliesCuration extends Equatable {
   static String keyOf(VideoEvent reply) => reply.addressableId ?? reply.id;
 
   /// Whether [value] is an address, `<kind>:<pubkey>:<d>`.
-  static bool _isAddress(String value) {
+  static bool isAddress(String value) {
     final parts = value.split(':');
     return parts.length >= 3 &&
         int.tryParse(parts[0]) != null &&
@@ -123,7 +123,7 @@ class RepliesCuration extends Equatable {
   ];
 
   static List<String> _replyTag(String key, String marker) =>
-      _isAddress(key) ? ['a', key, '', marker] : ['e', key, '', marker];
+      isAddress(key) ? ['a', key, '', marker] : ['e', key, '', marker];
 
   @override
   List<Object?> get props => [pinnedId, hiddenIds];

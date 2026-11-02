@@ -411,6 +411,77 @@ void main() {
       });
     });
 
+    group('fetchReply', () {
+      test('reads a reply by its address', () async {
+        relayAnswers([_reply(202, createdAt: 3000, byAddress: true)]);
+
+        final reply = await repository().fetchReply(
+          '34236:$_viewer:reply-202',
+          videoId: _rootId,
+          videoAddress: _rootAddress,
+        );
+
+        expect(reply?.id, equals(_hex(202)));
+        final filter =
+            (verify(
+                      () => nostrClient.queryEvents(captureAny()),
+                    ).captured.single
+                    as List<Filter>)
+                .single;
+        expect(filter.authors, equals([_viewer]));
+        expect(filter.d, equals(['reply-202']));
+      });
+
+      test('reads a reply by its event id', () async {
+        relayAnswers([_reply(201, createdAt: 1000)]);
+
+        final reply = await repository().fetchReply(
+          _hex(201),
+          videoId: _rootId,
+        );
+
+        expect(reply?.id, equals(_hex(201)));
+        final filter =
+            (verify(
+                      () => nostrClient.queryEvents(captureAny()),
+                    ).captured.single
+                    as List<Filter>)
+                .single;
+        expect(filter.ids, equals([_hex(201)]));
+      });
+
+      test('reads none for a video replying to another video', () async {
+        relayAnswers([
+          _video(
+            id: 203,
+            createdAt: 4000,
+            tags: [
+              ['E', _hex(999), ''],
+            ],
+          ),
+        ]);
+
+        final reply = await repository().fetchReply(
+          _hex(203),
+          videoId: _rootId,
+          videoAddress: _rootAddress,
+        );
+
+        expect(reply, isNull);
+      });
+
+      test('reads none when the relays have no such reply', () async {
+        relayAnswers([]);
+
+        final reply = await repository().fetchReply(
+          _hex(201),
+          videoId: _rootId,
+        );
+
+        expect(reply, isNull);
+      });
+    });
+
     group('fetchCuration', () {
       test("reads the creator's latest pins and hides", () async {
         curationAnswers([

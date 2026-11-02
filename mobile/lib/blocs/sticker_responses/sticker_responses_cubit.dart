@@ -65,8 +65,9 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
               videoAddress: address,
             ),
         ]);
-        responses = results.first as VideoResponses;
+        final replies = results.first as VideoResponses;
         if (results.length > 1) curation = results[1] as RepliesCuration;
+        responses = await _withPinned(replies, curation);
       } else {
         final chainRoot = _region.promptChainRoot(address ?? '');
         final hashtag = _region.promptHashtag;
@@ -83,6 +84,33 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
       addError(error, stackTrace);
       emitIfOpen(state.copyWith(status: StickerResponsesStatus.failure));
     }
+  }
+
+  /// [replies] with the reply the creator pinned, read on its own when it is
+  /// older than those read: it shows first whatever its age. It is counted
+  /// among [replies] already.
+  Future<VideoResponses> _withPinned(
+    VideoResponses replies,
+    RepliesCuration curation,
+  ) async {
+    final pinnedId = curation.pinnedId;
+    if (pinnedId == null ||
+        replies.videos.any(
+          (reply) =>
+              RepliesCuration.keyOf(reply) == pinnedId || reply.id == pinnedId,
+        )) {
+      return replies;
+    }
+    final pinned = await _repository.fetchReply(
+      pinnedId,
+      videoId: _video.id,
+      videoAddress: _video.addressableId,
+    );
+    if (pinned == null) return replies;
+    return VideoResponses(
+      total: replies.total,
+      videos: [...replies.videos, pinned],
+    );
   }
 
   void _emitShown(VideoResponses responses, RepliesCuration curation) {

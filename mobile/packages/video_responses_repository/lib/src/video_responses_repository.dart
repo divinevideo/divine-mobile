@@ -165,6 +165,36 @@ class VideoResponsesRepository {
     return _responsesIn(events, limit: limit, where: joined);
   }
 
+  /// The reply to the video [videoId] names, published at [videoAddress],
+  /// that [key] names, its [RepliesCuration.keyOf]: the newest version of it.
+  /// `null` when there is none, or it does not reply to that video.
+  Future<VideoEvent?> fetchReply(
+    String key, {
+    required String videoId,
+    String? videoAddress,
+  }) async {
+    final address = key.split(':');
+    final filter = RepliesCuration.isAddress(key)
+        ? Filter(
+            kinds: [int.parse(address[0])],
+            authors: [address[1]],
+            d: [address.skip(2).join(':')],
+          )
+        : Filter(ids: [key]);
+    final events = await _nostrClient.queryEvents([filter]);
+    final replies = _responsesIn(
+      events,
+      limit: 1,
+      where: (reply) => RepliesCuration.keyOf(reply) == key || reply.id == key,
+    );
+    final reply = replies.videos.firstOrNull;
+    if (reply == null) return null;
+    final repliesToVideo =
+        reply.replyRootEventId == videoId ||
+        (videoAddress != null && reply.replyRootAddressableId == videoAddress);
+    return repliesToVideo ? reply : null;
+  }
+
   Future<VideoResponses?> _fetchFromServer({
     required String videoId,
     required VideoResponseType type,
