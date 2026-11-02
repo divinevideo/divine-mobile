@@ -28,31 +28,55 @@ void main() {
       void Function(ProfileActionType action)? onMaybeLater,
       MockGoRouter? goRouter,
     }) {
-      final app = MaterialApp(
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: Builder(
-            builder: (context) {
-              return ElevatedButton(
-                onPressed: () {
-                  unawaited(
-                    showProfileActionsSheet(
-                      context: context,
-                      actions: actions,
-                      onMaybeLater: onMaybeLater,
-                    ),
-                  );
-                },
-                child: const Text('Open'),
-              );
-            },
+      // The button sits in a nested navigator, like a tab of the app shell,
+      // so a sheet shown on the nearest navigator would stay inside it.
+      final app = ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Navigator(
+              onGenerateRoute: (_) => MaterialPageRoute<void>(
+                builder: (context) => ElevatedButton(
+                  onPressed: () {
+                    unawaited(
+                      showProfileActionsSheet(
+                        context: context,
+                        actions: actions,
+                        onMaybeLater: onMaybeLater,
+                      ),
+                    );
+                  },
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
           ),
         ),
       );
       if (goRouter == null) return app;
       return MockGoRouterProvider(goRouter: goRouter, child: app);
     }
+
+    group('presentation', () {
+      testWidgets('opens on the root navigator, above the tab shell', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildApp(actions: [ProfileActionType.completeProfile]),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        final rootNavigator = tester.state<NavigatorState>(
+          find.byType(Navigator).first,
+        );
+        expect(
+          Navigator.of(tester.element(find.byType(ProfileActionsSheetContent))),
+          same(rootNavigator),
+        );
+      });
+    });
 
     group('primary action', () {
       late MockGoRouter goRouter;

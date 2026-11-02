@@ -13,6 +13,7 @@ import 'package:openvine/screens/auth/secure_account_screen.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/profile/profile_actions_sheet/profile_action_type.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -27,15 +28,15 @@ abstract class ProfileActionsSheetSizing {
 ///
 /// The short prompts use a sheet sized to its content. When the sheet opens on
 /// the supporter invitation it is the tall, draggable variant, with the
-/// content scrolling inside it.
+/// content scrolling inside it. Either way it opens on the root navigator, so
+/// it covers the tab shell's bottom navigation.
 Future<void> showProfileActionsSheet({
   required BuildContext context,
   required List<ProfileActionType> actions,
   void Function(ProfileActionType action)? onMaybeLater,
 }) {
   if (actions.first == ProfileActionType.becomeSupporter) {
-    return VineBottomSheet.show<void>(
-      context: context,
+    return context.showVideoPausingVineBottomSheet<void>(
       showHeaderDivider: false,
       initialChildSize: ProfileActionsSheetSizing.tallInitial,
       minChildSize: VineTheme.bottomSheetDismissFloor,
@@ -46,8 +47,7 @@ Future<void> showProfileActionsSheet({
       ),
     );
   }
-  return VineBottomSheet.show<void>(
-    context: context,
+  return context.showVideoPausingVineBottomSheet<void>(
     scrollable: false,
     showHeaderDivider: false,
     body: ProfileActionsSheetContent(
