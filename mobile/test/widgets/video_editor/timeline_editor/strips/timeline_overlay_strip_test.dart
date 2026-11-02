@@ -234,8 +234,8 @@ void main() {
         await tester.pumpAndSettle();
       });
 
-      // #10657: an overlay can outlast the timeline once its clips are
-      // shortened, and dragging it threw on `clamp(0, <negative>)`.
+      // #10657: an overlay can be longer than the strip's total duration,
+      // and dragging it threw on `clamp(0, <negative>)`.
       testWidgets('holds an item longer than the timeline at the start', (
         tester,
       ) async {
