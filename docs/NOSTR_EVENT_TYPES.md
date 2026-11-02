@@ -163,8 +163,10 @@ one of their videos, and the ones they hid
 
 **Implementation:**
 - An addressable event of the creator's: `["d", "divine:replies:<video address>"]`,
-  `["a", "<video address>"]`, and per reply `["e", "<reply id>", "", "pinned"]`
-  or `["e", "<reply id>", "", "hidden"]`; empty content
+  `["a", "<video address>"]`, and per reply a tag marked `pinned` or `hidden`:
+  `["a", "<reply address>", "", "pinned"]` for an addressable reply, so the
+  mark outlives an edit of it, or `["e", "<reply id>", "", "hidden"]` for one
+  that is not; empty content
 - Read and published by `mobile/packages/video_responses_repository`
   (`RepliesCuration`); viewers see the pinned reply first and none of the
   hidden ones on the video's replies sticker and in its replies feed

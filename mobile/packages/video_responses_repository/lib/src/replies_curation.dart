@@ -7,8 +7,10 @@ import 'package:nostr_sdk/nostr_sdk.dart' show Event;
 ///
 /// Published as a NIP-78 `kind:30078` event of the creator's, whose `d` tag
 /// is `divine:replies:<video address>`, with the video's address in an `a`
-/// tag and each reply in an `e` tag marked `pinned` or `hidden`. A later one
-/// replaces the one before.
+/// tag and each reply marked `pinned` or `hidden`: in an `a` tag by its
+/// address when it is addressable, so the mark outlives an edit of the reply,
+/// and otherwise in an `e` tag by its event id. A later one replaces the one
+/// before.
 class RepliesCuration extends Equatable {
   /// Creates a curation.
   const RepliesCuration({this.pinnedId, this.hiddenIds = const {}});
@@ -24,9 +26,15 @@ class RepliesCuration extends Equatable {
     String? pinnedId;
     final hiddenIds = <String>{};
     for (final tag in event.tags) {
-      if (tag.length < 4 || tag[0] != 'e') continue;
-      final id = tag[1].toLowerCase();
-      if (!NostrHexUtils.isValidEventId(id)) continue;
+      if (tag.length < 4) continue;
+      final String id;
+      if (tag[0] == 'e' && NostrHexUtils.isValidEventId(tag[1].toLowerCase())) {
+        id = tag[1].toLowerCase();
+      } else if (tag[0] == 'a' && _isAddress(tag[1])) {
+        id = tag[1];
+      } else {
+        continue;
+      }
       switch (tag[3]) {
         case _pinnedMarker:
           pinnedId ??= id;
@@ -51,10 +59,24 @@ class RepliesCuration extends Equatable {
   /// [videoAddress].
   static String dTagFor(String videoAddress) => '$_dTagPrefix$videoAddress';
 
-  /// The event id of the reply pinned to the front, or `null` for none.
+  /// How a curation names [reply]: its address when it is addressable, so a
+  /// pin or a hide still applies after the reply is edited, and otherwise
+  /// its event id.
+  static String keyOf(VideoEvent reply) => reply.addressableId ?? reply.id;
+
+  /// Whether [value] is an address, `<kind>:<pubkey>:<d>`.
+  static bool _isAddress(String value) {
+    final parts = value.split(':');
+    return parts.length >= 3 &&
+        int.tryParse(parts[0]) != null &&
+        NostrHexUtils.isValidPubkey(parts[1]) &&
+        parts.skip(2).join(':').isNotEmpty;
+  }
+
+  /// The [keyOf] the reply pinned to the front, or `null` for none.
   final String? pinnedId;
 
-  /// The event ids of the hidden replies.
+  /// The [keyOf] each hidden reply.
   final Set<String> hiddenIds;
 
   /// This curation with [replyId] pinned to the front instead, shown again
@@ -81,9 +103,12 @@ class RepliesCuration extends Equatable {
   List<VideoEvent> apply(List<VideoEvent> replies) {
     final shown = [
       for (final reply in replies)
-        if (!hiddenIds.contains(reply.id)) reply,
+        if (!hiddenIds.contains(keyOf(reply)) && !hiddenIds.contains(reply.id))
+          reply,
     ];
-    final pinnedIndex = shown.indexWhere((reply) => reply.id == pinnedId);
+    final pinnedIndex = shown.indexWhere(
+      (reply) => keyOf(reply) == pinnedId || reply.id == pinnedId,
+    );
     if (pinnedIndex <= 0) return shown;
     return [shown.removeAt(pinnedIndex), ...shown];
   }
@@ -93,9 +118,12 @@ class RepliesCuration extends Equatable {
   List<List<String>> toTags(String videoAddress) => [
     ['d', dTagFor(videoAddress)],
     ['a', videoAddress],
-    if (pinnedId case final id?) ['e', id, '', _pinnedMarker],
-    for (final id in hiddenIds) ['e', id, '', _hiddenMarker],
+    if (pinnedId case final id?) _replyTag(id, _pinnedMarker),
+    for (final id in hiddenIds) _replyTag(id, _hiddenMarker),
   ];
+
+  static List<String> _replyTag(String key, String marker) =>
+      _isAddress(key) ? ['a', key, '', marker] : ['e', key, '', marker];
 
   @override
   List<Object?> get props => [pinnedId, hiddenIds];

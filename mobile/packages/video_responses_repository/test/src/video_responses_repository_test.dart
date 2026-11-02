@@ -587,6 +587,65 @@ void main() {
       );
     });
 
+    test('keeps a reply hidden and pinned after its author edits it', () {
+      final hidden = VideoEvent.fromNostrEvent(_reply(201, createdAt: 900));
+      final pinned = VideoEvent.fromNostrEvent(_reply(202, createdAt: 800));
+      final curation = const RepliesCuration()
+          .hidden(RepliesCuration.keyOf(hidden))
+          .pinned(RepliesCuration.keyOf(pinned));
+      // An edit republishes the addressable reply under a new event id.
+      final edited = [
+        VideoEvent.fromNostrEvent(
+          _video(id: 301, createdAt: 1200, dTag: 'reply-201'),
+        ),
+        VideoEvent.fromNostrEvent(
+          _video(id: 302, createdAt: 1100, dTag: 'reply-202'),
+        ),
+        VideoEvent.fromNostrEvent(_reply(203, createdAt: 1000)),
+      ];
+
+      expect(
+        curation.apply(edited).map((v) => v.id),
+        equals([_hex(302), _hex(203)]),
+      );
+    });
+
+    test('reads pins and hides by address, and drops broken addresses', () {
+      final pinned = '34236:$_viewer:reply-201';
+      final hidden = '34236:$_viewer:reply-202';
+      expect(
+        RepliesCuration.fromEvent(
+          _curationEvent(
+            createdAt: 1,
+            tags: [
+              ['a', _rootAddress],
+              ['a', pinned, '', 'pinned'],
+              ['a', hidden, '', 'hidden'],
+              ['a', '34236:nope:reply-203', '', 'hidden'],
+              ['a', '34236:$_viewer:', '', 'hidden'],
+            ],
+          ),
+        ),
+        equals(RepliesCuration(pinnedId: pinned, hiddenIds: {hidden})),
+      );
+    });
+
+    test('publishes an addressable reply by its address', () {
+      final pinned = '34236:$_viewer:reply-201';
+      expect(
+        RepliesCuration(
+          pinnedId: pinned,
+          hiddenIds: {_hex(202)},
+        ).toTags(_rootAddress),
+        equals([
+          ['d', 'divine:replies:$_rootAddress'],
+          ['a', _rootAddress],
+          ['a', pinned, '', 'pinned'],
+          ['e', _hex(202), '', 'hidden'],
+        ]),
+      );
+    });
+
     test('publishes its pins and hides for the video', () {
       expect(
         RepliesCuration(

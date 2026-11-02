@@ -64,18 +64,20 @@ class VideoRepliesCubit extends Cubit<VideoRepliesState>
     }
   }
 
-  /// Pins [replyId] to the front, or unpins it when it is pinned already.
-  Future<void> pinToggled(String replyId) => _save(
-    state.curation.pinnedId == replyId
+  /// Pins the reply [replyKey] names, its [RepliesCuration.keyOf], to the
+  /// front, or unpins it when it is pinned already.
+  Future<void> pinToggled(String replyKey) => _save(
+    state.curation.pinnedId == replyKey
         ? state.curation.pinned(null)
-        : state.curation.pinned(replyId),
+        : state.curation.pinned(replyKey),
   );
 
-  /// Hides [replyId], or shows it again when it is hidden.
-  Future<void> hideToggled(String replyId) => _save(
-    state.curation.hiddenIds.contains(replyId)
-        ? state.curation.shown(replyId)
-        : state.curation.hidden(replyId),
+  /// Hides the reply [replyKey] names, its [RepliesCuration.keyOf], or shows
+  /// it again when it is hidden.
+  Future<void> hideToggled(String replyKey) => _save(
+    state.curation.hiddenIds.contains(replyKey)
+        ? state.curation.shown(replyKey)
+        : state.curation.hidden(replyKey),
   );
 
   Future<void> _save(RepliesCuration curation) async {

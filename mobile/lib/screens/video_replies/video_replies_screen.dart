@@ -16,6 +16,8 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/open_video_responses_feed.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:video_responses_repository/video_responses_repository.dart'
+    show RepliesCuration;
 
 /// The video replies to the creator's video [videoId], published at
 /// [videoAddress], as they manage them.
@@ -182,10 +184,12 @@ class _ReplyTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final colors = context.vineColors;
+    // By address when it has one, so a pin or a hide outlives an edit.
+    final key = RepliesCuration.keyOf(reply);
     final (isPinned, isHidden) = context.select(
       (VideoRepliesCubit cubit) => (
-        cubit.state.curation.pinnedId == reply.id,
-        cubit.state.curation.hiddenIds.contains(reply.id),
+        cubit.state.curation.pinnedId == key,
+        cubit.state.curation.hiddenIds.contains(key),
       ),
     );
     final cubit = context.read<VideoRepliesCubit>();
@@ -251,7 +255,7 @@ class _ReplyTile extends ConsumerWidget {
               type: .secondary,
               size: .small,
               onPressed: () => runDetached(
-                cubit.pinToggled(reply.id),
+                cubit.pinToggled(key),
                 'pin a video reply',
                 logName: 'VideoRepliesScreen',
                 category: LogCategory.ui,
@@ -264,7 +268,7 @@ class _ReplyTile extends ConsumerWidget {
               type: .tertiary,
               size: .small,
               onPressed: () => runDetached(
-                cubit.hideToggled(reply.id),
+                cubit.hideToggled(key),
                 'hide a video reply',
                 logName: 'VideoRepliesScreen',
                 category: LogCategory.ui,

@@ -112,6 +112,28 @@ void main() {
         verify(() => cubit.hideToggled(_reply(1).id)).called(1);
       });
 
+      testWidgets('pins and hides an addressable reply by its address', (
+        tester,
+      ) async {
+        final reply = _reply(1, name: 'Alice').copyWith(
+          addressableDTag: 'reply-1',
+        );
+        await pump(
+          tester,
+          VideoRepliesState(
+            status: VideoRepliesStatus.loaded,
+            replies: [reply],
+          ),
+        );
+
+        await tester.tap(find.text(l10n.videoStickerRepliesPin));
+        await tester.tap(find.text(l10n.videoStickerRepliesHide));
+
+        // By address, so the pin and the hide outlive an edit of the reply.
+        verify(() => cubit.pinToggled(reply.addressableId!)).called(1);
+        verify(() => cubit.hideToggled(reply.addressableId!)).called(1);
+      });
+
       testWidgets('opens a reply in the feed under the replies title', (
         tester,
       ) async {

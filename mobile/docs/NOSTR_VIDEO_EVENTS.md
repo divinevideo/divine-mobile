@@ -318,10 +318,12 @@ then show the sticker only as it is in the frames.
   the sticker. On the creator's own video a tap opens the list of replies,
   where they pin one to the front and hide single ones. That curation is a
   NIP-78 `kind:30078` event of the creator's with
-  `["d", "divine:replies:<video address>"]`, `["a", "<video address>"]` and an
-  `["e", "<reply id>", "", "pinned"]` or `["e", "<reply id>", "", "hidden"]`
-  per reply; a newer one replaces the one before. Viewers see the pinned reply
-  first and none of the hidden ones, on the sticker and in the feed.
+  `["d", "divine:replies:<video address>"]`, `["a", "<video address>"]` and,
+  per reply, a tag marked `pinned` or `hidden`: `["a", "<reply address>", "",
+  "hidden"]` for an addressable reply, so the mark outlives an edit of the
+  reply, or `["e", "<reply id>", "", "hidden"]` for one that is not. A newer
+  one replaces the one before. Viewers see the pinned reply first and none of
+  the hidden ones, on the sticker and in the feed.
 
 Funnelcake counts both and returns the latest
 (`GET /api/videos/{id}/responses?type=replies|joined&tag=<hashtag>`). For
