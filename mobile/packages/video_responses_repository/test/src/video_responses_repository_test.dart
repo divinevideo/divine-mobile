@@ -99,20 +99,22 @@ PublishOutcome _outcome({required bool accepted}) => PublishOutcome(
   noResponseFrom: const [],
 );
 
-VideoStats _stats(String id) => VideoStats(
-  id: id,
-  pubkey: _viewer,
-  createdAt: DateTime.fromMillisecondsSinceEpoch(1000000),
-  kind: 34236,
-  dTag: 'stats-$id',
-  title: '',
-  thumbnail: '',
-  videoUrl: 'https://cdn.example/$id.mp4',
-  reactions: 0,
-  comments: 0,
-  reposts: 0,
-  engagementScore: 0,
-);
+VideoStats _stats(String id, {List<List<String>> eventTags = const []}) =>
+    VideoStats(
+      id: id,
+      pubkey: _viewer,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(1000000),
+      kind: 34236,
+      dTag: 'stats-$id',
+      eventTags: eventTags,
+      title: '',
+      thumbnail: '',
+      videoUrl: 'https://cdn.example/$id.mp4',
+      reactions: 0,
+      comments: 0,
+      reposts: 0,
+      engagementScore: 0,
+    );
 
 void main() {
   late _MockNostrClient nostrClient;
@@ -357,6 +359,55 @@ void main() {
             hashtag: 'desksetup',
           ),
         ).called(1);
+      });
+
+      test("drops Funnelcake's answers that do not join the chain", () async {
+        when(() => funnelcake.isAvailable).thenReturn(true);
+        when(
+          () => funnelcake.getVideoResponses(
+            videoId: any(named: 'videoId'),
+            type: any(named: 'type'),
+            hashtag: any(named: 'hashtag'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) async => VideoResponsesResponse(
+            videos: [
+              _stats(
+                _hex(301),
+                eventTags: [
+                  ['a', _rootAddress, _relay, 'mention'],
+                  ['t', 'desksetup'],
+                ],
+              ),
+              // Another author's video with the same d tag.
+              _stats(
+                _hex(302),
+                eventTags: [
+                  ['a', '34236:$_viewer:root-d', _relay, 'mention'],
+                  ['t', 'desksetup'],
+                ],
+              ),
+              // A clip taken from the first video.
+              _stats(
+                _hex(303),
+                eventTags: [
+                  ['a', _rootAddress, _relay, clipSourceCreditTagMarker],
+                  ['t', 'desksetup'],
+                ],
+              ),
+            ],
+            total: 9,
+          ),
+        );
+
+        final responses = await repository(withFunnelcake: true).fetchJoined(
+          chainRoot: _rootAddress,
+          hashtag: 'desksetup',
+        );
+
+        expect(responses.videos.map((v) => v.id), equals([_hex(301)]));
+        expect(responses.total, equals(7));
       });
     });
 

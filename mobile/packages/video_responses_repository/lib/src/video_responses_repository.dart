@@ -123,14 +123,26 @@ class VideoResponsesRepository {
   }
 
   /// The videos that joined the Add yours chain starting at the video at
-  /// [chainRoot]: those that name it as what inspired them and carry
-  /// [hashtag]. The newest first, at most [limit] of them, and how many
-  /// there are.
+  /// [chainRoot]: those that name it in an `a` tag that is not a clip credit
+  /// and carry [hashtag]. The newest first, at most [limit] of them, and how
+  /// many there are.
   Future<VideoResponses> fetchJoined({
     required String chainRoot,
     required String hashtag,
     int limit = 20,
   }) async {
+    bool joined(VideoEvent answer) =>
+        answer.addressableId != chainRoot &&
+        answer.hashtags.contains(hashtag) &&
+        answer.nostrEventTags.any(
+          (tag) =>
+              tag.length >= 2 &&
+              tag[0] == 'a' &&
+              tag[1] == chainRoot &&
+              tag.elementAtOrNull(3)?.toLowerCase() !=
+                  clipSourceCreditTagMarker,
+        );
+
     final dTag = chainRoot.split(':').skip(2).join(':');
     final server = await _fetchFromServer(
       videoId: dTag,
@@ -138,7 +150,9 @@ class VideoResponsesRepository {
       hashtag: hashtag,
       limit: limit,
     );
-    if (server != null) return server;
+    // The server asks by the d tag, which another author's video may share,
+    // so what it returns is checked as the relays' answers are.
+    if (server != null) return _keeping(server, joined);
 
     final events = await _nostrClient.queryEvents([
       Filter(
@@ -148,14 +162,7 @@ class VideoResponsesRepository {
         limit: maxResponsesRead,
       ),
     ]);
-    return _responsesIn(
-      events,
-      limit: limit,
-      where: (answer) =>
-          answer.inspiredByVideo?.addressableId == chainRoot &&
-          answer.addressableId != chainRoot &&
-          answer.hashtags.contains(hashtag),
-    );
+    return _responsesIn(events, limit: limit, where: joined);
   }
 
   Future<VideoResponses?> _fetchFromServer({
@@ -181,6 +188,20 @@ class VideoResponsesRepository {
       // The relays answer the same question, only slower.
       return null;
     }
+  }
+
+  /// [responses] without those [where] rejects, counted without them too;
+  /// the rest of the count was not read, so it stays as it is.
+  VideoResponses _keeping(
+    VideoResponses responses,
+    bool Function(VideoEvent) where,
+  ) {
+    final kept = responses.videos.where(where).toList();
+    final rejected = responses.videos.length - kept.length;
+    return VideoResponses(
+      total: math.max(kept.length, responses.total - rejected),
+      videos: kept,
+    );
   }
 
   VideoResponses _responsesIn(
