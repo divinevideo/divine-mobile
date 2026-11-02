@@ -1982,7 +1982,14 @@ class DmRepository {
   /// `resumeAt` is where the next page can start without skipping anything:
   /// the newest of the reads' oldest events. A read stopped at its limit may
   /// hold more at or below its oldest event, and two reads stop at different
-  /// depths. Null for an empty page.
+  /// depths. Null for an empty page, and when a read that may have more sent
+  /// nothing: that read proves nothing about its range, so the page names no
+  /// point the other read could move it past.
+  ///
+  /// `possiblyCapped` is the cap evidence of the read `resumeAt` comes from,
+  /// or of a read that sent nothing. A read whose oldest event is older than
+  /// `resumeAt` sent all it holds at that second, so its cap leaves nothing
+  /// unsent there.
   ///
   /// [since] bounds the page from below. [onlyRelay] asks that one relay
   /// alone, on its pooled connection when the pool has one, instead of the
@@ -2033,13 +2040,25 @@ class DmRepository {
     if (_ingestSessionEnded(pubkey, generation)) return null;
     final events = [for (final read in reads) ...read.events];
     final authoritative = reads.every((read) => read.authoritative);
-    final possiblyCapped = reads.any((read) => read.possiblyCapped);
+    final ends = [
+      for (final read in reads)
+        (
+          oldest: read.events.isEmpty
+              ? null
+              : read.events.map((event) => event.createdAt).reduce(min),
+          possiblyCapped: read.possiblyCapped,
+        ),
+    ];
+    final stalled = ends.any((end) => end.possiblyCapped && end.oldest == null);
     int? resumeAt;
-    for (final read in reads) {
-      if (read.events.isEmpty) continue;
-      final oldest = read.events.map((event) => event.createdAt).reduce(min);
+    for (final end in ends) {
+      final oldest = end.oldest;
+      if (stalled || oldest == null) continue;
       if (resumeAt == null || oldest > resumeAt) resumeAt = oldest;
     }
+    final possiblyCapped =
+        stalled ||
+        ends.any((end) => end.possiblyCapped && end.oldest == resumeAt);
 
     // Pass 1 (off the _eventLock): batch-decrypt this page's gift wraps in one
     // isolate hop per chunk for local-key signers, instead of one isolate
@@ -3606,9 +3625,9 @@ class DmRepository {
   /// all share its top may have left more of that second unsent. The walk
   /// reads on below it, but keeps its saved position at the highest such
   /// second, and at the floor keeps those seconds as the relay's debt rather
-  /// than forgetting it. A settled page that is empty but may be capped, from
-  /// a NIP-67 `more` or frames the pool dropped, proves nothing read and
-  /// leaves the debt for a later walk.
+  /// than forgetting it. A settled read that is empty but may be capped, from
+  /// a NIP-67 `more` or frames the pool dropped, proves nothing read, even
+  /// beside a read that sent events, and leaves the debt for a later walk.
   ///
   /// Each write names the debt it read. A catch-up can record more of a
   /// relay's debt between two pages, and a write from the old range would
@@ -3680,8 +3699,8 @@ class DmRepository {
           if (oldest == null && page.possiblyCapped) {
             Log.warning(
               'DM catch-up debt walk for ${pubkeyForLogs(owner)} kept '
-              '${debt.relay} at $until: it settled an empty page that may '
-              'have more.',
+              '${debt.relay} at $until: it settled a read that may have more '
+              'and sent nothing.',
               category: LogCategory.system,
             );
             leftForLater.add(debt.relay);

@@ -3613,6 +3613,113 @@ void main() {
           await repository.stopListening();
         });
 
+        group('with a deletions read beside the DMs', () {
+          bool within(nostr_filter.Filter filter, Event event) =>
+              event.createdAt <= filter.until! &&
+              event.createdAt >= (filter.since ?? 0);
+
+          Event deletionAt(int createdAt) => Event.fromJson({
+            'id': 'd' * 64,
+            'pubkey': 'b' * 64,
+            'created_at': createdAt,
+            'kind': EventKind.eventDeletion,
+            'tags': [
+              ['e', 'e' * 64],
+              ['p', _validPubkeyA],
+            ],
+            'content': '',
+            'sig': '',
+          });
+
+          setUp(() {
+            when(
+              () => mockDirectMessagesDao.hasGiftWrap(any()),
+            ).thenAnswer((_) async => true);
+            when(
+              () => mockDirectMessagesDao.getMessageById(
+                any(),
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).thenAnswer((_) async => null);
+          });
+
+          test('clears the debt when a deletion above the oldest DM pins a '
+              'page at its top', () async {
+            // Two DMs per read, the relay saying it may hold more when it
+            // sends two, and one deletion between the newest two DMs: the
+            // second page resumes at the deletion and ends at its own top.
+            final dms = [
+              for (final (i, at) in [
+                1700000100,
+                1700000090,
+                1700000080,
+              ].indexed)
+                createGiftWrapEvent(id: '${i + 1}' * 64, createdAt: at),
+            ];
+            answerPage = (filter) {
+              final events = dms.where((e) => within(filter, e)).take(2);
+              pageCapped = events.length == 2;
+              return (
+                events: events.toList(),
+                timedOut: false,
+                noRelays: false,
+              );
+            };
+            final deletion = deletionAt(1700000095);
+            answerDeletions = (filter) =>
+                [deletion].where((e) => within(filter, e)).toList();
+            syncState.debt.add(
+              const DmCatchUpDebt(
+                relay: 'wss://a.example',
+                floor: window,
+                until: 1700000100,
+              ),
+            );
+            final repository = await start();
+
+            expect(
+              syncState.debt,
+              isEmpty,
+              reason:
+                  'the DMs read past the second the deletion pinned, yet it '
+                  'was kept as one they may have left unsent',
+            );
+            await repository.stopListening();
+          });
+
+          test('keeps the debt when the DM read may have more and sent '
+              'nothing beside a deletion', () async {
+            pageCapped = true;
+            answerPage = (_) =>
+                (events: <Event>[], timedOut: false, noRelays: false);
+            final deletion = deletionAt(1700000050);
+            answerDeletions = (filter) =>
+                [deletion].where((e) => within(filter, e)).toList();
+            syncState.debt.add(
+              const DmCatchUpDebt(
+                relay: 'wss://a.example',
+                floor: window,
+                until: 1700000100,
+              ),
+            );
+            final repository = await start();
+
+            expect(pages, hasLength(1));
+            expect(
+              syncState.debt,
+              const [
+                DmCatchUpDebt(
+                  relay: 'wss://a.example',
+                  floor: window,
+                  until: 1700000100,
+                ),
+              ],
+              reason: 'the walk moved past DMs the relay may still hold',
+            );
+            await repository.stopListening();
+          });
+        });
+
         test('reads each relay from its own stamp down to its floor', () async {
           answerPage = (_) =>
               (events: <Event>[], timedOut: false, noRelays: false);
