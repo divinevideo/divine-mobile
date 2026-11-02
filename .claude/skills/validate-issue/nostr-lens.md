@@ -181,9 +181,9 @@ production.
   **Run with the app** on 2026-11-02: iOS 27.0 simulator, debug, the first route above, staging relay upstream.
 
   - A signed-out app opens no relay WebSocket (every protected route redirects to the welcome screen, and the log says `relays: 0`). Account creation was not tried, because it writes. A session without a real account: import a throwaway key with `c.read(authServiceProvider).importFromHex(…)` through `evaluate`, post-frame, the expression read from a 0600 file on stdin and never in argv, and grep the run's logs for the key afterwards (0).
-  - **Signing in writes on its own**: five kind 3083 and one kind 10002 event in the first seconds, then a kind 22236 about every 15 s. Run with `--reject-event <prefix> --reject-event-count 100000` as a write guard and compare `rejected-with-OK-false` with what the app tried. The app logged each as `OK accepted=false (reason=rate-limited)`.
+  - **Signing in writes on its own**: five kind 3083 and one kind 10002 event in the first seconds, then a kind 22236 about every 15 s. Run with `--reject-event <prefix> --reject-event-count 100000` as a write guard and compare `rejected-with-OK-false` with what the app tried. The app logged the refusals as `OK accepted=false (reason=rate-limited)`.
   - Plain HTTP through the proxy carries the method, path, query and `Accept` header only, no body and no `Authorization`: the `…/bulk` lookups answered 415 and authenticated endpoints 401, so REST writes cannot pass, and some REST on screen is partial.
-  - The app's relay log throttles itself (`Further requestSettlement warning diagnostics suppressed until …`), so a burst of refusals leaves one line. Count frames at the proxy.
+  - The app's relay log keeps three lines a minute per relay, site and level (`RelayDiagnosticsAdapter`), then prints `Further requestSettlement warning diagnostics suppressed until …`, so a burst of refusals leaves at most three lines. Count frames at the proxy.
 
   | Fault | What the app did |
   |---|---|
