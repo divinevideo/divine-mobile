@@ -3711,7 +3711,7 @@ class DmRepository {
       // randomizes gift-wrap `created_at` and a deletion can drain ahead of
       // the event it names. A null `_reactionsRepository` (legacy fixtures)
       // lands here too: that is "cannot resolve", not "nothing to do", and
-      // cementing it would burn the wrap for every account on the device.
+      // cementing it would skip the wrap on every later delivery.
       if ((resolved ?? DmWrapOutcome.deferred) == DmWrapOutcome.deferred) {
         unresolved.add(rumorId);
         outcome = DmWrapOutcome.deferred;
@@ -5237,9 +5237,10 @@ class DmRepository {
             ),
           );
         } on FormatException {
-          // Every account on this device skips an id in the ledger, so the
-          // failure is final only when no other account could be the one the
-          // event was encrypted to.
+          // The ledger keeps an id for the first account to record it, so a
+          // row written here would take it from the account the event was
+          // encrypted to. Record the failure only when no other account
+          // could be that one.
           final namesOneRecipient = nip04Event.tags.every(
             (tag) =>
                 tag.length < 2 || tag[0] != 'p' || tag[1] == recipientPubkey,
