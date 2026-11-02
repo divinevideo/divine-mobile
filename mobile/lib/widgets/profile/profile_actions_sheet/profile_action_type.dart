@@ -35,7 +35,7 @@ enum ProfileActionType {
     required bool isAccountEnforced,
     required bool isAnonymous,
     required bool hasAnyProfileInfo,
-    bool canBecomeSupporter = false,
+    required bool canBecomeSupporter,
   }) {
     if (!isOwnProfile) return const [];
 

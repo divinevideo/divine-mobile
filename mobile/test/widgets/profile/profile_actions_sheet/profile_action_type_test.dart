@@ -13,6 +13,7 @@ void main() {
           isAccountEnforced: false,
           isAnonymous: true,
           hasAnyProfileInfo: false,
+          canBecomeSupporter: false,
         );
 
         expect(actions, hasLength(2));
@@ -26,6 +27,7 @@ void main() {
           isAccountEnforced: false,
           isAnonymous: true,
           hasAnyProfileInfo: true,
+          canBecomeSupporter: false,
         );
 
         expect(actions, equals([ProfileActionType.secureAccount]));
@@ -39,6 +41,7 @@ void main() {
             isAccountEnforced: false,
             isAnonymous: false,
             hasAnyProfileInfo: false,
+            canBecomeSupporter: false,
           );
 
           expect(actions, equals([ProfileActionType.completeProfile]));
@@ -51,6 +54,7 @@ void main() {
           isAccountEnforced: false,
           isAnonymous: false,
           hasAnyProfileInfo: true,
+          canBecomeSupporter: false,
         );
 
         expect(actions, isEmpty);
@@ -62,6 +66,7 @@ void main() {
           isAccountEnforced: true,
           isAnonymous: true,
           hasAnyProfileInfo: false,
+          canBecomeSupporter: false,
         );
 
         expect(actions, isEmpty);
@@ -73,6 +78,7 @@ void main() {
           isAccountEnforced: true,
           isAnonymous: true,
           hasAnyProfileInfo: false,
+          canBecomeSupporter: false,
         );
 
         expect(
