@@ -39,9 +39,14 @@ relay, with a hand-built NIP-59 peer that is not Divine:
 - the thread rendered two identical bubbles, and the message-request preamble
   counted them as separate messages ("they've sent 3 messages").
 
-Confirmed against `nostr-protocol/nips` at HEAD: `kind 14` carries only `p`,
-`e`, `subject` and `q`. No NIP defines a per-message correlation or idempotency
-identifier, and none has been proposed.
+Confirmed against `nostr-protocol/nips` at `400d157` (2026-10-27): `kind 14`
+carries only `p`, `e`, `subject` and `q` (`17.md:117-134`), followed by an open
+"rest of tags". No NIP defines a per-message correlation or idempotency
+identifier, and a search of the open pull requests found none that proposes
+one. The nearest prior art is
+[nips#2000](https://github.com/nostr-protocol/nips/pull/2000), a stale proposal
+for a "Mark as Received" event. That is a delivery receipt a sender could use to
+stop retrying, which is a different problem from telling a retry from a repeat.
 
 ## What Divine does today
 
@@ -60,7 +65,7 @@ contains no rumor-building call at all.
 Stated precisely: **Divine never re-mints a rumor it has stored.** Two paths do
 mint a fresh rumor for the same text, and neither is a retry of a stored one:
 `InlineReelReplyCubit.retry` falls back to a fresh `submit` when nothing was
-parked (`inline_reel_reply_cubit.dart:192`), and `sendMessage` skips the
+parked (`inline_reel_reply_cubit.dart`), and `sendMessage` skips the
 durable enqueue when no `outgoing_dms` DAO is wired. In both cases there is no
 stored rumor and no wire copy in flight, so no duplicate can result. This is
 now locked by
@@ -68,6 +73,20 @@ now locked by
 a doc comment, and a refactor that rebuilt the rumor through `buildRumor`
 instead would have silently turned Divine into a source of this defect for
 every peer it messages.
+
+Two more paths build a rumor and are not retries of a stored one:
+
+- `DmRepository.enqueueSend(idempotencyKey:, createdAt:)` (#8053) rebuilds the
+  rumor on every call from the caller's key and timestamp, so a durable intent
+  such as a queued report or a sound request reproduces the same rumor id, and
+  the same `batch` value, each time. `dm_enqueue_send_test.dart` pins both
+  halves: the same key and timestamp give the same rumor id, a different key
+  gives a different one. It is retry-stable by construction rather than by
+  replaying a stored row.
+- `sendFileMessage` (video DMs) has no queue row and builds the rumor inside
+  `sendPrivateMessage`. A second send encrypts the file again under a fresh key
+  and nonce (`dm_video_encryption.dart`), so its content and tags differ from
+  the first. It is a new message, not a re-mint of the old one.
 
 So Divine cannot cause this defect. It can only receive it.
 
@@ -136,7 +155,9 @@ resolve both:
    It is a **uniqueness nonce** — its job is to make two sends *differ*. Retry
    correlation needs the opposite: a token **stable across re-mints**. Because
    Divine replays the stored rumor on retry, the existing token has never been
-   exercised as a correlator at all.
+   exercised as a cross-client correlator. `enqueueSend` lets a caller supply
+   the key, which makes the value stable per intent, but it is still the
+   sender's own token, read back only by the sender's own ingest.
 2. **Peer-authored tokens are deliberately refused, with a stated attack.**
    Ingest honours the tag only when `rumor.pubkey == ownerPubkey`, because —
    quoting the code — "accepting a
