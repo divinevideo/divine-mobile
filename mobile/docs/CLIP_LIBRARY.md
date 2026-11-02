@@ -12,7 +12,7 @@ This page covers how the library is put together. Topics that already have their
 - Sharing clips in direct messages, the C2PA check, importing from and backing up to the device gallery: [`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md).
 - Leftover files and broken clips: [`STORAGE_MANAGEMENT.md`](STORAGE_MANAGEMENT.md).
 
-The two plans in `docs/plans/2025-12-18-clip-library-*.md` describe an earlier design, with SharedPreferences storage and a `SavedClip` model, and are historical.
+The two plans [`plans/2025-12-18-clip-library-redesign.md`](plans/2025-12-18-clip-library-redesign.md) and [`plans/2025-12-18-clip-library-implementation.md`](plans/2025-12-18-clip-library-implementation.md) describe an earlier design, with SharedPreferences storage and a `SavedClip` model, and are historical.
 
 ## Layers
 
