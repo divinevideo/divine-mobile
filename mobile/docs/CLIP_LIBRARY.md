@@ -35,7 +35,7 @@ File paths are stored as names relative to the documents directory and resolved 
 
 ## Rows
 
-Each clip is a row in the `clips` table. Columns hold what queries filter and sort on: draft id, owner, recording time, duration, file names, and the category, archive and trash state. The rest of the clip is a JSON blob in `data`. Category, archive and trash state live only in their columns; the service copies them onto the parsed clip, so the column is the source of truth.
+Each clip is a row in the `clips` table. Columns hold the draft id, owner, recording time, duration, file names, and the category, archive and trash state. The rest of the clip is a JSON blob in `data`. Category, archive and trash state live only in their columns; the service copies them onto the parsed clip, so the column is the source of truth.
 
 The same table stores the clips of drafts, so one recording can have several rows:
 
