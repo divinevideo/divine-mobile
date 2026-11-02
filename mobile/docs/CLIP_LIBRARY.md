@@ -119,6 +119,8 @@ When the library loads, clips missing a thumbnail or ghost frame get them regene
 | Share sheet, "Add to clips" | `VideoClipImportService.importToLibrary`, for classic Vines, the user's own videos and any video that allows reuse |
 | Direct messages | `VideoClipImportService.importReceivedClip` and `importReceivedVine` ([`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#in-the-library)) |
 | Device gallery | `VideoClipImportService.importGalleryClip` ([`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#back-from-the-gallery)) |
+| A clip the editor creates, such as a split-screen layout render | The editor's autosave draft, which `getAllClips` lists as library clips (see [Rows](#rows)) |
+| Developer recovery tool | `ClipRecoveryService`, which saves recovered recordings back (see [Accounts](#accounts)) |
 
 A clip received in a direct message or brought back from the gallery gets in only after the C2PA check described in [`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#the-c2pa-check). Two paths run no such check: an archived Vine is matched by its file hash instead, and the share sheet's "Add to clips" brings in a published video as it is.
 
