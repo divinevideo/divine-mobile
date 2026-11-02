@@ -115,7 +115,11 @@ class _SocialStickerHashtagFieldState extends State<SocialStickerHashtagField> {
 
   void _changed(String text) {
     context.read<SocialStickerCubit>().hashtagChanged(text);
-    context.read<HashtagSearchBloc>().add(HashtagSearchQueryChanged(text));
+    context.read<HashtagSearchBloc>().add(
+      text.isEmpty
+          ? const HashtagSearchCleared()
+          : HashtagSearchQueryChanged(text),
+    );
   }
 
   void _picked(String hashtag) {

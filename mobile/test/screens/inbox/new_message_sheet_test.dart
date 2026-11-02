@@ -2,6 +2,7 @@
 // ABOUTME: Pins it to the shared DM peer naming chain (#8421) and covers the
 // ABOUTME: "New group" mode that hands back several people (#8269).
 
+import 'dart:async';
 import 'dart:ui' show SemanticsFlags, Tristate;
 
 import 'package:clock/clock.dart';
@@ -143,6 +144,7 @@ void main() {
       ProfileRepository? activeProfileRepository,
       FollowRepository? activeFollowRepository,
       List<Override> extraOverrides = const [],
+      bool settle = true,
     }) async {
       stubContacts([contact]);
 
@@ -167,7 +169,8 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      // A spinner never settles, so a test holding the load open pumps once.
+      settle ? await tester.pumpAndSettle() : await tester.pump();
     }
 
     /// Opens the sheet through `NewMessageSheet.show`, the way the inbox does,
@@ -1279,6 +1282,188 @@ void main() {
         // The control for the test above: the list did move.
         expect(peopleScrollPosition(tester).pixels, greaterThan(0));
         expect(tester.testTextInput.isVisible, isTrue);
+      });
+
+      // #10017: a clear must win over a search started before it.
+      group('clearing the search', () {
+        const searchStarted = Duration(milliseconds: 400);
+        const insideDebounce = Duration(milliseconds: 100);
+
+        Completer<List<UserProfile>> holdSearch(String query) {
+          final response = Completer<List<UserProfile>>();
+          when(
+            () => profileRepository.searchUsers(
+              query: query,
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) => response.future);
+          return response;
+        }
+
+        Future<void> typeInField(WidgetTester tester, String text) =>
+            tester.enterText(find.byType(TextField), text);
+
+        void expectOnlyContacts() {
+          expect(personRow('Alice'), findsOneWidget);
+          expect(personRow('Bob'), findsNothing);
+          expect(find.text(l10n.newMessageNoUsersFound), findsNothing);
+          expect(find.text(l10n.userPickerSearchFailedTryAgain), findsNothing);
+        }
+
+        for (final allowGroups in [false, true]) {
+          final mode = allowGroups ? 'with groups on' : 'one-to-one';
+
+          testWidgets('keeps the contacts when a search returns people after '
+              'the field is cleared, $mode', (tester) async {
+            final response = holdSearch('bo');
+            await openSheet(
+              tester,
+              allowGroups: allowGroups,
+              contacts: [candidate(alicePubkey, 'Alice')],
+            );
+
+            await typeInField(tester, 'bo');
+            await tester.pump(searchStarted);
+            await typeInField(tester, '');
+            await tester.pump();
+            expectOnlyContacts();
+
+            response.complete([candidate(bobPubkey, 'Bob')]);
+            await tester.pump();
+            expectOnlyContacts();
+            await tester.pump(searchStarted);
+
+            expectOnlyContacts();
+          });
+
+          testWidgets('keeps the contacts when a search finds nobody after '
+              'the field is cleared, $mode', (tester) async {
+            final response = holdSearch('bo');
+            await openSheet(
+              tester,
+              allowGroups: allowGroups,
+              contacts: [candidate(alicePubkey, 'Alice')],
+            );
+
+            await typeInField(tester, 'bo');
+            await tester.pump(searchStarted);
+            await typeInField(tester, '');
+            await tester.pump();
+
+            response.complete(const []);
+            await tester.pump();
+            expectOnlyContacts();
+            await tester.pump(searchStarted);
+
+            expectOnlyContacts();
+          });
+
+          testWidgets('keeps the contacts when a search fails after the '
+              'field is cleared, $mode', (tester) async {
+            final response = holdSearch('bo');
+            await openSheet(
+              tester,
+              allowGroups: allowGroups,
+              contacts: [candidate(alicePubkey, 'Alice')],
+            );
+
+            await typeInField(tester, 'bo');
+            await tester.pump(searchStarted);
+            await typeInField(tester, '');
+            await tester.pump();
+
+            response.completeError(Exception('offline'));
+            await tester.pump();
+            expectOnlyContacts();
+            await tester.pump(searchStarted);
+
+            expectOnlyContacts();
+          });
+
+          testWidgets('starts no search when the field is cleared before the '
+              'debounce ends, $mode', (tester) async {
+            final response = holdSearch('bo');
+            await openSheet(
+              tester,
+              allowGroups: allowGroups,
+              contacts: [candidate(alicePubkey, 'Alice')],
+            );
+
+            await typeInField(tester, 'bo');
+            await tester.pump(insideDebounce);
+            await typeInField(tester, '');
+            await tester.pump(searchStarted);
+            // Answers a search only if one wrongly started, so its result
+            // would land under the empty field.
+            response.complete([candidate(bobPubkey, 'Bob')]);
+            await tester.pump();
+
+            expectOnlyContacts();
+            verifyNever(
+              () => profileRepository.searchUsers(
+                query: 'bo',
+                limit: any(named: 'limit'),
+                sortBy: any(named: 'sortBy'),
+              ),
+            );
+          });
+        }
+
+        testWidgets('keeps the spinner when the field is cleared while the '
+            'contacts load', (tester) async {
+          final signals = Completer<Map<String, UserRankingSignals>>();
+          when(
+            () => rankingSignalsLoader.load(any()),
+          ).thenAnswer((_) => signals.future);
+          await pumpPickerWith(
+            tester,
+            contact: candidate(alicePubkey, 'Alice'),
+            settle: false,
+          );
+
+          await typeInField(tester, 'bo');
+          await typeInField(tester, '');
+          await tester.pump();
+
+          expect(find.text(l10n.newMessageNoContacts), findsNothing);
+          expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
+
+          signals.complete({
+            alicePubkey: const UserRankingSignals(
+              pubkey: alicePubkey,
+              youFollow: true,
+            ),
+          });
+          await tester.pump();
+          await tester.pump(searchStarted);
+
+          expect(personRow('Alice'), findsOneWidget);
+        });
+
+        testWidgets('recovers by itself when the field is emptied one '
+            'character at a time', (tester) async {
+          final response = holdSearch('bo');
+          await openSheet(
+            tester,
+            allowGroups: false,
+            contacts: [candidate(alicePubkey, 'Alice')],
+          );
+
+          await typeInField(tester, 'bo');
+          await tester.pump(searchStarted);
+          await typeInField(tester, 'b');
+          await tester.pump(insideDebounce);
+          await typeInField(tester, '');
+          await tester.pump(insideDebounce);
+
+          response.complete(const []);
+          await tester.pump();
+          expectOnlyContacts();
+          await tester.pump(searchStarted);
+
+          expectOnlyContacts();
+        });
       });
 
       group('at the size limit', () {

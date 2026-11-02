@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:mocktail/mocktail.dart';
@@ -944,6 +945,253 @@ void main() {
               ),
         ],
       );
+
+      // #10017: a clear has to win over a search started before it.
+      group('with a search under way', () {
+        const insideDebounce = Duration(milliseconds: 100);
+        late Map<String, Completer<List<UserProfile>>> responses;
+        late List<String> searched;
+
+        setUp(() {
+          responses = {};
+          searched = [];
+          when(() => mockFollowRepo.followingPubkeys).thenReturn([]);
+          when(
+            () => mockProfileRepo.searchUsers(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((invocation) {
+            final query = invocation.namedArguments[#query] as String;
+            searched.add(query);
+            return (responses[query] = Completer<List<UserProfile>>()).future;
+          });
+        });
+
+        NewMessageSearchBloc startedBloc(FakeAsync async) {
+          final bloc = createBloc()..add(const NewMessageSearchStarted());
+          async.flushMicrotasks();
+          return bloc;
+        }
+
+        void expectNoSearch(NewMessageSearchBloc bloc) {
+          expect(bloc.state.status, NewMessageSearchStatus.idle);
+          expect(bloc.state.query, isEmpty);
+          expect(bloc.state.results, isEmpty);
+          expect(bloc.state.networkResults, isEmpty);
+        }
+
+        test('drops a result that arrives after the clear', () {
+          fakeAsync((async) {
+            final bloc = startedBloc(async);
+            bloc.add(const NewMessageSearchQueryChanged('zz'));
+            async.elapse(debounceDuration);
+            expect(searched, ['zz']);
+
+            bloc.add(const NewMessageSearchCleared());
+            async.flushMicrotasks();
+            responses['zz']!.complete([createTestProfile(pubkeyAt(2), 'Bob')]);
+            async.flushMicrotasks();
+
+            expectNoSearch(bloc);
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+
+        test('drops a failure that arrives after the clear', () {
+          fakeAsync((async) {
+            final bloc = startedBloc(async);
+            bloc.add(const NewMessageSearchQueryChanged('zz'));
+            async.elapse(debounceDuration);
+            expect(searched, ['zz']);
+
+            bloc.add(const NewMessageSearchCleared());
+            async.flushMicrotasks();
+            responses['zz']!.completeError(Exception('offline'));
+            async.flushMicrotasks();
+
+            expectNoSearch(bloc);
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+
+        test('starts no search when cleared before the debounce ends', () {
+          fakeAsync((async) {
+            final bloc = startedBloc(async);
+            bloc.add(const NewMessageSearchQueryChanged('zz'));
+            async.elapse(insideDebounce);
+            bloc.add(const NewMessageSearchCleared());
+            async.elapse(debounceDuration);
+
+            expect(searched, isEmpty);
+            expectNoSearch(bloc);
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+
+        test('shows no flash when the field empties one character at a '
+            'time', () {
+          fakeAsync((async) {
+            final bloc = startedBloc(async);
+            bloc.add(const NewMessageSearchQueryChanged('zz'));
+            async.elapse(debounceDuration);
+            bloc.add(const NewMessageSearchQueryChanged('z'));
+            async.elapse(insideDebounce);
+            bloc.add(const NewMessageSearchCleared());
+            async.flushMicrotasks();
+            responses['zz']!.complete(const []);
+            async.flushMicrotasks();
+
+            expectNoSearch(bloc);
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+
+        test('still searches for text retyped straight after the clear', () {
+          fakeAsync((async) {
+            final bloc = startedBloc(async);
+            bloc.add(const NewMessageSearchQueryChanged('zz'));
+            async.elapse(debounceDuration);
+            bloc.add(const NewMessageSearchCleared());
+            async.elapse(insideDebounce);
+            bloc.add(const NewMessageSearchQueryChanged('zz'));
+            async.elapse(debounceDuration);
+            expect(searched, ['zz', 'zz']);
+
+            final bob = createTestProfile(pubkeyAt(2), 'Bob');
+            responses['zz']!.complete([bob]);
+            async.flushMicrotasks();
+
+            expect(bloc.state.status, NewMessageSearchStatus.searchSuccess);
+            expect(bloc.state.query, 'zz');
+            expect(bloc.state.results, [bob]);
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+      });
+
+      // A list still on its way must not read as a list with nobody in it.
+      group('while contacts load', () {
+        late Completer<Map<String, UserRankingSignals>> signals;
+        final alice = createTestProfile(pubkeyAt(1), 'Alice');
+
+        setUp(() {
+          when(() => mockFollowRepo.followingPubkeys)
+              .thenReturn([alice.pubkey]);
+          when(
+            () => mockProfileRepo.getCachedProfile(pubkey: alice.pubkey),
+          ).thenAnswer((_) async => alice);
+          when(
+            () => rankingSignalsLoader.load(any()),
+          ).thenAnswer((_) => signals.future);
+          when(
+            () => rankingSignalsLoader.refreshInBackground(any()),
+          ).thenReturn(null);
+          when(
+            () => mockProfileRepo.searchUsers(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) async => const []);
+        });
+
+        // Inside the test's fake zone: a completer made in `setUp` would finish
+        // on the real microtask queue, which `flushMicrotasks` never drains.
+        NewMessageSearchBloc loadingBloc(FakeAsync async) {
+          signals = Completer();
+          final bloc = createBloc()..add(const NewMessageSearchStarted());
+          async.flushMicrotasks();
+          return bloc;
+        }
+
+        void finishLoading(FakeAsync async, NewMessageSearchBloc bloc) {
+          signals.complete({
+            alice.pubkey: UserRankingSignals(
+              pubkey: alice.pubkey,
+              youFollow: true,
+            ),
+          });
+          async.flushMicrotasks();
+          expect(bloc.state.status, NewMessageSearchStatus.idle);
+          expect(bloc.state.contacts, [alice]);
+        }
+
+        test('stops loading when a contact cannot be read', () {
+          fakeAsync((async) {
+            when(
+              () => mockProfileRepo.getCachedProfile(pubkey: alice.pubkey),
+            ).thenThrow(Exception('database unavailable'));
+            final bloc = loadingBloc(async);
+            signals.complete({
+              alice.pubkey: UserRankingSignals(
+                pubkey: alice.pubkey,
+                youFollow: true,
+              ),
+            });
+            async.flushMicrotasks();
+            expect(bloc.state.status, NewMessageSearchStatus.idle);
+
+            bloc.add(const NewMessageSearchCleared());
+            async.flushMicrotasks();
+            expect(bloc.state.status, NewMessageSearchStatus.idle);
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+
+        test('keeps loading through a clear', () {
+          fakeAsync((async) {
+            final bloc = loadingBloc(async);
+
+            bloc.add(const NewMessageSearchCleared());
+            async.flushMicrotasks();
+            expect(bloc.state.status, NewMessageSearchStatus.loadingContacts);
+
+            finishLoading(async, bloc);
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+
+        test('keeps loading through a query too short to search', () {
+          fakeAsync((async) {
+            final bloc = loadingBloc(async);
+
+            bloc.add(const NewMessageSearchQueryChanged('a'));
+            async.elapse(debounceDuration);
+            expect(bloc.state.status, NewMessageSearchStatus.loadingContacts);
+
+            finishLoading(async, bloc);
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+
+        test('goes back to loading when a finished search is cleared', () {
+          fakeAsync((async) {
+            final bloc = loadingBloc(async);
+
+            bloc.add(const NewMessageSearchQueryChanged('zz'));
+            async.elapse(debounceDuration);
+            expect(bloc.state.status, NewMessageSearchStatus.searchSuccess);
+
+            bloc.add(const NewMessageSearchCleared());
+            async.flushMicrotasks();
+            expect(bloc.state.status, NewMessageSearchStatus.loadingContacts);
+
+            finishLoading(async, bloc);
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+      });
     });
 
     group('NewMessageSearchGroupModeChanged', () {

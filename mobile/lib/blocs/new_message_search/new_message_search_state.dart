@@ -48,6 +48,7 @@ final class NewMessageSearchState extends Equatable {
     this.peerLabels,
     this.isGroupMode = false,
     this.selectedRecipients = const [],
+    this.isLoadingContacts = false,
   });
 
   /// Current status of the search flow.
@@ -94,6 +95,13 @@ final class NewMessageSearchState extends Equatable {
   /// unique by pubkey. Always empty outside [isGroupMode].
   final List<UserProfile> selectedRecipients;
 
+  /// Whether the followed contacts are still on their way.
+  ///
+  /// [status] cannot say so once a search has replaced
+  /// [NewMessageSearchStatus.loadingContacts], and clearing that search must
+  /// not report an empty list for contacts that have not arrived.
+  final bool isLoadingContacts;
+
   /// Whether a search query is active.
   bool get isSearchActive => query.isNotEmpty;
 
@@ -122,6 +130,7 @@ final class NewMessageSearchState extends Equatable {
     DmPeerLabels? peerLabels,
     bool? isGroupMode,
     List<UserProfile>? selectedRecipients,
+    bool? isLoadingContacts,
   }) {
     return NewMessageSearchState(
       status: status ?? this.status,
@@ -134,6 +143,7 @@ final class NewMessageSearchState extends Equatable {
       peerLabels: peerLabels ?? this.peerLabels,
       isGroupMode: isGroupMode ?? this.isGroupMode,
       selectedRecipients: selectedRecipients ?? this.selectedRecipients,
+      isLoadingContacts: isLoadingContacts ?? this.isLoadingContacts,
     );
   }
 
@@ -149,5 +159,6 @@ final class NewMessageSearchState extends Equatable {
     peerLabels,
     isGroupMode,
     selectedRecipients,
+    isLoadingContacts,
   ];
 }

@@ -1840,6 +1840,126 @@ void main() {
         act: (bloc) => bloc.add(const UserSearchCleared()),
         expect: () => [const UserSearchState()],
       );
+
+      // #10017: a clear has to win over a search started before it.
+      group('with a search under way', () {
+        late Map<String, StreamController<ProgressiveSearchResult>> streams;
+        late List<String> searched;
+
+        setUp(() {
+          streams = {};
+          searched = [];
+        });
+
+        Stream<ProgressiveSearchResult> holdSearch({
+          required String query,
+          required int limit,
+          required String sortBy,
+          required bool hasVideos,
+          required Set<String>? boostPubkeys,
+          required SearchCancellationToken cancellationToken,
+        }) {
+          searched.add(query);
+          return (streams[query] = StreamController<ProgressiveSearchResult>())
+              .stream;
+        }
+
+        UserSearchBloc createHeldBloc() => UserSearchBloc(
+          profileRepository: mockProfileRepository,
+          searchTimeout: null,
+          searchRunner: holdSearch,
+        );
+
+        test('drops a result that arrives after the clear', () {
+          fakeAsync((async) {
+            final bloc = createHeldBloc();
+            bloc.add(const UserSearchQueryChanged('zz'));
+            async.elapse(const Duration(milliseconds: 400));
+            expect(searched, ['zz']);
+
+            bloc.add(const UserSearchCleared());
+            async.flushMicrotasks();
+            streams['zz']!.add(
+              ProgressiveSearchResult(
+                profiles: [createTestProfile('b' * 64, 'Bob')],
+                sources: const {},
+                isComplete: true,
+              ),
+            );
+            unawaited(streams['zz']!.close());
+            async.flushMicrotasks();
+
+            expect(bloc.state, const UserSearchState());
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+
+        // Not on the fake clock: `asyncMap` finishes cancelling on the real
+        // microtask queue, so under `fakeAsync` the failure never gets through.
+        test('drops a failure that arrives after the clear', () async {
+          final started = Completer<void>();
+          final bloc = UserSearchBloc(
+            profileRepository: mockProfileRepository,
+            searchTimeout: null,
+            searchRunner:
+                ({
+                  required query,
+                  required limit,
+                  required sortBy,
+                  required hasVideos,
+                  required boostPubkeys,
+                  required cancellationToken,
+                }) {
+                  started.complete();
+                  return (streams[query] =
+                          StreamController<ProgressiveSearchResult>())
+                      .stream;
+                },
+          );
+          addTearDown(bloc.close);
+          bloc.add(const UserSearchQueryChanged('zz'));
+          await started.future.timeout(const Duration(seconds: 5));
+
+          bloc.add(const UserSearchCleared());
+          await pumpEventQueue();
+          streams['zz']!.addError(Exception('offline'));
+          await pumpEventQueue();
+
+          expect(bloc.state, const UserSearchState());
+        });
+
+        test('starts no search when cleared before the debounce ends', () {
+          fakeAsync((async) {
+            final bloc = createHeldBloc();
+            bloc.add(const UserSearchQueryChanged('zz'));
+            async.elapse(const Duration(milliseconds: 100));
+            bloc.add(const UserSearchCleared());
+            async.elapse(const Duration(milliseconds: 400));
+
+            expect(searched, isEmpty);
+            expect(bloc.state, const UserSearchState());
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+
+        test('cancels a running search once the clear has settled', () {
+          fakeAsync((async) {
+            final bloc = createHeldBloc();
+            bloc.add(const UserSearchQueryChanged('zz'));
+            async.elapse(const Duration(milliseconds: 400));
+            expect(streams['zz']!.hasListener, isTrue);
+
+            bloc.add(const UserSearchCleared());
+            async.elapse(const Duration(milliseconds: 400));
+
+            expect(streams['zz']!.hasListener, isFalse);
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+      });
     });
 
     group('follow boost', () {
