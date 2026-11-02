@@ -64,12 +64,15 @@ Event _answer(
   required int createdAt,
   String? chain,
   String hashtag = 'desksetup',
+  String? pubkey,
+  String marker = 'mention',
 }) => _video(
   id: id,
   createdAt: createdAt,
+  pubkey: pubkey ?? _hex(1000 + id),
   dTag: 'answer-$id',
   tags: [
-    ['a', chain ?? _rootAddress, _relay, 'mention'],
+    ['a', chain ?? _rootAddress, _relay, marker],
     ['t', hashtag],
   ],
 );
@@ -333,6 +336,41 @@ void main() {
         expect(filter.t, equals(['desksetup']));
       });
 
+      test('counts each person once, by their newest answer', () async {
+        relayAnswers([
+          _answer(301, createdAt: 1000, pubkey: _creator),
+          _answer(302, createdAt: 2000, pubkey: _creator),
+          _answer(303, createdAt: 1500),
+        ]);
+
+        final responses = await repository().fetchJoined(
+          chainRoot: _rootAddress,
+          hashtag: 'desksetup',
+        );
+
+        expect(responses.total, equals(2));
+        expect(
+          responses.videos.map((v) => v.id),
+          equals([_hex(302), _hex(303)]),
+        );
+      });
+
+      test('leaves out an `a` tag not marked as a mention', () async {
+        relayAnswers([
+          _answer(301, createdAt: 1000),
+          // A plain reply naming the first video, with the hashtag.
+          _answer(302, createdAt: 2000, marker: ''),
+          _answer(303, createdAt: 3000, marker: clipSourceCreditTagMarker),
+        ]);
+
+        final responses = await repository().fetchJoined(
+          chainRoot: _rootAddress,
+          hashtag: 'desksetup',
+        );
+
+        expect(responses.videos.map((v) => v.id), equals([_hex(301)]));
+      });
+
       test('asks Funnelcake by the first video and the hashtag', () async {
         when(() => funnelcake.isAvailable).thenReturn(true);
         when(
@@ -396,6 +434,14 @@ void main() {
                   ['t', 'desksetup'],
                 ],
               ),
+              // A second answer by the author of the first, counted once.
+              _stats(
+                _hex(304),
+                eventTags: [
+                  ['a', _rootAddress, _relay, 'mention'],
+                  ['t', 'desksetup'],
+                ],
+              ),
             ],
             total: 9,
           ),
@@ -406,8 +452,8 @@ void main() {
           hashtag: 'desksetup',
         );
 
-        expect(responses.videos.map((v) => v.id), equals([_hex(301)]));
-        expect(responses.total, equals(7));
+        expect(responses.videos, hasLength(1));
+        expect(responses.total, equals(6));
       });
     });
 

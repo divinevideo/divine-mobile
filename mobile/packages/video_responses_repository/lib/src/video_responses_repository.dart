@@ -83,6 +83,9 @@ class VideoResponsesRepository {
   /// The most responses one read from the relays asks for.
   static const int maxResponsesRead = 500;
 
+  /// The marker on the `a` tag an Add yours answer names its chain with.
+  static const String _mentionMarker = 'mention';
+
   /// The video replies to the video [videoId] names, published at
   /// [videoAddress] when it is addressable: the newest first, at most
   /// [limit] of them, and how many there are.
@@ -123,9 +126,9 @@ class VideoResponsesRepository {
   }
 
   /// The videos that joined the Add yours chain starting at the video at
-  /// [chainRoot]: those that name it in an `a` tag that is not a clip credit
-  /// and carry [hashtag]. The newest first, at most [limit] of them, and how
-  /// many there are.
+  /// [chainRoot]: those that name it in an `a` tag marked `mention` and carry
+  /// [hashtag]. One per person, the newest, at most [limit] of them, and how
+  /// many people joined.
   Future<VideoResponses> fetchJoined({
     required String chainRoot,
     required String hashtag,
@@ -136,11 +139,10 @@ class VideoResponsesRepository {
         answer.hashtags.contains(hashtag) &&
         answer.nostrEventTags.any(
           (tag) =>
-              tag.length >= 2 &&
+              tag.length >= 4 &&
               tag[0] == 'a' &&
               tag[1] == chainRoot &&
-              tag.elementAtOrNull(3)?.toLowerCase() !=
-                  clipSourceCreditTagMarker,
+              tag[3].toLowerCase() == _mentionMarker,
         );
 
     final dTag = chainRoot.split(':').skip(2).join(':');
@@ -152,7 +154,7 @@ class VideoResponsesRepository {
     );
     // The server asks by the d tag, which another author's video may share,
     // so what it returns is checked as the relays' answers are.
-    if (server != null) return _keeping(server, joined);
+    if (server != null) return _joinedOf(server, joined);
 
     final events = await _nostrClient.queryEvents([
       Filter(
@@ -162,7 +164,12 @@ class VideoResponsesRepository {
         limit: maxResponsesRead,
       ),
     ]);
-    return _responsesIn(events, limit: limit, where: joined);
+    return _responsesIn(
+      events,
+      limit: limit,
+      where: joined,
+      onePerAuthor: true,
+    );
   }
 
   /// The reply to the video [videoId] names, published at [videoAddress],
@@ -220,24 +227,31 @@ class VideoResponsesRepository {
     }
   }
 
-  /// [responses] without those [where] rejects, counted without them too;
-  /// the rest of the count was not read, so it stays as it is.
-  VideoResponses _keeping(
+  /// [responses] without those [where] rejects, one per person, counted
+  /// without those left out too; the rest of the count was not read, so it
+  /// stays as it is.
+  VideoResponses _joinedOf(
     VideoResponses responses,
     bool Function(VideoEvent) where,
   ) {
-    final kept = responses.videos.where(where).toList();
-    final rejected = responses.videos.length - kept.length;
+    final kept = _onePerAuthor(
+      responses.videos.where(where).toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+    );
+    final leftOut = responses.videos.length - kept.length;
     return VideoResponses(
-      total: math.max(kept.length, responses.total - rejected),
+      total: math.max(kept.length, responses.total - leftOut),
       videos: kept,
     );
   }
 
+  /// The parsed [events] that [where] keeps, the newest first, one per
+  /// person when [onePerAuthor]: at most [limit] of them, counted in all.
   VideoResponses _responsesIn(
     List<Event> events, {
     required int limit,
     required bool Function(VideoEvent) where,
+    bool onePerAuthor = false,
   }) {
     final byId = <String, VideoEvent>{};
     for (final event in events) {
@@ -250,12 +264,22 @@ class VideoResponsesRepository {
       }
       if (where(video)) byId[video.id] = video;
     }
-    final videos = byId.values.toList()
+    final newestFirst = byId.values.toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final videos = onePerAuthor ? _onePerAuthor(newestFirst) : newestFirst;
     return VideoResponses(
       total: videos.length,
       videos: videos.take(limit).toList(),
     );
+  }
+
+  /// The newest of [newestFirst] by each author.
+  static List<VideoEvent> _onePerAuthor(List<VideoEvent> newestFirst) {
+    final authors = <String>{};
+    return [
+      for (final video in newestFirst)
+        if (authors.add(video.pubkey.toLowerCase())) video,
+    ];
   }
 
   /// The reply its creator, [creatorPubkey], pinned to the front of the
