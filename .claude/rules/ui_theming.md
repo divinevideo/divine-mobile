@@ -733,10 +733,10 @@ the pop has to be resolved before the opener unmounts, resolve
 `Navigator.of(context, rootNavigator: true)`, as `ProfileHeaderWidget` does
 for its session-expired sheet.
 
-A snackbar raised while such a sheet is open lands on the shell's scaffold,
-underneath the sheet. A sheet that reports through a snackbar wraps itself in
-its own `ScaffoldMessenger` and `Scaffold` through `contentWrapper`, as the
-community-suggest and chroma-key sheets do.
+A snackbar raised while a sheet is open lands on its opener's `Scaffold`,
+underneath the sheet: the shell's, for a tab page. A sheet that reports through
+a snackbar wraps itself in its own `ScaffoldMessenger` and `Scaffold` through
+`contentWrapper`, as the community-suggest and chroma-key sheets do.
 
 `pushWithVideoPause` releases its owner from `push(...).whenComplete(...)`,
 which runs on a **pop** alone: a `go()`-style dismissal — the Android back
