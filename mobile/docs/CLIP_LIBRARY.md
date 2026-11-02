@@ -82,7 +82,7 @@ The bloc enforces these rules:
 
 - A selection holds either stop-motion sets or video clips, not both. The exceptions are the editor's two pickers (`allowsMixedClipTypes`): the one for adding clips converts every pick to the session's kind, and the split-screen cell picker takes both.
 - The recorder opens the library showing only its mode's type (`LibraryClipTypeFilter`). The direct-message picker and the chroma-key picker show video clips only.
-- In a picker opened from the editor, clips already on the timeline are pre-selected and cannot be deselected (`disabledClipIds`).
+- In the editor's add-clips picker, clips already on the timeline are pre-selected and cannot be deselected (`disabledClipIds`). The split-screen cell picker pre-selects nothing.
 - A split-screen cell picker accepts clips of any shape, since each one is cropped to the cell (`allowsMixedAspectRatios`). It allows no more clips than the layout has free cells (`maxSelectedClips`); with one free cell, a tap swaps the pick.
 - Delete and organize act only on selected clips the current filter shows. Clips selected under another filter stay selected and are left alone.
 
