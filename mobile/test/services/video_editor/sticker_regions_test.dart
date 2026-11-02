@@ -240,6 +240,29 @@ void main() {
       );
     });
 
+    test('places a poll with its look, question and answers, and no poll id '
+        'until it is published', () {
+      final regions = _regions([
+        _captured(
+          const SocialStickerData(
+            kind: SocialStickerKind.poll,
+            pollQuestion: 'Which one?',
+            pollOptions: ['Red', 'Blue'],
+          ),
+          box: const Size(240, 160),
+        ),
+      ]);
+
+      expect(
+        regions.map(
+          (region) => (region.kind, region.target, region.style, region.label),
+        ),
+        equals([
+          (VideoStickerKind.poll, '', 'light', 'Which one?\nRed\nBlue'),
+        ]),
+      );
+    });
+
     test('measures against the part of the body the export keeps', () {
       // A 400 by 800 body keeps 400 by 711.1 of a 9:16 export, from 44.4
       // down, so the body's centre is still the frame's.

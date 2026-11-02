@@ -1,5 +1,5 @@
 // ABOUTME: Draws a social sticker: an @mention, a #hashtag or a link as a pill,
-// ABOUTME: a sound credit that moves with the playhead, a countdown or a reply.
+// ABOUTME: a moving sound credit, a countdown, a reply, a poll or a slider.
 
 import 'dart:async';
 
@@ -16,6 +16,7 @@ import 'package:openvine/utils/sound_credit_paint.dart';
 import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_pill_palette.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/poll_sticker_card.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_marks.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -73,6 +74,14 @@ class SocialStickerView extends StatelessWidget {
       countdownDateOf(data),
     ].join(' · '),
     SocialStickerKind.reply => [?data.name, ?data.replyText].join(': '),
+    SocialStickerKind.poll || SocialStickerKind.quiz => [
+      data.pollQuestion ?? '',
+      ...data.pollOptions,
+    ].join(' · '),
+    SocialStickerKind.slider => [
+      data.pollQuestion ?? '',
+      ?data.sliderEmoji,
+    ].join(' '),
   };
 
   @override
@@ -106,7 +115,7 @@ class SocialStickerView extends StatelessWidget {
                   ink: palette.ink,
                   shadows: palette.shadows,
                 ),
-                _Line(text: textOf(data), style: palette.textStyle()),
+                StickerTextLine(text: textOf(data), style: palette.textStyle()),
               ],
             ),
           ),
@@ -116,9 +125,18 @@ class SocialStickerView extends StatelessWidget {
             value: countdownValue ?? countdownDateOf(data),
           ),
           SocialStickerKind.reply => _ReplyCard(data: data, palette: palette),
+          SocialStickerKind.poll ||
+          SocialStickerKind.quiz ||
+          SocialStickerKind.slider => PollStickerCard(
+            data: data,
+            overFrames: overFrames,
+          ),
           _ => StickerPill(
             palette: palette,
-            child: _Line(text: textOf(data), style: palette.textStyle()),
+            child: StickerTextLine(
+              text: textOf(data),
+              style: palette.textStyle(),
+            ),
           ),
         },
       ),
@@ -151,6 +169,7 @@ class SocialStickerCopy extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (data.kind.isPoll) return PollStickerCopy(data: data);
     final sticker = SocialStickerView(
       data: data,
       overFrames: true,
@@ -262,7 +281,10 @@ class _CountdownCard extends StatelessWidget {
         mainAxisSize: .min,
         spacing: _countdownSpacing,
         children: [
-          _Line(text: data.countdownTitle ?? '', style: palette.textStyle()),
+          StickerTextLine(
+            text: data.countdownTitle ?? '',
+            style: palette.textStyle(),
+          ),
           SizedBox(
             width: _countdownValueWidth,
             height: _countdownValueFontSize * 1.15,
@@ -311,12 +333,12 @@ class _ReplyCard extends StatelessWidget {
               crossAxisAlignment: .start,
               spacing: 6,
               children: [
-                _Line(
+                StickerTextLine(
                   text: data.name ?? '',
                   style: palette.textStyle(fontSize: 40),
                 ),
                 if (text != null)
-                  _Line(
+                  StickerTextLine(
                     text: text,
                     style: palette
                         .textStyle(fontSize: 34)
@@ -381,18 +403,25 @@ class _ReplyPicture extends StatelessWidget {
 /// player's copy of it has to match the frames at any font size. Its emoji
 /// are drawn in the sticker emoji font once that is loaded, which it loads
 /// when they are all its text needs beyond the sticker font.
-class _Line extends StatefulWidget {
-  const _Line({required this.text, required this.style, this.maxLines = 1});
+class StickerTextLine extends StatefulWidget {
+  const StickerTextLine({
+    required this.text,
+    required this.style,
+    this.maxLines = 1,
+    this.textAlign,
+    super.key,
+  });
 
   final String text;
   final TextStyle style;
   final int maxLines;
+  final TextAlign? textAlign;
 
   @override
-  State<_Line> createState() => _LineState();
+  State<StickerTextLine> createState() => _StickerTextLineState();
 }
 
-class _LineState extends State<_Line> {
+class _StickerTextLineState extends State<StickerTextLine> {
   @override
   void initState() {
     super.initState();
@@ -400,7 +429,7 @@ class _LineState extends State<_Line> {
   }
 
   @override
-  void didUpdateWidget(_Line oldWidget) {
+  void didUpdateWidget(StickerTextLine oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.text != widget.text) _loadEmojiFont();
   }
@@ -422,6 +451,7 @@ class _LineState extends State<_Line> {
         style: withStickerEmojiFont(widget.style),
         maxLines: widget.maxLines,
         overflow: .ellipsis,
+        textAlign: widget.textAlign,
         textScaler: TextScaler.noScaling,
       ),
     );

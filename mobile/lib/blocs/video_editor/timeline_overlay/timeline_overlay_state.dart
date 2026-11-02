@@ -59,7 +59,8 @@ class TimelineOverlayState extends Equatable {
   /// Incremented when marker changes should be persisted to editor history.
   final int timelineMarkersRevision;
 
-  /// The currently selected item (shows trim handles), or `null`.
+  /// The currently selected item, or `null`; it shows trim handles, or a plain
+  /// frame on a sticker card.
   final String? selectedItemId;
 
   /// The item being dragged, or `null`.

@@ -8,6 +8,7 @@ import 'dart:ui' show Offset, Size;
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
+import 'package:openvine/models/video_editor/sticker_card_layer.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show Layer, LayerMask, LayerMaskShape;
 
@@ -49,11 +50,13 @@ const double editorMaskRectangleCorners = 0.3;
 ///
 /// Every overlay can, except two that the export draws natively from their own
 /// description rather than from what the canvas shows: a hidden area (blur,
-/// pixelate), which covers what lies beneath it, and an audio visualizer.
+/// pixelate), which covers what lies beneath it, and an audio visualizer. A
+/// sticker card ([isStickerCardLayer]) cannot either: it shows whole.
 bool canMaskLayer(Layer? layer) =>
     layer != null &&
     !isCensorLayer(layer) &&
-    !AudioVisualizerLayerData.isAudioVisualizerLayer(layer);
+    !AudioVisualizerLayerData.isAudioVisualizerLayer(layer) &&
+    !isStickerCardLayer(layer);
 
 /// Moves a timeline mask from the cropped export frame into the full box of
 /// a detached clip. Keeping the same normalized coordinates would stretch a

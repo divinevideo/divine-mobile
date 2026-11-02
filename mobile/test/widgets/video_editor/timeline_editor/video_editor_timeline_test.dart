@@ -26,6 +26,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strip.dart';
@@ -1333,6 +1334,79 @@ void main() {
             oldIndex: 2,
             newIndex: 0,
             skipUpdateHistory: true,
+          ),
+        ).called(1);
+      });
+
+      testWidgets('keeps a layer dropped below the poll behind it', (
+        tester,
+      ) async {
+        final editor = _MockProImageEditorState();
+        final pollMeta = const SocialStickerData(
+          kind: SocialStickerKind.poll,
+          pollQuestion: 'Which one?',
+          pollOptions: ['Red', 'Blue'],
+        ).toMeta();
+        final layers = <Layer>[
+          EmojiLayer(emoji: '🍎', id: 'sticker'),
+          WidgetLayer(
+            id: 'poll',
+            widget: const SizedBox.shrink(),
+            meta: pollMeta,
+            exportConfigs: WidgetLayerExportConfigs(id: 'poll', meta: pollMeta),
+          ),
+        ];
+        when(() => editor.activeLayers).thenReturn(layers);
+        when(() => mockOverlayBloc.state).thenReturn(
+          TimelineOverlayState(
+            items: [
+              for (final (row, layer) in layers.indexed)
+                TimelineOverlayItem(
+                  id: layer.id,
+                  type: .layer,
+                  startTime: Duration.zero,
+                  endTime: const Duration(seconds: 2),
+                  row: row,
+                  layer: layer,
+                ),
+            ],
+          ),
+        );
+        when(() => mockClipBloc.state).thenReturn(
+          ClipEditorState(clips: [_createTestClip(id: 'a')]),
+        );
+
+        await tester.pumpWidget(buildWidget(editor: editor));
+        await tester.pump();
+
+        final body = tester.widget<VideoEditorTimelineInteractiveBody>(
+          find.byType(VideoEditorTimelineInteractiveBody),
+        );
+        // Dropped under the poll's row, the bottom one.
+        body.onOverlayItemMoved(
+          item: mockOverlayBloc.state.items.first,
+          startTime: Duration.zero,
+          row: 1,
+          insertAbove: false,
+        );
+
+        // The sticker stays before the poll in the list, so the poll is still
+        // drawn in front and keeps the last row.
+        verify(
+          () => editor.moveLayerListPosition(
+            oldIndex: 0,
+            newIndex: 0,
+            skipUpdateHistory: true,
+          ),
+        ).called(1);
+        verify(
+          () => mockOverlayBloc.add(
+            const TimelineOverlayItemMoved(
+              itemId: 'sticker',
+              startTime: Duration.zero,
+              row: 1,
+              insertAbove: true,
+            ),
           ),
         ).called(1);
       });

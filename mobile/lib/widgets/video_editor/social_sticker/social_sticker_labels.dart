@@ -6,7 +6,7 @@ import 'package:openvine/models/video_editor/social_sticker.dart';
 
 extension SocialStickerLabels on AppLocalizations {
   /// What [kind] is called: "Mention", "Hashtag", "Link", "Sound",
-  /// "Countdown" or "Reply".
+  /// "Countdown", "Reply", "Poll", "Quiz" or "Slider".
   String socialStickerKindLabel(SocialStickerKind kind) => switch (kind) {
     SocialStickerKind.mention => videoEditorSocialStickerMention,
     SocialStickerKind.hashtag => videoEditorSocialStickerHashtag,
@@ -14,6 +14,9 @@ extension SocialStickerLabels on AppLocalizations {
     SocialStickerKind.soundCredit => videoEditorSocialStickerSoundCredit,
     SocialStickerKind.countdown => videoEditorSocialStickerCountdown,
     SocialStickerKind.reply => videoEditorSocialStickerReply,
+    SocialStickerKind.poll => videoEditorSocialStickerPoll,
+    SocialStickerKind.quiz => videoEditorSocialStickerQuiz,
+    SocialStickerKind.slider => videoEditorSocialStickerSlider,
   };
 
   /// What [design] is called: "Note", "Record" and so on.

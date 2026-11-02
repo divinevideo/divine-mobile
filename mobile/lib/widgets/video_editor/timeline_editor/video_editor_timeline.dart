@@ -20,6 +20,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
+import 'package:openvine/models/video_editor/poll_sticker_placement.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_snack_bar.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -702,6 +703,17 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
     required int row,
     required bool insertAbove,
   }) {
+    // Every other layer stays behind the video's poll, quiz or slider, which
+    // keeps the last row.
+    final drop = item.type == .layer
+        ? layerDropBehindPoll(
+            items: context.read<TimelineOverlayBloc>().state.items.where(
+              (i) => i.id != item.id,
+            ),
+            row: row,
+            insertAbove: insertAbove,
+          )
+        : (row: row, insertAbove: insertAbove);
     // Sync the new time position to the editor before updating BLoC state so
     // the canvas reflects the move immediately.
     final editor = VideoEditorScope.of(context).requireEditor;
@@ -715,8 +727,8 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
     final targetIdx = _targetListIndex(
       type: item.type,
       draggedItemId: item.id,
-      targetRow: row,
-      insertAbove: insertAbove,
+      targetRow: drop.row,
+      insertAbove: drop.insertAbove,
     );
 
     switch (item.type) {
@@ -815,8 +827,8 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
       TimelineOverlayItemMoved(
         itemId: item.id,
         startTime: startTime,
-        row: row,
-        insertAbove: insertAbove,
+        row: drop.row,
+        insertAbove: drop.insertAbove,
       ),
     );
   }

@@ -13,6 +13,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_sheet_controls.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_inputs.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_labels.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_poll_inputs.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 
 /// Opens the social sticker sheet and resolves with the sticker as the
@@ -134,8 +135,15 @@ class SocialStickerSheet extends StatelessWidget {
                       text: context.l10n.videoEditorSocialStickerReplyNote,
                     ),
                   ],
+                  SocialStickerKind.poll || SocialStickerKind.quiz => [
+                    SocialStickerPollFields(autofocus: isNew),
+                  ],
+                  SocialStickerKind.slider => [
+                    SocialStickerSliderFields(autofocus: isNew),
+                  ],
                 },
-                const SocialStickerStylePicker(),
+                // A sticker with one look has nothing to pick.
+                if (kind.styles.length > 1) const SocialStickerStylePicker(),
               ],
             ),
           ),
