@@ -6900,21 +6900,19 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'محدد';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'غير محدد';
 
   @override
   String get videoClipSemanticHintDisabled => 'معطل';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'انقر للتحديد، اضغط مطولاً للمعاينة';
+  String get videoClipSemanticHintSelect => 'انقر للتحديد';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'انقر لإلغاء التحديد، اضغط مطولاً للمعاينة';
+  String get videoClipSemanticHintDeselect => 'انقر لإلغاء التحديد';
+
+  @override
+  String get videoClipSemanticHintPreview => 'انقر للمعاينة';
 
   @override
   String get routerInvalidCreator => 'منشئ غير صالح';
@@ -8754,6 +8752,36 @@ class AppLocalizationsAr extends AppLocalizations {
       one: 'مقطع واحد',
     );
     return 'سيؤدي هذا إلى حذف $_temp0 نهائيًا من سلة المهملات فورًا.';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تمت استعادة $count مقطع',
+      many: 'تمت استعادة $count مقطعًا',
+      few: 'تمت استعادة $count مقاطع',
+      two: 'تمت استعادة مقطعين',
+      one: 'تمت استعادة المقطع',
+      zero: 'لم تتم استعادة أي مقطع',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تم حذف $count مقطع نهائيًا',
+      many: 'تم حذف $count مقطعًا نهائيًا',
+      few: 'تم حذف $count مقاطع نهائيًا',
+      two: 'تم حذف مقطعين نهائيًا',
+      one: 'تم حذف المقطع نهائيًا',
+      zero: 'لم يُحذف أي مقطع نهائيًا',
+    );
+    return '$_temp0';
   }
 
   @override

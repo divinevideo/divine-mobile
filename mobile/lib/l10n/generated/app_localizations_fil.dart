@@ -6943,21 +6943,19 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Napili';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Hindi napili';
 
   @override
   String get videoClipSemanticHintDisabled => 'Hindi pinagana';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'I-tap para piliin, pindutin nang matagal para i-preview';
+  String get videoClipSemanticHintSelect => 'I-tap para piliin';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'I-tap para alisin ang pagpili, pindutin nang matagal para i-preview';
+  String get videoClipSemanticHintDeselect => 'I-tap para alisin ang pagpili';
+
+  @override
+  String get videoClipSemanticHintPreview => 'I-tap para i-preview';
 
   @override
   String get routerInvalidCreator => 'Invalid na creator';
@@ -8818,6 +8816,28 @@ class AppLocalizationsFil extends AppLocalizations {
       one: '$count clip',
     );
     return 'Permanente nitong ide-delete agad mula sa trash ang $_temp0.';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Naibalik ang $count clip',
+      one: 'Naibalik ang clip',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Permanenteng na-delete ang $count clip',
+      one: 'Permanenteng na-delete ang clip',
+    );
+    return '$_temp0';
   }
 
   @override

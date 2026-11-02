@@ -464,7 +464,8 @@ void main() {
       );
 
       testWidgets(
-        'omits the selection position when the badge is not shown',
+        'announces the preview instead of the selection when the badge is '
+        'not shown',
         (tester) async {
           // Reachable on the ordinary library route: entering the library with
           // clips already in the editor pre-selects them
@@ -484,10 +485,19 @@ void main() {
           final semantics = tester.getSemantics(
             find.byType(VideoClipThumbnailCard).first,
           );
-          // No badge on screen, so the ordinal would name a position the user
-          // cannot see.
+          // No badge on screen, and a tap opens the preview here, so the
+          // selection would name a state the user can neither see nor change.
           expect(find.text('1'), findsNothing);
-          expect(semantics.value, equals(en.videoClipSemanticValueSelected));
+          expect(
+            semantics,
+            isSemantics(
+              value: '',
+              hint: en.videoClipSemanticHintPreview,
+              hasSelectedState: false,
+              isButton: true,
+              hasTapAction: true,
+            ),
+          );
         },
       );
     });

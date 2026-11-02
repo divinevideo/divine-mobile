@@ -6904,21 +6904,19 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'منتخب';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'منتخب نہیں';
 
   @override
   String get videoClipSemanticHintDisabled => 'غیر فعال';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'منتخب کرنے کے لیے ٹیپ کریں، پیش منظر کے لیے دیر تک دبائیں';
+  String get videoClipSemanticHintSelect => 'منتخب کرنے کے لیے ٹیپ کریں';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'انتخاب ختم کرنے کے لیے ٹیپ کریں، پیش منظر کے لیے دیر تک دبائیں';
+  String get videoClipSemanticHintDeselect => 'انتخاب ختم کرنے کے لیے ٹیپ کریں';
+
+  @override
+  String get videoClipSemanticHintPreview => 'پیش منظر کے لیے ٹیپ کریں';
 
   @override
   String get routerInvalidCreator => 'غلط کریئیٹر';
@@ -8756,6 +8754,28 @@ class AppLocalizationsUr extends AppLocalizations {
       one: '1 کلپ',
     );
     return 'یہ $_temp0 فوراً ٹریش سے مستقل طور پر حذف کر دے گا۔';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count کلپس بحال ہو گئیں',
+      one: 'کلپ بحال ہو گئی',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count کلپس مستقل طور پر حذف ہو گئیں',
+      one: 'کلپ مستقل طور پر حذف ہو گئی',
+    );
+    return '$_temp0';
   }
 
   @override

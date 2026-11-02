@@ -6531,19 +6531,19 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => '選択済み';
-
-  @override
   String get videoClipSemanticValueNotSelected => '未選択';
 
   @override
   String get videoClipSemanticHintDisabled => '無効';
 
   @override
-  String get videoClipSemanticHintSelect => 'タップして選択、長押しでプレビュー';
+  String get videoClipSemanticHintSelect => 'タップして選択';
 
   @override
-  String get videoClipSemanticHintDeselect => 'タップして選択解除、長押しでプレビュー';
+  String get videoClipSemanticHintDeselect => 'タップして選択解除';
+
+  @override
+  String get videoClipSemanticHintPreview => 'タップしてプレビュー';
 
   @override
   String get routerInvalidCreator => '無効なクリエイター';
@@ -8309,6 +8309,28 @@ class AppLocalizationsJa extends AppLocalizations {
       one: '1件のクリップ',
     );
     return 'これでゴミ箱から$_temp0がすぐに完全に削除されます。';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件のクリップを復元しました',
+      one: 'クリップを復元しました',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件のクリップを完全に削除しました',
+      one: 'クリップを完全に削除しました',
+    );
+    return '$_temp0';
   }
 
   @override

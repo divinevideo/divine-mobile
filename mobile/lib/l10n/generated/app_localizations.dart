@@ -11641,12 +11641,6 @@ abstract class AppLocalizations {
   /// **'Selected, number {position}'**
   String videoClipSemanticValueSelectedAtPosition(int position);
 
-  /// No description provided for @videoClipSemanticValueSelected.
-  ///
-  /// In en, this message translates to:
-  /// **'Selected'**
-  String get videoClipSemanticValueSelected;
-
   /// No description provided for @videoClipSemanticValueNotSelected.
   ///
   /// In en, this message translates to:
@@ -11662,14 +11656,20 @@ abstract class AppLocalizations {
   /// No description provided for @videoClipSemanticHintSelect.
   ///
   /// In en, this message translates to:
-  /// **'Tap to select, long press to preview'**
+  /// **'Tap to select'**
   String get videoClipSemanticHintSelect;
 
   /// No description provided for @videoClipSemanticHintDeselect.
   ///
   /// In en, this message translates to:
-  /// **'Tap to deselect, long press to preview'**
+  /// **'Tap to deselect'**
   String get videoClipSemanticHintDeselect;
+
+  /// Accessibility hint on a library clip thumbnail outside selection mode, where a tap opens the clip preview.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to preview'**
+  String get videoClipSemanticHintPreview;
 
   /// No description provided for @routerInvalidCreator.
   ///
@@ -14710,6 +14710,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This permanently deletes {count, plural, =1{1 clip} other{{count} clips}} from trash right away.'**
   String libraryTrashEmptyConfirmMessage(int count);
+
+  /// Screen-reader announcement after clips are restored from trash and their rows leave the trash list.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Clip restored} other{{count} clips restored}}'**
+  String libraryTrashClipsRestored(int count);
+
+  /// Screen-reader announcement after clips are permanently deleted from trash (one at a time or by emptying it) and their rows leave the trash list.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Clip permanently deleted} other{{count} clips permanently deleted}}'**
+  String libraryTrashClipsDeleted(int count);
 
   /// No description provided for @videoRecorderCloseLabel.
   ///

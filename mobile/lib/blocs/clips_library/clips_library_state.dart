@@ -203,6 +203,32 @@ final class ClipsLibraryOrganizeResult extends Equatable {
   ];
 }
 
+/// What the last trash action did to the clips it took out of the trash.
+enum ClipsLibraryTrashAction {
+  /// Put back into the active library.
+  restored,
+
+  /// Deleted for good, one at a time or by emptying the trash.
+  deleted,
+}
+
+/// Outcome of the last restore from, or permanent delete in, the trash.
+///
+/// The trash list confirms it to screen readers: the rows simply vanish, which
+/// says nothing to someone who cannot see them go.
+final class ClipsLibraryTrashResult extends Equatable {
+  const ClipsLibraryTrashResult({required this.action, required this.clipIds});
+
+  /// What happened to the clips.
+  final ClipsLibraryTrashAction action;
+
+  /// The clips it happened to.
+  final Set<String> clipIds;
+
+  @override
+  List<Object?> get props => [action, clipIds];
+}
+
 /// A long-press-and-drag range selection running on the clips grid.
 ///
 /// Held for the length of the gesture so every move can be resolved against
@@ -285,6 +311,7 @@ final class ClipsLibraryState extends Equatable {
     this.categories = const [],
     this.filter = const ClipLibraryAllFilter(),
     this.lastOrganizeResult,
+    this.lastTrashResult,
     this.dragSelection,
     this.allowsMixedClipTypes = false,
     this.allowsMixedAspectRatios = false,
@@ -354,6 +381,13 @@ final class ClipsLibraryState extends Equatable {
   /// Result of the last move-to-category or archive action (for UI
   /// feedback), or `null` when there is nothing to report.
   final ClipsLibraryOrganizeResult? lastOrganizeResult;
+
+  /// Result of the last restore or permanent delete in the trash (for UI
+  /// feedback), or `null` when there is nothing to report.
+  ///
+  /// Cleared whenever the trash loads, so restoring a clip that was deleted
+  /// again since still differs from the result it left the last time.
+  final ClipsLibraryTrashResult? lastTrashResult;
 
   /// The long-press-and-drag range selection in progress, or `null` when the
   /// user is not dragging across the grid.
@@ -480,9 +514,11 @@ final class ClipsLibraryState extends Equatable {
     List<ClipCategory>? categories,
     ClipLibraryFilter? filter,
     ClipsLibraryOrganizeResult? lastOrganizeResult,
+    ClipsLibraryTrashResult? lastTrashResult,
     ClipsLibraryDragSelection? dragSelection,
     bool clearDragSelection = false,
     bool clearOrganizeResult = false,
+    bool clearTrashResult = false,
     bool clearDeletedCount = false,
     bool clearDeletedClipIds = false,
   }) {
@@ -512,6 +548,9 @@ final class ClipsLibraryState extends Equatable {
       lastOrganizeResult: clearOrganizeResult
           ? null
           : (lastOrganizeResult ?? this.lastOrganizeResult),
+      lastTrashResult: clearTrashResult
+          ? null
+          : (lastTrashResult ?? this.lastTrashResult),
       dragSelection: clearDragSelection
           ? null
           : (dragSelection ?? this.dragSelection),
@@ -540,6 +579,7 @@ final class ClipsLibraryState extends Equatable {
     categories,
     filter,
     lastOrganizeResult,
+    lastTrashResult,
     dragSelection,
     allowsMixedClipTypes,
     allowsMixedAspectRatios,

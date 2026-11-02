@@ -7072,21 +7072,19 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Selectat';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Neselectat';
 
   @override
   String get videoClipSemanticHintDisabled => 'Dezactivat';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Atinge pentru a selecta, ține apăsat pentru previzualizare';
+  String get videoClipSemanticHintSelect => 'Atinge pentru a selecta';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Atinge pentru a deselecta, ține apăsat pentru previzualizare';
+  String get videoClipSemanticHintDeselect => 'Atinge pentru a deselecta';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Atinge pentru previzualizare';
 
   @override
   String get routerInvalidCreator => 'Creator invalid';
@@ -8956,6 +8954,30 @@ class AppLocalizationsRo extends AppLocalizations {
       one: '1 clip',
     );
     return 'Asta șterge definitiv din coș $_temp0 imediat.';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de clipuri restaurate',
+      few: '$count clipuri restaurate',
+      one: 'Clip restaurat',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de clipuri șterse definitiv',
+      few: '$count clipuri șterse definitiv',
+      one: 'Clip șters definitiv',
+    );
+    return '$_temp0';
   }
 
   @override

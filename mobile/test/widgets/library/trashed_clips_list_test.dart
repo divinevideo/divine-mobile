@@ -3,6 +3,7 @@
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -79,6 +80,78 @@ void main() {
       verify(
         () => mockBloc.add(const ClipsLibraryRestoreClips({'trashed-clip'})),
       ).called(1);
+    });
+
+    testWidgets('keeps the thumbnail out of the semantics tree', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWidget(
+          ClipsLibraryState(
+            status: ClipsLibraryStatus.trashLoaded,
+            filter: const ClipLibraryTrashFilter(),
+            trashedClips: [trashedClip],
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // The title already names the clip; the thumbnail does nothing on tap,
+      // so a node of its own would be a button with no action.
+      expect(
+        find.bySemanticsLabel(en.videoClipSemanticLabel('5.00')),
+        findsNothing,
+      );
+      expect(find.text(en.libraryClipDuration('5.00')), findsOneWidget);
+    });
+
+    group('announces what happened to the rows that left', () {
+      final listed = ClipsLibraryState(
+        status: ClipsLibraryStatus.trashLoaded,
+        filter: const ClipLibraryTrashFilter(),
+        trashedClips: [trashedClip],
+      );
+
+      Future<List<Object?>> pumpResult(
+        WidgetTester tester,
+        ClipsLibraryTrashResult result,
+      ) async {
+        final announced = _captureAnnouncements(tester);
+        whenListen(
+          mockBloc,
+          Stream.value(
+            listed.copyWith(trashedClips: const [], lastTrashResult: result),
+          ),
+          initialState: listed,
+        );
+        await tester.pumpWidget(buildWidget(listed));
+        await tester.pump();
+        return announced;
+      }
+
+      testWidgets('a restored clip', (tester) async {
+        final announced = await pumpResult(
+          tester,
+          const ClipsLibraryTrashResult(
+            action: ClipsLibraryTrashAction.restored,
+            clipIds: {'trashed-clip'},
+          ),
+        );
+
+        expect(announced, equals([en.libraryTrashClipsRestored(1)]));
+      });
+
+      testWidgets('clips deleted for good', (tester) async {
+        final announced = await pumpResult(
+          tester,
+          const ClipsLibraryTrashResult(
+            action: ClipsLibraryTrashAction.deleted,
+            clipIds: {'trashed-clip', 'other-clip'},
+          ),
+        );
+
+        expect(announced, equals([en.libraryTrashClipsDeleted(2)]));
+      });
     });
 
     testWidgets('keeps the fractional duration of a sub-second clip', (
@@ -185,4 +258,25 @@ void main() {
       expect(find.text(en.libraryTrashEmptyTitle), findsOneWidget);
     });
   });
+}
+
+List<Object?> _captureAnnouncements(WidgetTester tester) {
+  final announced = <Object?>[];
+  tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
+    SystemChannels.accessibility,
+    (message) async {
+      if (message is Map && message['type'] == 'announce') {
+        announced.add((message['data'] as Map?)?['message']);
+      }
+      return null;
+    },
+  );
+  addTearDown(
+    () => tester.binding.defaultBinaryMessenger
+        .setMockDecodedMessageHandler<Object?>(
+          SystemChannels.accessibility,
+          null,
+        ),
+  );
+  return announced;
 }

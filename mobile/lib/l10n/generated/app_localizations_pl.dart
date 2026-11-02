@@ -7079,21 +7079,19 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Zaznaczono';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Niezaznaczono';
 
   @override
   String get videoClipSemanticHintDisabled => 'Wyłączono';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Dotknij, aby wybrać, przytrzymaj, aby podejrzeć';
+  String get videoClipSemanticHintSelect => 'Dotknij, aby wybrać';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Dotknij, aby odznaczyć, przytrzymaj, aby podejrzeć';
+  String get videoClipSemanticHintDeselect => 'Dotknij, aby odznaczyć';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Dotknij, aby podejrzeć';
 
   @override
   String get routerInvalidCreator => 'Nieprawidłowy twórca';
@@ -8959,6 +8957,32 @@ class AppLocalizationsPl extends AppLocalizations {
       one: '1 klip',
     );
     return 'To od razu trwale usunie z kosza $_temp0.';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Przywrócono $count klipu',
+      many: 'Przywrócono $count klipów',
+      few: 'Przywrócono $count klipy',
+      one: 'Przywrócono klip',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Trwale usunięto $count klipu',
+      many: 'Trwale usunięto $count klipów',
+      few: 'Trwale usunięto $count klipy',
+      one: 'Trwale usunięto klip',
+    );
+    return '$_temp0';
   }
 
   @override

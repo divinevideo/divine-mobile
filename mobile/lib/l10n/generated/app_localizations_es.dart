@@ -6965,21 +6965,19 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Seleccionado';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'No seleccionado';
 
   @override
   String get videoClipSemanticHintDisabled => 'Deshabilitado';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Toca para seleccionar, mantén para previsualizar';
+  String get videoClipSemanticHintSelect => 'Toca para seleccionar';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Toca para deseleccionar, mantén para previsualizar';
+  String get videoClipSemanticHintDeselect => 'Toca para deseleccionar';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Toca para previsualizar';
 
   @override
   String get routerInvalidCreator => 'Creador no válido';
@@ -8846,6 +8844,30 @@ class AppLocalizationsEs extends AppLocalizations {
       one: '1 clip',
     );
     return 'Esto elimina permanentemente de la papelera $_temp0 ahora mismo.';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Se restauraron $count clips',
+      many: 'Se restauraron $count de clips',
+      one: 'Se restauró el clip',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Se eliminaron $count clips de forma permanente',
+      many: 'Se eliminaron $count de clips de forma permanente',
+      one: 'Se eliminó el clip de forma permanente',
+    );
+    return '$_temp0';
   }
 
   @override

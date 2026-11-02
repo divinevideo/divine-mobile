@@ -3441,11 +3441,11 @@
     }
   },
   "videoClipSemanticValueSelectedAtPosition": "已选中，第 {position} 个",
-  "videoClipSemanticValueSelected": "已选中",
   "videoClipSemanticValueNotSelected": "未选中",
   "videoClipSemanticHintDisabled": "已禁用",
-  "videoClipSemanticHintSelect": "点按选择，长按预览",
-  "videoClipSemanticHintDeselect": "点按取消选择，长按预览",
+  "videoClipSemanticHintSelect": "点按选择",
+  "videoClipSemanticHintDeselect": "点按取消选择",
+  "videoClipSemanticHintPreview": "点按预览",
   "routerInvalidCreator": "无效的创作者",
   "routerInvalidHashtagRoute": "无效的话题标签路由",
   "categoryGalleryCouldNotLoadVideos": "视频加载失败",
@@ -4572,6 +4572,8 @@
     "description": "Confirmation-sheet title shown before permanently deleting every clip from trash."
   },
   "libraryTrashEmptyConfirmMessage": "这会立刻从回收站永久删除{count, plural, =1{1 个片段} other{{count} 个片段}}。",
+  "libraryTrashClipsRestored": "{count, plural, =1{已恢复片段} other{已恢复 {count} 个片段}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{已永久删除片段} other{已永久删除 {count} 个片段}}",
   "@libraryTrashEmptyConfirmMessage": {
     "description": "Confirmation-sheet subtitle shown before permanently deleting every clip from trash.",
     "placeholders": {

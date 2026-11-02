@@ -6492,19 +6492,19 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => '已选中';
-
-  @override
   String get videoClipSemanticValueNotSelected => '未选中';
 
   @override
   String get videoClipSemanticHintDisabled => '已禁用';
 
   @override
-  String get videoClipSemanticHintSelect => '点按选择，长按预览';
+  String get videoClipSemanticHintSelect => '点按选择';
 
   @override
-  String get videoClipSemanticHintDeselect => '点按取消选择，长按预览';
+  String get videoClipSemanticHintDeselect => '点按取消选择';
+
+  @override
+  String get videoClipSemanticHintPreview => '点按预览';
 
   @override
   String get routerInvalidCreator => '无效的创作者';
@@ -8232,6 +8232,28 @@ class AppLocalizationsZh extends AppLocalizations {
       one: '1 个片段',
     );
     return '这会立刻从回收站永久删除$_temp0。';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已恢复 $count 个片段',
+      one: '已恢复片段',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已永久删除 $count 个片段',
+      one: '已永久删除片段',
+    );
+    return '$_temp0';
   }
 
   @override

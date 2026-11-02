@@ -169,6 +169,21 @@ void main() {
       );
     });
 
+    testWidgets('names the clip it plays for screen readers', (tester) async {
+      installMockDivineVideoPlayer();
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pump(const Duration(milliseconds: 100));
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      // The still, spinner and video surface underneath say nothing, or only
+      // "image", so the media area carries the clip's name instead.
+      expect(
+        find.bySemanticsLabel(l10n.videoClipSemanticLabel('5.00')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('renders $DivineVideoPlayer and save button', (tester) async {
       installMockDivineVideoPlayer();
 
@@ -751,6 +766,22 @@ void main() {
         expect(saves, 1);
         // Checking and signing take a moment, so the button says so.
         expect(saveButton(), findsNothing);
+        // A screen reader must not offer it as a button that still works.
+        expect(
+          tester.getSemantics(
+            find.bySemanticsLabel(
+              lookupAppLocalizations(
+                const Locale('en'),
+              ).videoClipSaveTo(GallerySaveService.destinationName),
+            ),
+          ),
+          isSemantics(
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: false,
+            hasTapAction: false,
+          ),
+        );
         verifyNever(() => mockGoRouter.pop<Object?>(any()));
 
         saving.complete();

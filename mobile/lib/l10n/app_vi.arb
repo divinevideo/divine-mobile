@@ -3441,11 +3441,11 @@
     }
   },
   "videoClipSemanticValueSelectedAtPosition": "Đã chọn, số {position}",
-  "videoClipSemanticValueSelected": "Đã chọn",
   "videoClipSemanticValueNotSelected": "Chưa chọn",
   "videoClipSemanticHintDisabled": "Đã tắt",
-  "videoClipSemanticHintSelect": "Chạm để chọn, nhấn giữ để xem thử",
-  "videoClipSemanticHintDeselect": "Chạm để bỏ chọn, nhấn giữ để xem thử",
+  "videoClipSemanticHintSelect": "Chạm để chọn",
+  "videoClipSemanticHintDeselect": "Chạm để bỏ chọn",
+  "videoClipSemanticHintPreview": "Chạm để xem thử",
   "routerInvalidCreator": "Nhà sáng tạo không hợp lệ",
   "routerInvalidHashtagRoute": "Tuyến hashtag không hợp lệ",
   "categoryGalleryCouldNotLoadVideos": "Không tải được video",
@@ -4572,6 +4572,8 @@
     "description": "Confirmation-sheet title shown before permanently deleting every clip from trash."
   },
   "libraryTrashEmptyConfirmMessage": "Thao tác này xóa vĩnh viễn {count, plural, =1{1 clip} other{{count} clip}} khỏi thùng rác ngay lập tức.",
+  "libraryTrashClipsRestored": "{count, plural, =1{Đã khôi phục clip} other{Đã khôi phục {count} clip}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{Đã xóa vĩnh viễn clip} other{Đã xóa vĩnh viễn {count} clip}}",
   "@libraryTrashEmptyConfirmMessage": {
     "description": "Confirmation-sheet subtitle shown before permanently deleting every clip from trash.",
     "placeholders": {

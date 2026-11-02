@@ -890,29 +890,14 @@ class _LibraryViewState extends ConsumerState<_LibraryView>
                 // Deleting is deliberately absent: a soft delete finishes in a
                 // few frames, so the scrim only read as the screen flashing
                 // black. Its feedback is the clips leaving the grid plus Undo.
+                //
+                // The scrims stop touches by painting over the library, but a
+                // screen reader acts on nodes directly, so the library also
+                // has to leave the semantics tree while one is up.
                 if (isPreparing)
-                  Material(
-                    color: VineTheme.scrim65,
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        spacing: 16,
-                        children: [
-                          const DivineCircularProgressIndicator(
-                            color: VineTheme.vineGreen,
-                          ),
-                          Text(
-                            context.l10n.libraryPreparingVideo,
-                            style: VineTheme.bodyMediumFont(
-                              color: context.vineColors.primaryText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
+                  const BlockSemantics(child: _PreparingVideoProgress())
                 else if (isSavingToGallery)
-                  const _GallerySaveProgress(),
+                  const BlockSemantics(child: _GallerySaveProgress()),
               ],
             ),
           );
@@ -1033,6 +1018,40 @@ class _LibraryContent extends StatelessWidget {
         Radius.circular(VineTheme.shellInnerCornerRadius),
       ),
       child: Material(color: tabBackgroundColor, child: content),
+    );
+  }
+}
+
+/// Covers the library while the selected clips are prepared for the editor.
+class _PreparingVideoProgress extends StatelessWidget {
+  const _PreparingVideoProgress();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: VineTheme.scrim65,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 16,
+          children: [
+            const ExcludeSemantics(
+              child: DivineCircularProgressIndicator(
+                color: VineTheme.vineGreen,
+              ),
+            ),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                context.l10n.libraryPreparingVideo,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.primaryText,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
