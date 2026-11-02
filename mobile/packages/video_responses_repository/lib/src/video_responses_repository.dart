@@ -1,20 +1,24 @@
 // ABOUTME: Reads a video's video replies and the answers to its Add yours, from
 // ABOUTME: Funnelcake or else the relays, and its creator's pins and hides.
 
+import 'dart:math' as math;
+
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
-import 'package:nostr_sdk/nostr_sdk.dart' show Event, Filter, PublishOutcome;
+import 'package:nostr_sdk/nostr_sdk.dart'
+    show Event, Filter, NostrTimestamp, PublishOutcome;
 import 'package:video_responses_repository/src/replies_curation.dart';
 import 'package:video_responses_repository/src/video_responses.dart';
 
-/// Signs an event of [kind] as the signed-in account, or gives `null` when it
-/// cannot.
+/// Signs an event of [kind] as the signed-in account, at [createdAt] when
+/// given, or gives `null` when it cannot.
 typedef ResponsesEventSigner =
     Future<Event?> Function({
       required int kind,
       required String content,
       required List<List<String>> tags,
+      int? createdAt,
     });
 
 /// A curation that could not be signed or that no relay took.
@@ -69,6 +73,12 @@ class VideoResponsesRepository {
   final NostrClient _nostrClient;
   final ResponsesEventSigner _signEvent;
   final FunnelcakeApiClient? _funnelcakeApiClient;
+
+  /// When the latest curation this read or signed for each video was signed,
+  /// by its `d` tag. Of two signed in the same second NIP-01 keeps the one
+  /// with the lower id, so a quick pin and unpin could leave the relays
+  /// holding the first; the next one is signed after it instead.
+  final _curationSignedAt = <String, int>{};
 
   /// The most responses one read from the relays asks for.
   static const int maxResponsesRead = 500;
@@ -222,12 +232,25 @@ class VideoResponsesRepository {
     final latest =
         events.where((event) => event.pubkey == creatorPubkey).toList()
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (latest.firstOrNull case final newest?) {
+      _noteCurationSignedAt(
+        RepliesCuration.dTagFor(videoAddress),
+        newest.createdAt,
+      );
+    }
     return latest.map(RepliesCuration.fromEvent).nonNulls.firstOrNull ??
         const RepliesCuration();
   }
 
+  void _noteCurationSignedAt(String dTag, int createdAt) =>
+      _curationSignedAt[dTag] = math.max(
+        createdAt,
+        _curationSignedAt[dTag] ?? createdAt,
+      );
+
   /// Publishes [curation] of the replies to the video at [videoAddress] as
-  /// the signed-in account, its creator, replacing the one before.
+  /// the signed-in account, its creator, replacing the one before: it is
+  /// signed after the last one this read or signed, even within a second.
   ///
   /// Throws a [RepliesCurationException] if it cannot be signed or no relay
   /// takes it.
@@ -235,14 +258,22 @@ class VideoResponsesRepository {
     RepliesCuration curation, {
     required String videoAddress,
   }) async {
+    final dTag = RepliesCuration.dTagFor(videoAddress);
+    final now = NostrTimestamp.now(
+      driftTolerance: NostrTimestamp.getDriftToleranceForKind(
+        RepliesCuration.kind,
+      ),
+    );
     final event = await _signEvent(
       kind: RepliesCuration.kind,
       content: '',
       tags: curation.toTags(videoAddress),
+      createdAt: math.max(now, (_curationSignedAt[dTag] ?? 0) + 1),
     );
     if (event == null) {
       throw const RepliesCurationException('Could not sign the curation');
     }
+    _noteCurationSignedAt(dTag, event.createdAt);
     final outcome = await _nostrClient.publishEventAwaitOk(event);
     if (outcome.failed) {
       throw RepliesCurationException(

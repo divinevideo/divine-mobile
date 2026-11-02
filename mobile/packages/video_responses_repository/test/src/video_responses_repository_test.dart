@@ -117,7 +117,7 @@ VideoStats _stats(String id) => VideoStats(
 void main() {
   late _MockNostrClient nostrClient;
   late _MockFunnelcakeApiClient funnelcake;
-  late List<({int kind, List<List<String>> tags})> signed;
+  late List<({int kind, List<List<String>> tags, int? createdAt})> signed;
   late Event? signedEvent;
 
   setUpAll(() {
@@ -136,10 +136,16 @@ void main() {
   VideoResponsesRepository repository({bool withFunnelcake = false}) =>
       VideoResponsesRepository(
         nostrClient: nostrClient,
-        signEvent: ({required kind, required content, required tags}) async {
-          signed.add((kind: kind, tags: tags));
-          return signedEvent;
-        },
+        signEvent:
+            ({
+              required kind,
+              required content,
+              required tags,
+              createdAt,
+            }) async {
+              signed.add((kind: kind, tags: tags, createdAt: createdAt));
+              return signedEvent;
+            },
         funnelcakeApiClient: withFunnelcake ? funnelcake : null,
       );
 
@@ -481,6 +487,48 @@ void main() {
           anyElement(equals(['e', _hex(202), '', 'pinned'])),
         );
         verify(() => nostrClient.publishEventAwaitOk(signedEvent!)).called(1);
+      });
+
+      test('signs after the curation it read, even one ahead of now', () async {
+        final ahead = NostrTimestamp.now(driftTolerance: 0) + 1000;
+        curationAnswers([_curationEvent(createdAt: ahead)]);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        final responses = repository();
+        await responses.fetchCuration(
+          creatorPubkey: _creator,
+          videoAddress: _rootAddress,
+        );
+        signedEvent = _curationEvent(createdAt: ahead + 1);
+
+        await responses.saveCuration(
+          const RepliesCuration(),
+          videoAddress: _rootAddress,
+        );
+
+        expect(signed.single.createdAt, equals(ahead + 1));
+      });
+
+      test('signs a second curation after the first', () async {
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        final responses = repository();
+        signedEvent = _curationEvent(
+          createdAt: NostrTimestamp.now(driftTolerance: 0) + 1000,
+        );
+        await responses.saveCuration(
+          RepliesCuration(pinnedId: _hex(202)),
+          videoAddress: _rootAddress,
+        );
+
+        await responses.saveCuration(
+          const RepliesCuration(),
+          videoAddress: _rootAddress,
+        );
+
+        expect(signed.last.createdAt, equals(signedEvent!.createdAt + 1));
       });
 
       test('throws when it cannot be signed', () async {
