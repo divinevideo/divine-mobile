@@ -9,6 +9,10 @@ import 'package:material_ui/material_ui.dart';
 
 const _illustrationKey = Key('illustration');
 
+final Finder _sparkleIcon = find.byWidgetPredicate(
+  (widget) => widget is DivineIcon && widget.icon == DivineIconName.sparkle,
+);
+
 const _features = [
   VineFeatureAnnouncementItem(
     icon: DivineIconName.closedCaptioning,
@@ -98,8 +102,7 @@ void main() {
         await tester.pumpWidget(buildSubject(badgeLabel: 'New'));
 
         expect(find.text('New'), findsOneWidget);
-        final icon = tester.widget<DivineIcon>(find.byType(DivineIcon));
-        expect(icon.icon, equals(DivineIconName.sparkle));
+        expect(_sparkleIcon, findsOneWidget);
       });
 
       testWidgets('wraps a badge label too long for one line', (tester) async {
@@ -113,7 +116,7 @@ void main() {
       testWidgets('no badge when badgeLabel is null', (tester) async {
         await tester.pumpWidget(buildSubject());
 
-        expect(find.byType(DivineIcon), findsNothing);
+        expect(_sparkleIcon, findsNothing);
       });
 
       testWidgets('subtitle when provided', (tester) async {
@@ -136,8 +139,12 @@ void main() {
           expect(find.text(feature.title), findsOneWidget);
           expect(find.text(feature.description), findsOneWidget);
         }
+        final rowIcons = find.descendant(
+          of: find.byType(MergeSemantics),
+          matching: find.byType(DivineIcon),
+        );
         final icons = tester
-            .widgetList<DivineIcon>(find.byType(DivineIcon))
+            .widgetList<DivineIcon>(rowIcons)
             .map((icon) => icon.icon);
         expect(
           icons,
@@ -164,18 +171,17 @@ void main() {
 
     group('semantics', () {
       testWidgets('marks the title as a header', (tester) async {
-        final handle = tester.ensureSemantics();
         await tester.pumpWidget(buildSubject());
 
         expect(
           tester.getSemantics(find.text('Captions')),
           isSemantics(label: 'Captions', isHeader: true),
         );
-        handle.dispose();
       });
 
       testWidgets('reads each feature row as one node', (tester) async {
-        final handle = tester.ensureSemantics();
+        // Built at runtime, not reused from the const list, so the item's
+        // constructor stays covered.
         await tester.pumpWidget(
           buildSubject(
             features: [
@@ -198,7 +204,6 @@ void main() {
                 'Tap CC on any video that has captions.',
           ),
         );
-        handle.dispose();
       });
 
       testWidgets('hides the illustration from screen readers', (
@@ -306,6 +311,7 @@ void main() {
           expect(find.text(feature.title), findsOneWidget);
         }
         expect(find.text('Turn on captions'), findsOneWidget);
+        expect(find.byType(Divider), findsNothing);
 
         await tester.tap(find.text('Got it'));
         await tester.pumpAndSettle();
