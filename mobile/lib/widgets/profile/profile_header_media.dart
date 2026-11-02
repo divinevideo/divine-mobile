@@ -470,12 +470,16 @@ class _ProfileAvatarWithPendingActions extends StatelessWidget {
           isAccountEnforced: isAccountEnforced,
           isAnonymous: isAnonymous,
           hasAnyProfileInfo: hasAnyProfileInfo,
-          canBecomeSupporter:
-              isConfirmedNonSupporter &&
-              !supporterPromptDismissal.isDismissed(),
+          canBecomeSupporter: isConfirmedNonSupporter,
         ).where((action) {
-          return action != ProfileActionType.secureAccount ||
-              !secureAccountPromptDismissal.isDismissed();
+          return switch (action) {
+            ProfileActionType.secureAccount =>
+              !secureAccountPromptDismissal.isDismissed(),
+            ProfileActionType.becomeSupporter =>
+              !supporterPromptDismissal.isDismissed(),
+            ProfileActionType.accountRestricted ||
+            ProfileActionType.completeProfile => true,
+          };
         }).toList();
 
     return _ProfileAvatarWithColor(
