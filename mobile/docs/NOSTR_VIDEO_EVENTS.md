@@ -324,9 +324,12 @@ then show the sticker only as it is in the frames.
   first and none of the hidden ones, on the sticker and in the feed.
 
 Funnelcake counts both and returns the latest
-(`GET /api/videos/{id}/responses?type=replies|joined&tag=<hashtag>`, `{id}`
-the video's event id or d-tag, the first video's for a chain). While it does
-not answer, the app reads them from the relay, at most 500 in one request.
+(`GET /api/videos/{id}/responses?type=replies|joined&tag=<hashtag>`). For
+replies the app sends the video's event id, never its d-tag: a d-tag is unique
+only per author, and the server derives the address from the event, so replies
+to any version of the video still count. A chain is asked for by its first
+video's d-tag. While it does not answer, the app reads them from the relay, at
+most 500 in one request.
 Reading lives in `mobile/packages/video_responses_repository`; the player's
 copy is `mobile/lib/widgets/video_feed_item/interactive_sticker_overlay.dart`.
 

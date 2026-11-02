@@ -208,7 +208,8 @@ void main() {
         expect(filters, hasLength(1));
       });
 
-      test('takes the count and the latest from Funnelcake', () async {
+      test('takes the count and the latest from Funnelcake, asking by the '
+          "video's event id", () async {
         when(() => funnelcake.isAvailable).thenReturn(true);
         when(
           () => funnelcake.getVideoResponses(
@@ -229,8 +230,12 @@ void main() {
         expect(responses.total, equals(42));
         expect(responses.videos.single.id, equals('abc'));
         verify(
+          // Not the d tag: any account can publish a video with the same one,
+          // and the server resolves a d tag to the newest video carrying it.
+          // The event id names this video alone, and the server derives its
+          // address from it, so replies to any of its versions still count.
           () => funnelcake.getVideoResponses(
-            videoId: 'root-d',
+            videoId: _rootId,
             type: VideoResponseType.replies,
             limit: 3,
           ),

@@ -81,9 +81,12 @@ class VideoResponsesRepository {
     String? videoAddress,
     int limit = 20,
   }) async {
-    final dTag = videoAddress?.split(':').skip(2).join(':');
+    // By event id, never the d tag: the server resolves a d tag to the newest
+    // video carrying it, whoever published it, so a copy of this video's d tag
+    // would take over its replies. The server derives the address from the
+    // event, so replies to any version of the video still count.
     final server = await _fetchFromServer(
-      videoId: (dTag?.isEmpty ?? true) ? videoId : dTag!,
+      videoId: videoId,
       type: VideoResponseType.replies,
       limit: limit,
     );
