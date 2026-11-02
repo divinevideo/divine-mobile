@@ -212,6 +212,26 @@ void main() {
         ],
         errors: () => [isA<RepliesCurationException>()],
       );
+
+      blocTest<VideoRepliesCubit, VideoRepliesState>(
+        'goes back and takes the next change after any failed save',
+        setUp: () => when(
+          () => repository.saveCuration(
+            any(),
+            videoAddress: any(named: 'videoAddress'),
+          ),
+        ).thenThrow(StateError('signer gone')),
+        build: build,
+        seed: () => loaded,
+        act: (cubit) => cubit.hideToggled(_hex(1)),
+        skip: 1,
+        // Left at saving, the page would show the unsaved hide as done and
+        // drop every later pin or hide.
+        expect: () => [
+          loaded.copyWith(saveStatus: VideoRepliesSaveStatus.failed),
+        ],
+        errors: () => [isA<StateError>()],
+      );
     });
   });
 }

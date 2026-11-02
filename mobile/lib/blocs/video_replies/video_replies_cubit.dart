@@ -92,7 +92,9 @@ class VideoRepliesCubit extends Cubit<VideoRepliesState>
     try {
       await _repository.saveCuration(curation, videoAddress: _videoAddress);
       emitIfOpen(state.copyWith(saveStatus: VideoRepliesSaveStatus.idle));
-    } on RepliesCurationException catch (error, stackTrace) {
+    } catch (error, stackTrace) {
+      // Any failure, not just a refused curation: left at saving, the page
+      // would show the unsaved change as done and drop every later one.
       addError(error, stackTrace);
       emitIfOpen(
         state.copyWith(
