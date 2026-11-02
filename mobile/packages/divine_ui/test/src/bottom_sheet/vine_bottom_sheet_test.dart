@@ -787,25 +787,15 @@ void main() {
       const bottomNavKey = Key('bottom-nav');
 
       // A nested navigator above a fixed bottom bar, like the app's tab shell.
-      Widget buildShell({bool? useRootNavigator}) {
+      // [open] shows the sheet from inside that navigator.
+      Widget buildShell(void Function(BuildContext context) open) {
         return MaterialApp(
           home: Scaffold(
             body: Navigator(
               key: nestedNavigatorKey,
               onGenerateRoute: (_) => MaterialPageRoute<void>(
                 builder: (context) => ElevatedButton(
-                  onPressed: () => useRootNavigator == null
-                      ? VineBottomSheet.show<void>(
-                          context: context,
-                          scrollable: false,
-                          body: const Text('Sheet content'),
-                        )
-                      : VineBottomSheet.show<void>(
-                          context: context,
-                          scrollable: false,
-                          useRootNavigator: useRootNavigator,
-                          body: const Text('Sheet content'),
-                        ),
+                  onPressed: () => open(context),
                   child: const Text('Open'),
                 ),
               ),
@@ -823,28 +813,51 @@ void main() {
         matching: find.byKey(nestedNavigatorKey),
       );
 
-      testWidgets('opens on the root navigator by default, covering the '
-          'bottom navigation', (tester) async {
-        await tester.pumpWidget(buildShell());
-        await tester.tap(find.text('Open'));
-        await tester.pumpAndSettle();
+      // The draggable and the fixed layouts each hand the flag to
+      // showModalBottomSheet in their own branch, so both are exercised.
+      for (final scrollable in [true, false]) {
+        group('scrollable: $scrollable', () {
+          testWidgets('opens on the root navigator by default, covering the '
+              'bottom navigation', (tester) async {
+            await tester.pumpWidget(
+              buildShell(
+                (context) => VineBottomSheet.show<void>(
+                  context: context,
+                  scrollable: scrollable,
+                  body: const Text('Sheet content'),
+                ),
+              ),
+            );
+            await tester.tap(find.text('Open'));
+            await tester.pumpAndSettle();
 
-        expect(find.text('Sheet content'), findsOneWidget);
-        expect(sheetInsideNestedNavigator(), findsNothing);
-        expect(
-          tester.getBottomLeft(find.byType(VineBottomSheet)).dy,
-          greaterThan(tester.getTopLeft(find.byKey(bottomNavKey)).dy),
-        );
-      });
+            expect(find.text('Sheet content'), findsOneWidget);
+            expect(sheetInsideNestedNavigator(), findsNothing);
+            expect(
+              tester.getBottomLeft(find.byType(VineBottomSheet)).dy,
+              greaterThan(tester.getTopLeft(find.byKey(bottomNavKey)).dy),
+            );
+          });
 
-      testWidgets('stays in the nested navigator when useRootNavigator is '
-          'false', (tester) async {
-        await tester.pumpWidget(buildShell(useRootNavigator: false));
-        await tester.tap(find.text('Open'));
-        await tester.pumpAndSettle();
+          testWidgets('stays in the nested navigator when useRootNavigator is '
+              'false', (tester) async {
+            await tester.pumpWidget(
+              buildShell(
+                (context) => VineBottomSheet.show<void>(
+                  context: context,
+                  scrollable: scrollable,
+                  useRootNavigator: false,
+                  body: const Text('Sheet content'),
+                ),
+              ),
+            );
+            await tester.tap(find.text('Open'));
+            await tester.pumpAndSettle();
 
-        expect(sheetInsideNestedNavigator(), findsOneWidget);
-      });
+            expect(sheetInsideNestedNavigator(), findsOneWidget);
+          });
+        });
+      }
     });
 
     group('barrierColor', () {
