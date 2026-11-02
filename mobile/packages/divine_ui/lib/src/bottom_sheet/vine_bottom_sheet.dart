@@ -156,8 +156,8 @@ class VineBottomSheet extends StatelessWidget {
   /// to true so the sheet covers the bottom navigation of a tab shell. Set it
   /// to false only to keep the sheet in the nearest enclosing navigator.
   ///
-  /// With the default, an opener inside a nested navigator is not under the
-  /// sheet's navigator. Close the sheet from a context inside it, for example
+  /// With the default, the opener's nearest navigator can differ from the
+  /// sheet's. Close the sheet from a context inside it, for example
   /// `Navigator.of(context).pop()` in the body: a navigator resolved from the
   /// opener before the sheet opens would pop the wrong route. If it must be
   /// resolved early, use `Navigator.of(context, rootNavigator: true)`.
