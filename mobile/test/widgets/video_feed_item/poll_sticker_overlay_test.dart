@@ -241,6 +241,46 @@ void main() {
         expect(playerTaps, equals(1));
       });
 
+      testWidgets('reads a poll to a screen reader at the card, not as a '
+          'label of the whole video', (tester) async {
+        final handle = tester.ensureSemantics();
+        await pump(tester);
+        await tester.pump();
+
+        final card = tester.getSemantics(find.text('Which one?'));
+        expect(
+          card.rect.size,
+          equals(tester.getSize(find.byType(PollStickerOverlay))),
+        );
+        expect(card.label, equals('Which one?'));
+        handle.dispose();
+      });
+
+      testWidgets('reads the creator the shares and the vote count at the '
+          'card', (tester) async {
+        final handle = tester.ensureSemantics();
+        await pump(tester, session: ready(_author));
+        await tester.pump();
+
+        final card = tester.getSemantics(find.text('Which one?'));
+        expect(
+          card.rect.size,
+          equals(tester.getSize(find.byType(PollStickerOverlay))),
+        );
+        expect(
+          card.label,
+          allOf(
+            startsWith('Which one?'),
+            contains('Red, 100%'),
+            contains(
+              lookupAppLocalizations(const Locale('en'))
+                  .videoStickerPollVoteCount(3),
+            ),
+          ),
+        );
+        handle.dispose();
+      });
+
       testWidgets('reads a slider to a screen reader as one control named '
           'by its question', (tester) async {
         final handle = tester.ensureSemantics();
@@ -375,6 +415,12 @@ void main() {
           tester.takeAnnouncements().single.message,
           equals(l10n.videoStickerQuizWrongAnswer),
         );
+        // The outcomes read at the card, which is its own node, not as a label
+        // of the whole video.
+        expect(
+          tester.getSemantics(find.text('Which one?')).rect.size,
+          equals(tester.getSize(find.byType(PollStickerOverlay))),
+        );
         expect(
           find.bySemanticsLabel(RegExp(l10n.videoStickerQuizRightAnswer)),
           findsOneWidget,
@@ -383,18 +429,6 @@ void main() {
           find.bySemanticsLabel(RegExp(l10n.videoStickerQuizWrongAnswer)),
           findsOneWidget,
         );
-        handle.dispose();
-      });
-
-      testWidgets('reads the poll to a screen reader at the card, not as a '
-          'label of the whole video', (tester) async {
-        final handle = tester.ensureSemantics();
-        await pump(tester, session: ready(_author));
-        await tester.pump();
-
-        final node = tester.getSemantics(find.text('Which one?'));
-        expect(node.rect.size, equals(const Size(300, 240)));
-        expect(node.label, startsWith('Which one?'));
         handle.dispose();
       });
 
