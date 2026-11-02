@@ -43,7 +43,7 @@ The same table stores the clips of drafts, so one recording can have several row
 |---|---|---|
 | `<clipId>` | `NULL` | The library row. `saveClip` writes it. |
 | `<draftId>:<clipId>` | the draft | The clip inside a saved draft. Not listed in the library. |
-| `<autoSaveId>:<clipId>` | `VideoEditorConstants.autoSaveId` | The copy in the editor's autosave draft. Listed in the library, so a take the editor is holding stays visible. |
+| `<autoSaveId>:<clipId>` | `VideoEditorConstants.autoSaveId`, or `NULL` once the recorder's delete has detached it | The copy in the editor's autosave draft. Listed in the library, so a take the editor is holding stays visible. |
 
 `getAllClips` keeps one entry per clip id and prefers the library row. Because a clip can be loaded from either its library row or its autosave copy, every change writes both: `softDelete`, `restore`, `hardDelete`, `setClipCategory` and `setClipArchived`. A change that writes only one row is undone the next time the other row is the one loaded. When `saveClip` creates the library row, it carries the category and archive state over from an existing autosave copy.
 
