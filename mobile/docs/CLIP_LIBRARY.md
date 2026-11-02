@@ -115,7 +115,7 @@ When the library loads, clips missing a thumbnail or ghost frame get them regene
 | Recording a take | `ClipManagerNotifier.saveClipToLibrary`, right after the take stops ([`CAMERA_ARCHITECTURE.md`](CAMERA_ARCHITECTURE.md#stop)) |
 | Stop motion | `StopMotionSessionStore`, each still as it is taken ([`CAMERA_ARCHITECTURE.md`](CAMERA_ARCHITECTURE.md#modes)) |
 | Saving one clip from the editor timeline | [`VideoEditorClipLibrarySaveService`](../lib/services/video_editor/video_editor_clip_library_save_service.dart), which renders the trimmed part into a new file |
-| Share sheet, "Add to clips" | `VideoClipImportService.importToLibrary`, for classic Vines and the user's own videos |
+| Share sheet, "Add to clips" | `VideoClipImportService.importToLibrary`, for classic Vines, the user's own videos and any video that allows reuse |
 | Direct messages | `VideoClipImportService.importReceivedClip` and `importReceivedVine` ([`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#in-the-library)) |
 | Device gallery | `VideoClipImportService.importGalleryClip` ([`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#back-from-the-gallery)) |
 
