@@ -16,8 +16,9 @@ import 'package:unified_logger/unified_logger.dart';
 /// Styled like [ProfileTabEmptyState] with a retry under it, and centered in
 /// the tab as the design shows. The tab is only the space left under the
 /// header: about 165 points on an iPhone 17 without a bio, where the whole
-/// block fits, and 89 under a NIP-05 and a two-line bio, where Try again
-/// needs a scroll. Pull-to-refresh and the automatic retries cover that case.
+/// block fits in English, and 89 under a NIP-05 and a two-line bio, where
+/// Try again needs a scroll. Pull-to-refresh and the automatic retries cover
+/// that case.
 /// The top padding is smaller than the empty state's 64 because that would
 /// push the subtitle below the fold in the short tab too.
 class ProfileVideosLoadFailed extends StatefulWidget {
