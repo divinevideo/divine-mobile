@@ -10,13 +10,7 @@ void main() {
   group(InboxFab, () {
     group('renders', () {
       testWidgets('renders $DivineIcon', (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: InboxFab(onPressed: () {})),
-          ),
-        );
+        await _pumpFab(tester);
 
         expect(find.byType(DivineIcon), findsOneWidget);
       });
@@ -26,13 +20,7 @@ void main() {
       testWidgets('calls onPressed when tapped', (tester) async {
         var wasCalled = false;
 
-        await tester.pumpWidget(
-          MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: InboxFab(onPressed: () => wasCalled = true)),
-          ),
-        );
+        await _pumpFab(tester, onPressed: () => wasCalled = true);
 
         await tester.tap(find.byType(GestureDetector));
         await tester.pump();
@@ -122,7 +110,7 @@ void main() {
 
 Future<void> _pumpFab(
   WidgetTester tester, {
-  required Locale locale,
+  Locale? locale,
   VoidCallback? onPressed,
 }) {
   return tester.pumpWidget(
