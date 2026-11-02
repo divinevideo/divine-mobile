@@ -236,6 +236,14 @@ void main() {
 
         expect(find.byKey(_illustrationKey), findsOneWidget);
         expect(find.text('New'), findsOneWidget);
+        expect(find.text('Captions'), findsOneWidget);
+        expect(
+          find.text('Read along, even with the sound off.'),
+          findsOneWidget,
+        );
+        for (final feature in _features) {
+          expect(find.text(feature.title), findsOneWidget);
+        }
         expect(find.text('Turn on captions'), findsOneWidget);
 
         await tester.tap(find.text('Got it'));
