@@ -72,7 +72,7 @@ A clip belongs to at most one category. Categories are stored per account in `cl
 
 Archiving and categories are independent. Archiving takes a clip out of All, but the clip stays in its category unless the user removes it from there while archiving. Every organize action (move to a category, remove from one, archive, unarchive) produces a `ClipsLibraryOrganizeResult`, which the UI shows as a snackbar. Only archiving offers undo, and it also puts back any category the archive removed.
 
-The sort order (`ClipSort`) and the number of grid columns are kept in SharedPreferences, so they apply to every account on the device. Pinching the grid changes the column count, from 2 to 5.
+The sort order (`ClipSort`) and the number of grid columns are kept in SharedPreferences, so they apply to every account on the device. Pinching the grid changes the column count, from 2 to 5 (3 to start). A grid-size menu does the same for assistive technology, which cannot pinch.
 
 ## Selecting
 
