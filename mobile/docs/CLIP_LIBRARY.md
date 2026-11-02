@@ -47,7 +47,7 @@ The same table stores the clips of drafts, so one recording can have several row
 
 `getAllClips` keeps one entry per clip id and prefers the library row. Because a clip can be loaded from either its library row or its autosave copy, every change writes both: `softDelete`, `restore`, `hardDelete`, `setClipCategory` and `setClipArchived`. A change that writes only one row is undone the next time the other row is the one loaded. When `saveClip` creates the library row, it carries the category and archive state over from an existing autosave copy.
 
-Placeholders and freeze frames are stills the editor generates to fill a gap in a composition. They live in the autosave draft but never show in the library or the trash.
+Placeholders (the still that fills the slot a detached clip left behind) and freeze frames (a frame held still for a beat) are stills the editor renders to video. They live in the autosave draft but never show in the library or the trash.
 
 `saveClip` is an upsert that keeps three things the stored entry may know and the caller's copy may not: the recording hash, a C2PA proof added after recording, and the gallery backup state. [`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#how-a-clip-is-signed) explains why each one matters.
 
