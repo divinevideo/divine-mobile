@@ -81,7 +81,7 @@ A selection is for acting on clips in the library (delete, organize, save to the
 The bloc enforces these rules:
 
 - A selection holds either stop-motion sets or video clips, not both. The exceptions are the editor's two pickers (`allowsMixedClipTypes`): the one for adding clips converts every pick to the session's kind, and the split-screen cell picker takes both.
-- The recorder opens the library showing only its mode's type (`LibraryClipTypeFilter`).
+- The recorder opens the library showing only its mode's type (`LibraryClipTypeFilter`). The direct-message picker and the chroma-key picker show video clips only.
 - In a picker opened from the editor, clips already on the timeline are pre-selected and cannot be deselected (`disabledClipIds`).
 - A split-screen cell picker accepts clips of any shape, since each one is cropped to the cell (`allowsMixedAspectRatios`). It allows no more clips than the layout has free cells (`maxSelectedClips`); with one free cell, a tap swaps the pick.
 - Delete and organize act only on selected clips the current filter shows. Clips selected under another filter stay selected and are left alone.
@@ -129,8 +129,8 @@ Footage from outside the app gets in only after the C2PA check described in [`DM
 | Recorder | `openRecorderLibrary`, `RoutePaths.libraryClipsOnly` | Drafts and Clips; clips of the recording mode's type only |
 | Editor, adding clips | `LibraryScreen(selectionMode: true, allowsMixedClipTypes: true)` in a sheet | Clips tab as a picker; timeline clips pre-selected |
 | Editor, split-screen cell | `_pickLayoutCellClips` in [`video_editor_screen.dart`](../lib/screens/video_editor/video_editor_screen.dart) | Picker with the cell's crop on each thumbnail |
-| Chroma-key backdrop | `showChromaKeyClipPicker` | A single-clip picker with its own `ClipsLibraryBloc` |
-| Direct message | `_onAttachClip` in [`conversation_view.dart`](../lib/screens/inbox/conversation/conversation_view.dart) | Picker; the picked clips are sent |
+| Chroma-key backdrop | `showChromaKeyClipPicker` | A single-clip picker of video clips, with its own `ClipsLibraryBloc` |
+| Direct message | `_onAttachClip` in [`conversation_view.dart`](../lib/screens/inbox/conversation/conversation_view.dart) | Picker of video clips; the picked clips are sent |
 
 ## Tests
 
