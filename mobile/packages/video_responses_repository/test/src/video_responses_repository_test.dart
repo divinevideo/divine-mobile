@@ -147,6 +147,17 @@ void main() {
     () => nostrClient.queryEvents(any()),
   ).thenAnswer((_) async => events);
 
+  void curationAnswers(
+    List<Event> events, {
+    bool timedOut = false,
+    bool noRelays = false,
+  }) =>
+      when(
+        () => nostrClient.queryEventsDetailed(any()),
+      ).thenAnswer(
+        (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
+      );
+
   group(VideoResponsesRepository, () {
     group('fetchReplies', () {
       test('reads the replies from the relays, the newest first', () async {
@@ -340,7 +351,7 @@ void main() {
 
     group('fetchCuration', () {
       test("reads the creator's latest pins and hides", () async {
-        relayAnswers([
+        curationAnswers([
           _curationEvent(
             createdAt: 1000,
             tags: [
@@ -375,7 +386,7 @@ void main() {
         );
         final filter =
             (verify(
-                      () => nostrClient.queryEvents(captureAny()),
+                      () => nostrClient.queryEventsDetailed(captureAny()),
                     ).captured.single
                     as List<Filter>)
                 .single;
@@ -384,7 +395,7 @@ void main() {
       });
 
       test('reads none when the creator curated nothing', () async {
-        relayAnswers(const []);
+        curationAnswers(const []);
 
         expect(
           await repository().fetchCuration(
@@ -392,6 +403,58 @@ void main() {
             videoAddress: _rootAddress,
           ),
           equals(const RepliesCuration()),
+        );
+      });
+      test('fails when the read timed out and found nothing', () async {
+        curationAnswers(const [], timedOut: true);
+
+        // Read as "nothing curated", the creator's next pin would publish a
+        // curation without the replies they hid.
+        await expectLater(
+          repository().fetchCuration(
+            creatorPubkey: _creator,
+            videoAddress: _rootAddress,
+          ),
+          throwsA(isA<RepliesCurationUnavailableException>()),
+        );
+      });
+
+      test('fails when no relay could be asked', () async {
+        curationAnswers(const [], noRelays: true);
+
+        await expectLater(
+          repository().fetchCuration(
+            creatorPubkey: _creator,
+            videoAddress: _rootAddress,
+          ),
+          throwsA(
+            isA<RepliesCurationUnavailableException>().having(
+              (e) => e.toString(),
+              'toString',
+              equals(
+                'RepliesCurationUnavailableException: No relay could be asked',
+              ),
+            ),
+          ),
+        );
+      });
+
+      test('keeps what it found when the read timed out', () async {
+        curationAnswers([
+          _curationEvent(
+            createdAt: 1000,
+            tags: [
+              ['e', _hex(201), '', 'hidden'],
+            ],
+          ),
+        ], timedOut: true);
+
+        expect(
+          await repository().fetchCuration(
+            creatorPubkey: _creator,
+            videoAddress: _rootAddress,
+          ),
+          equals(RepliesCuration(hiddenIds: {_hex(201)})),
         );
       });
     });

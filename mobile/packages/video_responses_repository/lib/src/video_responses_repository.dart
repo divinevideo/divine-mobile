@@ -32,6 +32,23 @@ class RepliesCurationException implements Exception {
   String toString() => 'RepliesCurationException: $message';
 }
 
+/// A creator's curation that could not be read: the relays timed out or none
+/// could be asked, and nothing came back.
+///
+/// Kept apart from an empty curation, which means the creator pinned and hid
+/// nothing. Treating a failed read as empty would let the creator's next pin
+/// or hide publish a curation without the replies they hid before.
+class RepliesCurationUnavailableException implements Exception {
+  /// Creates the exception.
+  const RepliesCurationUnavailableException(this.message);
+
+  /// What went wrong.
+  final String message;
+
+  @override
+  String toString() => 'RepliesCurationUnavailableException: $message';
+}
+
 /// The videos responding to a video, and its creator's pins and hides.
 ///
 /// Funnelcake counts the responses and returns the latest when it can. When
@@ -179,17 +196,26 @@ class VideoResponsesRepository {
 
   /// The reply its creator, [creatorPubkey], pinned to the front of the
   /// replies to the video at [videoAddress], and the ones they hid.
+  ///
+  /// Throws a [RepliesCurationUnavailableException] when the relays timed out
+  /// or none could be asked and nothing came back.
   Future<RepliesCuration> fetchCuration({
     required String creatorPubkey,
     required String videoAddress,
   }) async {
-    final events = await _nostrClient.queryEvents([
-      Filter(
-        kinds: [RepliesCuration.kind],
-        authors: [creatorPubkey],
-        d: [RepliesCuration.dTagFor(videoAddress)],
-      ),
-    ]);
+    final (:events, :timedOut, :noRelays) = await _nostrClient
+        .queryEventsDetailed([
+          Filter(
+            kinds: [RepliesCuration.kind],
+            authors: [creatorPubkey],
+            d: [RepliesCuration.dTagFor(videoAddress)],
+          ),
+        ]);
+    if (events.isEmpty && (timedOut || noRelays)) {
+      throw RepliesCurationUnavailableException(
+        noRelays ? 'No relay could be asked' : 'The relays did not answer',
+      );
+    }
     final latest =
         events.where((event) => event.pubkey == creatorPubkey).toList()
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));

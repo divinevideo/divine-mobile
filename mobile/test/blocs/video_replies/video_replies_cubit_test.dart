@@ -108,6 +108,39 @@ void main() {
         ],
         errors: () => [isA<Exception>()],
       );
+
+      blocTest<VideoRepliesCubit, VideoRepliesState>(
+        'tells when the curation could not be read, rather than showing none',
+        setUp: () {
+          when(
+            () => repository.fetchReplies(
+              videoId: any(named: 'videoId'),
+              videoAddress: any(named: 'videoAddress'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                VideoResponses(total: 2, videos: [_reply(1), _reply(2)]),
+          );
+          when(
+            () => repository.fetchCuration(
+              creatorPubkey: _creator,
+              videoAddress: _address,
+            ),
+          ).thenThrow(
+            const RepliesCurationUnavailableException('The relays timed out'),
+          );
+        },
+        build: build,
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        // Loaded with an empty curation, the creator's next pin would publish
+        // over the replies they hid.
+        expect: () => [
+          const VideoRepliesState(status: VideoRepliesStatus.failure),
+        ],
+        errors: () => [isA<RepliesCurationUnavailableException>()],
+      );
     });
 
     group('pinToggled', () {

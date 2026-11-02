@@ -222,6 +222,38 @@ void main() {
         ],
         errors: () => [isA<Exception>()],
       );
+
+      blocTest<StickerResponsesCubit, StickerResponsesState>(
+        "shows no replies when the creator's hides could not be read",
+        setUp: () {
+          when(
+            () => repository.fetchReplies(
+              videoId: any(named: 'videoId'),
+              videoAddress: any(named: 'videoAddress'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                VideoResponses(total: 2, videos: [_video(1), _video(2)]),
+          );
+          when(
+            () => repository.fetchCuration(
+              creatorPubkey: _creator,
+              videoAddress: rootAddress,
+            ),
+          ).thenThrow(
+            const RepliesCurationUnavailableException('The relays timed out'),
+          );
+        },
+        build: () => build(_region(VideoStickerKind.replies)),
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        // Without the curation a reply the creator hid would show again.
+        expect: () => [
+          const StickerResponsesState(status: StickerResponsesStatus.failure),
+        ],
+        errors: () => [isA<RepliesCurationUnavailableException>()],
+      );
     });
   });
 }
