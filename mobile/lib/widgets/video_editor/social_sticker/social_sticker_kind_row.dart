@@ -48,9 +48,10 @@ class SocialStickerKindRow extends StatelessWidget {
 /// A horizontal row of the interactive stickers; tapping one pops the sheet
 /// with its [SocialStickerKind].
 ///
-/// The reply is offered only with a [reply] to show, which a video recorded
-/// as a reply has. The interactive cards, a poll, quiz, slider, question, Add
-/// yours and replies, are offered only while the video has none of them,
+/// Replies and Add yours, the most used, come right after the countdown. The
+/// reply is offered only with a [reply] to show, which a video recorded as a
+/// reply has. The interactive cards, replies, Add yours, a poll, quiz, slider
+/// and question, are offered only while the video has none of them,
 /// [hasInteractiveCard] being false: a video carries one.
 class InteractiveStickerKindRow extends StatelessWidget {
   const InteractiveStickerKindRow({
@@ -77,6 +78,19 @@ class InteractiveStickerKindRow extends StatelessWidget {
           countdownTitle: context.l10n.videoEditorSocialStickerCountdownSample,
         );
     final l10n = context.l10n;
+    final mostUsed = [
+      SocialStickerData.interactive(
+        SocialStickerKind.replies,
+        prompt: l10n.videoEditorSocialStickerRepliesSample,
+      ),
+      SocialStickerData.interactive(
+        SocialStickerKind.addYours,
+        prompt: l10n.videoEditorSocialStickerAddYoursSample,
+        hashtag: SocialStickerData.hashtagForPrompt(
+          l10n.videoEditorSocialStickerAddYoursSample,
+        ),
+      ),
+    ];
     final polls = [
       SocialStickerData(
         kind: SocialStickerKind.poll,
@@ -102,20 +116,14 @@ class InteractiveStickerKindRow extends StatelessWidget {
         SocialStickerKind.question,
         prompt: l10n.videoEditorSocialStickerQuestionSample,
       ),
-      SocialStickerData.interactive(
-        SocialStickerKind.addYours,
-        prompt: l10n.videoEditorSocialStickerAddYoursSample,
-        hashtag: SocialStickerData.hashtagForPrompt(
-          l10n.videoEditorSocialStickerAddYoursSample,
-        ),
-      ),
-      SocialStickerData.interactive(
-        SocialStickerKind.replies,
-        prompt: l10n.videoEditorSocialStickerRepliesSample,
-      ),
     ];
     return _SampleRow(
-      samples: [sample, ?reply, if (!hasInteractiveCard) ...polls],
+      samples: [
+        sample,
+        if (!hasInteractiveCard) ...mostUsed,
+        ?reply,
+        if (!hasInteractiveCard) ...polls,
+      ],
     );
   }
 }

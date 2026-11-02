@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/sticker_sheet_controls.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_kind_row.dart';
 
 void main() {
@@ -77,6 +78,25 @@ void main() {
           await tester.pump();
           expect(find.text(label), findsWidgets, reason: label);
         }
+      });
+
+      testWidgets('replies and Add yours right after the countdown', (
+        tester,
+      ) async {
+        await pump(tester);
+
+        final labels = tester
+            .widgetList<StickerKindTile>(find.byType(StickerKindTile))
+            .map((tile) => tile.label)
+            .take(3);
+        expect(
+          labels,
+          equals([
+            l10n.videoEditorSocialStickerCountdown,
+            l10n.videoEditorSocialStickerReplies,
+            l10n.videoEditorSocialStickerAddYours,
+          ]),
+        );
       });
 
       testWidgets('no interactive card once the video has one', (
