@@ -21,8 +21,9 @@ part 'clips_library_state.dart';
 /// Loads clips and categories from [ClipLibraryService] and owns what the
 /// grid shows: the active [ClipLibraryFilter], the sort order, the column
 /// count and the selection, including drag selection and the limits a picker
-/// sets. It also trashes, restores, files and archives clips. Saving clips to
-/// the gallery is `ClipGallerySaveCubit`'s job, since it outlives the library.
+/// sets. It also trashes, restores, deletes, files and archives clips and
+/// manages categories. Saving clips to the gallery is `ClipGallerySaveCubit`'s
+/// job, since it outlives the library.
 class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
   ClipsLibraryBloc({
     required ClipLibraryService clipLibraryService,
