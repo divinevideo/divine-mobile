@@ -935,6 +935,22 @@ void main() {
             expect(tester.getSize(row).height, 20);
             final label = tester.widget<Text>(pill);
             expect(label.style?.color, VineTheme.onPrimary);
+            final fill = tester.widget<Container>(
+              find
+                  .ancestor(
+                    of: row,
+                    matching: find.byWidgetPredicate(
+                      (widget) =>
+                          widget is Container &&
+                          widget.decoration is BoxDecoration,
+                    ),
+                  )
+                  .first,
+            );
+            expect(
+              (fill.decoration! as BoxDecoration).color,
+              VineTheme.primary,
+            );
           },
         );
 
