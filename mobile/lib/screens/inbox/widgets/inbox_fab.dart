@@ -3,6 +3,7 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 
 /// Green FAB for starting a new conversation.
 ///
@@ -25,30 +26,36 @@ class InboxFab extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: GestureDetector(
-        onTap: onPressed,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: VineTheme.primary,
-            borderRadius: BorderRadius.circular(_borderRadius),
-            boxShadow: const [
-              BoxShadow(
-                color: VineTheme.innerShadow,
-                blurRadius: 1,
-                offset: Offset(1, 1),
+      child: Semantics(
+        button: true,
+        label: context.l10n.newMessageTitle,
+        child: GestureDetector(
+          onTap: onPressed,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: VineTheme.primary,
+              borderRadius: BorderRadius.circular(_borderRadius),
+              boxShadow: const [
+                BoxShadow(
+                  color: VineTheme.innerShadow,
+                  blurRadius: 1,
+                  offset: Offset(1, 1),
+                ),
+                BoxShadow(
+                  color: VineTheme.innerShadow,
+                  blurRadius: 0.6,
+                  offset: Offset(0.4, 0.4),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: ExcludeSemantics(
+                child: DivineIcon(
+                  icon: DivineIconName.plus,
+                  color: VineTheme.onPrimary,
+                  size: 32,
+                ),
               ),
-              BoxShadow(
-                color: VineTheme.innerShadow,
-                blurRadius: 0.6,
-                offset: Offset(0.4, 0.4),
-              ),
-            ],
-          ),
-          child: const Center(
-            child: DivineIcon(
-              icon: DivineIconName.plus,
-              color: VineTheme.onPrimary,
-              size: 32,
             ),
           ),
         ),
