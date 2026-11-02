@@ -207,6 +207,7 @@ production.
   | `--refuse-connects N` | the first N WebSocket handshakes fail (HTTP 503), then recover. The NIP-11 fetch is forwarded and not counted, so a client that reads NIP-11 first still meets the refusal |
   | `--close-after N` | the connection closed with a close frame (code 4000) after N relay frames, for the first connection (`--close-after-count`): the reconnect path |
   | `--stall-after N` | a half-open connection: socket open, nothing delivered either way after N relay frames |
+  | `--stall-after-ms MS` | the same, MS after the connection opens. It is the way to stall an idle connection: an idle app sends no frames for `--stall-after` to count |
   | `--delay-ms MS` | latency on every relay frame |
 
   Ending the proxy process drops its sockets with no close frame, which is the closest this tool gets to the network taking a connection away (the "background for 2+ minutes" row of the Flutter lens §6). `--close-after` is a clean close and `--stall-after` a silent one: pick the one the claim describes. The delay flags count from when the relay sent a frame and keep frame order, so whatever the relay sent after a held OK or EOSE arrives with it: an EVENT that is late behind one is the proxy's doing, not the app's.

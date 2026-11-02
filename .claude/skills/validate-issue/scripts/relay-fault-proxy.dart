@@ -39,7 +39,10 @@
 //   --stall-after N         after N relay frames on a connection, deliver
 //                           nothing more in either direction and keep the
 //                           socket open: a half-open connection
-//   --stall-after-count K   how many connections get that (default 1)
+//   --stall-after-ms MS     the same, MS after the connection opens: the way to
+//                           stall a connection that is idle, which no frame
+//                           count can reach
+//   --stall-after-count K   how many connections get either (default 1)
 // Other:
 //   (plain HTTP)            forwarded with its method, path, query and Accept header
 //                           only: no body and no Authorization, so a request that
@@ -72,6 +75,7 @@ const _knownOptions = {
   'close-after',
   'close-after-count',
   'stall-after',
+  'stall-after-ms',
   'stall-after-count',
   'bind-all',
   'max-seconds',
@@ -178,7 +182,8 @@ Future<void> main(List<String> args) async {
       ? 0
       : _count(options, 'close-after-count', 1);
   final stallAfter = _count(options, 'stall-after');
-  var stallAfterLeft = stallAfter == 0
+  final stallAfterMs = _count(options, 'stall-after-ms');
+  var stallAfterLeft = stallAfter == 0 && stallAfterMs == 0
       ? 0
       : _count(options, 'stall-after-count', 1);
   final maxSeconds = _count(options, 'max-seconds', 1800);
@@ -232,6 +237,13 @@ Future<void> main(List<String> args) async {
     final stallThisOne = stallAfterLeft > 0 && stallAfterLeft-- > 0;
     var relayFrames = 0;
     var stalled = false;
+    if (stallThisOne && stallAfterMs > 0) {
+      Timer(Duration(milliseconds: stallAfterMs), () {
+        if (stalled) return;
+        stalled = true;
+        _log({'event': 'stalled', 'after_ms': stallAfterMs});
+      });
+    }
     final clock = Stopwatch()..start();
 
     // Set when the relay leg ends so client->relay frames stop. The client
@@ -350,7 +362,10 @@ Future<void> main(List<String> args) async {
             'action': action,
             'frame': _frame(data),
           });
-          if (stallThisOne && relayFrames >= stallAfter && !stalled) {
+          if (stallThisOne &&
+              stallAfter > 0 &&
+              relayFrames >= stallAfter &&
+              !stalled) {
             stalled = true;
             _log({'event': 'stalled', 'after_relay_frames': relayFrames});
           }

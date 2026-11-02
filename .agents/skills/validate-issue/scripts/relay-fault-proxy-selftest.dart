@@ -481,6 +481,25 @@ Future<void> main() async {
   );
 
   await scenario(
+    '--stall-after-ms stalls a connection that is idle',
+    ['--stall-after-ms', '600'],
+    (proxy) async {
+      final client = await proxy.connect();
+      client.send(['REQ', 's1', <String, Object?>{}]);
+      _expect(
+        await _within(() => client.of('EOSE').isNotEmpty),
+        'the first REQ should be answered before the stall',
+      );
+      await _quiet(900);
+      client.send(['REQ', 's2', <String, Object?>{}]);
+      await _quiet();
+      _expect(client.of('EOSE').length == 1, 'nothing should arrive after');
+      _expect(relay.count('REQ') == 1, 'the second REQ should be swallowed');
+      _expect(!client.done, 'the socket should stay open');
+    },
+  );
+
+  await scenario(
     'ending the proxy process drops the socket with no close frame',
     [],
     (proxy) async {
