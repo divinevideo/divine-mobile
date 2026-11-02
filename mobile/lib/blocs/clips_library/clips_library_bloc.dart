@@ -16,10 +16,13 @@ import 'package:unified_logger/unified_logger.dart';
 part 'clips_library_event.dart';
 part 'clips_library_state.dart';
 
-/// BLoC for managing saved video clips in the library.
+/// BLoC for the clip library grid and the clip pickers built on it.
 ///
-/// Loads clips from [ClipLibraryService], manages selection state, and
-/// handles deletion. Saving clips to the gallery is `ClipGallerySaveCubit`'s
+/// Loads clips and categories from [ClipLibraryService] and owns what the
+/// grid shows: the active [ClipLibraryFilter], the sort order, the column
+/// count and the selection, including drag selection and the limits a picker
+/// sets. It also trashes, restores, deletes, files and archives clips and
+/// manages categories. Saving clips to the gallery is `ClipGallerySaveCubit`'s
 /// job, since it outlives the library.
 class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
   ClipsLibraryBloc({

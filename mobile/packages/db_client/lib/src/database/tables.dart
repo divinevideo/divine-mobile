@@ -570,12 +570,14 @@ class Drafts extends Table {
   ];
 }
 
-/// Persistent storage for video clips belonging to drafts
+/// Persistent storage for video clips: the clip library and the clips of
+/// drafts.
 ///
-/// Each clip is a recorded video segment that belongs to a single draft.
-/// Key fields are indexed columns for efficient queries; the full clip
-/// payload (lens metadata, thumbnail info, etc.) lives in the [data]
-/// JSON blob.
+/// A library clip normally has a NULL [draftId] and its clip id as row id. A
+/// clip inside a draft is keyed `<draftId>:<clipId>`, so one recording can
+/// have a library row and draft rows at once. Key fields are indexed columns
+/// for efficient queries; the full clip payload (lens metadata, thumbnail
+/// info, etc.) lives in the [data] JSON blob.
 ///
 /// Retention: a draft's rows go with it (`DraftsDao.deleteDraft`), because
 /// `PRAGMA foreign_keys` is never enabled and the cascade below does not fire.
