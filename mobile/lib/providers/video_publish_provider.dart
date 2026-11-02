@@ -24,6 +24,7 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_reply_context.dart';
+import 'package:openvine/providers/add_yours_context_provider.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -219,6 +220,9 @@ class VideoPublishNotifier extends Notifier<VideoPublishProviderState> {
       // screen unmounts/remounts, so clearAll no longer resets it here (a
       // Notifier must not dispatch into VideoRecorderBloc).
       ref.read(videoReplyContextProvider.notifier).clear();
+      // Like the reply context: publishing leaves with go(), so the camera's
+      // pushed route never pops to clear it, and the next session would join.
+      ref.read(addYoursContextProvider.notifier).clear();
       reset();
 
       // The editor owns autosave deletion and starts deferred cleanup only
