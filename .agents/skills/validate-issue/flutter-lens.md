@@ -217,7 +217,7 @@ Traps that make a probe lie:
 | Row | What it catches |
 |---|---|
 | Cold start, act before the first relay connects | signer not ready, empty-cache paths, a lazy `BlocProvider` whose `create` never ran |
-| Background for 2+ minutes, then foreground (proxy: `--stall-after`, or end it; relay lens §6) | sockets the SDK idle policy dropped, a suspended isolate, subscriptions nobody reopened, double fetch on resume |
+| Background for 2+ minutes, then foreground (proxy: `--stall-after-ms`, or end it; relay lens §6) | sockets the SDK idle policy dropped, a suspended isolate, subscriptions nobody reopened, double fetch on resume |
 | Offline → act → online | "unanswered" rendered as "empty"; a retry that never fires |
 | Account switch, sign-out, sign-in | dependencies captured at first build, cross-account cache or prefs leak |
 | Relay slow or refusing (see relay lens §6) | timeout shown as empty, `OK false` counted as success |
