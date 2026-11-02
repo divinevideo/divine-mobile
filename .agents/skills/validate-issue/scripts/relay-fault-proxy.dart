@@ -53,8 +53,11 @@
 //   --max-seconds S         exit after S seconds (default 1800) so it cannot outlive the session
 //
 // stdout: one JSON object per frame {t, conn, dir, type, bytes, action, frame},
-// and per event {t, conn, event, ...}. conn numbers the WebSocket connections in
-// the order they open: an app can hold several to one relay.
+// and per event {t, event, ...}. conn numbers the WebSocket connections in the
+// order they open (an app can hold several to one relay). It is on every frame
+// and on the events of one connection: client-connected, stalled, client-closed,
+// relay-closed, closing-client and upstream-connect-failed. listening, exit,
+// refused-connect, connection-failed, http and http-failed have none.
 // Frames are logged whole: a cut frame can cut an event id or pubkey.
 import 'dart:async';
 import 'dart:convert';
