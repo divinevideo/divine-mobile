@@ -257,6 +257,61 @@ Future<void> main() async {
   );
 
   await scenario(
+    '--delay-eose-ms holds EOSE frames and nothing else',
+    ['--delay-eose-ms', '700'],
+    (proxy) async {
+      final client = await proxy.connect();
+      client.send(['REQ', 's1', <String, Object?>{}]);
+      _expect(
+        await _within(
+          () => client.of('EVENT').isNotEmpty,
+          const Duration(milliseconds: 500),
+        ),
+        'the EVENT should not be delayed',
+      );
+      _expect(client.of('EOSE').isEmpty, 'the EOSE should still be held');
+      _expect(
+        await _within(() => client.of('EOSE').isNotEmpty),
+        'the EOSE should arrive after the delay',
+      );
+    },
+  );
+
+  await scenario('--never-eose swallows every EOSE', ['--never-eose'], (
+    proxy,
+  ) async {
+    final client = await proxy.connect();
+    client
+      ..send(['REQ', 's1', <String, Object?>{}])
+      ..send(['REQ', 's2', <String, Object?>{}]);
+    _expect(
+      await _within(() => client.of('EVENT').length == 2),
+      'both EVENTs should arrive',
+    );
+    await _quiet();
+    _expect(client.of('EOSE').isEmpty, 'no EOSE should be delivered');
+  });
+
+  await scenario(
+    '--delay-ms holds every relay frame, not the client leg',
+    ['--delay-ms', '700'],
+    (proxy) async {
+      final client = await proxy.connect();
+      client.send(['REQ', 's1', <String, Object?>{}]);
+      await _quiet(400);
+      _expect(
+        relay.count('REQ') == 1,
+        'the REQ should reach the relay at once',
+      );
+      _expect(client.frames.isEmpty, 'nothing should arrive before the delay');
+      _expect(
+        await _within(() => client.of('EOSE').isNotEmpty),
+        'the frames should arrive after the delay',
+      );
+    },
+  );
+
+  await scenario(
     '--close-req answers a REQ with CLOSED',
     ['--close-req', 'auth-required'],
     (proxy) async {
