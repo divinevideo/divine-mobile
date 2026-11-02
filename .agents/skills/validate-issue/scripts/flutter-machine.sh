@@ -110,7 +110,7 @@ case "$cmd" in
     # DDS replays the Logging stream's history to a late subscriber, so the
     # backlog comes first. The VM cuts long strings; a cut message is marked.
     { jq -nc '{jsonrpc: "2.0", id: 1, method: "streamListen", params: {streamId: "Logging"}}'; sleep "$secs"; } \
-      | perl -e 'alarm shift; exec @ARGV' "$((secs + 15))" websocat -n -B 50000000 "$ws" \
+      | perl -e 'alarm shift; exec @ARGV' "$((secs + 15))" websocat -n -E -B 50000000 "$ws" \
       | jq -r 'select(.method == "streamNotify") | .params.event | select(.kind == "Logging") | .logRecord
           | "\(.level)\t\(.loggerName.valueAsString // "-")\t\(.message.valueAsString // "")\(if .message.valueAsStringIsTruncated then " …[cut by the VM]" else "" end)"'
     ;;

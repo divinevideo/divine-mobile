@@ -115,6 +115,22 @@ status=0; refusal=$(fm start "$run" "$SCRATCH" fake-device 2>&1) || status=$?
 
 fm ext "$run" ext.flutter.debugDumpApp | grep -q '"result":true' || fail "ext got no reply"
 fm logs "$run" | grep -qx 'hello from the fake app' || fail "logs lost the app.log line"
+
+# vmlog reads the VM Logging stream through websocat. Without -E, websocat keeps
+# the socket open after stdin closes, so the command only ends on its safety
+# alarm (secs + 15) and "vmlog 3" takes 18 s. A stand-in websocat records its
+# arguments and ends when stdin does, as `websocat -E` does.
+mkdir -p "$SCRATCH/bin"
+cat > "$SCRATCH/bin/websocat" <<'EOF'
+#!/bin/bash
+printf '%s\n' "$*" > "$FAKE_WEBSOCAT_ARGS"
+cat > /dev/null
+echo '{"jsonrpc":"2.0","method":"streamNotify","params":{"streamId":"Logging","event":{"kind":"Logging","logRecord":{"level":800,"loggerName":{"valueAsString":"probe"},"message":{"valueAsString":"hello"}}}}}'
+EOF
+chmod +x "$SCRATCH/bin/websocat"
+vmlog=$(PATH="$SCRATCH/bin:$PATH" FAKE_WEBSOCAT_ARGS="$SCRATCH/websocat.args" fm vmlog "$run" 1)
+printf '%s\n' "$vmlog" | grep -q "$(printf '^800\tprobe\thello')" || fail "vmlog did not format a Logging event: $vmlog"
+grep -q -- ' -E ' "$SCRATCH/websocat.args" || fail "vmlog must start websocat with -E so it exits when its input ends: $(cat "$SCRATCH/websocat.args")"
 fm taint "$run" | grep -q '^clean' || fail "taint flagged a clean run"
 fm stop "$run" | grep -qx 'stopped' || fail "stop did not report stopped"
 status=0; fm status "$run" >/dev/null 2>&1 || status=$?
