@@ -1,5 +1,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -125,6 +126,75 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.communitySuggestAlready), findsOneWidget);
+    });
+  });
+
+  group(CommunitySuggestSheet, () {
+    late _MockRepository repository;
+    late _MockVideoEvent video;
+    late AppLocalizations l10n;
+    const myPubkey =
+        'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
+
+    setUpAll(() {
+      registerFallbackValue(_MockVideoEvent());
+      registerFallbackValue(<ContentLabel>{});
+      l10n = lookupAppLocalizations(const Locale('en'));
+    });
+
+    setUp(() {
+      repository = _MockRepository();
+      video = _MockVideoEvent();
+      when(
+        () => repository.mySuggestedLabels(any(), any()),
+      ).thenAnswer((_) async => <String>{});
+    });
+
+    testWidgets('shows the failure snackbar above the sheet', (tester) async {
+      // Opened from a page under a Scaffold, as the home feed is under the
+      // shell. A snackbar raised on that Scaffold is drawn beneath the sheet,
+      // so the sheet has to carry its own.
+      when(
+        () => repository.suggestLabels(
+          video: any(named: 'video'),
+          labels: any(named: 'labels'),
+        ),
+      ).thenAnswer((_) async => throw Exception('relay rejected'));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => CommunitySuggestSheet.show(
+                    context,
+                    video: video,
+                    repository: repository,
+                    myPubkey: myPubkey,
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.text(localizedContentLabelName(l10n, ContentLabel.nudity)),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.communitySuggestSubmit));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(l10n.communitySuggestFailure).hitTestable(),
+        findsOneWidget,
+      );
     });
   });
 }
