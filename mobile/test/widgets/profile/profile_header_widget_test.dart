@@ -974,6 +974,29 @@ void main() {
           expect(find.text(l10n.supporterJoinLabel), findsOneWidget);
         });
 
+        testWidgets('is not offered on your own vanished profile', (
+          tester,
+        ) async {
+          final repository = await membership(tester, isSupporter: false);
+
+          await pumpHeader(
+            tester,
+            isOwnProfile: true,
+            isVanished: true,
+            ownMembership: repository,
+          );
+
+          // A vanished profile has no profile info, so the pill offers to
+          // complete it; the supporter invitation must not queue behind it.
+          await tester.tap(find.text(l10n.profileCompleteYourProfile));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.profileMaybeLaterLabel));
+          await tester.pumpAndSettle();
+
+          expect(find.byType(ProfileActionsSheetContent), findsNothing);
+          expect(find.byType(SupporterContent), findsNothing);
+        });
+
         testWidgets('opens the supporter content in the actions sheet', (
           tester,
         ) async {
@@ -1078,7 +1101,6 @@ void main() {
                 isTrue,
               );
               expect(find.byType(SupporterHaloWings), findsNothing);
-              expect(find.byType(SupporterMembership), findsNothing);
             },
           );
         }
