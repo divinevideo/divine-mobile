@@ -14,7 +14,8 @@ part 'clips_dao.g.dart';
 /// (`draft_id` NULL) and the clips of drafts.
 ///
 /// Owner-scoped queries return the given owner's rows plus legacy rows
-/// without an owner. Trashed rows are left out unless a query asks for them.
+/// without an owner. Listing queries leave trashed rows out unless asked;
+/// lookups by id, file name, file reference and recording hash include them.
 @DriftAccessor(tables: [Clips])
 class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
   ClipsDao(super.attachedDatabase);
