@@ -14,6 +14,8 @@ class ProfileTabEmptyState extends StatelessWidget {
   const ProfileTabEmptyState({
     required this.title,
     required this.subtitle,
+    this.action,
+    this.padding = const EdgeInsets.fromLTRB(48, 64, 48, 48),
     this.physics = const ClampingScrollPhysics(),
     super.key,
   });
@@ -23,6 +25,12 @@ class ProfileTabEmptyState extends StatelessWidget {
 
   /// Descriptive text shown below the title.
   final String subtitle;
+
+  /// Optional control shown under the subtitle, such as a retry button.
+  final Widget? action;
+
+  /// Space around the message inside the tab.
+  final EdgeInsetsGeometry padding;
 
   /// Scroll physics for the wrapping viewport.
   ///
@@ -38,7 +46,7 @@ class ProfileTabEmptyState extends StatelessWidget {
       SliverFillRemaining(
         hasScrollBody: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(48, 64, 48, 48),
+          padding: padding,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -57,6 +65,10 @@ class ProfileTabEmptyState extends StatelessWidget {
                   color: context.vineColors.onSurfaceMuted,
                 ),
               ),
+              if (action case final action?) ...[
+                const SizedBox(height: 32),
+                action,
+              ],
             ],
           ),
         ),
