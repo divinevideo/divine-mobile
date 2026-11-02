@@ -92,9 +92,12 @@ One hop sits outside this repository. For a Keycast identity the rumor is
 wrapped by the `nip17_wrap_batch` RPC, which takes the client's whole rumor,
 rejects a wrong id (`verify_id`), fills in an id only when one is missing, and
 wraps that rumor as given (`api/src/api/http/nostr_rpc.rs:366-380, 1609-1620`
-at keycast `ca0d8a9`). Read from code only: the pass-through is neither
-documented nor pinned by a test there, so a change on that side could re-mint
-without anything in this repository noticing.
+at keycast `ca0d8a9`). Read from code. The tests found for this RPC
+(`nostr_rpc.rs:2231` and `api/tests/nostr_rpc_integration_test.rs:2708-2777`)
+check that every recipient slot unwraps to the same rumor, but none compares
+the unwrapped rumor's `id` or `created_at` with the rumor the client sent, and
+nothing documents it, so a change on that side could re-mint without anything
+in this repository noticing.
 
 So, as the code stands, Divine does not cause this defect. It can only
 receive it.
