@@ -91,7 +91,7 @@ The bloc and the library screen enforce these rules:
 
 Deleting from the library is a soft delete: `deleted_at` is set and the files stay on disk. A snackbar offers undo. The Deleted filter lists trashed clips with the days left before they go; from there a clip can be restored or deleted for good, and the trash can be emptied (in the recorder's library, only the trashed clips of its type).
 
-At every app start and after an account switch, once signed in, `purgeExpiredTrash` permanently deletes the current account's clips (and legacy clips with no owner) that have been in the trash longer than `ClipLibraryConstants.trashRetention` (30 days). Another account's expired trash waits until that account signs in. The trash list reads the same constant for its countdown.
+As one of the startup steps (see [Startup and background work](#startup-and-background-work)), `purgeExpiredTrash` permanently deletes the current account's clips (and legacy clips with no owner) that have been in the trash longer than `ClipLibraryConstants.trashRetention` (30 days). Another account's expired trash waits until that account signs in. The trash list reads the same constant for its countdown.
 
 When the recorder deletes the last take, the clip goes to the trash too. It passes `clearDraftId: true`, so a restore puts the clip back in the library instead of in a draft that may be gone. The recorder has its own undo for this (`ClipManagerNotifier.undoPendingDeletion`).
 
