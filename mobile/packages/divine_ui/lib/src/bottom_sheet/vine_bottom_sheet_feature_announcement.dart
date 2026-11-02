@@ -6,9 +6,9 @@ import 'package:material_ui/material_ui.dart';
 
 /// One benefit listed in a [VineBottomSheetFeatureAnnouncement].
 @immutable
-class VineFeatureAnnouncementItem {
-  /// Creates a [VineFeatureAnnouncementItem].
-  const VineFeatureAnnouncementItem({
+class VineBottomSheetFeatureData {
+  /// Creates a [VineBottomSheetFeatureData].
+  const VineBottomSheetFeatureData({
     required this.icon,
     required this.title,
     required this.description,
@@ -46,7 +46,7 @@ class VineFeatureAnnouncementItem {
 ///   title: 'Captions',
 ///   subtitle: 'Read along, even with the sound off.',
 ///   features: const [
-///     VineFeatureAnnouncementItem(
+///     VineBottomSheetFeatureData(
 ///       icon: DivineIconName.closedCaptioning,
 ///       title: 'Turn them on anytime',
 ///       description: 'Tap CC on any video that has captions.',
@@ -89,7 +89,7 @@ class VineBottomSheetFeatureAnnouncement extends StatelessWidget {
   final String? subtitle;
 
   /// Benefits listed below the title.
-  final List<VineFeatureAnnouncementItem> features;
+  final List<VineBottomSheetFeatureData> features;
 
   /// Label for the primary action, usually the dismiss action.
   final String primaryButtonText;
@@ -120,7 +120,7 @@ class VineBottomSheetFeatureAnnouncement extends StatelessWidget {
     required VoidCallback onPrimaryPressed,
     String? badgeLabel,
     String? subtitle,
-    List<VineFeatureAnnouncementItem> features = const [],
+    List<VineBottomSheetFeatureData> features = const [],
     String? secondaryButtonText,
     VoidCallback? onSecondaryPressed,
   }) {
@@ -246,7 +246,7 @@ class _Badge extends StatelessWidget {
 class _FeatureRow extends StatelessWidget {
   const _FeatureRow({required this.feature});
 
-  final VineFeatureAnnouncementItem feature;
+  final VineBottomSheetFeatureData feature;
 
   @override
   Widget build(BuildContext context) {

@@ -14,12 +14,12 @@ final Finder _sparkleIcon = find.byWidgetPredicate(
 );
 
 const _features = [
-  VineFeatureAnnouncementItem(
+  VineBottomSheetFeatureData(
     icon: DivineIconName.closedCaptioning,
     title: 'Turn them on anytime',
     description: 'Tap CC on any video that has captions.',
   ),
-  VineFeatureAnnouncementItem(
+  VineBottomSheetFeatureData(
     icon: DivineIconName.gear,
     title: 'Your choice sticks',
     description: 'Keep captions on for every video in Settings.',
@@ -34,7 +34,7 @@ void main() {
     ),
     String? badgeLabel,
     String? subtitle,
-    List<VineFeatureAnnouncementItem> features = const [],
+    List<VineBottomSheetFeatureData> features = const [],
     VoidCallback? onPrimaryPressed,
     String? secondaryButtonText,
     VoidCallback? onSecondaryPressed,
@@ -185,7 +185,7 @@ void main() {
         await tester.pumpWidget(
           buildSubject(
             features: [
-              VineFeatureAnnouncementItem(
+              VineBottomSheetFeatureData(
                 icon: _features.first.icon,
                 title: _features.first.title,
                 description: _features.first.description,
