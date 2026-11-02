@@ -417,9 +417,10 @@ Future<void> executeAccountDeletion({
   // the screen-reader announcement still lands after that redirect (#6450).
   final view = View.of(context);
   final textDirection = Directionality.of(context);
-  // The navigator the sheet is pushed onto, resolved while the caller is
-  // still mounted. `context.pop()` would resolve to the innermost navigator
-  // instead, which for a shell-nested caller is not the one holding it.
+  // The root navigator, which `VineBottomSheet.show` pushes onto by default,
+  // resolved while the caller is still mounted. `context.pop()` would resolve
+  // to the innermost navigator instead, which for a shell-nested caller is
+  // not the one holding the sheet.
   final rootNavigator = Navigator.of(context, rootNavigator: true);
 
   // The sheet's own route, captured so dismissal can target exactly this
