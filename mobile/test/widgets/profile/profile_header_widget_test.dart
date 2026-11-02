@@ -783,6 +783,7 @@ void main() {
         WidgetTester tester, {
         required bool isSupporter,
         bool haloVisible = false,
+        bool read = true,
       }) async {
         final client = SupporterApiClient(
           baseUri: Uri.parse('https://supporters.test'),
@@ -814,7 +815,7 @@ void main() {
           apiClient: client,
         );
         addTearDown(repository.dispose);
-        await tester.runAsync(repository.refreshFromServer);
+        if (read) await tester.runAsync(repository.refreshFromServer);
         return repository;
       }
 
@@ -948,6 +949,29 @@ void main() {
           );
 
           expect(find.text(l10n.supporterJoinLabel), findsNothing);
+        });
+
+        testWidgets('is not offered before the membership is read', (
+          tester,
+        ) async {
+          final repository = await membership(
+            tester,
+            isSupporter: false,
+            read: false,
+          );
+
+          await pumpHeader(
+            tester,
+            isOwnProfile: true,
+            ownMembership: repository,
+          );
+
+          expect(find.text(l10n.supporterJoinLabel), findsNothing);
+
+          await tester.runAsync(repository.refreshFromServer);
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.supporterJoinLabel), findsOneWidget);
         });
 
         testWidgets('opens the supporter content in the actions sheet', (
