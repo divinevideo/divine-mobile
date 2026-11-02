@@ -21,10 +21,10 @@ import 'package:uuid/uuid.dart';
 /// Reads and writes the clip library of one account.
 ///
 /// Clips live in the `clips` table, which also holds the clips of drafts, so
-/// a clip can have a library row and an autosave-draft copy. Every change
-/// writes both (see `_writeToBothClipRows`). Trash, category and archive
-/// state are columns on those rows. The whole feature is described in
-/// `mobile/docs/CLIP_LIBRARY.md`.
+/// a clip can have a library row and an autosave-draft copy. Trashing,
+/// restoring, deleting, filing and archiving a clip write both. Trash,
+/// category and archive state are columns on those rows. The whole feature
+/// is described in `mobile/docs/CLIP_LIBRARY.md`.
 class ClipLibraryService {
   ClipLibraryService({
     required ClipsDao clipsDao,
