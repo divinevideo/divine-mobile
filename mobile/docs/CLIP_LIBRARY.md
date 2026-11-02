@@ -95,7 +95,7 @@ At every app start and after an account switch, once signed in, `purgeExpiredTra
 
 When the recorder deletes the last take, the clip goes to the trash too. It passes `clearDraftId: true`, so a restore puts the clip back in the library instead of in a draft that may be gone. The recorder has its own undo for this (`ClipManagerNotifier.undoPendingDeletion`).
 
-A permanent delete removes both rows first, then the files through `FileCleanupService`. That service keeps any file that another clip or draft still uses.
+Deleting for good, or emptying the trash, removes both rows first, then the files through `FileCleanupService`. The 30-day purge instead deletes each expired trashed row on its own, then its files. `FileCleanupService` keeps any file that another clip or draft still uses.
 
 ## Startup and background work
 
