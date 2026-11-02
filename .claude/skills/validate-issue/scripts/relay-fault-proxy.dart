@@ -8,7 +8,9 @@
 //   dart relay-fault-proxy.dart --upstream ws://localhost:10547 [--listen 47801] [faults]
 //
 // Faults. Counts are for the proxy's lifetime; "per connection" counts restart
-// on every connection the fault is applied to.
+// on every connection the fault is applied to. A delay counts from when the
+// relay sent the frame, so holds do not add up; relay frames keep their order,
+// so a frame behind a held one arrives with it.
 //   --refuse-connects N     answer the first N WebSocket handshakes with HTTP 503.
 //                           Plain HTTP (the NIP-11 document) is forwarded and
 //                           never counted, so a client that fetches NIP-11
@@ -230,6 +232,7 @@ Future<void> main(List<String> args) async {
     final stallThisOne = stallAfterLeft > 0 && stallAfterLeft-- > 0;
     var relayFrames = 0;
     var stalled = false;
+    final clock = Stopwatch()..start();
 
     // Set when the relay leg ends so client->relay frames stop. The client
     // close is scheduled after the relay->client queue drains, so the last
@@ -298,6 +301,8 @@ Future<void> main(List<String> args) async {
     // Relay-to-client frames go through one queue so delays keep their order.
     relay.listen(
       (data) {
+        // A hold runs from the frame's arrival, so held frames do not add up.
+        final arrived = clock.elapsed;
         queue = queue.then((_) async {
           final type = _frameType(data);
           relayFrames++;
@@ -323,7 +328,9 @@ Future<void> main(List<String> args) async {
                 (type == 'EOSE' ? delayEose : 0) +
                 (type == 'OK' ? delayOk : 0);
             if (hold > 0) {
-              await Future<void>.delayed(Duration(milliseconds: hold));
+              final wait =
+                  arrived + Duration(milliseconds: hold) - clock.elapsed;
+              if (wait > Duration.zero) await Future<void>.delayed(wait);
               action = 'delayed ${hold}ms';
             }
             if (clientClosed || client.closeCode != null) {

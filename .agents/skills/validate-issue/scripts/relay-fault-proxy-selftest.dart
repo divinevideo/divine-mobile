@@ -231,16 +231,18 @@ Future<void> main() async {
   );
 
   await scenario(
-    '--delay-ok-ms holds OK frames and nothing else',
+    '--delay-ok-ms holds every OK for the delay, not one after another',
     ['--delay-ok-ms', '700'],
     (proxy) async {
       final client = await proxy.connect();
-      client
-        ..send(['REQ', 's1', <String, Object?>{}])
-        ..send([
+      final sent = Stopwatch()..start();
+      client.send(['REQ', 's1', <String, Object?>{}]);
+      for (final id in ['a1', 'a2', 'a3']) {
+        client.send([
           'EVENT',
-          {'id': 'a1'},
+          {'id': id},
         ]);
+      }
       _expect(
         await _within(
           () => client.of('EOSE').isNotEmpty,
@@ -248,31 +250,42 @@ Future<void> main() async {
         ),
         'EOSE should not be delayed',
       );
-      _expect(client.of('OK').isEmpty, 'the OK should still be held');
+      _expect(client.of('OK').isEmpty, 'the OKs should still be held');
       _expect(
-        await _within(() => client.of('OK').isNotEmpty),
-        'the OK should arrive after the delay',
+        await _within(() => client.of('OK').length == 3),
+        'the OKs should arrive after the delay',
+      );
+      _expect(
+        sent.elapsedMilliseconds < 1300,
+        'three OKs took ${sent.elapsedMilliseconds} ms: the holds added up',
       );
     },
   );
 
   await scenario(
-    '--delay-eose-ms holds EOSE frames and nothing else',
+    '--delay-eose-ms holds every EOSE for the delay, not one after another',
     ['--delay-eose-ms', '700'],
     (proxy) async {
       final client = await proxy.connect();
-      client.send(['REQ', 's1', <String, Object?>{}]);
+      final sent = Stopwatch()..start();
+      for (final sub in ['s1', 's2', 's3']) {
+        client.send(['REQ', sub, <String, Object?>{}]);
+      }
       _expect(
         await _within(
           () => client.of('EVENT').isNotEmpty,
           const Duration(milliseconds: 500),
         ),
-        'the EVENT should not be delayed',
+        'the first EVENT should not be delayed',
       );
-      _expect(client.of('EOSE').isEmpty, 'the EOSE should still be held');
+      _expect(client.of('EOSE').isEmpty, 'the EOSEs should still be held');
       _expect(
-        await _within(() => client.of('EOSE').isNotEmpty),
-        'the EOSE should arrive after the delay',
+        await _within(() => client.of('EOSE').length == 3),
+        'the EOSEs should arrive after the delay',
+      );
+      _expect(
+        sent.elapsedMilliseconds < 1300,
+        'three EOSEs took ${sent.elapsedMilliseconds} ms: the holds added up',
       );
     },
   );
@@ -297,16 +310,23 @@ Future<void> main() async {
     ['--delay-ms', '700'],
     (proxy) async {
       final client = await proxy.connect();
-      client.send(['REQ', 's1', <String, Object?>{}]);
+      final sent = Stopwatch()..start();
+      for (final sub in ['s1', 's2', 's3']) {
+        client.send(['REQ', sub, <String, Object?>{}]);
+      }
       await _quiet(400);
       _expect(
-        relay.count('REQ') == 1,
-        'the REQ should reach the relay at once',
+        relay.count('REQ') == 3,
+        'the REQs should reach the relay at once',
       );
       _expect(client.frames.isEmpty, 'nothing should arrive before the delay');
       _expect(
-        await _within(() => client.of('EOSE').isNotEmpty),
+        await _within(() => client.of('EOSE').length == 3),
         'the frames should arrive after the delay',
+      );
+      _expect(
+        sent.elapsedMilliseconds < 1300,
+        'six frames took ${sent.elapsedMilliseconds} ms: the holds added up',
       );
     },
   );
