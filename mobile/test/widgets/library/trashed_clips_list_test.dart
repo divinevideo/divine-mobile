@@ -152,6 +152,33 @@ void main() {
 
         expect(announced, equals([en.libraryTrashClipsDeleted(2)]));
       });
+
+      testWidgets('once, while later states still carry the result', (
+        tester,
+      ) async {
+        const result = ClipsLibraryTrashResult(
+          action: ClipsLibraryTrashAction.restored,
+          clipIds: {'trashed-clip'},
+        );
+        final restored = listed.copyWith(
+          trashedClips: const [],
+          lastTrashResult: result,
+        );
+        final announced = _captureAnnouncements(tester);
+        // A clips reload while the trash is open copies the result forward.
+        whenListen(
+          mockBloc,
+          Stream.fromIterable([
+            restored,
+            restored.copyWith(clips: [trashedClip]),
+          ]),
+          initialState: listed,
+        );
+        await tester.pumpWidget(buildWidget(listed));
+        await tester.pump();
+
+        expect(announced, equals([en.libraryTrashClipsRestored(1)]));
+      });
     });
 
     testWidgets('keeps the fractional duration of a sub-second clip', (
