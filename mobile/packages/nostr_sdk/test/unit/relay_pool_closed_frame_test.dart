@@ -371,6 +371,44 @@ void main() {
       expect(relay.hasSubscriptionById(subId), isTrue);
     });
 
+    test("strfry's 'ERROR: auth-required' CLOSED keeps the query for "
+        'post-AUTH replay', () async {
+      final signer = LocalNostrSigner(
+        '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+      );
+      final nostr = Nostr(signer, [], dummyTempRelay);
+      final relay = _ControlledQueryRelay('wss://strfry.example');
+
+      expect(await nostr.relayPool.add(relay), isTrue);
+
+      final pending = nostr.queryEventsDetailed([
+        {
+          'kinds': [1059],
+        },
+      ], timeout: const Duration(seconds: 2));
+
+      final subId = await relay.awaitPendingQuery();
+      // strfry challenges and refuses in one go, prefixing its own `ERROR: `
+      // to the NIP-42 reason (#9467).
+      await relay.deliver(['AUTH', 'test-challenge']);
+      await relay.deliver([
+        'CLOSED',
+        subId,
+        'ERROR: auth-required: requested filter requires authentication',
+      ]);
+
+      expect(relay.checkQuery(subId), isTrue);
+
+      final authEventId = relay.capturedAuthEventId;
+      expect(authEventId, isNotNull);
+      await relay.deliver(['OK', authEventId, true, '']);
+      await relay.awaitReqCount(2);
+
+      await relay.deliver(['EOSE', subId]);
+      final result = await pending;
+      expect(result.timedOut, isFalse);
+    });
+
     test('auth-required CLOSED keeps the query for post-AUTH replay', () async {
       final signer = LocalNostrSigner(
         '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',

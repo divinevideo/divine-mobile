@@ -837,5 +837,35 @@ void main() {
         );
       }
     });
+
+    test("reads the prefix strfry puts after its own 'ERROR: '", () {
+      // strfry prefixes every CLOSED reason, so its NIP-42 refusal is
+      // `ERROR: auth-required: …` (#9467).
+      expect(
+        relayRefusalCategoryForDiagnostics(
+          'ERROR: auth-required: requested filter requires authentication',
+        ),
+        'auth-required',
+      );
+      expect(
+        relayRefusalCategoryForDiagnostics('ERROR: restricted: not yours'),
+        'restricted',
+      );
+    });
+
+    test("keeps 'error' when no known prefix follows it", () {
+      expect(
+        relayRefusalCategoryForDiagnostics('error: could not complete query'),
+        'error',
+      );
+      expect(relayRefusalCategoryForDiagnostics('error'), 'error');
+      expect(
+        relayRefusalCategoryForDiagnostics(
+          'ERROR: the auth-required flag is off',
+        ),
+        'error',
+        reason: 'only a prefix right after error: counts, never free text',
+      );
+    });
   });
 }

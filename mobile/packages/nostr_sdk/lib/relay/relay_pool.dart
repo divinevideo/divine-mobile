@@ -311,8 +311,8 @@ class RelayPool {
   ///
   /// Shares `relayRefusalPrefixes` with the `OK` refusal diagnostics, AUTH
   /// included, so they cannot disagree about what counts as a known refusal.
-  /// Matches the prefix rather than searching the whole reason, like
-  /// [_isExplicitAuthRequiredReason] and [_isRestrictedReason] already do.
+  /// Matches the prefix rather than searching the whole reason;
+  /// [_isExplicitAuthRequiredReason] and [_isRestrictedReason] read it too.
   String _closedReasonCategory(String reason) =>
       relayRefusalCategoryForDiagnostics(reason);
 
@@ -499,14 +499,13 @@ class RelayPool {
     return false;
   }
 
-  bool _isExplicitAuthRequiredReason(String message) {
-    final lower = message.trim().toLowerCase();
-    return lower.startsWith('auth-required');
-  }
+  /// Reads the reason through [relayRefusalCategoryForDiagnostics], so a
+  /// refusal strfry wraps in `ERROR: ` is replayed after AUTH too (#9467).
+  bool _isExplicitAuthRequiredReason(String message) =>
+      relayRefusalCategoryForDiagnostics(message) == 'auth-required';
 
-  bool _isRestrictedReason(String message) {
-    return message.trim().toLowerCase().startsWith('restricted');
-  }
+  bool _isRestrictedReason(String message) =>
+      relayRefusalCategoryForDiagnostics(message) == 'restricted';
 
   bool _shouldRetryPublishAfterAuth({
     required Relay relay,
