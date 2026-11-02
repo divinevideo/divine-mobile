@@ -20,7 +20,7 @@ The two plans [`plans/2025-12-18-clip-library-redesign.md`](plans/2025-12-18-cli
 |---|---|---|
 | UI | [`LibraryScreen`](../lib/screens/library_screen.dart), widgets in [`lib/widgets/library/`](../lib/widgets/library/) | Tabs, clip grid, selection, category chips, trash list |
 | BLoC | [`ClipsLibraryBloc`](../lib/blocs/clips_library/clips_library_bloc.dart) | Loads, filters, sorts, selects, organizes and trashes clips |
-| Service | [`ClipLibraryService`](../lib/services/clip_library_service.dart) | Reads and writes one account's clips and categories; runs the trash and startup sweeps |
+| Service | [`ClipLibraryService`](../lib/services/clip_library_service.dart) | Reads and writes the clips and categories, with listings scoped to one account (see [Accounts](#accounts)); runs the trash and startup sweeps |
 | Data | `ClipsDao`, `ClipCategoriesDao` in [`db_client`](../packages/db_client/lib/src/database/daos/) | The `clips` and `clip_categories` Drift tables |
 
 `clipLibraryServiceProvider` in [`social_providers.dart`](../lib/providers/social_providers.dart) builds the service for the account that owns local content (see [Accounts](#accounts)) and rebuilds it when the account changes. Saving clips to the device gallery is a separate cubit (`ClipGallerySaveCubit`), and so is bringing them back (`GalleryClipImportCubit`, described in [`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#back-from-the-gallery)).
