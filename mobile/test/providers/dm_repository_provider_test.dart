@@ -232,7 +232,7 @@ void main() {
       // active and DMs will be ingested even without InboxPage mounting.
       verify(
         () => mockNostrClient.subscribe(
-          any(),
+          any(that: _readsGiftWraps),
           subscriptionId: any(named: 'subscriptionId'),
           onStoredEventsStart: any(named: 'onStoredEventsStart'),
           onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -453,14 +453,32 @@ void main() {
       );
       container.read(dmRepositoryProvider);
       await pumpEventQueue();
+      final opened = verify(
+        () => mockNostrClient.subscribe(
+          any(),
+          subscriptionId: captureAny(named: 'subscriptionId'),
+          onStoredEventsStart: any(named: 'onStoredEventsStart'),
+          onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+        ),
+      ).captured;
+      expect(opened, isNotEmpty);
 
       // ACT — disposing the container fires ref.onDispose hooks, which
       // include repository.stopListening.
       container.dispose();
       await pumpEventQueue();
 
-      // ASSERT — unsubscribe was called on the relay client.
-      verify(() => mockNostrClient.unsubscribe(any())).called(1);
+      // ASSERT — every subscription the repository opened was closed.
+      final closed = verify(
+        () => mockNostrClient.unsubscribe(captureAny()),
+      ).captured;
+      expect(closed, unorderedEquals(opened));
     });
   });
 }
+
+/// Matches a REQ filter list that asks for NIP-17 gift wraps (kind 1059).
+final Matcher _readsGiftWraps = predicate<List<nostr_filter.Filter>>(
+  (filters) => filters.any((f) => f.kinds?.contains(1059) ?? false),
+  'a filter list reading kind 1059',
+);
