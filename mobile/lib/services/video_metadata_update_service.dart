@@ -367,10 +367,10 @@ class VideoMetadataUpdateService {
         tags.add(['imeta', ...imetaComponents]);
       }
 
-      final title = editorState.title.trim();
-      if (title.isNotEmpty) {
-        tags.add(['title', title]);
-      }
+      // Always written, even empty: the relay rejects a video event with no
+      // `title` tag, and first publish writes `["title", ""]` for untitled
+      // videos.
+      tags.add(['title', editorState.title.trim()]);
 
       final summary = editorState.description.trim();
       if (summary.isNotEmpty) {
