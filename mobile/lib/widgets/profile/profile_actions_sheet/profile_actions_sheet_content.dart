@@ -35,7 +35,13 @@ Future<void> showProfileActionsSheet({
   required List<ProfileActionType> actions,
   void Function(ProfileActionType action)? onMaybeLater,
 }) {
-  if (actions.first == ProfileActionType.becomeSupporter) {
+  final opensTall = switch (actions.first) {
+    ProfileActionType.becomeSupporter => true,
+    ProfileActionType.accountRestricted ||
+    ProfileActionType.secureAccount ||
+    ProfileActionType.completeProfile => false,
+  };
+  if (opensTall) {
     return context.showVideoPausingVineBottomSheet<void>(
       showHeaderDivider: false,
       initialChildSize: ProfileActionsSheetSizing.tallInitial,
