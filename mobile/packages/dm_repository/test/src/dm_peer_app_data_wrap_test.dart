@@ -20,7 +20,13 @@ import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:nostr_sdk/subscription.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+import 'support/live_dm_reads.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+}
 
 /// A signer that remembers the ciphertext of every NIP-44 layer it was asked
 /// to open, so a test can tell whether a particular gift wrap was decrypted.
@@ -213,7 +219,7 @@ void main() {
         when(() => client.unsubscribe(any())).thenAnswer((_) async {});
         when(
           () => client.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             tempRelays: any(named: 'tempRelays'),
             targetRelays: any(named: 'targetRelays'),

@@ -21,7 +21,13 @@ import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:nostr_sdk/subscription.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+import 'support/live_dm_reads.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+}
 
 /// Holds the handling of one gift wrap until the test releases it, so the
 /// app can close while the rest of an ended batch is still being handled.
@@ -180,7 +186,7 @@ void main() {
     when(() => client.unsubscribe(any())).thenAnswer((_) async {});
     when(
       () => client.subscribe(
-        any(),
+        any(that: isLiveDmRead),
         subscriptionId: any(named: 'subscriptionId'),
         tempRelays: any(named: 'tempRelays'),
         targetRelays: any(named: 'targetRelays'),

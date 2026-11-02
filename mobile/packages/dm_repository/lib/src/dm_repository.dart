@@ -918,6 +918,9 @@ class DmRepository {
 
   StreamSubscription<Event>? _giftWrapSubscription;
 
+  /// The live kind-5 read, opened and ended with [_giftWrapSubscription].
+  StreamSubscription<Event>? _deletionsSubscription;
+
   /// The live subscription's progress through stored events, or null while
   /// not listening. See [_LiveCatchUp].
   _LiveCatchUp? _liveCatchUp;
@@ -1483,8 +1486,7 @@ class DmRepository {
     unawaited(_dismissalSubscription?.cancel());
     _dismissalSubscription = null;
     _pendingReadCursors.clear();
-    unawaited(_giftWrapSubscription?.cancel());
-    _giftWrapSubscription = null;
+    _endLiveSubscriptions();
     _liveCatchUp?.cancelHoldLimit();
     _liveCatchUp = null;
     // Drop the outgoing user's resolved own-inbox relays so the next user
@@ -1493,6 +1495,7 @@ class DmRepository {
     final subId = _subscriptionId;
     try {
       unawaited(_nostrClient.unsubscribe(subId));
+      unawaited(_nostrClient.unsubscribe(dmDeletionsSubscriptionId(subId)));
     } on Object {
       // Ignore if subscription doesn't exist
     }
@@ -1601,16 +1604,21 @@ class DmRepository {
       final newestWire = _syncState?.newestWireSyncedAt(_userPubkey);
       final isFirstOpen = newest == null;
       final filter = nostr_filter.Filter(
-        kinds: [
-          EventKind.giftWrap,
-          EventKind.directMessage,
-          EventKind.eventDeletion,
-        ],
+        kinds: _protectedDmKinds,
         p: [_userPubkey],
         limit: isFirstOpen ? 50 : null,
         since: newest == null
             ? null
             : (newestWire ?? newest) - _sinceOverlapSeconds,
+      );
+      // Deletions in a REQ of their own, over the same window: a relay that
+      // gates DMs behind NIP-42 serves a REQ mixing them with kinds 1059 and
+      // 4 without the DMs, and never asks to authenticate (#9468).
+      final deletionsFilter = nostr_filter.Filter(
+        kinds: const [EventKind.eventDeletion],
+        p: [_userPubkey],
+        limit: filter.limit,
+        since: filter.since,
       );
 
       Log.info(
@@ -1705,8 +1713,7 @@ class DmRepository {
           // and schedule a reconnect. stopListening() now sets _disposed,
           // which suppresses that path as well (#7318); this cancel remains
           // the local cleanup for a stream that has already failed.
-          unawaited(_giftWrapSubscription?.cancel());
-          _giftWrapSubscription = null;
+          _endLiveSubscriptions();
           _dropLiveCatchUp(catchUp);
           if (!_disposed) {
             _scheduleReconnect();
@@ -1715,7 +1722,7 @@ class DmRepository {
         onDone: () {
           // Stream closed (relay disconnect, NostrClient rebuild, etc.)
           // Clear the subscription so startListening() can re-subscribe.
-          _giftWrapSubscription = null;
+          _endLiveSubscriptions();
           _dropLiveCatchUp(catchUp);
           if (!_disposed) {
             Log.info(
@@ -1727,6 +1734,30 @@ class DmRepository {
           }
         },
       );
+      // No catch-up: a deletion saves no stamp, so it cannot move a window.
+      _deletionsSubscription = _nostrClient
+          .subscribe(
+            [deletionsFilter],
+            subscriptionId: dmDeletionsSubscriptionId(subscriptionId),
+            tempRelays: ownInbox,
+          )
+          .listen(
+            _handleIncomingEvent,
+            onError: (Object error) {
+              Log.error(
+                'DM deletions subscription error: $error',
+                category: LogCategory.system,
+              );
+              _endLiveSubscriptions();
+              _dropLiveCatchUp(catchUp);
+              if (!_disposed) _scheduleReconnect();
+            },
+            onDone: () {
+              _endLiveSubscriptions();
+              _dropLiveCatchUp(catchUp);
+              if (!_disposed) _scheduleReconnect();
+            },
+          );
     } finally {
       _subscribing = false;
     }
@@ -3306,10 +3337,17 @@ class DmRepository {
     _readFlush = null;
     unawaited(_dismissalSubscription?.cancel());
     _dismissalSubscription = null;
-    await _giftWrapSubscription?.cancel();
+    final dms = _giftWrapSubscription;
+    final deletions = _deletionsSubscription;
     _giftWrapSubscription = null;
+    _deletionsSubscription = null;
+    await dms?.cancel();
+    await deletions?.cancel();
     try {
       await _nostrClient.unsubscribe(_subscriptionId);
+      await _nostrClient.unsubscribe(
+        dmDeletionsSubscriptionId(_subscriptionId),
+      );
     } on Object {
       // Ignore if subscription doesn't exist
     }
@@ -3364,6 +3402,16 @@ class DmRepository {
   void _dropLiveCatchUp(_LiveCatchUp catchUp) {
     catchUp.cancelHoldLimit();
     if (identical(_liveCatchUp, catchUp)) _liveCatchUp = null;
+  }
+
+  /// Cancels both live REQs, the DMs and the deletions. They open together
+  /// and end together, so a re-subscribe never runs beside a REQ left over
+  /// from the previous pair.
+  void _endLiveSubscriptions() {
+    unawaited(_giftWrapSubscription?.cancel());
+    unawaited(_deletionsSubscription?.cancel());
+    _giftWrapSubscription = null;
+    _deletionsSubscription = null;
   }
 
   /// Saves the stamps [catchUp] holds once the stored batch has fully

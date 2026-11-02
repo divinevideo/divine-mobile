@@ -20,9 +20,16 @@ import 'package:nostr_sdk/nip04/nip04.dart';
 import 'package:nostr_sdk/nip44/nip44_v2.dart';
 import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
+import 'package:nostr_sdk/subscription.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+import 'support/live_dm_reads.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+}
 
 final String _ownerSecret = '3' * 64;
 final String _aliceSecret = '4' * 64;
@@ -96,6 +103,11 @@ class _GatedRelay {
   final bool gated;
   final int? cap;
   final List<List<nostr_filter.Filter>> requests = [];
+  final List<List<nostr_filter.Filter>> liveRequests = [];
+
+  /// The kinds of every live REQ so far, for failure messages.
+  String get liveKinds =>
+      '${liveRequests.map((r) => r.map((f) => f.kinds).toList())}';
 
   static bool _protectedOnly(List<nostr_filter.Filter> filters) =>
       filters.every(
@@ -220,6 +232,35 @@ void main() {
             );
     });
     when(() => client.unsubscribe(any())).thenAnswer((_) async {});
+    Stream<Event> serve(Invocation invocation) {
+      final filters =
+          invocation.positionalArguments.first as List<nostr_filter.Filter>;
+      relay.liveRequests.add(filters);
+      final onEnd =
+          invocation.namedArguments[#onStoredEventsEnd]
+              as void Function(StoredEventsEnd)?;
+      // The relay's stored events, then the end of them; the REQ stays open.
+      final controller = StreamController<Event>();
+      final events = relay.answer(filters);
+      scheduleMicrotask(() {
+        events.forEach(controller.add);
+        onEnd?.call(StoredEventsEnd(deliveredEventCount: events.length));
+      });
+      return controller.stream;
+    }
+
+    for (final read in [isLiveDmRead, isLiveDeletionsRead]) {
+      when(
+        () => client.subscribe(
+          any(that: read),
+          subscriptionId: any(named: 'subscriptionId'),
+          tempRelays: any(named: 'tempRelays'),
+          targetRelays: any(named: 'targetRelays'),
+          onStoredEventsStart: any(named: 'onStoredEventsStart'),
+          onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+        ),
+      ).thenAnswer(serve);
+    }
     return client;
   }
 
@@ -251,6 +292,21 @@ void main() {
         .getSingle();
     return row.read<bool>('stored');
   }
+
+  Future<void> settled(Event wrap, _GatedRelay relay) => db
+      .customSelect(
+        _storedSql,
+        variables: [Variable.withString(wrap.id)],
+        readsFrom: {db.directMessages, db.processedGiftWraps},
+      )
+      .watchSingle()
+      .firstWhere((row) => row.read<bool>('stored'))
+      .timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => fail(
+          'gift wrap ${wrap.id} never arrived; live REQs: ${relay.liveKinds}',
+        ),
+      );
 
   /// A real, fully signed NIP-59 wrap of a kind-14 from Alice to the owner.
   Future<Event> wrapAt({required int wire, required String content}) async {
@@ -368,6 +424,63 @@ void main() {
       expect(await isStored(wrap), isTrue);
       await repository.stopListening();
     });
+  });
+
+  group('live subscription against a relay that gates DMs behind AUTH', () {
+    test(
+      'receives a gift wrap the relay hides from a request that mixes kinds',
+      () async {
+        final wrap = await wrapAt(wire: now() - 3600, content: 'live');
+        final relay = _GatedRelay([wrap], gated: true);
+        final repository = launch(relay);
+
+        await repository.startListening();
+        await settled(wrap, relay);
+
+        expect(await isStored(wrap), isTrue);
+        await repository.stopListening();
+      },
+    );
+  });
+
+  group('live deletions', () {
+    test(
+      'applies a deletion the relay holds for a message it delivers',
+      () async {
+        final at = now();
+        final message = nip04At(createdAt: at - 2000, content: 'retract me');
+        final deletion = nip04DeletionAt(
+          createdAt: at - 1000,
+          target: message.id,
+        );
+        final relay = _GatedRelay([message, deletion], gated: true);
+        final repository = launch(relay);
+
+        await repository.startListening();
+        await db
+            .customSelect(
+              'SELECT is_deleted FROM direct_messages WHERE id = ?1',
+              variables: [Variable.withString(message.id)],
+              readsFrom: {db.directMessages},
+            )
+            .watch()
+            .firstWhere(
+              (rows) => rows.isNotEmpty && rows.single.read<bool>('is_deleted'),
+            )
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: () => fail(
+                'the deletion was never applied; live REQs: ${relay.liveKinds}',
+              ),
+            );
+
+        final row = await DirectMessagesDao(
+          db,
+        ).getMessageById(message.id, ownerPubkey: _owner);
+        expect(row!.isDeleted, isTrue);
+        await repository.stopListening();
+      },
+    );
   });
 
   group('history restore paging protected kinds apart from deletions', () {

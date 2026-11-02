@@ -17,7 +17,13 @@ import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+import 'support/live_dm_reads.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+}
 
 class _MockDirectMessagesDao extends Mock implements DirectMessagesDao {}
 
@@ -524,7 +530,7 @@ void main() {
           stubAnsweredHistory();
           when(
             () => nostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
