@@ -226,7 +226,13 @@ class _Badge extends StatelessWidget {
             color: color,
           ),
         ),
-        Text(label, style: VineTheme.labelLargeFont(color: color)),
+        Flexible(
+          child: Text(
+            label,
+            style: VineTheme.labelLargeFont(color: color),
+            textAlign: .center,
+          ),
+        ),
       ],
     );
   }

@@ -102,6 +102,14 @@ void main() {
         expect(icon.icon, equals(DivineIconName.sparkle));
       });
 
+      testWidgets('wraps a badge label too long for one line', (tester) async {
+        final label = List.filled(40, 'New').join(' ');
+        await tester.pumpWidget(buildSubject(badgeLabel: label));
+
+        expect(tester.takeException(), isNull);
+        expect(find.text(label), findsOneWidget);
+      });
+
       testWidgets('no badge when badgeLabel is null', (tester) async {
         await tester.pumpWidget(buildSubject());
 
