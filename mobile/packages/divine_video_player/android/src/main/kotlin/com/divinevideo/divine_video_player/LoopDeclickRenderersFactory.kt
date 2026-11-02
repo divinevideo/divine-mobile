@@ -10,13 +10,12 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.audio.MediaCodecAudioRenderer
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
-import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
 import androidx.media3.exoplayer.video.VideoRendererEventListener
 
 /**
  * Builds the audio path with the loop declick fade in it (#6468), and the
- * per-clip equalizer when [setClipEqualizer] asked for one. The video path
- * gets a [KnownOutputSizeVideoRenderer] in place of the stock renderer.
+ * per-clip equalizer when [setClipEqualizer] asked for one. The video
+ * renderers are wrapped in a [KnownOutputSizeVideoRenderer].
  *
  * The processors have to be injected at construction because
  * `DefaultAudioSink`'s processor chain is fixed once the sink is built, and
@@ -121,21 +120,9 @@ internal class LoopDeclickRenderersFactory(
             allowedVideoJoiningTimeMs,
             out,
         )
-        val index = (start until out.size).firstOrNull {
-            out[it].javaClass == MediaCodecVideoRenderer::class.java
-        } ?: return
-        // Mirrors the stock renderer's config; no experimental video options
-        // are set here, so builder defaults match. Re-check on a Media3 bump.
-        // Prewarming would need buildSecondaryVideoRenderer overridden too.
-        out[index] = KnownOutputSizeVideoRenderer(
-            MediaCodecVideoRenderer.Builder(context)
-                .setCodecAdapterFactory(codecAdapterFactory)
-                .setMediaCodecSelector(mediaCodecSelector)
-                .setAllowedJoiningTimeMs(allowedVideoJoiningTimeMs)
-                .setEnableDecoderFallback(enableDecoderFallback)
-                .setEventHandler(eventHandler)
-                .setEventListener(eventListener)
-                .setMaxDroppedFramesToNotify(MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY),
-        )
+        // Wrapped rather than rebuilt, so each renderer keeps the stock config.
+        for (index in start until out.size) {
+            out[index] = KnownOutputSizeVideoRenderer(out[index])
+        }
     }
 }
