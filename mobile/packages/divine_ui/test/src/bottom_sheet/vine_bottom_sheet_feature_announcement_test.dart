@@ -54,6 +54,34 @@ void main() {
   }
 
   group(VineBottomSheetFeatureAnnouncement, () {
+    group('constructor', () {
+      test('asserts when secondaryButtonText has no onSecondaryPressed', () {
+        expect(
+          () => VineBottomSheetFeatureAnnouncement(
+            illustration: const SizedBox.shrink(),
+            title: 'Captions',
+            primaryButtonText: 'Got it',
+            onPrimaryPressed: () {},
+            secondaryButtonText: 'Turn on captions',
+          ),
+          throwsAssertionError,
+        );
+      });
+
+      test('asserts when onSecondaryPressed has no secondaryButtonText', () {
+        expect(
+          () => VineBottomSheetFeatureAnnouncement(
+            illustration: const SizedBox.shrink(),
+            title: 'Captions',
+            primaryButtonText: 'Got it',
+            onPrimaryPressed: () {},
+            onSecondaryPressed: () {},
+          ),
+          throwsAssertionError,
+        );
+      });
+    });
+
     group('renders', () {
       testWidgets('illustration, title and primary button', (tester) async {
         await tester.pumpWidget(buildSubject());
