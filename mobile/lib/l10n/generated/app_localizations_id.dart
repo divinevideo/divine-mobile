@@ -6816,21 +6816,19 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Dipilih';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Tidak dipilih';
 
   @override
   String get videoClipSemanticHintDisabled => 'Dinonaktifkan';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Ketuk untuk memilih, tekan lama untuk pratinjau';
+  String get videoClipSemanticHintSelect => 'Ketuk untuk memilih';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Ketuk untuk membatalkan pilihan, tekan lama untuk pratinjau';
+  String get videoClipSemanticHintDeselect => 'Ketuk untuk membatalkan pilihan';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Ketuk untuk pratinjau';
 
   @override
   String get routerInvalidCreator => 'Kreator tidak valid';
@@ -8663,6 +8661,28 @@ class AppLocalizationsId extends AppLocalizations {
       one: '1 klip',
     );
     return 'Ini langsung menghapus permanen $_temp0 dari sampah.';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klip dipulihkan',
+      one: 'Klip dipulihkan',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klip dihapus permanen',
+      one: 'Klip dihapus permanen',
+    );
+    return '$_temp0';
   }
 
   @override

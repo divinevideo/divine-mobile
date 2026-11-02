@@ -7104,21 +7104,19 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'ఎంచుకోబడింది';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'ఎంచుకోబడలేదు';
 
   @override
   String get videoClipSemanticHintDisabled => 'నిలిపివేయబడింది';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'ఎంచుకోవడానికి నొక్కండి, ప్రివ్యూ చేయడానికి ఎక్కువసేపు నొక్కండి';
+  String get videoClipSemanticHintSelect => 'ఎంచుకోవడానికి నొక్కండి';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'ఎంపికను తీసివేయడానికి నొక్కండి, ప్రివ్యూ చేయడానికి ఎక్కువసేపు నొక్కండి';
+  String get videoClipSemanticHintDeselect => 'ఎంపికను తీసివేయడానికి నొక్కండి';
+
+  @override
+  String get videoClipSemanticHintPreview => 'ప్రివ్యూ చేయడానికి నొక్కండి';
 
   @override
   String get routerInvalidCreator => 'చెల్లని సృష్టికర్త';
@@ -9005,6 +9003,28 @@ class AppLocalizationsTe extends AppLocalizations {
       one: '1 క్లిప్',
     );
     return 'ఇది శాశ్వతంగా తొలగిస్తుంది$_temp0.';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count క్లిప్‌లు పునరుద్ధరించబడ్డాయి',
+      one: 'క్లిప్ పునరుద్ధరించబడింది',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count క్లిప్‌లు శాశ్వతంగా తొలగించబడ్డాయి',
+      one: 'క్లిప్ శాశ్వతంగా తొలగించబడింది',
+    );
+    return '$_temp0';
   }
 
   @override

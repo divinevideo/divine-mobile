@@ -6556,19 +6556,19 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => '선택됨';
-
-  @override
   String get videoClipSemanticValueNotSelected => '선택 안 됨';
 
   @override
   String get videoClipSemanticHintDisabled => '비활성화됨';
 
   @override
-  String get videoClipSemanticHintSelect => '탭하여 선택, 길게 눌러 미리보기';
+  String get videoClipSemanticHintSelect => '탭하여 선택';
 
   @override
-  String get videoClipSemanticHintDeselect => '탭하여 선택 해제, 길게 눌러 미리보기';
+  String get videoClipSemanticHintDeselect => '탭하여 선택 해제';
+
+  @override
+  String get videoClipSemanticHintPreview => '탭하여 미리보기';
 
   @override
   String get routerInvalidCreator => '유효하지 않은 크리에이터';
@@ -8328,6 +8328,28 @@ class AppLocalizationsKo extends AppLocalizations {
       one: '클립 1개',
     );
     return '이 작업은 휴지통에서 $_temp0를 바로 영구 삭제합니다.';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '클립 $count개를 복원했어요',
+      one: '클립을 복원했어요',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '클립 $count개를 영구 삭제했어요',
+      one: '클립을 영구 삭제했어요',
+    );
+    return '$_temp0';
   }
 
   @override

@@ -6739,21 +6739,19 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'ተመርጧል';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'አልተመረጠም';
 
   @override
   String get videoClipSemanticHintDisabled => 'ተሰናክሏል';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'ለመምረጥ ነካ ያድርጉ፣ ቅድሚያ ለማሳየት ረዘም ያሉ ጫን';
+  String get videoClipSemanticHintSelect => 'ለመምረጥ ነካ ያድርጉ';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'ለማቋረጥ ነካ ያድርጉ፣ ቅድሚያ ለማሳየት ረዘም ያሉ ጫን';
+  String get videoClipSemanticHintDeselect => 'ለማቋረጥ ነካ ያድርጉ';
+
+  @override
+  String get videoClipSemanticHintPreview => 'ቅድሚያ ለማሳየት ነካ ያድርጉ';
 
   @override
   String get routerInvalidCreator => 'ልክ ያልሆነ ፈጣሪ';
@@ -8552,6 +8550,28 @@ class AppLocalizationsAm extends AppLocalizations {
       one: '$count ክሊፕ',
     );
     return '$_temp0 ከቆሻሻ መጣያው ወዲያውኑ በቋሚነት ይሰረዛሉ።';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ክሊፖች ተመልሰዋል',
+      one: 'ክሊፑ ተመልሷል',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ክሊፖች በቋሚነት ተሰርዘዋል',
+      one: 'ክሊፑ በቋሚነት ተሰርዟል',
+    );
+    return '$_temp0';
   }
 
   @override

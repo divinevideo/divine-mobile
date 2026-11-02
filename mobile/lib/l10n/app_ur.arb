@@ -3441,11 +3441,11 @@
     }
   },
   "videoClipSemanticValueSelectedAtPosition": "منتخب، نمبر {position}",
-  "videoClipSemanticValueSelected": "منتخب",
   "videoClipSemanticValueNotSelected": "منتخب نہیں",
   "videoClipSemanticHintDisabled": "غیر فعال",
-  "videoClipSemanticHintSelect": "منتخب کرنے کے لیے ٹیپ کریں، پیش منظر کے لیے دیر تک دبائیں",
-  "videoClipSemanticHintDeselect": "انتخاب ختم کرنے کے لیے ٹیپ کریں، پیش منظر کے لیے دیر تک دبائیں",
+  "videoClipSemanticHintSelect": "منتخب کرنے کے لیے ٹیپ کریں",
+  "videoClipSemanticHintDeselect": "انتخاب ختم کرنے کے لیے ٹیپ کریں",
+  "videoClipSemanticHintPreview": "پیش منظر کے لیے ٹیپ کریں",
   "routerInvalidCreator": "غلط کریئیٹر",
   "routerInvalidHashtagRoute": "غلط ہیش ٹیگ روٹ",
   "categoryGalleryCouldNotLoadVideos": "ویڈیوز لوڈ نہیں ہو سکیں",
@@ -4572,6 +4572,8 @@
     "description": "Confirmation-sheet title shown before permanently deleting every clip from trash."
   },
   "libraryTrashEmptyConfirmMessage": "یہ {count, plural, =1{1 کلپ} other{{count} کلپس}} فوراً ٹریش سے مستقل طور پر حذف کر دے گا۔",
+  "libraryTrashClipsRestored": "{count, plural, =1{کلپ بحال ہو گئی} other{{count} کلپس بحال ہو گئیں}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{کلپ مستقل طور پر حذف ہو گئی} other{{count} کلپس مستقل طور پر حذف ہو گئیں}}",
   "@libraryTrashEmptyConfirmMessage": {
     "description": "Confirmation-sheet subtitle shown before permanently deleting every clip from trash.",
     "placeholders": {

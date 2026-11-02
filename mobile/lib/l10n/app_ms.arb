@@ -3441,11 +3441,11 @@
     }
   },
   "videoClipSemanticValueSelectedAtPosition": "Dipilih, nombor {position}",
-  "videoClipSemanticValueSelected": "Dipilih",
   "videoClipSemanticValueNotSelected": "Tidak dipilih",
   "videoClipSemanticHintDisabled": "Dilumpuhkan",
-  "videoClipSemanticHintSelect": "Ketik untuk memilih, tekan lama untuk pratonton",
-  "videoClipSemanticHintDeselect": "Ketik untuk menyahpilih, tekan lama untuk pratonton",
+  "videoClipSemanticHintSelect": "Ketik untuk memilih",
+  "videoClipSemanticHintDeselect": "Ketik untuk menyahpilih",
+  "videoClipSemanticHintPreview": "Ketik untuk pratonton",
   "routerInvalidCreator": "Pencipta tidak sah",
   "routerInvalidHashtagRoute": "Laluan hashtag tidak sah",
   "categoryGalleryCouldNotLoadVideos": "Tidak dapat memuatkan video",
@@ -4572,6 +4572,8 @@
     "description": "Confirmation-sheet title shown before permanently deleting every clip from trash."
   },
   "libraryTrashEmptyConfirmMessage": "Ini memadam {count, plural, =1{1 klip} other{{count} klip}} secara kekal daripada tong sampah serta-merta.",
+  "libraryTrashClipsRestored": "{count, plural, =1{Klip dipulihkan} other{{count} klip dipulihkan}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{Klip dipadam secara kekal} other{{count} klip dipadam secara kekal}}",
   "@libraryTrashEmptyConfirmMessage": {
     "description": "Confirmation-sheet subtitle shown before permanently deleting every clip from trash.",
     "placeholders": {

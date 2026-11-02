@@ -6965,21 +6965,20 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Избран';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Не е избран';
 
   @override
   String get videoClipSemanticHintDisabled => 'Деактивиран';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Докоснете за избор, задръжте за преглед';
+  String get videoClipSemanticHintSelect => 'Докоснете за избор';
 
   @override
   String get videoClipSemanticHintDeselect =>
-      'Докоснете за премахване на избора, задръжте за преглед';
+      'Докоснете за премахване на избора';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Докоснете за преглед';
 
   @override
   String get routerInvalidCreator => 'Невалиден създател';
@@ -8832,6 +8831,28 @@ class AppLocalizationsBg extends AppLocalizations {
       one: '1 клип',
     );
     return 'Това ще изтрие окончателно $_temp0 от кошчето веднага.';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count клипа са възстановени',
+      one: 'Клипът е възстановен',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count клипа са изтрити окончателно',
+      one: 'Клипът е изтрит окончателно',
+    );
+    return '$_temp0';
   }
 
   @override

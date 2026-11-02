@@ -6931,21 +6931,19 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Geselecteerd';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Niet geselecteerd';
 
   @override
   String get videoClipSemanticHintDisabled => 'Uitgeschakeld';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Tik om te selecteren, houd vast voor voorbeeld';
+  String get videoClipSemanticHintSelect => 'Tik om te selecteren';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Tik om te deselecteren, houd vast voor voorbeeld';
+  String get videoClipSemanticHintDeselect => 'Tik om te deselecteren';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Tik voor voorbeeld';
 
   @override
   String get routerInvalidCreator => 'Ongeldige maker';
@@ -8795,6 +8793,28 @@ class AppLocalizationsNl extends AppLocalizations {
       one: '1 clip',
     );
     return 'Hiermee worden $_temp0 meteen definitief uit de prullenbak verwijderd.';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count clips hersteld',
+      one: 'Clip hersteld',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count clips definitief verwijderd',
+      one: 'Clip definitief verwijderd',
+    );
+    return '$_temp0';
   }
 
   @override

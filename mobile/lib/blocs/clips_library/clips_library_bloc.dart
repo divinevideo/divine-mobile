@@ -687,7 +687,12 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     ClipsLibraryTrashLoadRequested event,
     Emitter<ClipsLibraryState> emit,
   ) async {
-    emit(state.copyWith(status: ClipsLibraryStatus.trashLoading));
+    emit(
+      state.copyWith(
+        status: ClipsLibraryStatus.trashLoading,
+        clearTrashResult: true,
+      ),
+    );
     try {
       final trashed = await _getFilteredTrashedClips();
       emit(
@@ -721,7 +726,13 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
         name: 'ClipsLibraryBloc',
         category: LogCategory.video,
       );
-      await _reloadClipsAndTrash(emit);
+      await _reloadClipsAndTrash(
+        emit,
+        trashResult: ClipsLibraryTrashResult(
+          action: ClipsLibraryTrashAction.restored,
+          clipIds: event.clipIds,
+        ),
+      );
     } catch (e, stackTrace) {
       Log.error(
         '📚 Failed to restore clips: $e',
@@ -744,6 +755,10 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
         state.copyWith(
           status: ClipsLibraryStatus.trashLoaded,
           trashedClips: trashed,
+          lastTrashResult: ClipsLibraryTrashResult(
+            action: ClipsLibraryTrashAction.deleted,
+            clipIds: {event.clip.id},
+          ),
         ),
       );
     } catch (e, stackTrace) {
@@ -775,6 +790,10 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
         state.copyWith(
           status: ClipsLibraryStatus.trashLoaded,
           trashedClips: const [],
+          lastTrashResult: ClipsLibraryTrashResult(
+            action: ClipsLibraryTrashAction.deleted,
+            clipIds: {for (final clip in trashed) clip.id},
+          ),
         ),
       );
     } catch (e, stackTrace) {
@@ -1042,7 +1061,10 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
 
   /// Reloads both the active and trashed clip lists. Used after restore
   /// so both views reflect the change.
-  Future<void> _reloadClipsAndTrash(Emitter<ClipsLibraryState> emit) async {
+  Future<void> _reloadClipsAndTrash(
+    Emitter<ClipsLibraryState> emit, {
+    required ClipsLibraryTrashResult trashResult,
+  }) async {
     final clips = _applyTypeFilter(await _clipLibraryService.getAllClips());
     final trashed = await _getFilteredTrashedClips();
     emit(
@@ -1056,6 +1078,7 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
         sortedClips: _visibleClips(clips, state.filter, state.clipSort),
         trashedClips: trashed,
         clearDeletedClipIds: true,
+        lastTrashResult: trashResult,
       ),
     );
   }

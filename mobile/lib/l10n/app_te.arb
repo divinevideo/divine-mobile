@@ -4058,11 +4058,11 @@
       }
     }
   },
-  "videoClipSemanticValueSelected": "ఎంచుకోబడింది",
   "videoClipSemanticValueNotSelected": "ఎంచుకోబడలేదు",
   "videoClipSemanticHintDisabled": "నిలిపివేయబడింది",
-  "videoClipSemanticHintSelect": "ఎంచుకోవడానికి నొక్కండి, ప్రివ్యూ చేయడానికి ఎక్కువసేపు నొక్కండి",
-  "videoClipSemanticHintDeselect": "ఎంపికను తీసివేయడానికి నొక్కండి, ప్రివ్యూ చేయడానికి ఎక్కువసేపు నొక్కండి",
+  "videoClipSemanticHintSelect": "ఎంచుకోవడానికి నొక్కండి",
+  "videoClipSemanticHintDeselect": "ఎంపికను తీసివేయడానికి నొక్కండి",
+  "videoClipSemanticHintPreview": "ప్రివ్యూ చేయడానికి నొక్కండి",
   "routerInvalidCreator": "చెల్లని సృష్టికర్త",
   "routerInvalidHashtagRoute": "హ్యాష్‌ట్యాగ్ మార్గం చెల్లదు",
   "categoryGalleryCouldNotLoadVideos": "వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు",
@@ -5320,6 +5320,8 @@
     "description": "Confirmation-sheet title shown before permanently deleting every clip from trash."
   },
   "libraryTrashEmptyConfirmMessage": "ఇది శాశ్వతంగా తొలగిస్తుంది{count, plural, =1{1 క్లిప్} other{{count}క్లిప్‌లు\nవెంటనే ట్రాష్ నుండి }}.",
+  "libraryTrashClipsRestored": "{count, plural, =1{క్లిప్ పునరుద్ధరించబడింది} other{{count} క్లిప్‌లు పునరుద్ధరించబడ్డాయి}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{క్లిప్ శాశ్వతంగా తొలగించబడింది} other{{count} క్లిప్‌లు శాశ్వతంగా తొలగించబడ్డాయి}}",
   "@libraryTrashEmptyConfirmMessage": {
     "description": "Confirmation-sheet subtitle shown before permanently deleting every clip from trash.",
     "placeholders": {

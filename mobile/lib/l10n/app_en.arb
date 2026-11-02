@@ -4816,11 +4816,14 @@
       }
     }
   },
-  "videoClipSemanticValueSelected": "Selected",
   "videoClipSemanticValueNotSelected": "Not selected",
   "videoClipSemanticHintDisabled": "Disabled",
-  "videoClipSemanticHintSelect": "Tap to select, long press to preview",
-  "videoClipSemanticHintDeselect": "Tap to deselect, long press to preview",
+  "videoClipSemanticHintSelect": "Tap to select",
+  "videoClipSemanticHintDeselect": "Tap to deselect",
+  "videoClipSemanticHintPreview": "Tap to preview",
+  "@videoClipSemanticHintPreview": {
+    "description": "Accessibility hint on a library clip thumbnail outside selection mode, where a tap opens the clip preview."
+  },
   "routerInvalidCreator": "Invalid creator",
   "routerInvalidHashtagRoute": "Invalid hashtag route",
   "categoryGalleryCouldNotLoadVideos": "Could not load videos",
@@ -6112,6 +6115,24 @@
   "libraryTrashEmptyConfirmMessage": "This permanently deletes {count, plural, =1{1 clip} other{{count} clips}} from trash right away.",
   "@libraryTrashEmptyConfirmMessage": {
     "description": "Confirmation-sheet subtitle shown before permanently deleting every clip from trash.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryTrashClipsRestored": "{count, plural, =1{Clip restored} other{{count} clips restored}}",
+  "@libraryTrashClipsRestored": {
+    "description": "Screen-reader announcement after clips are restored from trash and their rows leave the trash list.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryTrashClipsDeleted": "{count, plural, =1{Clip permanently deleted} other{{count} clips permanently deleted}}",
+  "@libraryTrashClipsDeleted": {
+    "description": "Screen-reader announcement after clips are permanently deleted from trash (one at a time or by emptying it) and their rows leave the trash list.",
     "placeholders": {
       "count": {
         "type": "int"

@@ -6857,20 +6857,19 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Đã chọn';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Chưa chọn';
 
   @override
   String get videoClipSemanticHintDisabled => 'Đã tắt';
 
   @override
-  String get videoClipSemanticHintSelect => 'Chạm để chọn, nhấn giữ để xem thử';
+  String get videoClipSemanticHintSelect => 'Chạm để chọn';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Chạm để bỏ chọn, nhấn giữ để xem thử';
+  String get videoClipSemanticHintDeselect => 'Chạm để bỏ chọn';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Chạm để xem thử';
 
   @override
   String get routerInvalidCreator => 'Nhà sáng tạo không hợp lệ';
@@ -8710,6 +8709,28 @@ class AppLocalizationsVi extends AppLocalizations {
       one: '1 clip',
     );
     return 'Thao tác này xóa vĩnh viễn $_temp0 khỏi thùng rác ngay lập tức.';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Đã khôi phục $count clip',
+      one: 'Đã khôi phục clip',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Đã xóa vĩnh viễn $count clip',
+      one: 'Đã xóa vĩnh viễn clip',
+    );
+    return '$_temp0';
   }
 
   @override

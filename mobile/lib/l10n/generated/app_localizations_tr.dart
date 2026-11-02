@@ -6824,21 +6824,19 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Seçildi';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Seçilmedi';
 
   @override
   String get videoClipSemanticHintDisabled => 'Devre dışı';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Seçmek için dokun, önizlemek için uzun bas';
+  String get videoClipSemanticHintSelect => 'Seçmek için dokun';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Seçimi kaldırmak için dokun, önizlemek için uzun bas';
+  String get videoClipSemanticHintDeselect => 'Seçimi kaldırmak için dokun';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Önizlemek için dokun';
 
   @override
   String get routerInvalidCreator => 'Geçersiz içerik üretici';
@@ -8672,6 +8670,28 @@ class AppLocalizationsTr extends AppLocalizations {
       one: '1 klibi',
     );
     return 'Bu işlem $_temp0 hemen çöp kutusundan kalıcı olarak siler.';
+  }
+
+  @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klip geri yüklendi',
+      one: 'Klip geri yüklendi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klip kalıcı olarak silindi',
+      one: 'Klip kalıcı olarak silindi',
+    );
+    return '$_temp0';
   }
 
   @override
