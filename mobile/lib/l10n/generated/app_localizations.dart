@@ -15263,6 +15263,66 @@ abstract class AppLocalizations {
   /// **'Riso Print'**
   String get videoEditorEffectRiso;
 
+  /// Name of a colour-graded look in the video effects picker: the blockbuster film grade, with teal (blue-green) shadows and greens, and warm orange skin and highlights. Keep the colour names short; "& " may become your language's "and".
+  ///
+  /// In en, this message translates to:
+  /// **'Teal & Orange'**
+  String get videoEditorEffectTealOrange;
+
+  /// Name of a colour-graded look in the video effects picker: the soft, warm colours of a portrait photo film, with muted greens. "Film" means photographic film, as in the Old Film effect.
+  ///
+  /// In en, this message translates to:
+  /// **'Warm Film'**
+  String get videoEditorEffectWarmFilm;
+
+  /// Name of a colour-graded look in the video effects picker: the vivid, contrasty colours of slide (reversal) photo film, with deep blue skies. Use your language's word for slide or reversal film.
+  ///
+  /// In en, this message translates to:
+  /// **'Slide Film'**
+  String get videoEditorEffectSlideFilm;
+
+  /// Name of a colour-graded look in the video effects picker: the clean, cool colours of an everyday photo film, with emerald greens. "Cool" means cool in colour temperature (bluish), the opposite of Warm Film.
+  ///
+  /// In en, this message translates to:
+  /// **'Cool Film'**
+  String get videoEditorEffectCoolFilm;
+
+  /// Name of a colour-graded look in the video effects picker: a soft faded look with lifted greyish blacks and muted colours, like a matte print.
+  ///
+  /// In en, this message translates to:
+  /// **'Matte'**
+  String get videoEditorEffectMatte;
+
+  /// Name of a colour-graded look in the video effects picker: cold, hard and silvery with most colour drained, after the film processing technique that skips the bleach step. Keep the English term where film people use it.
+  ///
+  /// In en, this message translates to:
+  /// **'Bleach Bypass'**
+  String get videoEditorEffectBleachBypass;
+
+  /// Name of a colour-graded look in the video effects picker: blue shadows and yellow highlights, after the photo technique of developing slide film as a negative. Keep the English term where photographers use it.
+  ///
+  /// In en, this message translates to:
+  /// **'Cross Process'**
+  String get videoEditorEffectCrossProcess;
+
+  /// Name of a colour-graded look in the video effects picker: the warm golden light of the hour before sunset.
+  ///
+  /// In en, this message translates to:
+  /// **'Golden Hour'**
+  String get videoEditorEffectGoldenHour;
+
+  /// Name of a colour-graded look in the video effects picker: the picture made dark and blue, as if shot at night by moonlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Moonlight'**
+  String get videoEditorEffectMoonlight;
+
+  /// Name of a colour-graded look in the video effects picker: black-and-white photo film with deep blacks and darker skies. Silver refers to silver-based black-and-white film, not to the colour.
+  ///
+  /// In en, this message translates to:
+  /// **'Silver'**
+  String get videoEditorEffectSilver;
+
   /// Name of a group in the video effects picker: effects that look like old media, such as VHS tape, old film or an old TV.
   ///
   /// In en, this message translates to:
@@ -15298,6 +15358,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Particles'**
   String get videoEditorEffectCategoryParticles;
+
+  /// Name of a group in the video effects picker: colour-graded looks that change the colours of the picture the way a film stock or a colourist would, such as Teal & Orange or Warm Film.
+  ///
+  /// In en, this message translates to:
+  /// **'Looks'**
+  String get videoEditorEffectCategoryLooks;
 
   /// Name of a group in the colour filter picker of the video editor: filters that lift the picture subtly and keep its colours true to life.
   ///

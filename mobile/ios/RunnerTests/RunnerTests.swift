@@ -7,6 +7,7 @@ import divine_camera
 import CryptoKit
 import Flutter
 @testable import LibProofMode
+import ImageIO
 import ObjectivePGP
 @testable import Runner
 
@@ -2967,6 +2968,158 @@ final class AdjustVideoEffectTests: XCTestCase {
         }
         for k in 0..<3 { out[(yi * width + xi) * 3 + k] = color[k] }
       }
+    }
+    return out
+  }
+}
+
+/// The looks map colours through a lookup table with Core Image's
+/// `CIColorCube` on iOS and macOS, and with a shader that interpolates the
+/// same table trilinearly on Android (`LookVideoEffect`) and in the effects
+/// picker (`shaders/look.frag`). These tests read a table laid out as
+/// `tools/generate_looks.dart` writes it, load every look's table from the
+/// app's Flutter assets, as the effect does, and check every pixel the filter
+/// draws against that interpolation computed here on the CPU. So a table read
+/// upside down or with its channels swapped fails, and so does a filter that
+/// interpolates differently. No test runs the Android copy: a change to it has
+/// to be made here as well.
+final class LookVideoEffectTests: XCTestCase {
+  private let points = LookVideoEffect.points
+
+  /// Colours that fall between the table's points, on a 23-step grid in each
+  /// channel.
+  private let steps = 23
+
+  func testEveryLookCarriesItsTable() {
+    for look in LookVideoEffect.Look.allCases {
+      let cube = LookVideoEffect.cube(of: look)
+      XCTAssertEqual(cube?.count, points * points * points * 4 * 4, "\(look)")
+    }
+  }
+
+  func testReadsATableAsTheGeneratorLaysItOut() throws {
+    // The identity: pixel (b * 33 + r, g) holds (r, g, b) / 32.
+    let width = points * points
+    var bytes = [UInt8](repeating: 255, count: width * points * 4)
+    func level(_ index: Int) -> UInt8 { UInt8((Double(index) * 255 / 32).rounded()) }
+    for b in 0..<points {
+      for g in 0..<points {
+        for r in 0..<points {
+          let i = (g * width + b * points + r) * 4
+          bytes[i] = level(r)
+          bytes[i + 1] = level(g)
+          bytes[i + 2] = level(b)
+        }
+      }
+    }
+    let image = try XCTUnwrap(
+      CGImage(
+        width: width, height: points, bitsPerComponent: 8, bitsPerPixel: 32,
+        bytesPerRow: width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+        bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+        provider: CGDataProvider(data: Data(bytes) as CFData)!, decode: nil,
+        shouldInterpolate: false, intent: .defaultIntent))
+    let url = FileManager.default.temporaryDirectory
+      .appendingPathComponent("identity_look_\(UUID().uuidString).png")
+    defer { try? FileManager.default.removeItem(at: url) }
+    let destination = try XCTUnwrap(
+      CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil))
+    CGImageDestinationAddImage(destination, image, nil)
+    XCTAssertTrue(CGImageDestinationFinalize(destination))
+
+    let cube = try XCTUnwrap(LookVideoEffect.cubeData(fromTableAt: url))
+    let table: [Float] = cube.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+    XCTAssertEqual(table.count, points * points * points * 4)
+    var worst: Float = 0
+    for b in 0..<points {
+      for g in 0..<points {
+        for r in 0..<points {
+          let i = ((b * points + g) * points + r) * 4
+          let expected: [UInt8] = [level(r), level(g), level(b)]
+          for k in 0..<3 {
+            worst = max(worst, abs(table[i + k] - Float(expected[k]) / 255))
+          }
+          XCTAssertEqual(table[i + 3], 1)
+        }
+      }
+    }
+    XCTAssertLessThan(worst, 1e-6)
+  }
+
+  func testGradesWithTheTrilinearLookupTheAndroidShaderDoes() throws {
+    let width = steps * steps, height = steps
+    var pixels = [Float](repeating: 1, count: width * height * 4)
+    for b in 0..<steps {
+      for g in 0..<steps {
+        for r in 0..<steps {
+          let i = (g * width + b * steps + r) * 4
+          pixels[i] = Float(r) / Float(steps - 1)
+          pixels[i + 1] = Float(g) / Float(steps - 1)
+          pixels[i + 2] = Float(b) / Float(steps - 1)
+        }
+      }
+    }
+    let frame = CIImage(
+      bitmapData: Data(bytes: pixels, count: pixels.count * 4),
+      bytesPerRow: width * 16,
+      size: CGSize(width: width, height: height),
+      format: .RGBAf,
+      colorSpace: nil)
+    let context = CIContext(options: [.workingColorSpace: NSNull()])
+
+    for look in LookVideoEffect.Look.allCases {
+      let cube = try XCTUnwrap(LookVideoEffect.cube(of: look), "\(look)")
+      let table: [Float] = cube.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+      for intensity in [1.0, 0.4] {
+        let output = LookVideoEffect(look: look, params: ["intensity": intensity])
+          .render(frame, history: [], timeUs: 0, effectTimeUs: 0)
+        XCTAssertEqual(output.extent, frame.extent)
+        var drawn = [Float](repeating: 0, count: pixels.count)
+        drawn.withUnsafeMutableBytes {
+          context.render(
+            output, toBitmap: $0.baseAddress!, rowBytes: width * 16,
+            bounds: frame.extent, format: .RGBAf, colorSpace: nil)
+        }
+        var worst: Double = 0
+        for i in stride(from: 0, to: pixels.count, by: 4) {
+          let color: [Double] = (0..<3).map { Double(pixels[i + $0]) }
+          let graded: [Double] = lookUp(color, in: table)
+          for k in 0..<3 {
+            let expected: Double = color[k] + (graded[k] - color[k]) * intensity
+            worst = max(worst, abs(Double(drawn[i + k]) - expected))
+          }
+        }
+        // Core Image's half-float intermediates round to about 0.001.
+        XCTAssertLessThan(worst, 0.003, "\(look), intensity \(intensity)")
+      }
+    }
+  }
+
+  func testLeavesTheFrameAloneAtNoIntensity() {
+    let frame = CIImage(color: CIColor(red: 0.2, green: 0.5, blue: 0.7))
+      .cropped(to: CGRect(x: 0, y: 0, width: 4, height: 4))
+    let output = LookVideoEffect(look: .tealOrange, params: ["intensity": 0])
+      .render(frame, history: [], timeUs: 0, effectTimeUs: 0)
+    XCTAssertTrue(output === frame)
+  }
+
+  /// `color` looked up in `table`, `CIColorCube` data with red changing
+  /// fastest: red and green interpolated within the two nearest blue slices,
+  /// then blue between them, as the Android shader does.
+  private func lookUp(_ color: [Double], in table: [Float]) -> [Double] {
+    let last = Double(points - 1)
+    let p: [Double] = color.map { min(max($0, 0), 1) * last }
+    let lower: [Int] = p.map { min(Int($0), points - 2) }
+    let f: [Double] = (0..<3).map { p[$0] - Double(lower[$0]) }
+    var out = [Double](repeating: 0, count: 3)
+    for corner in 0..<8 {
+      let dr = corner & 1, dg = (corner >> 1) & 1, db = corner >> 2
+      let wr: Double = dr == 1 ? f[0] : 1 - f[0]
+      let wg: Double = dg == 1 ? f[1] : 1 - f[1]
+      let wb: Double = db == 1 ? f[2] : 1 - f[2]
+      let index: Int =
+        (((lower[2] + db) * points + lower[1] + dg) * points + lower[0] + dr) * 4
+      for k in 0..<3 { out[k] += wr * wg * wb * Double(table[index + k]) }
     }
     return out
   }

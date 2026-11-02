@@ -9021,6 +9021,36 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectRiso => 'In Riso';
 
   @override
+  String get videoEditorEffectTealOrange => 'Xanh ngọc & Cam';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'Phim ấm';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'Phim dương bản';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'Phim lạnh';
+
+  @override
+  String get videoEditorEffectMatte => 'Mờ';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'Bleach bypass';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'Tráng chéo';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'Giờ vàng';
+
+  @override
+  String get videoEditorEffectMoonlight => 'Ánh trăng';
+
+  @override
+  String get videoEditorEffectSilver => 'Bạc';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Retro';
 
   @override
@@ -9037,6 +9067,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryParticles => 'Hạt';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'Tông màu';
 
   @override
   String get videoEditorFilterCategoryNatural => 'Tự nhiên';

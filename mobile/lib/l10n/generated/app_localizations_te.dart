@@ -9317,6 +9317,36 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectRiso => 'రిసో ప్రింట్';
 
   @override
+  String get videoEditorEffectTealOrange => 'టీల్ & ఆరెంజ్';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'వెచ్చని ఫిల్మ్';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'స్లైడ్ ఫిల్మ్';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'చల్లని ఫిల్మ్';
+
+  @override
+  String get videoEditorEffectMatte => 'మ్యాట్';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'బ్లీచ్ బైపాస్';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'క్రాస్ ప్రాసెస్';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'గోల్డెన్ అవర్';
+
+  @override
+  String get videoEditorEffectMoonlight => 'వెన్నెల';
+
+  @override
+  String get videoEditorEffectSilver => 'వెండి';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'రెట్రో';
 
   @override
@@ -9333,6 +9363,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryParticles => 'కణాలు';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'లుక్స్';
 
   @override
   String get videoEditorFilterCategoryNatural => 'సహజం';

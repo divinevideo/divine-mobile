@@ -8633,6 +8633,36 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectRiso => '리소 인쇄';
 
   @override
+  String get videoEditorEffectTealOrange => '틸 & 오렌지';
+
+  @override
+  String get videoEditorEffectWarmFilm => '웜 필름';
+
+  @override
+  String get videoEditorEffectSlideFilm => '슬라이드 필름';
+
+  @override
+  String get videoEditorEffectCoolFilm => '쿨 필름';
+
+  @override
+  String get videoEditorEffectMatte => '매트';
+
+  @override
+  String get videoEditorEffectBleachBypass => '블리치 바이패스';
+
+  @override
+  String get videoEditorEffectCrossProcess => '크로스 프로세스';
+
+  @override
+  String get videoEditorEffectGoldenHour => '골든 아워';
+
+  @override
+  String get videoEditorEffectMoonlight => '달빛';
+
+  @override
+  String get videoEditorEffectSilver => '실버';
+
+  @override
   String get videoEditorEffectCategoryRetro => '레트로';
 
   @override
@@ -8649,6 +8679,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryParticles => '파티클';
+
+  @override
+  String get videoEditorEffectCategoryLooks => '룩';
 
   @override
   String get videoEditorFilterCategoryNatural => '내추럴';

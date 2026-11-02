@@ -9069,6 +9069,36 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectRiso => 'طباعة ريسو';
 
   @override
+  String get videoEditorEffectTealOrange => 'تيل وبرتقالي';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'فيلم دافئ';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'فيلم شرائح';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'فيلم بارد';
+
+  @override
+  String get videoEditorEffectMatte => 'مطفأ';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'تجاوز التبييض';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'معالجة متقاطعة';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'الساعة الذهبية';
+
+  @override
+  String get videoEditorEffectMoonlight => 'ضوء القمر';
+
+  @override
+  String get videoEditorEffectSilver => 'فضي';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'ريترو';
 
   @override
@@ -9085,6 +9115,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryParticles => 'جزيئات';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'إطلالات';
 
   @override
   String get videoEditorFilterCategoryNatural => 'طبيعي';

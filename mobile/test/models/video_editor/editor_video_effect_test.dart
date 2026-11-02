@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
@@ -935,6 +936,33 @@ void main() {
         });
       });
     });
+
+    group('looksLast', () {
+      CustomVideoEffect effect(String id) => CustomVideoEffect(id: id);
+
+      test('moves the looks after the other effects, keeping the order '
+          'within each', () {
+        expect(
+          looksLast([
+            effect(silverLookId),
+            effect(echoVideoEffectId),
+            effect(tealOrangeLookId),
+            effect(snowVideoEffectId),
+          ]).map((effect) => effect.id),
+          [
+            echoVideoEffectId,
+            snowVideoEffectId,
+            silverLookId,
+            tealOrangeLookId,
+          ],
+        );
+      });
+
+      test('leaves a list without looks as it is', () {
+        final effects = [effect(snowVideoEffectId), effect(echoVideoEffectId)];
+        expect(looksLast(effects), effects);
+      });
+    });
   });
 
   group('EditorVideoEffect custom', () {
@@ -1034,7 +1062,7 @@ void main() {
         for (final type in EditorEffectType.values)
           if (type.customId != null) type,
       ];
-      expect(custom, hasLength(28));
+      expect(custom, hasLength(38));
       for (final type in custom) {
         final effect = EditorVideoEffect.of(
           id: 'x',
@@ -1141,6 +1169,45 @@ void main() {
         EditorEffectType.ripple,
         EditorEffectType.flutedGlass,
       ]);
+    });
+
+    test('lists every colour-graded look under looks, each with its own '
+        'table', () {
+      final looks = EditorEffectCategory.looks.types;
+      expect(looks, [
+        EditorEffectType.tealOrange,
+        EditorEffectType.warmFilm,
+        EditorEffectType.slideFilm,
+        EditorEffectType.coolFilm,
+        EditorEffectType.matte,
+        EditorEffectType.bleachBypass,
+        EditorEffectType.crossProcess,
+        EditorEffectType.goldenHour,
+        EditorEffectType.moonlight,
+        EditorEffectType.silver,
+      ]);
+      expect(
+        lookTableAssets.keys,
+        unorderedEquals(looks.map((type) => type.customId)),
+      );
+      expect(lookTableAssets.values.toSet(), hasLength(looks.length));
+      for (final type in looks) {
+        expect(type.supportsOnBeat, isFalse, reason: type.name);
+        expect(type.isFlashing, isFalse, reason: type.name);
+      }
+    });
+
+    test("ships each look's table as the 1089x33 strip the renderers "
+        'read', () {
+      for (final asset in lookTableAssets.values) {
+        final bytes = File(asset).readAsBytesSync();
+        // The PNG's IHDR: width and height, 8-bit RGB.
+        final header = ByteData.sublistView(bytes, 16, 26);
+        expect(header.getUint32(0), 33 * 33, reason: asset);
+        expect(header.getUint32(4), 33, reason: asset);
+        expect(header.getUint8(8), 8, reason: asset);
+        expect(header.getUint8(9), 2, reason: asset);
+      }
     });
 
     test('lists the tape, film, screen and print looks under retro, the ones '

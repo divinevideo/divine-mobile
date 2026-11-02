@@ -81,6 +81,38 @@ const anaglyphVideoEffectId = 'divine.anaglyph';
 /// macOS.
 const risoVideoEffectId = 'divine.riso';
 
+/// The ids Divine's colour-graded looks are registered under with
+/// pro_video_editor, one per look, all drawn by the native `LookVideoEffect`
+/// on Android, iOS and macOS from the look's table in [lookTableAssets].
+const tealOrangeLookId = 'divine.look.tealOrange';
+const warmFilmLookId = 'divine.look.warmFilm';
+const slideFilmLookId = 'divine.look.slideFilm';
+const coolFilmLookId = 'divine.look.coolFilm';
+const matteLookId = 'divine.look.matte';
+const bleachBypassLookId = 'divine.look.bleachBypass';
+const crossProcessLookId = 'divine.look.crossProcess';
+const goldenHourLookId = 'divine.look.goldenHour';
+const moonlightLookId = 'divine.look.moonlight';
+const silverLookId = 'divine.look.silver';
+
+/// The 33x33x33 lookup table each look maps colours through, by look id.
+///
+/// `tools/generate_looks.dart` writes them. The native `LookVideoEffect`
+/// loads the same files under the same names, and the picker tile hands them
+/// to `shaders/look.frag`.
+const Map<String, String> lookTableAssets = {
+  tealOrangeLookId: 'assets/looks/teal_orange.png',
+  warmFilmLookId: 'assets/looks/warm_film.png',
+  slideFilmLookId: 'assets/looks/slide_film.png',
+  coolFilmLookId: 'assets/looks/cool_film.png',
+  matteLookId: 'assets/looks/matte.png',
+  bleachBypassLookId: 'assets/looks/bleach_bypass.png',
+  crossProcessLookId: 'assets/looks/cross_process.png',
+  goldenHourLookId: 'assets/looks/golden_hour.png',
+  moonlightLookId: 'assets/looks/moonlight.png',
+  silverLookId: 'assets/looks/silver.png',
+};
+
 /// A group of effects the effects picker lists together, by what they do to
 /// the picture; see [EditorEffectType.category]. In picker order.
 enum EditorEffectCategory {
@@ -100,7 +132,10 @@ enum EditorEffectCategory {
   motion,
 
   /// Things fall or float over the picture.
-  particles;
+  particles,
+
+  /// The colours are graded, as by a film stock or a colourist.
+  looks;
 
   /// The types listed under this category, in picker order.
   List<EditorEffectType> get types => [
@@ -224,6 +259,38 @@ class EditorEffectType {
   /// and slightly out of register.
   static const riso = EditorEffectType.custom(risoVideoEffectId);
 
+  /// Teal and orange: the blockbuster grade, teal shadows and greens, warm
+  /// skin and highlights.
+  static const tealOrange = EditorEffectType.custom(tealOrangeLookId);
+
+  /// Warm film: a soft, warm portrait film with muted greens.
+  static const warmFilm = EditorEffectType.custom(warmFilmLookId);
+
+  /// Slide film: a vivid, contrasty slide film with deep blues.
+  static const slideFilm = EditorEffectType.custom(slideFilmLookId);
+
+  /// Cool film: a clean, cool everyday film with emerald greens.
+  static const coolFilm = EditorEffectType.custom(coolFilmLookId);
+
+  /// Matte: faded, with lifted blacks and muted colours.
+  static const matte = EditorEffectType.custom(matteLookId);
+
+  /// Bleach bypass: cold, hard and silvery, with most colour drained.
+  static const bleachBypass = EditorEffectType.custom(bleachBypassLookId);
+
+  /// Cross process: blue shadows and yellow highlights, as slide film
+  /// developed as a negative.
+  static const crossProcess = EditorEffectType.custom(crossProcessLookId);
+
+  /// Golden hour: late warm sun, with golden highlights.
+  static const goldenHour = EditorEffectType.custom(goldenHourLookId);
+
+  /// Moonlight: day for night, dark and blue.
+  static const moonlight = EditorEffectType.custom(moonlightLookId);
+
+  /// Silver: black-and-white film with deep blacks and darker skies.
+  static const silver = EditorEffectType.custom(silverLookId);
+
   /// Every type the effects editor offers, in picker order.
   static final List<EditorEffectType> values = List.unmodifiable([
     for (final type in VideoEffectType.values) EditorEffectType.builtIn(type),
@@ -255,6 +322,16 @@ class EditorEffectType {
     eightBit,
     anaglyph,
     riso,
+    tealOrange,
+    warmFilm,
+    slideFilm,
+    coolFilm,
+    matte,
+    bleachBypass,
+    crossProcess,
+    goldenHour,
+    moonlight,
+    silver,
   ]);
 
   /// The built-in effect, or `null` for a custom one.
@@ -311,6 +388,8 @@ class EditorEffectType {
       bokehVideoEffectId ||
       firefliesVideoEffectId ||
       embersVideoEffectId => EditorEffectCategory.particles,
+      final id? when lookTableAssets.containsKey(id) =>
+        EditorEffectCategory.looks,
       _ => throw StateError('$this has no picker category'),
     },
   };
@@ -565,6 +644,21 @@ EditorEffectCategory _builtInVideoEffectCategory(VideoEffectType type) =>
       VideoEffectType.shake ||
       VideoEffectType.zoomPulse => EditorEffectCategory.motion,
     };
+
+/// [effects] with the looks after the other effects, each in its own order.
+///
+/// A look grades the finished picture, like a colour filter. It also keeps
+/// the grade out of the earlier frames an effect like Echo reads: those come
+/// unprocessed in the preview and in the iOS export, but in the Android
+/// export from the effect before it in the chain, so a look ahead of Echo
+/// would grade its trail on Android only. The preview and the export both
+/// order them this way; see `adjustVideoEffectsOf` for the same reasoning.
+List<CustomVideoEffect> looksLast(Iterable<CustomVideoEffect> effects) => [
+  for (final effect in effects)
+    if (!lookTableAssets.containsKey(effect.id)) effect,
+  for (final effect in effects)
+    if (lookTableAssets.containsKey(effect.id)) effect,
+];
 
 /// [effects] with their windows moved from the editor timeline onto the
 /// exported video, like [videoEffectsOnOutput] for built-in effects.

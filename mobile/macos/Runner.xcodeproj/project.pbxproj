@@ -46,6 +46,7 @@
 		71D5B9672C414D4DF83CCC58 /* EightBitVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */; };
 		E648F7BDCA3BBAC723D4FF76 /* AnaglyphVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */; };
 		BE5457F6518C15FBD7D67F84 /* RisoVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF08006D5B45BEC1469CADDF /* RisoVideoEffect.swift */; };
+		B917EE59D6D3D0A762EBE056 /* LookVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97BD6E9E1AB367CC54A6D082 /* LookVideoEffect.swift */; };
 		AD1A57E1C8E35A4FAB9D3D23 /* AdjustVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD1A57E1C8E35A4FAB9D3D22 /* AdjustVideoEffect.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		85EE05D0EF4411ECE02D06C9 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 53BB07D4E155845E5F56D875 /* Pods_Runner.framework */; };
@@ -119,6 +120,7 @@
 		5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EightBitVideoEffect.swift; path = ../ios/Runner/EightBitVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AnaglyphVideoEffect.swift; path = ../ios/Runner/AnaglyphVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		DF08006D5B45BEC1469CADDF /* RisoVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RisoVideoEffect.swift; path = ../ios/Runner/RisoVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		97BD6E9E1AB367CC54A6D082 /* LookVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LookVideoEffect.swift; path = ../ios/Runner/LookVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		AD1A57E1C8E35A4FAB9D3D22 /* AdjustVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AdjustVideoEffect.swift; path = ../ios/Runner/AdjustVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
@@ -240,6 +242,7 @@
 				5251575E4EB17C9E3B50C7F3 /* EightBitVideoEffect.swift */,
 				44A65A51122E2800D0638386 /* AnaglyphVideoEffect.swift */,
 				DF08006D5B45BEC1469CADDF /* RisoVideoEffect.swift */,
+				97BD6E9E1AB367CC54A6D082 /* LookVideoEffect.swift */,
 				AD1A57E1C8E35A4FAB9D3D22 /* AdjustVideoEffect.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
@@ -545,6 +548,7 @@
 				71D5B9672C414D4DF83CCC58 /* EightBitVideoEffect.swift in Sources */,
 				E648F7BDCA3BBAC723D4FF76 /* AnaglyphVideoEffect.swift in Sources */,
 				BE5457F6518C15FBD7D67F84 /* RisoVideoEffect.swift in Sources */,
+				B917EE59D6D3D0A762EBE056 /* LookVideoEffect.swift in Sources */,
 				AD1A57E1C8E35A4FAB9D3D23 /* AdjustVideoEffect.swift in Sources */,
 				2DD63C4A2E00A62100B40DED /* NativeCameraPlugin.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,

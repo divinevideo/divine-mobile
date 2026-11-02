@@ -2111,9 +2111,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// draws them on the preview (#9708), with their windows, and the beats of
   /// an effect on the beat, moved onto the player's timeline.
   ///
-  /// The Adjust sets' highlights, shadows, vibrance and sharpening come
-  /// last, as in the export (see `adjustVideoEffectsOf`); while the Adjust
-  /// editor is open its sliders stand in for them.
+  /// The looks come after the other effects, and the Adjust sets'
+  /// highlights, shadows, vibrance and sharpening last, as in the export
+  /// (see `looksLast` and `adjustVideoEffectsOf`); while the Adjust editor is
+  /// open its sliders stand in for them.
   void _syncFrameEffects() {
     final player = _videoPlayer;
     if (player == null || !mounted) return;
@@ -2125,7 +2126,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         context.read<VideoEditorMainBloc>().state.openSubEditor ==
         SubEditorType.tune;
     final effects = [
-      ...state.previewCustomEffects,
+      ...looksLast(state.previewCustomEffects),
       ...previewAdjustVideoEffects(
         applied:
             VideoEditorScope.of(

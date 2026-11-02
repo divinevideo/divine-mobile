@@ -9172,6 +9172,36 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorEffectRiso => 'Risografia';
 
   @override
+  String get videoEditorEffectTealOrange => 'Teal & Orange';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'Pellicola calda';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'Diapositiva';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'Pellicola fredda';
+
+  @override
+  String get videoEditorEffectMatte => 'Opaco';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'Bleach bypass';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'Cross process';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'Ora d\'oro';
+
+  @override
+  String get videoEditorEffectMoonlight => 'Chiaro di luna';
+
+  @override
+  String get videoEditorEffectSilver => 'Argento';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Retrò';
 
   @override
@@ -9188,6 +9218,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryParticles => 'Particelle';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'Look';
 
   @override
   String get videoEditorFilterCategoryNatural => 'Naturale';

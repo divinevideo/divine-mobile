@@ -6442,6 +6442,46 @@
   "@videoEditorEffectRiso": {
     "description": "Name of a video effect: the picture looks printed on a risograph, in grainy pink and blue ink on paper, slightly out of register. Keep Riso or use your language's word for risograph printing."
   },
+  "videoEditorEffectTealOrange": "Teal & Orange",
+  "@videoEditorEffectTealOrange": {
+    "description": "Name of a colour-graded look in the video effects picker: the blockbuster film grade, with teal (blue-green) shadows and greens, and warm orange skin and highlights. Keep the colour names short; \"& \" may become your language's \"and\"."
+  },
+  "videoEditorEffectWarmFilm": "Warm Film",
+  "@videoEditorEffectWarmFilm": {
+    "description": "Name of a colour-graded look in the video effects picker: the soft, warm colours of a portrait photo film, with muted greens. \"Film\" means photographic film, as in the Old Film effect."
+  },
+  "videoEditorEffectSlideFilm": "Slide Film",
+  "@videoEditorEffectSlideFilm": {
+    "description": "Name of a colour-graded look in the video effects picker: the vivid, contrasty colours of slide (reversal) photo film, with deep blue skies. Use your language's word for slide or reversal film."
+  },
+  "videoEditorEffectCoolFilm": "Cool Film",
+  "@videoEditorEffectCoolFilm": {
+    "description": "Name of a colour-graded look in the video effects picker: the clean, cool colours of an everyday photo film, with emerald greens. \"Cool\" means cool in colour temperature (bluish), the opposite of Warm Film."
+  },
+  "videoEditorEffectMatte": "Matte",
+  "@videoEditorEffectMatte": {
+    "description": "Name of a colour-graded look in the video effects picker: a soft faded look with lifted greyish blacks and muted colours, like a matte print."
+  },
+  "videoEditorEffectBleachBypass": "Bleach Bypass",
+  "@videoEditorEffectBleachBypass": {
+    "description": "Name of a colour-graded look in the video effects picker: cold, hard and silvery with most colour drained, after the film processing technique that skips the bleach step. Keep the English term where film people use it."
+  },
+  "videoEditorEffectCrossProcess": "Cross Process",
+  "@videoEditorEffectCrossProcess": {
+    "description": "Name of a colour-graded look in the video effects picker: blue shadows and yellow highlights, after the photo technique of developing slide film as a negative. Keep the English term where photographers use it."
+  },
+  "videoEditorEffectGoldenHour": "Golden Hour",
+  "@videoEditorEffectGoldenHour": {
+    "description": "Name of a colour-graded look in the video effects picker: the warm golden light of the hour before sunset."
+  },
+  "videoEditorEffectMoonlight": "Moonlight",
+  "@videoEditorEffectMoonlight": {
+    "description": "Name of a colour-graded look in the video effects picker: the picture made dark and blue, as if shot at night by moonlight."
+  },
+  "videoEditorEffectSilver": "Silver",
+  "@videoEditorEffectSilver": {
+    "description": "Name of a colour-graded look in the video effects picker: black-and-white photo film with deep blacks and darker skies. Silver refers to silver-based black-and-white film, not to the colour."
+  },
   "videoEditorEffectCategoryRetro": "Retro",
   "@videoEditorEffectCategoryRetro": {
     "description": "Name of a group in the video effects picker: effects that look like old media, such as VHS tape, old film or an old TV."
@@ -6465,6 +6505,10 @@
   "videoEditorEffectCategoryParticles": "Particles",
   "@videoEditorEffectCategoryParticles": {
     "description": "Name of a group in the video effects picker: effects where snow, confetti, hearts or sparkles fall or float over the picture."
+  },
+  "videoEditorEffectCategoryLooks": "Looks",
+  "@videoEditorEffectCategoryLooks": {
+    "description": "Name of a group in the video effects picker: colour-graded looks that change the colours of the picture the way a film stock or a colourist would, such as Teal & Orange or Warm Film."
   },
   "videoEditorFilterCategoryNatural": "Natural",
   "@videoEditorFilterCategoryNatural": {

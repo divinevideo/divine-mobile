@@ -8538,6 +8538,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectRiso => '孔版印刷';
 
   @override
+  String get videoEditorEffectTealOrange => '青橙';
+
+  @override
+  String get videoEditorEffectWarmFilm => '暖调胶片';
+
+  @override
+  String get videoEditorEffectSlideFilm => '反转片';
+
+  @override
+  String get videoEditorEffectCoolFilm => '冷调胶片';
+
+  @override
+  String get videoEditorEffectMatte => '哑光';
+
+  @override
+  String get videoEditorEffectBleachBypass => '留银';
+
+  @override
+  String get videoEditorEffectCrossProcess => '交叉冲印';
+
+  @override
+  String get videoEditorEffectGoldenHour => '黄金时刻';
+
+  @override
+  String get videoEditorEffectMoonlight => '月光';
+
+  @override
+  String get videoEditorEffectSilver => '银盐黑白';
+
+  @override
   String get videoEditorEffectCategoryRetro => '复古';
 
   @override
@@ -8554,6 +8584,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryParticles => '粒子';
+
+  @override
+  String get videoEditorEffectCategoryLooks => '调色';
 
   @override
   String get videoEditorFilterCategoryNatural => '自然';
