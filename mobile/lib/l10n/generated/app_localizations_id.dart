@@ -2100,6 +2100,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoStickerQuestionSignIn => 'Masuk untuk menjawab.';
 
   @override
+  String get videoStickerQuestionUnavailable =>
+      'Menjawab pertanyaan tidak tersedia untuk akunmu.';
+
+  @override
   String get videoStickerQuestionAnswerTitle => 'Jawab';
 
   @override

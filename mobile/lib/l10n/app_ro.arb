@@ -46,6 +46,7 @@
   "videoStickerRepliesCount": "{count, plural, =0{Încă niciun răspuns} =1{{count} răspuns} few{{count} răspunsuri} other{{count} de răspunsuri}}",
   "videoStickerRepliesSemanticLabel": "{count, plural, =0{Răspunsuri video, încă niciunul} =1{Vezi {count} răspuns video} few{Vezi {count} răspunsuri video} other{Vezi {count} de răspunsuri video}}",
   "videoStickerQuestionSignIn": "Conectează-te ca să răspunzi.",
+  "videoStickerQuestionUnavailable": "Răspunsul la întrebări nu e disponibil pentru contul tău.",
   "videoStickerQuestionAnswerTitle": "Răspunde",
   "videoStickerQuestionAnswerFieldLabel": "Răspunsul tău",
   "videoStickerQuestionAnswerPrivacyNote": "Doar {name} vede răspunsul tău. L-ar putea arăta într-un videoclip, fără numele tău.",

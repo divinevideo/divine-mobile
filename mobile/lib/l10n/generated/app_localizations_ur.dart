@@ -2171,6 +2171,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoStickerQuestionSignIn => 'جواب دینے کے لیے سائن ان کریں۔';
 
   @override
+  String get videoStickerQuestionUnavailable =>
+      'آپ کے اکاؤنٹ کے لیے سوالوں کے جواب دینا دستیاب نہیں ہے۔';
+
+  @override
   String get videoStickerQuestionAnswerTitle => 'جواب دیں';
 
   @override

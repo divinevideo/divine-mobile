@@ -2147,6 +2147,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoStickerQuestionSignIn => 'Log masuk untuk menjawab.';
 
   @override
+  String get videoStickerQuestionUnavailable =>
+      'Menjawab soalan tidak tersedia untuk akaun anda.';
+
+  @override
   String get videoStickerQuestionAnswerTitle => 'Jawab';
 
   @override

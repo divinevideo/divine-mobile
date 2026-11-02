@@ -2122,6 +2122,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoStickerQuestionSignIn => 'ለመመለስ ይግቡ።';
 
   @override
+  String get videoStickerQuestionUnavailable => 'ጥያቄዎችን መመለስ ለመለያዎ አይገኝም።';
+
+  @override
   String get videoStickerQuestionAnswerTitle => 'መልስ';
 
   @override

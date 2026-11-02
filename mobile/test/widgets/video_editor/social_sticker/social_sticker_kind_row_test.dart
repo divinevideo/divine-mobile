@@ -16,6 +16,7 @@ void main() {
     Future<List<Object?>> pump(
       WidgetTester tester, {
       bool hasInteractiveCard = false,
+      bool canAskQuestion = true,
     }) async {
       final popped = <Object?>[];
       final router = GoRouter(
@@ -37,6 +38,7 @@ void main() {
                 builder: (_, _) => Scaffold(
                   body: InteractiveStickerKindRow(
                     hasInteractiveCard: hasInteractiveCard,
+                    canAskQuestion: canAskQuestion,
                   ),
                 ),
               ),
@@ -97,6 +99,19 @@ void main() {
             l10n.videoEditorSocialStickerAddYours,
           ]),
         );
+      });
+
+      testWidgets('no question for an account that may not ask one', (
+        tester,
+      ) async {
+        await pump(tester, canAskQuestion: false);
+
+        final labels = tester
+            .widgetList<StickerKindTile>(find.byType(StickerKindTile))
+            .map((tile) => tile.label)
+            .toList();
+        expect(labels, contains(l10n.videoEditorSocialStickerSlider));
+        expect(labels, isNot(contains(l10n.videoEditorSocialStickerQuestion)));
       });
 
       testWidgets('no interactive card once the video has one', (

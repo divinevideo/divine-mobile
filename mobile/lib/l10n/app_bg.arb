@@ -46,6 +46,7 @@
   "videoStickerRepliesCount": "{count, plural, =0{Още няма отговори} =1{{count} отговор} other{{count} отговора}}",
   "videoStickerRepliesSemanticLabel": "{count, plural, =0{Видео отговори, още няма} =1{Гледай {count} видео отговор} other{Гледай {count} видео отговора}}",
   "videoStickerQuestionSignIn": "Влез в профила си, за да отговориш.",
+  "videoStickerQuestionUnavailable": "Отговарянето на въпроси не е достъпно за профила ти.",
   "videoStickerQuestionAnswerTitle": "Отговор",
   "videoStickerQuestionAnswerFieldLabel": "Твоят отговор",
   "videoStickerQuestionAnswerPrivacyNote": "Само {name} вижда отговора ти. Може да го сподели във видео, без името ти.",

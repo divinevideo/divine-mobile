@@ -2202,6 +2202,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Влез в профила си, за да отговориш.';
 
   @override
+  String get videoStickerQuestionUnavailable =>
+      'Отговарянето на въпроси не е достъпно за профила ти.';
+
+  @override
   String get videoStickerQuestionAnswerTitle => 'Отговор';
 
   @override

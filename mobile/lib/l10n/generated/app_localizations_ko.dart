@@ -2013,6 +2013,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoStickerQuestionSignIn => '로그인해야 답할 수 있어요.';
 
   @override
+  String get videoStickerQuestionUnavailable => '이 계정에서는 질문에 답할 수 없어요.';
+
+  @override
   String get videoStickerQuestionAnswerTitle => '답하기';
 
   @override

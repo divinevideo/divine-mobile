@@ -46,6 +46,7 @@
   "videoStickerRepliesCount": "{count, plural, =0{아직 답글이 없어요} =1{답글 {count}개} other{답글 {count}개}}",
   "videoStickerRepliesSemanticLabel": "{count, plural, =0{영상 답글, 아직 없음} =1{영상 답글 {count}개 보기} other{영상 답글 {count}개 보기}}",
   "videoStickerQuestionSignIn": "로그인해야 답할 수 있어요.",
+  "videoStickerQuestionUnavailable": "이 계정에서는 질문에 답할 수 없어요.",
   "videoStickerQuestionAnswerTitle": "답하기",
   "videoStickerQuestionAnswerFieldLabel": "내 답변",
   "videoStickerQuestionAnswerPrivacyNote": "{name}님만 내 답변을 볼 수 있어요. 내 이름 없이 영상에서 공유될 수도 있어요.",

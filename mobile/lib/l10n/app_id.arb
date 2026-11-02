@@ -46,6 +46,7 @@
   "videoStickerRepliesCount": "{count, plural, =0{Belum ada balasan} =1{{count} balasan} other{{count} balasan}}",
   "videoStickerRepliesSemanticLabel": "{count, plural, =0{Balasan video, belum ada} =1{Tonton {count} balasan video} other{Tonton {count} balasan video}}",
   "videoStickerQuestionSignIn": "Masuk untuk menjawab.",
+  "videoStickerQuestionUnavailable": "Menjawab pertanyaan tidak tersedia untuk akunmu.",
   "videoStickerQuestionAnswerTitle": "Jawab",
   "videoStickerQuestionAnswerFieldLabel": "Jawabanmu",
   "videoStickerQuestionAnswerPrivacyNote": "Hanya {name} yang melihat jawabanmu. Mereka mungkin membagikannya di video, tanpa namamu.",

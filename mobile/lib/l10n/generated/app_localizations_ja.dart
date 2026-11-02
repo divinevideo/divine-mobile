@@ -2002,6 +2002,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoStickerQuestionSignIn => '回答するにはログインしてください。';
 
   @override
+  String get videoStickerQuestionUnavailable => 'このアカウントでは質問に回答できません。';
+
+  @override
   String get videoStickerQuestionAnswerTitle => '回答';
 
   @override

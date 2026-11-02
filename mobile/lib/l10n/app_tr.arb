@@ -46,6 +46,7 @@
   "videoStickerRepliesCount": "{count, plural, =0{Henüz yanıt yok} =1{{count} yanıt} other{{count} yanıt}}",
   "videoStickerRepliesSemanticLabel": "{count, plural, =0{Video yanıtları, henüz yok} =1{{count} video yanıtını izle} other{{count} video yanıtını izle}}",
   "videoStickerQuestionSignIn": "Yanıtlamak için giriş yap.",
+  "videoStickerQuestionUnavailable": "Hesabın için soruları yanıtlama kullanılamıyor.",
   "videoStickerQuestionAnswerTitle": "Yanıtla",
   "videoStickerQuestionAnswerFieldLabel": "Yanıtın",
   "videoStickerQuestionAnswerPrivacyNote": "Yanıtını yalnızca {name} görür. Bunu bir videoda, adın olmadan paylaşabilir.",

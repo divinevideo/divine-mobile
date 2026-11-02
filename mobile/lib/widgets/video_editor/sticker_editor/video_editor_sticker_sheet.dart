@@ -27,6 +27,7 @@ class VideoEditorStickerSheet extends StatelessWidget {
     this.soundCredit,
     this.reply,
     this.hasInteractiveCard = false,
+    this.canAskQuestion = true,
   });
 
   final ScrollController? scrollController;
@@ -44,6 +45,10 @@ class VideoEditorStickerSheet extends StatelessWidget {
   /// slider, question, Add yours or replies, which leaves them all out of
   /// the interactive stickers: a video carries one.
   final bool hasInteractiveCard;
+
+  /// Whether the account may ask a question, whose answers come as private
+  /// messages; see [InteractiveStickerKindRow.canAskQuestion].
+  final bool canAskQuestion;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +107,7 @@ class VideoEditorStickerSheet extends StatelessWidget {
             child: InteractiveStickerKindRow(
               reply: reply,
               hasInteractiveCard: hasInteractiveCard,
+              canAskQuestion: canAskQuestion,
             ),
           ),
 

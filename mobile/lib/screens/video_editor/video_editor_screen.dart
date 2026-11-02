@@ -54,6 +54,7 @@ import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
@@ -824,6 +825,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
           soundCredit: soundCredits.firstOrNull,
           reply: _replySticker,
           hasInteractiveCard: _hasInteractiveCard,
+          // A protected minor messages Divine alone, so answers could never
+          // reach them.
+          canAskQuestion: !ref.read(isDmRestrictedProvider),
         ),
       ),
     );

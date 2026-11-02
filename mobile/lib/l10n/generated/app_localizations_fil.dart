@@ -2169,6 +2169,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoStickerQuestionSignIn => 'Mag-sign in para sumagot.';
 
   @override
+  String get videoStickerQuestionUnavailable =>
+      'Hindi available sa account mo ang pagsagot sa mga tanong.';
+
+  @override
   String get videoStickerQuestionAnswerTitle => 'Sumagot';
 
   @override

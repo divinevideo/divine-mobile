@@ -2107,6 +2107,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoStickerQuestionSignIn => 'Yanıtlamak için giriş yap.';
 
   @override
+  String get videoStickerQuestionUnavailable =>
+      'Hesabın için soruları yanıtlama kullanılamıyor.';
+
+  @override
   String get videoStickerQuestionAnswerTitle => 'Yanıtla';
 
   @override

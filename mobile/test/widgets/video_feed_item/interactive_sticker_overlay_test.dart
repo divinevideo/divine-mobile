@@ -16,6 +16,7 @@ import 'package:openvine/providers/add_yours_context_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
@@ -79,9 +80,11 @@ void main() {
     late int interactions;
     late AddYoursContext? addYoursWhileOpen;
     late Map<String, UserProfile> profiles;
+    late bool isDmRestricted;
 
     setUp(() {
       profiles = {};
+      isDmRestricted = false;
       repository = _MockVideoResponsesRepository();
       filter = (videos) => videos;
       pushed = [];
@@ -174,6 +177,7 @@ void main() {
               (videos) => filter(videos),
             ),
             feedRepositoryProvider.overrideWithValue(_MockFeedRepository()),
+            isDmRestrictedProvider.overrideWithValue(isDmRestricted),
             // Read for the avatar of a response that came without one.
             for (final n in [1, 2, 3])
               fetchUserProfileProvider(
@@ -365,6 +369,24 @@ void main() {
 
         expect(
           find.text(l10n(tester).videoStickerQuestionSignIn),
+          findsOneWidget,
+        );
+        expect(pushed, isEmpty);
+      });
+
+      testWidgets('tells a protected minor answering is not available', (
+        tester,
+      ) async {
+        isDmRestricted = true;
+        await pump(tester, question);
+
+        await tester.tap(
+          find.text(l10n(tester).videoStickerQuestionAnswerHint),
+        );
+        await tester.pump();
+
+        expect(
+          find.text(l10n(tester).videoStickerQuestionUnavailable),
           findsOneWidget,
         );
         expect(pushed, isEmpty);

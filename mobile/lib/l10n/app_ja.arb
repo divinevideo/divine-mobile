@@ -46,6 +46,7 @@
   "videoStickerRepliesCount": "{count, plural, =0{まだ返信はありません} =1{返信{count}件} other{返信{count}件}}",
   "videoStickerRepliesSemanticLabel": "{count, plural, =0{動画の返信、まだありません} =1{動画の返信{count}件を見る} other{動画の返信{count}件を見る}}",
   "videoStickerQuestionSignIn": "回答するにはログインしてください。",
+  "videoStickerQuestionUnavailable": "このアカウントでは質問に回答できません。",
   "videoStickerQuestionAnswerTitle": "回答",
   "videoStickerQuestionAnswerFieldLabel": "あなたの回答",
   "videoStickerQuestionAnswerPrivacyNote": "回答は{name}さんにだけ表示されます。あなたの名前を伏せて、動画で紹介されることがあります。",

@@ -2136,6 +2136,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoStickerQuestionSignIn => 'Đăng nhập để trả lời.';
 
   @override
+  String get videoStickerQuestionUnavailable =>
+      'Tài khoản của bạn không thể trả lời câu hỏi.';
+
+  @override
   String get videoStickerQuestionAnswerTitle => 'Trả lời';
 
   @override

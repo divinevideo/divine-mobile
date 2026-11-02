@@ -46,6 +46,7 @@
   "videoStickerRepliesCount": "{count, plural, =0{Nog geen reacties} =1{{count} reactie} other{{count} reacties}}",
   "videoStickerRepliesSemanticLabel": "{count, plural, =0{Videoreacties, nog geen} =1{Bekijk {count} videoreactie} other{Bekijk {count} videoreacties}}",
   "videoStickerQuestionSignIn": "Log in om te antwoorden.",
+  "videoStickerQuestionUnavailable": "Vragen beantwoorden is niet beschikbaar voor je account.",
   "videoStickerQuestionAnswerTitle": "Antwoorden",
   "videoStickerQuestionAnswerFieldLabel": "Jouw antwoord",
   "videoStickerQuestionAnswerPrivacyNote": "Alleen {name} ziet je antwoord. Misschien wordt het gedeeld in een video, zonder je naam.",

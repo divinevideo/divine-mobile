@@ -2188,6 +2188,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoStickerQuestionSignIn => 'يلزم تسجيل الدخول للإجابة.';
 
   @override
+  String get videoStickerQuestionUnavailable =>
+      'الإجابة عن الأسئلة غير متاحة لحسابك.';
+
+  @override
   String get videoStickerQuestionAnswerTitle => 'الإجابة';
 
   @override

@@ -46,6 +46,7 @@
   "videoStickerRepliesCount": "{count, plural, =0{لا ردود بعد} =1{رد واحد} =2{ردّان} few{{count} ردود} many{{count} ردًا} other{{count} رد}}",
   "videoStickerRepliesSemanticLabel": "{count, plural, =0{ردود الفيديو، لا شيء بعد} =1{مشاهدة رد واحد بالفيديو} =2{مشاهدة ردّين بالفيديو} few{مشاهدة {count} ردود بالفيديو} many{مشاهدة {count} ردًا بالفيديو} other{مشاهدة {count} رد بالفيديو}}",
   "videoStickerQuestionSignIn": "يلزم تسجيل الدخول للإجابة.",
+  "videoStickerQuestionUnavailable": "الإجابة عن الأسئلة غير متاحة لحسابك.",
   "videoStickerQuestionAnswerTitle": "الإجابة",
   "videoStickerQuestionAnswerFieldLabel": "إجابتك",
   "videoStickerQuestionAnswerPrivacyNote": "لا يرى إجابتك إلا {name}. قد تُشارَك في فيديو، دون ذكر اسمك.",

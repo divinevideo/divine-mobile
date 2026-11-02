@@ -2166,6 +2166,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoStickerQuestionSignIn => 'Logga in för att svara.';
 
   @override
+  String get videoStickerQuestionUnavailable =>
+      'Att svara på frågor är inte tillgängligt för ditt konto.';
+
+  @override
   String get videoStickerQuestionAnswerTitle => 'Svara';
 
   @override

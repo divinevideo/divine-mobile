@@ -3607,6 +3607,12 @@ abstract class AppLocalizations {
   /// **'Sign in to answer.'**
   String get videoStickerQuestionSignIn;
 
+  /// Snackbar when an account that may message only Divine, a protected minor, taps a question sticker on a video: its answers go as private messages, which it cannot send.
+  ///
+  /// In en, this message translates to:
+  /// **'Answering questions isn\'t available for your account.'**
+  String get videoStickerQuestionUnavailable;
+
   /// Title of the full-screen page where a viewer answers a question sticker.
   ///
   /// In en, this message translates to:

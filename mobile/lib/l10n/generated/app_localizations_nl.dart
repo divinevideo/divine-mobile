@@ -2183,6 +2183,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoStickerQuestionSignIn => 'Log in om te antwoorden.';
 
   @override
+  String get videoStickerQuestionUnavailable =>
+      'Vragen beantwoorden is niet beschikbaar voor je account.';
+
+  @override
   String get videoStickerQuestionAnswerTitle => 'Antwoorden';
 
   @override

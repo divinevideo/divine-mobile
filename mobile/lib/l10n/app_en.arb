@@ -1516,6 +1516,10 @@
   "@videoStickerQuestionSignIn": {
     "description": "Snackbar when someone who is not signed in taps a question sticker on a video."
   },
+  "videoStickerQuestionUnavailable": "Answering questions isn't available for your account.",
+  "@videoStickerQuestionUnavailable": {
+    "description": "Snackbar when an account that may message only Divine, a protected minor, taps a question sticker on a video: its answers go as private messages, which it cannot send."
+  },
   "videoStickerQuestionAnswerTitle": "Answer",
   "@videoStickerQuestionAnswerTitle": {
     "description": "Title of the full-screen page where a viewer answers a question sticker."

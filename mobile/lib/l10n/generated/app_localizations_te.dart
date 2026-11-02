@@ -2217,6 +2217,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'సమాధానం ఇవ్వడానికి సైన్ ఇన్ చేయండి.';
 
   @override
+  String get videoStickerQuestionUnavailable =>
+      'మీ ఖాతాకు ప్రశ్నలకు సమాధానం ఇవ్వడం అందుబాటులో లేదు.';
+
+  @override
   String get videoStickerQuestionAnswerTitle => 'సమాధానం';
 
   @override

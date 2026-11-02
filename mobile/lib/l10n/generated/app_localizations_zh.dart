@@ -2020,6 +2020,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoStickerQuestionSignIn => '登录后才能回答。';
 
   @override
+  String get videoStickerQuestionUnavailable => '你的账号无法回答问题。';
+
+  @override
   String get videoStickerQuestionAnswerTitle => '回答';
 
   @override

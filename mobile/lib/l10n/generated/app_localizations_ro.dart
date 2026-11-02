@@ -2233,6 +2233,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoStickerQuestionSignIn => 'Conectează-te ca să răspunzi.';
 
   @override
+  String get videoStickerQuestionUnavailable =>
+      'Răspunsul la întrebări nu e disponibil pentru contul tău.';
+
+  @override
   String get videoStickerQuestionAnswerTitle => 'Răspunde';
 
   @override

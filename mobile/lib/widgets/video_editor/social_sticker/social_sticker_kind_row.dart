@@ -52,11 +52,13 @@ class SocialStickerKindRow extends StatelessWidget {
 /// reply is offered only with a [reply] to show, which a video recorded as a
 /// reply has. The interactive cards, replies, Add yours, a poll, quiz, slider
 /// and question, are offered only while the video has none of them,
-/// [hasInteractiveCard] being false: a video carries one.
+/// [hasInteractiveCard] being false: a video carries one. The question is
+/// offered only when [canAskQuestion].
 class InteractiveStickerKindRow extends StatelessWidget {
   const InteractiveStickerKindRow({
     this.reply,
     this.hasInteractiveCard = false,
+    this.canAskQuestion = true,
     super.key,
   });
 
@@ -66,6 +68,11 @@ class InteractiveStickerKindRow extends StatelessWidget {
 
   /// Whether the video has an interactive card already.
   final bool hasInteractiveCard;
+
+  /// Whether the account may ask a question: its answers come as private
+  /// messages, which an account restricted to messaging Divine alone could
+  /// never receive.
+  final bool canAskQuestion;
 
   @override
   Widget build(BuildContext context) {
@@ -112,10 +119,11 @@ class InteractiveStickerKindRow extends StatelessWidget {
         pollQuestion: l10n.videoEditorSocialStickerSliderSampleQuestion,
         sliderEmoji: '😋',
       ),
-      SocialStickerData.interactive(
-        SocialStickerKind.question,
-        prompt: l10n.videoEditorSocialStickerQuestionSample,
-      ),
+      if (canAskQuestion)
+        SocialStickerData.interactive(
+          SocialStickerKind.question,
+          prompt: l10n.videoEditorSocialStickerQuestionSample,
+        ),
     ];
     return _SampleRow(
       samples: [

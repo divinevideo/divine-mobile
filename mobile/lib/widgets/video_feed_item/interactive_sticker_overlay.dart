@@ -15,6 +15,7 @@ import 'package:openvine/providers/add_yours_context_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/interactive_sticker_routes.dart';
@@ -66,7 +67,11 @@ class InteractiveStickerOverlay extends ConsumerWidget {
             ? null
             : () {
                 onInteraction?.call();
-                _answer(context, isSignedIn: viewer != null);
+                _answer(
+                  context,
+                  isSignedIn: viewer != null,
+                  isDmRestricted: ref.read(isDmRestrictedProvider),
+                );
               },
       );
     }
@@ -103,9 +108,19 @@ class InteractiveStickerOverlay extends ConsumerWidget {
     );
   }
 
-  void _answer(BuildContext context, {required bool isSignedIn}) {
+  void _answer(
+    BuildContext context, {
+    required bool isSignedIn,
+    required bool isDmRestricted,
+  }) {
     if (!isSignedIn) {
       _showSnackbar(context, context.l10n.videoStickerQuestionSignIn);
+      return;
+    }
+    // A protected minor messages Divine alone, so an answer could never be
+    // sent.
+    if (isDmRestricted) {
+      _showSnackbar(context, context.l10n.videoStickerQuestionUnavailable);
       return;
     }
     final location = QuestionAnswerRouteData(

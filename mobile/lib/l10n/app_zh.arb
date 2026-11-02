@@ -46,6 +46,7 @@
   "videoStickerRepliesCount": "{count, plural, =0{还没有回复} =1{{count} 条回复} other{{count} 条回复}}",
   "videoStickerRepliesSemanticLabel": "{count, plural, =0{视频回复，暂无} =1{观看 {count} 条视频回复} other{观看 {count} 条视频回复}}",
   "videoStickerQuestionSignIn": "登录后才能回答。",
+  "videoStickerQuestionUnavailable": "你的账号无法回答问题。",
   "videoStickerQuestionAnswerTitle": "回答",
   "videoStickerQuestionAnswerFieldLabel": "你的回答",
   "videoStickerQuestionAnswerPrivacyNote": "只有 {name} 能看到你的回答。对方可能会在视频里分享它，但不会显示你的名字。",

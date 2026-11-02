@@ -46,6 +46,7 @@
   "videoStickerRepliesCount": "{count, plural, =0{ابھی کوئی جواب نہیں} =1{{count} جواب} other{{count} جوابات}}",
   "videoStickerRepliesSemanticLabel": "{count, plural, =0{ویڈیو جوابات، ابھی کوئی نہیں} =1{{count} ویڈیو جواب دیکھیں} other{{count} ویڈیو جوابات دیکھیں}}",
   "videoStickerQuestionSignIn": "جواب دینے کے لیے سائن ان کریں۔",
+  "videoStickerQuestionUnavailable": "آپ کے اکاؤنٹ کے لیے سوالوں کے جواب دینا دستیاب نہیں ہے۔",
   "videoStickerQuestionAnswerTitle": "جواب دیں",
   "videoStickerQuestionAnswerFieldLabel": "آپ کا جواب",
   "videoStickerQuestionAnswerPrivacyNote": "آپ کا جواب صرف {name} دیکھ سکتے ہیں۔ وہ اسے کسی ویڈیو میں، آپ کے نام کے بغیر، شیئر کر سکتے ہیں۔",

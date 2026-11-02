@@ -46,6 +46,7 @@
   "videoStickerRepliesCount": "{count, plural, =0{Noch keine Antworten} =1{{count} Antwort} other{{count} Antworten}}",
   "videoStickerRepliesSemanticLabel": "{count, plural, =0{Video-Antworten, noch keine} =1{{count} Video-Antwort ansehen} other{{count} Video-Antworten ansehen}}",
   "videoStickerQuestionSignIn": "Melde dich an, um zu antworten.",
+  "videoStickerQuestionUnavailable": "Fragen beantworten ist für dein Konto nicht verfügbar.",
   "videoStickerQuestionAnswerTitle": "Antworten",
   "videoStickerQuestionAnswerFieldLabel": "Deine Antwort",
   "videoStickerQuestionAnswerPrivacyNote": "Nur {name} sieht deine Antwort. Vielleicht taucht sie in einem Video auf, aber ohne deinen Namen.",

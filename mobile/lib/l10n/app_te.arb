@@ -46,6 +46,7 @@
   "videoStickerRepliesCount": "{count, plural, =0{ఇంకా ప్రత్యుత్తరాలు లేవు} =1{{count} ప్రత్యుత్తరం} other{{count} ప్రత్యుత్తరాలు}}",
   "videoStickerRepliesSemanticLabel": "{count, plural, =0{వీడియో ప్రత్యుత్తరాలు, ఇంకా ఏవీ లేవు} =1{{count} వీడియో ప్రత్యుత్తరం చూడండి} other{{count} వీడియో ప్రత్యుత్తరాలు చూడండి}}",
   "videoStickerQuestionSignIn": "సమాధానం ఇవ్వడానికి సైన్ ఇన్ చేయండి.",
+  "videoStickerQuestionUnavailable": "మీ ఖాతాకు ప్రశ్నలకు సమాధానం ఇవ్వడం అందుబాటులో లేదు.",
   "videoStickerQuestionAnswerTitle": "సమాధానం",
   "videoStickerQuestionAnswerFieldLabel": "మీ సమాధానం",
   "videoStickerQuestionAnswerPrivacyNote": "మీ సమాధానం {name}కి మాత్రమే కనిపిస్తుంది. వారు దాన్ని మీ పేరు లేకుండా ఒక వీడియోలో పంచుకోవచ్చు.",

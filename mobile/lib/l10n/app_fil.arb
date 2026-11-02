@@ -46,6 +46,7 @@
   "videoStickerRepliesCount": "{count, plural, =0{Wala pang reply} =1{{count} reply} other{{count} reply}}",
   "videoStickerRepliesSemanticLabel": "{count, plural, =0{Mga video reply, wala pa} =1{Panoorin ang {count} video reply} other{Panoorin ang {count} video reply}}",
   "videoStickerQuestionSignIn": "Mag-sign in para sumagot.",
+  "videoStickerQuestionUnavailable": "Hindi available sa account mo ang pagsagot sa mga tanong.",
   "videoStickerQuestionAnswerTitle": "Sumagot",
   "videoStickerQuestionAnswerFieldLabel": "Sagot mo",
   "videoStickerQuestionAnswerPrivacyNote": "Si {name} lang ang makakakita ng sagot mo. Puwede nila itong i-share sa isang video, nang wala ang pangalan mo.",

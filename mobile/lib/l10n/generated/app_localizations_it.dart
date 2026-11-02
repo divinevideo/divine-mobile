@@ -2210,6 +2210,10 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoStickerQuestionSignIn => 'Accedi per rispondere.';
 
   @override
+  String get videoStickerQuestionUnavailable =>
+      'Rispondere alle domande non è disponibile per il tuo account.';
+
+  @override
   String get videoStickerQuestionAnswerTitle => 'Rispondi';
 
   @override
