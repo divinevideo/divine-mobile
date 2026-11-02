@@ -81,13 +81,16 @@ class _Client {
 }
 
 class _Proxy {
-  _Proxy(this.process, this.port, this.events);
+  _Proxy(this.process, this.port, this.events, this.frames);
 
   final Process process;
   final int port;
 
   /// Every `event` line the proxy has logged so far.
   final List<Map<String, Object?>> events;
+
+  /// Every frame line the proxy has logged so far.
+  final List<Map<String, Object?>> frames;
 
   List<Map<String, Object?>> eventsNamed(String name) =>
       events.where((e) => e['event'] == name).toList();
@@ -134,10 +137,12 @@ Future<_Proxy> _startProxy(int upstreamPort, List<String> flags) async {
   ]);
   final listening = Completer<int>();
   final events = <Map<String, Object?>>[];
+  final frames = <Map<String, Object?>>[];
   process.stdout.transform(utf8.decoder).transform(const LineSplitter()).listen(
     (line) {
       final entry = jsonDecode(line) as Map<String, Object?>;
       if (entry.containsKey('event')) events.add(entry);
+      if (entry.containsKey('dir')) frames.add(entry);
       if (entry['event'] == 'listening' && !listening.isCompleted) {
         listening.complete(entry['port']! as int);
       }
@@ -145,7 +150,7 @@ Future<_Proxy> _startProxy(int upstreamPort, List<String> flags) async {
   );
   unawaited(process.stderr.drain<void>());
   final port = await listening.future.timeout(const Duration(seconds: 15));
-  return _Proxy(process, port, events);
+  return _Proxy(process, port, events, frames);
 }
 
 Future<void> main() async {
@@ -562,6 +567,39 @@ Future<void> main() async {
       _expect(!client.done, 'a half-open socket should not hear the close');
     },
   );
+
+  await scenario('numbers each connection in the order it opens', [], (
+    proxy,
+  ) async {
+    final first = await proxy.connect();
+    first.send(['REQ', 's1', <String, Object?>{}]);
+    _expect(
+      await _within(() => first.of('EOSE').isNotEmpty),
+      'the first connection should be answered',
+    );
+    final second = await proxy.connect();
+    second.send(['REQ', 's2', <String, Object?>{}]);
+    _expect(
+      await _within(() => second.of('EOSE').isNotEmpty),
+      'the second connection should be answered',
+    );
+    final numbers = proxy
+        .eventsNamed('client-connected')
+        .map((e) => e['conn'])
+        .toList();
+    _expect(
+      numbers.length == 2 && numbers[0] == 1 && numbers[1] == 2,
+      'connections should be numbered 1 and 2, got $numbers',
+    );
+    final frames = proxy.frames
+        .where((f) => f['type'] == 'REQ')
+        .map((f) => f['conn'])
+        .toList();
+    _expect(
+      frames.length == 2 && frames[0] == 1 && frames[1] == 2,
+      'each frame should carry its connection, got $frames',
+    );
+  });
 
   await scenario(
     'a close from the relay reaches a client that is not stalled',

@@ -52,7 +52,9 @@
 //   --bind-all              listen on every interface (a phone on the LAN), not just loopback
 //   --max-seconds S         exit after S seconds (default 1800) so it cannot outlive the session
 //
-// stdout: one JSON object per frame {t, dir, type, bytes, action, frame}.
+// stdout: one JSON object per frame {t, conn, dir, type, bytes, action, frame},
+// and per event {t, conn, event, ...}. conn numbers the WebSocket connections in
+// the order they open: an app can hold several to one relay.
 // Frames are logged whole: a cut frame can cut an event id or pubkey.
 import 'dart:async';
 import 'dart:convert';
@@ -201,6 +203,8 @@ Future<void> main(List<String> args) async {
     exit(0);
   });
 
+  var connections = 0;
+
   Future<void> serve(HttpRequest request) async {
     if (!WebSocketTransformer.isUpgradeRequest(request)) {
       // Relay information document (NIP-11) and anything else over plain HTTP.
@@ -214,6 +218,10 @@ Future<void> main(List<String> args) async {
       await request.response.close();
       return;
     }
+    // Numbered in the order the sockets open, so a log from an app that holds
+    // several connections to one relay says which one each line belongs to.
+    final conn = ++connections;
+    void log(Map<String, Object?> entry) => _log({'conn': conn, ...entry});
     // Compression off on both legs: some clients reject the deflate parameters
     // dart:io offers, and the proxy has to read every frame anyway.
     final client = await WebSocketTransformer.upgrade(
@@ -227,11 +235,11 @@ Future<void> main(List<String> args) async {
         compression: CompressionOptions.compressionOff,
       );
     } on Object catch (error) {
-      _log({'event': 'upstream-connect-failed', 'error': '$error'});
+      log({'event': 'upstream-connect-failed', 'error': '$error'});
       await client.close(WebSocketStatus.internalServerError);
       return;
     }
-    _log({'event': 'client-connected'});
+    log({'event': 'client-connected'});
 
     // Chosen once per connection, so a reconnect after the fault is clean.
     final closeThisOne = closeAfterLeft > 0 && closeAfterLeft-- > 0;
@@ -243,7 +251,7 @@ Future<void> main(List<String> args) async {
       stallTimer = Timer(Duration(milliseconds: stallAfterMs), () {
         if (stalled) return;
         stalled = true;
-        _log({'event': 'stalled', 'after_ms': stallAfterMs});
+        log({'event': 'stalled', 'after_ms': stallAfterMs});
       });
     }
     final clock = Stopwatch()..start();
@@ -260,7 +268,7 @@ Future<void> main(List<String> args) async {
       stallTimer?.cancel();
       // A half-open socket never hears its peer close, so a stalled connection
       // keeps the client's socket as it is.
-      _log({'event': 'relay-closed', 'told_client': !stalled});
+      log({'event': 'relay-closed', 'told_client': !stalled});
       if (stalled) return;
       queue = queue.then((_) {
         clientClosed = true;
@@ -268,7 +276,7 @@ Future<void> main(List<String> args) async {
       });
     }
 
-    void logClientFrame(Object? data, String type, String action) => _log({
+    void logClientFrame(Object? data, String type, String action) => log({
       'dir': 'c>r',
       'type': type,
       'bytes': _size(data),
@@ -315,7 +323,7 @@ Future<void> main(List<String> args) async {
       },
       onDone: () {
         stallTimer?.cancel();
-        _log({'event': 'client-closed'});
+        log({'event': 'client-closed'});
         unawaited(relay.close());
       },
       onError: (Object _) {
@@ -369,7 +377,7 @@ Future<void> main(List<String> args) async {
               if (copies > 1) action = '$action, sent twice';
             }
           }
-          _log({
+          log({
             'dir': 'r>c',
             'type': type,
             'bytes': _size(data),
@@ -381,11 +389,11 @@ Future<void> main(List<String> args) async {
               relayFrames >= stallAfter &&
               !stalled) {
             stalled = true;
-            _log({'event': 'stalled', 'after_relay_frames': relayFrames});
+            log({'event': 'stalled', 'after_relay_frames': relayFrames});
           }
           if (closeThisOne && relayFrames >= closeAfter && !clientClosed) {
             clientClosed = true;
-            _log({'event': 'closing-client', 'code': _injectedCloseCode});
+            log({'event': 'closing-client', 'code': _injectedCloseCode});
             unawaited(
               client.close(_injectedCloseCode, 'proxy: injected close'),
             );
