@@ -5,6 +5,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -13,6 +14,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/video_replies/video_replies_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/video_replies/video_replies_screen.dart';
 import 'package:video_responses_repository/video_responses_repository.dart';
@@ -21,6 +23,14 @@ class _MockVideoRepliesCubit extends MockCubit<VideoRepliesState>
     implements VideoRepliesCubit {}
 
 class _MockFeedRepository extends Mock implements FeedRepository {}
+
+UserProfile _profile(String pubkey, String displayName) => UserProfile(
+  pubkey: pubkey,
+  displayName: displayName,
+  rawData: const {},
+  createdAt: DateTime(2026),
+  eventId: 'e' * 64,
+);
 
 VideoEvent _reply(int n, {String? name}) => VideoEvent(
   id: '$n'.padLeft(64, '0'),
@@ -34,19 +44,31 @@ VideoEvent _reply(int n, {String? name}) => VideoEvent(
 void main() {
   group(VideoRepliesView, () {
     late _MockVideoRepliesCubit cubit;
+    late Map<String, UserProfile> profiles;
     final l10n = lookupAppLocalizations(const Locale('en'));
 
     setUp(() {
       cubit = _MockVideoRepliesCubit();
+      profiles = {};
       when(() => cubit.pinToggled(any())).thenAnswer((_) async {});
       when(() => cubit.hideToggled(any())).thenAnswer((_) async {});
       when(() => cubit.load()).thenAnswer((_) async {});
     });
 
+    // The profiles of the replies' authors, read when a reply came without
+    // its author's name.
+    List<Override> profileOverrides() => [
+      for (final n in [1, 2])
+        fetchUserProfileProvider(
+          _reply(n).pubkey,
+        ).overrideWith((ref) async => profiles[_reply(n).pubkey]),
+    ];
+
     Future<void> pump(WidgetTester tester, VideoRepliesState state) async {
       when(() => cubit.state).thenReturn(state);
       await tester.pumpWidget(
         ProviderScope(
+          overrides: profileOverrides(),
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -83,6 +105,26 @@ void main() {
         expect(find.text(l10n.videoStickerRepliesHidden), findsOneWidget);
         expect(find.text(l10n.videoStickerRepliesUnpin), findsOneWidget);
         expect(find.text(l10n.videoStickerRepliesShow), findsOneWidget);
+      });
+
+      testWidgets("the name in a reply's profile when it came without one", (
+        tester,
+      ) async {
+        profiles[_reply(1).pubkey] = _profile(_reply(1).pubkey, 'Carol');
+        await pump(
+          tester,
+          VideoRepliesState(
+            status: VideoRepliesStatus.loaded,
+            replies: [_reply(1), _reply(2)],
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Carol'), findsOneWidget);
+        expect(
+          find.text(UserProfile.generatedNameFor(_reply(2).pubkey)),
+          findsOneWidget,
+        );
       });
 
       testWidgets('that there are none yet', (tester) async {
@@ -172,6 +214,7 @@ void main() {
           ProviderScope(
             overrides: [
               feedRepositoryProvider.overrideWithValue(_MockFeedRepository()),
+              ...profileOverrides(),
             ],
             child: MaterialApp.router(
               routerConfig: router,

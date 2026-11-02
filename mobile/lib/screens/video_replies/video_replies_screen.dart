@@ -11,6 +11,7 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/open_video_responses_feed.dart';
@@ -193,7 +194,15 @@ class _ReplyTile extends ConsumerWidget {
       ),
     );
     final cubit = context.read<VideoRepliesCubit>();
-    final name = reply.authorName ?? UserProfile.generatedNameFor(reply.pubkey);
+    // Funnelcake sends the author along; a reply read from the relays
+    // carries none, so its profile is read.
+    final name =
+        reply.authorName ??
+        ref
+            .watch(fetchUserProfileProvider(reply.pubkey))
+            .value
+            ?.bestDisplayName ??
+        UserProfile.generatedNameFor(reply.pubkey);
     final status = isPinned
         ? l10n.videoStickerRepliesPinned
         : isHidden

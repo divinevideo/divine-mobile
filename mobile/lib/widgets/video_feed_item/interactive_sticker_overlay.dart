@@ -16,6 +16,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/sticker_responses_filter_provider.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/routes/interactive_sticker_routes.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -154,7 +155,14 @@ class _ResponsesSticker extends ConsumerWidget {
             latest: [
               for (final video in state.videos.take(maxStickerAvatars))
                 StickerResponsePreview(
-                  avatarUrl: video.authorAvatar,
+                  // Funnelcake sends the author along; a video read from the
+                  // relays carries none, so its profile is read.
+                  avatarUrl:
+                      video.authorAvatar ??
+                      ref
+                          .watch(fetchUserProfileProvider(video.pubkey))
+                          .value
+                          ?.picture,
                   thumbnailUrl: video.thumbnailUrl,
                   // The warnings the viewer's settings call for, as the
                   // feed this opens shows them.

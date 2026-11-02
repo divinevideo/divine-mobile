@@ -17,6 +17,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/sticker_responses_filter_provider.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/interactive_sticker_card.dart';
 import 'package:openvine/widgets/video_feed_item/interactive_sticker_overlay.dart';
@@ -77,8 +78,10 @@ void main() {
     late List<Object?> extras;
     late int interactions;
     late AddYoursContext? addYoursWhileOpen;
+    late Map<String, UserProfile> profiles;
 
     setUp(() {
+      profiles = {};
       repository = _MockVideoResponsesRepository();
       filter = (videos) => videos;
       pushed = [];
@@ -171,6 +174,11 @@ void main() {
               (videos) => filter(videos),
             ),
             feedRepositoryProvider.overrideWithValue(_MockFeedRepository()),
+            // Read for the avatar of a response that came without one.
+            for (final n in [1, 2, 3])
+              fetchUserProfileProvider(
+                _reply(n).pubkey,
+              ).overrideWith((ref) async => profiles[_reply(n).pubkey]),
             nostrSessionProvider.overrideWith(
               () => _Session(
                 pubkey == null
@@ -262,6 +270,49 @@ void main() {
         expect(
           latest.map((preview) => preview.isBlurred),
           equals([true, false]),
+        );
+      });
+
+      testWidgets('shows the avatar in the profile of a response that came '
+          'without one', (tester) async {
+        when(
+          () => repository.fetchReplies(
+            videoId: any(named: 'videoId'),
+            videoAddress: any(named: 'videoAddress'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) async => VideoResponses(
+            total: 3,
+            videos: [
+              _reply(1),
+              _reply(2),
+              _reply(3).copyWith(authorAvatar: 'https://cdn.example/3.jpg'),
+            ],
+          ),
+        );
+        profiles[_reply(1).pubkey] = UserProfile(
+          pubkey: _reply(1).pubkey,
+          picture: 'https://cdn.example/1.jpg',
+          rawData: const {},
+          createdAt: DateTime(2026),
+          eventId: 'e' * 64,
+        );
+        await pump(tester, replies);
+        await tester.pump();
+        await tester.pump();
+
+        final latest = tester
+            .widget<InteractiveStickerCopy>(find.byType(InteractiveStickerCopy))
+            .responses!
+            .latest;
+        expect(
+          latest.map((preview) => preview.avatarUrl),
+          equals([
+            'https://cdn.example/1.jpg',
+            null,
+            'https://cdn.example/3.jpg',
+          ]),
         );
       });
 
