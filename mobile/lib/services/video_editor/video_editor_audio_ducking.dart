@@ -3,6 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/models/video_editor/audio_render_window.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -96,13 +97,18 @@ class VideoEditorAudioDucking {
     final path = voiceOver.localFilePath;
     if (path == null) return null;
     final (:startTime, :endTime) = renderWindowOf(voiceOver);
+    final speedRamp = voiceOver.speedRamp;
+    final rampSpan = speedRamp == null ? null : voiceOver.playedSourceSpan;
     return VideoAudioTrack(
       path: path,
       startTime: startTime,
       endTime: endTime,
       audioStartTime: voiceOver.startOffset,
+      // A ramp runs over the stretch the window plays, as in the render.
+      audioEndTime: rampSpan == null ? null : voiceOver.startOffset + rampSpan,
       volume: voiceOver.volume,
       playbackSpeed: voiceOver.playbackSpeed,
+      speedRamp: speedRamp,
       fadeInDuration: voiceOver.fadeInDuration,
       fadeOutDuration: voiceOver.fadeOutDuration,
     );

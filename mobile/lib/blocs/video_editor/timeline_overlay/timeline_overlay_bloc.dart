@@ -10,6 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_row_layout.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
@@ -302,7 +303,7 @@ class TimelineOverlayBloc
   /// [TimelineOverlayItem.startOffset], on the timeline at the track's speed)
   /// is derived from the same full-source basis as
   /// [TimelineOverlayItem.sourceDuration] so the two never drift — the same
-  /// `(sourceDuration - startOffset) / playbackSpeed` relationship
+  /// `(sourceDuration - startOffset) / averageSpeed` relationship
   /// [_onItemTrimmed] applies live during a trim drag.
   ///
   /// [measuredSourceDuration] is the basis the waveform extractor reported for
@@ -358,6 +359,7 @@ class TimelineOverlayBloc
       fadeIn: track.fadeInDuration,
       fadeOut: track.fadeOutDuration,
       playbackSpeed: track.playbackSpeed,
+      speedRamp: track.speedRamp,
     );
   }
 

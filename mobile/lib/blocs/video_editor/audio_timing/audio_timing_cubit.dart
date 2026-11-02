@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart' show AudioEvent, AudioSourceKind;
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:sound_service/sound_service.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -62,9 +63,10 @@ class AudioTimingCubit extends Cubit<AudioTimingState>
   static double get _maxDurationSecs =>
       VideoEditorConstants.maxDuration.inMilliseconds / 1000.0;
 
-  /// Seconds of the sound the video plays at its longest: the sound's speed
-  /// times the maximum video duration. The selection spans this much audio.
-  double get selectionSecs => _maxDurationSecs * _sound.playbackSpeed;
+  /// Seconds of the sound the video plays at its longest: the sound's
+  /// (average) speed times the maximum video duration. The selection spans
+  /// this much audio.
+  double get selectionSecs => _maxDurationSecs * _sound.averageSpeed;
 
   /// The scrollable audio range in seconds.
   ///
@@ -263,8 +265,11 @@ class AudioTimingCubit extends Cubit<AudioTimingState>
     }
 
     await _clipPlayer.setClip(config);
-    // Heard as the video will play it.
-    if (_sound.playbackSpeed != 1) {
+    // Heard as the video will play it: the clip starts where the window does,
+    // so its positions are the ramp's.
+    if (_sound.speedRamp != null) {
+      await _clipPlayer.setSpeedCurve(_sound.speedAtSourceOffset);
+    } else if (_sound.playbackSpeed != 1) {
       await _clipPlayer.setSpeed(_sound.playbackSpeed);
     }
   }

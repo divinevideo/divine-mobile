@@ -2,6 +2,7 @@
 // ABOUTME: metadata events. Used for audio reuse feature -
 // ABOUTME: parsing audio shared for use in other videos
 
+import 'package:collection/collection.dart';
 import 'package:meta/meta.dart';
 import 'package:models/src/audio_reuse_policy.dart';
 import 'package:models/src/equalizer_settings.dart';
@@ -88,6 +89,7 @@ class AudioEvent {
     this.fadeInDuration = Duration.zero,
     this.fadeOutDuration = Duration.zero,
     this.playbackSpeed = 1.0,
+    this.speedRampMap,
     this.voiceEffect = VoiceEffect.none,
     this.noiseReduction = false,
     this.equalizer = EqualizerSettings.none,
@@ -101,6 +103,10 @@ class AudioEvent {
   }) : assert(
          playbackSpeed > 0 && playbackSpeed < double.infinity,
          'playbackSpeed must be finite and greater than 0',
+       ),
+       assert(
+         speedRampMap == null || playbackSpeed == 1,
+         'Set either playbackSpeed or speedRampMap, not both',
        ),
        assert(
          duckingVolume >= 0 && duckingVolume <= 1,
@@ -358,8 +364,14 @@ class AudioEvent {
         milliseconds: (json['fadeOutMs'] as num?)?.toInt() ?? 0,
       ),
       playbackSpeed: switch ((json['playbackSpeed'] as num?)?.toDouble()) {
+        // A ramp replaces the speed; a draft never stores both.
+        _ when json['speedRamp'] is Map => 1.0,
         final double speed when speed > 0 && speed.isFinite => speed,
         _ => 1.0,
+      },
+      speedRampMap: switch (json['speedRamp']) {
+        final Map<dynamic, dynamic> ramp => Map<String, dynamic>.from(ramp),
+        _ => null,
       },
       voiceEffect: switch (json['voiceEffect']) {
         final Map<dynamic, dynamic> effect => VoiceEffect.fromJson(
@@ -762,16 +774,21 @@ class AudioEvent {
   /// half the time, `0.5` in twice the time.
   ///
   /// [startOffset] and [duration] stay positions and lengths in the sound;
-  /// [startTime], [endTime] and the fades stay editor-timeline time. Convert
-  /// between the two with [sourceSpanOf] and [timelineSpanOf]. Local-only
-  /// editor state, never published to Nostr.
+  /// [startTime], [endTime] and the fades stay editor-timeline time. The
+  /// editor converts between the two, through [speedRampMap] where the sound
+  /// has one. Local-only editor state, never published to Nostr.
   final double playbackSpeed;
 
-  /// How much of the sound plays in [timeline] of the editor timeline.
-  Duration sourceSpanOf(Duration timeline) => timeline * playbackSpeed;
-
-  /// How long [source] of the sound takes to play on the editor timeline.
-  Duration timelineSpanOf(Duration source) => source * (1 / playbackSpeed);
+  /// A speed that changes while the track plays, instead of [playbackSpeed],
+  /// at unchanged pitch.
+  ///
+  /// It is the map pro_video_editor's `VideoSpeedRamp.toMap` writes, read back
+  /// with `VideoSpeedRamp.fromMap`: this package cannot depend on the editor,
+  /// so it keeps the map as it is. The ramp's positions run along the stretch
+  /// of the sound the track plays, from [startOffset] to wherever [endTime]
+  /// stops it. Null plays the sound at [playbackSpeed]. Local-only editor
+  /// state, never published to Nostr.
+  final Map<String, dynamic>? speedRampMap;
 
   /// The voice effect baked into the file at [url].
   ///
@@ -1001,6 +1018,7 @@ class AudioEvent {
     Duration? fadeInDuration,
     Duration? fadeOutDuration,
     double? playbackSpeed,
+    Map<String, dynamic>? speedRampMap,
     VoiceEffect? voiceEffect,
     bool? noiseReduction,
     EqualizerSettings? equalizer,
@@ -1045,7 +1063,12 @@ class AudioEvent {
           : (anchorClipId ?? this.anchorClipId),
       fadeInDuration: fadeInDuration ?? this.fadeInDuration,
       fadeOutDuration: fadeOutDuration ?? this.fadeOutDuration,
-      playbackSpeed: playbackSpeed ?? this.playbackSpeed,
+      // The sound plays at either a speed or a ramp, so passing one of them
+      // drops the other.
+      playbackSpeed:
+          playbackSpeed ?? (speedRampMap == null ? this.playbackSpeed : 1.0),
+      speedRampMap:
+          speedRampMap ?? (playbackSpeed == null ? this.speedRampMap : null),
       voiceEffect: voiceEffect ?? this.voiceEffect,
       noiseReduction: noiseReduction ?? this.noiseReduction,
       equalizer: equalizer ?? this.equalizer,
@@ -1064,6 +1087,10 @@ class AudioEvent {
     );
   }
 
+  /// Compares [speedRampMap]s by their contents: a map read back from a
+  /// draft is a new instance.
+  static const _mapEquality = DeepCollectionEquality();
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -1076,6 +1103,7 @@ class AudioEvent {
         other.fadeInDuration == fadeInDuration &&
         other.fadeOutDuration == fadeOutDuration &&
         other.playbackSpeed == playbackSpeed &&
+        _mapEquality.equals(other.speedRampMap, speedRampMap) &&
         other.equalizer == equalizer &&
         other.ducksUnderVoiceOver == ducksUnderVoiceOver &&
         other.duckingVolume == duckingVolume;
@@ -1091,6 +1119,7 @@ class AudioEvent {
     fadeInDuration,
     fadeOutDuration,
     playbackSpeed,
+    _mapEquality.hash(speedRampMap),
     equalizer,
     ducksUnderVoiceOver,
     duckingVolume,
@@ -1143,6 +1172,7 @@ class AudioEvent {
     if (fadeOutDuration > Duration.zero)
       'fadeOutMs': fadeOutDuration.inMilliseconds,
     if (playbackSpeed != 1.0) 'playbackSpeed': playbackSpeed,
+    'speedRamp': ?speedRampMap,
     if (!voiceEffect.isNone) 'voiceEffect': voiceEffect.toJson(),
     if (noiseReduction) 'noiseReduction': true,
     if (!equalizer.isNone) 'equalizer': equalizer.toJson(),

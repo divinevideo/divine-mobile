@@ -8,13 +8,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:models/models.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_ducking.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show AudioLevelEnvelope;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show AudioLevelEnvelope, VideoSpeedRamp, VideoSpeedRampPoint;
 import 'package:unified_logger/unified_logger.dart';
 
 const _missingUrl = 'https://example.com/missing';
@@ -557,6 +559,52 @@ void main() {
 
         expect(result.single.playbackSpeed, equals(1.0));
       });
+
+      test(
+        'hands over a ramp over exactly the stretch of the sound its window '
+        'plays',
+        () async {
+          const ramp = VideoSpeedRamp([
+            VideoSpeedRampPoint(position: 0, speed: 2),
+            VideoSpeedRampPoint(position: 1, speed: 0.5),
+          ]);
+          final sound = AudioEvent(
+            id: 'ramped',
+            pubkey: 'pubkey',
+            createdAt: 0,
+            startOffset: const Duration(milliseconds: 250),
+            startTime: const Duration(seconds: 1),
+            endTime: const Duration(seconds: 4),
+          ).withSpeedRamp(ramp);
+
+          final result = await resolveRenderAudioTracks(
+            [_fileTrack(id: 'ramped', path: '/tmp/ramped.mp3')],
+            logName: 'test',
+            audioEvents: [sound],
+          );
+
+          final track = result.single;
+          expect(track.speedRamp, equals(ramp));
+          expect(track.playbackSpeed, equals(1.0));
+          expect(
+            track.audioStartTime,
+            equals(const Duration(milliseconds: 250)),
+          );
+          expect(
+            track.audioEndTime,
+            equals(
+              const Duration(milliseconds: 250) + sound.playedSourceSpan!,
+            ),
+          );
+          // The ramp plays that stretch in the window's three seconds.
+          expect(
+            ramp
+                .outputDuration(track.audioEndTime! - track.audioStartTime!)
+                .inMilliseconds,
+            closeTo(3000, 1),
+          );
+        },
+      );
     });
   });
 

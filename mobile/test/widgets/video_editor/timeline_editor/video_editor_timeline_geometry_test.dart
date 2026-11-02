@@ -5,6 +5,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
@@ -31,6 +32,15 @@ AudioEvent _audio({
   anchorClipId: anchorClipId,
   playbackSpeed: playbackSpeed,
 );
+
+/// Twice as fast through the window's first half, half as fast through the
+/// second: on average 0.8x.
+const _fastThenSlow = VideoSpeedRamp([
+  VideoSpeedRampPoint(position: 0, speed: 2),
+  VideoSpeedRampPoint(position: 0.5, speed: 2),
+  VideoSpeedRampPoint(position: 0.5 + 1e-9, speed: 0.5),
+  VideoSpeedRampPoint(position: 1, speed: 0.5),
+]);
 
 DivineVideoClip _clip(
   String id,
@@ -1221,6 +1231,34 @@ void main() {
       expect(result.anchorStillValid, isTrue);
     });
 
+    test('keeps a ramped sound ending on the same moment of it', () {
+      // A 5 s window plays 4 s of the sound along the ramp.
+      final track = _audio(
+        id: 'sound',
+        startTime: Duration.zero,
+        endTime: const Duration(seconds: 5),
+        startOffset: const Duration(seconds: 1),
+      ).withSpeedRamp(_fastThenSlow);
+      final sourceEnd = track.startOffset + track.playedSourceSpan!;
+
+      final result = audioLeftTrimResult(
+        track,
+        newStartTime: const Duration(seconds: 1),
+      );
+      final trimmed = track.copyWith(
+        startTime: const Duration(seconds: 1),
+        startOffset: result.startOffset,
+      );
+
+      expect(
+        (trimmed.startOffset + trimmed.playedSourceSpan! - sourceEnd)
+            .inMicroseconds
+            .abs(),
+        lessThanOrEqualTo(1),
+      );
+      expect(result.startOffset, greaterThan(track.startOffset));
+    });
+
     test('clears the anchor when revealing before the audio source head', () {
       final track = _audio(
         id: 'sound',
@@ -1335,6 +1373,52 @@ void main() {
     });
   });
 
+  group(audioAlongSpeedRamp, () {
+    test('rescales the window so the ramp plays the same stretch', () {
+      final track = _audio(
+        id: 'sound',
+        startTime: const Duration(seconds: 1),
+        endTime: const Duration(seconds: 5),
+        startOffset: const Duration(seconds: 3),
+        anchorClipId: 'clip',
+      );
+
+      final ramped = audioAlongSpeedRamp(
+        track,
+        _fastThenSlow,
+        compositionEnd: const Duration(seconds: 10),
+      );
+
+      expect(ramped.speedRamp, _fastThenSlow);
+      expect(ramped.playbackSpeed, 1);
+      // Four seconds of the sound at 0.8x on average take five.
+      expect(ramped.endTime, const Duration(seconds: 6));
+      expect(ramped.startOffset, const Duration(seconds: 3));
+      expect(ramped.anchorClipId, isNull);
+    });
+
+    test('a constant speed replaces the ramp over the same stretch', () {
+      final ramped = audioAlongSpeedRamp(
+        _audio(
+          id: 'sound',
+          startTime: Duration.zero,
+          endTime: const Duration(seconds: 4),
+        ),
+        _fastThenSlow,
+        compositionEnd: const Duration(seconds: 10),
+      );
+
+      final constant = audioAtSpeed(
+        ramped,
+        2,
+        compositionEnd: const Duration(seconds: 10),
+      );
+
+      expect(constant.speedRamp, isNull);
+      expect(constant.endTime, const Duration(seconds: 2));
+    });
+  });
+
   group(rebaseAnchoredAudioForClipState, () {
     // Two clips, both 10 s, no trim. clip-b starts at timeline 10 s.
     // An anchored track covers clip-b exactly: 10–20 s, startOffset 0.
@@ -1353,6 +1437,23 @@ void main() {
           anchorClipId: 'b',
           playbackSpeed: 2,
         ),
+      ];
+
+      expect(rebaseAnchoredAudioForClipState(clips, tracks), same(tracks));
+    });
+
+    test('leaves a track playing along a ramp of its own where it is', () {
+      final clips = [
+        _clip('a', 10),
+        _clip('b', 10, trimStart: const Duration(seconds: 3)),
+      ];
+      final tracks = [
+        _audio(
+          id: 'b-audio',
+          startTime: const Duration(seconds: 10),
+          endTime: const Duration(seconds: 15),
+          anchorClipId: 'b',
+        ).withSpeedRamp(_fastThenSlow),
       ];
 
       expect(rebaseAnchoredAudioForClipState(clips, tracks), same(tracks));

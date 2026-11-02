@@ -24,6 +24,7 @@ import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.d
 import 'package:openvine/blocs/video_editor/voice_effect/voice_effect_preset.dart';
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -31,6 +32,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_editor/clip_speed_choice.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/layer_style.dart';
@@ -2063,6 +2065,171 @@ void main() {
           // 2s + (5s - 3s) * 2 = 6s
           expect(tracks[1].startOffset, equals(const Duration(seconds: 6)));
           expect(tracks[1].playbackSpeed, equals(2));
+        },
+      );
+
+      testWidgets(
+        'sound split cuts the ramp of a ramped sound in two, so every moment '
+        'of it keeps its speed and its place',
+        (tester) async {
+          // The window plays 4 s of the sound: its first 2 s at 2x in 1 s,
+          // the rest at 0.5x in 4 s.
+          final track =
+              AudioEvent(
+                id: 'sound-1',
+                pubkey: 'pub',
+                createdAt: 0,
+                startOffset: const Duration(seconds: 2),
+                endTime: const Duration(seconds: 5),
+              ).withSpeedRamp(
+                const pve.VideoSpeedRamp([
+                  pve.VideoSpeedRampPoint(position: 0, speed: 2),
+                  pve.VideoSpeedRampPoint(position: 0.5, speed: 2),
+                  pve.VideoSpeedRampPoint(position: 0.5 + 1e-9, speed: 0.5),
+                  pve.VideoSpeedRampPoint(position: 1, speed: 0.5),
+                ]),
+              );
+          when(() => mockStateManager.activeMeta).thenReturn({
+            VideoEditorConstants.audioStateHistoryKey: [track.toJson()],
+          });
+          when(() => mainBloc.state).thenReturn(
+            const VideoEditorMainState(
+              currentPosition: Duration(seconds: 1),
+            ),
+          );
+
+          const item = TimelineOverlayItem(
+            id: 'sound-1',
+            type: TimelineOverlayType.sound,
+            startTime: Duration.zero,
+            endTime: Duration(seconds: 5),
+          );
+          await tester.pumpWidget(
+            buildWithEditor(item, mockEditor, mainBloc),
+          );
+
+          await tester.tap(
+            find.bySemanticsLabel(
+              l10n.videoEditorSplitSelectedClipSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          final meta =
+              verify(
+                    () =>
+                        mockEditor.addHistory(meta: captureAny(named: 'meta')),
+                  ).captured.single
+                  as Map<String, dynamic>;
+          final tracks =
+              (meta[VideoEditorConstants.audioStateHistoryKey] as List<dynamic>)
+                  .cast<Map<String, dynamic>>()
+                  .map(AudioEvent.fromJson)
+                  .toList();
+          final [head, tail] = tracks;
+
+          expect(tail.startOffset, equals(const Duration(seconds: 4)));
+          expect(head.speedRamp!.averageSpeed, closeTo(2, 1e-6));
+          expect(tail.speedRamp!.averageSpeed, closeTo(0.5, 1e-6));
+          expect(head.playedSourceSpan, equals(const Duration(seconds: 2)));
+          expect(tail.playedSourceSpan, equals(const Duration(seconds: 2)));
+        },
+      );
+
+      testWidgets(
+        'a curve picked in the speed sheet is written to the sound, whose '
+        'window then plays the same stretch of it along the curve',
+        (tester) async {
+          final track = AudioEvent(
+            id: 'sound-1',
+            pubkey: 'pub',
+            createdAt: 0,
+            startTime: const Duration(seconds: 1),
+            endTime: const Duration(seconds: 3),
+          );
+          when(() => mockStateManager.activeMeta).thenReturn({
+            VideoEditorConstants.audioStateHistoryKey: [track.toJson()],
+          });
+          when(
+            () => mainBloc.state,
+          ).thenReturn(const VideoEditorMainState());
+          final clipBloc = _MockClipEditorBloc();
+          when(
+            () => clipBloc.stream,
+          ).thenAnswer((_) => const Stream<ClipEditorState>.empty());
+          when(() => clipBloc.state).thenReturn(
+            ClipEditorState(
+              clips: [
+                DivineVideoClip(
+                  id: 'clip-1',
+                  video: EditorVideo.file('/tmp/clip-1.mp4'),
+                  duration: const Duration(seconds: 20),
+                  recordedAt: DateTime(2026),
+                  targetAspectRatio: model.AspectRatio.vertical,
+                  originalAspectRatio: 9 / 16,
+                ),
+              ],
+            ),
+          );
+
+          const item = TimelineOverlayItem(
+            id: 'sound-1',
+            type: TimelineOverlayType.sound,
+            startTime: Duration(seconds: 1),
+            endTime: Duration(seconds: 3),
+          );
+          await tester.pumpWidget(
+            buildWithEditor(
+              item,
+              mockEditor,
+              mainBloc,
+              clipBloc: clipBloc,
+              routed: true,
+            ),
+          );
+
+          await tester.tap(
+            find.bySemanticsLabel(l10n.videoEditorSetSoundSpeedSemanticLabel),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.videoEditorSpeedModeCurve));
+          await tester.pump();
+          await tester.tap(find.text(l10n.videoEditorSpeedCurveBullet));
+          await tester.pump();
+          await tester.tap(
+            find.descendant(
+              of: find.byType(VideoEditorClipSpeedSheet),
+              matching: find.byWidgetPredicate(
+                (w) => w is DivineIconButton && w.icon == DivineIconName.check,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final meta =
+              verify(
+                    () =>
+                        mockEditor.addHistory(meta: captureAny(named: 'meta')),
+                  ).captured.single
+                  as Map<String, dynamic>;
+          final sound = AudioEvent.fromJson(
+            (meta[VideoEditorConstants.audioStateHistoryKey] as List<dynamic>)
+                .cast<Map<String, dynamic>>()
+                .single,
+          );
+          final bullet = ClipSpeedRampPreset.bullet.ramp;
+
+          expect(sound.speedRamp, equals(bullet));
+          expect(sound.playbackSpeed, equals(1));
+          expect(sound.startTime, equals(const Duration(seconds: 1)));
+          // The 2 s of the sound the window played now play along the curve.
+          expect(
+            (sound.endTime! - const Duration(seconds: 1)).inMilliseconds,
+            closeTo(
+              bullet.outputDuration(const Duration(seconds: 2)).inMilliseconds,
+              1,
+            ),
+          );
         },
       );
 

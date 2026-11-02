@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'package:caption_generator/caption_generator.dart';
 import 'package:collection/collection.dart' show mergeSort;
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/caption_generation_outcome.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
@@ -209,19 +210,28 @@ class CaptionGenerationService {
     Duration start,
     Duration end,
   ) {
-    final startOffset = start - source.timelineStart;
-    final endOffset = end - source.timelineStart;
+    final shift = start - source.timelineStart;
+    final from = source.transcribedOffsetAt(shift);
+    final to = source.transcribedOffsetAt(end - source.timelineStart);
+    final toPlayback = source.toPlayback;
+    final fromPlayback = source.fromPlayback;
     return _SpeechSource(
       id: source.id,
       lane: source.lane,
       media: source.media,
       filePath: source.filePath,
-      sourceStart: source.sourceStart + startOffset * source.speed,
-      sourceEnd: source.sourceStart + endOffset * source.speed,
+      sourceStart: source.sourceStart + from * source.speed,
+      sourceEnd: source.sourceStart + to * source.speed,
       speed: source.speed,
       timelineStart: start,
-      extractedStart: source.extractedStart + startOffset,
-      extractedEnd: source.extractedStart + endOffset,
+      extractedStart: source.extractedStart + from,
+      extractedEnd: source.extractedStart + to,
+      toPlayback: toPlayback == null
+          ? null
+          : (offset) => toPlayback(from + offset) - shift,
+      fromPlayback: fromPlayback == null
+          ? null
+          : (offset) => fromPlayback(shift + offset) - from,
       onDeviceOnly: source.onDeviceOnly,
     );
   }
@@ -274,7 +284,8 @@ class CaptionGenerationService {
   /// being recognized, so a track with one is recognized on the device only.
   ///
   /// Takes and extracted sound are always placed with an end; a track
-  /// without one is skipped.
+  /// without one is skipped. A track under a speed ramp is transcribed as
+  /// recorded and its words are moved through the ramp, as a clip's are.
   static _SpeechSource? _trackSource(
     AudioEvent track, {
     required Duration totalDuration,
@@ -286,7 +297,7 @@ class CaptionGenerationService {
 
     final timelineEnd = endTime < totalDuration ? endTime : totalDuration;
     var sourceEnd =
-        track.startOffset + track.sourceSpanOf(timelineEnd - track.startTime);
+        track.startOffset + track.sourceOffsetAt(timelineEnd - track.startTime);
     final soundSeconds = track.duration;
     if (soundSeconds != null) {
       final soundLength = Duration(
@@ -296,7 +307,11 @@ class CaptionGenerationService {
     }
     if (sourceEnd <= track.startOffset) return null;
 
-    final extractedStart = track.timelineSpanOf(track.startOffset);
+    final ramped = track.speedRamp != null;
+    final played = sourceEnd - track.startOffset;
+    final extractedStart = ramped
+        ? track.startOffset
+        : track.timelineSpanOf(track.startOffset);
     return _SpeechSource(
       id: track.id,
       lane: track.id,
@@ -304,11 +319,13 @@ class CaptionGenerationService {
       filePath: path,
       sourceStart: track.startOffset,
       sourceEnd: sourceEnd,
-      speed: track.playbackSpeed,
+      speed: ramped ? 1 : track.playbackSpeed,
       timelineStart: track.startTime,
       extractedStart: extractedStart,
       extractedEnd:
-          extractedStart + track.timelineSpanOf(sourceEnd - track.startOffset),
+          extractedStart + (ramped ? played : track.timelineSpanOf(played)),
+      toPlayback: ramped ? track.timelineOffsetOf : null,
+      fromPlayback: ramped ? track.sourceOffsetAt : null,
       onDeviceOnly: !track.voiceEffect.isNone,
     );
   }
@@ -835,6 +852,7 @@ class _SpeechSource {
     required this.extractedStart,
     required this.extractedEnd,
     this.toPlayback,
+    this.fromPlayback,
     this.onDeviceOnly = false,
   });
 
@@ -875,8 +893,12 @@ class _SpeechSource {
   final Duration extractedEnd;
 
   /// Moves an offset into the transcribed sound to an offset on the
-  /// timeline, for a clip under a speed ramp; the two are equal otherwise.
+  /// timeline, for a clip or track under a speed ramp; the two are equal
+  /// otherwise.
   final Duration Function(Duration offset)? toPlayback;
+
+  /// The inverse of [toPlayback], for a track under a speed ramp.
+  final Duration Function(Duration offset)? fromPlayback;
 
   /// Whether the sound is only ever recognized on the device, never sent to
   /// the server.
@@ -885,6 +907,11 @@ class _SpeechSource {
   /// Where [offset] into the part that plays lands on the timeline.
   Duration onTimeline(Duration offset) =>
       timelineStart + (toPlayback?.call(offset) ?? offset);
+
+  /// How far into the part that plays the sound is [offset] after
+  /// [timelineStart]; the inverse of [onTimeline].
+  Duration transcribedOffsetAt(Duration offset) =>
+      fromPlayback?.call(offset) ?? offset;
 
   /// Where the part that plays ends on the timeline.
   Duration get timelineEnd => onTimeline(extractedEnd - extractedStart);

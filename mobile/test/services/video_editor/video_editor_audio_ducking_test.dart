@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_ducking.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -73,6 +74,23 @@ void main() {
             volume: 0.8,
           ),
         ]);
+      });
+
+      test('measures a ramped take where its ramp plays it', () async {
+        const ramp = VideoSpeedRamp([
+          VideoSpeedRampPoint(position: 0, speed: 2),
+          VideoSpeedRampPoint(position: 1, speed: 0.5),
+        ]);
+        final ramped = voiceOver.withSpeedRamp(ramp);
+
+        await ducking.curvesFor([ramped, music], videoDuration: null);
+
+        final take = measured.single.single;
+        expect(take.speedRamp, ramp);
+        expect(
+          take.audioEndTime,
+          const Duration(milliseconds: 200) + ramped.playedSourceSpan!,
+        );
       });
 
       test('measures the takes again only when they change', () async {
