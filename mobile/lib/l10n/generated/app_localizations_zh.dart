@@ -8495,6 +8495,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectComic => '漫画';
 
   @override
+  String get videoEditorEffectSwirl => '漩涡';
+
+  @override
+  String get videoEditorEffectRipple => '涟漪';
+
+  @override
+  String get videoEditorEffectFlutedGlass => '长虹玻璃';
+
+  @override
   String get videoEditorEffectEightBit => '8 位';
 
   @override

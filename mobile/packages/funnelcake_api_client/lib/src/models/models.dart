@@ -1,6 +1,7 @@
 export 'audio_reuse_policy.dart';
 export 'featured_tab_config.dart';
 export 'featured_tab_videos_response.dart';
+export 'notification_activity_update.dart';
 export 'notification_response.dart';
 export 'recent_videos_response.dart';
 export 'relay_notification.dart';

@@ -8815,6 +8815,15 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectComic => 'ኮሚክ';
 
   @override
+  String get videoEditorEffectSwirl => 'ሽክርክሪት';
+
+  @override
+  String get videoEditorEffectRipple => 'ክብ ሞገዶች';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'ባለሸንተረር መስታወት';
+
+  @override
   String get videoEditorEffectEightBit => '8-ቢት';
 
   @override

@@ -29,6 +29,12 @@ class LoopSuggestionCubit extends Cubit<LoopSuggestionState>
   Future<void> fix(LoopRepairInput input) async {
     if (isClosed || state.status != LoopSuggestionStatus.idle) return;
     final taskId = 'loop_repair_${_newTaskId()}';
+    Log.info(
+      'Loop repair started: clips=${input.clips.length}, '
+      'capability=${input.capability.name}',
+      name: 'LoopRepair',
+      category: LogCategory.video,
+    );
     emit(
       LoopSuggestionState(
         status: LoopSuggestionStatus.searching,
@@ -50,6 +56,11 @@ class LoopSuggestionCubit extends Cubit<LoopSuggestionState>
         await discard(result);
         return;
       }
+      Log.info(
+        'Loop repair finished: status=${result.status.name}',
+        name: 'LoopRepair',
+        category: LogCategory.video,
+      );
       emitIfOpen(
         LoopSuggestionState(
           status: switch (result.status) {
@@ -69,6 +80,11 @@ class LoopSuggestionCubit extends Cubit<LoopSuggestionState>
       if (_owns(taskId)) emitIfOpen(const LoopSuggestionState());
     } catch (error, stack) {
       if (!_owns(taskId)) return;
+      Log.warning(
+        'Loop repair failed: type=${error.runtimeType}',
+        name: 'LoopRepair',
+        category: LogCategory.video,
+      );
       addError(error, stack);
       emitIfOpen(
         LoopSuggestionState(

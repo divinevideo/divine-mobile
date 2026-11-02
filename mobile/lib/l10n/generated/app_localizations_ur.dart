@@ -9018,6 +9018,15 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectComic => 'کامک';
 
   @override
+  String get videoEditorEffectSwirl => 'بھنور';
+
+  @override
+  String get videoEditorEffectRipple => 'دائروی لہریں';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'دھاری دار شیشہ';
+
+  @override
   String get videoEditorEffectEightBit => '8 بٹ';
 
   @override

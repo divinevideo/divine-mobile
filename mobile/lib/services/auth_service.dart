@@ -3552,12 +3552,14 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
   ///
   /// Delegates to [SignerFactory.createAndSignEvent]; this facade keeps the
   /// authenticated/identity guard and the public signature.
+  /// Passive callers disable [allowUserInteraction] to forbid signer prompts.
   @override
   Future<Event?> createAndSignEvent({
     required int kind,
     required String content,
     List<List<String>>? tags,
     int? createdAt,
+    bool allowUserInteraction = true,
   }) async {
     final identity = _currentIdentity;
     if (!isAuthenticated || identity == null) {
@@ -3576,6 +3578,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       content: content,
       tags: tags,
       createdAt: createdAt,
+      allowUserInteraction: allowUserInteraction,
     );
   }
 

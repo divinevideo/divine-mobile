@@ -64,6 +64,9 @@ abstract class NotificationPayloadKeys {
 /// the tap parser compares against them, so the two sides must not drift by a
 /// stray literal at either site.
 abstract class NotificationWireValues {
+  /// Account-wide summary whose tap opens the notification inbox.
+  static const String activityDigest = 'activityDigest';
+
   /// `type` value for a campaign push, which carries an in-app destination
   /// instead of a Nostr event.
   static const String campaign = 'campaign';

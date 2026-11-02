@@ -45,6 +45,23 @@ void main() {
   );
 
   group('pushNotificationTapTarget', () {
+    test(
+      'activity digest opens the inbox despite carrying a trigger event',
+      () {
+        final result = pushTarget(
+          referencedAddress: videoCoordinate,
+          referencedEventId: 'a' * 64,
+          eventId: 'b' * 64,
+          notificationType: 'activityDigest',
+          senderPubkey: 'c' * 64,
+        );
+
+        expect(result.target, const OpenInboxTarget());
+        expect(result.targetEventId, isNull);
+        expect(result.videoCoordinate, isNull);
+      },
+    );
+
     test('campaign app_route opens the supplied in-app location', () {
       final result = pushTarget(
         referencedAddress: null,

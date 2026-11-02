@@ -9151,6 +9151,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorEffectComic => 'BD';
 
   @override
+  String get videoEditorEffectSwirl => 'Tourbillon';
+
+  @override
+  String get videoEditorEffectRipple => 'Ondulation';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'Verre cannelé';
+
+  @override
   String get videoEditorEffectEightBit => '8 bits';
 
   @override
