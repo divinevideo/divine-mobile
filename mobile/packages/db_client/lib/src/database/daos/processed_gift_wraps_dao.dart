@@ -17,11 +17,12 @@ class ProcessedGiftWrapsDao extends DatabaseAccessor<AppDatabase>
   /// Owner-scoped, because an id is unique to one account only for an inbound
   /// kind 1059: NIP-59 mints a separate wrap per recipient. An unwrapped kind 4
   /// has one event id shared by sender and recipient, so when both are accounts
-  /// on this device the ledger can hold the id for only one of them (the key is
-  /// the id alone, see [record]). The other account must not read that row as
-  /// its own handling: it never stored the message (#6645, #8209).
+  /// on this device each records its own outcome for the id, and one must not
+  /// read the other's row as its own handling: it never stored the message
+  /// (#6645, #8209).
   ///
-  /// Rows with no owner are treated as this account's, matching
+  /// A row with the empty-string owner is a legacy one from before the owner
+  /// was part of the key. It counts as this account's, matching
   /// [clearForAccountSwitch] and `DirectMessagesDao`'s legacy handling, so an
   /// upgrade does not reclassify an account's own history as somebody else's.
   Future<bool> hasGiftWrapForOwner({
@@ -64,20 +65,16 @@ class ProcessedGiftWrapsDao extends DatabaseAccessor<AppDatabase>
   /// own.
   Expression<bool> _heldBy(String ownerPubkey) {
     return processedGiftWraps.ownerPubkey.equals(ownerPubkey) |
-        processedGiftWraps.ownerPubkey.isNull() |
         processedGiftWraps.ownerPubkey.equals('');
   }
 
-  /// Records [giftWrapId] as terminally processed (idempotent — a re-delivered
-  /// wrap or a concurrent writer never throws). [ownerPubkey] is not part of
-  /// the dedup key, but is required so account cleanup can remove the correct
-  /// ledger entry without affecting another local account.
+  /// Records [giftWrapId] as terminally processed for [ownerPubkey] (idempotent
+  /// — a re-delivered wrap or a concurrent writer never throws).
   ///
-  /// The first account to record an id keeps it: a second account's record of
-  /// the same id is ignored. Only a kind 4 can reach that, and lookups are
-  /// owner-scoped ([hasGiftWrapForOwner]), so the second account simply
-  /// handles the event itself instead of skipping it, at the cost of one
-  /// repeat decrypt on a replay.
+  /// The key is the id and the account, so two local accounts can each record
+  /// the same id (a kind 4 is shared by both ends) and each finds its own row
+  /// again ([hasGiftWrapForOwner]). Account cleanup removes only the leaving
+  /// account's rows.
   Future<void> record({
     required String giftWrapId,
     required String ownerPubkey,
@@ -104,10 +101,7 @@ class ProcessedGiftWrapsDao extends DatabaseAccessor<AppDatabase>
   /// rows, while preserving every other known account's ledger entries.
   Future<int> clearForAccountSwitch(String ownerPubkey) {
     return (delete(processedGiftWraps)..where(
-          (t) =>
-              t.ownerPubkey.equals(ownerPubkey) |
-              t.ownerPubkey.isNull() |
-              t.ownerPubkey.equals(''),
+          (t) => t.ownerPubkey.equals(ownerPubkey) | t.ownerPubkey.equals(''),
         ))
         .go();
   }
@@ -124,7 +118,7 @@ class ProcessedGiftWrapsDao extends DatabaseAccessor<AppDatabase>
   Future<int> clearUnowned() {
     return (delete(
       processedGiftWraps,
-    )..where((t) => t.ownerPubkey.isNull() | t.ownerPubkey.equals(''))).go();
+    )..where((t) => t.ownerPubkey.equals(''))).go();
   }
 
   /// Total processed-wrap rows (diagnostics / tests).

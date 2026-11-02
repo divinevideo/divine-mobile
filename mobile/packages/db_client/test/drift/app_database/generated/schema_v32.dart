@@ -14072,10 +14072,11 @@ class ProcessedGiftWraps extends Table
   late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
     'owner_pubkey',
     aliasedName,
-    true,
+    false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    $customConstraints: 'NULL',
+    $customConstraints: 'NOT NULL DEFAULT \'\'',
+    defaultValue: const CustomExpression('\'\''),
   );
   @override
   List<GeneratedColumn> get $columns => [giftWrapId, processedAt, ownerPubkey];
@@ -14085,7 +14086,7 @@ class ProcessedGiftWraps extends Table
   String get actualTableName => $name;
   static const String $name = 'processed_gift_wraps';
   @override
-  Set<GeneratedColumn> get $primaryKey => {giftWrapId};
+  Set<GeneratedColumn> get $primaryKey => {giftWrapId, ownerPubkey};
   @override
   ProcessedGiftWrapsData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -14101,7 +14102,7 @@ class ProcessedGiftWraps extends Table
       ownerPubkey: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}owner_pubkey'],
-      ),
+      )!,
     );
   }
 
@@ -14111,7 +14112,9 @@ class ProcessedGiftWraps extends Table
   }
 
   @override
-  List<String> get customConstraints => const ['PRIMARY KEY(gift_wrap_id)'];
+  List<String> get customConstraints => const [
+    'PRIMARY KEY(gift_wrap_id, owner_pubkey)',
+  ];
   @override
   bool get dontWriteConstraints => true;
 }
@@ -14120,20 +14123,18 @@ class ProcessedGiftWrapsData extends DataClass
     implements Insertable<ProcessedGiftWrapsData> {
   final String giftWrapId;
   final int processedAt;
-  final String? ownerPubkey;
+  final String ownerPubkey;
   const ProcessedGiftWrapsData({
     required this.giftWrapId,
     required this.processedAt,
-    this.ownerPubkey,
+    required this.ownerPubkey,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['gift_wrap_id'] = Variable<String>(giftWrapId);
     map['processed_at'] = Variable<int>(processedAt);
-    if (!nullToAbsent || ownerPubkey != null) {
-      map['owner_pubkey'] = Variable<String>(ownerPubkey);
-    }
+    map['owner_pubkey'] = Variable<String>(ownerPubkey);
     return map;
   }
 
@@ -14141,9 +14142,7 @@ class ProcessedGiftWrapsData extends DataClass
     return ProcessedGiftWrapsCompanion(
       giftWrapId: Value(giftWrapId),
       processedAt: Value(processedAt),
-      ownerPubkey: ownerPubkey == null && nullToAbsent
-          ? const Value.absent()
-          : Value(ownerPubkey),
+      ownerPubkey: Value(ownerPubkey),
     );
   }
 
@@ -14155,7 +14154,7 @@ class ProcessedGiftWrapsData extends DataClass
     return ProcessedGiftWrapsData(
       giftWrapId: serializer.fromJson<String>(json['giftWrapId']),
       processedAt: serializer.fromJson<int>(json['processedAt']),
-      ownerPubkey: serializer.fromJson<String?>(json['ownerPubkey']),
+      ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
     );
   }
   @override
@@ -14164,18 +14163,18 @@ class ProcessedGiftWrapsData extends DataClass
     return <String, dynamic>{
       'giftWrapId': serializer.toJson<String>(giftWrapId),
       'processedAt': serializer.toJson<int>(processedAt),
-      'ownerPubkey': serializer.toJson<String?>(ownerPubkey),
+      'ownerPubkey': serializer.toJson<String>(ownerPubkey),
     };
   }
 
   ProcessedGiftWrapsData copyWith({
     String? giftWrapId,
     int? processedAt,
-    Value<String?> ownerPubkey = const Value.absent(),
+    String? ownerPubkey,
   }) => ProcessedGiftWrapsData(
     giftWrapId: giftWrapId ?? this.giftWrapId,
     processedAt: processedAt ?? this.processedAt,
-    ownerPubkey: ownerPubkey.present ? ownerPubkey.value : this.ownerPubkey,
+    ownerPubkey: ownerPubkey ?? this.ownerPubkey,
   );
   ProcessedGiftWrapsData copyWithCompanion(ProcessedGiftWrapsCompanion data) {
     return ProcessedGiftWrapsData(
@@ -14216,7 +14215,7 @@ class ProcessedGiftWrapsCompanion
     extends UpdateCompanion<ProcessedGiftWrapsData> {
   final Value<String> giftWrapId;
   final Value<int> processedAt;
-  final Value<String?> ownerPubkey;
+  final Value<String> ownerPubkey;
   final Value<int> rowid;
   const ProcessedGiftWrapsCompanion({
     this.giftWrapId = const Value.absent(),
@@ -14248,7 +14247,7 @@ class ProcessedGiftWrapsCompanion
   ProcessedGiftWrapsCompanion copyWith({
     Value<String>? giftWrapId,
     Value<int>? processedAt,
-    Value<String?>? ownerPubkey,
+    Value<String>? ownerPubkey,
     Value<int>? rowid,
   }) {
     return ProcessedGiftWrapsCompanion(

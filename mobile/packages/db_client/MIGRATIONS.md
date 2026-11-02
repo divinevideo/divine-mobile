@@ -307,21 +307,26 @@ again; only a migration test opens a database at an earlier version. Per the
 rule below, the guarded `beforeOpen` recovery and its repair probe are not
 extended for the new columns.
 
-Version 32 makes `idx_dm_gift_wrap_id` unique per account, on
-`(gift_wrap_id, owner_pubkey)` instead of `gift_wrap_id` alone (#6645). v12 keyed
-the message rows by account but left the wrap id unique across the device, so
-an account lost its copy of a message whose wrap id another local account's row
-already held: the sender's outgoing row stores the *recipient's* wrap id, and a
-kind-4 event id is shared by both ends. The new key only admits rows the old one
-refused, so no stored row can violate it and nothing is rewritten. The index is
-hand-written SQL outside Drift's schema, so the v32 snapshot equals v31's. The
-old index has the same name, so the step drops it before creating the new one;
-`CREATE ... IF NOT EXISTS` alone would keep it. The legacy-v1 normalization still
-creates the old definition, because its `direct_messages` has no `owner_pubkey`
-yet; the step replaces it at the end of the upgrade chain. The processed-wrap
-ledger keeps its single-column key: its lookups became owner-scoped instead, so
-the one case where two accounts share an id (a kind 4) costs the second account
-a repeat decrypt on a replay and no message.
+Version 32 makes the DM gift-wrap dedup per account (#6645). v12 keyed the
+message rows by account but left the wrap id unique across the device, and the
+processed-wrap ledger was keyed by the id alone. An account lost its copy of a
+message whose wrap id another local account's row already held (the sender's
+outgoing row stores the *recipient's* wrap id, and a kind-4 event id is shared
+by both ends), or could not remember that it had merged a dual-sent kind 4 into
+its NIP-17 copy and stored it a second time.
+
+Two keys change, and both only admit rows the old ones refused, so no stored row
+can violate them. `idx_dm_gift_wrap_id` becomes `(gift_wrap_id, owner_pubkey)`;
+it is hand-written SQL outside Drift's schema, and the old index has the same
+name, so the step drops it before creating the new one (`CREATE ... IF NOT
+EXISTS` alone would keep it). `processed_gift_wraps` gets the same composite
+primary key through a table rebuild, with `owner_pubkey` NOT NULL DEFAULT `''`
+as `direct_messages` got in v12; a NULL owner is backfilled to `''` first, since
+a NULL cannot take part in a key. The rebuild copies every row (about 200 bytes
+each, #8668), once, at the upgrade, and creates the table if a damaged database
+lacks it. The legacy-v1 normalization still creates the old index definition,
+because its `direct_messages` has no `owner_pubkey` yet; the step replaces it at
+the end of the upgrade chain.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only

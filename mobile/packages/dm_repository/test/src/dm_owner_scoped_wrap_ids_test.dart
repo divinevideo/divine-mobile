@@ -375,6 +375,80 @@ void main() {
       });
     });
 
+    group('a message the sender dual-sent as NIP-17 and kind 4', () {
+      test('is stored once for the recipient across a relaunch when the '
+          'sender ledgered the kind-4 copy', () async {
+        final kind4Id = _id('4');
+        final rumor = Event.fromJson({
+          'id': _id('2'),
+          'pubkey': _accountA,
+          'created_at': _createdAt,
+          'kind': EventKind.privateDirectMessage,
+          'tags': [
+            ['p', _accountB],
+          ],
+          'content': 'plain text',
+          'sig': '',
+        });
+        final kind4 = Event.fromJson({
+          'id': kind4Id,
+          'pubkey': _accountA,
+          'created_at': _createdAt,
+          'kind': EventKind.directMessage,
+          'tags': [
+            ['p', _accountB],
+          ],
+          'content': 'plain text',
+          'sig': '',
+        });
+        rumorByWrapId[_id('c')] = rumor;
+        // The sender's own send row holds the recipient's wrap id, and its
+        // outgoing NIP-04 recovery ledgered the kind-4 copy when it saw its
+        // own echo.
+        await messagesDao.insertMessage(
+          id: rumor.id,
+          conversationId: conversationAB,
+          senderPubkey: _accountA,
+          content: rumor.content,
+          createdAt: _createdAt,
+          giftWrapId: _id('c'),
+          ownerPubkey: _accountA,
+        );
+        await ProcessedGiftWrapsDao(
+          db,
+        ).record(giftWrapId: kind4Id, ownerPubkey: _accountA);
+
+        final first = await _Session.start(
+          db: db,
+          owner: _accountB,
+          rumorByWrapId: rumorByWrapId,
+        );
+        expect(
+          await first.deliver(db: db, wrapId: _id('c'), rumorId: rumor.id),
+          isTrue,
+          reason: 'precondition: the recipient stores the NIP-17 copy',
+        );
+        await first.deliverEvent(db: db, event: kind4, storedId: kind4Id);
+        await first.stop();
+
+        // The next launch replays the kind 4 inside the two-day overlap.
+        final relaunch = await _Session.start(
+          db: db,
+          owner: _accountB,
+          rumorByWrapId: rumorByWrapId,
+        );
+        await relaunch.deliverEvent(db: db, event: kind4, storedId: kind4Id);
+
+        expect(
+          await messagesDao.getMessagesForConversation(
+            conversationAB,
+            ownerPubkey: _accountB,
+          ),
+          hasLength(1),
+        );
+      });
+    });
+
     group('a wrap the ledger recorded under the old keys', () {
       test('is stored once the account switch has cleared the ledger and its '
           'rows', () async {

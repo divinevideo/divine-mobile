@@ -5237,10 +5237,9 @@ class DmRepository {
             ),
           );
         } on FormatException {
-          // The ledger keeps an id for the first account to record it, so a
-          // row written here would take it from the account the event was
-          // encrypted to. Record the failure only when no other account
-          // could be that one.
+          // Record the failure only when no other account could be the one the
+          // event was encrypted to: a row here is this account's outcome, and
+          // an event meant for another recipient is not its to settle.
           final namesOneRecipient = nip04Event.tags.every(
             (tag) =>
                 tag.length < 2 || tag[0] != 'p' || tag[1] == recipientPubkey,

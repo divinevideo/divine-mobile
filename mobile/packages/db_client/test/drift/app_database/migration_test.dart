@@ -311,6 +311,61 @@ void main() {
     });
 
     test(
+      'v32 keys the dedup ledger per account, keeping every recorded row',
+      () async {
+        final schema = await verifier.schemaAt(31);
+        final ownerA = 'a' * 64;
+        final ownerB = 'b' * 64;
+        final wrapId = 'c' * 64;
+        const insertRow =
+            'INSERT INTO processed_gift_wraps '
+            '(gift_wrap_id, processed_at, owner_pubkey) VALUES (?,?,?)';
+        schema.rawDatabase
+          ..execute(insertRow, [wrapId, 100, ownerA])
+          ..execute(insertRow, ['d' * 64, 101, null]);
+        expect(
+          () => schema.rawDatabase.execute(insertRow, [wrapId, 102, ownerB]),
+          throwsA(anything),
+          reason: 'precondition: the v31 key lets one account hold an id',
+        );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+
+        await verifier.migrateAndValidate(db, 32);
+
+        final dao = db.processedGiftWrapsDao;
+        expect(await dao.count(), 2, reason: 'no recorded row is lost');
+        expect(
+          await dao.hasGiftWrapForOwner(
+            giftWrapId: wrapId,
+            ownerPubkey: ownerA,
+          ),
+          isTrue,
+        );
+        expect(
+          await dao.hasGiftWrapForOwner(
+            giftWrapId: 'd' * 64,
+            ownerPubkey: ownerB,
+          ),
+          isTrue,
+          reason:
+              'a row with no owner is backfilled and still counts as the '
+              "account's own",
+        );
+        await dao.record(giftWrapId: wrapId, ownerPubkey: ownerB);
+        expect(
+          await dao.hasGiftWrapForOwner(
+            giftWrapId: wrapId,
+            ownerPubkey: ownerB,
+          ),
+          isTrue,
+          reason: 'the second account now remembers the same id itself',
+        );
+        expect(await dao.count(), 3);
+      },
+    );
+
+    test(
       'v32 lets two accounts hold one gift-wrap id, keeping the rows already '
       'stored',
       () async {

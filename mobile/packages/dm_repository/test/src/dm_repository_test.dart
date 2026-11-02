@@ -170,18 +170,19 @@ class _MockRemovedConversationsDao extends Mock
 
 /// In-memory [ProcessedGiftWrapsDao] backed by a [Set] of gift-wrap ids, so a
 /// repository test can prove a re-delivered wrap is not re-decrypted without a
-/// real Drift database. Mirrors the global (owner-agnostic) dedup contract.
+/// real Drift database. Mirrors the per-account dedup contract: an id is unique
+/// per owner.
 class _InMemoryProcessedGiftWrapsDao extends Mock
     implements ProcessedGiftWrapsDao {
   final Set<String> recorded = <String>{};
 
   /// Who recorded each id. An id seeded straight into [recorded] has no owner
   /// and counts as every account's, like an ownerless legacy ledger row.
-  final Map<String, String> _owners = <String, String>{};
+  final Map<String, Set<String>> _owners = <String, Set<String>>{};
 
   bool _heldBy(String giftWrapId, String ownerPubkey) =>
       recorded.contains(giftWrapId) &&
-      (_owners[giftWrapId] ?? ownerPubkey) == ownerPubkey;
+      (_owners[giftWrapId]?.contains(ownerPubkey) ?? true);
 
   @override
   Future<bool> hasGiftWrapForOwner({
@@ -206,7 +207,8 @@ class _InMemoryProcessedGiftWrapsDao extends Mock
     required String giftWrapId,
     required String ownerPubkey,
   }) async {
-    if (recorded.add(giftWrapId)) _owners[giftWrapId] = ownerPubkey;
+    recorded.add(giftWrapId);
+    _owners.putIfAbsent(giftWrapId, () => <String>{}).add(ownerPubkey);
   }
 }
 

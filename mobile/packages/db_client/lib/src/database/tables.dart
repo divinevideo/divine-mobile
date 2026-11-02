@@ -1850,12 +1850,12 @@ class ProcessedGiftWraps extends Table {
   /// The kind 1059 gift-wrap event id (outer), or the event id of a suppressed
   /// kind 4. Dedup key.
   ///
-  /// The key is the id alone, which is exact for a wrap: NIP-59 addresses each
-  /// one to a single recipient. A kind 4 is shared by both ends, so if both
-  /// are accounts on this device only the first to record it holds the row.
-  /// Lookups are scoped by [ownerPubkey] instead, so the other account does not
-  /// mistake that row for its own handling and simply handles the event itself,
-  /// at the cost of one repeat decrypt on a replay (#6645).
+  /// Unique per [ownerPubkey], not per device. A wrap is addressed to one
+  /// recipient, but a kind 4 is shared by both ends, so with both accounts on
+  /// this device each one records its own outcome for the id and must find it
+  /// again: a message dual-sent as NIP-17 and kind 4 is merged into one row,
+  /// and an account that cannot remember having done so stores the kind 4 a
+  /// second time on the next replay (#6645).
   TextColumn get giftWrapId => text().named('gift_wrap_id')();
 
   /// When the wrap was terminally processed (unix seconds).
@@ -1865,13 +1865,18 @@ class ProcessedGiftWraps extends Table {
   /// pruning an old row would make those wraps eligible for decryption again.
   IntColumn get processedAt => integer().named('processed_at')();
 
-  /// Recipient pubkey this wrap was processed for. Not part of the dedup key,
-  /// but scopes the lookups and the account cleanup, which must not delete
-  /// another saved account's ledger entries.
-  TextColumn get ownerPubkey => text().nullable().named('owner_pubkey')();
+  /// Hex public key of the account that processed this wrap.
+  ///
+  /// Part of the primary key, so NOT NULL with an empty-string default: SQLite
+  /// compares NULLs as distinct inside a unique key, which would stop two
+  /// ownerless rows for one id from collapsing. `''` is the legacy sentinel
+  /// `direct_messages` already uses, and rows written before v32 are backfilled
+  /// to it. Cleanup and lookups treat it as the account's own.
+  TextColumn get ownerPubkey =>
+      text().withDefault(const Constant('')).named('owner_pubkey')();
 
   @override
-  Set<Column> get primaryKey => {giftWrapId};
+  Set<Column> get primaryKey => {giftWrapId, ownerPubkey};
 }
 
 /// Account-lifetime dismissal state independent of cached conversation rows.

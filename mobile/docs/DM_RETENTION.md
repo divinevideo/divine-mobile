@@ -81,17 +81,18 @@ Both dedup lookups, the message row's `gift_wrap_id` and the ledger, answer
 is unique to one account only for an inbound gift wrap. An outgoing row stores
 the *recipient's* wrap id, and a kind-4 event id is shared by sender and
 recipient, so with both accounts on one device one id sits on two accounts'
-rows. The unique index is `(gift_wrap_id, owner_pubkey)` (schema v32, #6645).
-The ledger's key is still the id alone, so for a kind 4 only the first account
-to record an id holds the row; the other one handles the event itself, at the
-cost of one repeat decrypt on a replay.
+rows. The unique index and the ledger's primary key are both
+`(gift_wrap_id, owner_pubkey)` (schema v32, #6645), so each account keeps its
+own outcome for an id. That matters for a message dual-sent as NIP-17 and kind
+4: the recipient merges the kind 4 into its NIP-17 copy and must remember
+having done so, or the next replay stores the kind 4 a second time.
 
 ### Recovering a wrap the ledger skipped
 
 The ledger records that a wrap reached a terminal outcome, not which one, so
 a row with no message behind it cannot be told from a reaction, a deletion or a
 suppressed message, and no migration can sweep such rows safely. v12 and v32
-therefore leave the ledger alone. A wrap that an earlier build ledgered without
+therefore keep every ledger row (v32 only adds the owner to its key). A wrap that an earlier build ledgered without
 storing a message (the old device-wide keys, #6645) comes back the same way any
 account's history does: switching away from the account, or signing it out,
 deletes that account's messages, its ledger rows and its sync cursors (the

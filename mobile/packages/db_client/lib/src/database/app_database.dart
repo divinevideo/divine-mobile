@@ -421,7 +421,7 @@ class AppDatabase extends _$AppDatabase {
         await _repairSchemaV31();
       }
       if (from < 32 && to >= 32) {
-        await _migrateToV32OwnerScopedGiftWrapIndex();
+        await _migrateToV32OwnerScopedDedup(m);
       }
       await _withholdV31Columns(to);
     },
@@ -695,19 +695,35 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
-  /// Makes the DM gift-wrap dedup index unique per account (#6645).
+  /// Makes the DM gift-wrap dedup per account instead of per device (#6645).
   ///
-  /// v12 keyed the rows by account but left `gift_wrap_id` unique across the
-  /// device, so an account whose copy shares a wrap id with another local
+  /// v12 keyed the message rows by account but left `gift_wrap_id` unique
+  /// across the device, and the processed-wrap ledger was keyed by the id
+  /// alone. An account whose message shares a wrap id with another local
   /// account's row (the sender's outgoing row holds the recipient's wrap id, a
-  /// kind-4 id is shared by both ends) lost its copy. The new key only admits
-  /// rows the old one refused, so no stored row can violate it.
+  /// kind-4 id is shared by both ends) lost its copy, or could not remember
+  /// that it had already merged a dual-sent kind 4 into its NIP-17 copy and
+  /// stored it a second time.
   ///
-  /// The old index shares its name, so `CREATE ... IF NOT EXISTS` alone would
-  /// keep it. A versioned step only, outside the guarded `beforeOpen` recovery.
-  Future<void> _migrateToV32OwnerScopedGiftWrapIndex() async {
+  /// Both new keys only admit rows the old ones refused, so no stored row can
+  /// violate them. The message index shares its name with the old one, so
+  /// `CREATE ... IF NOT EXISTS` alone would keep it. The ledger is rebuilt for
+  /// its new primary key: a NULL owner becomes `''` first, because the column
+  /// is NOT NULL and a NULL cannot take part in a key. A versioned step only,
+  /// outside the guarded `beforeOpen` recovery.
+  Future<void> _migrateToV32OwnerScopedDedup(Migrator m) async {
     await customStatement('DROP INDEX IF EXISTS idx_dm_gift_wrap_id');
     await customStatement(_dmGiftWrapIndexSql);
+
+    if (!await _tableExists('processed_gift_wraps')) {
+      await m.createTable(processedGiftWraps);
+      return;
+    }
+    await customStatement(
+      "UPDATE processed_gift_wraps SET owner_pubkey = '' "
+      'WHERE owner_pubkey IS NULL',
+    );
+    await m.alterTable(TableMigration(processedGiftWraps));
   }
 
   /// Drops the v31 columns again from a database opened at an earlier
@@ -1676,8 +1692,8 @@ class AppDatabase extends _$AppDatabase {
         CREATE TABLE processed_gift_wraps (
           gift_wrap_id TEXT NOT NULL,
           processed_at INTEGER NOT NULL,
-          owner_pubkey TEXT,
-          PRIMARY KEY (gift_wrap_id)
+          owner_pubkey TEXT NOT NULL DEFAULT '',
+          PRIMARY KEY (gift_wrap_id, owner_pubkey)
         )
       ''');
     }

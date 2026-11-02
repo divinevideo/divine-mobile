@@ -3222,9 +3222,9 @@
             "name": "owner_pubkey",
             "getter_name": "ownerPubkey",
             "moor_type": "string",
-            "nullable": true,
+            "nullable": false,
             "customConstraints": null,
-            "default_dart": null,
+            "default_dart": "const CustomExpression('\\'\\'')",
             "default_client_dart": null,
             "dsl_features": []
           }
@@ -3233,7 +3233,8 @@
         "without_rowid": false,
         "constraints": [],
         "explicit_pk": [
-          "gift_wrap_id"
+          "gift_wrap_id",
+          "owner_pubkey"
         ]
       }
     },
@@ -4896,7 +4897,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"processed_gift_wraps\" (\"gift_wrap_id\" TEXT NOT NULL, \"processed_at\" INTEGER NOT NULL, \"owner_pubkey\" TEXT NULL, PRIMARY KEY (\"gift_wrap_id\"));"
+          "sql": "CREATE TABLE IF NOT EXISTS \"processed_gift_wraps\" (\"gift_wrap_id\" TEXT NOT NULL, \"processed_at\" INTEGER NOT NULL, \"owner_pubkey\" TEXT NOT NULL DEFAULT '', PRIMARY KEY (\"gift_wrap_id\", \"owner_pubkey\"));"
         }
       ]
     },
