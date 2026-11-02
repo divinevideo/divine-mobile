@@ -79,7 +79,14 @@ class _GatedRelay {
     this.cap,
     this.unsettledKinds = const {},
     this.finallyRefusingRelay = false,
+    this.inboxOnly = const [],
   });
+
+  /// The account's own kind-10050 inbox relay, outside the pool.
+  static const inboxUrl = 'wss://own-inbox.test';
+
+  /// Events only [inboxUrl] holds: a read that does not name it misses them.
+  final List<Event> inboxOnly;
 
   /// Whether a second relay in the pool refuses every request for the
   /// protected kinds for good, as relay.damus.io does once it rejects AUTH:
@@ -116,11 +123,17 @@ class _GatedRelay {
             filter.kinds!.every(_protectedKinds.contains),
       );
 
-  List<Event> answer(List<nostr_filter.Filter> filters) {
+  List<Event> answer(
+    List<nostr_filter.Filter> filters, {
+    List<String>? tempRelays,
+  }) {
     requests.add(filters);
     final reachesGate = _protectedOnly(filters);
     final served = [
-      for (final event in stored)
+      for (final event in [
+        ...stored,
+        if (tempRelays?.contains(inboxUrl) ?? false) ...inboxOnly,
+      ])
         if (filters.any((filter) => _admits(filter, event)) &&
             (!gated || reachesGate || !_protectedKinds.contains(event.kind)))
           event,
@@ -166,6 +179,7 @@ void main() {
     when(() => client.configuredRelayCount).thenReturn(1);
     when(() => client.configuredRelays).thenReturn(const ['wss://inbox.test']);
     when(() => client.relayStatuses).thenReturn(const {});
+    when(() => client.isRelayAllowed(any())).thenReturn(true);
     when(
       () => client.relayStatusStream,
     ).thenAnswer((_) => const Stream.empty());
@@ -187,7 +201,10 @@ void main() {
     ).thenAnswer((invocation) async {
       final filters =
           invocation.positionalArguments.first as List<nostr_filter.Filter>;
-      final events = relay.answer(filters);
+      final events = relay.answer(
+        filters,
+        tempRelays: invocation.namedArguments[#tempRelays] as List<String>?,
+      );
       if (!relay.settles(filters)) {
         return (events: const <Event>[], timedOut: true, noRelays: false);
       }
@@ -218,7 +235,10 @@ void main() {
     ).thenAnswer((invocation) async {
       final filters =
           invocation.positionalArguments.first as List<nostr_filter.Filter>;
-      final events = relay.answer(filters);
+      final events = relay.answer(
+        filters,
+        tempRelays: invocation.namedArguments[#tempRelays] as List<String>?,
+      );
       return relay.settles(filters)
           ? QueryResult(
               events: events,
@@ -241,7 +261,10 @@ void main() {
               as void Function(StoredEventsEnd)?;
       // The relay's stored events, then the end of them; the REQ stays open.
       final controller = StreamController<Event>();
-      final events = relay.answer(filters);
+      final events = relay.answer(
+        filters,
+        tempRelays: invocation.namedArguments[#tempRelays] as List<String>?,
+      );
       scheduleMicrotask(() {
         events.forEach(controller.add);
         onEnd?.call(StoredEventsEnd(deliveredEventCount: events.length));
@@ -367,6 +390,16 @@ void main() {
         '',
         createdAt: createdAt,
       )..sign(_aliceSecret);
+
+  /// The owner's kind-10050 naming [_GatedRelay.inboxUrl] as their DM inbox.
+  Event ownInboxList() => Event(
+    _owner,
+    EventKind.dmRelaysList,
+    [
+      ['relay', _GatedRelay.inboxUrl],
+    ],
+    '',
+  )..sign(_ownerSecret);
 
   int now() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
@@ -546,6 +579,37 @@ void main() {
         ).getMessageById(message.id, ownerPubkey: _owner);
         expect(row, isNotNull, reason: 'the message itself was restored');
         expect(row!.isDeleted, isTrue);
+        await repository.stopListening();
+      },
+    );
+
+    test(
+      "applies a deletion only the account's own inbox relay holds",
+      () async {
+        final at = now();
+        final message = nip04At(createdAt: at - 2000, content: 'inbox only');
+        final deletion = nip04DeletionAt(
+          createdAt: at - 1000,
+          target: message.id,
+        );
+        final relay = _GatedRelay(
+          [ownInboxList()],
+          gated: false,
+          inboxOnly: [message, deletion],
+        );
+        final repository = launch(relay);
+
+        await repository.backfillHistoryIfNeeded();
+
+        final row = await DirectMessagesDao(
+          db,
+        ).getMessageById(message.id, ownerPubkey: _owner);
+        expect(row, isNotNull, reason: 'the drain read the inbox relay');
+        expect(
+          row!.isDeleted,
+          isTrue,
+          reason: 'the deletion pass did not ask the inbox relay',
+        );
         await repository.stopListening();
       },
     );

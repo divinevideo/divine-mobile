@@ -2238,10 +2238,12 @@ class DmRepository {
   /// a drain page brings a deletion before the older page holding its message.
   /// The gift-wrap pages read only kinds 1059 and 4 (#9468), so deletions are
   /// read here, after them and after [_recoverOutgoingNip04]. Pages `#p:[self]`
-  /// kind-5 newest→oldest; see [_runRecoveryPass].
+  /// kind-5 newest→oldest on the relays those pages read, the account's own
+  /// inbox [tempRelays] included; see [_runRecoveryPass].
   Future<bool> _recoverDeletions(
     String pubkey,
     int generation, {
+    required List<String>? tempRelays,
     required bool allowRefusalConfirmation,
   }) => _runRecoveryPass(
     pubkey,
@@ -2255,12 +2257,14 @@ class DmRepository {
     ),
     subscriptionIdFor: (page) => dmDeletionDrainSubscriptionId(pubkey, page),
     pageKeyBase: DmHistoryDrainConfig.maxPages,
+    tempRelays: tempRelays,
     allowRefusalConfirmation: allowRefusalConfirmation,
   );
 
   /// Pages [filterFor]'s events newest→oldest after the gift-wrap drain
   /// reached the end, routing each through [_handleIncomingEvent]. Bounded by
   /// [DmHistoryDrainConfig.maxPages]. [label] names the pass in logs.
+  /// [tempRelays] are asked beside the pool, as in [_fetchHistoryPage].
   ///
   /// Returns `true` only when every page it read was authoritative and the
   /// walk ended on an empty page, at the epoch, or at the page budget. Returns
@@ -2279,6 +2283,7 @@ class DmRepository {
     required String Function(int page) subscriptionIdFor,
     required int pageKeyBase,
     required bool allowRefusalConfirmation,
+    List<String>? tempRelays,
   }) async {
     // A delayed pass confirms only a refusal seen both when its timer armed
     // and on the latest sweep that heard back about its page. A page answered
@@ -2299,6 +2304,7 @@ class DmRepository {
           [filterFor(cursor)],
           subscriptionId: subscriptionIdFor(page),
           useCache: false,
+          tempRelays: tempRelays,
           requireAllRelaysSettled: true,
         );
         final events = result.events;
@@ -3052,6 +3058,7 @@ class DmRepository {
             await _recoverDeletions(
               pubkey,
               gen,
+              tempRelays: ownInbox,
               allowRefusalConfirmation: allowRefusalConfirmation,
             );
         if (deletionsRecovered) {
