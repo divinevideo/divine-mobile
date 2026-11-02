@@ -185,13 +185,15 @@ class SocialStickerCubit extends Cubit<SocialStickerState> {
 
   /// Asks [text] in a question, prompts it in an Add yours, or titles a
   /// replies sticker with it. An Add yours whose hashtag still follows its
-  /// prompt, or has none, takes the new prompt's.
+  /// prompt, or has none, takes the new prompt's, unless it answers a chain:
+  /// there the hashtag is how the chain counts the answer, so it stays.
   void promptChanged(String text) {
     final data = state.data;
     final hashtag = data.hashtag ?? '';
     final followsPrompt =
-        hashtag.isEmpty ||
-        hashtag == SocialStickerData.hashtagForPrompt(data.prompt ?? '');
+        data.chainRoot == null &&
+        (hashtag.isEmpty ||
+            hashtag == SocialStickerData.hashtagForPrompt(data.prompt ?? ''));
     emit(
       state.copyWith(
         data: data.kind == SocialStickerKind.addYours && followsPrompt

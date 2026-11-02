@@ -367,6 +367,25 @@ void main() {
       );
 
       blocTest<SocialStickerCubit, SocialStickerState>(
+        "keeps an answer's chain hashtag when its prompt is edited",
+        build: () => build(
+          const SocialStickerData(
+            kind: SocialStickerKind.addYours,
+            prompt: 'Show your desk setup',
+            hashtag: 'showyourdesksetup',
+            chainRoot: '34236:pubkey:chain',
+          ),
+        ),
+        // The hashtag is how the chain counts this answer, so a new prompt
+        // must not take the video out of the chain.
+        act: (cubit) => cubit.promptChanged('Show your desk'),
+        verify: (cubit) {
+          expect(cubit.state.data.prompt, equals('Show your desk'));
+          expect(cubit.state.data.hashtag, equals('showyourdesksetup'));
+        },
+      );
+
+      blocTest<SocialStickerCubit, SocialStickerState>(
         'leaves a hashtag the creator wrote alone',
         build: () =>
             build(SocialStickerData.interactive(SocialStickerKind.addYours)),
