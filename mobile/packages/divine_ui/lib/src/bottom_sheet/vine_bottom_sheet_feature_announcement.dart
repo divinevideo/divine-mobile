@@ -20,7 +20,7 @@ class VineFeatureAnnouncementItem {
   /// Short title of the benefit.
   final String title;
 
-  /// One line explaining what the user gets.
+  /// A short sentence explaining what the user gets.
   final String description;
 }
 
@@ -28,8 +28,11 @@ class VineFeatureAnnouncementItem {
 /// the app opens after an update.
 ///
 /// From top to bottom it shows a free-form [illustration], an optional
-/// [badgeLabel] (such as "New"), a [title], an optional [subtitle], up to a
-/// few [features] rows, a primary action and an optional secondary action.
+/// [badgeLabel] (such as "New"), a [title], an optional [subtitle], one row
+/// per entry in [features], a primary action and an optional secondary action.
+///
+/// Use it instead of [VineBottomSheetPrompt] when the sheet needs an
+/// illustration other than a sticker, a badge, or feature rows.
 ///
 /// Can be used as a widget directly or shown as a modal via
 /// [VineBottomSheetFeatureAnnouncement.show].
@@ -82,7 +85,7 @@ class VineBottomSheetFeatureAnnouncement extends StatelessWidget {
   /// Name of the feature.
   final String title;
 
-  /// Optional one-line pitch below the title.
+  /// Optional short pitch below the title.
   final String? subtitle;
 
   /// Benefits listed below the title.
@@ -96,6 +99,8 @@ class VineBottomSheetFeatureAnnouncement extends StatelessWidget {
   final VoidCallback onPrimaryPressed;
 
   /// Optional label for a secondary action, such as trying the feature.
+  ///
+  /// Provide it together with [onSecondaryPressed], or leave both null.
   final String? secondaryButtonText;
 
   /// Callback for the secondary action. The sheet does not close itself.
