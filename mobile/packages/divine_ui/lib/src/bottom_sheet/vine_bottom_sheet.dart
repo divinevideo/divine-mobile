@@ -153,11 +153,14 @@ class VineBottomSheet extends StatelessWidget {
   /// behaviour between user-defined fractions of the viewport.
   ///
   /// [useRootNavigator] is forwarded to [showModalBottomSheet]. It defaults
-  /// to true so the sheet always covers the app's chrome, including the
-  /// bottom navigation of a tab shell. Set it to false only to keep the sheet
-  /// inside the nearest nested navigator. A caller that closes the sheet with
-  /// a navigator it resolved itself must resolve the same one:
-  /// `Navigator.of(context, rootNavigator: true)` for the default.
+  /// to true so the sheet covers the bottom navigation of a tab shell. Set it
+  /// to false only to keep the sheet in the nearest enclosing navigator.
+  ///
+  /// With the default, an opener inside a nested navigator is not under the
+  /// sheet's navigator. Close the sheet from a context inside it, for example
+  /// `Navigator.of(context).pop()` in the body: a navigator resolved from the
+  /// opener before the sheet opens would pop the wrong route. If it must be
+  /// resolved early, use `Navigator.of(context, rootNavigator: true)`.
   ///
   /// [tapOutsideToDismiss], when true (the default) and [scrollable] is
   /// true, wraps the sheet so that taps on the scrim above the sheet
