@@ -153,6 +153,21 @@ fm stop "$run" 2>/dev/null | grep -qx 'stopped' || fail "stop did not end a run 
 if kill -0 "$pid" 2>/dev/null; then
   fail "stop left the never-started run (pid $pid) running."
 fi
+
+# A pid file whose number now belongs to another process is not a live run.
+# Refusing it would last as long as that process does, and stop leaves a pid
+# it does not own in place, so start takes the directory over.
+run=$FM_DIR/reused
+mkdir -p "$run"
+sleep 60 &
+other=$!
+echo "$other" > "$run/pid"
+fm start "$run" "$SCRATCH" fake-device >/dev/null \
+  || fail "start refused a run directory whose pid belongs to another process"
+kill "$other"
+wait "$other" 2>/dev/null || true
+fm wait "$run" 20 >/dev/null
+fm stop "$run" >/dev/null
 unset FLUTTER
 
 # 4. The fault proxy and its selftest, where a Dart SDK is available.

@@ -61,7 +61,7 @@ send() { # method params-json [timeout]; prints the reply line
 case "$cmd" in
   start)
     proj="${3:?project dir}"; dev="${4:?device id}"; shift 4
-    if alive; then
+    if alive && ours; then
       echo "a run is still alive in $run (pid $(cat "$run/pid")); stop it first, or pick another run directory" >&2
       exit 3
     fi
