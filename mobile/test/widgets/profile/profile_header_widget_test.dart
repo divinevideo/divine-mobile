@@ -427,6 +427,8 @@ void main() {
       // Ahead of the app's own, so one of these wins for its type.
       List<LocalizationsDelegate<dynamic>> extraDelegates = const [],
       bool renderHeader = true,
+      // Puts the header in a nested navigator, as the profile tab does.
+      bool inTabNavigator = false,
       MockAuthService? authService,
       bool isVanished = false,
       OtherProfileState? otherProfileState,
@@ -597,7 +599,15 @@ void main() {
                 accessibleNavigation: accessibleNavigation,
                 textScaler: textScaler ?? MediaQuery.textScalerOf(context),
               ),
-              child: Scaffold(body: SingleChildScrollView(child: header)),
+              child: Scaffold(
+                body: inTabNavigator
+                    ? Navigator(
+                        onGenerateRoute: (_) => MaterialPageRoute<void>(
+                          builder: (_) => SingleChildScrollView(child: header),
+                        ),
+                      )
+                    : SingleChildScrollView(child: header),
+              ),
             ),
           ),
         ),
@@ -4350,6 +4360,38 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(prefs.getInt(_dismissedDivineLoginBannerKey), isNotNull);
         expect(find.byType(VineBottomSheetPrompt), findsNothing);
+      });
+
+      testWidgets('"Maybe later" closes the sheet when opened from a tab', (
+        tester,
+      ) async {
+        // The sheet opens on the root navigator. Popping the header's nearest
+        // navigator would pop the profile tab's page and leave the sheet up.
+        final testProfile = createTestProfile(displayName: 'Test User');
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            userIdHex: testUserHex,
+            isOwnProfile: true,
+            profile: testProfile,
+            hasExpiredSession: true,
+            sharedPreferences: prefs,
+            inTabNavigator: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.byType(VineBottomSheetPrompt), findsOneWidget);
+
+        await tester.tap(find.text(l10n.profileMaybeLaterLabel).last);
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(VineBottomSheetPrompt), findsNothing);
+        expect(find.byType(ProfileHeaderWidget), findsOneWidget);
       });
 
       testWidgets('dismisses via "Maybe later" after the header unmounts', (

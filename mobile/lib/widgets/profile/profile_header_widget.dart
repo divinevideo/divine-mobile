@@ -558,7 +558,8 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
       userIdHex: userIdHex,
     );
     final publishBloc = context.read<BackgroundPublishBloc>();
-    final navigator = Navigator.of(context);
+    // The sheet opens on the root navigator, not the profile tab's own.
+    final navigator = Navigator.of(context, rootNavigator: true);
 
     return VineBottomSheetPrompt.show<void>(
       context: context,
