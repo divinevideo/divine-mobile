@@ -52,6 +52,7 @@ Complete dark-mode design system providing:
 | `VineBottomSheet` | Base bottom sheet with drag handle and themed styling. Supports scrollable and fixed modes. |
 | `VineBottomSheetActionMenu` | Icon-and-label action list. For bespoke menus, use `VineBottomSheet.show<T>` with private tiles that pop a typed result; see `lib/screens/comments/widgets/comment_options_modal.dart`. |
 | `VineBottomSheetDragHandle` | Reusable drag handle widget |
+| `VineBottomSheetFeatureAnnouncement` | Announces a new feature: free-form illustration, optional "New" badge, title, subtitle, icon-title-description rows (`VineFeatureAnnouncementItem`), primary and optional secondary action. |
 | `VineBottomSheetHeader` | Header with title/subtitle for bottom sheets |
 | `VineBottomSheetPrompt` | Confirmation or decision prompt with typed results. |
 | `VineBottomSheetSelectionMenu` | Selection menu variant (pick from options) |
