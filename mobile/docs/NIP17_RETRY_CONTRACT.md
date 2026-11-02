@@ -1,13 +1,13 @@
 # NIP-17 retry semantics: making a retry distinguishable from a repeat
 
-Status: **proposal, awaiting a ruling from the `epic(dm)` #8227 owner.**
+Status: **ruled 2026-11-03. Adopt A′ (SHOULD), hold B behind field evidence,
+ship no receiver-side suppression.** See "Recommendation" for the full ruling.
 Tracking: [#6522](https://github.com/divinevideo/divine-mobile/issues/6522)
 Author's evidence: reproduced end-to-end, see "Evidence" below.
 
-Nothing in this document is implemented. It exists so the protocol decision
-#6522 asks for can be made against a written proposal rather than in a comment
-thread. The code shipped alongside it only *hardens* and *observes* — it does
-not change behaviour or the wire format.
+This document records the protocol decision #6522 asks for and the evidence
+behind it. It changes no behaviour and no wire format: Divine already does what
+A′ asks, and B is specified but not implemented.
 
 ---
 
@@ -88,11 +88,20 @@ Two more paths build a rumor and are not retries of a stored one:
   and nonce (`dm_video_encryption.dart`), so its content and tags differ from
   the first. It is a new message, not a re-mint of the old one.
 
-So Divine cannot cause this defect. It can only receive it.
+One hop sits outside this repository. For a Keycast identity the rumor is
+wrapped by the `nip17_wrap_batch` RPC, which takes the client's whole rumor,
+rejects a wrong id (`verify_id`), fills in an id only when one is missing, and
+wraps that rumor as given (`api/src/api/http/nostr_rpc.rs:366-380, 1609-1620`
+at keycast `ca0d8a9`). Read from code only: the pass-through is neither
+documented nor pinned by a test there, so a change on that side could re-mint
+without anything in this repository noticing.
+
+So, as the code stands, Divine does not cause this defect. It can only
+receive it.
 
 ---
 
-## Proposal A (recommended): state the contract
+## Proposal A′ (ruled): state the contract
 
 NIP-17 already makes the rumor id the message's identity — it requires the
 field:
@@ -107,12 +116,31 @@ same event on the wire again."
 **Proposed addition to NIP-17, after the Encrypting section:**
 
 > When a client retries delivery of a message it has already attempted to send,
-> it MUST re-wrap the original rumor — preserving its `id` and `created_at` —
-> rather than construct a new one. A new `id` denotes a new message: receivers
-> deduplicate on the rumor `id`, and a re-minted retry is indistinguishable
-> from the user sending the same text twice. Only the seal and the gift wrap
-> are rebuilt, which is required in any case since each carries a fresh
-> ephemeral key and a fresh randomized `created_at`.
+> it SHOULD keep the message's identity: re-wrap the original rumor, or rebuild
+> it with the same `created_at`, `tags` and `content`, so that its `id` does not
+> change. A new `id` denotes a new message: receivers deduplicate on the rumor
+> `id`, and a retry with a new `id` is indistinguishable from the user sending
+> the same text twice. Only the seal and the gift wrap are rebuilt, since each
+> carries a fresh ephemeral key and a randomized `created_at`. A retry sent
+> later keeps the rumor's original `created_at`. Sending the same text again on
+> purpose is a new message and needs its own `id`; a client that could send two
+> identical rumors in one second has to make them differ.
+
+A′ replaces the wording first proposed here ("MUST re-wrap the original
+rumor") in three ways:
+
+- **SHOULD, not MUST.** A re-minted retry shows the receiver a duplicate; it
+  does not break the protocol. The neighbouring timestamp rule is also a
+  SHOULD (`17.md:59`), and the three libraries read in "What third-party
+  clients do" re-mint by default today, so a MUST would make them
+  non-conforming on day one.
+- **A rebuild with identical fields is allowed.** Divine's `enqueueSend`
+  rebuilds its rumor from a caller-supplied key and timestamp rather than
+  replaying a stored row, and a library that cannot hand the rumor back can do
+  the same. What matters is that the `id` comes out the same, not how.
+- **The converse is stated.** Without it, "reuse the id" reads as "a repeat may
+  share an id", and same-second identical sends would collapse. Divine's
+  `batch` nonce exists for exactly that case (`_sendBatchTagKey`).
 
 **Why this is the right shape**
 
@@ -124,18 +152,27 @@ same event on the wire again."
   names behaviour some already have.
 - Divine is a conforming reference implementation, so we are asking the
   ecosystem to do what we already do rather than to adopt something we invented.
+- It is how the closest protocols settle the same question. The originator fixes
+  an identity once and a retry reuses it, as Matrix does with its transaction
+  id; on Nostr a resent event is an expected case that relays answer with a
+  `duplicate:` OK (`01.md:171`), and NIP-17 edits keep "the same timestamp"
+  (`17.md:89`).
 
 **What it does not do**
 
 It does not help against a client that ignores it, and it has no effect until
-clients adopt it. Adoption is outside our control. This is why B exists.
+clients adopt it. Adoption is outside our control. This is why B is specified
+and held.
 
 ---
 
-## Proposal B (fallback, specified but NOT implemented): a correlation tag
+## Proposal B (held, specified but NOT implemented): a correlation tag
 
-Only worth pursuing if A is rejected upstream, or if field evidence shows
-re-minting is common enough that waiting on adoption is unacceptable.
+Held. It is revisited when there is field evidence of a real client re-minting
+on retry that adoption of A′ does not fix: either a named, widely used client,
+or support logs showing it (see "What third-party clients do" for the
+`contentCorrelation` token). Upstream declining A′ is not by itself the
+trigger.
 
 **Divine already ships a tag in this exact position, and it is instructive that
 it cannot be reused.** `sendMessage` and `sendGroupMessage` both inject
@@ -165,9 +202,15 @@ resolve both:
    in-flight group persist." Honouring a peer's token is precisely what #6522
    needs, so **any cross-client correlation contract must answer this
    suppression vector before it can ship.** This is the strongest argument for
-   preferring A: a contract that says "reuse your own rumor" grants a peer no
+   preferring A′: a contract that says "reuse your own rumor" grants a peer no
    new power over the receiver's database, whereas any honoured peer-authored
    token does.
+
+   One way to narrow the vector, offered as an untested inference: if the
+   receiver only ever matched a token against earlier rows from the *same
+   sender pubkey*, a sender could suppress only their own later message, not
+   the local user's persist. No existing document evaluates this, and it needs
+   the same review as the rest of B before it counts as an answer.
 
 **Wire shape** — a tag inside the kind-14 rumor:
 
@@ -209,7 +252,7 @@ stored row swallow every same-text arrival in
 - It needs a Drift migration and changes the dedup contract currently pinned by
   `direct_messages_dao_test.dart`.
 - It still only helps against clients that adopt it — the same adoption problem
-  as A, but with a permanent format commitment attached.
+  as A′, but with a permanent format commitment attached.
 - Group sends require one byte-identical rumor per send
   ([#8188](https://github.com/divinevideo/divine-mobile/issues/8188)); the tag
   must be identical across recipients or it re-forks the id.
@@ -222,16 +265,16 @@ Recorded so they are not re-proposed.
 
 | Approach | Why it is rejected |
 |---|---|
-| Widen the ±5s dedup window | Absorbs legitimate repeated messages and re-creates #7324's silent data loss. It also would not even reach this case: post-[#8169](https://github.com/divinevideo/divine-mobile/issues/8169) the `DmDedupCounterpart` gate rejects a NIP-17-onto-NIP-17 match at *any* delta, so the window is not what decides here. |
+| Widen the ±5s dedup window | Absorbs legitimate repeated messages and re-creates #7324's silent data loss. It also would not even reach this case: post-[#8169](https://github.com/divinevideo/divine-mobile/issues/8169) a peer's rumor is only matched against a NIP-04 twin (`DmDedupCounterpart.nip04Copy`), so a NIP-17-onto-NIP-17 match is rejected at *any* delta and the window is not what decides here. That holds for a peer's rumors. The sender's own group rumors that carry no `batch` token still use the unconstrained ±5 s match (`dm_repository.dart:4310-4318` at `f3faefaa4a`), which is an echo of the user's own send and not a peer retry. |
 | Content-hash dedup | Identical content is not evidence of the same send, and there is no safe time boundary. An unbounded rule permanently discards legitimate repeats. |
 | Receiver-side heuristic suppression | Without a wire-level signal, any heuristic that catches a retry also discards a genuine repeat. It can only choose which error to make. |
 | Anything keyed on the gift wrap's `created_at` | NIP-17 says clients SHOULD randomize that timestamp up to two days into the past (`17.md:59`), so a conforming client buries it in noise on purpose. Measured at ~45 h from the rumor's own timestamp in our repro, and between 1 and 45 h across six wraps built with `nak`. It is a SHOULD, not a MUST: a client that skips it would make the timestamp informative, which is no basis for a rule. |
 
 ## What third-party clients do
 
-The question this section used to leave open was which clients re-mint on
-retry. It was answered from source on 2026-11-02, at the commits below. Nothing
-was run: each row says what the code does, not what an app built from it does.
+Which clients re-mint on retry was answered from source on 2026-11-02, at the
+commits below. Nothing was run: each row says what the code does, not what an
+app built from it does.
 
 | Project | Commit | Does the built-in retry reuse the rumor? | Where |
 |---|---|---|---|
@@ -244,13 +287,14 @@ was run: each row says what the code does, not what an app built from it does.
 What this shows:
 
 - Neither app with a built-in retry was found to re-mint on it. Both already do
-  what Proposal A asks, which is the same position Divine is in.
+  what Proposal A′ asks, which is the same position Divine is in.
 - Re-minting is the default path in the three libraries. The call an app author
   reaches for first builds the rumor internally and discards it, so retrying
   correctly means dropping to the lower-level wrap function and keeping the
-  rumor. A contract that says "re-wrap the original rumor" therefore also needs
-  those APIs to hand the rumor, or its `id` and `created_at`, back to the
-  caller. The sentence in the NIP is necessary but not sufficient.
+  rumor. A contract that says "keep the rumor's `id`" therefore also needs
+  those APIs to hand the rumor back, or to accept the original `created_at`
+  so the caller can rebuild it. The sentence in the NIP is necessary but not
+  sufficient.
 - It does not show that any shipped app re-mints. That depends on the app built
   on a library, and none of those were read.
 
@@ -271,16 +315,23 @@ changes after an app restart.
 
 ## Recommendation
 
-Adopt A. Specify B and hold it. Do not ship any receiver-side suppression.
+Ruled 2026-11-03:
 
-A is not merely cheaper than B — it is safer. B requires honouring a token
+- **Adopt A′, as a SHOULD.** It is the contract Divine already follows.
+- **Specify B and hold it.** Revisit it on field evidence of a real client
+  re-minting that A′ adoption does not fix, as described under Proposal B.
+- **Do not ship any receiver-side suppression.** It stays in the rejected
+  table.
+- **No "possibly resent" disclosure on the receiving side for now.**
+
+A′ is not merely cheaper than B — it is safer. B requires honouring a token
 authored by the peer, which is the one thing the current ingest path refuses on
 purpose; designing that safely is a larger problem
-than the duplicate bubble it would fix. A grants the peer no new authority over
+than the duplicate bubble it would fix. A′ grants the peer no new authority over
 the receiver's database at all.
 
-The third-party read adds one requirement to A. The two apps that retry already
+The third-party read adds one requirement to A′. The two apps that retry already
 conform, and the libraries make non-conformance the default, so the NIP wording
 is worth proposing together with a pointer for library authors: expose the
-rumor, or its `id` and `created_at`, from the high-level send call so a caller
-can keep it and re-wrap it.
+rumor, or let the caller pass the original `created_at`, from the high-level
+send call so a caller can keep the `id` and re-wrap or rebuild it.
