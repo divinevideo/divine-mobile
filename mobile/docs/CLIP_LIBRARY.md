@@ -91,7 +91,7 @@ The bloc and the library screen enforce these rules:
 
 Deleting from the library is a soft delete: `deleted_at` is set and the files stay on disk. A snackbar offers undo. The Deleted filter lists trashed clips with the days left before they go; from there a clip can be restored or deleted for good, and the whole trash can be emptied.
 
-At every app start, once signed in, `purgeExpiredTrash` permanently deletes the current account's clips (and legacy clips with no owner) that have been in the trash longer than `ClipLibraryConstants.trashRetention` (30 days). Another account's expired trash waits until that account signs in. The trash list reads the same constant for its countdown.
+At every app start and after an account switch, once signed in, `purgeExpiredTrash` permanently deletes the current account's clips (and legacy clips with no owner) that have been in the trash longer than `ClipLibraryConstants.trashRetention` (30 days). Another account's expired trash waits until that account signs in. The trash list reads the same constant for its countdown.
 
 When the recorder deletes the last take, the clip goes to the trash too. It passes `clearDraftId: true`, so a restore puts the clip back in the library instead of in a draft that may be gone. The recorder has its own undo for this (`ClipManagerNotifier.undoPendingDeletion`).
 
@@ -99,7 +99,7 @@ A permanent delete removes both rows first, then the files through `FileCleanupS
 
 ## Startup and background work
 
-Once the user is signed in, `AppLifecycleHandler` runs three clip steps in order, after it has resumed pending publishes. Between the first and the second it also migrates old drafts.
+Once the user is signed in, `AppLifecycleHandler` runs three clip steps in order, after it has resumed pending publishes. Between the first and the second it also migrates old drafts. An account switch rebuilds the app subtree, so the steps run again for the new account.
 
 1. `migrateOldClips` moves clips from the SharedPreferences store of earlier builds into Drift. It is a temporary migration, marked for removal.
 2. `purgeExpiredTrash` empties the current account's expired trash (see [Trash](#trash)).
