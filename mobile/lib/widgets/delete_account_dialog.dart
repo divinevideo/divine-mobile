@@ -417,10 +417,9 @@ Future<void> executeAccountDeletion({
   // the screen-reader announcement still lands after that redirect (#6450).
   final view = View.of(context);
   final textDirection = Directionality.of(context);
-  // The root navigator, which `VineBottomSheet.show` pushes onto by default,
-  // resolved while the caller is still mounted. `context.pop()` would resolve
-  // to the innermost navigator instead, which for a shell-nested caller is
-  // not the one holding the sheet.
+  // The progress sheet blocks the UI through an irreversible delete, so it
+  // must cover the shell: `VineBottomSheet.show` puts it on the root
+  // navigator by default. Resolved here, while the caller is still mounted.
   final rootNavigator = Navigator.of(context, rootNavigator: true);
 
   // The sheet's own route, captured so dismissal can target exactly this
