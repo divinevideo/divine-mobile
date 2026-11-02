@@ -78,7 +78,7 @@ The sort order (`ClipSort`) and the number of grid columns are kept in SharedPre
 
 A selection is for acting on clips in the library (delete, organize, save to the gallery, open in the editor) or for picking clips for another screen. Dragging across the grid selects a range.
 
-The bloc enforces these rules:
+The bloc and the library screen enforce these rules:
 
 - A selection holds either stop-motion sets or video clips, not both. The exceptions are the editor's two pickers (`allowsMixedClipTypes`): the one for adding clips converts every pick to the session's kind, and the split-screen cell picker takes both.
 - A selection holds clips of one aspect ratio, and the grid disables every other shape. In the editor's add-clips picker that is the shape of the timeline's first clip; elsewhere it is the shape of the first clip selected. The split-screen cell picker is the exception, below.
