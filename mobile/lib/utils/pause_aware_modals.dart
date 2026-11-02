@@ -137,8 +137,8 @@ extension PauseAwareModals on BuildContext {
     List<double>? snapSizes,
     // Defaults to true because video-pausing sheets are inherently
     // full-takeover interactions that should cover the tab bar. Callers on
-    // screens without a shell/tab bar can opt out with false. Matches the
-    // sibling showVideoPausingDialog.
+    // screens without a shell/tab bar can opt out with false. Matches
+    // VineBottomSheet.show and the sibling showVideoPausingDialog.
     bool useRootNavigator = true,
     bool tapOutsideToDismiss = true,
     Widget Function(BuildContext context, Widget child)? contentWrapper,
