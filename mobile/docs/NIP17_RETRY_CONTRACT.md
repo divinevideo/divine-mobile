@@ -227,19 +227,47 @@ Recorded so they are not re-proposed.
 | Receiver-side heuristic suppression | Without a wire-level signal, any heuristic that catches a retry also discards a genuine repeat. It can only choose which error to make. |
 | Anything keyed on the gift wrap's `created_at` | NIP-17 says clients SHOULD randomize that timestamp up to two days into the past (`17.md:59`), so a conforming client buries it in noise on purpose. Measured at ~45 h from the rumor's own timestamp in our repro, and between 1 and 45 h across six wraps built with `nak`. It is a SHOULD, not a MUST: a client that skips it would make the timestamp informative, which is no basis for a rule. |
 
-## Open question
+## What third-party clients do
 
-**We do not know which third-party clients actually re-mint on retry.** No
-spec-level prior art exists either way, and the send paths of Amethyst, 0xchat,
-Coracle, NDK and rust-nostr were not read. This does not change which design is
-correct, but it does change how urgent B is. It would be settled by reading
-those retry paths, or by field evidence. The change shipped alongside this
-document is what makes that evidence collectable: each `Persisted NIP-17 DM`
-line now records a process-local, keyed `contentCorrelation` token. Equal
-tokens for the same conversation and sender, seconds apart, are evidence of a
-possible re-mint that support can grep from a bug report. The plaintext, its
-length, and the temporary key are never logged, and the token changes after an
-app restart.
+The question this section used to leave open was which clients re-mint on
+retry. It was answered from source on 2026-11-02, at the commits below. Nothing
+was run: each row says what the code does, not what an app built from it does.
+
+| Project | Commit | Does the built-in retry reuse the rumor? | Where |
+|---|---|---|---|
+| Amethyst (Quartz) | amethyst `553f761f22`, quartz `5ae28cbea1` | **Yes.** A retry republishes the wraps built on the first send, so the rumor, seal and wrap ids are all unchanged. | `Account.broadcastPrivately`: "Republishing the wraps we already hold is the whole retry". The retry closure is in memory in `ChatDeliveryTracker` and covers a send that failed before reaching the relay pool |
+| Coracle and welshman | welshman `7d72fa0a7c`, coracle `d50db6133f` | **Yes.** `retry` republishes the thunk's original options, and the rumor is stamped once, before wrapping. | `thunk.ts:411-414`, `wraps.ts:70-71` |
+| nostr-tools | `8ffc6287cd` | No retry layer. The high-level `nip17.wrapEvent` stamps `created_at` from the clock on every call, so retrying by calling it again re-mints. The lower-level `nip59` functions accept an existing rumor. | `nip17.ts:22`, `nip59.ts:21-30` |
+| NDK | `4b86acd13f` | No retry layer. `NIP17Protocol.sendMessage` builds the rumor from the clock inside the call and does not return it. `giftWrap` accepts an existing event. | `messages/src/protocols/nip17.ts:28-40` |
+| rust-nostr | `4c8099aef6` | No retry layer. `PrivateDirectMessageBuilder::finalize` makes a fresh rumor on every call, even on a clone. `GiftWrapBuilder` wraps an `UnsignedEvent` the caller kept. | `nostr/src/nips/nip17.rs:158-166` |
+
+What this shows:
+
+- Neither app with a built-in retry was found to re-mint on it. Both already do
+  what Proposal A asks, which is the same position Divine is in.
+- Re-minting is the default path in the three libraries. The call an app author
+  reaches for first builds the rumor internally and discards it, so retrying
+  correctly means dropping to the lower-level wrap function and keeping the
+  rumor. A contract that says "re-wrap the original rumor" therefore also needs
+  those APIs to hand the rumor, or its `id` and `created_at`, back to the
+  caller. The sentence in the NIP is necessary but not sufficient.
+- It does not show that any shipped app re-mints. That depends on the app built
+  on a library, and none of those were read.
+
+Still unknown: apps built on nostr-tools, NDK and rust-nostr; 0xchat; whether
+Amethyst's retry survives a process restart, since its retry closure is held in
+memory; whether Quartz 2.13.0, the version Amethyst pins, matches the commit
+read; whether the older welshman that Coracle pins (0.13.0, whose
+`publisher.ts` says "The event keeps its id") behaves like the commit read;
+and the welshman version Flotilla pins. Damus and Primal were still
+kind-4-only on 2026-09-05 and were not read.
+
+Field evidence stays collectable from support logs: each
+`Persisted NIP-17 DM` line records a process-local, keyed `contentCorrelation`
+token. Equal tokens for the same conversation and sender, seconds apart, are
+evidence of a possible re-mint that support can grep from a bug report. The
+plaintext, its length, and the temporary key are never logged, and the token
+changes after an app restart.
 
 ## Recommendation
 
@@ -250,3 +278,9 @@ authored by the peer, which is the one thing the current ingest path refuses on
 purpose; designing that safely is a larger problem
 than the duplicate bubble it would fix. A grants the peer no new authority over
 the receiver's database at all.
+
+The third-party read adds one requirement to A. The two apps that retry already
+conform, and the libraries make non-conformance the default, so the NIP wording
+is worth proposing together with a pointer for library authors: expose the
+rumor, or its `id` and `created_at`, from the high-level send call so a caller
+can keep it and re-wrap it.
