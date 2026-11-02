@@ -439,12 +439,6 @@ Future<void> executeAccountDeletion({
       isDismissible: false,
       enableDrag: false,
       tapOutsideToDismiss: false,
-      // Pinned rather than left at VineBottomSheet's local-navigator default:
-      // this blocks the UI through an irreversible delete, so it has to cover
-      // shell chrome too. Both callers are root-level routes today, so it
-      // changes nothing now — it keeps a future shell-nested caller from
-      // leaving the bottom nav tappable mid-deletion.
-      useRootNavigator: true,
       body: const _DeletionProgressSheetContent(),
       contentWrapper: (sheetContext, child) {
         progressSheetRoute = ModalRoute.of<void>(sheetContext);

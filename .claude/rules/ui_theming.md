@@ -719,11 +719,10 @@ library is imported.
   the neighbours warm for fast resume, so it is not interchangeable with a
   page owner: the condition is
   `shouldRetainPlayer => isBottomSheetOpen && !isPageOpen`, so holding a page
-  owner and a sheet owner at once loses the retention. The two differ on
-  navigator — the first forwards `useRootNavigator` and defaults it to
-  `true`, while the second takes none and inherits `VineBottomSheet.show`'s
-  `false`, so it always lands on the branch navigator where the `AppShell`
-  net above cannot fire.
+  owner and a sheet owner at once loses the retention. Both open on the root
+  navigator, so they cover the bottom navigation: the first forwards
+  `useRootNavigator` and defaults it to `true`, and the second takes none and
+  inherits `VineBottomSheet.show`'s `true` default.
 
 `pushWithVideoPause` releases its owner from `push(...).whenComplete(...)`,
 which runs on a **pop** alone: a `go()`-style dismissal — the Android back
