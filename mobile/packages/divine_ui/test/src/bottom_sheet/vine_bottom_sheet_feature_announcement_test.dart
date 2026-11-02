@@ -1,6 +1,8 @@
 // ABOUTME: Tests for VineBottomSheetFeatureAnnouncement component
 // ABOUTME: Verifies rendering, button interactions, semantics, and modal show
 
+import 'dart:ui' show SemanticsFlag;
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -22,6 +24,10 @@ const _features = [
 
 void main() {
   Widget buildSubject({
+    Widget illustration = const SizedBox.square(
+      key: _illustrationKey,
+      dimension: 100,
+    ),
     String? badgeLabel,
     String? subtitle,
     List<VineFeatureAnnouncementItem> features = const [],
@@ -33,10 +39,7 @@ void main() {
       theme: VineTheme.theme,
       home: Scaffold(
         body: VineBottomSheetFeatureAnnouncement(
-          illustration: const SizedBox.square(
-            key: _illustrationKey,
-            dimension: 100,
-          ),
+          illustration: illustration,
           badgeLabel: badgeLabel,
           title: 'Captions',
           subtitle: subtitle,
@@ -149,15 +152,37 @@ void main() {
           ),
         );
 
+        // matchesSemantics, unlike isSemantics, also fails on unexpected
+        // flags, such as the image flag an unexcluded row icon would add.
         expect(
           tester.getSemantics(find.text('Turn them on anytime')),
-          isSemantics(
+          matchesSemantics(
             label:
                 'Turn them on anytime\n'
                 'Tap CC on any video that has captions.',
           ),
         );
         handle.dispose();
+      });
+
+      testWidgets('hides the illustration from screen readers', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSubject(illustration: const Text('Sparkle art')),
+        );
+
+        expect(find.text('Sparkle art'), findsOneWidget);
+        expect(find.bySemanticsLabel('Sparkle art'), findsNothing);
+      });
+
+      testWidgets('hides the badge sparkle icon from screen readers', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildSubject(badgeLabel: 'New'));
+
+        expect(find.bySemanticsLabel('New'), findsOneWidget);
+        expect(find.semantics.byFlag(SemanticsFlag.isImage), findsNothing);
       });
     });
 
