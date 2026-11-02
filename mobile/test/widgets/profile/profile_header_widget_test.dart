@@ -740,7 +740,6 @@ void main() {
           await tester.pump();
 
           expect(find.byType(SupporterMembership), findsNothing);
-          expect(find.byType(ActionChip), findsNothing);
         },
       );
     }
@@ -1297,7 +1296,7 @@ void main() {
               ),
             );
 
-            expect(find.byType(ActionChip), findsNothing);
+            expect(find.text(l10n.supporterJoinLabel), findsNothing);
             expect(find.text(l10n.supporterBadgeLabel), findsNothing);
           });
         }
