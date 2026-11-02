@@ -10,6 +10,11 @@ import 'package:path/path.dart' as p;
 
 part 'clips_dao.g.dart';
 
+/// Data access for the [Clips] table, which holds library clips
+/// (`draft_id` NULL) and the clips of drafts.
+///
+/// Owner-scoped queries return the given owner's rows plus legacy rows
+/// without an owner. Trashed rows are left out unless a query asks for them.
 @DriftAccessor(tables: [Clips])
 class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
   ClipsDao(super.attachedDatabase);
