@@ -1,6 +1,5 @@
-// ABOUTME: Multi-state bottom sheet content for pending profile actions.
-// ABOUTME: Animates between the pending prompts (account status, secure
-// ABOUTME: account, complete profile, become a supporter) with AnimatedSwitcher.
+// ABOUTME: Presents pending profile actions in a bottom sheet, tall for the
+// ABOUTME: supporter invitation, and animates between their prompts.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,8 +27,9 @@ abstract class ProfileActionsSheetSizing {
 ///
 /// The short prompts use a sheet sized to its content. When the sheet opens on
 /// the supporter invitation it is the tall, draggable variant, with the
-/// content scrolling inside it. Either way it opens on the root navigator, so
-/// it covers the tab shell's bottom navigation.
+/// content scrolling inside it. A supporter invitation reached through "Maybe
+/// later" stays in the short sheet and scrolls inside it. Either way it opens
+/// on the root navigator, so it covers the tab shell's bottom navigation.
 Future<void> showProfileActionsSheet({
   required BuildContext context,
   required List<ProfileActionType> actions,
@@ -175,7 +175,7 @@ class _ProfileActionsSheetContentState
   }
 }
 
-/// Single prompt view for one [ProfileActionType].
+/// Prompt for an action whose primary button opens another screen.
 ///
 /// Displays a sticker illustration, title, subtitle, and primary/secondary
 /// action buttons matching the [VineBottomSheetPrompt] layout pattern.
@@ -245,8 +245,8 @@ class _ActionPrompt extends StatelessWidget {
   }
 }
 
-/// The Supporter screen's content, so the user can join from the sheet, with
-/// a "Maybe later" that hides the invitation.
+/// The Supporter screen's content, so the user can join from the sheet,
+/// followed by "Maybe later".
 class _SupporterPrompt extends ConsumerWidget {
   const _SupporterPrompt({
     required this.onMaybeLater,

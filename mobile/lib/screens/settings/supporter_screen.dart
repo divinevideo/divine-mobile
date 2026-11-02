@@ -1,5 +1,5 @@
-// ABOUTME: Settings screen for the Divine supporter subscription.
-// ABOUTME: Acknowledges membership and manages optional public recognition.
+// ABOUTME: Settings screen for the Divine supporter subscription, and the
+// ABOUTME: content and cubit scope the profile's supporter sheet reuses.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
@@ -65,8 +65,7 @@ class SupporterCubitScope extends ConsumerWidget {
 class SupporterScreenView extends StatelessWidget {
   const SupporterScreenView({this.storeBillingAvailable = true, super.key});
 
-  /// Whether a store can bill this build. When false, plans and restore are
-  /// replaced by a note, because no checkout can succeed here.
+  /// Forwarded to [SupporterContent.storeBillingAvailable].
   final bool storeBillingAvailable;
 
   @override
@@ -119,8 +118,7 @@ class _SupporterContentState extends State<SupporterContent> {
   @override
   void initState() {
     super.initState();
-    // Start the cubit's entitlement listener now that the BlocProvider above
-    // has created the cubit.
+    // Reading the lazy cubit creates it; start its entitlement listener.
     context.read<SupporterCubit>().start();
   }
 

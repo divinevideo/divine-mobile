@@ -931,7 +931,7 @@ void main() {
             );
             expect(mascot, findsOneWidget);
             expect(tester.getSize(mascot), const Size.square(27));
-            // Drawn larger than its slot, so the pill keeps the label's height.
+            // Drawn larger than its slot, so the row keeps the label's height.
             expect(tester.getSize(row).height, 20);
             final label = tester.widget<Text>(pill);
             expect(label.style?.color, VineTheme.onPrimary);

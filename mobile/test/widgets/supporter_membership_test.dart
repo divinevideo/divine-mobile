@@ -1,4 +1,4 @@
-// ABOUTME: Tests own-account membership entries in settings and on the profile.
+// ABOUTME: Tests the own-account Settings entry and the membership scope.
 // ABOUTME: Covers refresh without store work and suppression of external prompts.
 
 import 'dart:async';

@@ -1,4 +1,5 @@
-// ABOUTME: Account-scoped supporter acknowledgement and discovery entry points.
+// ABOUTME: The Settings supporter entry and the scope that provides the
+// ABOUTME: signed-in account's membership.
 
 import 'dart:async';
 
@@ -16,7 +17,8 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 
-/// Settings entry to supporter membership, acknowledging supporters.
+/// Settings entry to supporter membership: acknowledges a supporter and
+/// invites everyone else.
 ///
 /// Reads the [SupporterCubit] of an enclosing [SupporterMembershipScope] when
 /// there is one, so it shares that scope's single membership read.

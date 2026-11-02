@@ -456,8 +456,8 @@ class _ProfileAvatarWithPendingActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Only a server-confirmed non-supporter is invited; an unknown or loading
-    // membership shows nothing. The cubit exists only on the signed-in
-    // owner's profile when supporters are configured.
+    // membership shows nothing. The cubit is absent outside the owner's
+    // SupporterMembershipScope.
     final isConfirmedNonSupporter = context.select<SupporterCubit?, bool>(
       (cubit) {
         final state = cubit?.state;
@@ -501,9 +501,8 @@ class _ProfileAvatarWithPendingActions extends StatelessWidget {
 /// Profile avatar with optional action label overlapping the bottom edge.
 ///
 /// When [pendingActions] is non-empty, a pill-shaped label (e.g. "Secure
-/// your account") is centred below the avatar. A red count badge appears
-/// on the label when more than one action is pending. Tapping either the
-/// avatar or the label triggers [onActionTap].
+/// your account") is centred below the avatar. A red badge on the label
+/// counts the pending actions. Tapping the label triggers [onActionTap].
 ///
 /// While [showSkeleton] is set the avatar is swapped for an [_AvatarBone] and
 /// the pending-action label is dropped, so neither is tappable during the
@@ -681,7 +680,7 @@ class _AvatarBone extends StatelessWidget {
 
 /// Pill-shaped label shown below the profile avatar for the highest-priority
 /// pending action. Displays an icon and text matching the action type, with
-/// an optional red badge when multiple actions are pending.
+/// a red badge counting the pending actions.
 class _ProfileActionLabel extends StatelessWidget {
   const _ProfileActionLabel({required this.action, required this.badgeCount});
 
@@ -791,8 +790,8 @@ class _ProfileActionLabel extends StatelessWidget {
 /// The Divine mascot on a pending-action pill. Decorative: the label beside it
 /// carries the meaning.
 ///
-/// The drawing fills only ~73% of its square raster, so the image is drawn
-/// larger than its slot: the visible mascot then matches the label's line
+/// The drawing fills only ~73% of its square raster's height, so the image is
+/// drawn taller than its slot: the visible mascot then matches the label's line
 /// height while the slot, and so the pill, keeps the height of the others.
 class _ProfileActionMascot extends StatelessWidget {
   const _ProfileActionMascot();
@@ -800,7 +799,7 @@ class _ProfileActionMascot extends StatelessWidget {
   /// The mascot's raster, declared with the rest of `assets/icon/`.
   static const asset = 'assets/icon/MascotCropped=yes.png';
 
-  /// The label's line height (`titleSmall`: 14px at 20/14).
+  /// The line height of [VineTheme.titleSmallFont], which the label uses.
   static const _slotHeight = 20.0;
   static const _drawnSize = 27.0;
 

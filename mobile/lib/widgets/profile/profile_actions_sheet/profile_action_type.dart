@@ -17,11 +17,11 @@ enum ProfileActionType {
   /// The user has not yet set a custom display name, bio, or picture.
   completeProfile,
 
-  /// The user is not a supporter yet and is invited to become one.
+  /// The account has no active supporter membership and is invited to join.
   becomeSupporter;
 
-  /// Returns the list of pending actions based on the current profile and
-  /// auth state.
+  /// Returns the list of pending actions based on the current profile, auth
+  /// and membership state.
   ///
   /// [isOwnProfile] — whether we are looking at the logged-in user's profile.
   /// [isAccountEnforced] — whether Divine has confirmed an account restriction.
