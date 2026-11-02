@@ -137,4 +137,8 @@ Footage from outside the app gets in only after the C2PA check described in [`DM
 - [`test/services/clip_library_service_test.dart`](../test/services/clip_library_service_test.dart)
 - [`test/blocs/clips_library/`](../test/blocs/clips_library/)
 - [`test/widgets/library/`](../test/widgets/library/)
+- [`test/screens/library_screen_test.dart`](../test/screens/library_screen_test.dart)
+- [`test/widgets/app_lifecycle_handler_test.dart`](../test/widgets/app_lifecycle_handler_test.dart), for the startup steps
+- [`test/services/video_clip_import_service_test.dart`](../test/services/video_clip_import_service_test.dart)
+- [`test/services/clip_recovery_service_test.dart`](../test/services/clip_recovery_service_test.dart)
 - [`clips_dao_test.dart`](../packages/db_client/test/src/database/daos/clips_dao_test.dart) and [`clip_categories_dao_test.dart`](../packages/db_client/test/src/database/daos/clip_categories_dao_test.dart) in `db_client`
