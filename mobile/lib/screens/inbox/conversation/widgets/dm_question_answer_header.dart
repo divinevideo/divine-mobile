@@ -5,12 +5,16 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show DmMessage, NIP71VideoKinds;
+import 'package:models/models.dart'
+    show DmMessage, NIP71VideoKinds, VideoStickerRegion;
+import 'package:openvine/blocs/question_answer/question_answer_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
+import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/string_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// The question [message] answers, quoted above it.
@@ -34,6 +38,21 @@ class DmQuestionAnswerHeader extends ConsumerWidget {
   /// The signed-in account's hex pubkey.
   final String? viewerPubkey;
 
+  /// The question [message] says it answers, as shown above it and on the
+  /// reply sticker of a video answering it.
+  ///
+  /// The sender writes it, so it is cut to the longest question a sticker
+  /// holds and cleared of broken characters that would crash text layout.
+  static String? questionOf(DmMessage message) {
+    final question = message.answeredQuestion;
+    return question == null
+        ? null
+        : _bounded(question, VideoStickerRegion.maxLabelLength);
+  }
+
+  static String _bounded(String text, int maxCodeUnits) =>
+      StringUtils.sanitizeUtf16(sliceDmDisplayText(text, maxCodeUnits).text);
+
   /// What a video answering [message] replies to: the creator's video, with
   /// the question and the answer, its citation line left out, on its reply
   /// sticker. `null` when [message] names no video of [creatorPubkey]'s.
@@ -41,7 +60,7 @@ class DmQuestionAnswerHeader extends ConsumerWidget {
     DmMessage message, {
     required String? creatorPubkey,
   }) {
-    final question = message.answeredQuestion;
+    final question = questionOf(message);
     final videoId = message.answeredVideoId;
     final video = message.sharedVideoRef;
     if (question == null ||
@@ -51,11 +70,14 @@ class DmQuestionAnswerHeader extends ConsumerWidget {
         video.authorPubkey?.toLowerCase() != creatorPubkey.toLowerCase()) {
       return null;
     }
-    final answer = message.content
-        .split('\n')
-        .where((line) => !line.trim().startsWith('nostr:'))
-        .join('\n')
-        .trim();
+    final answer = _bounded(
+      message.content
+          .split('\n')
+          .where((line) => !line.trim().startsWith('nostr:'))
+          .join('\n')
+          .trim(),
+      QuestionAnswerCubit.maxAnswerLength,
+    );
     return VideoReplyContext(
       rootEventId: videoId,
       rootEventKind: NIP71VideoKinds.addressableShortVideo,
@@ -70,7 +92,7 @@ class DmQuestionAnswerHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final colors = context.vineColors;
-    final question = message.answeredQuestion ?? '';
+    final question = questionOf(message) ?? '';
     final replyContext = isSent
         ? null
         : replyContextFor(message, creatorPubkey: viewerPubkey);

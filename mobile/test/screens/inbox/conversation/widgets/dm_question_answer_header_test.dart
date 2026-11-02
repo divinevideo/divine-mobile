@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/question_answer/question_answer_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
@@ -14,15 +15,20 @@ import 'package:openvine/screens/inbox/conversation/widgets/dm_question_answer_h
 final String _creator = 'c' * 64;
 final String _videoId = 'e' * 64;
 
-DmMessage _answer({String? author, List<List<String>>? extraTags}) => DmMessage(
+DmMessage _answer({
+  String? author,
+  String question = 'Ask me anything',
+  String answer = 'Pizza',
+  List<List<String>>? extraTags,
+}) => DmMessage(
   id: 'a' * 64,
   conversationId: 'conversation',
   senderPubkey: 'b' * 64,
-  content: 'Pizza\nnostr:naddr1example',
+  content: '$answer\nnostr:naddr1example',
   createdAt: 1757385263,
   giftWrapId: 'f' * 64,
   tags: [
-    [DmMessage.questionTagName, 'Ask me anything', _videoId],
+    [DmMessage.questionTagName, question, _videoId],
     ...?extraTags,
   ],
   sharedVideoRef: DmSharedVideoRef(
@@ -53,6 +59,29 @@ void main() {
               replyToText: 'Pizza',
             ),
           ),
+        );
+      });
+
+      test('bounds what the sender wrote before it goes on the sticker', () {
+        // The sender writes both: a question no sticker could hold, an answer
+        // past what the answer page sends, and a lone surrogate that would
+        // crash text layout.
+        final context = DmQuestionAnswerHeader.replyContextFor(
+          _answer(
+            question: 'Q\uD800${'x' * 400}',
+            answer: 'A' * (QuestionAnswerCubit.maxAnswerLength + 100),
+          ),
+          creatorPubkey: _creator,
+        )!;
+
+        expect(
+          context.replyToName!.length,
+          lessThanOrEqualTo(VideoStickerRegion.maxLabelLength),
+        );
+        expect(context.replyToName, isNot(contains('\uD800')));
+        expect(
+          context.replyToText!.length,
+          equals(QuestionAnswerCubit.maxAnswerLength),
         );
       });
 
