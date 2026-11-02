@@ -447,6 +447,130 @@ void main() {
       expect(gated.checkQuery(refusedId), isFalse);
     });
 
+    test('an EOSE with the auth hint holds the query for the post-AUTH '
+        'replay', () async {
+      final signer = LocalNostrSigner(
+        '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+      );
+      final nostr = Nostr(signer, [], dummyTempRelay);
+      final relay = _ControlledQueryRelay('wss://hinting.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+
+      final pending = nostr.readEvents(
+        [
+          {
+            'kinds': [1059],
+          },
+        ],
+        requireAllRelaysSettled: true,
+        timeout: const Duration(seconds: 30),
+      );
+      final subId = await relay.awaitPendingQuery();
+      // NIP-42 / NIP-67: the challenge, then an EOSE saying more may follow
+      // an AUTH.
+      await relay.deliver(['AUTH', 'test-challenge']);
+      await relay.deliver([
+        'EOSE',
+        subId,
+        ['auth'],
+      ]);
+      expect(relay.checkQuery(subId), isTrue);
+
+      await relay.deliver(['OK', relay.capturedAuthEventId, true, '']);
+      await relay.awaitReqCount(2);
+      await relay.deliver(['EOSE', subId]);
+
+      final result = await pending.timeout(const Duration(seconds: 2));
+      expect(result.endedBy, QueryEnd.complete);
+    });
+
+    test('an EOSE with the auth hint ends as a restricted refusal once the '
+        'relay rejects AUTH', () async {
+      final signer = LocalNostrSigner(
+        '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+      );
+      final nostr = Nostr(signer, [], dummyTempRelay);
+      final answering = _ControlledQueryRelay('wss://answering.example');
+      final hinting = _ControlledQueryRelay('wss://hinting.example');
+      expect(await nostr.relayPool.add(answering), isTrue);
+      expect(await nostr.relayPool.add(hinting), isTrue);
+
+      final pending = nostr.readEvents(
+        [
+          {
+            'kinds': [1059],
+          },
+        ],
+        requireAllRelaysSettled: true,
+        timeout: const Duration(seconds: 30),
+      );
+      final answeredId = await answering.awaitPendingQuery();
+      final hintedId = await hinting.awaitPendingQuery();
+      await answering.deliver(['EOSE', answeredId]);
+      await hinting.deliver(['AUTH', 'test-challenge']);
+      await hinting.deliver([
+        'EOSE',
+        hintedId,
+        ['auth'],
+      ]);
+      await hinting.deliver([
+        'OK',
+        hinting.capturedAuthEventId,
+        false,
+        'restricted: not for this key',
+      ]);
+
+      final result = await pending.timeout(const Duration(seconds: 2));
+      expect(result.closedRelayReasons, {
+        'wss://hinting.example': 'restricted',
+      });
+    });
+
+    test('a refusal after the relay already rejected AUTH on the connection '
+        'ends at once as restricted', () async {
+      final signer = LocalNostrSigner(
+        '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+      );
+      final nostr = Nostr(signer, [], dummyTempRelay);
+      final answering = _ControlledQueryRelay('wss://answering.example');
+      final gated = _ControlledQueryRelay('wss://gated.example');
+      expect(await nostr.relayPool.add(answering), isTrue);
+      expect(await nostr.relayPool.add(gated), isTrue);
+      // AUTH rejected once on this connection.
+      await gated.deliver(['AUTH', 'test-challenge']);
+      await gated.deliver([
+        'OK',
+        gated.capturedAuthEventId,
+        false,
+        'error: relay needs serviceUrl to be configured before AUTH can work',
+      ]);
+
+      final pending = nostr.readEvents(
+        [
+          {
+            'kinds': [1059],
+          },
+        ],
+        requireAllRelaysSettled: true,
+        timeout: const Duration(seconds: 30),
+      );
+      final answeredId = await answering.awaitPendingQuery();
+      final refusedId = await gated.awaitPendingQuery();
+      await answering.deliver(['EOSE', answeredId]);
+      // No new challenge: the relay just refuses again.
+      await gated.deliver([
+        'CLOSED',
+        refusedId,
+        'auth-required: authentication required to read this event kind',
+      ]);
+
+      final result = await pending.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => fail('the query waited for an AUTH that was refused'),
+      );
+      expect(result.closedRelayReasons, {'wss://gated.example': 'restricted'});
+    });
+
     test('a query refused while no AUTH was sent keeps its auth-required '
         'refusal', () async {
       final nostr = Nostr(_NoKeySigner(), [], dummyTempRelay);

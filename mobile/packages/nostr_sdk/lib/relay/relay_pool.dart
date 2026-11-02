@@ -150,6 +150,10 @@ class RelayPool {
   /// for the post-AUTH replay. Belongs to one socket, like the handshake.
   final Map<String, Set<String>> _queriesParkedForAuth = {};
 
+  /// Relays that rejected our AUTH on their current socket. Their refusals
+  /// for missing AUTH are final until a new challenge or a new socket.
+  final Set<String> _authRejected = {};
+
   /// How long an outstanding NIP-42 handshake may hold a one-shot query open
   /// past [querySettleWindow].
   ///
@@ -1480,6 +1484,30 @@ class RelayPool {
     }
   }
 
+  /// Whether [frame] is an `EOSE` carrying NIP-42's `auth` hint (42.md:89,
+  /// NIP-67) from a relay this socket has not authenticated to, after the
+  /// challenge the hint requires: the relay may hold more for an
+  /// authenticated reader, so its answer is not complete. Without a challenge
+  /// nothing can authenticate, and the hint only marks the answer as not
+  /// exhaustive.
+  bool _eoseAsksForAuth(Relay relay, List<dynamic> frame) {
+    if (relay.relayStatus.authed) return false;
+    final hints = frame.length > 2 ? frame[2] : null;
+    if (hints is! List || !hints.contains('auth')) return false;
+    return _hasLiveAuthHandshake(relay) ||
+        _authRejected.contains(relay.url) ||
+        _authGateClosed.contains(relay.url);
+  }
+
+  /// Holds one-shot query [subId] on [relay] for the post-AUTH replay, as an
+  /// `auth-required` refusal is held, after an `EOSE` that asked for AUTH.
+  void _holdQueryForAuth(Relay relay, String subId) {
+    _recordQueryClosed(relay, subId, 'auth-required');
+    (_queriesParkedForAuth[relay.url] ??= {}).add(subId);
+    if (!_hasLiveAuthHandshake(relay)) _closeAuthGate(relay);
+    if (_authRejected.contains(relay.url)) _endQueriesParkedForAuth(relay);
+  }
+
   /// Watches [relay]'s connection state so a dropped socket releases the
   /// one-shot queries that were still riding on it.
   ///
@@ -1501,6 +1529,7 @@ class RelayPool {
       _authHandshakeStartedAt.remove(relay.url);
       _authGateClosed.remove(relay.url);
       _queriesParkedForAuth.remove(relay.url);
+      _authRejected.remove(relay.url);
       _settleQueriesBlockedBy(relay);
       _recheckStoredEventsPhasesOf(relay);
     };
@@ -2241,6 +2270,10 @@ class RelayPool {
       // would otherwise find this relay gone without an answer.
       if (relay.checkQuery(subId)) {
         _queryOutcomes[subId]?.recordEose(relay, json);
+        if (_eoseAsksForAuth(relay, json)) {
+          _holdQueryForAuth(relay, subId);
+          return;
+        }
       }
       var isQuery = await relay.checkAndCompleteQuery(subId);
       if (isQuery) {
@@ -2362,6 +2395,7 @@ class RelayPool {
         if (success) {
           relay.relayStatus.authed = true;
           _queriesParkedForAuth.remove(relay.url);
+          _authRejected.remove(relay.url);
           log('🔐 AUTH succeeded for ${relay.url}');
           _diagnose(
             RelayDiagnosticSite.authentication,
@@ -2424,6 +2458,7 @@ class RelayPool {
           _rejectAuthRequiredPublishesForRelay(relay, message);
           // The gate stayed shut, so the queries parked for the post-AUTH
           // replay will never be replayed.
+          _authRejected.add(relay.url);
           _endQueriesParkedForAuth(relay);
           _closeAuthGate(relay);
         }
@@ -2461,6 +2496,7 @@ class RelayPool {
         _authHandshakeStartedAt[relay.url] = DateTime.now();
         // A new challenge supersedes whatever the last one concluded.
         _authGateClosed.remove(relay.url);
+        _authRejected.remove(relay.url);
         log('🔐 Challenge: $challenge');
         var tags = [
           ["relay", relay.url],
@@ -2622,6 +2658,7 @@ class RelayPool {
         // must stop suppressing its own refusal once it goes stale, or every
         // later query on that socket pays its full budget.
         if (!_hasLiveAuthHandshake(relay)) _closeAuthGate(relay);
+        if (_authRejected.contains(relay.url)) _endQueriesParkedForAuth(relay);
       } else if (relay.discardQuery(subscriptionId)) {
         _recordQueryClosed(relay, subscriptionId, reason);
         _fireQueryCompleteIfSettled(
