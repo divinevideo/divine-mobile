@@ -45,7 +45,7 @@ app_logs() { # app.log events, plus the raw lines some devices print outside the
 # the run, so later errors can be ones no user can reach (#10439; flutter-lens §4).
 taint_re="Build scheduled during frame|unfinished batch edits|while finalizing the widget tree|_debugMouseTrackerUpdateScheduled|_lifecycleState == _ElementLifecycle"
 send() { # method params-json [timeout]; prints the reply line
-  alive || { echo "flutter run is not running (see $run/run.err)" >&2; return 3; }
+  { alive && ours; } || { echo "flutter run is not running (see $run/run.err)" >&2; return 3; }
   local id msg i=0 t="${3:-90}"
   id=$(( $(cat "$run/seq" 2>/dev/null || echo 100) + 1 )); echo "$id" > "$run/seq"
   msg=$(jq -nc --argjson id "$id" --arg m "$1" --argjson p "$2" '[{id: $id, method: $m, params: $p}]') || { echo "bad params json" >&2; return 64; }
@@ -88,7 +88,7 @@ case "$cmd" in
     ;;
   status)
     [ -f "$run/pid" ] || { echo "state=none (no run in $run)"; exit 3; }
-    state=exited; alive && state=running
+    state=exited; alive && ours && state=running
     started=no; grep -q '"event":"app.started"' "$out" 2>/dev/null && started=yes
     echo "state=$state pid=$(cat "$run/pid") started=$started"
     echo "appId=$(app_id)"; echo "wsUri=$(field app.debugPort wsUri)"; echo "dtdUri=$(field app.dtd uri)"
@@ -128,8 +128,8 @@ case "$cmd" in
     # A run that never reached app.start has no appId to stop, and would sit
     # here for the full wait: go straight to ending its process tree.
     if [ -n "$id" ]; then
-      alive && { send app.stop "$(jq -nc --arg a "$id" '{appId: $a}')" 30 >/dev/null || true; }
-      i=0; while alive && [ "$i" -lt 20 ]; do sleep 1; i=$((i + 1)); done
+      alive && ours && { send app.stop "$(jq -nc --arg a "$id" '{appId: $a}')" 30 >/dev/null || true; }
+      i=0; while alive && ours && [ "$i" -lt 20 ]; do sleep 1; i=$((i + 1)); done
     fi
     if alive; then
       if ours; then

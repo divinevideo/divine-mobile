@@ -168,6 +168,25 @@ kill "$other"
 wait "$other" 2>/dev/null || true
 fm wait "$run" 20 >/dev/null
 fm stop "$run" >/dev/null
+
+# The same, once the run has ended and its FIFO has no reader: a command that
+# writes to the FIFO would block until something opens it, so nothing may treat
+# the other process as the run.
+run=$FM_DIR/foreign
+mkdir -p "$run"
+echo '[{"event":"app.start","params":{"appId":"gone"}}]' > "$run/run.jsonl"
+echo '[{"event":"app.started","params":{}}]' >> "$run/run.jsonl"
+mkfifo "$run/ctl"
+sleep 60 &
+other=$!
+echo "$other" > "$run/pid"
+status=0; fm status "$run" >/dev/null 2>&1 || status=$?
+[ "$status" -eq 3 ] || fail "status reported another process as this run: exit $status"
+fm stop "$run" 2>/dev/null | grep -qx 'stopped' \
+  || fail "stop hung or failed on a run directory whose pid belongs to another process"
+kill -0 "$other" 2>/dev/null || fail "stop ended a process that was not its run"
+kill "$other"
+wait "$other" 2>/dev/null || true
 unset FLUTTER
 
 # 4. The fault proxy and its selftest, where a Dart SDK is available.
