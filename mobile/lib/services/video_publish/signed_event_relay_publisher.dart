@@ -107,8 +107,8 @@ enum _RelayPresence { found, notFound, unknown }
 /// Two entry points:
 ///
 /// * [publishViaWebSocket] — one OK-aware attempt over the relay pool. The
-///   single-shot path for audio and subtitle events, whose callers keep
-///   their own null/false handling.
+///   single-shot path for audio, subtitle, sound-sharing and video-metadata
+///   edit events, whose callers keep their own failure handling.
 /// * [publish] — the video-event strategy: up to three attempts with a 2s/4s
 ///   backoff, all sending the same signed event. With an [EventApiClient]
 ///   wired, as the app always does, each attempt is REST first with an
@@ -244,8 +244,7 @@ class SignedEventRelayPublisher {
   /// **Failure contract** (returns [EventPublishOutcome.transientFailure]):
   /// timeouts, ordinary relay rejection/no response, and inner exceptions.
   /// Video publication retries those outcomes with relay-presence recovery;
-  /// single-shot audio/subtitle callers retain their existing null/false
-  /// handling.
+  /// single-shot callers retain their own failure handling.
   ///
   /// **Sentinel-return contract** (audits #3593 / #4592): transport and domain
   /// failures intentionally remain outcomes rather than exceptions because all
