@@ -71,7 +71,13 @@ class _GatedRelay {
     required this.gated,
     this.cap,
     this.unsettledKinds = const {},
+    this.finallyRefusingRelay = false,
   });
+
+  /// Whether a second relay in the pool refuses every request for the
+  /// protected kinds for good, as relay.damus.io does once it rejects AUTH:
+  /// the pool reports it `restricted` beside this relay's answer.
+  final bool finallyRefusingRelay;
 
   /// Kinds a request may not ask for and still be settled: the relay never
   /// ends such a request.
@@ -170,9 +176,18 @@ void main() {
       final filters =
           invocation.positionalArguments.first as List<nostr_filter.Filter>;
       final events = relay.answer(filters);
-      return relay.settles(filters)
-          ? (events: events, timedOut: false, noRelays: false)
-          : (events: const <Event>[], timedOut: true, noRelays: false);
+      if (!relay.settles(filters)) {
+        return (events: const <Event>[], timedOut: true, noRelays: false);
+      }
+      // NostrClient.queryEventsDetailed settles a read that ended on final
+      // refusals beside an answer only when asked to.
+      final refused =
+          relay.finallyRefusingRelay && _GatedRelay._protectedOnly(filters);
+      final accepts =
+          invocation.namedArguments[#acceptRelayClosedWhenOthersAnswered]
+              as bool? ??
+          false;
+      return (events: events, timedOut: refused && !accepts, noRelays: false);
     });
     when(
       () => client.readEvents(
@@ -319,6 +334,25 @@ void main() {
               'gift wrap the relay held; requests sent: '
               '${relay.requests.map((r) => r.map((f) => f.kinds).toList())}',
         );
+        await repository.stopListening();
+      },
+    );
+
+    test(
+      'completes restore beside a relay that refuses DMs for good',
+      () async {
+        final wrap = await wrapAt(wire: now() - 3600, content: 'beside');
+        final relay = _GatedRelay(
+          [wrap],
+          gated: true,
+          finallyRefusingRelay: true,
+        );
+        final repository = launch(relay);
+
+        await repository.backfillHistoryIfNeeded();
+
+        expect(await isStored(wrap), isTrue);
+        expect(DmSyncState(prefs).historyDrainComplete(_owner), isTrue);
         await repository.stopListening();
       },
     );

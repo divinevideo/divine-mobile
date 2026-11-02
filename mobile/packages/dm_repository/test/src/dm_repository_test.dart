@@ -9174,9 +9174,12 @@ void main() {
             giftWrapPages.add((captured[i + 1], captured[i + 2]));
           }
           expect(giftWrapPages, isNotEmpty);
-          // Every gift-wrap page demands settlement, and none settles on a
-          // relay's refusal: only the NIP-04 pass below may weigh refusals.
-          expect(giftWrapPages, everyElement(equals((true, false))));
+          // Every gift-wrap page demands settlement, and settles beside a
+          // relay's refusal only when the refusal is final: the client leaves
+          // auth-required, error and other unanswered. A relay that refuses
+          // DMs for good (relay.damus.io once it rejects AUTH) would otherwise
+          // hold restore open forever (#9468).
+          expect(giftWrapPages, everyElement(equals((true, true))));
           verify(
             () => mockNostrClient.readEvents(
               any(that: _nip04RecoveryRead),

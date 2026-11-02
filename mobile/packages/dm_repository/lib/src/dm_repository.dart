@@ -2107,6 +2107,11 @@ class DmRepository {
         useCache: false,
         tempRelays: tempRelays,
         requireAllRelaysSettled: true,
+        // A relay that refuses for good (`restricted`, `blocked`, ...) beside
+        // relays that answered has said all it will: relay.damus.io refuses
+        // every DM read once it rejects AUTH. Ambiguous refusals still leave
+        // the page unanswered (#9468).
+        acceptRelayClosedWhenOthersAnswered: true,
       );
       return (
         events: result.events,
