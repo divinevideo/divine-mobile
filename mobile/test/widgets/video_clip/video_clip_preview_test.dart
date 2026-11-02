@@ -441,6 +441,24 @@ void main() {
       );
     });
 
+    testWidgets('lets a screen reader delete the clip', (tester) async {
+      installMockDivineVideoPlayer();
+      var deletes = 0;
+
+      await tester.pumpWidget(buildTestWidget(onDelete: () => deletes++));
+      await tester.pump(const Duration(milliseconds: 100));
+      // The button hides its icon's semantics, so its own tap action is the
+      // only one a screen reader can trigger.
+      tester.semantics.tap(
+        find.semantics.byLabel(
+          lookupAppLocalizations(const Locale('en')).videoClipDelete,
+        ),
+      );
+      await tester.pump();
+
+      expect(deletes, 1);
+    });
+
     testWidgets('hides delete button when onDelete is null', (tester) async {
       installMockDivineVideoPlayer();
 
@@ -788,6 +806,38 @@ void main() {
         await tester.pump();
 
         verify(() => mockGoRouter.pop<Object?>(any())).called(1);
+      });
+
+      testWidgets('lets a screen reader start the save', (tester) async {
+        installMockDivineVideoPlayer();
+        // A clip whose file exists, so the preview does not close on load.
+        final tempDir = Directory.systemTemp.createTempSync(
+          'clip_preview_semantic_save',
+        );
+        addTearDown(() => tempDir.deleteSync(recursive: true));
+        final videoFile = File('${tempDir.path}/video.mp4')
+          ..writeAsBytesSync(const [0]);
+        var saves = 0;
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            clip: testClip.copyWith(video: EditorVideo.file(videoFile.path)),
+            onSaveToGallery: () async => saves++,
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        // The button hides its icon's semantics, so its own tap action is the
+        // only one a screen reader can trigger.
+        tester.semantics.tap(
+          find.semantics.byLabel(
+            lookupAppLocalizations(
+              const Locale('en'),
+            ).videoClipSaveTo(GallerySaveService.destinationName),
+          ),
+        );
+        await tester.pump();
+
+        expect(saves, 1);
       });
 
       testWidgets('hides the save button without a save action', (
