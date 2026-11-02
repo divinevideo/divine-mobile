@@ -55,9 +55,11 @@ into the underlying `showModalBottomSheet` / `DraggableScrollableSheet`):
 |---|---|---|---|
 | `bool snap` | `false` | Enable snap behaviour on the draggable sheet | Comments |
 | `List<double>? snapSizes` | `null` | Snap positions passed to `DraggableScrollableSheet` | Comments |
-| `bool useRootNavigator` | `true` | Show the sheet above the tab shell | Comments |
+| `bool useRootNavigator` | `false` | Show the sheet above the tab shell | Comments |
 | `bool tapOutsideToDismiss` | `true` | Opt-in-by-default tap-outside behaviour for the draggable variant | Fixes Metadata + Comments |
 | `double Function(BuildContext modalContext)? initialChildSizeBuilder` | `null` | Lets callers pick `initialChildSize` dynamically (e.g. keyboard-aware) | Comments |
+
+The table records the defaults when this plan was written. `useRootNavigator` has defaulted to `true` since #10673.
 
 ### Already supported — do **not** re-add
 
