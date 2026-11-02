@@ -98,7 +98,10 @@
   "dmReactionRetryAction": "Opnieuw proberen",
   "dmMessageBubbleVideoReplyHint": "Verwezen video openen",
   "commonSomethingWentWrong": "Er ging iets mis",
-  "profileFeedError": "Kan de server niet bereiken. Controleer je verbinding en probeer het opnieuw.",
+  "profileVideosLoadFailedTitle": "Je video's konden niet worden geladen",
+  "profileVideosLoadFailedOtherTitle": "Video's konden niet worden geladen",
+  "profileVideosLoadFailedSubtitle": "Controleer je verbinding en probeer het opnieuw.",
+  "profileVideosLoadFailedRetry": "Opnieuw proberen",
   "profileFeedLoadMoreError": "Meer video's konden niet worden geladen. Trek omlaag om te vernieuwen.",
   "appTitle": "Divine",
   "@appTitle": {

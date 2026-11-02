@@ -4461,8 +4461,17 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Kan inte nå servern. Kontrollera din anslutning och försök igen.';
+  String get profileVideosLoadFailedTitle => 'Kunde inte läsa in dina videor';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'Kunde inte läsa in videor';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Kontrollera din anslutning och försök igen.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Försök igen';
 
   @override
   String get profileFeedLoadMoreError =>

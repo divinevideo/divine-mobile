@@ -98,7 +98,10 @@
   "dmReactionRetryAction": "Опитай отново",
   "dmMessageBubbleVideoReplyHint": "Отваряне на посочения видеоклип",
   "commonSomethingWentWrong": "Нещо се обърка",
-  "profileFeedError": "Сървърът е недостъпен. Провери връзката си и опитай отново.",
+  "profileVideosLoadFailedTitle": "Видеата ти не можаха да се заредят",
+  "profileVideosLoadFailedOtherTitle": "Видеата не можаха да се заредят",
+  "profileVideosLoadFailedSubtitle": "Провери връзката си и опитай отново.",
+  "profileVideosLoadFailedRetry": "Опитай пак",
   "profileFeedLoadMoreError": "Още видеа не можаха да се заредят. Дръпни надолу за обновяване.",
   "appTitle": "Divine",
   "@appTitle": {

@@ -98,7 +98,10 @@
   "dmReactionRetryAction": "Yeniden dene",
   "dmMessageBubbleVideoReplyHint": "Atıfta bulunulan videoyu aç",
   "commonSomethingWentWrong": "Bir hata oluştu",
-  "profileFeedError": "Sunucuya ulaşılamıyor. Bağlantını kontrol edip tekrar dene.",
+  "profileVideosLoadFailedTitle": "Videoların yüklenemedi",
+  "profileVideosLoadFailedOtherTitle": "Videolar yüklenemedi",
+  "profileVideosLoadFailedSubtitle": "Bağlantını kontrol edip tekrar dene.",
+  "profileVideosLoadFailedRetry": "Tekrar dene",
   "profileFeedLoadMoreError": "Daha fazla video yüklenemedi. Yenilemek için aşağı çek.",
   "appTitle": "Divine",
   "@appTitle": {

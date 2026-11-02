@@ -4604,8 +4604,19 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Serverul nu poate fi contactat. Verifică-ți conexiunea și încearcă din nou.';
+  String get profileVideosLoadFailedTitle =>
+      'Nu am putut încărca videoclipurile tale';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle =>
+      'Nu am putut încărca videoclipurile';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Verifică-ți conexiunea și încearcă din nou.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Încearcă din nou';
 
   @override
   String get profileFeedLoadMoreError =>

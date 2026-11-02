@@ -4456,8 +4456,17 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مرة أخرى.';
+  String get profileVideosLoadFailedTitle => 'تعذّر تحميل فيديوهاتك';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'تعذّر تحميل الفيديوهات';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'يرجى التحقق من اتصالك والمحاولة مرّة أخرى.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'إعادة المحاولة';
 
   @override
   String get profileFeedLoadMoreError =>

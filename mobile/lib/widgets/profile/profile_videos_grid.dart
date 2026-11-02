@@ -394,7 +394,7 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
         return const ProfileVideosGridSkeleton();
       }
       if (feedState.status == ProfileFeedStatus.failure) {
-        return const ProfileVideosLoadFailed();
+        return ProfileVideosLoadFailed(isOwnProfile: isOwnProfile);
       }
       if (!isOwnProfile || feedState.unavailablePinnedCoordinates.isEmpty) {
         return ProfileTabEmptyState(

@@ -4543,8 +4543,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Can\'t reach the server. Check your connection and try again.';
+  String get profileVideosLoadFailedTitle => 'Couldn\'t load your videos';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'Couldn\'t load videos';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Check your connection and try again.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Try again';
 
   @override
   String get profileFeedLoadMoreError =>

@@ -13,11 +13,19 @@ import 'package:unified_logger/unified_logger.dart';
 /// Shown in the Videos tab when the profile's videos failed to load and none
 /// are cached, so "no videos" and "videos didn't load" never look the same.
 ///
-/// Built like [ProfileTabEmptyState] so the tab still scrolls into the
-/// profile's pull-to-refresh, but anchored to the top: the profile's header
-/// leaves little of the tab above the bottom nav, and Retry has to fit in it.
+/// Styled like [ProfileTabEmptyState] with a retry under it, and centered in
+/// the tab as the design shows. The tab is only the space left under the
+/// header: about 165 points on an iPhone 17 without a bio, where the whole
+/// block fits, and 89 under a NIP-05 and a two-line bio, where Try again
+/// needs a scroll. Pull-to-refresh and the automatic retries cover that case.
+/// The top padding is smaller than the empty state's 64 because that would
+/// push the subtitle below the fold in the short tab too.
 class ProfileVideosLoadFailed extends StatefulWidget {
-  const ProfileVideosLoadFailed({super.key});
+  const ProfileVideosLoadFailed({required this.isOwnProfile, super.key});
+
+  /// Whether the viewer owns the profile, which picks "your videos" or
+  /// "videos" in the title.
+  final bool isOwnProfile;
 
   @override
   State<ProfileVideosLoadFailed> createState() =>
@@ -35,7 +43,7 @@ class _ProfileVideosLoadFailedState extends State<ProfileVideosLoadFailed> {
       runDetached(
         SemanticsService.sendAnnouncement(
           View.of(context),
-          context.l10n.profileFeedError,
+          _title(context),
           Directionality.of(context),
         ),
         'announce the failed profile video load',
@@ -44,6 +52,10 @@ class _ProfileVideosLoadFailedState extends State<ProfileVideosLoadFailed> {
       );
     });
   }
+
+  String _title(BuildContext context) => widget.isOwnProfile
+      ? context.l10n.profileVideosLoadFailedTitle
+      : context.l10n.profileVideosLoadFailedOtherTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -56,26 +68,34 @@ class _ProfileVideosLoadFailedState extends State<ProfileVideosLoadFailed> {
         SliverFillRemaining(
           hasScrollBody: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(48, 24, 48, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
             child: Column(
-              spacing: 16,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  context.l10n.profileFeedError,
+                  _title(context),
+                  textAlign: TextAlign.center,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.onSurfaceMuted,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  context.l10n.profileVideosLoadFailedSubtitle,
                   textAlign: TextAlign.center,
                   style: VineTheme.bodyMediumFont(
                     color: context.vineColors.onSurfaceMuted,
                   ),
                 ),
+                const SizedBox(height: 32),
                 DivineButton(
-                  label: context.l10n.profileRetryButton,
+                  label: context.l10n.profileVideosLoadFailedRetry,
                   type: DivineButtonType.secondary,
+                  size: DivineButtonSize.small,
                   isLoading: isRetrying,
-                  onPressed: isRetrying
-                      ? null
-                      : () => context.read<ProfileFeedCubit>().add(
-                          const ProfileFeedRetryRequested(),
-                        ),
+                  onPressed: () => context.read<ProfileFeedCubit>().add(
+                    const ProfileFeedRetryRequested(),
+                  ),
                 ),
               ],
             ),

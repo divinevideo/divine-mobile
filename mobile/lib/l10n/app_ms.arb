@@ -2174,10 +2174,10 @@
       }
     }
   },
-  "profileFeedError": "Tidak dapat mencapai pelayan. Semak sambungan anda dan cuba lagi.",
-  "@profileFeedError": {
-    "description": "Full-screen message shown when an author's profile feed fails to load."
-  },
+  "profileVideosLoadFailedTitle": "Tidak dapat memuatkan video anda",
+  "profileVideosLoadFailedOtherTitle": "Tidak dapat memuatkan video",
+  "profileVideosLoadFailedSubtitle": "Semak sambungan anda dan cuba lagi.",
+  "profileVideosLoadFailedRetry": "Cuba lagi",
   "profileFeedLoadMoreError": "Tidak dapat memuatkan lebih banyak video. Tarik untuk muat semula.",
   "@profileFeedLoadMoreError": {
     "description": "Transient message shown when paginating an author's profile feed fails."

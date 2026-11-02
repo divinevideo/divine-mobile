@@ -2174,10 +2174,10 @@
       }
     }
   },
-  "profileFeedError": "سرور تک رسائی نہیں ہو رہی۔ اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔",
-  "@profileFeedError": {
-    "description": "Full-screen message shown when an author's profile feed fails to load."
-  },
+  "profileVideosLoadFailedTitle": "آپ کی ویڈیوز لوڈ نہیں ہو سکیں",
+  "profileVideosLoadFailedOtherTitle": "ویڈیوز لوڈ نہیں ہو سکیں",
+  "profileVideosLoadFailedSubtitle": "اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔",
+  "profileVideosLoadFailedRetry": "دوبارہ کوشش کریں",
   "profileFeedLoadMoreError": "مزید ویڈیوز لوڈ نہیں ہو سکیں۔ ریفریش کے لیے کھینچیں۔",
   "@profileFeedLoadMoreError": {
     "description": "Transient message shown when paginating an author's profile feed fails."

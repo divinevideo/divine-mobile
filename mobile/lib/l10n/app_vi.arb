@@ -2174,10 +2174,10 @@
       }
     }
   },
-  "profileFeedError": "Không kết nối được với máy chủ. Kiểm tra kết nối của bạn rồi thử lại nhé.",
-  "@profileFeedError": {
-    "description": "Full-screen message shown when an author's profile feed fails to load."
-  },
+  "profileVideosLoadFailedTitle": "Không tải được video của bạn",
+  "profileVideosLoadFailedOtherTitle": "Không tải được video",
+  "profileVideosLoadFailedSubtitle": "Kiểm tra kết nối của bạn rồi thử lại nhé.",
+  "profileVideosLoadFailedRetry": "Thử lại",
   "profileFeedLoadMoreError": "Không tải thêm được video. Kéo để làm mới.",
   "@profileFeedLoadMoreError": {
     "description": "Transient message shown when paginating an author's profile feed fails."

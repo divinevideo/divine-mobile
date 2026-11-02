@@ -98,7 +98,10 @@
   "dmReactionRetryAction": "Erneut versuchen",
   "dmMessageBubbleVideoReplyHint": "Referenziertes Video öffnen",
   "commonSomethingWentWrong": "Etwas ist schiefgelaufen",
-  "profileFeedError": "Server nicht erreichbar. Prüf deine Verbindung und versuch es noch mal.",
+  "profileVideosLoadFailedTitle": "Deine Videos konnten nicht geladen werden",
+  "profileVideosLoadFailedOtherTitle": "Videos konnten nicht geladen werden",
+  "profileVideosLoadFailedSubtitle": "Prüf deine Verbindung und versuch es noch mal.",
+  "profileVideosLoadFailedRetry": "Erneut versuchen",
   "profileFeedLoadMoreError": "Weitere Videos konnten nicht geladen werden. Zieh nach unten zum Aktualisieren.",
   "appTitle": "Divine",
   "@appTitle": {
