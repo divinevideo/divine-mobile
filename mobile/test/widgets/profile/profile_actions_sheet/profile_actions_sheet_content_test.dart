@@ -37,14 +37,10 @@ void main() {
               return ElevatedButton(
                 onPressed: () {
                   unawaited(
-                    VineBottomSheet.show<void>(
+                    showProfileActionsSheet(
                       context: context,
-                      scrollable: false,
-                      showHeaderDivider: false,
-                      body: ProfileActionsSheetContent(
-                        actions: actions,
-                        onMaybeLater: onMaybeLater,
-                      ),
+                      actions: actions,
+                      onMaybeLater: onMaybeLater,
                     ),
                   );
                 },
@@ -275,6 +271,48 @@ void main() {
         ],
         child: buildApp(actions: actions, onMaybeLater: onMaybeLater),
       );
+
+      group('sheet size', () {
+        double sheetHeightFraction(WidgetTester tester) {
+          final screen =
+              tester.view.physicalSize / tester.view.devicePixelRatio;
+          return tester.getSize(find.byType(VineBottomSheet)).height /
+              screen.height;
+        }
+
+        testWidgets('opens tall when it starts on the supporter invitation', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildSupporterApp(actions: [ProfileActionType.becomeSupporter]),
+          );
+          await tester.tap(find.text('Open'));
+          await tester.pumpAndSettle();
+
+          expect(
+            sheetHeightFraction(tester),
+            moreOrLessEquals(
+              ProfileActionsSheetSizing.tallInitial,
+              epsilon: 0.05,
+            ),
+          );
+        });
+
+        testWidgets('stays sized to a short prompt', (tester) async {
+          await tester.pumpWidget(
+            buildSupporterApp(
+              actions: [
+                ProfileActionType.completeProfile,
+                ProfileActionType.becomeSupporter,
+              ],
+            ),
+          );
+          await tester.tap(find.text('Open'));
+          await tester.pumpAndSettle();
+
+          expect(sheetHeightFraction(tester), lessThan(0.8));
+        });
+      });
 
       testWidgets('shows the Supporter screen content in the sheet', (
         tester,

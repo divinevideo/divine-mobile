@@ -597,32 +597,28 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
   ) {
     _runProfileDetached(
       _awaitProfileResult(
-        VineBottomSheet.show<void>(
+        showProfileActionsSheet(
           context: context,
-          scrollable: false,
-          showHeaderDivider: false,
-          body: ProfileActionsSheetContent(
-            actions: actions,
-            onMaybeLater: (action) {
-              final dismissal = switch (action) {
-                ProfileActionType.secureAccount =>
-                  secureAccountPromptDismissal.dismiss(),
-                ProfileActionType.becomeSupporter =>
-                  supporterPromptDismissal.dismiss(),
-                ProfileActionType.accountRestricted ||
-                ProfileActionType.completeProfile => null,
-              };
-              if (dismissal == null) return;
-              // The write lands in the in-memory SharedPreferences cache before
-              // the future completes, so an empty setState is enough to drop the
-              // action from the next build.
-              _runProfileDetached(
-                dismissal,
-                'persist ${action.name} prompt dismissal',
-              );
-              if (mounted) setState(() {});
-            },
-          ),
+          actions: actions,
+          onMaybeLater: (action) {
+            final dismissal = switch (action) {
+              ProfileActionType.secureAccount =>
+                secureAccountPromptDismissal.dismiss(),
+              ProfileActionType.becomeSupporter =>
+                supporterPromptDismissal.dismiss(),
+              ProfileActionType.accountRestricted ||
+              ProfileActionType.completeProfile => null,
+            };
+            if (dismissal == null) return;
+            // The write lands in the in-memory SharedPreferences cache before
+            // the future completes, so an empty setState is enough to drop the
+            // action from the next build.
+            _runProfileDetached(
+              dismissal,
+              'persist ${action.name} prompt dismissal',
+            );
+            if (mounted) setState(() {});
+          },
         ),
       ),
       'show profile actions sheet',

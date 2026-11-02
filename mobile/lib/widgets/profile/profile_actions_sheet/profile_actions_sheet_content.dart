@@ -16,6 +16,47 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile/profile_actions_sheet/profile_action_type.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+/// Sizes of the tall sheet the supporter invitation opens in: its content (the
+/// Supporter screen's pitch, plans and terms) does not fit a half sheet. It
+/// opens at the sheet's default maximum height.
+abstract class ProfileActionsSheetSizing {
+  static const double tallInitial = 0.9;
+}
+
+/// Shows the pending [actions] in a bottom sheet.
+///
+/// The short prompts use a sheet sized to its content. When the sheet opens on
+/// the supporter invitation it is the tall, draggable variant, with the
+/// content scrolling inside it.
+Future<void> showProfileActionsSheet({
+  required BuildContext context,
+  required List<ProfileActionType> actions,
+  void Function(ProfileActionType action)? onMaybeLater,
+}) {
+  if (actions.first == ProfileActionType.becomeSupporter) {
+    return VineBottomSheet.show<void>(
+      context: context,
+      showHeaderDivider: false,
+      initialChildSize: ProfileActionsSheetSizing.tallInitial,
+      minChildSize: VineTheme.bottomSheetDismissFloor,
+      buildScrollBody: (scrollController) => ProfileActionsSheetContent(
+        actions: actions,
+        onMaybeLater: onMaybeLater,
+        scrollController: scrollController,
+      ),
+    );
+  }
+  return VineBottomSheet.show<void>(
+    context: context,
+    scrollable: false,
+    showHeaderDivider: false,
+    body: ProfileActionsSheetContent(
+      actions: actions,
+      onMaybeLater: onMaybeLater,
+    ),
+  );
+}
+
 /// Content widget for the profile-actions bottom sheet.
 ///
 /// Displays a prompt for each pending [ProfileActionType] in order.
@@ -31,6 +72,7 @@ class ProfileActionsSheetContent extends StatefulWidget {
   const ProfileActionsSheetContent({
     required this.actions,
     this.onMaybeLater,
+    this.scrollController,
     super.key,
   }) : assert(actions.length > 0, 'actions must not be empty');
 
@@ -40,6 +82,9 @@ class ProfileActionsSheetContent extends StatefulWidget {
 
   /// Called with the action the user dismissed before the sheet advances.
   final void Function(ProfileActionType action)? onMaybeLater;
+
+  /// The tall sheet's controller, so dragging the content drags the sheet.
+  final ScrollController? scrollController;
 
   @override
   State<ProfileActionsSheetContent> createState() =>
@@ -116,6 +161,7 @@ class _ProfileActionsSheetContentState
           ProfileActionType.becomeSupporter => _SupporterPrompt(
             key: key,
             onMaybeLater: _onMaybeLater,
+            scrollController: widget.scrollController,
           ),
         },
       ),
@@ -196,9 +242,14 @@ class _ActionPrompt extends StatelessWidget {
 /// The Supporter screen's content, so the user can join from the sheet, with
 /// a "Maybe later" that hides the invitation.
 class _SupporterPrompt extends ConsumerWidget {
-  const _SupporterPrompt({required this.onMaybeLater, super.key});
+  const _SupporterPrompt({
+    required this.onMaybeLater,
+    this.scrollController,
+    super.key,
+  });
 
   final VoidCallback onMaybeLater;
+  final ScrollController? scrollController;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -207,6 +258,7 @@ class _SupporterPrompt extends ConsumerWidget {
     );
     return SupporterCubitScope(
       child: SingleChildScrollView(
+        controller: scrollController,
         padding: EdgeInsets.fromLTRB(
           16,
           16,
