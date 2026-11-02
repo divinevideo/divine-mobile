@@ -35,6 +35,7 @@ class VineFeatureAnnouncementItem {
 /// [VineBottomSheetFeatureAnnouncement.show].
 ///
 /// ```dart
+/// final navigator = Navigator.of(context);
 /// await VineBottomSheetFeatureAnnouncement.show<void>(
 ///   context: context,
 ///   illustration: const DivineSticker(sticker: DivineStickerName.sparkle),
@@ -49,7 +50,7 @@ class VineFeatureAnnouncementItem {
 ///     ),
 ///   ],
 ///   primaryButtonText: 'Got it',
-///   onPrimaryPressed: () => Navigator.of(context).pop(),
+///   onPrimaryPressed: () => navigator.pop(),
 /// );
 /// ```
 class VineBottomSheetFeatureAnnouncement extends StatelessWidget {
@@ -90,16 +91,22 @@ class VineBottomSheetFeatureAnnouncement extends StatelessWidget {
   /// Label for the primary action, usually the dismiss action.
   final String primaryButtonText;
 
-  /// Callback for the primary action.
+  /// Callback for the primary action. The sheet does not close itself; pop it
+  /// here when the action should dismiss it.
   final VoidCallback onPrimaryPressed;
 
   /// Optional label for a secondary action, such as trying the feature.
   final String? secondaryButtonText;
 
-  /// Callback for the secondary action.
+  /// Callback for the secondary action. The sheet does not close itself.
   final VoidCallback? onSecondaryPressed;
 
   /// Shows the announcement as a fixed modal bottom sheet.
+  ///
+  /// Completes with the value a callback pops, or null when the user taps the
+  /// scrim or drags the sheet down, which calls neither callback. Read the
+  /// [NavigatorState] before calling this, as the class example does: the
+  /// caller's context can unmount while the sheet is open.
   static Future<T?> show<T>({
     required BuildContext context,
     required Widget illustration,

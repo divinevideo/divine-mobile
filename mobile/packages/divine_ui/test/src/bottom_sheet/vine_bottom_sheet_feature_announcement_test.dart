@@ -259,6 +259,7 @@ void main() {
               body: Builder(
                 builder: (context) => ElevatedButton(
                   onPressed: () async {
+                    final navigator = Navigator.of(context);
                     result =
                         await VineBottomSheetFeatureAnnouncement.show<String>(
                           context: context,
@@ -271,8 +272,7 @@ void main() {
                           subtitle: 'Read along, even with the sound off.',
                           features: _features,
                           primaryButtonText: 'Got it',
-                          onPrimaryPressed: () =>
-                              Navigator.of(context).pop('dismissed'),
+                          onPrimaryPressed: () => navigator.pop('dismissed'),
                           secondaryButtonText: 'Turn on captions',
                           onSecondaryPressed: () {},
                         );
