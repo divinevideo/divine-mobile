@@ -1,8 +1,9 @@
 # Flutter and Dart lens
 
 Facts here come from the pinned SDK source (Flutter 3.47.2, Dart 3.13.2),
-`origin/main`, runs on a developer Mac in October 2026, and a headless
-`flutter-tester` run on 2026-11-02. iOS build traps are
+`origin/main`, runs on a developer Mac in October 2026, and on 2026-11-02 a
+headless `flutter-tester`, an iOS 27.0 simulator and a USB iPhone on iOS 27.0.1.
+iOS build traps are
 in `.claude/rules/ios_build_troubleshooting.md`; read it before the first build,
 and use `mise exec -- flutter` from `mobile/`.
 
@@ -24,7 +25,7 @@ with other agent sessions on the same Mac.
   - `test_local_name_server` (it starts its own Compose project), `local_stack/` scripts other than its stubbed `test_*_scripts.sh` checks, and `docker compose up` and `down`;
   - any `adb`, `devicectl` or `simctl` command other than listing devices.
 - State this in every brief you write, and run device work yourself. Host commands can still lower the generated iOS Swift package floor (`.claude/rules/ios_build_troubleshooting.md`, Cause 3), so check it before your next device build.
-- A debug run replaces the installed Divine Staging build, and its data may not survive. That is an ask-the-user item.
+- A debug run replaces the installed Divine Staging build, and its data may not survive. That is an ask-the-user item. On the iPhone the Keychain account survived and the app came back signed in as the existing account. Afterwards the phone holds a debug build, which Flutter says does not launch from the home screen on iOS 14 and later, so reinstall the TestFlight build to use the app on its own again.
 - One simulator per session, named by UDID in every note.
 
 The device steps below are written for iOS; §5b has Android, macOS and web.
@@ -69,7 +70,7 @@ How the tool gets phone logs on this toolchain (Xcode ≥ 26, CoreDevice), from
 - Profile launches with `devicectl … --console`, which carries native output only, since `Log.*` is compiled out. Release launches with no console at all.
 - `flutter logs` is given neither source for a physical iPhone (read from source, not run). Do not wait on it.
 - DDS, on by default, keeps history for the `Logging`, `Stdout` and `Stderr` streams and replays it to a late subscriber, so attaching after the fact still shows what happened (10,000 entries by default). `--no-dds` loses this, and DTD with it.
-- `$FM vmlog $RUN 5` prints the `Logging` stream for five seconds, backlog first, one `level<TAB>logger<TAB>message` line each. On `flutter-tester` (Dart 3.13.2) the history started when DDS subscribed: `developer.log` calls from the first moments of a cold-started `main()` were not in it, and a hot restart's were. The VM cuts a message at 128 characters and the command marks the cut.
+- `$FM vmlog $RUN 5` prints the `Logging` stream for five seconds, backlog first, one `level<TAB>logger<TAB>message` line each. On `flutter-tester` (Dart 3.13.2) the history started when DDS subscribed: `developer.log` calls from the first moments of a cold-started `main()` were not in it, and a hot restart's were. The VM cuts a message at 128 characters and the command marks the cut. On the iPhone it returned on time (3 s and 6 s) and carried `nostr_sdk`'s relay-pool lines (`Connect begin`, OK responses, COUNT requests), none of which are in `$FM logs`.
 - The relay layer rate-limits its own log lines per relay, site and level (`RelayDiagnosticsAdapter` in `nostr_client`): three a minute, then one `Further requestSettlement warning diagnostics suppressed until <time>`. How many were dropped shows only in a `Suppressed <n> repeated …` line, written when the next one arrives after that minute. A burst of refusals or timeouts leaves three lines, so count frames at the proxy (relay lens §6) before reading the log as a count.
 - If `flutter run` stalls at launch on the phone, see flutter/flutter#179496 (open; LLDB debugging on recent iOS). The workaround changes global Flutter config, so it is an ask-the-user item.
 
@@ -102,7 +103,8 @@ $FM stop $RUN
 
 Run on the headless `flutter-tester` device: start, wait, status, ext, reload,
 restart, vmlog, taint, stop. Run on a USB iPhone on iOS 27.0.1: start, wait,
-logs, taint, stop, then a second start on the same install. On the phone the
+status, ext, vmlog, taint, stop, and on an earlier run logs and a second start
+on the same install; `restart` crashed the app (below). On the phone the
 first `app.started` took about four minutes, and the tool printed "The Dart VM
 Service was not discovered after 60 seconds" on the way; it attached without
 help, so keep waiting rather than restarting.
@@ -117,6 +119,8 @@ help, so keep waiting rather than restarting.
 - Without `--machine`, SIGUSR1 / SIGUSR2 reload and restart only in a debug run that has already started; anywhere else the signal kills the tool.
 - The dart MCP server is a convenience, not a dependency: if it shows as failed at session start, everything in this file works with `websocat` on `wsUri` (§4). `dart mcp-server` may recompile its package on launch and outlast the default connect timeout; in Claude Code the user can reconnect it with `/mcp` or raise `MCP_TIMEOUT`.
 - The first `flutter run` on a phone can die with `App terminated due to signal 10` right after `Installing and launching`. Run it again; the second attaches.
+- On the iPhone a hot restart of the Divine app ended the run both times it was tried (debug, iOS 27.0.1): `EXC_BAD_ACCESS` on the `com.apple.NSURLSession-delegate` queue at addresses ending in the same `…0258`, then `Lost connection to device`. It reads as a native `cupertino_http` callback reaching the torn-down isolate. Use `stop` and `start` for a fresh run, and do not report the crash as an app bug. The scratch app on `flutter-tester` has no `cupertino_http` and restarted fine.
+- A device build can fail in `Building native assets` when the `sqlite3` hook cannot download `libsqlite3mc.arm64.ios.dylib` (`github.com` timed out here while `api.github.com` answered). Fetch the asset with `gh release download sqlite3-<ver> --repo simolus3/sqlite3.dart --pattern 'libsqlite3mc.arm64.ios.dylib'`, check its SHA-256 against `asset_hashes.dart` in the pub-cache `sqlite3` package, and copy it to `mobile/.dart_tool/hooks_runner/shared/sqlite3/build/download-<first 8 hex of that hash>/libsqlite3mc.dylib`. Nothing tracked changes.
 
 ## 4. Find the failing layer by reading state
 
@@ -128,7 +132,7 @@ expected and actual part ways.
 | Screen | `ext.flutter.debugDumpApp`; `ext.flutter.debugDumpSemanticsTreeInTraversalOrder`; dart MCP `widget_inspector`; `devicectl device capture screenshot` |
 | Bloc / provider state | VM `evaluate` in the owning library, deferred to post-frame. Match the instance (stale blocs linger behind the current route) |
 | Cache | `evaluate` a Drift query, `Hive.isBoxOpen(…)`, the repository's cached value |
-| Wire: REST | `ext.dart.io.httpEnableTimelineLogging` on, then `ext.dart.io.getHttpProfile` with the `isolateId`: each `dart:io` request lists method, `uri`, start and end time, request, response and events. Run on `flutter-tester` and on the Divine app (iOS 27.0 simulator, debug): REST shows as plain ids, and a media download (`cupertino_http` in `media_cache`) as a `from_package/N` entry: a GET to the media host, status 200, request and response recorded. Not run: `cronet_http` on Android, and a physical iPhone |
+| Wire: REST | `ext.dart.io.httpEnableTimelineLogging` on, then `ext.dart.io.getHttpProfile` with the `isolateId`: each `dart:io` request lists method, `uri`, start and end time, request, response and events. Run on `flutter-tester`, and on the Divine app on an iOS 27.0 simulator and on an iPhone (iOS 27.0.1), debug: REST shows as plain ids, and a media download (`cupertino_http` in `media_cache`) as a `from_package/N` entry: a GET to the media host, status 200, request and response recorded. Switch the logging on right after launch: on the iPhone 30 s later the first media fetches had already passed (8 requests, none `from_package`), while from launch it caught 65, two of them `from_package`. Not run: `cronet_http` on Android |
 | Wire: relay sockets | `RELAY` log lines for content. For timing, direction and size of every frame without a proxy: turn on HTTP timeline logging (`$FM ext $RUN ext.dart.io.httpEnableTimelineLogging '{"enabled":"true"}'`; the value is a string), then `getVMTimeline` shows `WebSocket.Connect` (with the URI), `Send`, `Receive` and `Close`, each tagged `args.filterKey: "HTTP/websocket"` and carrying connection id, direction, opcode and byte count; the default recorded streams already include `Dart`. Relay sockets are `dart:io` (`IOWebSocketChannel`). Payloads need the log lines or the relay lens's proxy. Run on `flutter-tester` against a local `dart:io` socket; not yet run against the app |
 | Relay | `nostr-lens.md` §3 |
 | Errors nobody mentioned | dart MCP `get_runtime_errors`; the whole capture buffer at `warning` and above |
@@ -188,7 +192,7 @@ The signatures are the `taint_re` line of `scripts/flutter-machine.sh`.
 
 Traps that make a probe lie:
 
-- Confirm the account from the log before you call a run signed-out: `Auth state:` (`auth_service.dart`) and `Signing kind` (`signer_factory.dart`). A Keychain entry can survive an uninstall, so a reinstall may come back signed in and publish for real; the log of a write-blocking proxy (`--reject-event`, relay lens §6) is the proof that nothing got through.
+- Confirm the account from the log before you call a run signed-out: `Auth state:` (`auth_service.dart`) and `Signing kind` (`signer_factory.dart`). A Keychain entry can survive an uninstall, so a reinstall may come back signed in and publish for real (a debug install over Divine Staging on the iPhone did); the log of a write-blocking proxy (`--reject-event`, relay lens §6) is the proof that nothing got through.
 - One tap, one look: screenshot after every tap that can change state. A blind batch can land on a destructive row once a layout shifts.
 - Navigate as the app does. `go()` straight to a page the app `push`es leaves `pop` with nothing to return to, and the bugs that follow belong to the probe.
 
