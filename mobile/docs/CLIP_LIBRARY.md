@@ -70,7 +70,7 @@ The grid shows one filter at a time (`ClipLibraryFilter`):
 
 A clip belongs to at most one category. Categories are stored per account in `clip_categories`, in the order of the chip row. Category names are the user's own text and are not localized. Deleting a category keeps its clips.
 
-Archiving and categories are independent. Archiving takes a clip out of All, but the clip stays in its category unless the user removes it from there while archiving. Moving clips to a category and archiving them produce a `ClipsLibraryOrganizeResult`, which the UI shows as a snackbar with undo.
+Archiving and categories are independent. Archiving takes a clip out of All, but the clip stays in its category unless the user removes it from there while archiving. Every organize action (move to a category, remove from one, archive, unarchive) produces a `ClipsLibraryOrganizeResult`, which the UI shows as a snackbar. Only archiving offers undo, and it also puts back any category the archive removed.
 
 The sort order (`ClipSort`) and the number of grid columns are kept in SharedPreferences, so they apply to every account on the device. Pinching the grid changes the column count, from 2 to 5.
 
