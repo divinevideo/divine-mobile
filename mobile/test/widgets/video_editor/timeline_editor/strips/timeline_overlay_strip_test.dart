@@ -49,6 +49,7 @@ void main() {
       String? selectedItemId,
       ValueChanged<TimelineOverlayItem>? onItemTapped,
       OverlayMoveCallback? onItemMoved,
+      OverlayMovingCallback? onItemMoving,
       OverlayTrimCallback? onTrimChanged,
       ValueChanged<bool>? onTrimDragChanged,
       ValueChanged<TimelineOverlayItem>? onDragStarted,
@@ -74,6 +75,7 @@ void main() {
                 selectedItemId: selectedItemId,
                 onItemTapped: onItemTapped,
                 onItemMoved: onItemMoved,
+                onItemMoving: onItemMoving,
                 onTrimChanged: onTrimChanged,
                 onTrimDragChanged: onTrimDragChanged,
                 onDragStarted: onDragStarted,
@@ -237,6 +239,7 @@ void main() {
       testWidgets('holds an item longer than the timeline at the start', (
         tester,
       ) async {
+        Duration? movingTo;
         Duration? movedTo;
         await tester.pumpWidget(
           buildWidget(
@@ -248,6 +251,8 @@ void main() {
               required row,
               required insertAbove,
             }) => movedTo = startTime,
+            onItemMoving: ({required item, required startTime}) =>
+                movingTo = startTime,
           ),
         );
 
@@ -257,6 +262,7 @@ void main() {
         await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
         await gesture.moveBy(const Offset(40, 0));
         await tester.pump();
+        expect(movingTo, equals(Duration.zero));
         await gesture.up();
         await tester.pumpAndSettle();
 
