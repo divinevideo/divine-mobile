@@ -204,7 +204,7 @@ Recorded so they are not re-proposed.
 | Widen the ±5s dedup window | Absorbs legitimate repeated messages and re-creates #7324's silent data loss. It also would not even reach this case: post-[#8169](https://github.com/divinevideo/divine-mobile/issues/8169) the `DmDedupCounterpart` gate rejects a NIP-17-onto-NIP-17 match at *any* delta, so the window is not what decides here. |
 | Content-hash dedup | Identical content is not evidence of the same send, and there is no safe time boundary. An unbounded rule permanently discards legitimate repeats. |
 | Receiver-side heuristic suppression | Without a wire-level signal, any heuristic that catches a retry also discards a genuine repeat. It can only choose which error to make. |
-| Anything keyed on the gift wrap's `created_at` | NIP-17 requires that timestamp to be randomized up to two days into the past. Measured in our repro at ~45 h from the rumor's own timestamp. It is deliberately noise. |
+| Anything keyed on the gift wrap's `created_at` | NIP-17 says clients SHOULD randomize that timestamp up to two days into the past (`17.md:59`), so a conforming client buries it in noise on purpose. Measured at ~45 h from the rumor's own timestamp in our repro, and between 1 and 45 h across six wraps built with `nak`. It is a SHOULD, not a MUST: a client that skips it would make the timestamp informative, which is no basis for a rule. |
 
 ## Open question
 
