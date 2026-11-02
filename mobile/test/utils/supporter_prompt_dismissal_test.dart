@@ -12,7 +12,7 @@ void main() {
           userIdHex: pubkey,
         );
 
-    test('persists a dismissal without an expiry', () async {
+    test('persists a dismissal', () async {
       final store = await storeFor('account-a');
 
       await store.dismiss();
