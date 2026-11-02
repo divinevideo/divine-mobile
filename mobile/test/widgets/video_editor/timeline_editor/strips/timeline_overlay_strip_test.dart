@@ -231,6 +231,38 @@ void main() {
         await gesture.up();
         await tester.pumpAndSettle();
       });
+
+      // #10657: an overlay can outlast the timeline once its clips are
+      // shortened, and dragging it threw on `clamp(0, <negative>)`.
+      testWidgets('holds an item longer than the timeline at the start', (
+        tester,
+      ) async {
+        Duration? movedTo;
+        await tester.pumpWidget(
+          buildWidget(
+            totalDuration: const Duration(seconds: 4),
+            clipEdgesMs: const [0, 4000],
+            onItemMoved: ({
+              required item,
+              required startTime,
+              required row,
+              required insertAbove,
+            }) => movedTo = startTime,
+          ),
+        );
+
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.text('Test Layer')),
+        );
+        await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+        await gesture.moveBy(const Offset(40, 0));
+        await tester.pump();
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(movedTo, equals(Duration.zero));
+      });
     });
 
     group('collapse mode', () {
