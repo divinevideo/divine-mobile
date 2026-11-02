@@ -392,7 +392,8 @@ fi
 echo ""
 
 echo "Executing tests..."
-if mise exec -- flutter test $TEST_FILES 2>&1; then
+# Integration-tagged tests include manual staging writes and need explicit runs.
+if mise exec -- flutter test --exclude-tags integration $TEST_FILES 2>&1; then
     echo ""
     echo "All tests passed!"
 else

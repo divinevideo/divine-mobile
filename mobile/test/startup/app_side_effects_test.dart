@@ -13,6 +13,7 @@ import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
+import 'package:openvine/providers/notification_activity_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/relay_list_repository_provider.dart';
 import 'package:openvine/providers/relay_providers.dart';
@@ -101,6 +102,7 @@ void main() {
     void Function()? onBlockedFollowReconcilerBuilt,
     void Function()? onNotificationPreferencesSyncBuilt,
     void Function()? onPushNotificationSyncBuilt,
+    void Function()? onNotificationActivityBuilt,
     void Function(String?)? onDmVideoStoreBuilt,
   }) => [
     authServiceProvider.overrideWithValue(authService),
@@ -148,6 +150,9 @@ void main() {
     pushNotificationSyncProvider.overrideWith((ref) {
       onPushNotificationSyncBuilt?.call();
       return null;
+    }),
+    notificationActivitySyncProvider.overrideWith((ref) {
+      onNotificationActivityBuilt?.call();
     }),
     blocklistSyncBridgeProvider.overrideWithValue(null),
   ];
@@ -279,6 +284,7 @@ void main() {
     ) async {
       var notificationPreferencesSyncBuilds = 0;
       var pushNotificationSyncBuilds = 0;
+      var notificationActivityBuilds = 0;
 
       await tester.pumpWidget(
         ProviderScope(
@@ -289,6 +295,9 @@ void main() {
             onPushNotificationSyncBuilt: () {
               pushNotificationSyncBuilds += 1;
             },
+            onNotificationActivityBuilt: () {
+              notificationActivityBuilds += 1;
+            },
           ),
           child: const AppRootSideEffects(child: SizedBox.shrink()),
         ),
@@ -296,6 +305,7 @@ void main() {
 
       expect(notificationPreferencesSyncBuilds, 1);
       expect(pushNotificationSyncBuilds, 1);
+      expect(notificationActivityBuilds, 1);
     });
 
     // Signing in is opening the account, so the age-review closure notice is

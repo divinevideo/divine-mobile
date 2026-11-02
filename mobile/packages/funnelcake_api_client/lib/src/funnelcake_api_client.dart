@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:funnelcake_api_client/src/exceptions.dart';
+import 'package:funnelcake_api_client/src/guarded_http_request.dart';
 import 'package:funnelcake_api_client/src/leaderboard_period.dart';
 import 'package:funnelcake_api_client/src/models/models.dart';
 import 'package:funnelcake_api_client/src/user_agent.dart';
@@ -425,6 +426,53 @@ class FunnelcakeApiClient {
   /// PR #4034's rollback semantics treat as a hard failure).
   Uri notificationsReadUri({required String pubkey}) =>
       Uri.parse('$_baseUrl/api/users/$pubkey/notifications/read');
+
+  /// Exact URL to bind in the activity request's NIP-98 signature.
+  Uri get notificationActivityUri =>
+      Uri.parse('$_baseUrl/api/v2/notifications/activity');
+
+  /// Reports visibility without changing notification read state.
+  ///
+  /// A 204 acknowledges applied, duplicate, and stale sequences alike.
+  /// Callers retry uncertain requests with the same [update] and fresh auth.
+  /// [isCurrent] lets supporting transports reject retired lifecycle retries.
+  Future<void> recordNotificationActivity(
+    NotificationActivityUpdate update, {
+    Map<String, String>? authHeaders,
+    bool Function()? isCurrent,
+  }) async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    final uri = notificationActivityUri;
+    try {
+      final request = isCurrent == null
+          ? http.Request('POST', uri)
+          : GuardedHttpRequest('POST', uri, isCurrent: isCurrent);
+      request.headers.addAll({
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...buildDivineClientHeaders(appVersion: _appVersion),
+        ...?authHeaders,
+      });
+      request.body = update.body;
+      final response = await _httpClient
+          .send(request)
+          .then(http.Response.fromStream)
+          .timeout(_timeout);
+      if (response.statusCode != 204) {
+        throw FunnelcakeApiException(
+          message: 'Failed to report notification activity',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } on Object {
+      throw const FunnelcakeException('Notification activity request failed');
+    }
+  }
 
   /// Builds the JSON body sent to [markNotificationsRead].
   ///
