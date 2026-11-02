@@ -9,12 +9,12 @@ import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
  * A [MediaCodecVideoRenderer] that never hands its effect pipeline an output
  * size it cannot draw at.
  *
- * `ExoPlayer.setVideoSurface` reports a newly attached surface's size as
- * unknown, (-1, -1), and Media3 passes that on to the effect pipeline; only a
- * size of 0 is ignored. The player sends the real size right after each
- * attach, but a frame drawn in between builds a canvas of width -1, and the
- * video graph fails for good. Ignored here, the frames in between are
- * dropped instead, as they are while no surface is attached.
+ * `ExoPlayer.setVideoSurface` reports a surface attached after a detach as
+ * [Size.UNKNOWN], and Media3 passes that on to the effect pipeline; only a
+ * size of 0 is ignored. The plugin follows each attach with the real size once
+ * it knows it, but a frame drawn in between builds a canvas of width -1, and
+ * the video graph fails for good. This renderer ignores that size, so the
+ * frames in between are dropped, as they are while no surface is attached.
  */
 @UnstableApi
 internal class KnownOutputSizeVideoRenderer(

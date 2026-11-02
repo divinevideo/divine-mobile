@@ -22,8 +22,8 @@ import org.junit.Test
 /**
  * Guards the editor preview against the frame-effect pipeline failing for
  * good when the output surface is reattached at a clip end: Media3 reports
- * the reattached surface's size as (-1, -1) before the player sends the real
- * one, and a frame drawn in between used to build a canvas of width -1.
+ * the reattached surface's size as [Size.UNKNOWN] before the plugin sends the
+ * real one, and a frame drawn in between would build a canvas of width -1.
  */
 @UnstableApi
 class KnownOutputSizeVideoRendererTest {
