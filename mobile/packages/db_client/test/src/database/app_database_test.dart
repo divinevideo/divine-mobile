@@ -1377,7 +1377,13 @@ void main() {
             giftWrapId: 'upgrade-wrap-id',
             ownerPubkey: testPubkey,
           );
-          expect(await dao.hasGiftWrap('upgrade-wrap-id'), isTrue);
+          expect(
+            await dao.hasGiftWrapForOwner(
+              giftWrapId: 'upgrade-wrap-id',
+              ownerPubkey: testPubkey,
+            ),
+            isTrue,
+          );
         },
       );
 

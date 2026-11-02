@@ -176,8 +176,12 @@ class _Launch {
     );
     for (var attempt = 0; attempt < 200; attempt += 1) {
       await pumpEventQueue();
-      if (await DirectMessagesDao(db).hasGiftWrap(wrapId) ||
-          await ProcessedGiftWrapsDao(db).hasGiftWrap(wrapId)) {
+      if (await DirectMessagesDao(
+            db,
+          ).hasGiftWrap(wrapId, ownerPubkey: _owner) ||
+          await ProcessedGiftWrapsDao(
+            db,
+          ).hasGiftWrapForOwner(giftWrapId: wrapId, ownerPubkey: _owner)) {
         return;
       }
     }

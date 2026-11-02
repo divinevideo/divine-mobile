@@ -11,6 +11,15 @@ part 'app_database.g.dart';
 /// Default retention period for notifications (7 days)
 const _notificationRetentionDays = 7;
 
+/// The DM gift-wrap dedup index, unique per account rather than per device.
+///
+/// An outgoing row stores the recipient's wrap id and a kind-4 id is shared by
+/// both ends, so with both accounts on one device the id sits on two accounts'
+/// rows (#6645). Every place that creates the index uses this one definition.
+const _dmGiftWrapIndexSql =
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_dm_gift_wrap_id '
+    'ON direct_messages (gift_wrap_id, owner_pubkey)';
+
 /// Tables that legacy-v1 normalization creates and the v2 recovery probe
 /// checks.
 @visibleForTesting
@@ -164,7 +173,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 31;
+  int get schemaVersion => 32;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -411,6 +420,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 31 && to >= 31) {
         await _repairSchemaV31();
       }
+      if (from < 32 && to >= 32) {
+        await _migrateToV32OwnerScopedGiftWrapIndex();
+      }
       await _withholdV31Columns(to);
     },
     beforeOpen: (details) async {
@@ -549,10 +561,7 @@ class AppDatabase extends _$AppDatabase {
       'CREATE INDEX IF NOT EXISTS idx_dm_conversation_created '
       'ON direct_messages (conversation_id, created_at DESC)',
     );
-    await customStatement(
-      'CREATE UNIQUE INDEX IF NOT EXISTS idx_dm_gift_wrap_id '
-      'ON direct_messages (gift_wrap_id)',
-    );
+    await customStatement(_dmGiftWrapIndexSql);
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_dm_sender '
       'ON direct_messages (sender_pubkey)',
@@ -684,6 +693,21 @@ class AppDatabase extends _$AppDatabase {
     for (final (table, column) in _v31HeldWrapColumns) {
       await _addColumnIfMissing(table, column, 'TEXT NULL');
     }
+  }
+
+  /// Makes the DM gift-wrap dedup index unique per account (#6645).
+  ///
+  /// v12 keyed the rows by account but left `gift_wrap_id` unique across the
+  /// device, so an account whose copy shares a wrap id with another local
+  /// account's row (the sender's outgoing row holds the recipient's wrap id, a
+  /// kind-4 id is shared by both ends) lost its copy. The new key only admits
+  /// rows the old one refused, so no stored row can violate it.
+  ///
+  /// The old index shares its name, so `CREATE ... IF NOT EXISTS` alone would
+  /// keep it. A versioned step only, outside the guarded `beforeOpen` recovery.
+  Future<void> _migrateToV32OwnerScopedGiftWrapIndex() async {
+    await customStatement('DROP INDEX IF EXISTS idx_dm_gift_wrap_id');
+    await customStatement(_dmGiftWrapIndexSql);
   }
 
   /// Drops the v31 columns again from a database opened at an earlier
@@ -1208,6 +1232,8 @@ class AppDatabase extends _$AppDatabase {
         CREATE INDEX IF NOT EXISTS idx_dm_conversation_created
         ON direct_messages (conversation_id, created_at DESC)
       ''');
+      // This table has no owner_pubkey yet; the v32 step re-creates the index
+      // per account once the upgrade chain has added it.
       await customStatement('''
         CREATE UNIQUE INDEX IF NOT EXISTS idx_dm_gift_wrap_id
         ON direct_messages (gift_wrap_id)
@@ -1310,10 +1336,7 @@ class AppDatabase extends _$AppDatabase {
     // Ensure the UNIQUE index on gift_wrap_id exists unconditionally.
     // It was originally inside the "if table missing" block, so databases
     // created by Drift's m.createAll() were missing it.
-    await customStatement('''
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_dm_gift_wrap_id
-      ON direct_messages (gift_wrap_id)
-    ''');
+    await customStatement(_dmGiftWrapIndexSql);
     await customStatement('''
       CREATE INDEX IF NOT EXISTS idx_dm_owner_pubkey
       ON direct_messages (owner_pubkey)

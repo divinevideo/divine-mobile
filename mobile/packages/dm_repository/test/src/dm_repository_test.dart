@@ -175,23 +175,38 @@ class _InMemoryProcessedGiftWrapsDao extends Mock
     implements ProcessedGiftWrapsDao {
   final Set<String> recorded = <String>{};
 
-  @override
-  Future<bool> hasGiftWrap(String giftWrapId) async =>
-      recorded.contains(giftWrapId);
+  /// Who recorded each id. An id seeded straight into [recorded] has no owner
+  /// and counts as every account's, like an ownerless legacy ledger row.
+  final Map<String, String> _owners = <String, String>{};
 
-  /// The batch fast path probes this, not [hasGiftWrap]. Without a faithful
-  /// override it fell through to the `Mock` base and answered empty, so the
-  /// ledger half of `_alreadyProcessedBatch` was unobservable (#8170).
+  bool _heldBy(String giftWrapId, String ownerPubkey) =>
+      recorded.contains(giftWrapId) &&
+      (_owners[giftWrapId] ?? ownerPubkey) == ownerPubkey;
+
   @override
-  Future<Set<String>> giftWrapIdsPresent(Set<String> giftWrapIds) async =>
-      giftWrapIds.intersection(recorded);
+  Future<bool> hasGiftWrapForOwner({
+    required String giftWrapId,
+    required String ownerPubkey,
+  }) async => _heldBy(giftWrapId, ownerPubkey);
+
+  /// The batch fast path probes this, not [hasGiftWrapForOwner]. Without a
+  /// faithful override it fell through to the `Mock` base and answered empty,
+  /// so the ledger half of `_alreadyProcessedBatch` was unobservable (#8170).
+  @override
+  Future<Set<String>> giftWrapIdsPresent(
+    Set<String> giftWrapIds, {
+    required String ownerPubkey,
+  }) async => {
+    for (final id in giftWrapIds)
+      if (_heldBy(id, ownerPubkey)) id,
+  };
 
   @override
   Future<void> record({
     required String giftWrapId,
     required String ownerPubkey,
   }) async {
-    recorded.add(giftWrapId);
+    if (recorded.add(giftWrapId)) _owners[giftWrapId] = ownerPubkey;
   }
 }
 
@@ -1177,7 +1192,10 @@ void main() {
         );
 
     void stubNoPersistedGiftWrapIds() => when(
-      () => mockDirectMessagesDao.giftWrapIdsPresent(any()),
+      () => mockDirectMessagesDao.giftWrapIdsPresent(
+        any(),
+        ownerPubkey: any(named: 'ownerPubkey'),
+      ),
     ).thenAnswer((_) async => const <String>{});
 
     void stubNoMessageForSendBatch() => when(
@@ -2288,6 +2306,7 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
@@ -2391,7 +2410,10 @@ void main() {
         );
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
@@ -2503,7 +2525,10 @@ void main() {
           var maxActivePersists = 0;
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
           stubNip04RecoveryAnsweredEmpty();
@@ -2738,7 +2763,10 @@ void main() {
 
         setUp(() {
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
           stubNip04RecoveryAnsweredEmpty();
@@ -2994,7 +3022,10 @@ void main() {
         final rumor = createRumorEvent(createdAt: rumorCreatedAt);
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
@@ -3052,7 +3083,10 @@ void main() {
           final rumor = createRumorEvent(createdAt: rumorCreatedAt);
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
@@ -3107,7 +3141,10 @@ void main() {
           final giftWrap = createGiftWrapEvent();
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => true);
 
           final controller = StreamController<Event>();
@@ -3157,7 +3194,10 @@ void main() {
             // window from moving for the whole session.
             final giftWrap = createGiftWrapEvent();
             when(
-              () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+              () => mockDirectMessagesDao.hasGiftWrap(
+                _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
             ).thenAnswer((_) async => true);
             final controller = StreamController<Event>();
             when(
@@ -3196,7 +3236,10 @@ void main() {
           fakeAsync((async) {
             final giftWrap = createGiftWrapEvent();
             when(
-              () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+              () => mockDirectMessagesDao.hasGiftWrap(
+                _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
             ).thenAnswer((_) async => true);
             final controller = StreamController<Event>();
             when(
@@ -3517,7 +3560,10 @@ void main() {
 
         test('forgets a relay once a page reaches below its floor', () async {
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => true);
           answerPage = (_) => (
             events: [createGiftWrapEvent(createdAt: window - 5)],
@@ -3635,7 +3681,10 @@ void main() {
         test('stops reading, without saving the page, once its subscription '
             'fails', () async {
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => true);
           final gate = Completer<void>();
           pageGate = gate;
@@ -3668,7 +3717,10 @@ void main() {
 
         test('stops asking a relay removed while its debt is read', () async {
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => true);
           final gate = Completer<void>();
           pageGate = gate;
@@ -3800,7 +3852,10 @@ void main() {
 
         test('reads at most one page budget per walk', () async {
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => true);
           var serial = 0;
           answerPage = (filter) => (
@@ -3843,7 +3898,10 @@ void main() {
               createdAt: 1699900000,
             );
             when(
-              () => mockDirectMessagesDao.hasGiftWrap(any()),
+              () => mockDirectMessagesDao.hasGiftWrap(
+                any(),
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
             ).thenAnswer((_) async => true);
             final controller = StreamController<Event>();
             void Function()? storedEventsStart;
@@ -3973,7 +4031,10 @@ void main() {
           fakeAsync((async) {
             final giftWrap = createGiftWrapEvent();
             when(
-              () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+              () => mockDirectMessagesDao.hasGiftWrap(
+                _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
             ).thenAnswer((_) async => true);
             final streams = <StreamController<Event>>[];
             when(
@@ -4024,7 +4085,10 @@ void main() {
           fakeAsync((async) {
             final giftWrap = createGiftWrapEvent();
             when(
-              () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+              () => mockDirectMessagesDao.hasGiftWrap(
+                _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
             ).thenAnswer((_) async => true);
             final streams = <StreamController<Event>>[];
             when(
@@ -4083,7 +4147,10 @@ void main() {
             createdAt: 1699990000,
           );
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
           final controller = StreamController<Event>();
@@ -4212,7 +4279,10 @@ void main() {
             final giftWrap = createGiftWrapEvent();
             final dedup = Completer<bool>();
             when(
-              () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+              () => mockDirectMessagesDao.hasGiftWrap(
+                _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
             ).thenAnswer((_) => dedup.future);
             final streams = <StreamController<Event>>[];
             when(
@@ -4288,7 +4358,10 @@ void main() {
             ),
           ).thenAnswer((_) async {});
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
           final controller = StreamController<Event>();
@@ -4348,7 +4421,10 @@ void main() {
         });
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
@@ -4403,6 +4479,7 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
@@ -4468,7 +4545,10 @@ void main() {
           // ingest wrote.
           final persisted = <({String id, String? batchId})>[];
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
           when(
@@ -4660,7 +4740,10 @@ void main() {
             ],
           );
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
@@ -4730,7 +4813,10 @@ void main() {
             ],
           );
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
@@ -4791,6 +4877,7 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => true);
 
@@ -4849,6 +4936,7 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
 
@@ -4917,7 +5005,10 @@ void main() {
           ).thenAnswer((_) async {});
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final controller = StreamController<Event>();
@@ -4991,7 +5082,10 @@ void main() {
           ).thenAnswer((_) async {});
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
@@ -5059,7 +5153,10 @@ void main() {
             ),
           ).thenAnswer((_) async {});
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final controller = StreamController<Event>();
@@ -5191,7 +5288,10 @@ void main() {
             ),
           ).thenAnswer((_) async {});
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final repository = createRepository(pendingGiftWrapsDao: pendingDao);
@@ -5236,7 +5336,10 @@ void main() {
             ),
           ).thenAnswer((_) async {});
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
         });
 
@@ -5358,6 +5461,7 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
 
@@ -5418,6 +5522,7 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
 
@@ -5483,6 +5588,7 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
@@ -5551,6 +5657,7 @@ void main() {
           when(
             () => mockDirectMessagesDao.hasGiftWrap(
               _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
             ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
@@ -5626,11 +5733,13 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId2,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
@@ -5697,6 +5806,7 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
         when(
@@ -6212,7 +6322,10 @@ void main() {
             ),
           );
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final syncState = _FakeDmSyncState()
@@ -9457,7 +9570,10 @@ void main() {
           ).thenAnswer((_) async => answeredPage(const <Event>[]));
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -9668,7 +9784,10 @@ void main() {
             ),
           ).thenAnswer((_) async => answeredPage(const <Event>[]));
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(partialNip04.id),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              partialNip04.id,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => true);
 
           final syncState = _FakeDmSyncState()
@@ -12609,7 +12728,10 @@ void main() {
         // insertMessage has persisted, so the inclusive `until` boundary
         // re-request is deduped instead of re-inserted.
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer(
           (inv) async =>
               persistedGiftWrapIds.contains(inv.positionalArguments[0]),
@@ -12618,7 +12740,10 @@ void main() {
         // hasGiftWrap, so the inclusive-`until` boundary re-request is deduped
         // before decryption instead of re-decrypted.
         when(
-          () => mockDirectMessagesDao.giftWrapIdsPresent(any()),
+          () => mockDirectMessagesDao.giftWrapIdsPresent(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer(
           (inv) async => (inv.positionalArguments[0] as Set<String>)
               .intersection(persistedGiftWrapIds),
@@ -13114,7 +13239,10 @@ void main() {
             ),
           ).thenAnswer((_) => controller.stream);
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(giftWrap.id),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              giftWrap.id,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final decryptStarted = Completer<void>();
@@ -13177,12 +13305,18 @@ void main() {
             ),
           ).thenAnswer((_) => controller.stream);
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(giftWrap.id),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              giftWrap.id,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final ledger = _MockProcessedGiftWrapsDao();
           when(
-            () => ledger.hasGiftWrap(giftWrap.id),
+            () => ledger.hasGiftWrapForOwner(
+              giftWrapId: giftWrap.id,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           final recordStarted = Completer<void>();
           final recordGate = Completer<void>();
@@ -13539,7 +13673,10 @@ void main() {
           // The first dedup probe carries BOTH wrap ids in one query — proving
           // the page is probed in a single batch, not one hasGiftWrap per wrap.
           final probed = verify(
-            () => mockDirectMessagesDao.giftWrapIdsPresent(captureAny()),
+            () => mockDirectMessagesDao.giftWrapIdsPresent(
+              captureAny(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).captured;
           expect(probed, isNotEmpty);
           expect(probed.first, equals({wrap1.id, wrap2.id}));
@@ -14572,7 +14709,10 @@ void main() {
           });
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           final controller = StreamController<Event>();
           when(
@@ -14772,7 +14912,10 @@ void main() {
             'sig': '',
           });
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           final controller = StreamController<Event>();
           when(
@@ -14826,7 +14969,10 @@ void main() {
       ) async {
         final ledger = _InMemoryProcessedGiftWrapsDao();
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         final controller = StreamController<Event>();
         when(
@@ -14994,7 +15140,10 @@ void main() {
         final wrap = built!;
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         final controller = StreamController<Event>();
         addTearDown(controller.close);
@@ -15573,7 +15722,10 @@ void main() {
           });
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           stubDaoInserts();
@@ -15758,7 +15910,10 @@ void main() {
         });
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
@@ -15853,7 +16008,10 @@ void main() {
         });
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
@@ -16742,7 +16900,10 @@ void main() {
           });
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
@@ -17023,7 +17184,10 @@ void main() {
         final nip04Event = createNip04Event();
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.claimCrossProtocolTwin(
@@ -17091,7 +17255,10 @@ void main() {
         final removedConversationsDao = _MockRemovedConversationsDao();
         final ledger = _InMemoryProcessedGiftWrapsDao();
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.hasMatchingMessage(
@@ -17191,7 +17358,10 @@ void main() {
           final ledger = _InMemoryProcessedGiftWrapsDao();
           var decryptCalls = 0;
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -17258,7 +17428,10 @@ void main() {
           final ledger = _InMemoryProcessedGiftWrapsDao();
           var decryptCalls = 0;
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -17338,7 +17511,10 @@ void main() {
         final nip04Event = createNip04Event();
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
@@ -17405,7 +17581,10 @@ void main() {
         );
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
@@ -17453,7 +17632,10 @@ void main() {
           final nip04Event = createNip04Event();
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -17554,7 +17736,10 @@ void main() {
 
           var hasGiftWrapCalls = 0;
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => hasGiftWrapCalls++ > 0);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -17649,7 +17834,10 @@ void main() {
         );
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
@@ -17692,27 +17880,33 @@ void main() {
         await repository.stopListening();
       });
 
-      // A kind-1059 id belongs to one recipient, so "some account processed
-      // this" and "we processed this" are the same fact. A kind 4 has no
-      // envelope: sender and recipient share one event id, so when both are
-      // accounts on this device the dedup tables hold one id for two accounts.
+      // A kind-1059 id belongs to one recipient. A kind 4 has no envelope:
+      // sender and recipient share one event id, so when both are accounts on
+      // this device one id sits on two accounts' rows, and what the other
+      // account handled must not stand in for this one's (#6645).
       group('a kind-4 another local account processed', () {
         late _MockProcessedGiftWrapsDao ledger;
 
         setUp(() {
           ledger = _MockProcessedGiftWrapsDao();
+          // Only the OTHER account holds the event.
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _rumorEventId,
+              ownerPubkey: _validPubkeyB,
+            ),
           ).thenAnswer((_) async => true);
           when(
-            () => mockDirectMessagesDao.getMessageById(
+            () => mockDirectMessagesDao.hasGiftWrap(
               _rumorEventId,
-              ownerPubkey: any(named: 'ownerPubkey'),
+              ownerPubkey: _validPubkeyA,
             ),
-          ).thenAnswer((_) async => null);
+          ).thenAnswer((_) async => false);
         });
 
-        Future<_FakeDmSyncState> deliverDuplicate() async {
+        Future<_FakeDmSyncState> deliver({
+          required Future<String> Function(String, String) nip04Decryptor,
+        }) async {
           final controller = StreamController<Event>();
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
@@ -17730,7 +17924,7 @@ void main() {
           });
           final syncState = _FakeDmSyncState();
           final repository = createRepository(
-            nip04Decryptor: (_, _) async => 'should not reach',
+            nip04Decryptor: nip04Decryptor,
             syncState: syncState,
             processedGiftWrapsDao: ledger,
           );
@@ -17743,7 +17937,8 @@ void main() {
           return syncState;
         }
 
-        test("does not advance this account's wire boundary", () async {
+        test('is decrypted and stored for this account as well', () async {
+          stubDaoInserts();
           when(
             () => ledger.hasGiftWrapForOwner(
               giftWrapId: any(named: 'giftWrapId'),
@@ -17751,15 +17946,31 @@ void main() {
             ),
           ).thenAnswer((_) async => false);
 
-          final syncState = await deliverDuplicate();
+          await deliver(
+            nip04Decryptor: (_, _) async => 'Decrypted NIP-04 text',
+          );
 
-          // The boundary only ever rises, so raising it over a message this
-          // account never stored puts every future window above it.
-          expect(syncState.recordedWire, isEmpty);
+          // Skipping it would drop this account's copy, and moving its
+          // boundary past a message it never stored would raise the floor of
+          // every future window over it (#8209).
+          verify(
+            () => mockDirectMessagesDao.insertMessage(
+              id: _rumorEventId,
+              conversationId: any(named: 'conversationId'),
+              senderPubkey: _validPubkeyB,
+              content: 'Decrypted NIP-04 text',
+              createdAt: 1700000000,
+              giftWrapId: _rumorEventId,
+              messageKind: EventKind.directMessage,
+              ownerPubkey: _validPubkeyA,
+              tagsJson: any(named: 'tagsJson'),
+              sendBatchId: any(named: 'sendBatchId'),
+            ),
+          ).called(1);
         });
 
-        test('still advances it when this account ledgered the event '
-            'itself', () async {
+        test('advances its wire boundary when this account ledgered the '
+            'event itself', () async {
           when(
             () => ledger.hasGiftWrapForOwner(
               giftWrapId: any(named: 'giftWrapId'),
@@ -17767,7 +17978,9 @@ void main() {
             ),
           ).thenAnswer((_) async => true);
 
-          final syncState = await deliverDuplicate();
+          final syncState = await deliver(
+            nip04Decryptor: (_, _) async => 'should not reach',
+          );
 
           // Mutation guard: "never advance on a dedup hit" would regress the
           // account's own suppressed history, which the 2-day overlap
@@ -17781,31 +17994,14 @@ void main() {
           'wire boundary', () async {
         final nip04Event = createNip04Event();
 
-        when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
-        ).thenAnswer((_) async => true);
-
         // This account's OWN duplicate: the row is in direct_messages under
         // this owner, which is what entitles it to move its boundary.
         when(
-          () => mockDirectMessagesDao.getMessageById(
+          () => mockDirectMessagesDao.hasGiftWrap(
             _rumorEventId,
-            ownerPubkey: any(named: 'ownerPubkey'),
-          ),
-        ).thenAnswer(
-          (_) async => const DirectMessageRow(
-            id: _rumorEventId,
-            conversationId: 'own-duplicate',
-            senderPubkey: _validPubkeyB,
-            content: 'duplicate',
-            createdAt: 1700000000,
-            giftWrapId: _rumorEventId,
-            messageKind: 4,
             ownerPubkey: _validPubkeyA,
-            isDeleted: false,
-            twinCollapsed: false,
           ),
-        );
+        ).thenAnswer((_) async => true);
 
         final controller = StreamController<Event>();
         void Function(StoredEventsEnd)? storedEventsEnd;
@@ -17877,7 +18073,10 @@ void main() {
           final dedupStarted = Completer<void>();
           final dedupResult = Completer<bool>();
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) {
             dedupStarted.complete();
             return dedupResult.future;
@@ -17965,7 +18164,10 @@ void main() {
           final dedupStarted = Completer<void>();
           final dedupResult = Completer<bool>();
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) {
             dedupStarted.complete();
             return dedupResult.future;
@@ -18051,7 +18253,10 @@ void main() {
           final decryptResult = Completer<String?>();
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
@@ -18117,7 +18322,10 @@ void main() {
           final decryptResult = Completer<String?>();
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
@@ -18177,7 +18385,10 @@ void main() {
         final nip04Event = createNip04Event(tags: []);
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
 
         final controller = StreamController<Event>();
@@ -18235,7 +18446,10 @@ void main() {
         var decryptCalls = 0;
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
 
         final controller = StreamController<Event>();
@@ -18331,7 +18545,10 @@ void main() {
         });
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
@@ -18450,7 +18667,10 @@ void main() {
         final convId = DmRepository.computeConversationId(participants);
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.hasMatchingMessage(
@@ -20969,7 +21189,10 @@ void main() {
           );
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -21160,7 +21383,10 @@ void main() {
           );
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -21317,7 +21543,10 @@ void main() {
           );
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -21490,7 +21719,10 @@ void main() {
           );
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -21657,7 +21889,10 @@ void main() {
         final rumor = createRumorEvent();
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.hasMatchingMessage(
@@ -22970,7 +23205,10 @@ void main() {
 
         // Stub hasGiftWrap to ensure deletion event is not treated as duplicate
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
 
         final repository = createRepository(
@@ -23048,7 +23286,10 @@ void main() {
             ),
           ).thenAnswer((_) async => null);
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final repository = createRepository(
@@ -23125,7 +23366,10 @@ void main() {
             );
           });
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final repository = createRepository(
@@ -23173,7 +23417,10 @@ void main() {
         );
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
 
         final repository = createRepository(
@@ -23226,7 +23473,10 @@ void main() {
         );
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
 
         final repository = createRepository(
@@ -23265,7 +23515,10 @@ void main() {
         ).thenAnswer((_) async => null);
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
 
         final repository = createRepository(
@@ -23327,7 +23580,10 @@ void main() {
           stubWrappedDeleteSubscription(controller);
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockReactionsRepository.applyDeletion(
@@ -23404,7 +23660,10 @@ void main() {
           stubWrappedDeleteSubscription(controller);
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.getMessageById(
@@ -23476,7 +23735,10 @@ void main() {
         ).thenAnswer((_) => controller.stream);
         when(() => mockNostrClient.unsubscribe(any())).thenAnswer((_) async {});
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.markMessageDeleted(
@@ -23846,7 +24108,10 @@ void main() {
         // Reactions/deletions never leave a directMessages dedup row, so the
         // message-table check is always false for these wraps.
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
       });
 
@@ -24114,7 +24379,10 @@ void main() {
         () async {
           var hasGiftWrapCalls = 0;
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => hasGiftWrapCalls++ > 0);
 
           final syncState = _FakeDmSyncState();
@@ -24486,7 +24754,10 @@ void main() {
 
           const newMessageAt = 1700000001;
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId2),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId2,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(

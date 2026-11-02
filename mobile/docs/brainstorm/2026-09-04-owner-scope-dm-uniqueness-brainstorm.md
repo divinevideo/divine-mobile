@@ -191,6 +191,13 @@ destroying evidence that prevents duplicate processing.
 - [x] Do `hasGiftWrap` / `giftWrapIdsPresent` stay global once the message key
       is owner-scoped?
 
+> **Update (schema v32, #6645).** The three answers above held for an inbound
+> gift wrap only. An outgoing row stores the recipient's wrap id and a kind-4
+> id is shared by both ends, so with both accounts on one device one id sat on
+> two accounts' rows and the second one was dropped. The index became
+> `(gift_wrap_id, owner_pubkey)` and both lookups owner-scoped; the ledger kept
+> its single-column key. See `DM_RETENTION.md`, "Dedup is per account".
+
 ## Prerequisites
 
 - [x] Regenerate the drift schema snapshot (`drift_schemas/app_database/drift_schema_v12.json`)

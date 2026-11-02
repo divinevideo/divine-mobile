@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 31** (see `app_database.dart`).
+**Version: 32** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -306,6 +306,22 @@ upgrade, or a guarded recovery, that stops below v31 drops the three columns
 again; only a migration test opens a database at an earlier version. Per the
 rule below, the guarded `beforeOpen` recovery and its repair probe are not
 extended for the new columns.
+
+Version 32 makes `idx_dm_gift_wrap_id` unique per account, on
+`(gift_wrap_id, owner_pubkey)` instead of `gift_wrap_id` alone (#6645). v12 keyed
+the message rows by account but left the wrap id unique across the device, so
+an account lost its copy of a message whose wrap id another local account's row
+already held: the sender's outgoing row stores the *recipient's* wrap id, and a
+kind-4 event id is shared by both ends. The new key only admits rows the old one
+refused, so no stored row can violate it and nothing is rewritten. The index is
+hand-written SQL outside Drift's schema, so the v32 snapshot equals v31's. The
+old index has the same name, so the step drops it before creating the new one;
+`CREATE ... IF NOT EXISTS` alone would keep it. The legacy-v1 normalization still
+creates the old definition, because its `direct_messages` has no `owner_pubkey`
+yet; the step replaces it at the end of the upgrade chain. The processed-wrap
+ledger keeps its single-column key: its lookups became owner-scoped instead, so
+the one case where two accounts share an id (a kind 4) costs the second account
+a repeat decrypt on a replay and no message.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only

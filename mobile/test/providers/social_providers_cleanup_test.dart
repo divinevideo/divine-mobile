@@ -2598,7 +2598,12 @@ void main() {
             }),
           );
           for (var i = 0; i < 50; i++) {
-            if (await db.directMessagesDao.hasGiftWrap(wrapId)) return;
+            if (await db.directMessagesDao.hasGiftWrap(
+              wrapId,
+              ownerPubkey: _pubkeyA,
+            )) {
+              return;
+            }
             await pumpEventQueue();
           }
           fail('wrap $wrapId was never stored');

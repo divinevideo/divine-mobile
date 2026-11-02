@@ -114,7 +114,12 @@ void main() {
         );
 
         // No DB reads checking for existing gift wraps.
-        verifyNever(() => mockDirectMessagesDao.hasGiftWrap(any()));
+        verifyNever(
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        );
 
         // No DB writes persisting messages.
         verifyNever(

@@ -280,7 +280,10 @@ void main() {
 
       expect(await storedCount(), 1, reason: 'the kind-4 is the twin');
       expect(
-        await processedDao.hasGiftWrap(suppressed),
+        await processedDao.hasGiftWrapForOwner(
+          giftWrapId: suppressed,
+          ownerPubkey: _owner,
+        ),
         isTrue,
         reason: 'the suppression must be remembered across replays (#8211)',
       );

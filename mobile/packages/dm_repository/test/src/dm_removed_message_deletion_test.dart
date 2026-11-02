@@ -285,7 +285,10 @@ void main() {
         );
 
         expect(
-          await processedDao.hasGiftWrap(_id('b')),
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: _id('b'),
+            ownerPubkey: _owner,
+          ),
           isTrue,
           reason:
               'the message is gone, so the retraction has nothing left to '
@@ -321,7 +324,13 @@ void main() {
           ),
         );
 
-        expect(await processedDao.hasGiftWrap(_id('b')), isTrue);
+        expect(
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: _id('b'),
+            ownerPubkey: _owner,
+          ),
+          isTrue,
+        );
       });
     });
 
@@ -353,7 +362,13 @@ void main() {
           ),
         );
 
-        expect(await processedDao.hasGiftWrap(_id('b')), isTrue);
+        expect(
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: _id('b'),
+            ownerPubkey: _owner,
+          ),
+          isTrue,
+        );
       });
     });
 
@@ -377,7 +392,10 @@ void main() {
         );
         await deliver(wrapId: _id('b'), rumor: early);
         expect(
-          await processedDao.hasGiftWrap(_id('b')),
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: _id('b'),
+            ownerPubkey: _owner,
+          ),
           isFalse,
           reason: 'its target has not arrived, so it must stay retryable',
         );
@@ -389,7 +407,13 @@ void main() {
         await deliver(wrapId: _id('b'), rumor: early);
 
         expect(await messageIsDeleted(_id('4')), isTrue);
-        expect(await processedDao.hasGiftWrap(_id('b')), isTrue);
+        expect(
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: _id('b'),
+            ownerPubkey: _owner,
+          ),
+          isTrue,
+        );
       });
 
       test(
@@ -428,7 +452,13 @@ void main() {
           );
 
           expect(await messageIsDeleted(_id('5')), isTrue);
-          expect(await processedDao.hasGiftWrap(_id('b')), isTrue);
+          expect(
+            await processedDao.hasGiftWrapForOwner(
+              giftWrapId: _id('b'),
+              ownerPubkey: _owner,
+            ),
+            isTrue,
+          );
         },
       );
 
@@ -451,7 +481,13 @@ void main() {
         );
 
         expect(await messageIsDeleted(_id('1')), isTrue);
-        expect(await processedDao.hasGiftWrap(_id('b')), isTrue);
+        expect(
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: _id('b'),
+            ownerPubkey: _owner,
+          ),
+          isTrue,
+        );
       });
 
       test(
@@ -482,7 +518,13 @@ void main() {
           );
 
           expect(await messageIsDeleted(_id('1')), isTrue);
-          expect(await processedDao.hasGiftWrap(_id('b')), isTrue);
+          expect(
+            await processedDao.hasGiftWrapForOwner(
+              giftWrapId: _id('b'),
+              ownerPubkey: _owner,
+            ),
+            isTrue,
+          );
         },
       );
     });
@@ -519,7 +561,13 @@ void main() {
           isNull,
           reason: 'it was removed with its conversation and must stay gone',
         );
-        expect(await processedDao.hasGiftWrap(_id('a')), isTrue);
+        expect(
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: _id('a'),
+            ownerPubkey: _owner,
+          ),
+          isTrue,
+        );
       });
 
       test('is not stored again when its NIP-04 event is replayed', () async {

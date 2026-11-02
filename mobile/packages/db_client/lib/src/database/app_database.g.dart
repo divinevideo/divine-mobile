@@ -9900,7 +9900,13 @@ class DirectMessageRow extends DataClass
   /// Optional parent message ID (from `e` tag) for threaded replies.
   final String? replyToId;
 
-  /// The gift-wrap event ID (kind 1059) used for deduplication.
+  /// The gift-wrap event ID (kind 1059) used for deduplication, unique per
+  /// [ownerPubkey].
+  ///
+  /// An inbound wrap is addressed to one recipient, but an outgoing row stores
+  /// the *recipient's* wrap id and a kind-4 row stores the event id both ends
+  /// share, so with both accounts on one device one id sits on two accounts'
+  /// rows (#6645).
   final String giftWrapId;
 
   /// Optional conversation subject/title (from `subject` tag).
@@ -17773,12 +17779,15 @@ class $ProcessedGiftWrapsTable extends ProcessedGiftWraps
 
 class ProcessedGiftWrap extends DataClass
     implements Insertable<ProcessedGiftWrap> {
-  /// The kind 1059 gift-wrap event id (outer). Dedup key.
+  /// The kind 1059 gift-wrap event id (outer), or the event id of a suppressed
+  /// kind 4. Dedup key.
   ///
-  /// Intentionally NOT scoped by owner: gift-wrap event ids are globally unique
-  /// per the Nostr protocol, so cross-account dedup prevents re-processing the
-  /// same relay event for multiple local accounts — matching
-  /// [DirectMessages.giftWrapId] dedup semantics.
+  /// The key is the id alone, which is exact for a wrap: NIP-59 addresses each
+  /// one to a single recipient. A kind 4 is shared by both ends, so if both
+  /// are accounts on this device only the first to record it holds the row.
+  /// Lookups are scoped by [ownerPubkey] instead, so the other account does not
+  /// mistake that row for its own handling and simply handles the event itself,
+  /// at the cost of one repeat decrypt on a replay (#6645).
   final String giftWrapId;
 
   /// When the wrap was terminally processed (unix seconds).
@@ -17788,8 +17797,8 @@ class ProcessedGiftWrap extends DataClass
   /// pruning an old row would make those wraps eligible for decryption again.
   final int processedAt;
 
-  /// Recipient pubkey this wrap was processed for. Not part of the global
-  /// gift-wrap dedup key, but used to scope account cleanup without deleting
+  /// Recipient pubkey this wrap was processed for. Not part of the dedup key,
+  /// but scopes the lookups and the account cleanup, which must not delete
   /// another saved account's ledger entries.
   final String? ownerPubkey;
   const ProcessedGiftWrap({

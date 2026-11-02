@@ -306,9 +306,89 @@ void main() {
       });
     }
 
-    test('current schema version is 31', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 31);
+    test('current schema version is 32', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 32);
     });
+
+    test(
+      'v32 lets two accounts hold one gift-wrap id, keeping the rows already '
+      'stored',
+      () async {
+        final schema = await verifier.schemaAt(31);
+        final ownerA = 'a' * 64;
+        final ownerB = 'b' * 64;
+        final wrapId = 'c' * 64;
+        const insertMessage =
+            'INSERT INTO direct_messages (id, conversation_id, sender_pubkey, '
+            'content, created_at, gift_wrap_id, owner_pubkey) '
+            'VALUES (?,?,?,?,?,?,?)';
+        // The snapshot carries no hand-written indexes, so give it the one a
+        // shipped v31 install holds.
+        schema.rawDatabase
+          ..execute(
+            'CREATE UNIQUE INDEX idx_dm_gift_wrap_id '
+            'ON direct_messages (gift_wrap_id)',
+          )
+          ..execute(insertMessage, [
+            'rumor_a',
+            'd' * 64,
+            ownerA,
+            'sent to b',
+            1700000000,
+            wrapId,
+            ownerA,
+          ]);
+        expect(
+          () => schema.rawDatabase.execute(insertMessage, [
+            'rumor_a',
+            'e' * 64,
+            ownerA,
+            'sent to b',
+            1700000000,
+            wrapId,
+            ownerB,
+          ]),
+          throwsA(anything),
+          reason: 'precondition: the v31 index lets one account hold a wrap id',
+        );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+
+        await verifier.migrateAndValidate(db, 32);
+
+        expect(
+          await db.directMessagesDao.hasGiftWrap(wrapId, ownerPubkey: ownerA),
+          isTrue,
+          reason: 'the row stored before the upgrade is kept',
+        );
+        expect(
+          await db.directMessagesDao.insertMessage(
+            id: 'rumor_a',
+            conversationId: 'e' * 64,
+            senderPubkey: ownerA,
+            content: 'sent to b',
+            createdAt: 1700000000,
+            giftWrapId: wrapId,
+            ownerPubkey: ownerB,
+          ),
+          isTrue,
+          reason: 'the second account keeps its own copy of the same wrap id',
+        );
+        expect(
+          await db.directMessagesDao.insertMessage(
+            id: 'rumor_a_again',
+            conversationId: 'd' * 64,
+            senderPubkey: ownerA,
+            content: 'sent to b',
+            createdAt: 1700000000,
+            giftWrapId: wrapId,
+            ownerPubkey: ownerA,
+          ),
+          isFalse,
+          reason: 'a wrap id still dedups within one account',
+        );
+      },
+    );
 
     test(
       'v31 gives queued DM reactions and retractions a held-wrap record, '
