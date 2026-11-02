@@ -11,7 +11,7 @@ import 'package:path/path.dart' as p;
 part 'clips_dao.g.dart';
 
 /// Data access for the [Clips] table, which holds library clips
-/// (`draft_id` NULL) and the clips of drafts.
+/// (`draft_id` NULL, or the autosave draft's) and the clips of drafts.
 ///
 /// Owner-scoped queries return the given owner's rows plus legacy rows
 /// without an owner. Listing queries leave trashed rows out unless asked;
