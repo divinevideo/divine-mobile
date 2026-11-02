@@ -283,7 +283,7 @@ app built from it does.
 |---|---|---|---|
 | Amethyst (Quartz) | amethyst `553f761f22`, quartz `5ae28cbea1` | **Yes.** A retry republishes the wraps built on the first send, so the rumor, seal and wrap ids are all unchanged. | `Account.broadcastPrivately`: "Republishing the wraps we already hold is the whole retry". The retry closure is in memory in `ChatDeliveryTracker` and covers a send that failed before reaching the relay pool |
 | Coracle and welshman | welshman `7d72fa0a7c`, coracle `d50db6133f` | **Yes.** `retry` republishes the thunk's original options, and the rumor is stamped once, before wrapping. | `thunk.ts:411-414`, `wraps.ts:70-71` |
-| nostr-tools | `8ffc6287cd` | No retry layer. The high-level `nip17.wrapEvent` stamps `created_at` from the clock on every call, so retrying by calling it again re-mints. The lower-level `nip59` functions accept an existing rumor. | `nip17.ts:22`, `nip59.ts:21-30` |
+| nostr-tools | `8ffc6287cd` | No retry layer. The high-level `nip17.wrapEvent` stamps `created_at` from the clock on every call, so retrying by calling it again re-mints. The lower-level `nip59` functions accept an existing rumor. Changed since: 2.25.5 (`a8562d9c`, [nbd-wtf/nostr-tools#568](https://github.com/nbd-wtf/nostr-tools/issues/568)) gives `wrapEvent` and `wrapManyEvents` an optional trailing `createdAt`, so a retry that passes the original value rebuilds the same rumor id. Without it they still read the clock. | `nip17.ts:22`, `nip59.ts:21-30` |
 | NDK | `4b86acd13f` | No retry layer. `NIP17Protocol.sendMessage` builds the rumor from the clock inside the call and does not return it. `giftWrap` accepts an existing event. | `messages/src/protocols/nip17.ts:28-40` |
 | rust-nostr | `4c8099aef6` | No retry layer. `PrivateDirectMessageBuilder::finalize` makes a fresh rumor on every call, even on a clone. `GiftWrapBuilder` wraps an `UnsignedEvent` the caller kept. | `nostr/src/nips/nip17.rs:158-166` |
 
@@ -297,7 +297,11 @@ What this shows:
   rumor. A contract that says "keep the rumor's `id`" therefore also needs
   those APIs to hand the rumor back, or to accept the original `created_at`
   so the caller can rebuild it. The sentence in the NIP is necessary but not
-  sufficient.
+  sufficient. nostr-tools took the second shape in 2.25.5; the NDK and
+  rust-nostr issues filed the same day
+  ([ndk#404](https://github.com/nostr-dev-kit/ndk/issues/404),
+  [nostr#1509](https://github.com/nostrdevkit/nostr/issues/1509)) were
+  still open on 2026-11-03.
 - It does not show that any shipped app re-mints. That depends on the app built
   on a library, and none of those were read.
 
