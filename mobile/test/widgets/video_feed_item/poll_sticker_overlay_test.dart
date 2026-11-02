@@ -176,6 +176,38 @@ void main() {
       await tester.pump();
     }
 
+    Future<void> pumpSlider(WidgetTester tester) async {
+      final slider = Poll.slider(question: 'Hungry?', emoji: '😋');
+      when(
+        () => repository.fetchPoll(_pollId, authorPubkey: _author),
+      ).thenAnswer(
+        (_) async => PollSnapshot(
+          poll: Poll(
+            id: _pollId,
+            authorPubkey: _author,
+            question: slider.question,
+            options: slider.options,
+            kind: PollKind.slider,
+            emoji: slider.emoji,
+          ),
+          results: const PollResults(),
+        ),
+      );
+      await pump(
+        tester,
+        region: VideoStickerRegion(
+          kind: VideoStickerKind.slider,
+          target: _pollId,
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.8,
+          height: 0.2,
+          style: 'light',
+          label: 'Hungry?\n😋',
+        ),
+      );
+    }
+
     group('renders', () {
       testWidgets('draws the poll of a video the feed only loads ahead, '
           'without reading it', (tester) async {
@@ -207,6 +239,24 @@ void main() {
         await tester.tapAt(tester.getCenter(find.text('Blue')));
         verifyNever(() => repository.vote(any(), any()));
         expect(playerTaps, equals(1));
+      });
+
+      testWidgets('reads a slider to a screen reader as one control named '
+          'by its question', (tester) async {
+        final handle = tester.ensureSemantics();
+        await pumpSlider(tester);
+        await tester.pump();
+
+        expect(
+          tester.getSemantics(find.text('Hungry?')),
+          isSemantics(
+            label: 'Hungry?',
+            isSlider: true,
+            hasIncreaseAction: true,
+            hasDecreaseAction: true,
+          ),
+        );
+        handle.dispose();
       });
     });
 
@@ -363,35 +413,7 @@ void main() {
       });
 
       testWidgets('rates a slider where the emoji is let go', (tester) async {
-        final slider = Poll.slider(question: 'Hungry?', emoji: '😋');
-        when(
-          () => repository.fetchPoll(_pollId, authorPubkey: _author),
-        ).thenAnswer(
-          (_) async => PollSnapshot(
-            poll: Poll(
-              id: _pollId,
-              authorPubkey: _author,
-              question: slider.question,
-              options: slider.options,
-              kind: PollKind.slider,
-              emoji: slider.emoji,
-            ),
-            results: const PollResults(),
-          ),
-        );
-        await pump(
-          tester,
-          region: VideoStickerRegion(
-            kind: VideoStickerKind.slider,
-            target: _pollId,
-            centerX: 0.5,
-            centerY: 0.5,
-            width: 0.8,
-            height: 0.2,
-            style: 'light',
-            label: 'Hungry?\n😋',
-          ),
-        );
+        await pumpSlider(tester);
         // The card is 720 wide, its bar's ends 90 in from either side.
         final card = tester.getRect(find.byType(PollStickerCard));
         double at(double value) =>

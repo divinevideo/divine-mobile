@@ -142,7 +142,6 @@ class PollStickerCard extends StatelessWidget {
             ),
             if (data.kind == SocialStickerKind.slider)
               _SliderScale(
-                question: data.pollQuestion ?? '',
                 emoji: data.sliderEmoji ?? '',
                 value: sliderValue,
                 average: results?.average,
@@ -373,7 +372,6 @@ class _Answer extends StatelessWidget {
 /// It runs from left to right in every language, as it does in the frames.
 class _SliderScale extends StatelessWidget {
   const _SliderScale({
-    required this.question,
     required this.emoji,
     required this.value,
     required this.average,
@@ -382,8 +380,6 @@ class _SliderScale extends StatelessWidget {
     required this.onSlideEnd,
   });
 
-  /// What the slider asks, which names it to a screen reader.
-  final String question;
   final String emoji;
   final double value;
   final double? average;
@@ -476,7 +472,6 @@ class _SliderScale extends StatelessWidget {
                 ? IgnorePointer(ignoring: passesTaps, child: thumb)
                 : Semantics(
                     slider: true,
-                    label: question,
                     value: '${(value * 100).round()}',
                     increasedValue:
                         '${((value + 0.1).clamp(0, 1) * 100).round()}',
