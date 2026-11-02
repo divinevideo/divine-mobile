@@ -1,9 +1,8 @@
 // ABOUTME: Reads who joined an Add yours or replied to a video for its sticker,
-// ABOUTME: leaving out the blocked, and the replies its creator hid.
+// ABOUTME: filtered like any feed, without the replies its creator hid.
 
 import 'dart:math' as math;
 
-import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart'
@@ -13,25 +12,33 @@ import 'package:video_responses_repository/video_responses_repository.dart';
 
 part 'sticker_responses_state.dart';
 
+/// Filters responses the way the feeds do, and puts on each the content
+/// warnings the viewer's settings call for.
+typedef StickerResponsesFilter = List<VideoEvent> Function(
+  List<VideoEvent> responses,
+);
+
 /// Reads the responses an Add yours or replies sticker on [video] shows.
 ///
-/// Someone the viewer blocked, or who blocked them, is left out, and so are
-/// the replies the video's creator hid; the reply they pinned comes first.
+/// They pass through [StickerResponsesFilter], the feeds' blocks, mutes and
+/// content filters, since they show on someone else's video and open in a
+/// feed; the replies the video's creator hid are left out too, and the reply
+/// they pinned comes first.
 class StickerResponsesCubit extends Cubit<StickerResponsesState>
     with CloseGuardedEmit<StickerResponsesState> {
   StickerResponsesCubit({
     required VideoResponsesRepository repository,
-    required ContentBlocklistRepository blocklistRepository,
+    required StickerResponsesFilter filter,
     required VideoEvent video,
     required VideoStickerRegion region,
   }) : _repository = repository,
-       _blocklistRepository = blocklistRepository,
+       _filter = filter,
        _video = video,
        _region = region,
        super(const StickerResponsesState());
 
   final VideoResponsesRepository _repository;
-  final ContentBlocklistRepository _blocklistRepository;
+  final StickerResponsesFilter _filter;
   final VideoEvent _video;
   final VideoStickerRegion _region;
 
@@ -79,12 +86,7 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
   }
 
   void _emitShown(VideoResponses responses, RepliesCuration curation) {
-    final shown = curation.apply([
-      for (final video in responses.videos)
-        if (!_blocklistRepository.isBlocked(video.pubkey) &&
-            !_blocklistRepository.hasBlockedUs(video.pubkey))
-          video,
-    ]);
+    final shown = curation.apply(_filter(responses.videos));
     // What is left out among those read is left out of the count too; the
     // rest of the count was not read, so it stays as it is.
     final leftOut = responses.videos.length - shown.length;

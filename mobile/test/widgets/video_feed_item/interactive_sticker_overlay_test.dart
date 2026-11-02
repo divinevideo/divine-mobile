@@ -1,7 +1,6 @@
 // ABOUTME: Tests a question, Add yours or replies sticker on a playing video:
 // ABOUTME: it reads only on the active video and opens what its buttons open.
 
-import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/sticker_responses/sticker_responses_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/add_yours_context.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
@@ -16,15 +16,14 @@ import 'package:openvine/providers/add_yours_context_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/interactive_sticker_card.dart';
 import 'package:openvine/widgets/video_feed_item/interactive_sticker_overlay.dart';
 import 'package:video_responses_repository/video_responses_repository.dart';
 
 class _MockVideoResponsesRepository extends Mock
     implements VideoResponsesRepository {}
-
-class _MockContentBlocklistRepository extends Mock
-    implements ContentBlocklistRepository {}
 
 class _MockFeedRepository extends Mock implements FeedRepository {}
 
@@ -73,7 +72,7 @@ VideoEvent _reply(int n) => VideoEvent(
 void main() {
   group(InteractiveStickerOverlay, () {
     late _MockVideoResponsesRepository repository;
-    late _MockContentBlocklistRepository blocklist;
+    late StickerResponsesFilter filter;
     late List<String> pushed;
     late List<Object?> extras;
     late int interactions;
@@ -81,13 +80,11 @@ void main() {
 
     setUp(() {
       repository = _MockVideoResponsesRepository();
-      blocklist = _MockContentBlocklistRepository();
+      filter = (videos) => videos;
       pushed = [];
       extras = [];
       interactions = 0;
       addYoursWhileOpen = null;
-      when(() => blocklist.isBlocked(any())).thenReturn(false);
-      when(() => blocklist.hasBlockedUs(any())).thenReturn(false);
       when(
         () => repository.fetchReplies(
           videoId: any(named: 'videoId'),
@@ -170,7 +167,9 @@ void main() {
         ProviderScope(
           overrides: [
             videoResponsesRepositoryProvider.overrideWithValue(repository),
-            contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+            stickerResponsesFilterProvider.overrideWithValue(
+              (videos) => filter(videos),
+            ),
             feedRepositoryProvider.overrideWithValue(_MockFeedRepository()),
             nostrSessionProvider.overrideWith(
               () => _Session(
@@ -226,6 +225,43 @@ void main() {
         expect(
           find.text(l10n(tester).videoStickerRepliesCount(2)),
           findsOneWidget,
+        );
+      });
+
+      testWidgets('leaves out the responses the feeds would', (tester) async {
+        filter = (videos) => [
+          for (final video in videos)
+            if (video.id != _reply(2).id) video,
+        ];
+        await pump(tester, replies);
+        await tester.pump();
+
+        expect(
+          find.text(l10n(tester).videoStickerRepliesCount(1)),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets("blurs a response the viewer's settings warn about", (
+        tester,
+      ) async {
+        filter = (videos) => [
+          for (final video in videos)
+            if (video.id == _reply(1).id)
+              video.copyWith(warnLabels: ['nudity'])
+            else
+              video,
+        ];
+        await pump(tester, replies);
+        await tester.pump();
+
+        final latest = tester
+            .widget<InteractiveStickerCopy>(find.byType(InteractiveStickerCopy))
+            .responses!
+            .latest;
+        expect(
+          latest.map((preview) => preview.isBlurred),
+          equals([true, false]),
         );
       });
 

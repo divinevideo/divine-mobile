@@ -8,8 +8,11 @@ import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 
 /// Opens [videos] in the full-screen feed at [index] under [title], counted
-/// in the views as coming from [sourceDetail]. The feed applies the viewer's
-/// blocks and content filters, as every feed does.
+/// in the views as coming from [sourceDetail].
+///
+/// The feed itself applies only the viewer's blocks and source preferences.
+/// Content filters and the content warnings it shows come with [videos]: pass
+/// them through `stickerResponsesFilterProvider` first, as the stickers do.
 Future<void> openVideoResponsesFeed(
   BuildContext context, {
   required FeedRepository feedRepository,

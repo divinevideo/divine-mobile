@@ -1,8 +1,7 @@
 // ABOUTME: Tests reading who joined an Add yours or replied to a video for its
-// ABOUTME: sticker: blocked people and hidden replies left out, pins first.
+// ABOUTME: sticker: the feeds' filter applied, hidden replies left out, pins first.
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -11,9 +10,6 @@ import 'package:video_responses_repository/video_responses_repository.dart';
 
 class _MockVideoResponsesRepository extends Mock
     implements VideoResponsesRepository {}
-
-class _MockContentBlocklistRepository extends Mock
-    implements ContentBlocklistRepository {}
 
 String _hex(int n) => n.toRadixString(16).padLeft(64, '0');
 
@@ -45,21 +41,19 @@ VideoStickerRegion _region(VideoStickerKind kind, {String target = ''}) =>
 void main() {
   group(StickerResponsesCubit, () {
     late _MockVideoResponsesRepository repository;
-    late _MockContentBlocklistRepository blocklist;
+    late StickerResponsesFilter filter;
     final root = _video(100, pubkey: _creator, dTag: 'root-d');
     final rootAddress = root.addressableId!;
 
     setUp(() {
       repository = _MockVideoResponsesRepository();
-      blocklist = _MockContentBlocklistRepository();
-      when(() => blocklist.isBlocked(any())).thenReturn(false);
-      when(() => blocklist.hasBlockedUs(any())).thenReturn(false);
+      filter = (videos) => videos;
     });
 
     StickerResponsesCubit build(VideoStickerRegion region, {VideoEvent? on}) =>
         StickerResponsesCubit(
           repository: repository,
-          blocklistRepository: blocklist,
+          filter: (videos) => filter(videos),
           video: on ?? root,
           region: region,
         );
@@ -67,7 +61,7 @@ void main() {
     group('load', () {
       blocTest<StickerResponsesCubit, StickerResponsesState>(
         'shows the replies with the pinned one first, without the hidden '
-        'ones or anyone blocked, and counts them out',
+        'ones or any the feeds leave out, and counts them out',
         setUp: () {
           when(
             () => repository.fetchReplies(
@@ -90,7 +84,11 @@ void main() {
             (_) async =>
                 RepliesCuration(pinnedId: _hex(3), hiddenIds: {_hex(2)}),
           );
-          when(() => blocklist.hasBlockedUs(_hex(1004))).thenReturn(true);
+          // The feeds' filter: blocks and mutes either way, content filters.
+          filter = (videos) => [
+            for (final video in videos)
+              if (video.pubkey != _hex(1004)) video,
+          ];
         },
         build: () => build(_region(VideoStickerKind.replies)),
         act: (cubit) => cubit.load(),
@@ -110,6 +108,31 @@ void main() {
             limit: StickerResponsesCubit.feedLimit,
           ),
         ).called(1),
+      );
+
+      blocTest<StickerResponsesCubit, StickerResponsesState>(
+        'keeps the warnings the filter puts on a response, to blur it',
+        setUp: () {
+          when(
+            () => repository.fetchJoined(
+              chainRoot: any(named: 'chainRoot'),
+              hashtag: any(named: 'hashtag'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer(
+            (_) async => VideoResponses(total: 1, videos: [_video(1)]),
+          );
+          filter = (videos) => [
+            for (final video in videos) video.copyWith(warnLabels: ['nudity']),
+          ];
+        },
+        build: () => build(_region(VideoStickerKind.prompt)),
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        verify: (cubit) {
+          expect(cubit.state.videos.single.warnLabels, equals(['nudity']));
+          expect(cubit.state.videos.single.shouldShowWarning, isTrue);
+        },
       );
 
       blocTest<StickerResponsesCubit, StickerResponsesState>(

@@ -15,6 +15,7 @@ import 'package:openvine/providers/add_yours_context_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/router/routes/interactive_sticker_routes.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -69,14 +70,16 @@ class InteractiveStickerOverlay extends ConsumerWidget {
       );
     }
     final repository = ref.watch(videoResponsesRepositoryProvider);
-    final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
+    // Rebuilt when the viewer's blocks, mutes or content filters change, so
+    // the responses are read again under the new policy.
+    final filter = ref.watch(stickerResponsesFilterProvider);
     return BlocProvider(
       // Another account has its own blocks, and the creator their own view.
-      key: ValueKey((repository, blocklistRepository, region, video.id)),
+      key: ValueKey((repository, filter, region, video.id)),
       create: (_) {
         final cubit = StickerResponsesCubit(
           repository: repository,
-          blocklistRepository: blocklistRepository,
+          filter: filter,
           video: video,
           region: region,
         );
@@ -153,7 +156,9 @@ class _ResponsesSticker extends ConsumerWidget {
                 StickerResponsePreview(
                   avatarUrl: video.authorAvatar,
                   thumbnailUrl: video.thumbnailUrl,
-                  isBlurred: video.hasContentWarning,
+                  // The warnings the viewer's settings call for, as the
+                  // feed this opens shows them.
+                  isBlurred: video.shouldShowWarning,
                 ),
             ],
           )
