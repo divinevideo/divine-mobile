@@ -121,6 +121,7 @@ When the library loads, video clips missing a thumbnail or ghost frame get them 
 | Device gallery | `VideoClipImportService.importGalleryClip` ([`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#back-from-the-gallery)) |
 | A clip the editor creates, such as a split-screen layout render | The editor's autosave draft, which `getAllClips` lists as library clips (see [Rows](#rows)) |
 | Developer recovery tool | `ClipRecoveryService`, which saves recovered recordings back (see [Accounts](#accounts)) |
+| Earlier builds | `ClipLibraryService.migrateOldClips`, which moves the old SharedPreferences store into Drift at startup (see [Startup and background work](#startup-and-background-work)) |
 
 Of the ways footage comes in from outside the app, a clip received in a direct message and a clip brought back from the gallery get in only after the C2PA check described in [`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#the-c2pa-check). A received file that carries no credentials gets in only if it is the exact file of an archived Vine, matched by its file hash. The share sheet's "Add to clips" brings in a published video with no check.
 
