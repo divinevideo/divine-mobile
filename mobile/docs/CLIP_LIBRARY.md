@@ -23,7 +23,7 @@ The two plans [`plans/2025-12-18-clip-library-redesign.md`](plans/2025-12-18-cli
 | Service | [`ClipLibraryService`](../lib/services/clip_library_service.dart) | Reads and writes one account's clips and categories; runs the trash and startup sweeps |
 | Data | `ClipsDao`, `ClipCategoriesDao` in [`db_client`](../packages/db_client/lib/src/database/daos/) | The `clips` and `clip_categories` Drift tables |
 
-`clipLibraryServiceProvider` in [`social_providers.dart`](../lib/providers/social_providers.dart) builds the service for the signed-in account and rebuilds it when the account changes. Saving clips to the device gallery is a separate cubit (`ClipGallerySaveCubit`), and so is bringing them back (`GalleryClipImportCubit`); both are described in [`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#back-from-the-gallery).
+`clipLibraryServiceProvider` in [`social_providers.dart`](../lib/providers/social_providers.dart) builds the service for the account that owns local content (see [Accounts](#accounts)) and rebuilds it when the account changes. Saving clips to the device gallery is a separate cubit (`ClipGallerySaveCubit`), and so is bringing them back (`GalleryClipImportCubit`); both are described in [`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#back-from-the-gallery).
 
 The library does not run on the web; `LibraryScreen` shows a placeholder there.
 
@@ -53,9 +53,9 @@ Placeholders and freeze frames are stills the editor generates to fill a gap in 
 
 ## Accounts
 
-All accounts on a device share the table. Each row carries `owner_pubkey`, and every library query returns the current account's rows plus legacy rows that have no owner. At sign-in, legacy rows and rows recorded while signed out are assigned to the account (`claimLegacyRows`). Switching accounts keeps every account's clips. Deleting an account's data removes its clips and categories (`deleteAllForUser`).
+All accounts on a device share the table. Each row carries `owner_pubkey`. The service's owner is the signed-in account while a session is live. While one is still being restored it is the account this device last signed into, when the known-accounts registry agrees. Otherwise it is the marker owner `DraftStorageService.anonymousOwnerPubkey`, which rows recorded while signed out carry. Library listings return the owner's rows plus legacy rows that have no owner, so marker rows stay hidden from every real account until a claim assigns them. At sign-in and after an account switch, legacy rows and marker rows are assigned to the account (`claimLegacyRows`). Switching accounts keeps every account's clips. Deleting an account's data removes its clip and category rows (`deleteAllForUser`).
 
-`getClipById` does not filter by owner, so a clip found by id can belong to another account. Check `belongsToAnotherAccount` before acting on it, as `VideoClipImportService` does before it restores a clip from the trash.
+Operations that take a clip id (`getClipById`, trashing, restoring, deleting, filing and archiving) do not check the owner, so an id can belong to another account. Check `belongsToAnotherAccount` before acting on one that may come from outside this library, as `VideoClipImportService` does before it restores a clip from the trash.
 
 [`ClipRecoveryService`](../lib/services/clip_recovery_service.dart) is a developer-only tool for recordings the library can no longer show: rows stored under another owner, and files whose rows are gone.
 
