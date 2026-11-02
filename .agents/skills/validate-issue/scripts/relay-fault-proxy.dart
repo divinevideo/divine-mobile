@@ -37,8 +37,9 @@
 //                           with no close frame at all)
 //   --close-after-count K   how many connections get that (default 1)
 //   --stall-after N         after N relay frames on a connection, deliver
-//                           nothing more in either direction and keep the
-//                           socket open: a half-open connection
+//                           nothing more in either direction, a close from
+//                           the relay included, and keep the socket open: a
+//                           half-open connection
 //   --stall-after-ms MS     the same, MS after the connection opens: the way to
 //                           stall a connection that is idle, which no frame
 //                           count can reach
@@ -237,8 +238,9 @@ Future<void> main(List<String> args) async {
     final stallThisOne = stallAfterLeft > 0 && stallAfterLeft-- > 0;
     var relayFrames = 0;
     var stalled = false;
+    Timer? stallTimer;
     if (stallThisOne && stallAfterMs > 0) {
-      Timer(Duration(milliseconds: stallAfterMs), () {
+      stallTimer = Timer(Duration(milliseconds: stallAfterMs), () {
         if (stalled) return;
         stalled = true;
         _log({'event': 'stalled', 'after_ms': stallAfterMs});
@@ -255,6 +257,11 @@ Future<void> main(List<String> args) async {
     void endRelay() {
       if (relayEnded) return;
       relayEnded = true;
+      stallTimer?.cancel();
+      // A half-open socket never hears its peer close, so a stalled connection
+      // keeps the client's socket as it is.
+      _log({'event': 'relay-closed', 'told_client': !stalled});
+      if (stalled) return;
       queue = queue.then((_) {
         clientClosed = true;
         client.close();
@@ -306,8 +313,15 @@ Future<void> main(List<String> args) async {
         relay.add(data);
         logClientFrame(data, type, 'forwarded');
       },
-      onDone: relay.close,
-      onError: (Object _) => relay.close(),
+      onDone: () {
+        stallTimer?.cancel();
+        _log({'event': 'client-closed'});
+        unawaited(relay.close());
+      },
+      onError: (Object _) {
+        stallTimer?.cancel();
+        unawaited(relay.close());
+      },
     );
 
     // Relay-to-client frames go through one queue so delays keep their order.

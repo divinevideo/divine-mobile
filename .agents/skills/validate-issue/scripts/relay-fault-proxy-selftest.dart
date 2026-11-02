@@ -14,6 +14,7 @@ typedef _Frame = List<Object?>;
 class _FakeRelay {
   late final HttpServer _server;
   final received = <_Frame>[];
+  final _sockets = <WebSocket>[];
 
   int get port => _server.port;
 
@@ -28,6 +29,7 @@ class _FakeRelay {
         return;
       }
       final socket = await WebSocketTransformer.upgrade(request);
+      _sockets.add(socket);
       socket.listen((data) {
         final message = jsonDecode(data as String) as _Frame;
         received.add(message);
@@ -51,6 +53,13 @@ class _FakeRelay {
 
   int count(String type) => received.where((m) => m.first == type).length;
 
+  Future<void> closeSockets() async {
+    for (final socket in _sockets) {
+      await socket.close();
+    }
+    _sockets.clear();
+  }
+
   Future<void> stop() => _server.close(force: true);
 }
 
@@ -72,10 +81,16 @@ class _Client {
 }
 
 class _Proxy {
-  _Proxy(this.process, this.port);
+  _Proxy(this.process, this.port, this.events);
 
   final Process process;
   final int port;
+
+  /// Every `event` line the proxy has logged so far.
+  final List<Map<String, Object?>> events;
+
+  List<Map<String, Object?>> eventsNamed(String name) =>
+      events.where((e) => e['event'] == name).toList();
 
   Future<_Client> connect() async =>
       _Client(await WebSocket.connect('ws://127.0.0.1:$port'));
@@ -118,9 +133,11 @@ Future<_Proxy> _startProxy(int upstreamPort, List<String> flags) async {
     ...flags,
   ]);
   final listening = Completer<int>();
+  final events = <Map<String, Object?>>[];
   process.stdout.transform(utf8.decoder).transform(const LineSplitter()).listen(
     (line) {
       final entry = jsonDecode(line) as Map<String, Object?>;
+      if (entry.containsKey('event')) events.add(entry);
       if (entry['event'] == 'listening' && !listening.isCompleted) {
         listening.complete(entry['port']! as int);
       }
@@ -128,7 +145,7 @@ Future<_Proxy> _startProxy(int upstreamPort, List<String> flags) async {
   );
   unawaited(process.stderr.drain<void>());
   final port = await listening.future.timeout(const Duration(seconds: 15));
-  return _Proxy(process, port);
+  return _Proxy(process, port, events);
 }
 
 Future<void> main() async {
@@ -496,6 +513,75 @@ Future<void> main() async {
       _expect(client.of('EOSE').length == 1, 'nothing should arrive after');
       _expect(relay.count('REQ') == 1, 'the second REQ should be swallowed');
       _expect(!client.done, 'the socket should stay open');
+    },
+  );
+
+  await scenario(
+    '--stall-after-ms says nothing for a connection that has ended',
+    ['--stall-after-ms', '400'],
+    (proxy) async {
+      final client = await proxy.connect();
+      client.send(['REQ', 's1', <String, Object?>{}]);
+      _expect(
+        await _within(() => client.of('EOSE').isNotEmpty),
+        'the first REQ should be answered',
+      );
+      await client.socket.close();
+      _expect(
+        await _within(() => proxy.eventsNamed('client-closed').isNotEmpty),
+        'the proxy should log the client leaving',
+      );
+      await _quiet(900);
+      _expect(
+        proxy.eventsNamed('stalled').isEmpty,
+        'a stall was reported for a connection that had already ended',
+      );
+    },
+  );
+
+  await scenario(
+    'a close from the relay is not passed on to a stalled connection',
+    ['--stall-after-ms', '300'],
+    (proxy) async {
+      final client = await proxy.connect();
+      client.send(['REQ', 's1', <String, Object?>{}]);
+      _expect(
+        await _within(() => proxy.eventsNamed('stalled').isNotEmpty),
+        'the connection should stall',
+      );
+      await relay.closeSockets();
+      _expect(
+        await _within(() => proxy.eventsNamed('relay-closed').isNotEmpty),
+        'the proxy should log the relay closing',
+      );
+      await _quiet();
+      _expect(
+        proxy.eventsNamed('relay-closed').first['told_client'] == false,
+        'the proxy should not report telling a stalled client',
+      );
+      _expect(!client.done, 'a half-open socket should not hear the close');
+    },
+  );
+
+  await scenario(
+    'a close from the relay reaches a client that is not stalled',
+    [],
+    (proxy) async {
+      final client = await proxy.connect();
+      client.send(['REQ', 's1', <String, Object?>{}]);
+      _expect(
+        await _within(() => client.of('EOSE').isNotEmpty),
+        'the REQ should be answered',
+      );
+      await relay.closeSockets();
+      _expect(
+        await _within(() => client.done),
+        'the client should hear the relay close',
+      );
+      _expect(
+        proxy.eventsNamed('relay-closed').first['told_client'] == true,
+        'the proxy should report telling the client',
+      );
     },
   );
 
