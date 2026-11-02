@@ -318,7 +318,12 @@ class _TimelineOverlayStripState extends State<TimelineOverlayStrip> {
     final item = draggedItem.first;
     final pos = _dragPosition.value;
 
-    final maxStartMs = (widget.totalDuration - item.duration).inMilliseconds;
+    // An item longer than the timeline stays at 0; `clamp` throws when its
+    // upper bound is below the lower one.
+    final maxStartMs = math.max(
+      0,
+      (widget.totalDuration - item.duration).inMilliseconds,
+    );
     final newStartMs = pos.startMs.clamp(0, maxStartMs);
 
     final rowDelta = (pos.deltaY / _effectiveRowHeight).round();
@@ -438,7 +443,7 @@ class _TimelineOverlayStripState extends State<TimelineOverlayStrip> {
     final pps = widget.pixelsPerSecond;
     final itemDurationMs = item.duration.inMilliseconds;
     final totalMs = widget.totalDuration.inMilliseconds;
-    final maxStartMs = totalMs - itemDurationMs;
+    final maxStartMs = math.max(0, totalMs - itemDurationMs);
 
     // Compute per-frame delta from the previous absolute offset.
     final currentOffsetX = details.offsetFromOrigin.dx;
