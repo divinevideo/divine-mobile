@@ -102,7 +102,10 @@ class SupporterScreenView extends StatelessWidget {
 /// the cubit when it mounts. Has no scroll view of its own, so the host
 /// decides how it scrolls.
 class SupporterContent extends StatefulWidget {
-  const SupporterContent({this.storeBillingAvailable = true, super.key});
+  const SupporterContent({
+    required this.storeBillingAvailable,
+    super.key,
+  });
 
   /// Whether a store can bill this build. When false, plans and restore are
   /// replaced by a note, because no checkout can succeed here.
