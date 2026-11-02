@@ -87,6 +87,34 @@ class _ControlledQueryRelay extends Relay {
   }
 }
 
+/// A signer that cannot produce a public key yet, like a remote signer that
+/// is still starting.
+class _NoKeySigner implements NostrSigner {
+  @override
+  Future<String?> getPublicKey() async => null;
+
+  @override
+  Future<Event?> signEvent(Event event) async => null;
+
+  @override
+  Future<Map?> getRelays() async => null;
+
+  @override
+  Future<String?> encrypt(String pubkey, String plaintext) async => null;
+
+  @override
+  Future<String?> decrypt(String pubkey, String ciphertext) async => null;
+
+  @override
+  Future<String?> nip44Encrypt(String pubkey, String plaintext) async => null;
+
+  @override
+  Future<String?> nip44Decrypt(String pubkey, String ciphertext) async => null;
+
+  @override
+  void close() {}
+}
+
 void main() {
   group('RelayPool CLOSED frame handling', () {
     Relay dummyTempRelay(String url) => RelayBase(url, RelayStatus(url));
@@ -369,6 +397,90 @@ void main() {
 
       expect(closed, isFalse);
       expect(relay.hasSubscriptionById(subId), isTrue);
+    });
+
+    test('a query refused until AUTH ends as a restricted refusal once the '
+        'relay rejects AUTH', () async {
+      final signer = LocalNostrSigner(
+        '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+      );
+      final nostr = Nostr(signer, [], dummyTempRelay);
+      final answering = _ControlledQueryRelay('wss://answering.example');
+      final gated = _ControlledQueryRelay('wss://gated.example');
+      expect(await nostr.relayPool.add(answering), isTrue);
+      expect(await nostr.relayPool.add(gated), isTrue);
+
+      final pending = nostr.readEvents(
+        [
+          {
+            'kinds': [1059],
+          },
+        ],
+        requireAllRelaysSettled: true,
+        timeout: const Duration(seconds: 30),
+      );
+      final answeredId = await answering.awaitPendingQuery();
+      final refusedId = await gated.awaitPendingQuery();
+      await answering.deliver(['EOSE', answeredId]);
+      await gated.deliver(['AUTH', 'test-challenge']);
+      await gated.deliver([
+        'CLOSED',
+        refusedId,
+        'ERROR: auth-required: requested filter requires authentication',
+      ]);
+      final authEventId = gated.capturedAuthEventId;
+      expect(authEventId, isNotNull);
+      // relay.damus.io's answer to every AUTH: nothing will replay the query.
+      await gated.deliver([
+        'OK',
+        authEventId,
+        false,
+        'error: relay needs serviceUrl to be configured before AUTH can work',
+      ]);
+
+      final result = await pending.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => fail('the query waited for a replay that cannot come'),
+      );
+      expect(result.endedBy, QueryEnd.relayClosed);
+      expect(result.closedRelayReasons, {'wss://gated.example': 'restricted'});
+      expect(gated.checkQuery(refusedId), isFalse);
+    });
+
+    test('a query refused while no AUTH was sent keeps its auth-required '
+        'refusal', () async {
+      final nostr = Nostr(_NoKeySigner(), [], dummyTempRelay);
+      final answering = _ControlledQueryRelay('wss://answering.example');
+      final gated = _ControlledQueryRelay('wss://gated.example');
+      expect(await nostr.relayPool.add(answering), isTrue);
+      expect(await nostr.relayPool.add(gated), isTrue);
+
+      final pending = nostr.readEvents(
+        [
+          {
+            'kinds': [1059],
+          },
+        ],
+        requireAllRelaysSettled: true,
+        timeout: const Duration(milliseconds: 300),
+      );
+      final answeredId = await answering.awaitPendingQuery();
+      final refusedId = await gated.awaitPendingQuery();
+      await answering.deliver(['EOSE', answeredId]);
+      // The challenge cannot be answered yet, as with a remote signer that
+      // is still starting: the gate may open later, so nothing is final.
+      await gated.deliver(['AUTH', 'test-challenge']);
+      await gated.deliver([
+        'CLOSED',
+        refusedId,
+        'ERROR: auth-required: requested filter requires authentication',
+      ]);
+
+      final result = await pending;
+      expect(gated.capturedAuthEventId, isNull);
+      expect(result.closedRelayReasons, {
+        'wss://gated.example': 'auth-required',
+      });
     });
 
     test("strfry's 'ERROR: auth-required' CLOSED keeps the query for "

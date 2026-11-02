@@ -146,6 +146,10 @@ class RelayPool {
   /// answers it would otherwise stay marked outstanding forever.
   final Map<String, DateTime> _authHandshakeStartedAt = {};
 
+  /// Relay url -> one-shot queries it refused with `auth-required` that wait
+  /// for the post-AUTH replay. Belongs to one socket, like the handshake.
+  final Map<String, Set<String>> _queriesParkedForAuth = {};
+
   /// How long an outstanding NIP-42 handshake may hold a one-shot query open
   /// past [querySettleWindow].
   ///
@@ -1452,6 +1456,30 @@ class RelayPool {
     _settleQueriesBlockedBy(relay);
   }
 
+  /// Ends the one-shot queries [relay] refused with `auth-required` and that
+  /// wait for the post-AUTH replay, now that it rejected our AUTH on this
+  /// connection: nothing will replay them, and a caller demanding full
+  /// settlement would otherwise wait out its deadline for a relay that has
+  /// already answered (#9468).
+  ///
+  /// Recorded as `restricted`, NIP-42's "performed AUTH but the key is not
+  /// allowed": a final refusal, not one a later AUTH may overturn. A gate
+  /// shut only because no AUTH could be signed is not this case, since the
+  /// signer may produce one later, so [_closeAuthGate] alone does not do it.
+  void _endQueriesParkedForAuth(Relay relay) {
+    final parked = _queriesParkedForAuth.remove(relay.url);
+    if (parked == null) return;
+    for (final subId in parked) {
+      if (!relay.discardQuery(subId)) continue;
+      _recordQueryClosed(relay, subId, 'restricted');
+      _fireQueryCompleteIfSettled(
+        subId,
+        afterTerminalFrame: true,
+        afterClosedWithoutAnswer: true,
+      );
+    }
+  }
+
   /// Watches [relay]'s connection state so a dropped socket releases the
   /// one-shot queries that were still riding on it.
   ///
@@ -1472,6 +1500,7 @@ class RelayPool {
       // read as "handshake outstanding" for the rest of the session.
       _authHandshakeStartedAt.remove(relay.url);
       _authGateClosed.remove(relay.url);
+      _queriesParkedForAuth.remove(relay.url);
       _settleQueriesBlockedBy(relay);
       _recheckStoredEventsPhasesOf(relay);
     };
@@ -2332,6 +2361,7 @@ class RelayPool {
 
         if (success) {
           relay.relayStatus.authed = true;
+          _queriesParkedForAuth.remove(relay.url);
           log('🔐 AUTH succeeded for ${relay.url}');
           _diagnose(
             RelayDiagnosticSite.authentication,
@@ -2394,6 +2424,7 @@ class RelayPool {
           _rejectAuthRequiredPublishesForRelay(relay, message);
           // The gate stayed shut, so the queries parked for the post-AUTH
           // replay will never be replayed.
+          _endQueriesParkedForAuth(relay);
           _closeAuthGate(relay);
         }
       }
@@ -2575,6 +2606,7 @@ class RelayPool {
         // replay draws replaces it.
         if (relay.checkQuery(subscriptionId)) {
           _recordQueryClosed(relay, subscriptionId, reason);
+          (_queriesParkedForAuth[relay.url] ??= {}).add(subscriptionId);
         }
         // It answers this REQ; the one re-sent after AUTH is answered anew.
         _storedEventsPhaseAnswered(
