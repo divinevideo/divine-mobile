@@ -80,7 +80,7 @@ A selection is for acting on clips in the library (delete, organize, save to the
 
 The bloc enforces these rules:
 
-- A selection holds either stop-motion sets or video clips, not both. The exception is the editor's picker (`allowsMixedClipTypes`), which converts every picked clip to the composition's type.
+- A selection holds either stop-motion sets or video clips, not both. The exceptions are the editor's two pickers (`allowsMixedClipTypes`): the one for adding clips converts every pick to the session's kind, and the split-screen cell picker takes both.
 - The recorder opens the library showing only its mode's type (`LibraryClipTypeFilter`).
 - In a picker opened from the editor, clips already on the timeline are pre-selected and cannot be deselected (`disabledClipIds`).
 - A split-screen cell picker accepts clips of any shape, since each one is cropped to the cell (`allowsMixedAspectRatios`). It allows no more clips than the layout has free cells (`maxSelectedClips`); with one free cell, a tap swaps the pick.
