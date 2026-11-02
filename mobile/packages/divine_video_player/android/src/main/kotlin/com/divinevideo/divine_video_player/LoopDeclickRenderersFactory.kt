@@ -124,8 +124,9 @@ internal class LoopDeclickRenderersFactory(
         val index = (start until out.size).firstOrNull {
             out[it].javaClass == MediaCodecVideoRenderer::class.java
         } ?: return
-        // Configured as the superclass configures its own; this factory sets
-        // none of its experimental video options.
+        // Mirrors the stock renderer's config; no experimental video options
+        // are set here, so builder defaults match. Re-check on a Media3 bump.
+        // Prewarming would need buildSecondaryVideoRenderer overridden too.
         out[index] = KnownOutputSizeVideoRenderer(
             MediaCodecVideoRenderer.Builder(context)
                 .setCodecAdapterFactory(codecAdapterFactory)
