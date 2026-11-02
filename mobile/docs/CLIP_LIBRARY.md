@@ -128,7 +128,7 @@ A clip received in a direct message or brought back from the gallery gets in onl
 
 | From | Code | Shows |
 |---|---|---|
-| Library routes | `RoutePaths.libraryDrafts`, `RoutePaths.libraryClips` in [`library_routes.dart`](../lib/router/routes/library_routes.dart) | Drafts, Clips and Sounds tabs |
+| Library routes | `RoutePaths.libraryDrafts`, `RoutePaths.libraryClips`, `RoutePaths.librarySounds` in [`library_routes.dart`](../lib/router/routes/library_routes.dart) | Drafts, Clips and Sounds tabs |
 | Recorder | `openRecorderLibrary`, `RoutePaths.libraryClipsOnly` | Drafts and Clips; clips of the recording mode's type only |
 | Editor, adding clips | `LibraryScreen(selectionMode: true, allowsMixedClipTypes: true)` in a sheet | Clips tab as a picker; timeline clips pre-selected |
 | Editor, split-screen cell | `_pickLayoutCellClips` in [`video_editor_screen.dart`](../lib/screens/video_editor/video_editor_screen.dart) | Picker with the cell's crop on each thumbnail |
