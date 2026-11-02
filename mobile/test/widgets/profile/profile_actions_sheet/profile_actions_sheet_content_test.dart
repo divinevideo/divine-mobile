@@ -296,6 +296,24 @@ void main() {
         child: buildApp(actions: actions, onMaybeLater: onMaybeLater),
       );
 
+      testWidgets('opens the tall sheet on the root navigator too', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSupporterApp(actions: [ProfileActionType.becomeSupporter]),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        final rootNavigator = tester.state<NavigatorState>(
+          find.byType(Navigator).first,
+        );
+        expect(
+          Navigator.of(tester.element(find.byType(ProfileActionsSheetContent))),
+          same(rootNavigator),
+        );
+      });
+
       group('sheet size', () {
         double sheetHeightFraction(WidgetTester tester) {
           final screen =
