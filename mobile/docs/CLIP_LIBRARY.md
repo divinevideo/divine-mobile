@@ -49,7 +49,7 @@ The same table stores the clips of drafts, so one recording can have several row
 
 Placeholders (the still that fills the slot a detached clip left behind) and freeze frames (a frame held still for a beat) are stills the editor renders to video. They live in the autosave draft but never show in the library or the trash.
 
-`saveClip` is an upsert that keeps three things the stored entry may know and the caller's copy may not. The recording hash is kept when the caller's copy carries none and still plays the same file. A C2PA proof added after recording is kept when the caller's proof names no manifest and the file is the same. The stored entry's gallery backup state wins when it has one; otherwise the caller's copy keeps its own. The upsert leaves the category, archive and trash columns alone. [`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#how-a-clip-is-signed) explains why each one matters.
+`saveClip` is an upsert that keeps three things the stored entry may know and the caller's copy may not. The recording hash, read from the library row, is kept when the caller's copy carries none and still plays the same file (see [`DM_CLIP_SHARING.md`](DM_CLIP_SHARING.md#how-a-clip-is-signed)). A stored C2PA proof that names a manifest, read from the library row or else the autosave copy, is kept when the caller's proof names none and the file is the same (see [duplicate detection](DM_CLIP_SHARING.md#back-from-the-gallery)). The gallery backup state, read from the library row, wins when the stored entry has one; otherwise the caller's copy keeps its own (see [backing up new recordings](DM_CLIP_SHARING.md#backing-up-new-recordings)). The upsert leaves the category, archive and trash columns alone.
 
 ## Accounts
 
