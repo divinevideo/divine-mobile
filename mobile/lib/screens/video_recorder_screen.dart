@@ -227,6 +227,10 @@ class _VideoRecorderBlocScope extends ConsumerWidget {
     final creationAnalyticsTracker = ref.watch(
       creationAnalyticsTrackerProvider,
     );
+    // The bloc finishes events still in flight after this widget unmounts,
+    // when its ref throws. The providers are app-scoped, so the readers go
+    // through the container instead.
+    final container = ProviderScope.containerOf(context, listen: false);
 
     return BlocProvider<VideoRecorderBloc>(
       key: ValueKey((
@@ -236,11 +240,13 @@ class _VideoRecorderBlocScope extends ConsumerWidget {
         creationAnalyticsTracker,
       )),
       create: (_) => VideoRecorderBloc(
-        readClipManager: () => ref.read(clipManagerProvider.notifier),
-        readVideoEditor: () => ref.read(videoEditorProvider.notifier),
-        readVideoEditorState: () => ref.read(videoEditorProvider),
-        readSharedPreferences: () => ref.read(sharedPreferencesProvider),
-        performanceMonitor: ref.read(performanceMonitoringServiceProvider),
+        readClipManager: () => container.read(clipManagerProvider.notifier),
+        readVideoEditor: () => container.read(videoEditorProvider.notifier),
+        readVideoEditorState: () => container.read(videoEditorProvider),
+        readSharedPreferences: () => container.read(sharedPreferencesProvider),
+        performanceMonitor: container.read(
+          performanceMonitoringServiceProvider,
+        ),
         onRecordingStarted: (mode) =>
             unawaited(creationAnalyticsTracker.recordingStarted(mode)),
         liveChromaKeySupported: ChromaKeyShader.isBackendSupported,

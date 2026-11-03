@@ -338,9 +338,10 @@ class VideoRecorderBloc
   /// them go even after the widget that reads the clip manager is gone.
   ClipManagerNotifier? _chromaKeyBakeHolder;
 
-  /// Set once [close] starts. A countdown keeps ticking through close's
-  /// awaits, and a tick must not take a new hold then: the widget that reads
-  /// the clip manager is already gone, and nothing would release the hold.
+  /// Set once [close] starts. [isClosed] stays false through close's awaits,
+  /// while work already in flight keeps running. A countdown tick must not
+  /// take a new hold then: nothing would release it. Nor may an event
+  /// handler resuming then reconfigure the camera close is disposing.
   bool _isClosing = false;
   AudioPlaybackService? _audioPlaybackService;
   CountdownSoundService? _countdownSoundService;
@@ -639,6 +640,7 @@ class VideoRecorderBloc
   ) async {
     if (_remoteRecordControlEnabled) {
       await _cameraService.setRemoteRecordControlEnabled(enabled: true);
+      if (_isClosing) return;
       Log.debug(
         '🎮 Remote record control resumed',
         name: 'VideoRecorderBloc',
@@ -1826,6 +1828,7 @@ class VideoRecorderBloc
       event.mode,
       keepAutosavedDraft: event.keepAutosavedDraft,
     );
+    if (_isClosing) return;
     // Leaving Upload resumes a paused camera: a rebind while paused would
     // restart it on Android, so the resume applies the mode instead.
     if (previousMode != VideoRecorderMode.upload) {
