@@ -290,6 +290,39 @@ class VideosRepository {
     );
   }
 
+  /// Refreshes the reuse decisions for the videos [addressableIds] name,
+  /// keyed by those ids, in one request per hundred.
+  ///
+  /// An id that names no addressable short video is left out unasked.
+  ///
+  /// Throws [FunnelcakeNotConfiguredException] without an available
+  /// Funnelcake client, and [FunnelcakeException] when it cannot decide.
+  Future<Map<String, AudioReusePolicy>> refreshAudioReusePolicies(
+    Iterable<String> addressableIds,
+  ) async {
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+    final addresses = <String, AId>{
+      for (final id in addressableIds)
+        if (AId.fromString(id) case final address?
+            when (address.kind == EventKind.videoVertical ||
+                    address.kind == EventKind.videoHorizontal) &&
+                _hexPubkey.hasMatch(address.pubkey) &&
+                address.dTag.isNotEmpty)
+          id: address,
+    };
+    if (addresses.isEmpty) return const {};
+    final policies = await client.refreshAudioReusePolicies([
+      for (final address in addresses.values)
+        (kind: address.kind, pubkey: address.pubkey, dTag: address.dTag),
+    ]);
+    return Map.fromIterables(addresses.keys, policies);
+  }
+
+  static final _hexPubkey = RegExp(r'^[0-9a-fA-F]{64}$');
+
   /// Clears the in-memory feed cache.
   ///
   /// When [key] is provided, only that feed mode's cache is removed

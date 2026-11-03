@@ -155,6 +155,7 @@ void main() {
       registerFallbackValue(LeaderboardPeriod.week);
       registerFallbackValue(PopularVideosVariant.classic);
       registerFallbackValue(VideoSearchSort.trending);
+      registerFallbackValue(<({int kind, String pubkey, String dTag})>[]);
     });
 
     test('can be instantiated', () {
@@ -223,6 +224,79 @@ void main() {
             pubkey: any(named: 'pubkey'),
             dTag: any(named: 'dTag'),
           ),
+        );
+      });
+    });
+
+    group('refreshAudioReusePolicies', () {
+      final pubkey = 'a' * 64;
+      final vertical = '34236:$pubkey:first';
+      final horizontal = '34235:$pubkey:second';
+      const allowed = AudioReusePolicy(allowAudioReuse: true);
+      const refused = AudioReusePolicy(allowAudioReuse: false);
+
+      late MockFunnelcakeApiClient client;
+      late VideosRepository repositoryWithClient;
+
+      setUp(() {
+        client = MockFunnelcakeApiClient();
+        when(() => client.isAvailable).thenReturn(true);
+        when(
+          () => client.refreshAudioReusePolicies(any()),
+        ).thenAnswer((_) async => [allowed, refused]);
+        repositoryWithClient = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: client,
+        );
+      });
+
+      test('keys each decision by the id it was asked for', () async {
+        final policies = await repositoryWithClient.refreshAudioReusePolicies([
+          vertical,
+          horizontal,
+        ]);
+
+        expect(policies, {vertical: same(allowed), horizontal: same(refused)});
+        verify(
+          () => client.refreshAudioReusePolicies([
+            (kind: 34236, pubkey: pubkey, dTag: 'first'),
+            (kind: 34235, pubkey: pubkey, dTag: 'second'),
+          ]),
+        ).called(1);
+      });
+
+      test('leaves out ids that name no addressable short video', () async {
+        when(
+          () => client.refreshAudioReusePolicies(any()),
+        ).thenAnswer((_) async => [allowed]);
+
+        final policies = await repositoryWithClient.refreshAudioReusePolicies([
+          vertical,
+          '22:$pubkey:short',
+          '34236:not-a-pubkey:third',
+          'garbage',
+        ]);
+
+        expect(policies.keys, [vertical]);
+        verify(
+          () => client.refreshAudioReusePolicies([
+            (kind: 34236, pubkey: pubkey, dTag: 'first'),
+          ]),
+        ).called(1);
+      });
+
+      test('asks nothing when no id names a video', () async {
+        expect(
+          await repositoryWithClient.refreshAudioReusePolicies(['garbage']),
+          isEmpty,
+        );
+        verifyNever(() => client.refreshAudioReusePolicies(any()));
+      });
+
+      test('fails without an available Funnelcake client', () {
+        expect(
+          () => repository.refreshAudioReusePolicies([vertical]),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
         );
       });
     });
