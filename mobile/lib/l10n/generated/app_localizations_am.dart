@@ -4360,8 +4360,16 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'አገልጋዩ ጋር መድረስ አልተቻለም። ግንኙነትዎን አረጋግጠው እንደገና ይሞክሩ።';
+  String get profileVideosLoadFailedTitle => 'ቪዲዮዎችዎን መጫን አልተቻለም';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'ቪዲዮዎችን መጫን አልተቻለም';
+
+  @override
+  String get profileVideosLoadFailedSubtitle => 'ግንኙነትዎን አረጋግጠው እንደገና ይሞክሩ።';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'እንደገና ይሞክሩ';
 
   @override
   String get profileFeedLoadMoreError =>

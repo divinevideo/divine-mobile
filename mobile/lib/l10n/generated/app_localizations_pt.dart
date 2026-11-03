@@ -4502,8 +4502,19 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Não foi possível conectar ao servidor. Verifique sua conexão e tente de novo.';
+  String get profileVideosLoadFailedTitle =>
+      'Não foi possível carregar seus vídeos';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle =>
+      'Não foi possível carregar os vídeos';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Verifique sua conexão e tente de novo.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Tentar novamente';
 
   @override
   String get profileFeedLoadMoreError =>

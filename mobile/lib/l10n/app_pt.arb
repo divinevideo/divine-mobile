@@ -98,7 +98,10 @@
   "dmReactionRetryAction": "Tentar novamente",
   "dmMessageBubbleVideoReplyHint": "Abrir o vídeo referenciado",
   "commonSomethingWentWrong": "Algo deu errado",
-  "profileFeedError": "Não foi possível conectar ao servidor. Verifique sua conexão e tente de novo.",
+  "profileVideosLoadFailedTitle": "Não foi possível carregar seus vídeos",
+  "profileVideosLoadFailedOtherTitle": "Não foi possível carregar os vídeos",
+  "profileVideosLoadFailedSubtitle": "Verifique sua conexão e tente de novo.",
+  "profileVideosLoadFailedRetry": "Tentar novamente",
   "profileFeedLoadMoreError": "Não foi possível carregar mais vídeos. Puxe para atualizar.",
   "appTitle": "Divine",
   "@appTitle": {

@@ -4475,8 +4475,17 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'سرور تک رسائی نہیں ہو رہی۔ اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔';
+  String get profileVideosLoadFailedTitle => 'آپ کی ویڈیوز لوڈ نہیں ہو سکیں';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'ویڈیوز لوڈ نہیں ہو سکیں';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'دوبارہ کوشش کریں';
 
   @override
   String get profileFeedLoadMoreError =>

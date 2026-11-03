@@ -2566,10 +2566,10 @@
       }
     }
   },
-  "profileFeedError": "సర్వర్‌ని చేరుకోలేదు. మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.",
-  "@profileFeedError": {
-    "description": "Full-screen message shown when an author's profile feed fails to load. This state is only reached when the API could not be reached at all — an author with genuinely no videos gets the empty state instead — so the copy names the connection rather than implying the profile is empty. Wording deliberately matches authSignInErrorNetwork."
-  },
+  "profileVideosLoadFailedTitle": "మీ వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు",
+  "profileVideosLoadFailedOtherTitle": "వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు",
+  "profileVideosLoadFailedSubtitle": "మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.",
+  "profileVideosLoadFailedRetry": "మళ్లీ ప్రయత్నించండి",
   "profileFeedLoadMoreError": "మరిన్ని వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు. రిఫ్రెష్ చేయడానికి లాగండి.",
   "@profileFeedLoadMoreError": {
     "description": "Transient message shown when paginating an author's profile feed fails."

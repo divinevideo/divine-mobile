@@ -4455,8 +4455,17 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Tidak dapat mencapai pelayan. Semak sambungan anda dan cuba lagi.';
+  String get profileVideosLoadFailedTitle => 'Tidak dapat memuatkan video anda';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'Tidak dapat memuatkan video';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Semak sambungan anda dan cuba lagi.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Cuba lagi';
 
   @override
   String get profileFeedLoadMoreError =>

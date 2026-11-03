@@ -98,7 +98,10 @@
   "dmReactionRetryAction": "እንደገና ሞክር",
   "dmMessageBubbleVideoReplyHint": "የተጠቀሰውን ቪዲዮ ክፈት",
   "commonSomethingWentWrong": "የሆነ ችግር ተፈጥሯል",
-  "profileFeedError": "አገልጋዩ ጋር መድረስ አልተቻለም። ግንኙነትዎን አረጋግጠው እንደገና ይሞክሩ።",
+  "profileVideosLoadFailedTitle": "ቪዲዮዎችዎን መጫን አልተቻለም",
+  "profileVideosLoadFailedOtherTitle": "ቪዲዮዎችን መጫን አልተቻለም",
+  "profileVideosLoadFailedSubtitle": "ግንኙነትዎን አረጋግጠው እንደገና ይሞክሩ።",
+  "profileVideosLoadFailedRetry": "እንደገና ይሞክሩ",
   "profileFeedLoadMoreError": "ተጨማሪ ቪዲዮዎችን መጫን አልተቻለም። ለማደስ ወደታች ሳብ።",
   "appTitle": "Divine",
   "@appTitle": {

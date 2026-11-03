@@ -2174,10 +2174,10 @@
       }
     }
   },
-  "profileFeedError": "连不上服务器。请检查网络连接后重试。",
-  "@profileFeedError": {
-    "description": "Full-screen message shown when an author's profile feed fails to load."
-  },
+  "profileVideosLoadFailedTitle": "无法加载你的视频",
+  "profileVideosLoadFailedOtherTitle": "无法加载视频",
+  "profileVideosLoadFailedSubtitle": "请检查网络连接后重试。",
+  "profileVideosLoadFailedRetry": "再试一次",
   "profileFeedLoadMoreError": "无法加载更多视频。下拉刷新试试。",
   "@profileFeedLoadMoreError": {
     "description": "Transient message shown when paginating an author's profile feed fails."

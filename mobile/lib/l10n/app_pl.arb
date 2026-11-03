@@ -98,7 +98,10 @@
   "dmReactionRetryAction": "Spróbuj ponownie",
   "dmMessageBubbleVideoReplyHint": "Otwórz przywołane wideo",
   "commonSomethingWentWrong": "Coś poszło nie tak",
-  "profileFeedError": "Nie można połączyć się z serwerem. Sprawdź połączenie i spróbuj ponownie.",
+  "profileVideosLoadFailedTitle": "Nie udało się wczytać twoich filmów",
+  "profileVideosLoadFailedOtherTitle": "Nie udało się wczytać filmów",
+  "profileVideosLoadFailedSubtitle": "Sprawdź połączenie i spróbuj ponownie.",
+  "profileVideosLoadFailedRetry": "Spróbuj ponownie",
   "profileFeedLoadMoreError": "Nie udało się wczytać kolejnych filmów. Pociągnij, aby odświeżyć.",
   "appTitle": "Divine",
   "@appTitle": {

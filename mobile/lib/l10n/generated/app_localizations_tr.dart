@@ -4404,8 +4404,17 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Sunucuya ulaşılamıyor. Bağlantını kontrol edip tekrar dene.';
+  String get profileVideosLoadFailedTitle => 'Videoların yüklenemedi';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'Videolar yüklenemedi';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Bağlantını kontrol edip tekrar dene.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Tekrar dene';
 
   @override
   String get profileFeedLoadMoreError =>

@@ -4165,7 +4165,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError => '连不上服务器。请检查网络连接后重试。';
+  String get profileVideosLoadFailedTitle => '无法加载你的视频';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => '无法加载视频';
+
+  @override
+  String get profileVideosLoadFailedSubtitle => '请检查网络连接后重试。';
+
+  @override
+  String get profileVideosLoadFailedRetry => '再试一次';
 
   @override
   String get profileFeedLoadMoreError => '无法加载更多视频。下拉刷新试试。';

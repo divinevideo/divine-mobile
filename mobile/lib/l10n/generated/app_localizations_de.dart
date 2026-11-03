@@ -4526,8 +4526,19 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Server nicht erreichbar. Prüf deine Verbindung und versuch es noch mal.';
+  String get profileVideosLoadFailedTitle =>
+      'Deine Videos konnten nicht geladen werden';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle =>
+      'Videos konnten nicht geladen werden';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Prüf deine Verbindung und versuch es noch mal.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Erneut versuchen';
 
   @override
   String get profileFeedLoadMoreError =>

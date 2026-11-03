@@ -98,7 +98,10 @@
   "dmReactionRetryAction": "Reîncearcă",
   "dmMessageBubbleVideoReplyHint": "Deschide videoclipul referențiat",
   "commonSomethingWentWrong": "Ceva nu a mers bine",
-  "profileFeedError": "Serverul nu poate fi contactat. Verifică-ți conexiunea și încearcă din nou.",
+  "profileVideosLoadFailedTitle": "Nu am putut încărca videoclipurile tale",
+  "profileVideosLoadFailedOtherTitle": "Nu am putut încărca videoclipurile",
+  "profileVideosLoadFailedSubtitle": "Verifică-ți conexiunea și încearcă din nou.",
+  "profileVideosLoadFailedRetry": "Încearcă din nou",
   "profileFeedLoadMoreError": "Nu am putut încărca mai multe videoclipuri. Trage în jos pentru reîmprospătare.",
   "appTitle": "Divine",
   "@appTitle": {

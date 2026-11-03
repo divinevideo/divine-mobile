@@ -4184,7 +4184,16 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError => 'サーバーに接続できません。接続を確認してもう一度お試しください。';
+  String get profileVideosLoadFailedTitle => '動画を読み込めませんでした';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => '動画を読み込めませんでした';
+
+  @override
+  String get profileVideosLoadFailedSubtitle => '接続を確認してもう一度お試しください。';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'もう一度試す';
 
   @override
   String get profileFeedLoadMoreError => 'これ以上の動画を読み込めませんでした。引っ張って更新してください。';

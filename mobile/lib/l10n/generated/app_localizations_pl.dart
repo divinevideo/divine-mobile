@@ -4596,8 +4596,19 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Nie można połączyć się z serwerem. Sprawdź połączenie i spróbuj ponownie.';
+  String get profileVideosLoadFailedTitle =>
+      'Nie udało się wczytać twoich filmów';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle =>
+      'Nie udało się wczytać filmów';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Sprawdź połączenie i spróbuj ponownie.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Spróbuj ponownie';
 
   @override
   String get profileFeedLoadMoreError =>

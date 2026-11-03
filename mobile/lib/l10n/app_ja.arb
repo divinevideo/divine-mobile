@@ -98,7 +98,10 @@
   "dmReactionRetryAction": "再試行",
   "dmMessageBubbleVideoReplyHint": "参照先の動画を開く",
   "commonSomethingWentWrong": "問題が発生しました",
-  "profileFeedError": "サーバーに接続できません。接続を確認してもう一度お試しください。",
+  "profileVideosLoadFailedTitle": "動画を読み込めませんでした",
+  "profileVideosLoadFailedOtherTitle": "動画を読み込めませんでした",
+  "profileVideosLoadFailedSubtitle": "接続を確認してもう一度お試しください。",
+  "profileVideosLoadFailedRetry": "もう一度試す",
   "profileFeedLoadMoreError": "これ以上の動画を読み込めませんでした。引っ張って更新してください。",
   "appTitle": "Divine",
   "@appTitle": {

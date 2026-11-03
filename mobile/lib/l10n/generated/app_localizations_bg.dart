@@ -4516,8 +4516,19 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Сървърът е недостъпен. Провери връзката си и опитай отново.';
+  String get profileVideosLoadFailedTitle =>
+      'Видеата ти не можаха да се заредят';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle =>
+      'Видеата не можаха да се заредят';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Провери връзката си и опитай отново.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Опитай пак';
 
   @override
   String get profileFeedLoadMoreError =>

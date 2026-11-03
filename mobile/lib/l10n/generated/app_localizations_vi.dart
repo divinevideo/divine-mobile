@@ -4428,8 +4428,17 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Không kết nối được với máy chủ. Kiểm tra kết nối của bạn rồi thử lại nhé.';
+  String get profileVideosLoadFailedTitle => 'Không tải được video của bạn';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'Không tải được video';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Kiểm tra kết nối của bạn rồi thử lại nhé.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Thử lại';
 
   @override
   String get profileFeedLoadMoreError =>

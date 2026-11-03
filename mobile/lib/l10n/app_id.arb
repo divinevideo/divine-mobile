@@ -98,7 +98,10 @@
   "dmReactionRetryAction": "Coba lagi",
   "dmMessageBubbleVideoReplyHint": "Buka video yang dirujuk",
   "commonSomethingWentWrong": "Terjadi kesalahan",
-  "profileFeedError": "Tidak dapat menjangkau server. Periksa koneksimu dan coba lagi.",
+  "profileVideosLoadFailedTitle": "Videomu gagal dimuat",
+  "profileVideosLoadFailedOtherTitle": "Video gagal dimuat",
+  "profileVideosLoadFailedSubtitle": "Periksa koneksimu dan coba lagi.",
+  "profileVideosLoadFailedRetry": "Coba lagi",
   "profileFeedLoadMoreError": "Video lainnya gagal dimuat. Tarik untuk menyegarkan.",
   "appTitle": "Divine",
   "@appTitle": {

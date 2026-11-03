@@ -4625,8 +4625,19 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'సర్వర్‌ని చేరుకోలేదు. మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.';
+  String get profileVideosLoadFailedTitle =>
+      'మీ వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle =>
+      'వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'మళ్లీ ప్రయత్నించండి';
 
   @override
   String get profileFeedLoadMoreError =>
