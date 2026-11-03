@@ -19,6 +19,7 @@ import 'package:dm_repository/src/dm_batch_send_budget.dart';
 import 'package:dm_repository/src/dm_clock.dart';
 import 'package:dm_repository/src/dm_decrypt_isolate.dart';
 import 'package:dm_repository/src/dm_decryption_worker.dart';
+import 'package:dm_repository/src/dm_early_deletions.dart';
 import 'package:dm_repository/src/dm_held_pool_wraps.dart';
 import 'package:dm_repository/src/dm_message_size.dart';
 import 'package:dm_repository/src/dm_reactions_repository.dart';
@@ -1053,6 +1054,11 @@ class DmRepository {
   /// ids, so a flood of unresolvable retractions must not be able to fill it.
   static const int maxLoggedDeferredDeletions = 64;
 
+  /// How many kind-5 deletions naming a message not stored yet are held in
+  /// memory, one per message each names, until that message is stored. A
+  /// sender chooses those targets, so past this the oldest is dropped.
+  static const int maxHeldEarlyDeletions = 256;
+
   /// Most participants, sender included, a received rumor may name and still be
   /// filed as a room. NIP-17 advises another messaging scheme for a group of
   /// more than 10; beyond it a rumor costs the stored participant list, the
@@ -1487,6 +1493,7 @@ class DmRepository {
     unawaited(_dismissalSubscription?.cancel());
     _dismissalSubscription = null;
     _pendingReadCursors.clear();
+    _earlyDeletions.clear();
     _endLiveSubscriptions();
     _liveCatchUp?.cancelHoldLimit();
     _liveCatchUp = null;
@@ -1675,9 +1682,10 @@ class DmRepository {
       // Deletions are asked for once the DMs' stored events have ended, the
       // AUTH replay's included: a gated relay answers a deletions-only REQ at
       // once but holds the DMs, and a deletion handled before the message it
-      // names finds nothing to retract. The hold limit opens them too, as a
-      // relay can hold that end for the whole session. No catch-up either: a
-      // deletion saves no stamp, so it cannot move a window.
+      // names waits for it only in memory, and only up to a cap. The hold
+      // limit opens them too, as a relay can hold that end for the whole
+      // session. No catch-up either: a deletion saves no stamp, so it cannot
+      // move a window.
       var deletionsOpened = false;
       void openDeletions() {
         if (deletionsOpened || _disposed) return;
@@ -2269,8 +2277,9 @@ class DmRepository {
   /// message is stored.
   ///
   /// A deletion names the message it removes, and applying one finds that
-  /// message by id: one handled before its message is stored is dropped, and
-  /// a drain page brings a deletion before the older page holding its message.
+  /// message by id: one handled before its message is stored waits for it
+  /// only in memory, up to [maxHeldEarlyDeletions], and a drain page brings a
+  /// deletion before the older page holding its message.
   /// The gift-wrap pages read only kinds 1059 and 4 (#9468), so deletions are
   /// read here, after them and after [_recoverOutgoingNip04]. Pages `#p:[self]`
   /// kind-5 newest→oldest on the relays those pages read, the account's own
@@ -3344,6 +3353,7 @@ class DmRepository {
     _reconnectTimer = null;
     _liveCatchUp?.cancelHoldLimit();
     _liveCatchUp = null;
+    _earlyDeletions.clear();
     _cancelNip04CopyRetries();
     _resetRecoveryRefusalConfirmationState();
     await _drainRelayReadySubscription?.cancel();
@@ -3867,12 +3877,26 @@ class DmRepository {
   /// Handles an incoming NIP-09 kind 5 deletion event.
   ///
   /// For each `e` tag, validates that the event author matches the original
-  /// message sender (NIP-09 requirement) before soft-deleting.
+  /// message sender (NIP-09 requirement) before soft-deleting. A target not
+  /// stored yet is held until it is; see [_applyEarlyDeletions].
   Future<void> _handleDeletionEvent(Event deletionEvent) async {
+    final owner = _userPubkey;
+    final generation = _resetGeneration;
     try {
       for (final tag in deletionEvent.tags) {
         if (tag.length < 2 || tag[0] != 'e') continue;
-        await _applyMessageDeletion(rumorId: tag[1], deletion: deletionEvent);
+        final target = tag[1];
+        final outcome = await _applyMessageDeletion(
+          rumorId: target,
+          deletion: deletionEvent,
+        );
+        // The message it names can still arrive, from another relay or out
+        // of order on this one. Only an event id can name a stored message.
+        if (outcome == null &&
+            !_ingestSessionEnded(owner, generation) &&
+            _eventIdPattern.hasMatch(target)) {
+          _earlyDeletions.hold(target, deletionEvent);
+        }
       }
     } on Object catch (e, stackTrace) {
       Log.error(
@@ -3953,6 +3977,12 @@ class DmRepository {
 
   /// Wrap ids already logged by [_logDeferredDeletion] this session.
   final Set<String> _loggedDeferredDeletions = <String>{};
+
+  /// Kind-5 deletions that named a message this session had not stored yet,
+  /// applied by [_applyEarlyDeletions] once it is. Cleared with the session.
+  final DmEarlyDeletions _earlyDeletions = DmEarlyDeletions(
+    capacity: maxHeldEarlyDeletions,
+  );
 
   static final _eventIdPattern = RegExp(r'^[0-9a-f]{64}$');
 
@@ -4082,6 +4112,37 @@ class DmRepository {
       category: LogCategory.system,
     );
     return DmWrapOutcome.processed;
+  }
+
+  /// Applies the kind-5 deletions held for [messageId], now that it is stored
+  /// for [ownerPubkey]. Each one goes through [_applyMessageDeletion], so it
+  /// takes effect only if its author sent the message.
+  ///
+  /// When the account changed while the message was stored, what is held now
+  /// belongs to the next account, so it stays held.
+  Future<void> _applyEarlyDeletions(
+    String messageId, {
+    required String ownerPubkey,
+  }) async {
+    if (_ownerPubkey != ownerPubkey) return;
+    for (final deletion in _earlyDeletions.take(messageId)) {
+      Log.debug(
+        'Applying kind 5 deletion ${deletion.id}, which arrived before message '
+        '$messageId',
+        category: LogCategory.system,
+      );
+      try {
+        await _applyMessageDeletion(rumorId: messageId, deletion: deletion);
+      } on Object catch (e, stackTrace) {
+        Log.error(
+          'Failed to apply kind 5 deletion ${deletion.id} to message '
+          '$messageId: $e',
+          category: LogCategory.system,
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
+    }
   }
 
   /// Pre-decrypt dedup: has this gift wrap (or NIP-04 event) already been
@@ -4835,6 +4896,7 @@ class DmRepository {
         }
 
         if (refilesMentions) _roomsAwaitingReplyTarget.remove(rumor.id);
+        await _applyEarlyDeletions(rumor.id, ownerPubkey: ownerPubkey);
         // A soft-deleted reply can be the newest one moved; the preview has
         // to come from the newest message still shown.
         for (final refiledConversationId in {
@@ -5682,6 +5744,7 @@ class DmRepository {
         );
         return;
       }
+      await _applyEarlyDeletions(nip04Event.id, ownerPubkey: ownerPubkey);
 
       // NIP-04 created_at values are not randomized (unlike NIP-17 gift
       // wraps), so this bounded timestamp is a real send time and safe to
