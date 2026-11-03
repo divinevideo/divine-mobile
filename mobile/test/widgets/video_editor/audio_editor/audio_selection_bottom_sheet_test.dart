@@ -959,6 +959,21 @@ void main() {
       });
     });
 
+    group('Preview', () {
+      testWidgets('loops, like the video a sound plays under', (tester) async {
+        final audioService = _stubbedAudioService();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: audioService,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        verify(() => audioService.setLooping(looping: true)).called(1);
+      });
+    });
+
     group('Loading more', () {
       final lateSound = _createTestAudioEvent(
         id: 'late',
