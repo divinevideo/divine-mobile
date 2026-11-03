@@ -1,5 +1,5 @@
-// ABOUTME: Router gating with a saved review status (#9495): an account never
-// ABOUTME: seen restricted skips the wait, one seen restricted does not.
+// ABOUTME: Router gating while the review status loads: a saved status (#9495)
+// ABOUTME: decides the wait, and a push held on the wait reopens afterwards.
 
 import 'dart:async';
 
@@ -16,6 +16,7 @@ import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/settings/legal_screen.dart';
+import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/minor_account_review_status_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -377,6 +378,62 @@ void main() {
           expect(location(router), LegalScreen.path);
         },
       );
+    });
+
+    group('a push held while the status loads', () {
+      // A notification tap pushes its video like this, through
+      // DeepLinkCoordinator.
+      final videoPath = VideoDetailScreen.pathForId(
+        '7b3f1c9e2d4a6b8c0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f',
+      );
+
+      List<RouteMatchBase> pages(GoRouter router) =>
+          router.routerDelegate.currentConfiguration.matches;
+
+      testWidgets('opens above the destination once the status arrives', (
+        tester,
+      ) async {
+        final router = await pumpRouter(
+          tester,
+          startState: AuthState.authenticated,
+        );
+        unawaited(router.push<void>(videoPath));
+        await tester.pump();
+        expect(location(router), MinorAccountReviewLoadingScreen.path);
+
+        fetch.complete(MinorAccountReviewStatus.active());
+        // The video screen keeps animating while it loads, so it never
+        // settles; pump past the page transition instead.
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(location(router), videoPath);
+        expect(pages(router).last, isA<ImperativeRouteMatch>());
+        expect(
+          router.routerDelegate.currentConfiguration.uri.path,
+          LegalScreen.path,
+        );
+      });
+
+      testWidgets('stays closed when the status is a restriction', (
+        tester,
+      ) async {
+        final router = await pumpRouter(
+          tester,
+          startState: AuthState.checking,
+          cachedRestricted: true,
+        );
+        await finishAuthRestore(tester);
+        unawaited(router.push<void>(videoPath));
+        await tester.pump();
+        expect(pages(router).last, isA<ImperativeRouteMatch>());
+
+        fetch.complete(restrictedStatus());
+        await tester.pumpAndSettle();
+
+        expect(location(router), MinorAccountReviewScreen.path);
+        expect(pages(router), hasLength(1));
+      });
     });
   });
 }

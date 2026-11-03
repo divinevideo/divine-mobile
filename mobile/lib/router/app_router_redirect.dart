@@ -344,6 +344,65 @@ AsyncValue<MinorAccountReviewStatus> _routedReviewStatus(
   );
 }
 
+/// Where a push held on the loading screen was going, or null when its
+/// `from` names no destination the account can be sent on to.
+String? _heldReviewStatusPushTarget(ImperativeRouteMatch page) {
+  final from = page.matches.uri.queryParameters['from'];
+  if (from == null || from.isEmpty) return null;
+  final path = Uri.parse(from).path;
+  if (_isAuthEntryLocation(path) ||
+      path == MinorAccountReviewLoadingScreen.path) {
+    return null;
+  }
+  return from;
+}
+
+/// Takes the pushes held on the review-status loading screen off the stack
+/// once the status has arrived and, with [reopen], pushes each one again to
+/// where it was going. Returns false when nothing was held.
+///
+/// A router refresh cannot do this. go_router re-runs redirects for the base
+/// location only, and replaces the whole stack once that base moves off the
+/// loading screen, so a notification tap made while an account's status
+/// first loaded was dropped and never opened. Only the held page's `from`
+/// still says where it was going. Its route extra is already gone, because
+/// go_router drops the extra when a redirect replaces a location.
+bool _releaseHeldReviewStatusPushes(GoRouter router, {required bool reopen}) {
+  final configuration = router.routerDelegate.currentConfiguration;
+  // The loading screen is a top-level route, so its pushes are top-level pages.
+  final held = configuration.matches
+      .whereType<ImperativeRouteMatch>()
+      .where(
+        (page) => page.matches.uri.path == MinorAccountReviewLoadingScreen.path,
+      )
+      .toList();
+  if (held.isEmpty) return false;
+
+  // Every push made while waiting is held, so removing the lowest held page,
+  // and with it the pages above, leaves only what was there before. The
+  // restore re-runs the base location's redirect, as a refresh would.
+  router.restore(configuration.remove(held.first));
+  if (!reopen) return true;
+
+  for (final page in held) {
+    final target = _heldReviewStatusPushTarget(page);
+    if (target == null) continue;
+    Log.info(
+      'Router: review status arrived — reopening held push '
+      '${redactUriStringForLogs(target)}',
+      name: 'AppRouter',
+      category: LogCategory.auth,
+    );
+    runDetached(
+      router.push<void>(target),
+      'reopen a push held for the review status',
+      logName: 'AppRouter',
+      category: LogCategory.ui,
+    );
+  }
+  return true;
+}
+
 /// Top-level GoRouter redirect: divine:// scheme → universal-link rewrite →
 /// minor-account-review gating → auth-route gating → unauthenticated gating.
 ///
