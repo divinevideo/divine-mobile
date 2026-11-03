@@ -49,6 +49,7 @@ void main() {
       String? selectedItemId,
       ValueChanged<TimelineOverlayItem>? onItemTapped,
       OverlayMoveCallback? onItemMoved,
+      OverlayMovingCallback? onItemMoving,
       OverlayTrimCallback? onTrimChanged,
       ValueChanged<bool>? onTrimDragChanged,
       ValueChanged<TimelineOverlayItem>? onDragStarted,
@@ -74,6 +75,7 @@ void main() {
                 selectedItemId: selectedItemId,
                 onItemTapped: onItemTapped,
                 onItemMoved: onItemMoved,
+                onItemMoving: onItemMoving,
                 onTrimChanged: onTrimChanged,
                 onTrimDragChanged: onTrimDragChanged,
                 onDragStarted: onDragStarted,
@@ -230,6 +232,42 @@ void main() {
         );
         await gesture.up();
         await tester.pumpAndSettle();
+      });
+
+      // #10657: an overlay can be longer than the strip's total duration,
+      // and dragging it threw on `clamp(0, <negative>)`.
+      testWidgets('holds an item longer than the timeline at the start', (
+        tester,
+      ) async {
+        Duration? movingTo;
+        Duration? movedTo;
+        await tester.pumpWidget(
+          buildWidget(
+            totalDuration: const Duration(seconds: 4),
+            clipEdgesMs: const [0, 4000],
+            onItemMoved: ({
+              required item,
+              required startTime,
+              required row,
+              required insertAbove,
+            }) => movedTo = startTime,
+            onItemMoving: ({required item, required startTime}) =>
+                movingTo = startTime,
+          ),
+        );
+
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.text('Test Layer')),
+        );
+        await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+        await gesture.moveBy(const Offset(40, 0));
+        await tester.pump();
+        expect(movingTo, equals(Duration.zero));
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(movedTo, equals(Duration.zero));
       });
     });
 

@@ -12,35 +12,17 @@ class ProcessedGiftWrapsDao extends DatabaseAccessor<AppDatabase>
     with _$ProcessedGiftWrapsDaoMixin {
   ProcessedGiftWrapsDao(super.attachedDatabase);
 
-  /// Has the gift wrap [giftWrapId] already been terminally processed?
-  ///
-  /// Global (NOT owner-scoped): gift-wrap event ids are globally unique, so a
-  /// wrap processed under any local account dedups for all of them — matching
-  /// [DirectMessagesDao.hasGiftWrap].
-  Future<bool> hasGiftWrap(String giftWrapId) async {
-    final query = selectOnly(processedGiftWraps)
-      ..addColumns([processedGiftWraps.giftWrapId])
-      ..where(processedGiftWraps.giftWrapId.equals(giftWrapId))
-      ..limit(1);
-    return (await query.get()).isNotEmpty;
-  }
-
   /// Has [giftWrapId] been terminally processed *by [ownerPubkey]*?
   ///
-  /// [hasGiftWrap] answers "has any local account handled this", which is the
-  /// right question for deciding whether to pay a decrypt again. This answers
-  /// "did THIS account handle it", which is the right question for deciding
-  /// whether the account may move its own sync boundary past the event.
+  /// Owner-scoped, because an id is unique to one account only for an inbound
+  /// kind 1059: NIP-59 mints a separate wrap per recipient. An unwrapped kind 4
+  /// has one event id shared by sender and recipient, so when both are accounts
+  /// on this device each records its own outcome for the id, and one must not
+  /// read the other's row as its own handling: it never stored the message
+  /// (#6645, #8209).
   ///
-  /// The global form rests on a gift-wrap id being unique to one recipient,
-  /// which holds for kind 1059 because NIP-59 mints a fresh ephemeral key and
-  /// a separate wrap per recipient. It does not hold for an unwrapped kind 4,
-  /// whose single event id is shared by sender and recipient — so when both
-  /// are accounts on this device the ledger genuinely holds one id for two
-  /// accounts. See #8209 for why moving a boundary for a message this account
-  /// never stored is permanent damage.
-  ///
-  /// Rows with no owner are treated as this account's, matching
+  /// A row with the empty-string owner is a legacy one from before the owner
+  /// was part of the key. It counts as this account's, matching
   /// [clearForAccountSwitch] and `DirectMessagesDao`'s legacy handling, so an
   /// upgrade does not reclassify an account's own history as somebody else's.
   Future<bool> hasGiftWrapForOwner({
@@ -50,24 +32,26 @@ class ProcessedGiftWrapsDao extends DatabaseAccessor<AppDatabase>
     final query = selectOnly(processedGiftWraps)
       ..addColumns([processedGiftWraps.giftWrapId])
       ..where(
-        processedGiftWraps.giftWrapId.equals(giftWrapId) &
-            (processedGiftWraps.ownerPubkey.equals(ownerPubkey) |
-                processedGiftWraps.ownerPubkey.isNull() |
-                processedGiftWraps.ownerPubkey.equals('')),
+        processedGiftWraps.giftWrapId.equals(giftWrapId) & _heldBy(ownerPubkey),
       )
       ..limit(1);
     return (await query.get()).isNotEmpty;
   }
 
-  /// Which of [giftWrapIds] are already recorded in the ledger. Batched
-  /// counterpart to [hasGiftWrap]: one `IN` query instead of N single-id
-  /// lookups, used by the history-drain dedup probe to avoid a per-wrap DB
-  /// round trip. Returns an empty set for an empty input.
-  Future<Set<String>> giftWrapIdsPresent(Set<String> giftWrapIds) async {
+  /// Which of [giftWrapIds] [ownerPubkey] has already recorded in the ledger.
+  /// Batched counterpart to [hasGiftWrapForOwner]: one `IN` query instead of N
+  /// single-id lookups, used by the history-drain dedup probe to avoid a
+  /// per-wrap DB round trip. Returns an empty set for an empty input.
+  Future<Set<String>> giftWrapIdsPresent(
+    Set<String> giftWrapIds, {
+    required String ownerPubkey,
+  }) async {
     if (giftWrapIds.isEmpty) return const <String>{};
     final query = selectOnly(processedGiftWraps)
       ..addColumns([processedGiftWraps.giftWrapId])
-      ..where(processedGiftWraps.giftWrapId.isIn(giftWrapIds));
+      ..where(
+        processedGiftWraps.giftWrapId.isIn(giftWrapIds) & _heldBy(ownerPubkey),
+      );
     final rows = await query.get();
     final present = <String>{};
     for (final row in rows) {
@@ -77,10 +61,20 @@ class ProcessedGiftWrapsDao extends DatabaseAccessor<AppDatabase>
     return present;
   }
 
-  /// Records [giftWrapId] as terminally processed (idempotent — a re-delivered
-  /// wrap or a concurrent writer never throws). [ownerPubkey] is not part of
-  /// the dedup key, but is required so account cleanup can remove the correct
-  /// ledger entry without affecting another local account.
+  /// Rows [ownerPubkey] has recorded, counting an ownerless legacy row as its
+  /// own.
+  Expression<bool> _heldBy(String ownerPubkey) {
+    return processedGiftWraps.ownerPubkey.equals(ownerPubkey) |
+        processedGiftWraps.ownerPubkey.equals('');
+  }
+
+  /// Records [giftWrapId] as terminally processed for [ownerPubkey] (idempotent
+  /// — a re-delivered wrap or a concurrent writer never throws).
+  ///
+  /// The key is the id and the account, so two local accounts can each record
+  /// the same id (a kind 4 is shared by both ends) and each finds its own row
+  /// again ([hasGiftWrapForOwner]). Account cleanup removes only the leaving
+  /// account's rows.
   Future<void> record({
     required String giftWrapId,
     required String ownerPubkey,
@@ -107,10 +101,7 @@ class ProcessedGiftWrapsDao extends DatabaseAccessor<AppDatabase>
   /// rows, while preserving every other known account's ledger entries.
   Future<int> clearForAccountSwitch(String ownerPubkey) {
     return (delete(processedGiftWraps)..where(
-          (t) =>
-              t.ownerPubkey.equals(ownerPubkey) |
-              t.ownerPubkey.isNull() |
-              t.ownerPubkey.equals(''),
+          (t) => t.ownerPubkey.equals(ownerPubkey) | t.ownerPubkey.equals(''),
         ))
         .go();
   }
@@ -127,7 +118,7 @@ class ProcessedGiftWrapsDao extends DatabaseAccessor<AppDatabase>
   Future<int> clearUnowned() {
     return (delete(
       processedGiftWraps,
-    )..where((t) => t.ownerPubkey.isNull() | t.ownerPubkey.equals(''))).go();
+    )..where((t) => t.ownerPubkey.equals(''))).go();
   }
 
   /// Total processed-wrap rows (diagnostics / tests).

@@ -11,8 +11,8 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/models/content_label.dart';
@@ -22,6 +22,7 @@ import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_metadata_update_service.dart';
+import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
 import '../helpers/test_provider_overrides.dart';
@@ -35,6 +36,9 @@ class _MockPersonalEventCacheService extends Mock
 
 class _MockVideoEventService extends Mock implements VideoEventService {}
 
+class _MockSignedEventRelayPublisher extends Mock
+    implements SignedEventRelayPublisher {}
+
 class _FakeEvent extends Fake implements Event {}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
@@ -45,6 +49,7 @@ const _ownerPubkey =
 VideoEvent _testVideo({
   List<List<String>> extraTags = const [],
   int? eventCreatedAt,
+  String? title = 'Test Video Title',
 }) {
   return VideoEvent(
     id: 'event-id',
@@ -53,7 +58,7 @@ VideoEvent _testVideo({
     content: 'Test video content',
     timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
     videoUrl: 'https://cdn.example.com/video.mp4',
-    title: 'Test Video Title',
+    title: title,
     vineId: 'video-d-tag',
     eventCreatedAt: eventCreatedAt,
     nostrEventTags: [
@@ -65,7 +70,7 @@ VideoEvent _testVideo({
 
 void main() {
   late MockAuthService mockAuthService;
-  late MockNostrClient mockNostrService;
+  late _MockSignedEventRelayPublisher mockRelayPublisher;
   late _MockBlossomUploadService mockBlossomUploadService;
   late _MockDmRepository mockDmRepository;
   late _MockPersonalEventCacheService mockPersonalEventCacheService;
@@ -85,7 +90,7 @@ void main() {
       authState: AuthState.authenticated,
       currentPublicKeyHex: _ownerPubkey,
     );
-    mockNostrService = createMockNostrService();
+    mockRelayPublisher = _MockSignedEventRelayPublisher();
     mockBlossomUploadService = _MockBlossomUploadService();
     mockDmRepository = _MockDmRepository();
     mockPersonalEventCacheService = _MockPersonalEventCacheService();
@@ -93,7 +98,6 @@ void main() {
     capturedTags = [];
     capturedCreatedAt = 0;
 
-    late Event signedEvent;
     when(
       () => mockAuthService.createAndSignEvent(
         kind: any(named: 'kind'),
@@ -106,7 +110,7 @@ void main() {
         invocation.namedArguments[#tags] as List<List<String>>,
       );
       capturedCreatedAt = invocation.namedArguments[#createdAt] as int? ?? 0;
-      return signedEvent = Event(
+      return Event(
         _ownerPubkey,
         NIP71VideoKinds.addressableShortVideo,
         capturedTags,
@@ -116,8 +120,8 @@ void main() {
     });
 
     when(
-      () => mockNostrService.publishEvent(any()),
-    ).thenAnswer((_) async => PublishSuccess(event: signedEvent));
+      () => mockRelayPublisher.publishViaWebSocket(any()),
+    ).thenAnswer((_) async => EventPublishOutcome.published);
 
     when(
       () => mockPersonalEventCacheService.cacheUserEvent(any()),
@@ -127,7 +131,7 @@ void main() {
     service = VideoMetadataUpdateService(
       authService: mockAuthService,
       blossomService: mockBlossomUploadService,
-      nostrService: mockNostrService,
+      relayPublisher: mockRelayPublisher,
       personalEventCache: mockPersonalEventCacheService,
       videoEventService: mockVideoEventService,
       collaboratorInviteService: CollaboratorInviteService(
@@ -699,7 +703,7 @@ void main() {
               createdAt: any(named: 'createdAt'),
             ),
           );
-          verifyNever(() => mockNostrService.publishEvent(any()));
+          verifyNever(() => mockRelayPublisher.publishViaWebSocket(any()));
         },
       );
 
@@ -808,6 +812,37 @@ void main() {
           );
           expect(capturedTags, contains(equals(['t', 'newtag'])));
           expect(capturedTags, isNot(contains(equals(['t', 'oldtag']))));
+        },
+      );
+
+      test(
+        'keeps an empty title tag on an untitled video so the relay '
+        'accepts the replacement',
+        () async {
+          final video = _testVideo(
+            title: null,
+            extraTags: const [
+              ['title', ''],
+              ['summary', 'Old description'],
+            ],
+          );
+
+          final result = await service.updateVideo(
+            originalVideo: video,
+            editorState: VideoEditorProviderState(
+              title: '   ',
+              description: 'New description',
+            ),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateSuccess>());
+          expect(
+            capturedTags.where((tag) => tag.first == 'title'),
+            equals([
+              ['title', ''],
+            ]),
+          );
         },
       );
 
@@ -1400,18 +1435,21 @@ void main() {
         expect(result, isA<VideoUpdateSuccess>());
       });
 
-      test('calls publishEvent and cacheUserEvent on success', () async {
-        await service.updateVideo(
-          originalVideo: _testVideo(),
-          editorState: VideoEditorProviderState(),
-          initialCollaboratorPubkeys: const {},
-        );
+      test(
+        'publishes through the relay publisher and caches on success',
+        () async {
+          await service.updateVideo(
+            originalVideo: _testVideo(),
+            editorState: VideoEditorProviderState(),
+            initialCollaboratorPubkeys: const {},
+          );
 
-        verify(() => mockNostrService.publishEvent(any())).called(1);
-        verify(
-          () => mockPersonalEventCacheService.cacheUserEvent(any()),
-        ).called(1);
-      });
+          verify(() => mockRelayPublisher.publishViaWebSocket(any())).called(1);
+          verify(
+            () => mockPersonalEventCacheService.cacheUserEvent(any()),
+          ).called(1);
+        },
+      );
 
       test('calls updateVideoEvent on success', () async {
         await service.updateVideo(
@@ -1426,11 +1464,12 @@ void main() {
 
     group('publish failure', () {
       test(
-        'returns VideoUpdateFailure when publishEvent does not succeed',
+        'returns publishRejected and caches nothing when no relay accepts '
+        'the edit',
         () async {
           when(
-            () => mockNostrService.publishEvent(any()),
-          ).thenAnswer((_) async => const PublishNoRelays());
+            () => mockRelayPublisher.publishViaWebSocket(any()),
+          ).thenAnswer((_) async => EventPublishOutcome.transientFailure);
 
           final result = await service.updateVideo(
             originalVideo: _testVideo(),
@@ -1444,6 +1483,40 @@ void main() {
               (f) => f.reason,
               'reason',
               VideoMetadataUpdateError.publishRejected,
+            ),
+          );
+          verifyNever(
+            () => mockPersonalEventCacheService.cacheUserEvent(any()),
+          );
+          verifyNever(() => mockVideoEventService.updateVideoEvent(any()));
+        },
+      );
+
+      test(
+        'returns a failure and caches nothing when the relay reports the '
+        'account restricted',
+        () async {
+          when(
+            () => mockRelayPublisher.publishViaWebSocket(any()),
+          ).thenThrow(
+            const AccountRestrictedPublishException(
+              reason: 'blocked: account suspended',
+              source: AccountRestrictionSource.webSocket,
+            ),
+          );
+
+          final result = await service.updateVideo(
+            originalVideo: _testVideo(),
+            editorState: VideoEditorProviderState(),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(
+            result,
+            isA<VideoUpdateFailure>().having(
+              (f) => f.reason,
+              'reason',
+              VideoMetadataUpdateError.generic,
             ),
           );
           verifyNever(
@@ -1483,7 +1556,7 @@ void main() {
               VideoMetadataUpdateError.generic,
             ),
           );
-          verifyNever(() => mockNostrService.publishEvent(any()));
+          verifyNever(() => mockRelayPublisher.publishViaWebSocket(any()));
         },
       );
 
@@ -1516,7 +1589,7 @@ void main() {
               VideoMetadataUpdateError.couldNotSign,
             ),
           );
-          verifyNever(() => mockNostrService.publishEvent(any()));
+          verifyNever(() => mockRelayPublisher.publishViaWebSocket(any()));
         },
       );
     });

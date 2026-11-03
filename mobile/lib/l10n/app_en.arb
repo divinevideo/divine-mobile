@@ -2949,9 +2949,21 @@
       }
     }
   },
-  "profileFeedError": "Can't reach the server. Check your connection and try again.",
-  "@profileFeedError": {
-    "description": "Full-screen message shown when an author's profile feed fails to load. This state is only reached when the API could not be reached at all — an author with genuinely no videos gets the empty state instead — so the copy names the connection rather than implying the profile is empty. Wording deliberately matches authSignInErrorNetwork."
+  "profileVideosLoadFailedTitle": "Couldn't load your videos",
+  "@profileVideosLoadFailedTitle": {
+    "description": "Title in the Videos tab of the viewer's own profile when their videos failed to load. The rest of the profile stays on screen around it. Only reached when the server could not be reached, so it must not read as 'you have no videos'."
+  },
+  "profileVideosLoadFailedOtherTitle": "Couldn't load videos",
+  "@profileVideosLoadFailedOtherTitle": {
+    "description": "Title in the Videos tab of someone else's profile when their videos failed to load. Same state as profileVideosLoadFailedTitle, without 'your'."
+  },
+  "profileVideosLoadFailedSubtitle": "Check your connection and try again.",
+  "@profileVideosLoadFailedSubtitle": {
+    "description": "Line under the title when a profile's videos failed to load."
+  },
+  "profileVideosLoadFailedRetry": "Try again",
+  "@profileVideosLoadFailedRetry": {
+    "description": "Button under a profile's failed-to-load videos that loads them again."
   },
   "profileFeedLoadMoreError": "Couldn't load more videos. Pull to refresh.",
   "@profileFeedLoadMoreError": {
@@ -4816,11 +4828,14 @@
       }
     }
   },
-  "videoClipSemanticValueSelected": "Selected",
   "videoClipSemanticValueNotSelected": "Not selected",
   "videoClipSemanticHintDisabled": "Disabled",
-  "videoClipSemanticHintSelect": "Tap to select, long press to preview",
-  "videoClipSemanticHintDeselect": "Tap to deselect, long press to preview",
+  "videoClipSemanticHintSelect": "Tap to select",
+  "videoClipSemanticHintDeselect": "Tap to deselect",
+  "videoClipSemanticHintPreview": "Tap to preview",
+  "@videoClipSemanticHintPreview": {
+    "description": "Accessibility hint on a library clip thumbnail outside selection mode, where a tap opens the clip preview."
+  },
   "routerInvalidCreator": "Invalid creator",
   "routerInvalidHashtagRoute": "Invalid hashtag route",
   "categoryGalleryCouldNotLoadVideos": "Could not load videos",
@@ -6118,6 +6133,24 @@
       }
     }
   },
+  "libraryTrashClipsRestored": "{count, plural, =1{Clip restored} other{{count} clips restored}}",
+  "@libraryTrashClipsRestored": {
+    "description": "Screen-reader announcement after clips are restored from trash and their rows leave the trash list.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryTrashClipsDeleted": "{count, plural, =1{Clip permanently deleted} other{{count} clips permanently deleted}}",
+  "@libraryTrashClipsDeleted": {
+    "description": "Screen-reader announcement after clips are permanently deleted from trash (one at a time or by emptying it) and their rows leave the trash list.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "videoRecorderCloseLabel": "Close video recorder",
   "videoRecorderContinueToEditorLabel": "Continue to video editor",
   "videoRecorderCameraPreviewLabel": "Camera preview",
@@ -6413,6 +6446,10 @@
   "videoEditorEffectZoomBlur": "Zoom Blur",
   "@videoEditorEffectZoomBlur": {
     "description": "Name of a video effect: the picture streaks outward from its centre, as if the camera zoomed in during the shot."
+  },
+  "videoEditorEffectSpinBlur": "Spin Blur",
+  "@videoEditorEffectSpinBlur": {
+    "description": "Name of a video effect: the picture streaks around its centre, as if the camera turned during the shot."
   },
   "videoEditorEffectComic": "Comic",
   "@videoEditorEffectComic": {

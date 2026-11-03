@@ -92,6 +92,17 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     return exactOwner | (legacy & exactCopyExists.not());
   }
 
+  /// Rows [ownerPubkey] holds, counting a legacy unowned row as its own.
+  ///
+  /// Unlike [_visibleToOwner] this ignores the owned-copy shadowing: a
+  /// dedup probe asks whether the account has handled the wrap, not which of
+  /// two rows it should read.
+  Expression<bool> _heldBy($DirectMessagesTable row, String ownerPubkey) {
+    return row.ownerPubkey.equals(ownerPubkey) |
+        row.ownerPubkey.equals('') |
+        row.ownerPubkey.isNull();
+  }
+
   /// Rows the sender must still be able to recognize in the conversation.
   ///
   /// An own retraction in [retractionsShownToSender] is deliberately visible
@@ -115,14 +126,16 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
   /// Insert a decrypted DM, returning whether a row was actually written.
   ///
   /// Uses `INSERT OR IGNORE` so that violations on either the primary key
-  /// (`id`, `owner_pubkey`) **or** the UNIQUE index on `gift_wrap_id` are
-  /// handled gracefully without throwing. A `false` return means a local
-  /// uniqueness constraint skipped the row, and callers must avoid advancing
-  /// receive-side state that depends on a newly persisted message.
+  /// (`id`, `owner_pubkey`) **or** the UNIQUE index on (`gift_wrap_id`,
+  /// `owner_pubkey`) are handled gracefully without throwing. A `false` return
+  /// means a local uniqueness constraint skipped the row, and callers must
+  /// avoid advancing receive-side state that depends on a newly persisted
+  /// message.
   ///
   /// NIP-17 rumor events are immutable — the same rumor ID always carries
-  /// the same content. Rumor uniqueness is owner-scoped, while gift-wrap IDs
-  /// remain globally unique because a wrap has exactly one recipient.
+  /// the same content. Both the rumor ID and the gift-wrap ID are unique per
+  /// owner: an outgoing row holds the recipient's wrap ID and a kind-4 ID is
+  /// shared by both ends, so two local accounts can hold one ID (#6645).
   ///
   /// For kind 14 (text), only [content] is used.
   /// For kind 15 (file), [content] holds the file URL and file metadata
@@ -682,30 +695,42 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     return await query.getSingleOrNull() != null;
   }
 
-  /// Check if a gift wrap event has already been processed (dedup).
+  /// Has [ownerPubkey] already persisted a message for [giftWrapId] (dedup)?
   ///
-  /// Intentionally NOT scoped by `ownerPubkey`: gift-wrap event IDs are
-  /// globally unique per the Nostr protocol, so cross-account dedup
-  /// prevents re-processing the same relay event for multiple local accounts.
-  Future<bool> hasGiftWrap(String giftWrapId) async {
+  /// Owner-scoped: a wrap id is unique to one account only for an inbound
+  /// NIP-17 wrap. An outgoing row stores the *recipient's* wrap id, and a
+  /// kind-4 id is shared by sender and recipient, so on a device holding both
+  /// ends one id sits on two accounts' rows (#6645). A legacy unowned row
+  /// counts as the account's own, as in every other owner-scoped read.
+  Future<bool> hasGiftWrap(
+    String giftWrapId, {
+    required String ownerPubkey,
+  }) async {
     final query = selectOnly(directMessages)
-      ..where(directMessages.giftWrapId.equals(giftWrapId))
-      ..addColumns([directMessages.id]);
-    final result = await query.getSingleOrNull();
-    return result != null;
+      ..where(
+        directMessages.giftWrapId.equals(giftWrapId) &
+            _heldBy(directMessages, ownerPubkey),
+      )
+      ..addColumns([directMessages.id])
+      ..limit(1);
+    return (await query.get()).isNotEmpty;
   }
 
-  /// Which of [giftWrapIds] already have a persisted message row. Batched
-  /// counterpart to [hasGiftWrap]: one `IN` query instead of N single-id
-  /// lookups, used by the history-drain dedup probe to avoid a per-wrap DB
-  /// round trip. Like [hasGiftWrap], it is NOT scoped by `ownerPubkey`
-  /// (gift-wrap IDs are globally unique). Returns an empty set for an empty
-  /// input.
-  Future<Set<String>> giftWrapIdsPresent(Set<String> giftWrapIds) async {
+  /// Which of [giftWrapIds] [ownerPubkey] already has a persisted message row
+  /// for. Batched counterpart to [hasGiftWrap]: one `IN` query instead of N
+  /// single-id lookups, used by the history-drain dedup probe to avoid a
+  /// per-wrap DB round trip. Returns an empty set for an empty input.
+  Future<Set<String>> giftWrapIdsPresent(
+    Set<String> giftWrapIds, {
+    required String ownerPubkey,
+  }) async {
     if (giftWrapIds.isEmpty) return const <String>{};
     final query = selectOnly(directMessages)
       ..addColumns([directMessages.giftWrapId])
-      ..where(directMessages.giftWrapId.isIn(giftWrapIds));
+      ..where(
+        directMessages.giftWrapId.isIn(giftWrapIds) &
+            _heldBy(directMessages, ownerPubkey),
+      );
     final rows = await query.get();
     final present = <String>{};
     for (final row in rows) {

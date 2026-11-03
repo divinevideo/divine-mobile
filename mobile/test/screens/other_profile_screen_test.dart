@@ -442,7 +442,7 @@ void main() {
           widget.semanticIdentifier == SemanticIds.profileBackButton,
     );
 
-    testWidgets('keeps Back and offers Retry', (
+    testWidgets('keeps Back and offers Try again', (
       tester,
     ) async {
       when(
@@ -461,9 +461,10 @@ void main() {
       await tester.pump();
       final l10n = lookupAppLocalizations(const Locale('en'));
 
-      expect(find.text(l10n.profileFeedError), findsOneWidget);
+      expect(find.text(l10n.profileVideosLoadFailedOtherTitle), findsOneWidget);
+      expect(find.text(l10n.profileVideosLoadFailedTitle), findsNothing);
       expect(backButton, findsOneWidget);
-      expect(find.text(l10n.profileRetryButton), findsOneWidget);
+      expect(find.text(l10n.profileVideosLoadFailedRetry), findsOneWidget);
     });
   });
 

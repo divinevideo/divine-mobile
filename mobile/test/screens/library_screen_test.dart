@@ -22,6 +22,8 @@ import 'package:openvine/models/clip_category.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
+import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
+import 'package:openvine/models/video_publish/video_publish_state.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
@@ -132,6 +134,26 @@ class _GatedVideoPublishNotifier extends VideoPublishNotifier {
     return gate.future;
   }
 }
+
+/// Lets a test move the publish flow into its preparing step, which is what
+/// puts the screen's preparing overlay up.
+class _PreparableVideoPublishNotifier extends VideoPublishNotifier {
+  @override
+  VideoPublishProviderState build() => const VideoPublishProviderState();
+
+  void startPreparing() => state = const VideoPublishProviderState(
+    publishState: VideoPublishState.preparing,
+  );
+}
+
+/// Labels a screen reader can reach by swiping through the screen.
+///
+/// Not `find.bySemanticsLabel`: that reads the node cached on a render object,
+/// which outlives the node being dropped from the tree.
+List<String> _reachableLabels(WidgetTester tester) => [
+  for (final node in tester.semantics.simulatedAccessibilityTraversal())
+    node.label,
+];
 
 List<Object?> _captureAnnouncements(WidgetTester tester) {
   final announced = <Object?>[];
@@ -948,6 +970,39 @@ void main() {
           expect(clips.first.id, equals('sel-clip-1'));
         },
       );
+
+      testWidgets(
+        'keeps a screen reader out of the library while the video is prepared',
+        (tester) async {
+          final publish = _PreparableVideoPublishNotifier();
+          await tester.pumpWidget(
+            buildWidget(
+              extraOverrides: [
+                videoPublishProvider.overrideWith(() => publish),
+              ],
+            ),
+          );
+          await tester.pump();
+          expect(
+            _reachableLabels(tester),
+            contains(en.libraryCloseSemanticLabel),
+          );
+
+          publish.startPreparing();
+          await tester.pump();
+
+          // The scrim stops touches; the library must leave the semantics
+          // tree too, or a screen reader could still reach its controls.
+          expect(
+            _reachableLabels(tester),
+            isNot(contains(en.libraryCloseSemanticLabel)),
+          );
+          expect(
+            tester.getSemantics(find.text(en.libraryPreparingVideo)),
+            isSemantics(label: en.libraryPreparingVideo, isLiveRegion: true),
+          );
+        },
+      );
     });
     group('delete undo snackbar', () {
       testWidgets('tapping Undo after the screen is gone does not add to the '
@@ -1240,6 +1295,10 @@ void main() {
           ..add(ClipsLibraryToggleSelection(clip))
           ..add(ClipsLibraryToggleSelection(second));
         await tester.pumpAndSettle();
+        expect(
+          _reachableLabels(tester),
+          contains(en.libraryDeleteSelectedClipsTooltip),
+        );
         await tester.tap(
           find.bySemanticsLabel(en.librarySaveSelectedClipsTooltip),
         );
@@ -1247,6 +1306,12 @@ void main() {
         await tester.pump();
 
         expect(find.text(en.libraryGallerySaveProgress(1, 2)), findsOneWidget);
+        // The scrim stops touches; the library must leave the semantics tree
+        // too, or a screen reader could still delete or move the clips.
+        expect(
+          _reachableLabels(tester),
+          isNot(contains(en.libraryDeleteSelectedClipsTooltip)),
+        );
 
         firstSave.complete(const GallerySaveSuccess());
         await tester.pumpAndSettle();

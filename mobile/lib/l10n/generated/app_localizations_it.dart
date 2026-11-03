@@ -4524,8 +4524,19 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Impossibile raggiungere il server. Controlla la connessione e riprova.';
+  String get profileVideosLoadFailedTitle =>
+      'Non è stato possibile caricare i tuoi video';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle =>
+      'Non è stato possibile caricare i video';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Controlla la connessione e riprova.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Riprova';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -6976,21 +6987,19 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Selezionato';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Non selezionato';
 
   @override
   String get videoClipSemanticHintDisabled => 'Disabilitato';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Tocca per selezionare, tieni premuto per anteprima';
+  String get videoClipSemanticHintSelect => 'Tocca per selezionare';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Tocca per deselezionare, tieni premuto per anteprima';
+  String get videoClipSemanticHintDeselect => 'Tocca per deselezionare';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Tocca per l\'anteprima';
 
   @override
   String get routerInvalidCreator => 'Creatore non valido';
@@ -8863,6 +8872,30 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count clip ripristinati',
+      many: '$count di clip ripristinati',
+      one: 'Clip ripristinato',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count clip eliminati definitivamente',
+      many: '$count di clip eliminati definitivamente',
+      one: 'Clip eliminato definitivamente',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'Chiudi registratore video';
 
   @override
@@ -9149,6 +9182,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoEditorEffectZoomBlur => 'Sfocatura zoom';
+
+  @override
+  String get videoEditorEffectSpinBlur => 'Sfocatura rotatoria';
 
   @override
   String get videoEditorEffectComic => 'Fumetto';

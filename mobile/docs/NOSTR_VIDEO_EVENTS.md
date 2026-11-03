@@ -43,7 +43,7 @@ Tags: Array of [tagName, tagValue, ...additionalParams]
 
 | Tag | Format | Description | Required |
 |-----|--------|-------------|----------|
-| `title` | `["title", "Video Title"]` | Video title | Recommended |
+| `title` | `["title", "Video Title"]` | Video title. The Divine relay rejects a video event without this tag; an empty value (`["title", ""]`) is accepted for untitled videos | **Required** |
 | `m` | `["m", "video/mp4"]` | MIME type (video/mp4, video/webm, etc.) | Recommended |
 | `x` | `["x", "sha256hash"]` | SHA-256 hash of video file | Optional |
 | `size` | `["size", "12345678"]` | File size in bytes | Optional |

@@ -1,8 +1,11 @@
 # Nostr lens
 
-Line numbers below are `nostr-protocol/nips` at `a79e21d` (2026-10-05). If the
-local clone has moved, re-read the line before quoting it. Command behaviour is
-`nak` 0.20.6 as run on 2026-10-10; re-check flags after upgrading.
+Line numbers below are `nostr-protocol/nips` at `400d157` (2026-10-27). If the
+local clone has moved, re-read the line before quoting it: NIP-01 lines after
+141 moved by two when the empty-list rule landed. Command behaviour is `nak`
+0.20.6 as run on 2026-10-10, and a reviewer re-checked the recipes on 0.20.7.
+Later releases exist (0.22.1 on 2026-10-31) and have not been re-run: re-check
+flags after upgrading.
 
 ## 1. Name the authority the bug is against
 
@@ -25,9 +28,11 @@ that breaks on it is the one with the bug.
 The table says where other implementations keep the code. The Quartz row's
 three directories (in `vitorpamplona/quartz` at `c63c35c`; Quartz no longer
 lives in the `amethyst` repo) and the welshman row's files (at `7d72fa0`) were
-last opened on 2026-10-28. The other rows come from a web read on 2026-10-10
-and their paths were not opened. Confirm a path before citing it, and pin a
-commit SHA whenever you cite one of these.
+opened on 2026-10-28. The other rows' paths were confirmed to exist through the
+GitHub contents API on 2026-11-02, at nostr-tools `8ffc628`, ndk `4b86acd` (its
+last commit is from 2026-04-05), rust-nostr `5dded12`, damus `4a94f66` and
+strfry `4cd3cf6`; their contents were not read. Open a file before you quote
+it, and pin a commit SHA whenever you cite one of these.
 
 | Project | DM wrapping (NIP-17 / 59) | Video (NIP-71) |
 |---|---|---|
@@ -51,7 +56,9 @@ gh pr list -R nostr-protocol/nips --state open --search 'NIP-NN'              # 
 ```
 
 The spec moves. Changes in 2026 that touch code Divine ships, each a place
-where "the app follows the NIP" may have silently stopped being true:
+where "the app follows the NIP" may have silently stopped being true. Rules
+that §5 states with a date (relay URL identity, NIP-46 logout and client
+metadata, `limit: 0`) are not repeated here:
 
 | Date | Change | Line |
 |---|---|---|
@@ -60,16 +67,13 @@ where "the app follows the NIP" may have silently stopped being true:
 | 2026-05-28 | NIP-59 ephemeral gift wrap, kind 21059 | 59.md:77 |
 | 2026-05-28 | NIP-17 deletion: a kind 5 wrapped in a 1059, sent in the conversation | 17.md:87 |
 | 2026-05-28 | NIP-71 multiple audio tracks as `imeta` variants; `ov` flags the original, `waveform` is optional, clients should prefer them over in-video audio | 71.md:41-50, 94-100 |
-| 2026-05-28 | NIP-01: relays accept one endpoint when path segments change nothing (URL normalisation) | 01.md:111 |
-| 2026-06-15 | NIP-46 `logout` method: the signer SHOULD remove the session on request; the client MUST still delete its client-keypair on logout | 46.md:109, 133-135 |
-| 2026-06-23 | NIP-46 optional client metadata (`name`, `url`, `image`) in `connect`; a display hint, never authorization | 46.md:48, 115-123 |
 | 2026-06-28 | NIP-44 plaintext may exceed 65535 bytes (6-byte length prefix above it) | 44.md:87-91 |
 | 2026-07-15 | NIP-46: unknown methods MUST get an error reply (no silent timeout) | 46.md:164 |
 | 2026-08-24 | NIP-22: the ban on kind 1111 replies to kind 1 was removed | 22.md (line deleted in 13664fb) |
 | 2026-09-01 | NIP-42 / NIP-67: `EOSE` may carry an `auth` hint | 42.md:89 |
 | 2026-09-03 | NIP-78: relays SHOULD require NIP-42 AUTH for kind 78 / 30078 and serve them only to the authenticated owner | 78.md:21-24 |
-| 2026-09-04 | NIP-01: `limit: 0` returns no stored events, then EOSE, subscription stays live | 01.md:151 |
 | 2026-10-05 | NIP-92: `imeta` on kind 0 picture and banner, carried over on republish | 92.md:49, 80 |
+| 2026-10-17, 10-19 | NIP-01: a filter list that is empty matches nothing and is never "attribute absent"; clients SHOULD NOT send empty lists | 01.md:141 |
 
 ## 3. Relay ground truth
 
@@ -109,6 +113,13 @@ differently: REST and tag-indexed relay queries can trail a by-id read by
 minutes. "It is missing" is located by reading all four at the same moment and
 naming the first one that lacks it.
 
+| Path | Read it with |
+|---|---|
+| Relay REQ | §3, one relay per call |
+| funnelcake REST | `curl -s -w '\nHTTP %{http_code}\n' "$API/api/videos?limit=1"`, where `API` is `apiBaseUrl` in `mobile/lib/models/environment_config.dart` (production: `https://api.divine.video`). The paths and parameters the app sends are in `mobile/packages/funnelcake_api_client/lib/src/funnelcake_api_client.dart` (for example `/api/users/<pubkey hex>/videos`). A public GET is a read-only production read; keep the status code beside the body, as with `nak` |
+| Local cache | The Drift file is `{appSupport}/openvine/database/divine_db.db` (`connection_native.dart`). It may be encrypted at rest (SQLite3MultipleCiphers, `mobile/docs/sqlcipher_at_rest_plan.md`), and then `sqlite3` on a copy of the file cannot open it: query the DAO in the running app with `evaluate` (flutter lens §4). Hive boxes and `cache_sync` entries the same way |
+| Bloc state | `evaluate` `bloc.state` (flutter lens §4) |
+
 ## 5. Failure classes
 
 Pick the rows the claim sheet touches. Each is a prediction to test, not a
@@ -119,14 +130,15 @@ conclusion.
 | Replaceable tie-break | "the event with the lowest id … should be retained" (01.md:101) | Two publishes in one second; relays or caches keep different winners |
 | Read-modify-write clobber (kinds 0, 3, 10002, 10050, lists) | No NIP protects you; NIP-51 only says append (51.md:13) | A partial update republishes from a stale or empty base and drops tags or fields. Diff the relay's event before and after |
 | Addressable identity | `d` required for 34235 / 34236 (71.md:115); address is `kind:pubkey:d` | Edits appear as duplicates; `#a` and `#e` queries disagree |
-| Video kind coverage | 34235 / 34236 were absent from NIP-71 from 2025-01-30 to 2026-01-07; `duration` is an `imeta` property (71.md:48) yet the addressable example carries a top-level `duration` tag (71.md:207); multiple audio tracks are `imeta` variants and clients should prefer them over in-video audio (71.md:41-50) | A client written in that year queries only 21 / 22 and never sees Divine's 34236 videos, or the reverse; duration missing depending on which place a client reads; a client ignores or duplicates an audio track |
-| `since` / `until` inclusive | 01.md:143 | Paging duplicates or skips the boundary second |
-| `limit` | initial query only (01.md:149); `limit: 0` (01.md:151); relays clamp (`max_limit`) | "Missing" items past the clamp; a count that equals the clamp |
-| Unanswered is not empty | EOSE ends stored events (01.md:159); CLOSED refuses (01.md:178) | A timeout or CLOSED rendered as "nothing here yet" |
-| `OK` handling | 3rd field is the verdict; prefixes `duplicate, pow, blocked, rate-limited, invalid, restricted, mute, error` (01.md:166-182); `auth-required:` / `restricted:` (42.md:58-59) | `duplicate:` arrives with `true`; `rate-limited:` and `error:` are retryable; a late OK after a client timeout means the relay stored it |
+| Video kind coverage | the 34235 / 34236 gap and the audio-track variants are in §2; `duration` is an `imeta` property (71.md:48) yet the addressable example carries a top-level `duration` tag (71.md:207) | A client written in that year queries only 21 / 22 and never sees Divine's 34236 videos, or the reverse; duration missing depending on which place a client reads; a client ignores or duplicates an audio track |
+| `since` / `until` inclusive | 01.md:145 | Paging duplicates or skips the boundary second |
+| `limit` | initial query only (01.md:151); `limit: 0` returns no stored events, then EOSE, and the subscription stays live (01.md:153, 2026-09-04); relays clamp (`max_limit`) | "Missing" items past the clamp; a count that equals the clamp |
+| Empty filter list | `authors: []`, `ids: []`, `kinds: []` or an empty tag list matches nothing; it is not "no restriction" (01.md:141) | An empty follow list sent as `authors: []`: a conforming relay returns nothing, a relay that reads `[]` as "absent" returns the global stream, so the same code looks right on one relay and wrong on another. Grep the filter builders for a list that can be empty |
+| Unanswered is not empty | EOSE ends stored events (01.md:161); CLOSED refuses (01.md:180) | A timeout or CLOSED rendered as "nothing here yet" |
+| `OK` handling | 3rd field is the verdict; prefixes `duplicate, pow, blocked, rate-limited, invalid, restricted, mute, error` (01.md:168-184); `auth-required:` / `restricted:` (42.md:58-59) | `duplicate:` arrives with `true`; `rate-limited:` and `error:` are retryable; a late OK after a client timeout means the relay stored it |
 | Subscription id | max 64 chars (01.md:121) | Strict relays reject; Divine's own relays do not, so no local test catches it |
 | Id serialisation | escapes for `\n " \\ \r \t \b \f` only (01.md:49-55) | "event id does not match" on content with TAB / CR when either side escapes differently |
-| Relay URL identity | one endpoint per relay (01.md, 2026-05-28) | Trailing-slash or path variants treated as two relays: double REQ or a skipped publish |
+| Relay URL identity | one endpoint per relay when path segments change nothing (01.md:111, 2026-05-28) | Trailing-slash or path variants treated as two relays: double REQ or a skipped publish |
 | Gift-wrap time | seal and wrap `created_at` randomised "up to two days in the past" (17.md:59); the canonical time is the rumor's (59.md:111) | A `since` cursor misses fresh wraps: a wrap built with `nak gift wrap` in testing was dated 36 h back. Order by the rumor's time |
 | Seal authorship | kind 13 pubkey MUST equal the rumor's pubkey (17.md:57) | Impersonation if unchecked |
 | DM routing | publish only to the recipient's kind 10050 relays; if none, "clients shouldn't try" (17.md:77); relays SHOULD serve kind 1059 only to p-tagged users via AUTH (17.md:81) | Sends to the general pool; "delivered" with no reader; a relay leaks DM metadata or an unauthenticated client reads an empty inbox |
@@ -142,7 +154,7 @@ conclusion.
 | NIP-98 | `u` exactly equals the request URL including query; window ~60 s (98.md:42-43) | 401s from normalised URLs or device clock skew |
 | Blossom auth | kind 24242; `created_at` MUST be in the past, `expiration` in the future, `t` verb MUST match; header is Base64url without padding (BUD-11 at `hzrd149/blossom` b5bd280), unlike NIP-98's standard base64 | 401 on a device whose clock runs fast; 401 only for tokens whose base64 happens to contain `+ / =` |
 | NIP-46 | `remote-signer-pubkey` is not the user pubkey: call `get_public_key`; validate `secret` (46.md:9, 55-67) | Events signed or attributed to the wrong key; hijacked connect |
-| NIP-46 session teardown | `logout` is a courtesy hint; the client MUST still delete its client-keypair (46.md:133-135). Client metadata is unauthenticated and for display only (46.md:115-123) | A stale signer session survives logout; a signer trusts client metadata for authorization |
+| NIP-46 session teardown | `logout` (2026-06-15) is a courtesy hint; the client MUST still delete its client-keypair (46.md:109, 133-135). Client metadata (2026-06-23) is unauthenticated and for display only (46.md:48, 115-123) | A stale signer session survives logout; a signer trusts client metadata for authorization |
 | Signer readiness | repo rule, not a NIP: identity known ≠ signer ready | A publish attempted at `authenticated` fails once and is never retried |
 
 Divine-specific contracts (relay policy, REST lag, vanish boundary, moderation
@@ -161,17 +173,53 @@ production.
       --drop-ok 1 > <scratch>/proxy.jsonl </dev/null &      # then point the client at ws://localhost:47801
   ```
 
-  To put the app behind it, start the local stack (`mise run local_up` from `mobile/`; for the iOS simulator export `BLOSSOM_PUBLIC_URL=http://localhost:43003` first, per `AGENTS.md`), use `--upstream ws://localhost:47777` (the stack's relay, `localRelayPort` in `mobile/lib/models/environment_config.dart`), run the app with `DEFAULT_ENV=LOCAL`, and add `ws://localhost:47801` in the app's relay settings. Not yet run with the app as the client: so far only `nak` and `websocat` have connected through it.
+  To put the app behind it, the environment decides how. In every non-production environment the app accepts only relays on the environment's own host (`lib/services/nostr_service_factory.dart`), so under STAGING it takes `relay.staging.divine.video` and nothing else: a loopback proxy cannot be added there. Under `DEFAULT_ENV=LOCAL` the host is `localhost`, the default relay is `ws://localhost:47777` and the REST API shares that port (`mobile/lib/models/environment_config.dart`):
+
+  - **No local stack.** Run the proxy with `--listen 47777` and any `--upstream`, for example `wss://relay.staging.divine.video`. The app's own default relay now goes through it, and nothing needs adding in the settings. Plain HTTP to that port is forwarded too, so REST reads work.
+  - **With the local stack** (`mise run local_up` from `mobile/`; for the iOS simulator export `BLOSSOM_PUBLIC_URL=http://localhost:43003` first, per `AGENTS.md`): `--upstream ws://localhost:47777` (`localRelayPort`), the proxy on 47801, and add `ws://localhost:47801` in the app's relay settings. This route has not been run.
+
+  **Run with the app** on 2026-11-02: iOS 27.0 simulator, debug, the first route above, staging relay upstream.
+
+  - A signed-out app opens no relay WebSocket (every protected route redirects to the welcome screen, and the log says `relays: 0`). Account creation was not tried, because it writes. A session without a real account: import a throwaway key with `c.read(authServiceProvider).importFromHex(…)` through `evaluate`, post-frame, the expression read from a 0600 file on stdin and never in argv, and grep the run's logs for the key afterwards (0).
+  - **Signing in writes on its own**: five kind 3083 and one kind 10002 event in the first seconds, then a kind 22236 about every 15 s. Run with `--reject-event <prefix> --reject-event-count 100000` as a write guard and compare `rejected-with-OK-false` with what the app tried. The app logged the refusals as `OK accepted=false (reason=rate-limited)`.
+  - Plain HTTP through the proxy carries the method, path, query and `Accept` header only, no body and no `Authorization`: the `…/bulk` lookups answered 415 and authenticated endpoints 401, so REST writes cannot pass, and some REST on screen is partial.
+  - The app's relay log keeps three lines a minute per relay, site and level (`RelayDiagnosticsAdapter`), then prints `Further requestSettlement warning diagnostics suppressed until …`, so a burst of refusals leaves at most three lines. Count frames at the proxy.
+
+  | Fault | What the app did |
+  |---|---|
+  | proxy process ended (abrupt drop) | `Stream closed by remote`, `Reconnecting in 2s (attempt 1/4)`, `Re-issuing 10 saved relay requests`; all 10 answered |
+  | `--close-after 8` (close frame 4000) | the same path, reconnected about 2 s later |
+  | `--never-eose` (events flow, no EOSE) | after 10 s `Full-settlement request … ended inconclusively`; 5 s later `Relay sent no response during the settlement window; reconnecting`; the 10 REQs re-sent |
+  | `--stall-after 6`, REQs outstanding | the same settlement-window reconnect within about 5 s of the stall; the next connection settled normally |
+  | `--stall-after-ms 60000`, nothing outstanding (idle), the connection that carries the traffic | for two minutes the app's 7 kind 22236 EVENTs (its periodic one) and 37 relay frames were swallowed, and I found no app log line about them. Then `Connection idle for 119s (timeout: 90s), forcing disconnect`, `Reconnecting in 2s (attempt 1/4)`, and the new connection reached the proxy 2.1 s later (an earlier run, proxy restarted under a live app: idle 92 s, then `Re-issuing 11 saved relay requests`). `WebSocketConnectionManager` checks every 30 s (`heartbeatInterval`) for 90 s without a *received* frame (`idleTimeout`), so detection lands 90 to 120 s after the last inbound frame, whatever the app sends. None of the swallowed EVENTs was sent again after the reconnect (each id appears once at the proxy, in two runs) |
+  | `--close-req auth-required`, 6 REQs, no AUTH challenge first | none re-sent in 45 s; one `Relay closed request … (reason=auth-required)` line. A real relay sends the challenge first, which this fault does not |
+
+  Not run with the app: `--drop-ok`, `--delay-ok-ms`, `--drop-event` and `--duplicate-event` (they need an app write to get through, which the guard prevents). Nothing was run on an iPhone.
+
+  **Run on a phone**, 2026-11-02: a Galaxy S23 (Android 17) on USB, debug, `DEFAULT_ENV=LOCAL`, staging upstream, the proxy on loopback with the write guard, `adb reverse tcp:47777 tcp:47777`, the scratch `localHost` change described below, and a throwaway key imported as above. The proxy never left loopback.
+
+  - It looked like the simulator: four WebSockets within a second of launch, connection 3 carrying the traffic (190 of 199 frames), 1, 2 and 4 living under a second, the five kind 3083 and the kind 10002 writes rejected, REST reads answered 200, `…/bulk` 415 and an authenticated endpoint 401.
+  - **Proxy ended, back 7 s later.** With `adb reverse` the phone accepts the connection and drops it when the Mac side refuses, so the app logged `Connection closed before full header was received` (twice, 2 s then 4 s later) instead of a refusal. `Relay connectivity lost` came 7.5 s after the proxy ended; the third attempt, 8 s after the second, reached the new proxy: `Re-issuing 10 saved relay requests`, and `Relay connectivity restored` 10 s after the proxy returned.
+  - **Backgrounded for 2 min 35 s, proxy up.** The staging relay closed the socket exactly 60 s after the last frame (`relay-closed`, `told_client` true), 30 s after the app went to the background. The app's reconnects then failed with `Failed host lookup: 'localhost' (OS Error: No address associated with hostname)`, three logged, 2, 4 and 8 s apart, although the proxy was up, and `Relay connectivity lost` followed. Data Saver was off (`cmd netpolicy get restrict-background`); I did not find the cause. For 128 s the app had no relay socket. On resume it reconnected within a second (`Relay reconnect after app resume finished: 1 of 1 relays connected`) and the proxy saw 21 REQs on the new connection. A second `inactive` then `resumed` blip 9 s later (not isolated) made it log `Force reconnecting all relays` again.
 
   | Flag | Reproduces |
   |---|---|
   | `--drop-ok N` | the relay stored the event and the client never heard: with `nak` as client the publish "failed" while a direct read returned the event |
+  | `--delay-ok-ms MS` | a late OK: the client timed out, the relay stored it, and the OK arrives afterwards |
+  | `--drop-event N` | an EVENT that never reached the relay: the same silence as a lost OK, but a direct read finds nothing |
+  | `--reject-event PREFIX` | a relay that refuses the write: `["OK", id, false, "PREFIX: injected"]` (`rate-limited`, `error`, `restricted`, …), nothing stored; `--reject-event-count` for how many |
+  | `--duplicate-event N` | the relay delivering an EVENT twice: client-side dedup |
   | `--close-req auth-required` | a refused REQ (`CLOSED`), for the first `--close-req-count` requests |
   | `--delay-eose-ms MS`, `--never-eose` | a slow relay, and a REQ that never terminates |
-  | `--refuse-connects N` | the first N connections fail (HTTP 503), then recover |
+  | `--refuse-connects N` | the first N WebSocket handshakes fail (HTTP 503), then recover. The NIP-11 fetch is forwarded and not counted, so a client that reads NIP-11 first still meets the refusal |
+  | `--close-after N` | the connection closed with a close frame (code 4000) after N relay frames, for the first connection (`--close-after-count`): the reconnect path |
+  | `--stall-after N` | a half-open connection: socket open, nothing delivered either way after N relay frames, a close from the relay included |
+  | `--stall-after-ms MS` | the same, MS after the connection opens. It is the way to stall an idle connection: an idle app receives no frames for `--stall-after` to count. `--stall-after-count K` counts the first K connections, **the short probe connections the app opens at launch included**: on a cold start connections 1, 2 and 4 each lived 1 to 4 s and connection 3 carried all the traffic, so a stall aimed at connection 1 stalled nothing (the first run of this check logged a stall for a socket that was already closed, which is why the proxy now cancels the timer). Use `--stall-after-count 3` on a cold start, or restart the proxy under a running app, which reconnects on one connection |
   | `--delay-ms MS` | latency on every relay frame |
 
-  It logs one JSON line per frame (direction, type, size, action, and the frame itself, untruncated so ids stay greppable), forwards the NIP-11 document, and exits by itself after `--max-seconds` (default 1800) so it cannot outlive the session. All of the above ran against `nak serve`; none of it, including the app wiring above, has been run against the app yet. A simulator reaches it on `localhost` with `DEFAULT_ENV=LOCAL`. A phone cannot reach the Mac's `localhost`, and the app drops a cleartext `ws://` relay on any other host (`normalizeRelayUrl` in `mobile/packages/nostr_client/lib/src/relay_manager.dart` checks `isLoopbackHost`), so a phone run silently loads zero relays. It needs `--bind-all`, the Mac's LAN address, and a scratch, never-committed patch that lets that check accept the LAN address: an ask-the-user item.
+  Ending the proxy process drops its sockets with no close frame, which is the closest this tool gets to the network taking a connection away (the "background for 2+ minutes" row of the Flutter lens §6). `--close-after` is a clean close and `--stall-after` a silent one: pick the one the claim describes. The delay flags count from when the relay sent a frame and keep frame order, so whatever the relay sent after a held OK or EOSE arrives with it: an EVENT that is late behind one is the proxy's doing, not the app's.
+
+  It logs one JSON line per frame (connection number, direction, type, size, action, and the frame itself, untruncated so ids stay greppable) and per event (`client-connected`, `stalled`, `client-closed`, `relay-closed` with whether the client was told), forwards the NIP-11 document, rejects a mistyped flag with exit 64 instead of ignoring it, and exits by itself after `--max-seconds` (default 1800) so it cannot outlive the session. `dart <skill dir>/scripts/relay-fault-proxy-selftest.dart` runs every fault above against a fake relay (about fifteen seconds); run it after changing the proxy. A simulator reaches the proxy on `localhost` with `DEFAULT_ENV=LOCAL`. A phone cannot reach the Mac's `localhost`, and the app drops a cleartext `ws://` relay on any other host (`normalizeRelayUrl` in `mobile/packages/nostr_client/lib/src/relay_manager.dart` checks `isLoopbackHost`), so a phone run silently loads zero relays. An Android phone on USB needs no LAN: `adb reverse tcp:47777 tcp:47777` makes the phone's `localhost:47777` the Mac's, so the check passes and the proxy stays on loopback. The one scratch, never-committed change is `localHost` in `environment_config.dart`, which returns the emulator alias `10.0.2.2` on Android: make it return `loopbackHost`, build and run with it, then revert it and check `git status` (I kept it in place for the whole run). An iPhone has no `adb reverse` and needs `--bind-all`, the Mac's LAN address and a patch that lets the check accept that address. Either is an ask-the-user item on a phone.
 - **Test level.** A fake relay in a package test reproduces most ordering and refusal bugs in milliseconds. Reach for the device only when the claim involves lifecycle, sockets across backgrounding, or the UI.
 
 ## 7. Safety

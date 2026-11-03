@@ -4455,8 +4455,17 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Tidak dapat mencapai pelayan. Semak sambungan anda dan cuba lagi.';
+  String get profileVideosLoadFailedTitle => 'Tidak dapat memuatkan video anda';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'Tidak dapat memuatkan video';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Semak sambungan anda dan cuba lagi.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Cuba lagi';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -6898,21 +6907,19 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Dipilih';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Tidak dipilih';
 
   @override
   String get videoClipSemanticHintDisabled => 'Dilumpuhkan';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Ketik untuk memilih, tekan lama untuk pratonton';
+  String get videoClipSemanticHintSelect => 'Ketik untuk memilih';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Ketik untuk menyahpilih, tekan lama untuk pratonton';
+  String get videoClipSemanticHintDeselect => 'Ketik untuk menyahpilih';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Ketik untuk pratonton';
 
   @override
   String get routerInvalidCreator => 'Pencipta tidak sah';
@@ -8759,6 +8766,28 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klip dipulihkan',
+      one: 'Klip dipulihkan',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klip dipadam secara kekal',
+      one: 'Klip dipadam secara kekal',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'Tutup perakam video';
 
   @override
@@ -9043,6 +9072,9 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorEffectZoomBlur => 'Kabur Zum';
+
+  @override
+  String get videoEditorEffectSpinBlur => 'Kabur Putar';
 
   @override
   String get videoEditorEffectComic => 'Komik';

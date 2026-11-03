@@ -47,6 +47,8 @@ void main() {
       int selectionIndex = -1,
       bool disabled = false,
       bool showArchivedBadge = false,
+      bool showSelectionIndicator = true,
+      bool interactive = true,
       VoidCallback? onTap,
     }) {
       return MaterialApp(
@@ -59,7 +61,8 @@ void main() {
             selectionIndex: selectionIndex,
             disabled: disabled,
             showArchivedBadge: showArchivedBadge,
-            onTap: onTap ?? () {},
+            showSelectionIndicator: showSelectionIndicator,
+            onTap: interactive ? onTap ?? () {} : null,
           ),
         ),
       );
@@ -249,6 +252,51 @@ void main() {
         final semanticsData = semantics.getSemanticsData();
         expect(semanticsData.hasAction(SemanticsAction.tap), isTrue);
         expect(find.bySemanticsLabel('5.00'), findsNothing);
+      });
+
+      testWidgets('announces the preview a tap opens without the badge', (
+        tester,
+      ) async {
+        // Selected but badge-less: how the library shows a clip the editor
+        // pre-selected while selection mode is off.
+        await tester.pumpWidget(
+          buildWidget(selectionIndex: 1, showSelectionIndicator: false),
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        expect(
+          tester.getSemantics(find.byType(VideoClipThumbnailCard)),
+          isSemantics(
+            label: l10n.videoClipSemanticLabel('5.00'),
+            value: '',
+            hint: l10n.videoClipSemanticHintPreview,
+            hasSelectedState: false,
+            isButton: true,
+            hasTapAction: true,
+          ),
+        );
+      });
+
+      testWidgets('is not announced as a button without a tap action', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(interactive: false, showSelectionIndicator: false),
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        expect(
+          tester.getSemantics(find.byType(VideoClipThumbnailCard)),
+          isSemantics(
+            label: l10n.videoClipSemanticLabel('5.00'),
+            value: '',
+            hint: '',
+            isButton: false,
+            hasTapAction: false,
+            hasEnabledState: false,
+            hasSelectedState: false,
+          ),
+        );
       });
 
       testWidgets('announces that a badged clip is archived', (tester) async {

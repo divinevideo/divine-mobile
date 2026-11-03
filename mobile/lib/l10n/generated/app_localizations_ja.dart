@@ -4184,7 +4184,16 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError => 'サーバーに接続できません。接続を確認してもう一度お試しください。';
+  String get profileVideosLoadFailedTitle => '動画を読み込めませんでした';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => '動画を読み込めませんでした';
+
+  @override
+  String get profileVideosLoadFailedSubtitle => '接続を確認してもう一度お試しください。';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'もう一度試す';
 
   @override
   String get profileFeedLoadMoreError => 'これ以上の動画を読み込めませんでした。引っ張って更新してください。';
@@ -6531,19 +6540,19 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => '選択済み';
-
-  @override
   String get videoClipSemanticValueNotSelected => '未選択';
 
   @override
   String get videoClipSemanticHintDisabled => '無効';
 
   @override
-  String get videoClipSemanticHintSelect => 'タップして選択、長押しでプレビュー';
+  String get videoClipSemanticHintSelect => 'タップして選択';
 
   @override
-  String get videoClipSemanticHintDeselect => 'タップして選択解除、長押しでプレビュー';
+  String get videoClipSemanticHintDeselect => 'タップして選択解除';
+
+  @override
+  String get videoClipSemanticHintPreview => 'タップしてプレビュー';
 
   @override
   String get routerInvalidCreator => '無効なクリエイター';
@@ -8312,6 +8321,28 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件のクリップを復元しました',
+      one: 'クリップを復元しました',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count件のクリップを完全に削除しました',
+      one: 'クリップを完全に削除しました',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => '動画レコーダーを閉じる';
 
   @override
@@ -8591,6 +8622,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorEffectZoomBlur => 'ズームブラー';
+
+  @override
+  String get videoEditorEffectSpinBlur => 'スピンブラー';
 
   @override
   String get videoEditorEffectComic => 'コミック';

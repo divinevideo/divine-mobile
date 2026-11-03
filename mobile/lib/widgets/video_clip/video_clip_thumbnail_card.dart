@@ -6,10 +6,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/divine_video_clip.dart';
-import 'package:openvine/utils/video_editor_utils.dart';
 import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_clip/video_clip_hero.dart';
+import 'package:openvine/widgets/video_clip/video_clip_semantic_label.dart';
 
 /// Thumbnail card for a single clip in the grid.
 ///
@@ -37,11 +37,15 @@ class VideoClipThumbnailCard extends StatefulWidget {
   final int selectionIndex;
 
   /// Whether to show the selection indicator in the top-right corner.
+  ///
+  /// Without it a tap opens the clip preview, which is what the card tells
+  /// screen readers it does.
   final bool showSelectionIndicator;
 
   /// Callback invoked when the card is tapped. When `null`, the card
   /// is non-interactive (e.g. in the trash bin view where restore /
-  /// delete-now actions live outside the thumbnail).
+  /// delete-now actions live outside the thumbnail) and is not announced as
+  /// a button.
   final VoidCallback? onTap;
 
   /// Whether to show the duration badge at the bottom-left corner.
@@ -85,19 +89,7 @@ class _VideoClipThumbnailCardState extends State<VideoClipThumbnailCard> {
       final backup? when backup.needsAttention => backup.status,
       _ => null,
     };
-    // A stop-motion clip's playback length is a tiny, misleading value, which
-    // is why the duration badge is hidden for it. Announcing that same number
-    // would leak to screen readers exactly what the UI withholds, so describe
-    // the clip by its still count instead.
-    final label = widget.clip.isStopMotion
-        ? l10n.videoClipStopMotionSemanticLabel(
-            l10n.videoEditorStopMotionFramesCount(
-              widget.clip.stopMotionFrames?.length ?? 0,
-            ),
-          )
-        : l10n.videoClipSemanticLabel(
-            widget.clip.duration.toFormattedSeconds(),
-          );
+    final label = widget.clip.semanticLabel(l10n);
     final labelWithBackup = switch (backupStatus) {
       ClipGalleryBackupStatus.pending =>
         l10n.videoClipBackupPendingSemanticLabel(label),
@@ -106,30 +98,37 @@ class _VideoClipThumbnailCardState extends State<VideoClipThumbnailCard> {
       ClipGalleryBackupStatus.saved || null => label,
     };
 
+    final isInteractive = widget.onTap != null;
+    // Selection is only announced while its badge is on screen. Entering the
+    // library with clips already in the editor pre-selects them while
+    // selection mode is off, and there a tap opens the preview instead.
+    final announcesSelection = isInteractive && widget.showSelectionIndicator;
+
     return Semantics(
       container: true,
       label: widget.showArchivedBadge
           ? l10n.videoClipArchivedSemanticLabel(labelWithBackup)
           : labelWithBackup,
-      value: _isSelected
+      value: announcesSelection
           // The badge shows the pick order, which decides the order clips are
           // stitched into, so announce it rather than letting the badge's bare
-          // digits merge into the label. Only when the badge is actually on
-          // screen: entering the library with clips already in the editor
-          // pre-selects them while selection mode is off, so the ordinal would
-          // otherwise name a position with no visible referent.
-          ? widget.showSelectionIndicator
+          // digits merge into the label.
+          ? _isSelected
                 ? l10n.videoClipSemanticValueSelectedAtPosition(
                     widget.selectionIndex,
                   )
-                : l10n.videoClipSemanticValueSelected
-          : l10n.videoClipSemanticValueNotSelected,
-      button: true,
-      selected: _isSelected,
-      enabled: !widget.disabled,
+                : l10n.videoClipSemanticValueNotSelected
+          : null,
+      button: isInteractive,
+      selected: announcesSelection ? _isSelected : null,
+      enabled: isInteractive ? !widget.disabled : null,
       onTap: widget.disabled ? null : widget.onTap,
-      hint: widget.disabled
+      hint: !isInteractive
+          ? null
+          : widget.disabled
           ? l10n.videoClipSemanticHintDisabled
+          : !widget.showSelectionIndicator
+          ? l10n.videoClipSemanticHintPreview
           : _isSelected
           ? l10n.videoClipSemanticHintDeselect
           : l10n.videoClipSemanticHintSelect,
@@ -413,9 +412,8 @@ class _DurationBadge extends StatelessWidget {
         child: ExcludeSemantics(
           child: Text(
             clip.durationInSeconds.toStringAsFixed(2),
-            style: VineTheme.labelSmallFont(
-              color: VineTheme.whiteText,
-            ).copyWith(fontFeatures: [const .tabularFigures()]),
+            style: VineTheme.labelSmallFont(color: VineTheme.whiteText)
+                .copyWith(fontFeatures: [const .tabularFigures()]),
           ),
         ),
       ),

@@ -9900,7 +9900,13 @@ class DirectMessageRow extends DataClass
   /// Optional parent message ID (from `e` tag) for threaded replies.
   final String? replyToId;
 
-  /// The gift-wrap event ID (kind 1059) used for deduplication.
+  /// The gift-wrap event ID (kind 1059) used for deduplication, unique per
+  /// [ownerPubkey].
+  ///
+  /// An inbound wrap is addressed to one recipient, but an outgoing row stores
+  /// the *recipient's* wrap id and a kind-4 row stores the event id both ends
+  /// share, so with both accounts on one device one id sits on two accounts'
+  /// rows (#6645).
   final String giftWrapId;
 
   /// Optional conversation subject/title (from `subject` tag).
@@ -17692,9 +17698,10 @@ class $ProcessedGiftWrapsTable extends ProcessedGiftWraps
   late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
     'owner_pubkey',
     aliasedName,
-    true,
+    false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   @override
   List<GeneratedColumn> get $columns => [giftWrapId, processedAt, ownerPubkey];
@@ -17745,7 +17752,7 @@ class $ProcessedGiftWrapsTable extends ProcessedGiftWraps
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {giftWrapId};
+  Set<GeneratedColumn> get $primaryKey => {giftWrapId, ownerPubkey};
   @override
   ProcessedGiftWrap map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -17761,7 +17768,7 @@ class $ProcessedGiftWrapsTable extends ProcessedGiftWraps
       ownerPubkey: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}owner_pubkey'],
-      ),
+      )!,
     );
   }
 
@@ -17773,12 +17780,15 @@ class $ProcessedGiftWrapsTable extends ProcessedGiftWraps
 
 class ProcessedGiftWrap extends DataClass
     implements Insertable<ProcessedGiftWrap> {
-  /// The kind 1059 gift-wrap event id (outer). Dedup key.
+  /// The kind 1059 gift-wrap event id (outer), or the event id of a suppressed
+  /// kind 4. Dedup key.
   ///
-  /// Intentionally NOT scoped by owner: gift-wrap event ids are globally unique
-  /// per the Nostr protocol, so cross-account dedup prevents re-processing the
-  /// same relay event for multiple local accounts — matching
-  /// [DirectMessages.giftWrapId] dedup semantics.
+  /// Unique per [ownerPubkey], not per device. A wrap is addressed to one
+  /// recipient, but a kind 4 is shared by both ends, so with both accounts on
+  /// this device each one records its own outcome for the id and must find it
+  /// again: a message dual-sent as NIP-17 and kind 4 is merged into one row,
+  /// and an account that cannot remember having done so stores the kind 4 a
+  /// second time on the next replay (#6645).
   final String giftWrapId;
 
   /// When the wrap was terminally processed (unix seconds).
@@ -17788,23 +17798,25 @@ class ProcessedGiftWrap extends DataClass
   /// pruning an old row would make those wraps eligible for decryption again.
   final int processedAt;
 
-  /// Recipient pubkey this wrap was processed for. Not part of the global
-  /// gift-wrap dedup key, but used to scope account cleanup without deleting
-  /// another saved account's ledger entries.
-  final String? ownerPubkey;
+  /// Hex public key of the account that processed this wrap.
+  ///
+  /// Part of the primary key, so NOT NULL with an empty-string default: SQLite
+  /// compares NULLs as distinct inside a unique key, which would stop two
+  /// ownerless rows for one id from collapsing. `''` is the legacy sentinel
+  /// `direct_messages` already uses, and rows written before v32 are backfilled
+  /// to it. Cleanup and lookups treat it as the account's own.
+  final String ownerPubkey;
   const ProcessedGiftWrap({
     required this.giftWrapId,
     required this.processedAt,
-    this.ownerPubkey,
+    required this.ownerPubkey,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['gift_wrap_id'] = Variable<String>(giftWrapId);
     map['processed_at'] = Variable<int>(processedAt);
-    if (!nullToAbsent || ownerPubkey != null) {
-      map['owner_pubkey'] = Variable<String>(ownerPubkey);
-    }
+    map['owner_pubkey'] = Variable<String>(ownerPubkey);
     return map;
   }
 
@@ -17812,9 +17824,7 @@ class ProcessedGiftWrap extends DataClass
     return ProcessedGiftWrapsCompanion(
       giftWrapId: Value(giftWrapId),
       processedAt: Value(processedAt),
-      ownerPubkey: ownerPubkey == null && nullToAbsent
-          ? const Value.absent()
-          : Value(ownerPubkey),
+      ownerPubkey: Value(ownerPubkey),
     );
   }
 
@@ -17826,7 +17836,7 @@ class ProcessedGiftWrap extends DataClass
     return ProcessedGiftWrap(
       giftWrapId: serializer.fromJson<String>(json['giftWrapId']),
       processedAt: serializer.fromJson<int>(json['processedAt']),
-      ownerPubkey: serializer.fromJson<String?>(json['ownerPubkey']),
+      ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
     );
   }
   @override
@@ -17835,18 +17845,18 @@ class ProcessedGiftWrap extends DataClass
     return <String, dynamic>{
       'giftWrapId': serializer.toJson<String>(giftWrapId),
       'processedAt': serializer.toJson<int>(processedAt),
-      'ownerPubkey': serializer.toJson<String?>(ownerPubkey),
+      'ownerPubkey': serializer.toJson<String>(ownerPubkey),
     };
   }
 
   ProcessedGiftWrap copyWith({
     String? giftWrapId,
     int? processedAt,
-    Value<String?> ownerPubkey = const Value.absent(),
+    String? ownerPubkey,
   }) => ProcessedGiftWrap(
     giftWrapId: giftWrapId ?? this.giftWrapId,
     processedAt: processedAt ?? this.processedAt,
-    ownerPubkey: ownerPubkey.present ? ownerPubkey.value : this.ownerPubkey,
+    ownerPubkey: ownerPubkey ?? this.ownerPubkey,
   );
   ProcessedGiftWrap copyWithCompanion(ProcessedGiftWrapsCompanion data) {
     return ProcessedGiftWrap(
@@ -17886,7 +17896,7 @@ class ProcessedGiftWrap extends DataClass
 class ProcessedGiftWrapsCompanion extends UpdateCompanion<ProcessedGiftWrap> {
   final Value<String> giftWrapId;
   final Value<int> processedAt;
-  final Value<String?> ownerPubkey;
+  final Value<String> ownerPubkey;
   final Value<int> rowid;
   const ProcessedGiftWrapsCompanion({
     this.giftWrapId = const Value.absent(),
@@ -17918,7 +17928,7 @@ class ProcessedGiftWrapsCompanion extends UpdateCompanion<ProcessedGiftWrap> {
   ProcessedGiftWrapsCompanion copyWith({
     Value<String>? giftWrapId,
     Value<int>? processedAt,
-    Value<String?>? ownerPubkey,
+    Value<String>? ownerPubkey,
     Value<int>? rowid,
   }) {
     return ProcessedGiftWrapsCompanion(
@@ -33028,14 +33038,14 @@ typedef $$ProcessedGiftWrapsTableCreateCompanionBuilder =
     ProcessedGiftWrapsCompanion Function({
       required String giftWrapId,
       required int processedAt,
-      Value<String?> ownerPubkey,
+      Value<String> ownerPubkey,
       Value<int> rowid,
     });
 typedef $$ProcessedGiftWrapsTableUpdateCompanionBuilder =
     ProcessedGiftWrapsCompanion Function({
       Value<String> giftWrapId,
       Value<int> processedAt,
-      Value<String?> ownerPubkey,
+      Value<String> ownerPubkey,
       Value<int> rowid,
     });
 
@@ -33156,7 +33166,7 @@ class $$ProcessedGiftWrapsTableTableManager
               ({
                 Value<String> giftWrapId = const Value.absent(),
                 Value<int> processedAt = const Value.absent(),
-                Value<String?> ownerPubkey = const Value.absent(),
+                Value<String> ownerPubkey = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProcessedGiftWrapsCompanion(
                 giftWrapId: giftWrapId,
@@ -33168,7 +33178,7 @@ class $$ProcessedGiftWrapsTableTableManager
               ({
                 required String giftWrapId,
                 required int processedAt,
-                Value<String?> ownerPubkey = const Value.absent(),
+                Value<String> ownerPubkey = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ProcessedGiftWrapsCompanion.insert(
                 giftWrapId: giftWrapId,

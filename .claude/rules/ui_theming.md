@@ -719,11 +719,24 @@ library is imported.
   the neighbours warm for fast resume, so it is not interchangeable with a
   page owner: the condition is
   `shouldRetainPlayer => isBottomSheetOpen && !isPageOpen`, so holding a page
-  owner and a sheet owner at once loses the retention. The two differ on
-  navigator — the first forwards `useRootNavigator` and defaults it to
-  `true`, while the second takes none and inherits `VineBottomSheet.show`'s
-  `false`, so it always lands on the branch navigator where the `AppShell`
-  net above cannot fire.
+  owner and a sheet owner at once loses the retention. Both helpers open on
+  the root navigator by default, so they cover the bottom navigation: the
+  first forwards `useRootNavigator` (default `true`), and the second takes
+  none and inherits `VineBottomSheet.show`'s `true` default.
+
+A `VineBottomSheet` opened from a tab page is on the root navigator, not the
+tab's own. Close it from a context inside the sheet, for example
+`Navigator.of(context).pop(value)` in the sheet body, never from a
+`Navigator.of(context)` resolved before `show`: that navigator is the tab's,
+so the pop targets the page beneath the sheet and the sheet stays open. When
+the pop has to be resolved before the opener unmounts, resolve
+`Navigator.of(context, rootNavigator: true)`, as `ProfileHeaderWidget` does
+for its session-expired sheet.
+
+A snackbar raised while a sheet is open lands on its opener's `Scaffold`,
+underneath the sheet: the shell's, for a tab page. A sheet that reports through
+a snackbar wraps itself in its own `ScaffoldMessenger` and `Scaffold` through
+`contentWrapper`, as the community-suggest and chroma-key sheets do.
 
 `pushWithVideoPause` releases its owner from `push(...).whenComplete(...)`,
 which runs on a **pop** alone: a `go()`-style dismissal — the Android back

@@ -639,7 +639,7 @@ void main() {
 
         expect(
           tester.takeAnnouncements().map((a) => a.message),
-          contains(l10n.profileFeedError),
+          contains(l10n.profileVideosLoadFailedTitle),
         );
 
         await tester.pumpWidget(const SizedBox.shrink());
@@ -655,7 +655,7 @@ void main() {
         );
         final l10n = lookupAppLocalizations(const Locale('en'));
 
-        expect(find.text(l10n.profileFeedError), findsOneWidget);
+        expect(find.text(l10n.profileVideosLoadFailedTitle), findsOneWidget);
         expect(settingsButton, findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());
@@ -679,7 +679,7 @@ void main() {
           ],
         );
         final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.text(l10n.profileFeedError), findsOneWidget);
+        expect(find.text(l10n.profileVideosLoadFailedTitle), findsOneWidget);
 
         when(
           () => videosRepository.getAuthorFeed(
@@ -695,7 +695,7 @@ void main() {
         await tester.runAsync(pumpEventQueue);
         await tester.pump();
 
-        expect(find.text(l10n.profileFeedError), findsNothing);
+        expect(find.text(l10n.profileVideosLoadFailedTitle), findsNothing);
         expect(find.text(l10n.profileNoVideosTitle), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());
@@ -714,7 +714,7 @@ void main() {
             (_) async => const AuthorFeedResult(authorPubkey: _authorPubkeyHex),
           );
 
-      testWidgets('Retry reloads the videos', (
+      testWidgets('Try again reloads the videos', (
         tester,
       ) async {
         stubFeedThrows();
@@ -726,7 +726,7 @@ void main() {
         final l10n = lookupAppLocalizations(const Locale('en'));
 
         stubFeedEmpty();
-        final retry = find.text(l10n.profileRetryButton);
+        final retry = find.text(l10n.profileVideosLoadFailedRetry);
         await scrollUntilTappable(
           tester,
           retry,
@@ -742,7 +742,7 @@ void main() {
         await tester.runAsync(pumpEventQueue);
         await tester.pump();
 
-        expect(find.text(l10n.profileFeedError), findsNothing);
+        expect(find.text(l10n.profileVideosLoadFailedTitle), findsNothing);
         expect(find.text(l10n.profileNoVideosTitle), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());
@@ -769,7 +769,7 @@ void main() {
         await tester.runAsync(pumpEventQueue);
         await tester.pump();
 
-        expect(find.text(l10n.profileFeedError), findsNothing);
+        expect(find.text(l10n.profileVideosLoadFailedTitle), findsNothing);
         expect(find.text(l10n.profileNoVideosTitle), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());
@@ -789,7 +789,7 @@ void main() {
           profileRetaps: retaps,
         );
         final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.text(l10n.profileFeedError), findsOneWidget);
+        expect(find.text(l10n.profileVideosLoadFailedTitle), findsOneWidget);
 
         stubFeedEmpty();
         retaps.request();
@@ -797,14 +797,14 @@ void main() {
         await tester.runAsync(pumpEventQueue);
         await tester.pump();
 
-        expect(find.text(l10n.profileFeedError), findsNothing);
+        expect(find.text(l10n.profileVideosLoadFailedTitle), findsNothing);
         expect(find.text(l10n.profileNoVideosTitle), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 3));
       });
 
-      testWidgets('shows the error and Retry in the Videos tab', (
+      testWidgets('shows the error and Try again in the Videos tab', (
         tester,
       ) async {
         stubFeedThrows();
@@ -815,8 +815,8 @@ void main() {
         );
         final l10n = lookupAppLocalizations(const Locale('en'));
 
-        expect(find.text(l10n.profileFeedError), findsOneWidget);
-        expect(find.text(l10n.profileRetryButton), findsOneWidget);
+        expect(find.text(l10n.profileVideosLoadFailedTitle), findsOneWidget);
+        expect(find.text(l10n.profileVideosLoadFailedRetry), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 3));

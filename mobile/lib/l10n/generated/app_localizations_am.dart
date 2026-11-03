@@ -4360,8 +4360,16 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'አገልጋዩ ጋር መድረስ አልተቻለም። ግንኙነትዎን አረጋግጠው እንደገና ይሞክሩ።';
+  String get profileVideosLoadFailedTitle => 'ቪዲዮዎችዎን መጫን አልተቻለም';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'ቪዲዮዎችን መጫን አልተቻለም';
+
+  @override
+  String get profileVideosLoadFailedSubtitle => 'ግንኙነትዎን አረጋግጠው እንደገና ይሞክሩ።';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'እንደገና ይሞክሩ';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -6739,21 +6747,19 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'ተመርጧል';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'አልተመረጠም';
 
   @override
   String get videoClipSemanticHintDisabled => 'ተሰናክሏል';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'ለመምረጥ ነካ ያድርጉ፣ ቅድሚያ ለማሳየት ረዘም ያሉ ጫን';
+  String get videoClipSemanticHintSelect => 'ለመምረጥ ነካ ያድርጉ';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'ለማቋረጥ ነካ ያድርጉ፣ ቅድሚያ ለማሳየት ረዘም ያሉ ጫን';
+  String get videoClipSemanticHintDeselect => 'ለማቋረጥ ነካ ያድርጉ';
+
+  @override
+  String get videoClipSemanticHintPreview => 'ቅድሚያ ለማሳየት ነካ ያድርጉ';
 
   @override
   String get routerInvalidCreator => 'ልክ ያልሆነ ፈጣሪ';
@@ -8555,6 +8561,28 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ክሊፖች ተመልሰዋል',
+      one: 'ክሊፑ ተመልሷል',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ክሊፖች በቋሚነት ተሰርዘዋል',
+      one: 'ክሊፑ በቋሚነት ተሰርዟል',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'የቪዲዮ መቅረጫ ዝጋ';
 
   @override
@@ -8837,6 +8865,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorEffectZoomBlur => 'የማጉላት ብዥታ';
+
+  @override
+  String get videoEditorEffectSpinBlur => 'የማሽከርከር ብዥታ';
 
   @override
   String get videoEditorEffectComic => 'ኮሚክ';

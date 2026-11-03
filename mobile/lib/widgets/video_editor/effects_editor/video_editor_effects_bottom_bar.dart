@@ -257,6 +257,10 @@ ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
     asset: 'shaders/zoom_blur.frag',
     values: const [1.0],
   ),
+  spinBlurVideoEffectId => (
+    asset: 'shaders/spin_blur.frag',
+    values: const [1.0],
+  ),
   comicVideoEffectId => (asset: 'shaders/comic.frag', values: const [1.0]),
   eightBitVideoEffectId => (
     asset: 'shaders/eight_bit.frag',
@@ -441,6 +445,7 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
     rippleVideoEffectId => context.l10n.videoEditorEffectRipple,
     flutedGlassVideoEffectId => context.l10n.videoEditorEffectFlutedGlass,
     zoomBlurVideoEffectId => context.l10n.videoEditorEffectZoomBlur,
+    spinBlurVideoEffectId => context.l10n.videoEditorEffectSpinBlur,
     comicVideoEffectId => context.l10n.videoEditorEffectComic,
     eightBitVideoEffectId => context.l10n.videoEditorEffectEightBit,
     anaglyphVideoEffectId => context.l10n.videoEditorEffectAnaglyph,

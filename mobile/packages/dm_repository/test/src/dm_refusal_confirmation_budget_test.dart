@@ -88,7 +88,10 @@ void main() {
       ),
     ).thenAnswer((_) async => <String, int>{});
     when(
-      () => directMessagesDao.hasGiftWrap(any()),
+      () => directMessagesDao.hasGiftWrap(
+        any(),
+        ownerPubkey: any(named: 'ownerPubkey'),
+      ),
     ).thenAnswer((_) async => false);
   });
 
@@ -561,7 +564,10 @@ void main() {
         // quiet duplicate skip instead of a persist that fails on unstubbed
         // DAO calls and is swallowed.
         when(
-          () => directMessagesDao.hasGiftWrap(outgoing.id),
+          () => directMessagesDao.hasGiftWrap(
+            outgoing.id,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => true);
         when(
           () => directMessagesDao.getMessageById(

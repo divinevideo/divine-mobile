@@ -119,9 +119,11 @@ class _LaunchStatusReaderState extends ConsumerState<_LaunchStatusReader> {
     // recorder, an editor, a conversation or the app-update dialog a push
     // would skip their own exit steps, such as the recorder's lock and pause,
     // so the closure waits until the shell is in front. A sheet on a tab's own
-    // navigator does not cover the shell, which is harmless: a sheet has no
-    // exit steps to skip. Account Status marks a closure it explains as shown,
-    // so one the account opened itself in the meantime is not opened again.
+    // navigator (a raw `showModalBottomSheet`) does not cover the shell, which
+    // is harmless: a sheet has no exit steps to skip. `VineBottomSheet` opens
+    // on the root navigator by default and does cover it. Account Status marks
+    // a closure it explains as shown, so one the account opened itself in the
+    // meantime is not opened again.
     if (!(ModalRoute.isCurrentOf(context) ?? true)) return;
     notice.shown();
     if (pubkey == null) return;

@@ -4516,8 +4516,19 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Сървърът е недостъпен. Провери връзката си и опитай отново.';
+  String get profileVideosLoadFailedTitle =>
+      'Видеата ти не можаха да се заредят';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle =>
+      'Видеата не можаха да се заредят';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Провери връзката си и опитай отново.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Опитай пак';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -6965,21 +6976,20 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Избран';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Не е избран';
 
   @override
   String get videoClipSemanticHintDisabled => 'Деактивиран';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Докоснете за избор, задръжте за преглед';
+  String get videoClipSemanticHintSelect => 'Докоснете за избор';
 
   @override
   String get videoClipSemanticHintDeselect =>
-      'Докоснете за премахване на избора, задръжте за преглед';
+      'Докоснете за премахване на избора';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Докоснете за преглед';
 
   @override
   String get routerInvalidCreator => 'Невалиден създател';
@@ -8835,6 +8845,28 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count клипа са възстановени',
+      one: 'Клипът е възстановен',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count клипа са изтрити окончателно',
+      one: 'Клипът е изтрит окончателно',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'Затворете видеорекордер';
 
   @override
@@ -9123,6 +9155,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorEffectZoomBlur => 'Зум размазване';
+
+  @override
+  String get videoEditorEffectSpinBlur => 'Ротационно размазване';
 
   @override
   String get videoEditorEffectComic => 'Комикс';

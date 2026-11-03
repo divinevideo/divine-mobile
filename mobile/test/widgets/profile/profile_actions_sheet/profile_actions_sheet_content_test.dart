@@ -4,14 +4,21 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iap_repository/iap_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/overlay_visibility_provider.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/auth/secure_account_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
+import 'package:openvine/screens/settings/supporter_screen.dart';
+import 'package:openvine/services/supporter_repository.dart';
 import 'package:openvine/widgets/profile/profile_actions_sheet/profile_actions_sheet.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/go_router.dart';
 
@@ -22,35 +29,90 @@ void main() {
       void Function(ProfileActionType action)? onMaybeLater,
       MockGoRouter? goRouter,
     }) {
-      final app = MaterialApp(
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: Builder(
-            builder: (context) {
-              return ElevatedButton(
-                onPressed: () {
-                  unawaited(
-                    VineBottomSheet.show<void>(
-                      context: context,
-                      scrollable: false,
-                      showHeaderDivider: false,
-                      body: ProfileActionsSheetContent(
+      // The button sits in a nested navigator, like a tab of the app shell,
+      // so a sheet shown on the nearest navigator would stay inside it.
+      final app = ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Navigator(
+              onGenerateRoute: (_) => MaterialPageRoute<void>(
+                builder: (context) => ElevatedButton(
+                  onPressed: () {
+                    unawaited(
+                      showProfileActionsSheet(
+                        context: context,
                         actions: actions,
                         onMaybeLater: onMaybeLater,
                       ),
-                    ),
-                  );
-                },
-                child: const Text('Open'),
-              );
-            },
+                    );
+                  },
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
           ),
         ),
       );
       if (goRouter == null) return app;
       return MockGoRouterProvider(goRouter: goRouter, child: app);
     }
+
+    group('presentation', () {
+      testWidgets('opens on the root navigator, above the tab shell', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildApp(actions: [ProfileActionType.completeProfile]),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        final rootNavigator = tester.state<NavigatorState>(
+          find.byType(Navigator).first,
+        );
+        expect(
+          Navigator.of(tester.element(find.byType(ProfileActionsSheetContent))),
+          same(rootNavigator),
+        );
+      });
+
+      testWidgets('holds the bottom-sheet video owner while it is open', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildApp(actions: [ProfileActionType.completeProfile]),
+        );
+        final overlay = ProviderScope.containerOf(
+          tester.element(find.text('Open')),
+          listen: false,
+        );
+        expect(
+          overlay.read(overlayVisibilityProvider).isBottomSheetOpen,
+          isFalse,
+        );
+
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(
+          overlay.read(overlayVisibilityProvider).isBottomSheetOpen,
+          isTrue,
+        );
+
+        await tester.tap(
+          find.text(
+            lookupAppLocalizations(const Locale('en')).profileMaybeLaterLabel,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(ProfileActionsSheetContent), findsNothing);
+        expect(
+          overlay.read(overlayVisibilityProvider).isBottomSheetOpen,
+          isFalse,
+        );
+      });
+    });
 
     group('primary action', () {
       late MockGoRouter goRouter;
@@ -242,6 +304,148 @@ void main() {
         // Sheet should be fully dismissed
         expect(find.text('Complete Your Profile'), findsNothing);
         expect(find.text('Secure Your Account'), findsNothing);
+      });
+    });
+
+    group('becomeSupporter', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      late SupporterRepository repository;
+
+      setUp(() async {
+        SharedPreferences.setMockInitialValues({});
+        repository = SupporterRepository(
+          pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          validator: StubEntitlementValidator(),
+          prefs: await SharedPreferences.getInstance(),
+        );
+        addTearDown(repository.dispose);
+      });
+
+      Widget buildSupporterApp({
+        required List<ProfileActionType> actions,
+        void Function(ProfileActionType action)? onMaybeLater,
+      }) => ProviderScope(
+        overrides: [
+          supporterRepositoryProvider.overrideWithValue(repository),
+          supporterStoreBillingAvailableProvider.overrideWithValue(true),
+        ],
+        child: buildApp(actions: actions, onMaybeLater: onMaybeLater),
+      );
+
+      testWidgets('opens the tall sheet on the root navigator too', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSupporterApp(actions: [ProfileActionType.becomeSupporter]),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        final rootNavigator = tester.state<NavigatorState>(
+          find.byType(Navigator).first,
+        );
+        expect(
+          Navigator.of(tester.element(find.byType(ProfileActionsSheetContent))),
+          same(rootNavigator),
+        );
+      });
+
+      group('sheet size', () {
+        double sheetHeightFraction(WidgetTester tester) {
+          final screen =
+              tester.view.physicalSize / tester.view.devicePixelRatio;
+          return tester.getSize(find.byType(VineBottomSheet)).height /
+              screen.height;
+        }
+
+        testWidgets('opens tall when it starts on the supporter invitation', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildSupporterApp(actions: [ProfileActionType.becomeSupporter]),
+          );
+          await tester.tap(find.text('Open'));
+          await tester.pumpAndSettle();
+
+          expect(
+            sheetHeightFraction(tester),
+            moreOrLessEquals(
+              ProfileActionsSheetSizing.tallInitial,
+              epsilon: 0.05,
+            ),
+          );
+        });
+
+        testWidgets('stays sized to a short prompt', (tester) async {
+          await tester.pumpWidget(
+            buildSupporterApp(
+              actions: [
+                ProfileActionType.completeProfile,
+                ProfileActionType.becomeSupporter,
+              ],
+            ),
+          );
+          await tester.tap(find.text('Open'));
+          await tester.pumpAndSettle();
+
+          expect(sheetHeightFraction(tester), lessThan(0.8));
+        });
+      });
+
+      testWidgets('shows the Supporter screen content in the sheet', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSupporterApp(actions: [ProfileActionType.becomeSupporter]),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SupporterContent), findsOneWidget);
+        expect(find.text(l10n.supporterHeroTitle), findsOneWidget);
+        expect(find.text(l10n.supporterRestorePurchases), findsOneWidget);
+        expect(find.text(l10n.profileMaybeLaterLabel), findsOneWidget);
+      });
+
+      testWidgets('Maybe Later reports the dismissal and closes the sheet', (
+        tester,
+      ) async {
+        final dismissed = <ProfileActionType>[];
+        await tester.pumpWidget(
+          buildSupporterApp(
+            actions: [ProfileActionType.becomeSupporter],
+            onMaybeLater: dismissed.add,
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(l10n.profileMaybeLaterLabel));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SupporterContent), findsNothing);
+        expect(dismissed, [ProfileActionType.becomeSupporter]);
+      });
+
+      testWidgets('comes after a pending setup action', (tester) async {
+        await tester.pumpWidget(
+          buildSupporterApp(
+            actions: [
+              ProfileActionType.completeProfile,
+              ProfileActionType.becomeSupporter,
+            ],
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.profileCompleteYourProfile), findsOneWidget);
+        expect(find.byType(SupporterContent), findsNothing);
+
+        await tester.tap(find.text(l10n.profileMaybeLaterLabel));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.profileCompleteYourProfile), findsNothing);
+        expect(find.byType(SupporterContent), findsOneWidget);
       });
     });
   });

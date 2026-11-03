@@ -4456,8 +4456,17 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مرة أخرى.';
+  String get profileVideosLoadFailedTitle => 'تعذّر تحميل فيديوهاتك';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'تعذّر تحميل الفيديوهات';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'يرجى التحقق من اتصالك والمحاولة مرّة أخرى.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'إعادة المحاولة';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -6900,21 +6909,19 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'محدد';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'غير محدد';
 
   @override
   String get videoClipSemanticHintDisabled => 'معطل';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'انقر للتحديد، اضغط مطولاً للمعاينة';
+  String get videoClipSemanticHintSelect => 'انقر للتحديد';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'انقر لإلغاء التحديد، اضغط مطولاً للمعاينة';
+  String get videoClipSemanticHintDeselect => 'انقر لإلغاء التحديد';
+
+  @override
+  String get videoClipSemanticHintPreview => 'انقر للمعاينة';
 
   @override
   String get routerInvalidCreator => 'منشئ غير صالح';
@@ -8757,6 +8764,36 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تمت استعادة $count مقطع',
+      many: 'تمت استعادة $count مقطعًا',
+      few: 'تمت استعادة $count مقاطع',
+      two: 'تمت استعادة مقطعين',
+      one: 'تمت استعادة المقطع',
+      zero: 'لم تتم استعادة أي مقطع',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تم حذف $count مقطع نهائيًا',
+      many: 'تم حذف $count مقطعًا نهائيًا',
+      few: 'تم حذف $count مقاطع نهائيًا',
+      two: 'تم حذف مقطعين نهائيًا',
+      one: 'تم حذف المقطع نهائيًا',
+      zero: 'لم يُحذف أي مقطع نهائيًا',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'إغلاق مسجل الفيديو';
 
   @override
@@ -9046,6 +9083,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorEffectZoomBlur => 'تمويه التكبير';
+
+  @override
+  String get videoEditorEffectSpinBlur => 'تمويه الدوران';
 
   @override
   String get videoEditorEffectComic => 'رسوم مصوّرة';

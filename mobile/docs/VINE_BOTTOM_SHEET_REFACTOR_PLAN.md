@@ -59,6 +59,8 @@ into the underlying `showModalBottomSheet` / `DraggableScrollableSheet`):
 | `bool tapOutsideToDismiss` | `true` | Opt-in-by-default tap-outside behaviour for the draggable variant | Fixes Metadata + Comments |
 | `double Function(BuildContext modalContext)? initialChildSizeBuilder` | `null` | Lets callers pick `initialChildSize` dynamically (e.g. keyboard-aware) | Comments |
 
+The table records the defaults when this plan was written. `useRootNavigator` has defaulted to `true` since #10673.
+
 ### Already supported — do **not** re-add
 
 - `onShow` / `onDismiss` — used by `showVideoPausingVineBottomSheet` for

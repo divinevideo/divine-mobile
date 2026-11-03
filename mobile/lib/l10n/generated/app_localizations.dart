@@ -7549,11 +7549,29 @@ abstract class AppLocalizations {
   /// **'Unfollowed {name}'**
   String profileUnfollowedUser(String name);
 
-  /// Full-screen message shown when an author's profile feed fails to load. This state is only reached when the API could not be reached at all — an author with genuinely no videos gets the empty state instead — so the copy names the connection rather than implying the profile is empty. Wording deliberately matches authSignInErrorNetwork.
+  /// Title in the Videos tab of the viewer's own profile when their videos failed to load. The rest of the profile stays on screen around it. Only reached when the server could not be reached, so it must not read as 'you have no videos'.
   ///
   /// In en, this message translates to:
-  /// **'Can\'t reach the server. Check your connection and try again.'**
-  String get profileFeedError;
+  /// **'Couldn\'t load your videos'**
+  String get profileVideosLoadFailedTitle;
+
+  /// Title in the Videos tab of someone else's profile when their videos failed to load. Same state as profileVideosLoadFailedTitle, without 'your'.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load videos'**
+  String get profileVideosLoadFailedOtherTitle;
+
+  /// Line under the title when a profile's videos failed to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your connection and try again.'**
+  String get profileVideosLoadFailedSubtitle;
+
+  /// Button under a profile's failed-to-load videos that loads them again.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get profileVideosLoadFailedRetry;
 
   /// Transient message shown when paginating an author's profile feed fails.
   ///
@@ -11641,12 +11659,6 @@ abstract class AppLocalizations {
   /// **'Selected, number {position}'**
   String videoClipSemanticValueSelectedAtPosition(int position);
 
-  /// No description provided for @videoClipSemanticValueSelected.
-  ///
-  /// In en, this message translates to:
-  /// **'Selected'**
-  String get videoClipSemanticValueSelected;
-
   /// No description provided for @videoClipSemanticValueNotSelected.
   ///
   /// In en, this message translates to:
@@ -11662,14 +11674,20 @@ abstract class AppLocalizations {
   /// No description provided for @videoClipSemanticHintSelect.
   ///
   /// In en, this message translates to:
-  /// **'Tap to select, long press to preview'**
+  /// **'Tap to select'**
   String get videoClipSemanticHintSelect;
 
   /// No description provided for @videoClipSemanticHintDeselect.
   ///
   /// In en, this message translates to:
-  /// **'Tap to deselect, long press to preview'**
+  /// **'Tap to deselect'**
   String get videoClipSemanticHintDeselect;
+
+  /// Accessibility hint on a library clip thumbnail outside selection mode, where a tap opens the clip preview.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to preview'**
+  String get videoClipSemanticHintPreview;
 
   /// No description provided for @routerInvalidCreator.
   ///
@@ -14711,6 +14729,18 @@ abstract class AppLocalizations {
   /// **'This permanently deletes {count, plural, =1{1 clip} other{{count} clips}} from trash right away.'**
   String libraryTrashEmptyConfirmMessage(int count);
 
+  /// Screen-reader announcement after clips are restored from trash and their rows leave the trash list.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Clip restored} other{{count} clips restored}}'**
+  String libraryTrashClipsRestored(int count);
+
+  /// Screen-reader announcement after clips are permanently deleted from trash (one at a time or by emptying it) and their rows leave the trash list.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Clip permanently deleted} other{{count} clips permanently deleted}}'**
+  String libraryTrashClipsDeleted(int count);
+
   /// No description provided for @videoRecorderCloseLabel.
   ///
   /// In en, this message translates to:
@@ -15220,6 +15250,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Zoom Blur'**
   String get videoEditorEffectZoomBlur;
+
+  /// Name of a video effect: the picture streaks around its centre, as if the camera turned during the shot.
+  ///
+  /// In en, this message translates to:
+  /// **'Spin Blur'**
+  String get videoEditorEffectSpinBlur;
 
   /// Name of a video effect: the picture looks like a printed comic book, with flat colours, halftone dots and ink outlines.
   ///

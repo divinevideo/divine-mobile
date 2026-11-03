@@ -8,6 +8,7 @@ import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/constants/clip_library_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/utils/video_editor_utils.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/library/empty_library_state.dart';
@@ -22,6 +23,39 @@ class TrashedClipsList extends StatelessWidget {
   const TrashedClipsList({this.scrollController, super.key});
 
   /// Optional scroll controller, e.g. from a parent bottom sheet.
+  final ScrollController? scrollController;
+
+  @override
+  Widget build(BuildContext context) {
+    // A restored or deleted row just vanishes, taking the screen reader's
+    // focus with it, so say what happened to it.
+    return BlocListener<ClipsLibraryBloc, ClipsLibraryState>(
+      listenWhen: (prev, curr) =>
+          prev.lastTrashResult != curr.lastTrashResult &&
+          (curr.lastTrashResult?.clipIds.isNotEmpty ?? false),
+      listener: (context, state) {
+        final result = state.lastTrashResult!;
+        final count = result.clipIds.length;
+        announceDetached(
+          context,
+          switch (result.action) {
+            ClipsLibraryTrashAction.restored =>
+              context.l10n.libraryTrashClipsRestored(count),
+            ClipsLibraryTrashAction.deleted =>
+              context.l10n.libraryTrashClipsDeleted(count),
+          },
+          description: 'announce trash action',
+          logName: 'TrashedClipsList',
+        );
+      },
+      child: _TrashedClipsBody(scrollController: scrollController),
+    );
+  }
+}
+
+class _TrashedClipsBody extends StatelessWidget {
+  const _TrashedClipsBody({required this.scrollController});
+
   final ScrollController? scrollController;
 
   @override
@@ -77,15 +111,19 @@ class _TrashedClipTile extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 12),
         horizontalTitleGap: 12,
         minLeadingWidth: 56,
-        leading: SizedBox(
-          width: 56,
-          height: 56,
-          child: ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(8)),
-            child: VideoClipThumbnailCard(
-              clip: clip,
-              showSelectionIndicator: false,
-              showDurationBadge: false,
+        // Decorative: the title already names the clip by its length, and the
+        // row's actions are the buttons beside it.
+        leading: ExcludeSemantics(
+          child: SizedBox(
+            width: 56,
+            height: 56,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.all(Radius.circular(8)),
+              child: VideoClipThumbnailCard(
+                clip: clip,
+                showSelectionIndicator: false,
+                showDurationBadge: false,
+              ),
             ),
           ),
         ),

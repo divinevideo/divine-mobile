@@ -1,5 +1,5 @@
 // ABOUTME: Service for persisting video clips to the clip library
-// ABOUTME: Handles save, load, delete operations with JSON serialization
+// ABOUTME: Saves, trashes and organizes library clips in Drift
 
 import 'dart:convert';
 
@@ -18,6 +18,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
 
+/// Reads and writes the clip library, with listings scoped to one account.
+///
+/// Clips live in the `clips` table, which also holds the clips of drafts, so
+/// a clip can have a library row and an autosave-draft copy. Trashing,
+/// restoring, hard-deleting, filing and archiving a clip write both. Trash,
+/// category and archive state are columns on those rows. The whole feature
+/// is described in `mobile/docs/CLIP_LIBRARY.md`.
 class ClipLibraryService {
   ClipLibraryService({
     required ClipsDao clipsDao,

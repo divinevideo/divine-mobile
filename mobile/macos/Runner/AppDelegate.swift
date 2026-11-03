@@ -19,6 +19,7 @@ class AppDelegate: FlutterAppDelegate {
     RippleVideoEffect.register()
     FlutedGlassVideoEffect.register()
     ZoomBlurVideoEffect.register()
+    SpinBlurVideoEffect.register()
     ComicVideoEffect.register()
     EightBitVideoEffect.register()
     AnaglyphVideoEffect.register()

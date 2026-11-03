@@ -14,7 +14,7 @@ import pro_video_editor
 /// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
 /// long the streaks are) and, for an effect on the beat, `beatsUs`: the beats,
 /// in microseconds after the effect's start. On the beat the streaks only show
-/// on each hit and fade out over half a second; see ``ZoomBlurHits``.
+/// on each hit and fade out over half a second; see ``BlurHits``.
 final class ZoomBlurVideoEffect: ShaderVideoEffect {
   /// The id the Dart `CustomVideoEffect` names.
   static let id = "divine.zoomBlur"
@@ -24,7 +24,7 @@ final class ZoomBlurVideoEffect: ShaderVideoEffect {
 
   init(params: [String: Any]) {
     intensity = Self.readIntensity(params)
-    beatsUs = ZoomBlurHits.beats(params)
+    beatsUs = BlurHits.beats(params)
     super.init(function: Self.function, source: Self.source)
   }
 
@@ -37,7 +37,7 @@ final class ZoomBlurVideoEffect: ShaderVideoEffect {
   }
 
   override func values(effectTimeUs: Int64) -> [Double]? {
-    let strength = ZoomBlurHits.strength(
+    let strength = BlurHits.strength(
       intensity: intensity, beatsUs: beatsUs, effectTimeUs: effectTimeUs)
     return strength > 0 ? [strength] : nil
   }
@@ -71,14 +71,14 @@ final class ZoomBlurVideoEffect: ShaderVideoEffect {
     """
 }
 
-/// How strongly the zoom blur streaks at a moment. Mirrors the Android
-/// `ZoomBlurHits`.
+/// How strongly the zoom blur, or the spin blur, streaks at a moment. Mirrors
+/// the Android `BlurHits`.
 ///
 /// All the time it streaks at its intensity. On the beat each beat starts a
 /// hit at the intensity that fades out over ``hitUs`` as `(1 - u)²`, `u` the
 /// share of the hit gone, as the built-in zoom pulse eases out; a later beat
 /// starts the next hit. Before the first beat it does not streak at all.
-enum ZoomBlurHits {
+enum BlurHits {
   /// How long one hit lasts.
   static let hitUs: Int64 = 500_000
 

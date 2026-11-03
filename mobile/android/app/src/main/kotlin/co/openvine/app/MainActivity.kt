@@ -26,6 +26,7 @@ import co.openvine.app.videoeffects.LookVideoEffect
 import co.openvine.app.videoeffects.ParticlesVideoEffect
 import co.openvine.app.videoeffects.RippleVideoEffect
 import co.openvine.app.videoeffects.RisoVideoEffect
+import co.openvine.app.videoeffects.SpinBlurVideoEffect
 import co.openvine.app.videoeffects.SwirlVideoEffect
 import co.openvine.app.videoeffects.TiltShiftVideoEffect
 import co.openvine.app.videoeffects.ZoomBlurVideoEffect
@@ -123,6 +124,7 @@ class MainActivity : FlutterFragmentActivity() {
         RippleVideoEffect.register()
         FlutedGlassVideoEffect.register()
         ZoomBlurVideoEffect.register()
+        SpinBlurVideoEffect.register()
         ComicVideoEffect.register()
         EightBitVideoEffect.register()
         AnaglyphVideoEffect.register()

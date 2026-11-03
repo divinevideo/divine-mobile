@@ -4165,7 +4165,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError => '连不上服务器。请检查网络连接后重试。';
+  String get profileVideosLoadFailedTitle => '无法加载你的视频';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => '无法加载视频';
+
+  @override
+  String get profileVideosLoadFailedSubtitle => '请检查网络连接后重试。';
+
+  @override
+  String get profileVideosLoadFailedRetry => '再试一次';
 
   @override
   String get profileFeedLoadMoreError => '无法加载更多视频。下拉刷新试试。';
@@ -6492,19 +6501,19 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => '已选中';
-
-  @override
   String get videoClipSemanticValueNotSelected => '未选中';
 
   @override
   String get videoClipSemanticHintDisabled => '已禁用';
 
   @override
-  String get videoClipSemanticHintSelect => '点按选择，长按预览';
+  String get videoClipSemanticHintSelect => '点按选择';
 
   @override
-  String get videoClipSemanticHintDeselect => '点按取消选择，长按预览';
+  String get videoClipSemanticHintDeselect => '点按取消选择';
+
+  @override
+  String get videoClipSemanticHintPreview => '点按预览';
 
   @override
   String get routerInvalidCreator => '无效的创作者';
@@ -8235,6 +8244,28 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已恢复 $count 个片段',
+      one: '已恢复片段',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已永久删除 $count 个片段',
+      one: '已永久删除片段',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => '关闭录像机';
 
   @override
@@ -8515,6 +8546,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorEffectZoomBlur => '变焦模糊';
+
+  @override
+  String get videoEditorEffectSpinBlur => '旋转模糊';
 
   @override
   String get videoEditorEffectComic => '漫画';

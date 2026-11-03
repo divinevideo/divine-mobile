@@ -17,6 +17,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/stop_motion/stop_motion_player.dart';
 import 'package:openvine/widgets/video_clip/clip_thumbnail_image.dart';
 import 'package:openvine/widgets/video_clip/video_clip_hero.dart';
+import 'package:openvine/widgets/video_clip/video_clip_semantic_label.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Creates the transparent route used to fly a library thumbnail into preview.
@@ -240,17 +241,24 @@ class _VideoClipPreviewSheetState extends State<VideoClipPreview> {
                   mainAxisSize: MainAxisSize.min,
                   spacing: 48,
                   children: [
-                    // Video preview
+                    // Video preview. Named like its grid card, since the
+                    // still, the spinner and the video surface below it say
+                    // nothing to a screen reader, or only "image".
                     Flexible(
-                      child: AspectRatio(
-                        aspectRatio: widget.clip.targetAspectRatio.value,
-                        child: ClipRRect(
-                          borderRadius: .circular(16),
-                          child: _ClipHero(
-                            clip: widget.clip,
-                            child: _ClipMedia(
+                      child: Semantics(
+                        container: true,
+                        label: widget.clip.semanticLabel(context.l10n),
+                        excludeSemantics: true,
+                        child: AspectRatio(
+                          aspectRatio: widget.clip.targetAspectRatio.value,
+                          child: ClipRRect(
+                            borderRadius: .circular(16),
+                            child: _ClipHero(
                               clip: widget.clip,
-                              controller: _controller,
+                              child: _ClipMedia(
+                                clip: widget.clip,
+                                controller: _controller,
+                              ),
                             ),
                           ),
                         ),
@@ -422,9 +430,15 @@ class _ActionButtonsRow extends StatelessWidget {
             // Save to gallery button
             Semantics(
               button: true,
+              // Disabled while the save runs, so a screen reader does not
+              // offer a button that does nothing until the preview closes.
+              enabled: !isSaving,
               label: context.l10n.videoClipSaveTo(
                 GallerySaveService.destinationName,
               ),
+              onTap: isSaving ? null : onSave,
+              // The icon and the spinner only repeat the label and the state.
+              excludeSemantics: true,
               child: GestureDetector(
                 onTap: isSaving ? null : onSave,
                 child: Container(
@@ -459,6 +473,8 @@ class _ActionButtonsRow extends StatelessWidget {
             Semantics(
               button: true,
               label: context.l10n.videoClipDelete,
+              onTap: onDelete,
+              excludeSemantics: true,
               child: GestureDetector(
                 onTap: onDelete,
                 child: Container(

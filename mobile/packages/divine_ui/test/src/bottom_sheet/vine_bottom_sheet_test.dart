@@ -782,6 +782,84 @@ void main() {
       });
     });
 
+    group('useRootNavigator', () {
+      const nestedNavigatorKey = Key('nested-navigator');
+      const bottomNavKey = Key('bottom-nav');
+
+      // A nested navigator above a fixed bottom bar, like the app's tab shell.
+      // [open] shows the sheet from inside that navigator.
+      Widget buildShell(void Function(BuildContext context) open) {
+        return MaterialApp(
+          home: Scaffold(
+            body: Navigator(
+              key: nestedNavigatorKey,
+              onGenerateRoute: (_) => MaterialPageRoute<void>(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => open(context),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+            bottomNavigationBar: const SizedBox(
+              key: bottomNavKey,
+              height: 80,
+            ),
+          ),
+        );
+      }
+
+      Finder sheetInsideNestedNavigator() => find.ancestor(
+        of: find.text('Sheet content'),
+        matching: find.byKey(nestedNavigatorKey),
+      );
+
+      // The draggable and the fixed layouts each hand the flag to
+      // showModalBottomSheet in their own branch, so both are exercised.
+      for (final scrollable in [true, false]) {
+        group('scrollable: $scrollable', () {
+          testWidgets('opens on the root navigator by default, covering the '
+              'bottom navigation', (tester) async {
+            await tester.pumpWidget(
+              buildShell(
+                (context) => VineBottomSheet.show<void>(
+                  context: context,
+                  scrollable: scrollable,
+                  body: const Text('Sheet content'),
+                ),
+              ),
+            );
+            await tester.tap(find.text('Open'));
+            await tester.pumpAndSettle();
+
+            expect(find.text('Sheet content'), findsOneWidget);
+            expect(sheetInsideNestedNavigator(), findsNothing);
+            expect(
+              tester.getBottomLeft(find.byType(VineBottomSheet)).dy,
+              greaterThan(tester.getTopLeft(find.byKey(bottomNavKey)).dy),
+            );
+          });
+
+          testWidgets('stays in the nested navigator when useRootNavigator is '
+              'false', (tester) async {
+            await tester.pumpWidget(
+              buildShell(
+                (context) => VineBottomSheet.show<void>(
+                  context: context,
+                  scrollable: scrollable,
+                  useRootNavigator: false,
+                  body: const Text('Sheet content'),
+                ),
+              ),
+            );
+            await tester.tap(find.text('Open'));
+            await tester.pumpAndSettle();
+
+            expect(sheetInsideNestedNavigator(), findsOneWidget);
+          });
+        });
+      }
+    });
+
     group('barrierColor', () {
       Future<Color?> showAndReadBarrier(
         WidgetTester tester, {

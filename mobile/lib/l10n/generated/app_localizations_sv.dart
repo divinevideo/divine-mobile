@@ -4461,8 +4461,17 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Kan inte nå servern. Kontrollera din anslutning och försök igen.';
+  String get profileVideosLoadFailedTitle => 'Kunde inte läsa in dina videor';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'Kunde inte läsa in videor';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Kontrollera din anslutning och försök igen.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Försök igen';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -6891,21 +6900,19 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Valt';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Inte valt';
 
   @override
   String get videoClipSemanticHintDisabled => 'Inaktiverat';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Tryck för att välja, håll för förhandsgranskning';
+  String get videoClipSemanticHintSelect => 'Tryck för att välja';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Tryck för att avmarkera, håll för förhandsgranskning';
+  String get videoClipSemanticHintDeselect => 'Tryck för att avmarkera';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Tryck för förhandsgranskning';
 
   @override
   String get routerInvalidCreator => 'Ogiltig skapare';
@@ -8753,6 +8760,28 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klipp har återställts',
+      one: 'Klippet har återställts',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klipp har raderats permanent',
+      one: 'Klippet har raderats permanent',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'Stäng videoinspelaren';
 
   @override
@@ -9038,6 +9067,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorEffectZoomBlur => 'Zoomoskärpa';
+
+  @override
+  String get videoEditorEffectSpinBlur => 'Rotationsoskärpa';
 
   @override
   String get videoEditorEffectComic => 'Serie';

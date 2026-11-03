@@ -1,4 +1,5 @@
-// ABOUTME: Account-scoped supporter acknowledgement and discovery entry points.
+// ABOUTME: The Settings supporter entry and the scope that provides the
+// ABOUTME: signed-in account's membership.
 
 import 'dart:async';
 
@@ -16,15 +17,13 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 
-/// Entry to supporter membership. The settings tile acknowledges supporters;
-/// the compact profile entry hides once the account is a supporter.
+/// Settings entry to supporter membership: acknowledges a supporter and
+/// invites everyone else.
 ///
 /// Reads the [SupporterCubit] of an enclosing [SupporterMembershipScope] when
 /// there is one, so it shares that scope's single membership read.
 class SupporterMembership extends ConsumerWidget {
-  const SupporterMembership({this.compact = false, super.key});
-
-  final bool compact;
+  const SupporterMembership({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,15 +33,14 @@ class SupporterMembership extends ConsumerWidget {
     ref.watch(currentAuthStateProvider);
     if (!ref.watch(authServiceProvider).isAuthenticated) {
       return _MembershipEntry(
-        compact: compact,
         label: context.l10n.supporterTitle,
         subtitle: context.l10n.supporterTileSubtitle,
       );
     }
-    final status = _MembershipStatus(compact: compact);
+    const status = _MembershipStatus();
     return context.read<SupporterCubit?>() != null
         ? status
-        : SupporterMembershipScope(child: status);
+        : const SupporterMembershipScope(child: status);
   }
 }
 
@@ -105,24 +103,18 @@ bool _signsWithoutPrompting(AuthenticationSource source) => switch (source) {
 };
 
 class _MembershipStatus extends StatelessWidget {
-  const _MembershipStatus({required this.compact});
-
-  final bool compact;
+  const _MembershipStatus();
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<SupporterCubit, SupporterState>(
       builder: (context, state) {
-        // On the profile, the halo and wings are the supporter's mark; the
-        // compact entry only remains as a way in for everyone else.
-        if (compact && state.isSupporter) return const SizedBox.shrink();
         final label = state.isSupporter
             ? context.l10n.supporterBadgeLabel
             : state.isConfirmedInactive
             ? context.l10n.supporterJoinLabel
             : context.l10n.supporterTitle;
         return _MembershipEntry(
-          compact: compact,
           label: label,
           subtitle: state.isSupporter
               ? context.l10n.supporterActiveBadge
@@ -134,34 +126,19 @@ class _MembershipStatus extends StatelessWidget {
 }
 
 class _MembershipEntry extends StatelessWidget {
-  const _MembershipEntry({
-    required this.compact,
-    required this.label,
-    required this.subtitle,
-  });
+  const _MembershipEntry({required this.label, required this.subtitle});
 
-  final bool compact;
   final String label;
   final String subtitle;
 
   @override
   Widget build(BuildContext context) => Material(
     type: MaterialType.transparency,
-    child: compact
-        ? ActionChip(
-            avatar: DivineIcon(
-              icon: DivineIconName.heart,
-              size: 16,
-              color: context.vineColors.primaryText,
-            ),
-            label: Text(label),
-            onPressed: () => context.push(SupporterScreen.path),
-          )
-        : DivineListTile(
-            title: label,
-            icon: DivineIconName.heart,
-            subtitle: subtitle,
-            onTap: () => context.push(SupporterScreen.path),
-          ),
+    child: DivineListTile(
+      title: label,
+      icon: DivineIconName.heart,
+      subtitle: subtitle,
+      onTap: () => context.push(SupporterScreen.path),
+    ),
   );
 }

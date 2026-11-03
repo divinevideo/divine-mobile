@@ -1232,4 +1232,6 @@ else
   echo "skip: no writable /dev/shm; cross-device purge path not exercised."
 fi
 
+"$REPO_ROOT/.codex/scripts/test-validate-issue-skill.sh"
+
 echo "Codex configuration checks passed."

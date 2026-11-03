@@ -4428,8 +4428,17 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Không kết nối được với máy chủ. Kiểm tra kết nối của bạn rồi thử lại nhé.';
+  String get profileVideosLoadFailedTitle => 'Không tải được video của bạn';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'Không tải được video';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Kiểm tra kết nối của bạn rồi thử lại nhé.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Thử lại';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -6857,20 +6866,19 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Đã chọn';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Chưa chọn';
 
   @override
   String get videoClipSemanticHintDisabled => 'Đã tắt';
 
   @override
-  String get videoClipSemanticHintSelect => 'Chạm để chọn, nhấn giữ để xem thử';
+  String get videoClipSemanticHintSelect => 'Chạm để chọn';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Chạm để bỏ chọn, nhấn giữ để xem thử';
+  String get videoClipSemanticHintDeselect => 'Chạm để bỏ chọn';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Chạm để xem thử';
 
   @override
   String get routerInvalidCreator => 'Nhà sáng tạo không hợp lệ';
@@ -8713,6 +8721,28 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Đã khôi phục $count clip',
+      one: 'Đã khôi phục clip',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Đã xóa vĩnh viễn $count clip',
+      one: 'Đã xóa vĩnh viễn clip',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'Đóng máy quay';
 
   @override
@@ -8998,6 +9028,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorEffectZoomBlur => 'Mờ phóng to';
+
+  @override
+  String get videoEditorEffectSpinBlur => 'Mờ xoay';
 
   @override
   String get videoEditorEffectComic => 'Truyện tranh';

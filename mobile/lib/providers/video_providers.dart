@@ -64,6 +64,7 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/services/video_metadata_update_service.dart';
 import 'package:openvine/services/video_moderation_status_service.dart';
+import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:openvine/services/video_source_visibility_policy.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
@@ -763,7 +764,10 @@ VideoMetadataUpdateService videoMetadataUpdateService(Ref ref) {
   return VideoMetadataUpdateService(
     authService: ref.watch(authServiceProvider),
     blossomService: ref.watch(blossomUploadServiceProvider),
-    nostrService: ref.watch(nostrServiceProvider),
+    relayPublisher: SignedEventRelayPublisher(
+      nostrClient: ref.watch(nostrServiceProvider),
+      trustedRelayUrl: ref.watch(currentEnvironmentProvider).relayUrl,
+    ),
     personalEventCache: ref.watch(personalEventCacheServiceProvider),
     videoEventService: ref.watch(videoEventServiceProvider),
     collaboratorInviteService: CollaboratorInviteService(

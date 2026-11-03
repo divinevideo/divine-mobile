@@ -2566,10 +2566,10 @@
       }
     }
   },
-  "profileFeedError": "సర్వర్‌ని చేరుకోలేదు. మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.",
-  "@profileFeedError": {
-    "description": "Full-screen message shown when an author's profile feed fails to load. This state is only reached when the API could not be reached at all — an author with genuinely no videos gets the empty state instead — so the copy names the connection rather than implying the profile is empty. Wording deliberately matches authSignInErrorNetwork."
-  },
+  "profileVideosLoadFailedTitle": "మీ వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు",
+  "profileVideosLoadFailedOtherTitle": "వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు",
+  "profileVideosLoadFailedSubtitle": "మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.",
+  "profileVideosLoadFailedRetry": "మళ్లీ ప్రయత్నించండి",
   "profileFeedLoadMoreError": "మరిన్ని వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు. రిఫ్రెష్ చేయడానికి లాగండి.",
   "@profileFeedLoadMoreError": {
     "description": "Transient message shown when paginating an author's profile feed fails."
@@ -4058,11 +4058,11 @@
       }
     }
   },
-  "videoClipSemanticValueSelected": "ఎంచుకోబడింది",
   "videoClipSemanticValueNotSelected": "ఎంచుకోబడలేదు",
   "videoClipSemanticHintDisabled": "నిలిపివేయబడింది",
-  "videoClipSemanticHintSelect": "ఎంచుకోవడానికి నొక్కండి, ప్రివ్యూ చేయడానికి ఎక్కువసేపు నొక్కండి",
-  "videoClipSemanticHintDeselect": "ఎంపికను తీసివేయడానికి నొక్కండి, ప్రివ్యూ చేయడానికి ఎక్కువసేపు నొక్కండి",
+  "videoClipSemanticHintSelect": "ఎంచుకోవడానికి నొక్కండి",
+  "videoClipSemanticHintDeselect": "ఎంపికను తీసివేయడానికి నొక్కండి",
+  "videoClipSemanticHintPreview": "ప్రివ్యూ చేయడానికి నొక్కండి",
   "routerInvalidCreator": "చెల్లని సృష్టికర్త",
   "routerInvalidHashtagRoute": "హ్యాష్‌ట్యాగ్ మార్గం చెల్లదు",
   "categoryGalleryCouldNotLoadVideos": "వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు",
@@ -5320,6 +5320,8 @@
     "description": "Confirmation-sheet title shown before permanently deleting every clip from trash."
   },
   "libraryTrashEmptyConfirmMessage": "ఇది శాశ్వతంగా తొలగిస్తుంది{count, plural, =1{1 క్లిప్} other{{count}క్లిప్‌లు\nవెంటనే ట్రాష్ నుండి }}.",
+  "libraryTrashClipsRestored": "{count, plural, =1{క్లిప్ పునరుద్ధరించబడింది} other{{count} క్లిప్‌లు పునరుద్ధరించబడ్డాయి}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{క్లిప్ శాశ్వతంగా తొలగించబడింది} other{{count} క్లిప్‌లు శాశ్వతంగా తొలగించబడ్డాయి}}",
   "@libraryTrashEmptyConfirmMessage": {
     "description": "Confirmation-sheet subtitle shown before permanently deleting every clip from trash.",
     "placeholders": {
@@ -5483,6 +5485,7 @@
   "videoEditorEffectBalloons": "బెలూన్లు",
   "videoEditorEffectTiltShift": "టిల్ట్-షిఫ్ట్",
   "videoEditorEffectZoomBlur": "జూమ్ బ్లర్",
+  "videoEditorEffectSpinBlur": "స్పిన్ బ్లర్",
   "videoEditorEffectComic": "కామిక్",
   "videoEditorEffectSwirl": "సుడిగుండం",
   "videoEditorEffectRipple": "అలలు",

@@ -4604,8 +4604,19 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Serverul nu poate fi contactat. Verifică-ți conexiunea și încearcă din nou.';
+  String get profileVideosLoadFailedTitle =>
+      'Nu am putut încărca videoclipurile tale';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle =>
+      'Nu am putut încărca videoclipurile';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Verifică-ți conexiunea și încearcă din nou.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Încearcă din nou';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -7072,21 +7083,19 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Selectat';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Neselectat';
 
   @override
   String get videoClipSemanticHintDisabled => 'Dezactivat';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Atinge pentru a selecta, ține apăsat pentru previzualizare';
+  String get videoClipSemanticHintSelect => 'Atinge pentru a selecta';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Atinge pentru a deselecta, ține apăsat pentru previzualizare';
+  String get videoClipSemanticHintDeselect => 'Atinge pentru a deselecta';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Atinge pentru previzualizare';
 
   @override
   String get routerInvalidCreator => 'Creator invalid';
@@ -8959,6 +8968,30 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de clipuri restaurate',
+      few: '$count clipuri restaurate',
+      one: 'Clip restaurat',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de clipuri șterse definitiv',
+      few: '$count clipuri șterse definitiv',
+      one: 'Clip șters definitiv',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'Închide înregistratorul video';
 
   @override
@@ -9249,6 +9282,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorEffectZoomBlur => 'Estompare zoom';
+
+  @override
+  String get videoEditorEffectSpinBlur => 'Estompare rotativă';
 
   @override
   String get videoEditorEffectComic => 'Benzi desenate';

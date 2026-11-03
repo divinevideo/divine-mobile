@@ -169,6 +169,21 @@ void main() {
       );
     });
 
+    testWidgets('names the clip it plays for screen readers', (tester) async {
+      installMockDivineVideoPlayer();
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pump(const Duration(milliseconds: 100));
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      // The still, spinner and video surface underneath say nothing, or only
+      // "image", so the media area carries the clip's name instead.
+      expect(
+        find.bySemanticsLabel(l10n.videoClipSemanticLabel('5.00')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('renders $DivineVideoPlayer and save button', (tester) async {
       installMockDivineVideoPlayer();
 
@@ -424,6 +439,24 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('lets a screen reader delete the clip', (tester) async {
+      installMockDivineVideoPlayer();
+      var deletes = 0;
+
+      await tester.pumpWidget(buildTestWidget(onDelete: () => deletes++));
+      await tester.pump(const Duration(milliseconds: 100));
+      // The button hides its icon's semantics, so its own tap action is the
+      // only one a screen reader can trigger.
+      tester.semantics.tap(
+        find.semantics.byLabel(
+          lookupAppLocalizations(const Locale('en')).videoClipDelete,
+        ),
+      );
+      await tester.pump();
+
+      expect(deletes, 1);
     });
 
     testWidgets('hides delete button when onDelete is null', (tester) async {
@@ -751,12 +784,60 @@ void main() {
         expect(saves, 1);
         // Checking and signing take a moment, so the button says so.
         expect(saveButton(), findsNothing);
+        // A screen reader must not offer it as a button that still works.
+        expect(
+          tester.getSemantics(
+            find.bySemanticsLabel(
+              lookupAppLocalizations(
+                const Locale('en'),
+              ).videoClipSaveTo(GallerySaveService.destinationName),
+            ),
+          ),
+          isSemantics(
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: false,
+            hasTapAction: false,
+          ),
+        );
         verifyNever(() => mockGoRouter.pop<Object?>(any()));
 
         saving.complete();
         await tester.pump();
 
         verify(() => mockGoRouter.pop<Object?>(any())).called(1);
+      });
+
+      testWidgets('lets a screen reader start the save', (tester) async {
+        installMockDivineVideoPlayer();
+        // A clip whose file exists, so the preview does not close on load.
+        final tempDir = Directory.systemTemp.createTempSync(
+          'clip_preview_semantic_save',
+        );
+        addTearDown(() => tempDir.deleteSync(recursive: true));
+        final videoFile = File('${tempDir.path}/video.mp4')
+          ..writeAsBytesSync(const [0]);
+        var saves = 0;
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            clip: testClip.copyWith(video: EditorVideo.file(videoFile.path)),
+            onSaveToGallery: () async => saves++,
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        // The button hides its icon's semantics, so its own tap action is the
+        // only one a screen reader can trigger.
+        tester.semantics.tap(
+          find.semantics.byLabel(
+            lookupAppLocalizations(
+              const Locale('en'),
+            ).videoClipSaveTo(GallerySaveService.destinationName),
+          ),
+        );
+        await tester.pump();
+
+        expect(saves, 1);
       });
 
       testWidgets('hides the save button without a save action', (

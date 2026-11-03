@@ -570,12 +570,14 @@ class Drafts extends Table {
   ];
 }
 
-/// Persistent storage for video clips belonging to drafts
+/// Persistent storage for video clips: the clip library and the clips of
+/// drafts.
 ///
-/// Each clip is a recorded video segment that belongs to a single draft.
-/// Key fields are indexed columns for efficient queries; the full clip
-/// payload (lens metadata, thumbnail info, etc.) lives in the [data]
-/// JSON blob.
+/// A library clip normally has a NULL [draftId] and its clip id as row id. A
+/// clip inside a draft is keyed `<draftId>:<clipId>`, so one recording can
+/// have a library row and draft rows at once. Key fields are indexed columns
+/// for efficient queries; the full clip payload (lens metadata, thumbnail
+/// info, etc.) lives in the [data] JSON blob.
 ///
 /// Retention: a draft's rows go with it (`DraftsDao.deleteDraft`), because
 /// `PRAGMA foreign_keys` is never enabled and the cascade below does not fire.
@@ -760,7 +762,13 @@ class DirectMessages extends Table {
   /// Optional parent message ID (from `e` tag) for threaded replies.
   TextColumn get replyToId => text().nullable().named('reply_to_id')();
 
-  /// The gift-wrap event ID (kind 1059) used for deduplication.
+  /// The gift-wrap event ID (kind 1059) used for deduplication, unique per
+  /// [ownerPubkey].
+  ///
+  /// An inbound wrap is addressed to one recipient, but an outgoing row stores
+  /// the *recipient's* wrap id and a kind-4 row stores the event id both ends
+  /// share, so with both accounts on one device one id sits on two accounts'
+  /// rows (#6645).
   TextColumn get giftWrapId => text().named('gift_wrap_id')();
 
   /// Optional conversation subject/title (from `subject` tag).
@@ -929,7 +937,7 @@ class DirectMessages extends Table {
     Index(
       'idx_dm_gift_wrap_id',
       'CREATE UNIQUE INDEX IF NOT EXISTS idx_dm_gift_wrap_id '
-          'ON direct_messages (gift_wrap_id)',
+          'ON direct_messages (gift_wrap_id, owner_pubkey)',
     ),
     Index(
       'idx_dm_sender',
@@ -1839,12 +1847,15 @@ class ProcessedGiftWraps extends Table {
   @override
   String get tableName => 'processed_gift_wraps';
 
-  /// The kind 1059 gift-wrap event id (outer). Dedup key.
+  /// The kind 1059 gift-wrap event id (outer), or the event id of a suppressed
+  /// kind 4. Dedup key.
   ///
-  /// Intentionally NOT scoped by owner: gift-wrap event ids are globally unique
-  /// per the Nostr protocol, so cross-account dedup prevents re-processing the
-  /// same relay event for multiple local accounts — matching
-  /// [DirectMessages.giftWrapId] dedup semantics.
+  /// Unique per [ownerPubkey], not per device. A wrap is addressed to one
+  /// recipient, but a kind 4 is shared by both ends, so with both accounts on
+  /// this device each one records its own outcome for the id and must find it
+  /// again: a message dual-sent as NIP-17 and kind 4 is merged into one row,
+  /// and an account that cannot remember having done so stores the kind 4 a
+  /// second time on the next replay (#6645).
   TextColumn get giftWrapId => text().named('gift_wrap_id')();
 
   /// When the wrap was terminally processed (unix seconds).
@@ -1854,13 +1865,18 @@ class ProcessedGiftWraps extends Table {
   /// pruning an old row would make those wraps eligible for decryption again.
   IntColumn get processedAt => integer().named('processed_at')();
 
-  /// Recipient pubkey this wrap was processed for. Not part of the global
-  /// gift-wrap dedup key, but used to scope account cleanup without deleting
-  /// another saved account's ledger entries.
-  TextColumn get ownerPubkey => text().nullable().named('owner_pubkey')();
+  /// Hex public key of the account that processed this wrap.
+  ///
+  /// Part of the primary key, so NOT NULL with an empty-string default: SQLite
+  /// compares NULLs as distinct inside a unique key, which would stop two
+  /// ownerless rows for one id from collapsing. `''` is the legacy sentinel
+  /// `direct_messages` already uses, and rows written before v32 are backfilled
+  /// to it. Cleanup and lookups treat it as the account's own.
+  TextColumn get ownerPubkey =>
+      text().withDefault(const Constant('')).named('owner_pubkey')();
 
   @override
-  Set<Column> get primaryKey => {giftWrapId};
+  Set<Column> get primaryKey => {giftWrapId, ownerPubkey};
 }
 
 /// Account-lifetime dismissal state independent of cached conversation rows.

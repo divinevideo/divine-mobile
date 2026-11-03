@@ -1,10 +1,9 @@
-// ABOUTME: Tests own-account membership entries in settings and on the profile.
+// ABOUTME: Tests the own-account Settings entry and the membership scope.
 // ABOUTME: Covers refresh without store work and suppression of external prompts.
 
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -54,7 +53,7 @@ void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
 
   group('own account membership', () {
-    testWidgets('signed-out compact entry supplies its own Material', (
+    testWidgets('signed-out entry supplies its own Material', (
       tester,
     ) async {
       final auth = _MockAuth();
@@ -70,14 +69,13 @@ void main() {
           child: buildLocalizedWidget(
             const ColoredBox(
               color: Colors.black,
-              child: SupporterMembership(compact: true),
+              child: SupporterMembership(),
             ),
           ),
         ),
       );
       expect(tester.takeException(), isNull);
-      expect(find.byType(ActionChip), findsOneWidget);
-      expect(find.byType(ListTile), findsNothing);
+      expect(find.byType(ListTile), findsOneWidget);
     });
 
     testWidgets('signed-out settings entry describes the subscription', (
@@ -100,44 +98,6 @@ void main() {
       );
       expect(find.text(l10n.supporterTileSubtitle), findsOneWidget);
     });
-
-    // DivineIcon ignores the chip's IconTheme and would otherwise keep the
-    // asset's white fill, which disappears on the light chip.
-    for (final (mode, theme, colors) in [
-      ('light', VineTheme.lightTheme, VineTheme.lightColors),
-      ('dark', VineTheme.theme, VineTheme.darkColors),
-    ]) {
-      testWidgets('compact entry tints its heart with $mode primary text', (
-        tester,
-      ) async {
-        final auth = _MockAuth();
-        when(() => auth.isAuthenticated).thenReturn(false);
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              authServiceProvider.overrideWithValue(auth),
-              currentAuthStateProvider.overrideWithValue(
-                AuthState.unauthenticated,
-              ),
-            ],
-            child: MaterialApp(
-              theme: theme,
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: const Scaffold(body: SupporterMembership(compact: true)),
-            ),
-          ),
-        );
-
-        final heart = tester.widget<DivineIcon>(
-          find.descendant(
-            of: find.byType(ActionChip),
-            matching: find.byType(DivineIcon),
-          ),
-        );
-        expect(heart.color, equals(colors.primaryText));
-      });
-    }
 
     testWidgets('account switch ignores an old in-flight membership response', (
       tester,
@@ -200,7 +160,7 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: buildLocalizedWidget(
-            const Scaffold(body: SupporterMembership(compact: true)),
+            const Scaffold(body: SupporterMembership()),
           ),
         ),
       );
@@ -279,7 +239,7 @@ void main() {
                 supporterRepositoryProvider.overrideWithValue(repo),
               ],
               child: buildLocalizedWidget(
-                const Scaffold(body: SupporterMembership(compact: true)),
+                const Scaffold(body: SupporterMembership()),
               ),
             ),
           );
@@ -294,29 +254,7 @@ void main() {
           } else {
             expect(requests, 1);
             expect(repo.isSupporter, isTrue);
-            // The halo and wings mark a supporter's profile instead.
-            expect(find.byType(ActionChip), findsNothing);
             expect(repo.snapshot?.haloVisible, isFalse);
-
-            // Settings still acknowledges the membership.
-            await tester.pumpWidget(
-              ProviderScope(
-                overrides: [
-                  authServiceProvider.overrideWithValue(auth),
-                  currentAuthStateProvider.overrideWithValue(
-                    AuthState.authenticated,
-                  ),
-                  currentAuthRpcCapabilityProvider.overrideWithValue(
-                    AuthRpcCapability.rpcReady,
-                  ),
-                  supporterRepositoryProvider.overrideWithValue(repo),
-                ],
-                child: buildLocalizedWidget(
-                  const Scaffold(body: SupporterMembership()),
-                ),
-              ),
-            );
-            await tester.pumpAndSettle();
             expect(find.text(l10n.supporterBadgeLabel), findsOneWidget);
           }
           await tester.pumpWidget(const SizedBox.shrink());
