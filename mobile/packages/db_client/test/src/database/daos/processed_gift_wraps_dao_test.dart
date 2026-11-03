@@ -34,6 +34,17 @@ void main() {
     if (file.existsSync()) file.deleteSync();
   });
 
+  Future<bool> recordedFor(String wrapId, String owner) =>
+      dao.hasGiftWrapForOwner(giftWrapId: wrapId, ownerPubkey: owner);
+
+  // A row from before the owner was part of the key: the v32 step backfills
+  // a NULL owner to the empty string.
+  Future<void> insertLegacyRow(String wrapId) => database.customStatement(
+    'INSERT INTO processed_gift_wraps '
+    '(gift_wrap_id, processed_at, owner_pubkey) VALUES (?, 100, ?)',
+    [wrapId, ''],
+  );
+
   group(ProcessedGiftWrapsDao, () {
     group('hasGiftWrapForOwner', () {
       test("does not see another account's row", () async {
@@ -42,57 +53,37 @@ void main() {
         // An unwrapped kind 4 carries one event id shared by both ends, so
         // this is how the ledger looks when the other party is also a local
         // account. B never stored it and must not act as though it had.
-        expect(
-          await dao.hasGiftWrapForOwner(
-            giftWrapId: wrap1,
-            ownerPubkey: ownerB,
-          ),
-          isFalse,
-        );
+        expect(await recordedFor(wrap1, ownerB), isFalse);
       });
 
       test("sees this account's own row", () async {
         await dao.record(giftWrapId: wrap1, ownerPubkey: ownerA);
 
-        expect(
-          await dao.hasGiftWrapForOwner(
-            giftWrapId: wrap1,
-            ownerPubkey: ownerA,
-          ),
-          isTrue,
-        );
+        expect(await recordedFor(wrap1, ownerA), isTrue);
       });
 
-      test('leaves the global probe answering for every account', () async {
-        await dao.record(giftWrapId: wrap1, ownerPubkey: ownerA);
+      test("counts a legacy ownerless row as the account's own", () async {
+        await insertLegacyRow(wrap1);
 
-        // The cost decision stays global: the event is terminally handled on
-        // this device, so nobody pays to decrypt it again.
-        expect(await dao.hasGiftWrap(wrap1), isTrue);
+        expect(await recordedFor(wrap1, ownerB), isTrue);
       });
 
       test('is false for an id nobody recorded', () async {
         await dao.record(giftWrapId: wrap1, ownerPubkey: ownerA);
 
-        expect(
-          await dao.hasGiftWrapForOwner(
-            giftWrapId: wrap2,
-            ownerPubkey: ownerA,
-          ),
-          isFalse,
-        );
+        expect(await recordedFor(wrap2, ownerA), isFalse);
       });
     });
 
-    test('hasGiftWrap is false before any record', () async {
-      expect(await dao.hasGiftWrap(wrap1), isFalse);
+    test('hasGiftWrapForOwner is false before any record', () async {
+      expect(await recordedFor(wrap1, ownerA), isFalse);
     });
 
-    test('record then hasGiftWrap returns true', () async {
+    test('record then hasGiftWrapForOwner returns true', () async {
       await dao.record(giftWrapId: wrap1, ownerPubkey: ownerA);
 
-      expect(await dao.hasGiftWrap(wrap1), isTrue);
-      expect(await dao.hasGiftWrap(wrap2), isFalse);
+      expect(await recordedFor(wrap1, ownerA), isTrue);
+      expect(await recordedFor(wrap2, ownerA), isFalse);
     });
 
     test('record is idempotent — re-recording the same wrap does not throw '
@@ -100,22 +91,29 @@ void main() {
       await dao.record(giftWrapId: wrap1, ownerPubkey: ownerA);
       await dao.record(giftWrapId: wrap1, ownerPubkey: ownerA);
 
-      expect(await dao.hasGiftWrap(wrap1), isTrue);
+      expect(await recordedFor(wrap1, ownerA), isTrue);
       expect(await dao.count(), 1);
     });
 
-    test('dedup is global — a wrap recorded under one owner dedups for '
-        'another account on the device', () async {
+    test('two accounts can each record the same id — a kind 4 is shared by '
+        'both ends, and each remembers its own outcome', () async {
       await dao.record(giftWrapId: wrap1, ownerPubkey: ownerA);
-
-      // hasGiftWrap takes no owner: a different account sees the same wrap as
-      // already processed.
-      expect(await dao.hasGiftWrap(wrap1), isTrue);
-
-      // A second record under a different owner is ignored (gift-wrap ids are
-      // globally unique), leaving a single row.
       await dao.record(giftWrapId: wrap1, ownerPubkey: ownerB);
-      expect(await dao.count(), 1);
+
+      expect(await dao.count(), 2);
+      expect(await recordedFor(wrap1, ownerA), isTrue);
+      expect(await recordedFor(wrap1, ownerB), isTrue);
+    });
+
+    test("switching away from one account keeps the other's row for the same "
+        'id', () async {
+      await dao.record(giftWrapId: wrap1, ownerPubkey: ownerA);
+      await dao.record(giftWrapId: wrap1, ownerPubkey: ownerB);
+
+      expect(await dao.clearForAccountSwitch(ownerA), 1);
+
+      expect(await recordedFor(wrap1, ownerA), isFalse);
+      expect(await recordedFor(wrap1, ownerB), isTrue);
     });
 
     test('record rejects an empty owner', () async {
@@ -124,19 +122,46 @@ void main() {
         throwsArgumentError,
       );
 
-      expect(await dao.hasGiftWrap(wrap1), isFalse);
+      expect(await recordedFor(wrap1, ownerA), isFalse);
     });
 
-    test('giftWrapIdsPresent returns only the recorded subset', () async {
-      await dao.record(giftWrapId: wrap1, ownerPubkey: ownerA);
+    group('giftWrapIdsPresent', () {
+      test('returns only the recorded subset', () async {
+        await dao.record(giftWrapId: wrap1, ownerPubkey: ownerA);
 
-      expect(await dao.giftWrapIdsPresent({wrap1, wrap2}), equals({wrap1}));
-    });
+        expect(
+          await dao.giftWrapIdsPresent({wrap1, wrap2}, ownerPubkey: ownerA),
+          equals({wrap1}),
+        );
+      });
 
-    test('giftWrapIdsPresent returns an empty set for empty input', () async {
-      await dao.record(giftWrapId: wrap1, ownerPubkey: ownerA);
+      test("leaves out another account's rows", () async {
+        await dao.record(giftWrapId: wrap1, ownerPubkey: ownerA);
+        await dao.record(giftWrapId: wrap2, ownerPubkey: ownerB);
 
-      expect(await dao.giftWrapIdsPresent(const <String>{}), isEmpty);
+        expect(
+          await dao.giftWrapIdsPresent({wrap1, wrap2}, ownerPubkey: ownerB),
+          equals({wrap2}),
+        );
+      });
+
+      test("counts a legacy ownerless row as the account's own", () async {
+        await insertLegacyRow(wrap1);
+
+        expect(
+          await dao.giftWrapIdsPresent({wrap1}, ownerPubkey: ownerB),
+          equals({wrap1}),
+        );
+      });
+
+      test('returns an empty set for empty input', () async {
+        await dao.record(giftWrapId: wrap1, ownerPubkey: ownerA);
+
+        expect(
+          await dao.giftWrapIdsPresent(const <String>{}, ownerPubkey: ownerA),
+          isEmpty,
+        );
+      });
     });
 
     test('account-switch cleanup preserves another owner', () async {
@@ -146,41 +171,29 @@ void main() {
       final deleted = await dao.clearForAccountSwitch(ownerA);
 
       expect(deleted, 1);
-      expect(await dao.hasGiftWrap(wrap1), isFalse);
-      expect(await dao.hasGiftWrap(wrap2), isTrue);
+      expect(await recordedFor(wrap1, ownerA), isFalse);
+      expect(await recordedFor(wrap2, ownerB), isTrue);
       expect(await dao.count(), 1);
     });
 
     test('exact-owner deletion preserves a legacy ownerless row', () async {
       await dao.record(giftWrapId: wrap1, ownerPubkey: ownerA);
-      await database.customStatement(
-        'INSERT INTO processed_gift_wraps '
-        '(gift_wrap_id, processed_at, owner_pubkey) VALUES (?, 100, NULL)',
-        [wrap2],
-      );
+      await insertLegacyRow(wrap2);
 
       expect(await dao.deleteAllForOwner(ownerA), 1);
-      expect(await dao.hasGiftWrap(wrap2), isTrue);
+      expect(await recordedFor(wrap2, ownerA), isTrue);
     });
 
-    test('unknown-owner cleanup removes NULL and empty legacy rows', () async {
-      await database.customStatement(
-        'INSERT INTO processed_gift_wraps '
-        '(gift_wrap_id, processed_at, owner_pubkey) VALUES (?, 100, NULL)',
-        [wrap1],
-      );
-      await database.customStatement(
-        'INSERT INTO processed_gift_wraps '
-        "(gift_wrap_id, processed_at, owner_pubkey) VALUES (?, 100, '')",
-        [wrap2],
-      );
+    test('unknown-owner cleanup removes the ownerless legacy rows', () async {
+      await insertLegacyRow(wrap1);
+      await insertLegacyRow(wrap2);
       const ownedWrap =
           'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
       await dao.record(giftWrapId: ownedWrap, ownerPubkey: ownerB);
 
       expect(await dao.clearUnowned(), 2);
       expect(await dao.count(), 1);
-      expect(await dao.hasGiftWrap(ownedWrap), isTrue);
+      expect(await recordedFor(ownedWrap, ownerB), isTrue);
     });
   });
 }

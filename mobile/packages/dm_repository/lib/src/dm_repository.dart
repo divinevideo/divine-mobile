@@ -298,27 +298,6 @@ const Duration _ownDmInboxAuthoritativeTimeout = Duration(seconds: 3);
 /// eternally-retrying rows — the reason this backstop must stay generous.
 const Duration _messagePublishTimeout = DmBatchSendBudget.messagePublishTimeout;
 
-/// Outcome of resolving a user's own kind-10050 DM inbox relay list (#4974).
-///
-/// Distinguishes a genuine absence from a transient query failure so callers
-/// don't conflate them: the live subscription / drain fall back to the
-/// default pool on either, but RC3 must only publish-when-`absent` and never
-/// overwrite a real list when the lookup merely `failed`.
-/// Which local account terminally handled an already-processed event.
-///
-/// Only meaningful for NIP-04. A kind-1059 wrap id belongs to exactly one
-/// recipient, so "processed" and "processed by us" are the same fact there.
-enum _Nip04DedupHit {
-  /// Not processed by anyone on this device.
-  none,
-
-  /// Processed by the account that is receiving it now.
-  thisAccount,
-
-  /// Processed by a different local account, so this one never stored it.
-  otherAccount,
-}
-
 /// What a removal request resolves to, before anything is written.
 ///
 /// [absent] and [removable] both report `removed` to the caller — a stale id
@@ -2516,7 +2495,10 @@ class DmRepository {
         final row = pending[i];
         // Already recovered by the live sub / drain — clear the stale row so
         // it does not linger and re-query on every inbox open.
-        if (await _directMessagesDao.hasGiftWrap(row.giftWrapId)) {
+        if (await _directMessagesDao.hasGiftWrap(
+          row.giftWrapId,
+          ownerPubkey: pubkey,
+        )) {
           await dao.deletePending(
             giftWrapId: row.giftWrapId,
             ownerPubkey: pubkey,
@@ -3729,7 +3711,7 @@ class DmRepository {
       // randomizes gift-wrap `created_at` and a deletion can drain ahead of
       // the event it names. A null `_reactionsRepository` (legacy fixtures)
       // lands here too: that is "cannot resolve", not "nothing to do", and
-      // cementing it would burn the wrap for every account on the device.
+      // cementing it would skip the wrap on every later delivery.
       if ((resolved ?? DmWrapOutcome.deferred) == DmWrapOutcome.deferred) {
         unresolved.add(rumorId);
         outcome = DmWrapOutcome.deferred;
@@ -3879,70 +3861,54 @@ class DmRepository {
   /// participants, messages suppressed by a removed-conversation tombstone)
   /// leave a `processed_gift_wraps` ledger row instead. Checking both means a
   /// re-delivered wrap of any kind is skipped before paying a decrypt. #5452.
-  Future<bool> _alreadyProcessed(String giftWrapId) async {
-    if (await _directMessagesDao.hasGiftWrap(giftWrapId)) return true;
-    final ledger = _processedGiftWrapsDao;
-    if (ledger == null) return false;
-    return ledger.hasGiftWrap(giftWrapId);
-  }
-
-  /// Attributes an already-processed kind-4 to a local account.
   ///
-  /// [_alreadyProcessed] is global on the documented reasoning that a
-  /// gift-wrap event id is globally unique. That holds for kind 1059, where
-  /// NIP-59 mints a fresh ephemeral key and a separate wrap per recipient, so
-  /// one id can only ever belong to one local account. A kind 4 has no
-  /// envelope — one signed event, one author, one `p` recipient — so when both
-  /// ends are accounts on this device they genuinely share an id, and
-  /// `_recoverOutgoingNip04` makes that concrete by paging the whole outgoing
-  /// history of one account into tables the other one reads.
-  ///
-  /// The global probe still runs first and still decides whether to pay for a
-  /// decrypt: the event is terminally handled on this device either way. What
-  /// this adds is who handled it, which is what decides whether this account
-  /// may move its own sync boundary past it.
-  Future<_Nip04DedupHit> _nip04DedupHit(
-    String eventId, {
+  /// Scoped to [ownerPubkey]: did THIS account handle it? A wrap id is unique
+  /// to one account only for an inbound kind 1059. An outgoing row stores the
+  /// *recipient's* wrap id, and a kind 4 has no envelope — one signed event,
+  /// one author, one `p` recipient — so its id is shared by both ends. With
+  /// both accounts on one device, a global probe made the account that never
+  /// stored the message skip it before decrypting it (#6645).
+  Future<bool> _alreadyProcessed(
+    String giftWrapId, {
     required String ownerPubkey,
   }) async {
-    if (!await _alreadyProcessed(eventId)) return _Nip04DedupHit.none;
-    if (ownerPubkey.isEmpty) return _Nip04DedupHit.thisAccount;
-    // The kind-4 insert writes the same id into both `id` and `giftWrapId`,
-    // so an owner-scoped lookup by id is the exact counterpart of the global
-    // `hasGiftWrap` probe on this path — and it already applies the legacy
-    // unowned-row allowance.
-    if (await _directMessagesDao.getMessageById(
-          eventId,
-          ownerPubkey: ownerPubkey,
-        ) !=
-        null) {
-      return _Nip04DedupHit.thisAccount;
+    if (await _directMessagesDao.hasGiftWrap(
+      giftWrapId,
+      ownerPubkey: ownerPubkey,
+    )) {
+      return true;
     }
     final ledger = _processedGiftWrapsDao;
-    if (ledger != null &&
-        await ledger.hasGiftWrapForOwner(
-          giftWrapId: eventId,
-          ownerPubkey: ownerPubkey,
-        )) {
-      return _Nip04DedupHit.thisAccount;
-    }
-    return _Nip04DedupHit.otherAccount;
+    if (ledger == null) return false;
+    return ledger.hasGiftWrapForOwner(
+      giftWrapId: giftWrapId,
+      ownerPubkey: ownerPubkey,
+    );
   }
 
   /// Batched form of [_alreadyProcessed] for the history-drain dedup probe.
-  /// Resolves which of [giftWrapIds] are already persisted or in the dedup
-  /// ledger with TWO `IN` queries instead of 2×N sequential single-id lookups,
-  /// collapsing a full page's probe from ~200 bg-isolate round trips to 2. The
-  /// in-transaction `hasGiftWrap` re-check in the persist path still guards
-  /// TOCTOU races, so this is purely a fast-path filter. #5452.
-  Future<Set<String>> _alreadyProcessedBatch(Set<String> giftWrapIds) async {
+  /// Resolves which of [giftWrapIds] [ownerPubkey] already has persisted or in
+  /// the dedup ledger with TWO `IN` queries instead of 2×N sequential
+  /// single-id lookups, collapsing a full page's probe from ~200 bg-isolate
+  /// round trips to 2. The in-transaction `hasGiftWrap` re-check in the
+  /// persist path still guards TOCTOU races, so this is purely a fast-path
+  /// filter. #5452.
+  Future<Set<String>> _alreadyProcessedBatch(
+    Set<String> giftWrapIds, {
+    required String ownerPubkey,
+  }) async {
     if (giftWrapIds.isEmpty) return const <String>{};
     final present = <String>{
-      ...await _directMessagesDao.giftWrapIdsPresent(giftWrapIds),
+      ...await _directMessagesDao.giftWrapIdsPresent(
+        giftWrapIds,
+        ownerPubkey: ownerPubkey,
+      ),
     };
     final ledger = _processedGiftWrapsDao;
     if (ledger != null) {
-      present.addAll(await ledger.giftWrapIdsPresent(giftWrapIds));
+      present.addAll(
+        await ledger.giftWrapIdsPresent(giftWrapIds, ownerPubkey: ownerPubkey),
+      );
     }
     return present;
   }
@@ -3978,7 +3944,10 @@ class DmRepository {
     final Event? rumorEvent;
     try {
       // Dedup: skip if already processed (message row or ledger). #5452.
-      if (await _alreadyProcessed(giftWrapEvent.id)) {
+      if (await _alreadyProcessed(
+        giftWrapEvent.id,
+        ownerPubkey: ownerPubkey,
+      )) {
         // Still advance the wire boundary. A duplicate is by definition a
         // wrap we have processed, so its outer stamp belongs in the maximum
         // this boundary tracks, and without this an install that upgraded
@@ -4415,7 +4384,10 @@ class DmRepository {
           // Re-check dedup inside transaction (TOCTOU protection). The skip is
           // logged after the transaction below; logging here too would emit one
           // line per skip twice.
-          if (await _directMessagesDao.hasGiftWrap(giftWrapEvent.id)) {
+          if (await _directMessagesDao.hasGiftWrap(
+            giftWrapEvent.id,
+            ownerPubkey: ownerPubkey,
+          )) {
             skippedByTransactionalGiftWrapDedup = true;
             return;
           }
@@ -4764,7 +4736,7 @@ class DmRepository {
     ];
     final processed = await _alreadyProcessedBatch({
       for (final event in giftWraps) event.id,
-    });
+    }, ownerPubkey: _userPubkey);
     final pending = [
       for (final event in giftWraps)
         if (!processed.contains(event.id)) event,
@@ -4852,7 +4824,7 @@ class DmRepository {
     ];
     final processed = await _alreadyProcessedBatch({
       for (final event in giftWraps) event.id,
-    });
+    }, ownerPubkey: _userPubkey);
     final pending = [
       for (final event in giftWraps)
         if (!processed.contains(event.id)) event,
@@ -5159,39 +5131,21 @@ class DmRepository {
       // processed-wraps ledger also carries NIP-04 event ids that were
       // suppressed by a removed-conversation tombstone, so replays skip
       // decryption entirely — matching the terminal NIP-17 behavior. #7804.
-      final dedupHit = await _nip04DedupHit(
-        nip04Event.id,
-        ownerPubkey: ownerPubkey,
-      );
-      if (dedupHit != _Nip04DedupHit.none) {
-        if (dedupHit == _Nip04DedupHit.thisAccount) {
-          // Advance the wire boundary for the same reason the gift-wrap dedup
-          // path does. A kind 4 is its own envelope, so the stamp the relay
-          // filtered to deliver this replay is the event's own `created_at`.
-          await _recordWireSeen(
-            ownerPubkey,
-            nip04Event.createdAt,
-            deferTo: deferWireTo,
-          );
-        } else {
-          // A different local account processed this kind 4 — its id is shared
-          // by both ends, unlike a gift wrap's. This account never stored the
-          // message, so moving its boundary past the event would raise the
-          // floor of every future window over a message it does not have, and
-          // the boundary only ever rises. See #8209.
-          // A drain deliberately re-requests this event while its cursor stays
-          // above it. Logging every replay would fill the capture ring and
-          // evict the persist diagnostics the warning is meant to support.
-          if (_historyDrain == null) {
-            Log.warning(
-              'Skipping kind-4 ${nip04Event.id} for '
-              '${pubkeyForLogs(ownerPubkey)}: another local account processed '
-              'it, so this account is not advancing its sync boundary past a '
-              'message it never stored',
-              category: LogCategory.system,
-            );
-          }
-        }
+      //
+      // Scoped to this account: a kind 4's id is shared by both ends, so when
+      // the other end is also a local account its handling must not stand in
+      // for this one's. Skipping on it would drop this account's copy, and
+      // moving its boundary past a message it never stored raises the floor of
+      // every future window over it (#6645, #8209).
+      if (await _alreadyProcessed(nip04Event.id, ownerPubkey: ownerPubkey)) {
+        // Advance the wire boundary for the same reason the gift-wrap dedup
+        // path does. A kind 4 is its own envelope, so the stamp the relay
+        // filtered to deliver this replay is the event's own `created_at`.
+        await _recordWireSeen(
+          ownerPubkey,
+          nip04Event.createdAt,
+          deferTo: deferWireTo,
+        );
         if (_historyDrain == null) {
           Log.debug(
             'Skipping already-processed NIP-04 event ${nip04Event.id}',
@@ -5283,9 +5237,9 @@ class DmRepository {
             ),
           );
         } on FormatException {
-          // Every account on this device skips an id in the ledger, so the
-          // failure is final only when no other account could be the one the
-          // event was encrypted to.
+          // Record the failure only when no other account could be the one the
+          // event was encrypted to: a row here is this account's outcome, and
+          // an event meant for another recipient is not its to settle.
           final namesOneRecipient = nip04Event.tags.every(
             (tag) =>
                 tag.length < 2 || tag[0] != 'p' || tag[1] == recipientPubkey,
@@ -5397,7 +5351,10 @@ class DmRepository {
         // Re-check dedup inside transaction (TOCTOU protection). The skip is
         // logged after the transaction below; logging here too would emit one
         // line per skip twice.
-        if (await _directMessagesDao.hasGiftWrap(nip04Event.id)) {
+        if (await _directMessagesDao.hasGiftWrap(
+          nip04Event.id,
+          ownerPubkey: ownerPubkey,
+        )) {
           skippedByTransactionalGiftWrapDedup = true;
           return;
         }

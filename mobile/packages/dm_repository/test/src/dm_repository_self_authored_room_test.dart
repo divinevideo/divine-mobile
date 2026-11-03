@@ -236,7 +236,10 @@ void main() {
 
         await expectOnlyTheRoomHolding([rumor.id]);
         expect(
-          await processedDao.hasGiftWrap(wrap.id),
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: wrap.id,
+            ownerPubkey: _owner,
+          ),
           isFalse,
           reason:
               'a ledgered wrap is skipped before decryption on every later '
@@ -254,7 +257,13 @@ void main() {
         final wrap = await deliver(rumor, authorSecret: _ownerSecret);
 
         await expectOnlyTheRoomHolding([rumor.id]);
-        expect(await processedDao.hasGiftWrap(wrap.id), isFalse);
+        expect(
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: wrap.id,
+            ownerPubkey: _owner,
+          ),
+          isFalse,
+        );
       });
 
       test('is stored once when both of its self-copies arrive', () async {
@@ -290,7 +299,13 @@ void main() {
         final wrap = await deliver(rumor, authorSecret: _ownerSecret);
 
         expect(await conversations(), isEmpty);
-        expect(await processedDao.hasGiftWrap(wrap.id), isTrue);
+        expect(
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: wrap.id,
+            ownerPubkey: _owner,
+          ),
+          isTrue,
+        );
       });
     });
 

@@ -33,12 +33,15 @@ class _GatedMessagesDao extends DirectMessagesDao {
   final Completer<void> release = Completer<void>();
 
   @override
-  Future<bool> hasGiftWrap(String giftWrapId) async {
+  Future<bool> hasGiftWrap(
+    String giftWrapId, {
+    required String ownerPubkey,
+  }) async {
     if (giftWrapId == gatedWrapId && !reached.isCompleted) {
       reached.complete();
       await release.future;
     }
-    return super.hasGiftWrap(giftWrapId);
+    return super.hasGiftWrap(giftWrapId, ownerPubkey: ownerPubkey);
   }
 }
 

@@ -74,6 +74,32 @@ deletions, unsupported kinds, and messages suppressed by a removal tombstone),
 so those rows remain part of the dedup ledger while history can be replayed.
 Its long-term growth should be measured before changing that policy.
 
+### Dedup is per account
+
+Both dedup lookups, the message row's `gift_wrap_id` and the ledger, answer
+"did *this account* handle it", not "did any account on the device". A wrap id
+is unique to one account only for an inbound gift wrap. An outgoing row stores
+the *recipient's* wrap id, and a kind-4 event id is shared by sender and
+recipient, so with both accounts on one device one id sits on two accounts'
+rows. The unique index and the ledger's primary key are both
+`(gift_wrap_id, owner_pubkey)` (schema v32, #6645), so each account keeps its
+own outcome for an id. That matters for a message dual-sent as NIP-17 and kind
+4: the recipient merges the kind 4 into its NIP-17 copy and must remember
+having done so, or the next replay stores the kind 4 a second time.
+
+### Recovering a wrap the ledger skipped
+
+The ledger records that a wrap reached a terminal outcome, not which one, so
+a row with no message behind it cannot be told from a reaction, a deletion or a
+suppressed message, and no migration can sweep such rows safely. v12 and v32
+therefore keep every ledger row (v32 only adds the owner to its key). A wrap that an earlier build ledgered without
+storing a message (the old device-wide keys, #6645) comes back the same way any
+account's history does: switching away from the account, or signing it out,
+deletes that account's messages, its ledger rows and its sync cursors (the
+account cleanup in `social_providers.dart`), and the next sign-in downloads its
+history again with the owner-scoped keys. A history download alone does not do
+it, because the ledger is read before a wrap is decrypted.
+
 ## The server copy
 
 `dm_log` lives in `divine-moderation-service` (`migrations/003-dm-support.sql`).

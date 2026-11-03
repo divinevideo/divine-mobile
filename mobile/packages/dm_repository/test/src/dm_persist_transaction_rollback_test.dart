@@ -286,7 +286,10 @@ void main() {
           // The rolled-back insert must take the gift-wrap marker with it. If
           // the row survived, hasGiftWrap() would short-circuit the TOCTOU
           // re-check on every replay and the message could never be recovered.
-          expect(await messagesDao.hasGiftWrap(wrapId), isFalse);
+          expect(
+            await messagesDao.hasGiftWrap(wrapId, ownerPubkey: _owner),
+            isFalse,
+          );
 
           conversationsDao.failUpsert = false;
           await deliverNip17(

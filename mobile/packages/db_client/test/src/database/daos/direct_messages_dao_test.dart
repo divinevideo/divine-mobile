@@ -438,6 +438,107 @@ void main() {
       });
     });
 
+    group('owner-scoped gift-wrap ids', () {
+      // A gift-wrap id is unique to one recipient only for an INBOUND NIP-17
+      // wrap. An outgoing row stores the recipient's wrap id, and a kind-4
+      // event has one public id shared by sender and recipient, so when both
+      // ends are accounts on this device one `gift_wrap_id` names two owners.
+      // #6645.
+      final ownerA = 'a' * 64;
+      final ownerB = 'b' * 64;
+
+      test(
+        "the recipient account keeps its copy when the sender's outgoing row "
+        'already holds the wrap addressed to it',
+        () async {
+          const rumorId = 'rumor_a_to_b';
+          const wrapForB = 'wrap_addressed_to_b';
+          final sentByA = await dao.insertMessage(
+            id: rumorId,
+            conversationId: conversationId1,
+            senderPubkey: ownerA,
+            content: 'hello b',
+            createdAt: 1700000000,
+            giftWrapId: wrapForB,
+            ownerPubkey: ownerA,
+          );
+          final receivedByB = await dao.insertMessage(
+            id: rumorId,
+            conversationId: conversationId2,
+            senderPubkey: ownerA,
+            content: 'hello b',
+            createdAt: 1700000000,
+            giftWrapId: wrapForB,
+            ownerPubkey: ownerB,
+          );
+
+          expect(sentByA, isTrue);
+          expect(receivedByB, isTrue);
+          expect(
+            await dao.getMessagesForConversation(
+              conversationId2,
+              ownerPubkey: ownerB,
+            ),
+            hasLength(1),
+          );
+        },
+      );
+
+      test(
+        'both ends of a kind-4 event hold their own row when both are local',
+        () async {
+          const eventId = 'kind4_event_id';
+          final sentByA = await dao.insertMessage(
+            id: eventId,
+            conversationId: conversationId1,
+            senderPubkey: ownerA,
+            content: 'hello b',
+            createdAt: 1700000000,
+            giftWrapId: eventId,
+            ownerPubkey: ownerA,
+          );
+          final receivedByB = await dao.insertMessage(
+            id: eventId,
+            conversationId: conversationId2,
+            senderPubkey: ownerA,
+            content: 'hello b',
+            createdAt: 1700000000,
+            giftWrapId: eventId,
+            ownerPubkey: ownerB,
+          );
+
+          expect(sentByA, isTrue);
+          expect(receivedByB, isTrue);
+        },
+      );
+
+      test('a relay redelivery of the same wrap to the same owner is still '
+          'ignored', () async {
+        const wrapId = 'wrap_redelivered';
+        final first = await dao.insertMessage(
+          id: 'rumor_redelivered',
+          conversationId: conversationId1,
+          senderPubkey: 'pubkey_peer',
+          content: 'once',
+          createdAt: 1700000000,
+          giftWrapId: wrapId,
+          ownerPubkey: ownerA,
+        );
+        final redelivered = await dao.insertMessage(
+          id: 'rumor_redelivered',
+          conversationId: conversationId1,
+          senderPubkey: 'pubkey_peer',
+          content: 'once',
+          createdAt: 1700000000,
+          giftWrapId: wrapId,
+          ownerPubkey: ownerA,
+        );
+
+        expect(first, isTrue);
+        expect(redelivered, isFalse);
+      });
+    });
+
     group('getMessagesForConversation', () {
       test(
         'returns messages sorted by createdAt desc (newest first)',
@@ -1892,7 +1993,10 @@ void main() {
     });
 
     group('hasGiftWrap', () {
-      test('returns true when gift wrap ID exists', () async {
+      final ownerA = 'a' * 64;
+      final ownerB = 'b' * 64;
+
+      test('returns true when the owner holds the gift wrap ID', () async {
         await dao.insertMessage(
           id: 'msg_1',
           conversationId: conversationId1,
@@ -1900,24 +2004,66 @@ void main() {
           content: 'Hello!',
           createdAt: 1700000000,
           giftWrapId: 'gw_unique_123',
+          ownerPubkey: ownerA,
         );
 
-        final exists = await dao.hasGiftWrap('gw_unique_123');
+        final exists = await dao.hasGiftWrap(
+          'gw_unique_123',
+          ownerPubkey: ownerA,
+        );
+        expect(exists, isTrue);
+      });
+
+      test('returns false when only another account holds it', () async {
+        await dao.insertMessage(
+          id: 'msg_1',
+          conversationId: conversationId1,
+          senderPubkey: 'pubkey_alice',
+          content: 'Hello!',
+          createdAt: 1700000000,
+          giftWrapId: 'gw_unique_123',
+          ownerPubkey: ownerA,
+        );
+
+        final exists = await dao.hasGiftWrap(
+          'gw_unique_123',
+          ownerPubkey: ownerB,
+        );
+        expect(exists, isFalse);
+      });
+
+      test("counts a legacy unowned row as the account's own", () async {
+        await dao.insertMessage(
+          id: 'msg_legacy',
+          conversationId: conversationId1,
+          senderPubkey: 'pubkey_alice',
+          content: 'Hello!',
+          createdAt: 1700000000,
+          giftWrapId: 'gw_legacy',
+        );
+
+        final exists = await dao.hasGiftWrap('gw_legacy', ownerPubkey: ownerB);
         expect(exists, isTrue);
       });
 
       test('returns false when gift wrap ID does not exist', () async {
-        final exists = await dao.hasGiftWrap('gw_nonexistent');
+        final exists = await dao.hasGiftWrap(
+          'gw_nonexistent',
+          ownerPubkey: ownerA,
+        );
         expect(exists, isFalse);
       });
 
       test('returns false when table is empty', () async {
-        final exists = await dao.hasGiftWrap('gw_any');
+        final exists = await dao.hasGiftWrap('gw_any', ownerPubkey: ownerA);
         expect(exists, isFalse);
       });
     });
 
     group('giftWrapIdsPresent', () {
+      final ownerA = 'a' * 64;
+      final ownerB = 'b' * 64;
+
       test('returns only the subset of ids that have a message row', () async {
         await dao.insertMessage(
           id: 'msg_present',
@@ -1926,13 +2072,41 @@ void main() {
           content: 'Hello!',
           createdAt: 1700000000,
           giftWrapId: 'gw_present',
+          ownerPubkey: ownerA,
         );
 
         final present = await dao.giftWrapIdsPresent({
           'gw_present',
           'gw_absent',
-        });
+        }, ownerPubkey: ownerA);
         expect(present, equals({'gw_present'}));
+      });
+
+      test('leaves out ids only another account holds', () async {
+        await dao.insertMessage(
+          id: 'msg_a',
+          conversationId: conversationId1,
+          senderPubkey: 'pubkey_alice',
+          content: 'for a',
+          createdAt: 1700000000,
+          giftWrapId: 'gw_a',
+          ownerPubkey: ownerA,
+        );
+        await dao.insertMessage(
+          id: 'msg_b',
+          conversationId: conversationId2,
+          senderPubkey: 'pubkey_alice',
+          content: 'for b',
+          createdAt: 1700000000,
+          giftWrapId: 'gw_b',
+          ownerPubkey: ownerB,
+        );
+
+        final present = await dao.giftWrapIdsPresent({
+          'gw_a',
+          'gw_b',
+        }, ownerPubkey: ownerB);
+        expect(present, equals({'gw_b'}));
       });
 
       test('returns an empty set for empty input', () async {
@@ -1943,9 +2117,13 @@ void main() {
           content: 'Hi',
           createdAt: 1700000000,
           giftWrapId: 'gw_x',
+          ownerPubkey: ownerA,
         );
 
-        expect(await dao.giftWrapIdsPresent(const <String>{}), isEmpty);
+        expect(
+          await dao.giftWrapIdsPresent(const <String>{}, ownerPubkey: ownerA),
+          isEmpty,
+        );
       });
     });
 

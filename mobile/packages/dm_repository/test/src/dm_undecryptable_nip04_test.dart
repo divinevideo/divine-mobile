@@ -42,12 +42,18 @@ class _HeldProcessedGiftWrapsDao extends ProcessedGiftWrapsDao {
   final resume = Completer<void>();
 
   @override
-  Future<bool> hasGiftWrap(String giftWrapId) async {
+  Future<bool> hasGiftWrapForOwner({
+    required String giftWrapId,
+    required String ownerPubkey,
+  }) async {
     if (giftWrapId == holdId && !started.isCompleted) {
       started.complete();
       await resume.future;
     }
-    return super.hasGiftWrap(giftWrapId);
+    return super.hasGiftWrapForOwner(
+      giftWrapId: giftWrapId,
+      ownerPubkey: ownerPubkey,
+    );
   }
 }
 
