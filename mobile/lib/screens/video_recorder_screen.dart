@@ -33,6 +33,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/widgets/camera_permission_gate.dart';
 import 'package:openvine/widgets/video_clip/clip_crop_guide.dart';
+import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_shader.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_stack.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_stop_motion_budget.dart';
@@ -335,6 +336,8 @@ class _VideoRecorderViewState extends ConsumerState<VideoRecorderView>
       recorderMode: _requestedRecorderMode,
       autoStartRecording: autoStartRecording,
     );
+    // Lip sync opens on the sound picker, and the editor offers it next.
+    AudioSelectionBottomSheet.preload(ref);
     await _maybeShowWhySixSeconds();
     // An auto-recording open already found nothing to offer.
     if (!mounted || autoStartRecording) return;

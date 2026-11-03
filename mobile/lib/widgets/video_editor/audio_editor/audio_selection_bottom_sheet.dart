@@ -88,6 +88,19 @@ class AudioSelectionBottomSheet extends ConsumerStatefulWidget {
     );
   }
 
+  /// Starts loading what the picker opens on, For you with its covers and
+  /// Divine's own sounds, so a picker opened soon after shows them at once
+  /// instead of after the second or two their relay queries take.
+  ///
+  /// They stay loaded for a few minutes, so calling this again meanwhile
+  /// costs nothing.
+  static void preload(WidgetRef ref) {
+    // The covers wait on For you, so reading them loads both.
+    ref
+      ..read(forYouSoundCoversProvider)
+      ..read(divineSoundsProvider);
+  }
+
   @override
   ConsumerState<AudioSelectionBottomSheet> createState() =>
       _AudioSelectionBottomSheetState();
