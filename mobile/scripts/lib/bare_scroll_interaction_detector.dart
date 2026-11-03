@@ -564,7 +564,7 @@ class _Scanner {
     }
     final bindings = {...names};
     final positional = node.argumentList.arguments
-        .where((a) => a is! NamedExpression)
+        .whereType<Expression>()
         .toList();
     var position = 0;
     for (final parameter
@@ -575,8 +575,8 @@ class _Scanner {
       AstNode? argument;
       if (parameter.isNamed) {
         for (final named
-            in node.argumentList.arguments.whereType<NamedExpression>()) {
-          if (named.name.label.name == name) argument = named.expression;
+            in node.argumentList.arguments.whereType<NamedArgument>()) {
+          if (named.name.lexeme == name) argument = named.argumentExpression;
         }
       } else if (position < positional.length) {
         argument = positional[position++];

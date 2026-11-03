@@ -233,7 +233,7 @@ class _SkippedTestVisitor extends RecursiveAstVisitor<void> {
   void visitAnnotation(Annotation node) {
     // `@Skip('reason')` above `library;` disables every test in the file.
     if (node.name.name == 'Skip' && node.parent is Directive) {
-      final args = node.arguments?.arguments ?? const <Expression>[];
+      final args = node.arguments?.arguments ?? const <Argument>[];
       sites.add(
         SkippedTest(
           path: path,
@@ -272,14 +272,14 @@ class _SkippedTestVisitor extends RecursiveAstVisitor<void> {
 
   Expression? _skipArgument(MethodInvocation node) {
     for (final argument in node.argumentList.arguments) {
-      if (argument is NamedExpression && argument.name.label.name == 'skip') {
-        return argument.expression;
+      if (argument is NamedArgument && argument.name.lexeme == 'skip') {
+        return argument.argumentExpression;
       }
     }
     return null;
   }
 
-  String _describe(Expression first) => _oneLine(first.toSource(), max: 70);
+  String _describe(Argument first) => _oneLine(first.toSource(), max: 70);
 
   String _oneLine(String text, {int max = 60}) {
     final flat = text.replaceAll(RegExp(r'\s+'), ' ');

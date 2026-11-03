@@ -676,9 +676,12 @@ class _SiteCollector extends RecursiveAstVisitor<void> {
   /// opaque field, so the ratchet is blind to it unless read here.
   void _scanRelayDiagnostic(ArgumentList args, AstNode scopeNode) {
     for (final argument in args.arguments) {
-      if (argument is NamedExpression &&
-          argument.name.label.name == 'message') {
-        _scan(argument.expression, scopeNode, 'RelayDiagnostic.message');
+      if (argument is NamedArgument && argument.name.lexeme == 'message') {
+        _scan(
+          argument.argumentExpression,
+          scopeNode,
+          'RelayDiagnostic.message',
+        );
       }
     }
   }
@@ -858,7 +861,9 @@ class _ShorteningFinder extends RecursiveAstVisitor<void> {
       }
     } else if (shorteners.contains(member)) {
       for (final arg in node.argumentList.arguments) {
-        final value = arg is NamedExpression ? arg.expression : arg;
+        final value = arg is NamedArgument
+            ? arg.argumentExpression
+            : arg as Expression;
         final root = _rootIdentifierName(value);
         if (root != null && isIdentifierName(root)) {
           hits.add(_Hit(offset: node.offset, identifier: root, how: member));

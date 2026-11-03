@@ -83,8 +83,8 @@ class _NavigationVisitor extends RecursiveAstVisitor<void> {
 
 Expression? _namedArgument(ArgumentList arguments, String name) {
   for (final argument in arguments.arguments) {
-    if (argument is NamedExpression && argument.name.label.name == name) {
-      return argument.expression;
+    if (argument is NamedArgument && argument.name.lexeme == name) {
+      return argument.argumentExpression;
     }
   }
   return null;
@@ -92,7 +92,7 @@ Expression? _namedArgument(ArgumentList arguments, String name) {
 
 Expression? _firstPositional(ArgumentList arguments) {
   for (final argument in arguments.arguments) {
-    if (argument is! NamedExpression) return argument;
+    if (argument is Expression) return argument;
   }
   return null;
 }

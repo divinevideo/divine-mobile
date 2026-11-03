@@ -77,9 +77,9 @@ class _IndicatorVisitor extends RecursiveAstVisitor<void> {
     Expression? value;
     var hasValue = false;
     for (final argument in arguments.arguments) {
-      if (argument is NamedExpression && argument.name.label.name == 'value') {
+      if (argument is NamedArgument && argument.name.lexeme == 'value') {
         hasValue = true;
-        value = argument.expression;
+        value = argument.argumentExpression;
         break;
       }
     }
