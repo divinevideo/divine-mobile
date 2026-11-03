@@ -304,8 +304,8 @@ then show the sticker only as it is in the frames.
   video's own question sticker, not the one in the message, which the sender
   wrote. The creator does not answer their own question; a signed-out viewer
   is asked to sign in. An account that may message only Divine, a protected
-  minor, is not offered the question sticker, and a tap on one tells it
-  answering isn't available.
+  minor, is not offered the question sticker, a draft carrying one is refused
+  when it posts, and a tap on one tells it answering isn't available.
 - **Add yours (`prompt`).** A tap on its button opens the camera. The editor
   places the same sticker on the answer, pointing at the same chain, and names
   the chain's first video as what inspired the answer
@@ -317,8 +317,7 @@ then show the sticker only as it is in the frames.
   of its own with the same hashtag; otherwise the chain starts at the
   sticker's own video. The player shows how many people joined, each counted
   once by their newest answer the viewer's filters let through, and their
-  avatars; a tap on them opens the
-  answers in the full-screen feed.
+  avatars; a tap on them opens the answers in the full-screen feed.
 - **Replies.** The player shows how many video replies the video has (kind
   34236 videos whose NIP-22 `E` or `A` root tag names it), the avatars of the
   latest, and their thumbnails in turn, held still under reduced motion. A tap
@@ -341,8 +340,8 @@ only per author, and the server derives the address from the event, so replies
 to any version of the video still count. A chain is asked for by its first
 video's d-tag, and each answer it returns is checked as the relays' are.
 While it does not answer, the app reads them from the relay, at most 500 in one
-request, and a read that reaches that many shows its count with a plus, as
-a floor.
+request, and shows the count with a plus, as a floor, when a relay may have
+stopped at its result-size limit.
 Reading lives in `mobile/packages/video_responses_repository`; the player's
 copy is `mobile/lib/widgets/video_feed_item/interactive_sticker_overlay.dart`.
 

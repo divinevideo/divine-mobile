@@ -127,8 +127,8 @@ bool _isEditRebuiltTag(List<String> tag, {required bool isVideoReply}) {
   // Inspired-by a-tags (publish writes a 'mention' marker, edit writes
   // 'inspired-by' unless it keeps the same video). Only owned on non-reply
   // videos; on a reply these are reply-threading metadata (or a genuine
-  // inspired-by the edit flow cannot represent) and are preserved verbatim. Unmarked reply-root a-tags are
-  // preserved either way. Match the marker case-insensitively to mirror the
+  // inspired-by the edit flow cannot represent) and are preserved verbatim.
+  // Unmarked reply-root a-tags are preserved either way. Match the marker case-insensitively to mirror the
   // parser and the collaborator check above.
   if (!isVideoReply &&
       name == 'a' &&
