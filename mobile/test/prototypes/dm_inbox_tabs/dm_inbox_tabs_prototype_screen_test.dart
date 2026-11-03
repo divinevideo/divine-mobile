@@ -1,8 +1,8 @@
 // ABOUTME: PROTOTYPE (#8076) — proves the four-tab screen renders and that
 // ABOUTME: request content stays concealed until the user opens it.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tabs_prototype_screen.dart';
 
 import '../../helpers/test_provider_overrides.dart';
@@ -75,7 +75,7 @@ void main() {
         expect(badgeOn('Official'), equals('Official|2'));
 
         // Move Official into Inbox; its rows now render there.
-        await tester.tap(find.byTooltip('Tune classification'));
+        await tester.tap(find.text('Tune'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('Official gets its own tab'));
         await tester.pumpAndSettle();
