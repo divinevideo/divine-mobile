@@ -28,56 +28,39 @@ class DivineVideoPlayerPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, 
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
     companion object {
-        // Tracks the plugin instance attached to the main FlutterEngine.
-        // Flutter creates a NEW DivineVideoPlayerPlugin instance per engine,
-        // so instance variables cannot distinguish engines — only a static
-        // reference to the known-main instance works.
+        // The plugin instance of the UI FlutterEngine, which owns the
+        // process-wide state: the native log sink, PlayerRegistry teardown and
+        // the video cache. Flutter creates a NEW plugin instance per engine,
+        // and background engines (Firebase messaging, WorkManager) register
+        // every plugin too.
         //
-        // Background engines (Firebase FCM isolate, WorkManager) attach a
-        // different instance while mainPluginInstance is non-null. They are
-        // skipped entirely so PlayerRegistry.disposeAll() never kills live
-        // players owned by the main engine.
+        // Ownership is claimed on Activity attachment, which only the UI
+        // engine receives — never on engine attachment, where a background
+        // engine can come first: a push that starts the process attaches the
+        // Firebase engine before MainActivity exists.
         @Volatile
-        private var mainPluginInstance: DivineVideoPlayerPlugin? = null
+        private var uiPluginInstance: DivineVideoPlayerPlugin? = null
     }
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-        // Treat as the main engine when:
-        //   • nothing is registered yet (cold start), OR
-        //   • this same instance is reattaching (hot restart without a
-        //     preceding onDetachedFromEngine call).
-        // Any other instance attaching while the main one is registered is
-        // a background engine — skip it.
-        val isMainEngine = mainPluginInstance == null || mainPluginInstance === this
-        if (!isMainEngine) return
+        // Hot restart re-calls onAttachedToEngine on the UI instance without a
+        // preceding onDetachedFromEngine. Dispose zombie players left over from
+        // the previous Dart VM. main.dart also calls disposeAll() before
+        // runApp() as belt-and-suspenders coverage.
+        if (uiPluginInstance === this) PlayerRegistry.disposeAll()
 
-        mainPluginInstance = this
         binding = flutterPluginBinding
 
-        // Hot restart re-calls onAttachedToEngine on the same instance without
-        // a preceding onDetachedFromEngine. Dispose zombie players left over
-        // from the previous Dart VM. main.dart also calls disposeAll() before
-        // runApp() as belt-and-suspenders coverage.
-        PlayerRegistry.disposeAll()
-
+        // Every engine registers its own channel: a channel belongs to one
+        // engine's messenger, so a background engine cannot shadow the UI
+        // engine's handler. Registering only on the first engine to attach
+        // left the UI engine without one after a push started the process,
+        // and startup's configureCache then threw before runApp.
         globalChannel = MethodChannel(
             flutterPluginBinding.binaryMessenger,
             "divine_video_player",
         )
         globalChannel.setMethodCallHandler(this)
-
-        // Forward curated native diagnostics to Dart's UnifiedLogger so video
-        // playback problems land in user bug reports. Only the main engine
-        // reaches here (background isolates returned early above), so the
-        // process-wide sink always points at the UI engine's channel.
-        DivineVideoPlayerLog.sink = { level, message, name ->
-            mainHandler.post {
-                globalChannel.invokeMethod(
-                    "onNativeLog",
-                    mapOf("level" to level, "message" to message, "name" to name),
-                )
-            }
-        }
 
         flutterPluginBinding.platformViewRegistry.registerViewFactory(
             "divine_video_player_view",
@@ -86,15 +69,29 @@ class DivineVideoPlayerPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, 
     }
 
     override fun onDetachedFromEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-        if (mainPluginInstance !== this) {
-            // Background engine detaching — do not touch main engine's players.
+        globalChannel.setMethodCallHandler(null)
+        if (uiPluginInstance !== this) {
+            // Background engine detaching — do not touch the UI engine's players.
             return
         }
-        mainPluginInstance = null
-        globalChannel.setMethodCallHandler(null)
+        uiPluginInstance = null
         DivineVideoPlayerLog.sink = null
         PlayerRegistry.disposeAll()
         VideoCache.release()
+    }
+
+    private fun claimUiEngine() {
+        uiPluginInstance = this
+        // Forward curated native diagnostics to Dart's UnifiedLogger so video
+        // playback problems land in user bug reports.
+        DivineVideoPlayerLog.sink = { level, message, name ->
+            mainHandler.post {
+                globalChannel.invokeMethod(
+                    "onNativeLog",
+                    mapOf("level" to level, "message" to message, "name" to name),
+                )
+            }
+        }
     }
 
     // -- ActivityAware: pause/resume players with app lifecycle --
@@ -110,6 +107,7 @@ class DivineVideoPlayerPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, 
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        claimUiEngine()
         (binding.activity as? LifecycleOwner)?.lifecycle?.addObserver(lifecycleObserver)
     }
 
@@ -118,6 +116,7 @@ class DivineVideoPlayerPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, 
     }
 
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        claimUiEngine()
         (binding.activity as? LifecycleOwner)?.lifecycle?.addObserver(lifecycleObserver)
     }
 
