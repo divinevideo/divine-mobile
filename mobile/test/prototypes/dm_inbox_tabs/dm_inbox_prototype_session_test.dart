@@ -119,7 +119,7 @@ void main() {
 
       test('returns null for a group', () {
         final group = fixtures.dmConversations.firstWhere(
-          (c) => fixtures.titleFor(c).contains('and 1 others'),
+          (c) => fixtures.titleFor(c).endsWith(' and 1 other'),
         );
         expect(soleCounterparty(group, fixtures.userPubkey), isNull);
       });
@@ -175,7 +175,7 @@ void main() {
 
       test('block hides every conversation with that sender', () {
         final group = fixtures.dmConversations.firstWhere(
-          (c) => fixtures.titleFor(c).contains('and 1 others'),
+          (c) => fixtures.titleFor(c).endsWith(' and 1 other'),
         );
         final friend = fixtures.dmConversations.firstWhere(
           (c) => fixtures.titleFor(c) == 'Sofia Marchetti',

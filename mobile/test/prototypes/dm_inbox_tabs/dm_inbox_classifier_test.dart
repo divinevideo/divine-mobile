@@ -136,7 +136,7 @@ void main() {
       test('keeps a group containing one unfollowed spammer out of inbox', () {
         final result = classify();
         final mixedGroup = fixtures.dmConversations.firstWhere(
-          (c) => fixtures.titleFor(c).contains('and 1 others'),
+          (c) => fixtures.titleFor(c).endsWith(' and 1 other'),
         );
         expect(result.inbox, isNot(contains(mixedGroup)));
         expect(

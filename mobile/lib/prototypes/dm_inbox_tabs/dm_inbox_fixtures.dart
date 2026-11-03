@@ -85,7 +85,9 @@ class DmInboxFixtures {
         .toList();
     if (others.isEmpty) return 'Unknown sender';
     if (others.length == 1) return displayNameFor(others.first);
-    return '${displayNameFor(others.first)} and ${others.length - 1} others';
+    final rest = others.length - 1;
+    return '${displayNameFor(others.first)} and '
+        '${rest == 1 ? '1 other' : '$rest others'}';
   }
 
   static DmInboxFixtures build() => _build();
