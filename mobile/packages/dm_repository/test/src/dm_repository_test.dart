@@ -10362,6 +10362,34 @@ void main() {
       );
 
       test(
+        're-arms an install whose drain completed while a relay hid gift '
+        'wraps from the mixed request — #9468',
+        () async {
+          final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          final oldestRumor = nowSec - 90 * 86400;
+          final capturedUntil = <int?>[];
+          stubFiniteHistory(const <Event>[], capturedUntil);
+
+          // 6 is the last version to read kinds 1059 and 4 in one REQ with the
+          // deletions, which a NIP-42-gated relay answered without them.
+          // Hardcoded so this fails if #9468 ships without a bump.
+          final syncState = _FakeDmSyncState()
+            ..drainCompleteOverride = true
+            ..newestOverride = nowSec - 3600
+            ..oldestOverride = oldestRumor
+            ..drainVersionOverride = 6;
+          final repository = createRepository(syncState: syncState);
+
+          await repository.backfillHistoryIfNeeded();
+
+          expect(syncState.upgradedPubkeys, isNotEmpty);
+          expect(capturedUntil, isNotEmpty);
+          expect(capturedUntil.first, greaterThan(oldestRumor));
+          expect(syncState.drainCompleteOverride, isTrue);
+        },
+      );
+
+      test(
         'emits recovery true→false on historyRecoveryStream around an '
         'actual drain (#5202)',
         () async {
