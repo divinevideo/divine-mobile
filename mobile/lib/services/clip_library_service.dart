@@ -2,6 +2,7 @@
 // ABOUTME: Saves, trashes and organizes library clips in Drift
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:db_client/db_client.dart';
 import 'package:models/models.dart' show NativeProofData;
@@ -974,6 +975,9 @@ class ClipLibraryService {
   /// Recovers missing thumbnails and ghost frames for clips that were
   /// persisted before their assets had been generated.
   ///
+  /// Stop-motion clips and clips whose video file no longer exists are
+  /// skipped.
+  ///
   /// Returns the updated list if any clips were recovered, or the original
   /// list unchanged.
   Future<List<DivineVideoClip>> recoverMissingAssets(
@@ -986,12 +990,14 @@ class ClipLibraryService {
     if (incomplete.isEmpty) return clips;
 
     Log.info(
-      '📚 Recovering assets for ${incomplete.length} clip(s)',
+      '📚 Found ${incomplete.length} clip(s) missing a thumbnail or ghost '
+      'frame',
       name: 'ClipLibraryService',
       category: LogCategory.video,
     );
 
     var updated = false;
+    final missingVideoClipIds = <String>[];
 
     for (final clip in incomplete) {
       try {
@@ -999,6 +1005,12 @@ class ClipLibraryService {
         // their thumbnail is the first captured frame.
         if (clip.isStopMotion) continue;
         final videoPath = await clip.video!.safeFilePath();
+        // Nothing to extract from, and trying anyway reports a failed
+        // extraction to Crashlytics on every library load.
+        if (!File(videoPath).existsSync()) {
+          missingVideoClipIds.add(clip.id);
+          continue;
+        }
         var updatedClip = clip;
 
         if (clip.thumbnailPath == null) {
@@ -1041,6 +1053,17 @@ class ClipLibraryService {
           stackTrace: s,
         );
       }
+    }
+
+    if (missingVideoClipIds.isNotEmpty) {
+      // A warning, not a debug line, so the skip survives into bug-report
+      // log summaries, which keep warnings but drop older debug lines.
+      Log.warning(
+        '📚 Skipped asset recovery for ${missingVideoClipIds.length} clip(s) '
+        'whose video file is missing: ${missingVideoClipIds.join(', ')}',
+        name: 'ClipLibraryService',
+        category: LogCategory.video,
+      );
     }
 
     if (updated) {
