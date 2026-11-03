@@ -12,7 +12,11 @@ class AudioReuseConsentResolver {
 
   final VideosRepository _videosRepository;
 
-  Future<bool> verify(AudioEvent sound) async {
+  /// Whether [sound] may be reused now.
+  ///
+  /// [knownSource] is its source video when the caller has read it already,
+  /// which spares the lookup. The reuse policy is still asked fresh.
+  Future<bool> verify(AudioEvent sound, {VideoEvent? knownSource}) async {
     if (sound.isBundled || sound.isLocalImport) return true;
     if (sound.externalSource case final external?) {
       return external.license.allowsDerivatives;
@@ -36,9 +40,11 @@ class AudioReuseConsentResolver {
       // `['e', <audioEventId>, <relay>, 'audio']` tag, which legacy videos
       // predate. That is the same population this resolver exists to rescue,
       // so the reverse lookup returned nothing for every one of them (#6769).
-      final candidates = await _videosRepository.getVideosByAddressableIds([
-        sourceAddress,
-      ]);
+      final candidates = knownSource?.addressableId == sourceAddress
+          ? [knownSource!]
+          : await _videosRepository.getVideosByAddressableIds([
+              sourceAddress,
+            ]);
       final matching = candidates
           .where((video) => video.addressableId == sourceAddress)
           .toList();

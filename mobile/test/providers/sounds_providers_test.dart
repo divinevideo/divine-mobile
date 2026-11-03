@@ -1437,6 +1437,9 @@ void main() {
 
       setUp(() {
         videosRepository = _MockVideosRepository();
+        when(
+          () => videosRepository.refreshAudioReusePolicies(any()),
+        ).thenAnswer((_) async => const {});
       });
 
       VideoEvent sourceVideo(String pubkey, String dTag) => VideoEvent(
@@ -1449,7 +1452,34 @@ void main() {
         thumbnailUrl: 'https://example.com/$dTag.jpg',
       );
 
-      ProviderContainer buildContainer(List<AudioEvent> trending) {
+      void stubBothSourceVideos() {
+        when(
+          () => videosRepository.getVideosFromRelaysByAddressableIds(
+            any(),
+            includeFeedShape: any(named: 'includeFeedShape'),
+          ),
+        ).thenAnswer(
+          (_) async => (
+            videos: [
+              sourceVideo(authorA, 'clip-a'),
+              sourceVideo(authorB, 'clip-b'),
+            ],
+            complete: true,
+          ),
+        );
+      }
+
+      List<AudioEvent> soundsFrom(List<String> references) => [
+        for (final (index, reference) in references.indexed)
+          createTestAudioEvent(
+            id: 'sound-$index',
+          ).copyWith(sourceVideoReference: reference),
+      ];
+
+      ProviderContainer buildContainer(
+        List<AudioEvent> trending, {
+        String? viewer,
+      }) {
         when(
           () => mockRepository.fetchTrendingSounds(
             limit: any(named: 'limit'),
@@ -1464,6 +1494,7 @@ void main() {
           overrides: [
             soundsRepositoryProvider.overrideWithValue(mockRepository),
             videosRepositoryProvider.overrideWithValue(videosRepository),
+            authServiceProvider.overrideWithValue(_StubAuthService(viewer)),
           ],
         );
         addTearDown(container.dispose);
@@ -1671,6 +1702,162 @@ void main() {
             includeFeedShape: any(named: 'includeFeedShape'),
           ),
         );
+      });
+
+      test('hands the reuse check the source video a cover came from, so it '
+          'asks only for the policy', () async {
+        final source = sourceVideo(authorA, 'clip-a');
+        when(
+          () => videosRepository.getVideosFromRelaysByAddressableIds(
+            any(),
+            includeFeedShape: any(named: 'includeFeedShape'),
+          ),
+        ).thenAnswer((_) async => (videos: [source], complete: true));
+        when(
+          () => videosRepository.refreshAudioReusePolicy(source),
+        ).thenAnswer(
+          (_) async => const AudioReusePolicy(allowAudioReuse: true),
+        );
+        final sound = createTestAudioEvent(
+          id: 'picked',
+        ).copyWith(sourceVideoReference: verticalReference);
+        final container = buildContainer([sound]);
+        await container.read(trendingSoundCoversProvider.future);
+
+        expect(
+          await container.read(audioReuseTermsProvider(sound).future),
+          isTrue,
+        );
+        verifyNever(() => videosRepository.getVideosByAddressableIds(any()));
+      });
+
+      group('reuse', () {
+        test('marks a video whose creator lets no one reuse its sound as '
+            'gone, so its row is left out', () async {
+          stubBothSourceVideos();
+          when(
+            () => videosRepository.refreshAudioReusePolicies(any()),
+          ).thenAnswer(
+            (_) async => {
+              verticalReference: const AudioReusePolicy(allowAudioReuse: true),
+              normalReference: const AudioReusePolicy(allowAudioReuse: false),
+            },
+          );
+          final container = buildContainer(
+            soundsFrom([verticalReference, normalReference]),
+          );
+
+          final covers = await container.read(
+            trendingSoundCoversProvider.future,
+          );
+
+          expect(covers[verticalReference], isNotNull);
+          expect(covers.containsKey(normalReference), isTrue);
+          expect(covers[normalReference], isNull);
+          final asked = verify(
+            () => videosRepository.refreshAudioReusePolicies(captureAny()),
+          ).captured;
+          expect((asked.single as Iterable<String>).toSet(), {
+            verticalReference,
+            normalReference,
+          });
+        });
+
+        test("never asks about the viewer's own videos, whose sound they may "
+            'always reuse', () async {
+          stubBothSourceVideos();
+          final container = buildContainer(
+            soundsFrom([verticalReference, normalReference]),
+            viewer: authorA,
+          );
+
+          await container.read(trendingSoundCoversProvider.future);
+
+          final asked = verify(
+            () => videosRepository.refreshAudioReusePolicies(captureAny()),
+          ).captured;
+          expect((asked.single as Iterable<String>).toList(), [
+            normalReference,
+          ]);
+        });
+
+        test('keeps the covers when the server cannot say', () async {
+          stubBothSourceVideos();
+          when(
+            () => videosRepository.refreshAudioReusePolicies(any()),
+          ).thenThrow(Exception('policy store down'));
+          final container = buildContainer(
+            soundsFrom([verticalReference, normalReference]),
+          );
+
+          final covers = await container.read(
+            trendingSoundCoversProvider.future,
+          );
+
+          expect(covers[verticalReference], isNotNull);
+          expect(covers[normalReference], isNotNull);
+        });
+      });
+
+      group('savedSoundSourcesProvider', () {
+        test('looks up the source videos of saved sounds', () async {
+          stubBothSourceVideos();
+          when(
+            () => videosRepository.refreshAudioReusePolicies(any()),
+          ).thenAnswer(
+            (_) async => {
+              normalReference: const AudioReusePolicy(allowAudioReuse: false),
+            },
+          );
+          final container = buildContainer(const []);
+
+          final sources = await container.read(
+            savedSoundSourcesProvider(
+              SoundSourceReferences(
+                soundsFrom([verticalReference, normalReference]),
+              ),
+            ).future,
+          );
+
+          expect(sources[verticalReference], isNotNull);
+          expect(sources.containsKey(normalReference), isTrue);
+          expect(sources[normalReference], isNull);
+        });
+
+        test('asks nothing for saved sounds from no video', () async {
+          final container = buildContainer(const []);
+
+          final sources = await container.read(
+            savedSoundSourcesProvider(
+              SoundSourceReferences([createTestAudioEvent(id: 'imported')]),
+            ).future,
+          );
+
+          expect(sources, isEmpty);
+          verifyNever(
+            () => videosRepository.getVideosFromRelaysByAddressableIds(
+              any(),
+              includeFeedShape: any(named: 'includeFeedShape'),
+            ),
+          );
+        });
+
+        test('takes sounds from the same videos for the same key', () {
+          final sounds = soundsFrom([verticalReference, normalReference]);
+
+          expect(
+            SoundSourceReferences(sounds),
+            SoundSourceReferences(sounds.reversed),
+          );
+          expect(
+            SoundSourceReferences(sounds).hashCode,
+            SoundSourceReferences(sounds.reversed).hashCode,
+          );
+          expect(
+            SoundSourceReferences(sounds),
+            isNot(SoundSourceReferences(sounds.take(1))),
+          );
+        });
       });
     });
 

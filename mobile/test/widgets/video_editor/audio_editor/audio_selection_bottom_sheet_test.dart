@@ -127,6 +127,7 @@ void main() {
       String? viewerPubkey,
       Map<String, int>? usageCounts,
       Map<String, SoundCover?>? covers,
+      Map<String, SoundCover?> savedSources = const {},
       bool coversPending = false,
       bool coversFail = false,
       Completer<Map<String, SoundCover?>>? forYouCovers,
@@ -226,6 +227,11 @@ void main() {
               forYouSoundCoversProvider.overrideWith(
                 (_) => forYouCovers.future,
               ),
+            // Always overridden: the real one looks the saved sounds' videos
+            // up through the real repository.
+            savedSoundSourcesProvider.overrideWith(
+              (ref, sources) async => savedSources,
+            ),
             // Always overridden: without it a keystroke would build the real
             // repository, and with it a Nostr client, inside a widget test.
             soundSearchResultsProvider.overrideWith((ref, query) async {
@@ -2253,6 +2259,38 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Saved Sound'), findsOneWidget);
+      });
+
+      testWidgets('leaves out a saved sound that can no longer be reused', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            savedSounds: [
+              _createTestAudioEvent(
+                id: 'reusable',
+                title: 'Reusable',
+              ).copyWith(sourceVideoReference: '34236:${'a' * 64}:kept'),
+              _createTestAudioEvent(
+                id: 'refused',
+                title: 'Refused',
+              ).copyWith(sourceVideoReference: '34236:${'b' * 64}:refused'),
+            ],
+            savedSources: {
+              '34236:${'a' * 64}:kept': const SoundCover(),
+              '34236:${'b' * 64}:refused': null,
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryMySounds));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Reusable'), findsOneWidget);
+        expect(find.text('Refused'), findsNothing);
       });
     });
   });

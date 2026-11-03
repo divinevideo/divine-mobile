@@ -99,7 +99,8 @@ final class SoundsRepositoryProvider
 String _$soundsRepositoryHash() => r'ee1eabdb6858cd033616241484cd49192481c3ac';
 
 /// The newest sounds, the picker's "New" list, loading older ones page by
-/// page as it is scrolled ([TrendingSounds.loadMore]).
+/// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
+/// it fills a screen.
 ///
 /// Unnamed sounds nobody reused are left out
 /// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
@@ -114,7 +115,8 @@ String _$soundsRepositoryHash() => r'ee1eabdb6858cd033616241484cd49192481c3ac';
 final trendingSoundsProvider = TrendingSoundsProvider._();
 
 /// The newest sounds, the picker's "New" list, loading older ones page by
-/// page as it is scrolled ([TrendingSounds.loadMore]).
+/// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
+/// it fills a screen.
 ///
 /// Unnamed sounds nobody reused are left out
 /// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
@@ -127,7 +129,8 @@ final trendingSoundsProvider = TrendingSoundsProvider._();
 final class TrendingSoundsProvider
     extends $AsyncNotifierProvider<TrendingSounds, PagedSounds> {
   /// The newest sounds, the picker's "New" list, loading older ones page by
-  /// page as it is scrolled ([TrendingSounds.loadMore]).
+  /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
+  /// it fills a screen.
   ///
   /// Unnamed sounds nobody reused are left out
   /// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
@@ -156,10 +159,11 @@ final class TrendingSoundsProvider
   TrendingSounds create() => TrendingSounds();
 }
 
-String _$trendingSoundsHash() => r'350f3902d357caf4bcdd6e2ff43c9653e20000e2';
+String _$trendingSoundsHash() => r'308f904cb163b67176bf6635d34eddd65ee18fc6';
 
 /// The newest sounds, the picker's "New" list, loading older ones page by
-/// page as it is scrolled ([TrendingSounds.loadMore]).
+/// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
+/// it fills a screen.
 ///
 /// Unnamed sounds nobody reused are left out
 /// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
@@ -1038,7 +1042,8 @@ String _$divineSoundsHash() => r'9810f55d815543cfd9e2405e3e6a4100861b3f64';
 
 /// The newest sounds published by people the viewer follows, for the
 /// picker's "For you" list, loading older ones page by page as it is
-/// scrolled ([ForYouSounds.loadMore]).
+/// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
+/// screen.
 ///
 /// Divine's own sounds are left out even when the viewer follows a Divine
 /// sound account: the picker lists them from [divineSounds], tied to the
@@ -1052,7 +1057,8 @@ final forYouSoundsProvider = ForYouSoundsProvider._();
 
 /// The newest sounds published by people the viewer follows, for the
 /// picker's "For you" list, loading older ones page by page as it is
-/// scrolled ([ForYouSounds.loadMore]).
+/// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
+/// screen.
 ///
 /// Divine's own sounds are left out even when the viewer follows a Divine
 /// sound account: the picker lists them from [divineSounds], tied to the
@@ -1064,7 +1070,8 @@ final class ForYouSoundsProvider
     extends $AsyncNotifierProvider<ForYouSounds, PagedSounds> {
   /// The newest sounds published by people the viewer follows, for the
   /// picker's "For you" list, loading older ones page by page as it is
-  /// scrolled ([ForYouSounds.loadMore]).
+  /// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
+  /// screen.
   ///
   /// Divine's own sounds are left out even when the viewer follows a Divine
   /// sound account: the picker lists them from [divineSounds], tied to the
@@ -1091,11 +1098,12 @@ final class ForYouSoundsProvider
   ForYouSounds create() => ForYouSounds();
 }
 
-String _$forYouSoundsHash() => r'd8b6d2530a54ec65f63e28fd564139b0ba8e5b65';
+String _$forYouSoundsHash() => r'4e3765a54b30199fd2c60394634f55554490ec0d';
 
 /// The newest sounds published by people the viewer follows, for the
 /// picker's "For you" list, loading older ones page by page as it is
-/// scrolled ([ForYouSounds.loadMore]).
+/// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
+/// screen.
 ///
 /// Divine's own sounds are left out even when the viewer follows a Divine
 /// sound account: the picker lists them from [divineSounds], tied to the
@@ -1392,11 +1400,111 @@ final class SoundSearchCoversFamily extends $Family
   String toString() => r'soundSearchCoversProvider';
 }
 
+/// What My sounds' saved sounds' source videos left: their covers, keyed and
+/// marked like [trendingSoundCovers], so the tab can leave out the sounds that
+/// can no longer be reused.
+
+@ProviderFor(savedSoundSources)
+final savedSoundSourcesProvider = SavedSoundSourcesFamily._();
+
+/// What My sounds' saved sounds' source videos left: their covers, keyed and
+/// marked like [trendingSoundCovers], so the tab can leave out the sounds that
+/// can no longer be reused.
+
+final class SavedSoundSourcesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, SoundCover?>>,
+          Map<String, SoundCover?>,
+          FutureOr<Map<String, SoundCover?>>
+        >
+    with
+        $FutureModifier<Map<String, SoundCover?>>,
+        $FutureProvider<Map<String, SoundCover?>> {
+  /// What My sounds' saved sounds' source videos left: their covers, keyed and
+  /// marked like [trendingSoundCovers], so the tab can leave out the sounds that
+  /// can no longer be reused.
+  SavedSoundSourcesProvider._({
+    required SavedSoundSourcesFamily super.from,
+    required SoundSourceReferences super.argument,
+  }) : super(
+         retry: null,
+         name: r'savedSoundSourcesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$savedSoundSourcesHash();
+
+  @override
+  String toString() {
+    return r'savedSoundSourcesProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<String, SoundCover?>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<String, SoundCover?>> create(Ref ref) {
+    final argument = this.argument as SoundSourceReferences;
+    return savedSoundSources(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SavedSoundSourcesProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$savedSoundSourcesHash() => r'07756bea37ab7d70229d56768596c43a85770cca';
+
+/// What My sounds' saved sounds' source videos left: their covers, keyed and
+/// marked like [trendingSoundCovers], so the tab can leave out the sounds that
+/// can no longer be reused.
+
+final class SavedSoundSourcesFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<Map<String, SoundCover?>>,
+          SoundSourceReferences
+        > {
+  SavedSoundSourcesFamily._()
+    : super(
+        retry: null,
+        name: r'savedSoundSourcesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// What My sounds' saved sounds' source videos left: their covers, keyed and
+  /// marked like [trendingSoundCovers], so the tab can leave out the sounds that
+  /// can no longer be reused.
+
+  SavedSoundSourcesProvider call(SoundSourceReferences sources) =>
+      SavedSoundSourcesProvider._(argument: sources, from: this);
+
+  @override
+  String toString() => r'savedSoundSourcesProvider';
+}
+
 /// The covers the picker's lists have looked up, shared by them, so a list
 /// that loads more asks only about its new rows.
 ///
 /// Made anew with the videos repository, whose viewer decides which videos
-/// are found.
+/// are found, and for each account, whose own sounds it may always reuse.
 
 @ProviderFor(_soundCoverCache)
 final _soundCoverCacheProvider = _SoundCoverCacheProvider._();
@@ -1405,7 +1513,7 @@ final _soundCoverCacheProvider = _SoundCoverCacheProvider._();
 /// that loads more asks only about its new rows.
 ///
 /// Made anew with the videos repository, whose viewer decides which videos
-/// are found.
+/// are found, and for each account, whose own sounds it may always reuse.
 
 final class _SoundCoverCacheProvider
     extends
@@ -1419,7 +1527,7 @@ final class _SoundCoverCacheProvider
   /// that loads more asks only about its new rows.
   ///
   /// Made anew with the videos repository, whose viewer decides which videos
-  /// are found.
+  /// are found, and for each account, whose own sounds it may always reuse.
   _SoundCoverCacheProvider._()
     : super(
         from: null,
@@ -1453,7 +1561,7 @@ final class _SoundCoverCacheProvider
   }
 }
 
-String _$_soundCoverCacheHash() => r'01c694f76ef4d141d826ef31390ac9a2585dad97';
+String _$_soundCoverCacheHash() => r'1cd87cc3aa83da3ee258ccf49f7e54cbe6a654e6';
 
 /// Viewer-independent reuse terms for explicit and legacy audio events.
 
@@ -1509,7 +1617,7 @@ final class AudioReuseTermsProvider
   }
 }
 
-String _$audioReuseTermsHash() => r'6c5b36e30d803320d075b60393eb586e6e2fc72d';
+String _$audioReuseTermsHash() => r'6df56ee2881813312aa6d2862a5c87291cbfd0f9';
 
 /// Viewer-independent reuse terms for explicit and legacy audio events.
 
