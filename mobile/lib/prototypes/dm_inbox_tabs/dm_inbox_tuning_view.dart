@@ -207,7 +207,7 @@ class _DmInboxTuningViewState extends State<DmInboxTuningView> {
           _Section(
             title: 'Risk signals',
             icon: DivineIconName.warning,
-            accent: VineTheme.error,
+            accent: context.vineColors.onErrorContainer,
             blurb:
                 'Added to the score when the signal fires. The strongest '
                 'two are behavioural — what the sender did to other people '
@@ -285,7 +285,7 @@ class _DmInboxTuningViewState extends State<DmInboxTuningView> {
           _Section(
             title: 'Mitigating signals',
             icon: DivineIconName.shieldCheck,
-            accent: VineTheme.primary,
+            accent: context.vineColors.accentBrand,
             blurb:
                 'Subtracted from the score. These are what keep a real '
                 'person with an unusual profile out of the spam bucket.',
@@ -413,15 +413,15 @@ class _FilterHero extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surfaceContainer,
         borderRadius: const BorderRadius.all(Radius.circular(18)),
-        border: Border.all(color: VineTheme.primary.withValues(alpha: 0.35)),
+        border: Border.all(color: colors.accentBrand.withValues(alpha: 0.35)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 14,
         children: [
-          const DivineIcon(
+          DivineIcon(
             icon: DivineIconName.shieldCheck,
-            color: VineTheme.primary,
+            color: colors.accentBrand,
             size: 28,
           ),
           Expanded(

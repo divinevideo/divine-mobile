@@ -285,11 +285,11 @@ class _PrototypeStrip extends StatelessWidget {
                 ),
                 Text(
                   'Tune',
-                  style: VineTheme.labelMediumFont(color: VineTheme.primary),
+                  style: VineTheme.labelMediumFont(color: colors.accentBrand),
                 ),
-                const DivineIcon(
+                DivineIcon(
                   icon: DivineIconName.arrowRight,
-                  color: VineTheme.primary,
+                  color: colors.accentBrand,
                   size: 13,
                 ),
               ],
@@ -733,9 +733,9 @@ class _TitleRow extends StatelessWidget {
                 ),
               ),
               if (isOfficial)
-                const DivineIcon(
+                DivineIcon(
                   icon: DivineIconName.sealCheckFill,
-                  color: VineTheme.primary,
+                  color: colors.accentBrand,
                   size: 15,
                 ),
             ],
@@ -774,7 +774,7 @@ class _Avatar extends StatelessWidget {
             ? colors.iconButton
             : colors.surfaceContainer.withValues(alpha: concealed ? 0.6 : 1),
         border: isOfficial
-            ? Border.all(color: VineTheme.primary.withValues(alpha: 0.45))
+            ? Border.all(color: colors.accentBrand.withValues(alpha: 0.45))
             : null,
       ),
       alignment: Alignment.center,
@@ -809,7 +809,7 @@ class _OfficialFooter extends StatelessWidget {
         children: [
           Text(
             identity.label,
-            style: VineTheme.labelSmallFont(color: VineTheme.primary),
+            style: VineTheme.labelSmallFont(color: colors.accentBrand),
           ),
           Flexible(
             child: Text(
@@ -833,9 +833,9 @@ class _UnreadDot extends StatelessWidget {
     return Container(
       width: 8,
       height: 8,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: VineTheme.primary,
+        color: context.vineColors.accentBrand,
       ),
     );
   }
@@ -1018,7 +1018,7 @@ class _ReasonsPanel extends StatelessWidget {
     if (reasons.isEmpty) return const SizedBox.shrink();
     final colors = context.vineColors;
     final accent = verdict.bucket == DmInboxBucket.likelySpam
-        ? VineTheme.error
+        ? colors.onErrorContainer
         : colors.onSurfaceMuted;
 
     return Column(
@@ -1088,7 +1088,9 @@ class _ReasonRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.vineColors;
-    final tint = reason.isMitigating ? colors.accentPositive : VineTheme.error;
+    final tint = reason.isMitigating
+        ? colors.accentPositive
+        : colors.onErrorContainer;
     return Row(
       spacing: 8,
       children: [
@@ -1178,7 +1180,7 @@ class _FacilitatorScore extends StatelessWidget {
         child: Text(
           'risk $score · filtered at $threshold',
           style: VineTheme.labelSmallFont(
-            color: isSpam ? VineTheme.error : colors.onSurfaceMuted,
+            color: isSpam ? colors.onErrorContainer : colors.onSurfaceMuted,
           ),
         ),
       ),
@@ -1340,10 +1342,10 @@ extension on DmInboxBucket {
   };
 
   Color accent(BuildContext context) => switch (this) {
-    DmInboxBucket.official => VineTheme.primary,
+    DmInboxBucket.official => context.vineColors.accentBrand,
     DmInboxBucket.inbox => context.vineColors.onSurfaceMuted,
     DmInboxBucket.requests => context.vineColors.onSurfaceMuted,
-    DmInboxBucket.likelySpam => VineTheme.error,
+    DmInboxBucket.likelySpam => context.vineColors.onErrorContainer,
   };
 
   String? get headerCopy => switch (this) {
