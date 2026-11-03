@@ -1087,6 +1087,68 @@ void main() {
         expect((captured.single as Iterable<String>).toSet(), {audioEventId1});
       });
 
+      test('counts only the sounds a new page added', () async {
+        final older = createTestAudioEvent(id: audioEventId2, createdAt: 100);
+        when(
+          () => mockRepository.fetchVideosUsingSoundCounts(any()),
+        ).thenAnswer(
+          (invocation) async => {
+            for (final id
+                in invocation.positionalArguments.single as Iterable<String>)
+              id: id == audioEventId1 ? 7 : 2,
+          },
+        );
+        final container = buildContainer([
+          createTestAudioEvent(id: audioEventId1, createdAt: 200),
+        ]);
+        final subscription = container.listen(
+          trendingSoundUsageCountsProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await container.read(trendingSoundUsageCountsProvider.future);
+        when(
+          () => mockRepository.fetchTrendingSounds(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+          ),
+        ).thenAnswer((_) async => [older]);
+
+        await container.read(trendingSoundsProvider.notifier).loadMore();
+        // The counts follow the new page once its change has gone round.
+        await pumpEventQueue();
+        final counts = await container.read(
+          trendingSoundUsageCountsProvider.future,
+        );
+
+        expect(counts, {audioEventId1: 7, audioEventId2: 2});
+        final captured = verify(
+          () => mockRepository.fetchVideosUsingSoundCounts(captureAny()),
+        ).captured;
+        expect(
+          [for (final ids in captured) (ids as Iterable<String>).toSet()],
+          [
+            {audioEventId1},
+            {audioEventId2},
+          ],
+        );
+      });
+
+      test('leaves out the counts it could not look up', () async {
+        when(
+          () => mockRepository.fetchVideosUsingSoundCounts(any()),
+        ).thenThrow(Exception('relay down'));
+
+        final container = buildContainer([
+          createTestAudioEvent(id: audioEventId1),
+        ]);
+
+        expect(
+          await container.read(trendingSoundUsageCountsProvider.future),
+          isEmpty,
+        );
+      });
+
       test('never queries for sounds with no referenceable event', () async {
         final container = buildContainer([
           createTestAudioEvent(id: '${AudioEvent.bundledMarker}_wednesday'),
