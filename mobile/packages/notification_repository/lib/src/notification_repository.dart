@@ -2241,6 +2241,8 @@ class NotificationRepository {
 
   /// Enriches raw relay notifications with profile + video metadata, then
   /// groups them into [VideoNotification]s and [ActorNotification]s.
+  ///
+  /// Activity on repost events is dropped first; see [_targetsRepostEvent].
   Future<List<NotificationItem>> _enrichAndGroup(
     List<RelayNotification> unfiltered, {
     NotificationKind? filter,
@@ -2474,18 +2476,16 @@ class NotificationRepository {
   /// a [VideoNotification], even if only one actor interacted. Comments can
   /// anchor on `rootEventId` when the payload omits `referencedEventId`.
   ///
-  /// Notifications whose referenced video is confirmed to belong to a
-  /// different user are collected in [misattributed] for reclassification
-  /// as actor-anchored notifications (e.g. "liked your comment" instead of
-  /// "liked your video"). This fixes #4813.
+  /// Notifications whose anchor is confirmed not to be the user's own video
+  /// are collected in [misattributed] for reclassification as actor-anchored
+  /// rows (#4813): comments become "replied to your comment", and likes whose
+  /// anchor 404'd under a foreign root author become "liked your comment".
   ///
-  /// A like whose anchor resolves through metadata to another creator's video
-  /// goes to [taggedVideoLikes] instead. It targets that video itself, not a
-  /// comment: Funnelcake marks every like on a comment with
-  /// `target_comment_id`, which makes it a likeComment before this point.
-  /// Funnelcake notifies everyone a like tags, such as a video's
-  /// collaborators, so the row must not claim either "your video" or "your
-  /// comment".
+  /// A like whose anchor metadata resolves to another creator's video goes to
+  /// [taggedVideoLikes] instead: Funnelcake notifies everyone a like tags, a
+  /// collaborator for example, so the row must not say "your video". A like
+  /// on the user's comment usually carries `target_comment_id` and is a
+  /// likeComment before this point.
   List<VideoNotification> _groupVideoAnchored(
     List<RelayNotification> raw,
     Map<String, UserProfile> profiles,
@@ -2730,8 +2730,8 @@ class NotificationRepository {
   ///
   /// Instead of silently dropping these, they are surfaced as
   /// [ActorNotification]s with the correct kind:
-  /// - `like` (reaction on someone else's video) → `likeComment`
-  ///   ("liked your comment")
+  /// - `like` whose anchor 404'd under a foreign `root_event_pubkey` (a
+  ///   reaction on the user's comment) → `likeComment` ("liked your comment")
   /// - `comment` (reply on someone else's video) → `reply`
   ///   ("replied to your comment")
   /// - `repost` remains dropped — a repost of someone else's video should
@@ -3255,8 +3255,8 @@ class NotificationRepository {
     return true;
   }
 
-  /// Whether [n] is a like, comment or repost on one of the user's own
-  /// repost events.
+  /// Whether [n] is a like, comment or repost whose referenced event is a
+  /// repost (kind 6 or 16).
   ///
   /// Funnelcake notifies the author of every event a source event tags, so
   /// activity on a repost reaches the reposter even though the video is

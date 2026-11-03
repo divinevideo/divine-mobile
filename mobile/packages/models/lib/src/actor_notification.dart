@@ -1,10 +1,12 @@
-// ABOUTME: Actor-anchored notification — follows, mentions, system, and
-// ABOUTME: reactions without a video anchor, including grouped comment likes.
+// ABOUTME: Actor-anchored notification — follows, mentions, system,
+// ABOUTME: reactions without a video anchor, grouped comment likes, and likes
+// ABOUTME: on another creator's video.
 
 part of 'notification_item.dart';
 
-/// A notification anchored to an actor (follow, mention, system, or an
-/// addressable reaction without a concrete video event ID).
+/// A notification anchored to an actor (follow, mention, system, an
+/// addressable reaction without a concrete video event ID, or a like on
+/// another creator's video — see [isTaggedVideo]).
 ///
 /// Comment likes with a confirmed comment ID share a row; other kinds
 /// remain one row per event.
@@ -93,11 +95,8 @@ class ActorNotification extends NotificationItem {
   /// Present only for client-decrypted room mentions.
   final ChatNotificationTarget? chatTarget;
 
-  /// Whether this [NotificationKind.like] is on another creator's video that
-  /// only tags the user, such as a collaboration.
-  ///
-  /// The row must not say "your video" — nor "your comment", since the like
-  /// carries no comment target.
+  /// Whether this [NotificationKind.like] is on a video another creator owns,
+  /// so the row must not say "your video" or "your comment".
   final bool isTaggedVideo;
 
   /// Returns a copy with the given fields replaced.

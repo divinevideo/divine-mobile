@@ -108,9 +108,10 @@ class RelayNotification {
   /// Nostr kind of the event named by [referencedEventId], when Funnelcake
   /// knows it.
   ///
-  /// `null` means unknown, never "a video": Funnelcake only sets it on rows
-  /// materialized since 2026-08-24. A kind 6 or 16 means the activity
-  /// targeted the recipient's repost event rather than their own content.
+  /// `null` means unknown, not "a video": Funnelcake omits it on rows written
+  /// before the field existed and when it cannot resolve the referenced
+  /// event. A kind 6 or 16 means [referencedEventId] is a repost, not the
+  /// content it points to.
   final int? referencedEventKind;
 
   /// The notification type (e.g. 'reaction', 'reply', 'repost', 'zap').

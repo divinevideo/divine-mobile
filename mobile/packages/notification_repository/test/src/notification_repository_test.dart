@@ -3744,9 +3744,7 @@ void main() {
 
       test('reaction on a non-owned video is a like on a video the user is '
           'tagged in, not liked your video or your comment', () async {
-        // No targetCommentId, and metadata resolves the anchor to another
-        // creator's video: the like is on that video itself. Funnelcake
-        // notifies everyone it tags, such as a collaborator.
+        // Funnelcake notifies everyone a like tags, such as a collaborator.
         stubNotifications([
           makeNotification(referencedEventId: 'foreign_video'),
         ]);
