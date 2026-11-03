@@ -38,7 +38,7 @@ class VineBottomSheetFeatureData {
 /// [VineBottomSheetFeatureAnnouncement.show].
 ///
 /// ```dart
-/// final navigator = Navigator.of(context);
+/// final navigator = Navigator.of(context, rootNavigator: true);
 /// await VineBottomSheetFeatureAnnouncement.show<void>(
 ///   context: context,
 ///   illustration: const DivineSticker(sticker: DivineStickerName.sparkle),

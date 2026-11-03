@@ -272,7 +272,10 @@ void main() {
               body: Builder(
                 builder: (context) => ElevatedButton(
                   onPressed: () async {
-                    final navigator = Navigator.of(context);
+                    final navigator = Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    );
                     result =
                         await VineBottomSheetFeatureAnnouncement.show<String>(
                           context: context,
@@ -331,7 +334,10 @@ void main() {
               body: Builder(
                 builder: (context) => ElevatedButton(
                   onPressed: () async {
-                    final navigator = Navigator.of(context);
+                    final navigator = Navigator.of(
+                      context,
+                      rootNavigator: true,
+                    );
                     result =
                         await VineBottomSheetFeatureAnnouncement.show<String>(
                           context: context,
