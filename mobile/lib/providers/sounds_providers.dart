@@ -246,22 +246,33 @@ Future<Map<String, int>> trendingSoundUsageCounts(Ref ref) async {
 /// ```
 @riverpod
 class PopularSounds extends _$PopularSounds with _LoadsMoreSounds {
-  late SoundsRepository _repository;
-  final _seen = <String>{};
-  var _offset = 0;
+  late _RankingPager _pager;
 
   @override
   Future<PagedSounds> build() async {
     _keepForReopen(ref);
-    _repository = ref.watch(soundsRepositoryProvider);
+    final repository = ref.watch(soundsRepositoryProvider);
     _hideAuthorsBlockedLater();
-    _seen.clear();
-    _offset = 0;
-    return PagedSounds.first(await _nextPage());
+    // Made anew with each build, so a page still loading for the list this
+    // build replaced cannot move the new one's offset.
+    _pager = _RankingPager(repository);
+    return PagedSounds.first(await _pager.next());
   }
 
   @override
-  Future<SoundPage> _nextPage() async {
+  Future<SoundPage> _nextPage() => _pager.next();
+}
+
+/// Walks the Funnelcake ranking down, a page per [next], each holding only
+/// sounds the pages before it did not.
+class _RankingPager {
+  _RankingPager(this._repository);
+
+  final SoundsRepository _repository;
+  final _seen = <String>{};
+  var _offset = 0;
+
+  Future<SoundPage> next() async {
     final popular = await _repository.fetchPopularSounds(offset: _offset);
     _offset += SoundsRepository.popularPageSize;
     // The ranking moves while it is paged through, so a sound can come

@@ -615,6 +615,45 @@ void main() {
         verify(() => mockRepository.fetchPopularSounds(offset: 50)).called(1);
       });
 
+      test('pages on from the top after the list started over', () async {
+        final first = createTestAudioEvent(id: 'first');
+        final second = createTestAudioEvent(id: 'second');
+        final stalePage = Completer<RankedSounds>();
+        var call = 0;
+        when(
+          () => mockRepository.fetchPopularSounds(
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer((invocation) {
+          // The first loadMore, overtaken by the rebuild below.
+          if (call++ == 1) return stalePage.future;
+          return Future.value(switch (invocation.namedArguments[#offset]) {
+            50 => rankedPage([second]),
+            _ => rankedPage([first]),
+          });
+        });
+        final container = buildContainer();
+        final subscription = container.listen(
+          popularSoundsProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await container.read(popularSoundsProvider.future);
+
+        final stale = container.read(popularSoundsProvider.notifier).loadMore();
+        container.invalidate(popularSoundsProvider);
+        await container.read(popularSoundsProvider.future);
+        stalePage.complete(rankedPage([second]));
+        await stale;
+        await container.read(popularSoundsProvider.notifier).loadMore();
+
+        expect(container.read(popularSoundsProvider).requireValue.pages, [
+          [first],
+          [second],
+        ]);
+        verify(() => mockRepository.fetchPopularSounds(offset: 50)).called(2);
+      });
+
       test('ends where the ranking does', () async {
         final last = createTestAudioEvent(id: 'last');
         when(
