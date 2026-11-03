@@ -6364,6 +6364,80 @@ void main() {
         });
       });
 
+      test('asks again for refused deletions once per replay of the DMs '
+          'stored events', () {
+        fakeAsync((async) {
+          final dms = <StreamController<Event>>[];
+          final deletions = <StreamController<Event>>[];
+          void Function()? replayStart;
+          void Function(StoredEventsEnd)? replayEnd;
+          when(
+            () => mockNostrClient.subscribe(
+              any(that: isLiveDmRead),
+              subscriptionId: any(named: 'subscriptionId'),
+              tempRelays: any(named: 'tempRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer((invocation) {
+            replayStart =
+                invocation.namedArguments[#onStoredEventsStart]
+                    as void Function()?;
+            replayEnd =
+                invocation.namedArguments[#onStoredEventsEnd]
+                    as void Function(StoredEventsEnd)?;
+            return _openLiveDmRead(invocation, dms);
+          });
+          when(
+            () => mockNostrClient.subscribe(
+              any(that: isLiveDeletionsRead),
+              subscriptionId: any(named: 'subscriptionId'),
+              tempRelays: any(named: 'tempRelays'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer(
+            (_) => (deletions..add(StreamController<Event>())).last.stream,
+          );
+          when(
+            () => mockNostrClient.unsubscribe(any()),
+          ).thenAnswer((_) async {});
+          final repository = createRepository();
+
+          unawaited(repository.startListening());
+          async.flushMicrotasks();
+          deletions.single.addError(
+            const RelaySubscriptionRefusedException('restricted: no'),
+          );
+          unawaited(deletions.single.close());
+          async.flushMicrotasks();
+          expect(deletions, hasLength(1));
+
+          // A relay reconnecting, or authenticating, replays the DMs.
+          replayStart!();
+          replayEnd!(const StoredEventsEnd(deliveredEventCount: 0));
+          async.flushMicrotasks();
+          expect(deletions, hasLength(2));
+          expect(deletions.last.hasListener, isTrue);
+          expect(dms, hasLength(1), reason: 'the DM REQ was opened again');
+
+          // Refused again, it waits for the next replay: past the reconnect
+          // delay and the hold limit, nothing asks for it.
+          deletions.last.addError(
+            const RelaySubscriptionRefusedException('restricted: no'),
+          );
+          unawaited(deletions.last.close());
+          async
+            ..flushMicrotasks()
+            ..elapse(const Duration(minutes: 3))
+            ..flushMicrotasks();
+          expect(deletions, hasLength(2));
+          expect(dms, hasLength(1));
+
+          unawaited(repository.stopListening());
+          async.flushMicrotasks();
+        });
+      });
+
       for (final (how, endDeletions, recovers)
           in <(String, void Function(StreamController<Event>), bool)>[
             (
@@ -6387,8 +6461,8 @@ void main() {
         test(
           recovers
               ? 'ends the DM REQ when its deletions REQ $how and re-opens both'
-              : 'keeps the DM REQ when its deletions REQ $how, and asks for '
-                    'neither again',
+              : 'keeps the DM REQ when its deletions REQ $how, and does not '
+                    'reconnect',
           () {
             fakeAsync((async) {
               final dms = <StreamController<Event>>[];

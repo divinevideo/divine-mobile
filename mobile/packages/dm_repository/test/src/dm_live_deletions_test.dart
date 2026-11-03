@@ -57,9 +57,10 @@ bool _admits(nostr_filter.Filter filter, Event event) {
 
 /// One live REQ the repository opened, sent to by the test.
 class _LiveReq {
-  _LiveReq(this.onEnd);
+  _LiveReq(this.onEnd, {this.onStart});
 
   final void Function(StoredEventsEnd)? onEnd;
+  final void Function()? onStart;
   final StreamController<Event> controller = StreamController<Event>();
   int _sent = 0;
 
@@ -73,6 +74,15 @@ class _LiveReq {
   void end({Map<String, int?> capped = const {}}) => onEnd?.call(
     StoredEventsEnd(deliveredEventCount: _sent, possiblyCappedRelays: capped),
   );
+
+  /// Sends the stored events again from the start, as after AUTH.
+  void replay() => onStart?.call();
+
+  /// Ends the REQ as NostrClient does when every relay refused it.
+  void refuse(String reason) {
+    controller.addError(RelaySubscriptionRefusedException(reason));
+    unawaited(controller.close());
+  }
 }
 
 /// Holds each lookup of a message id the test named until it is released, and
@@ -221,6 +231,9 @@ void main() {
         final req = _LiveReq(
           invocation.namedArguments[#onStoredEventsEnd]
               as void Function(StoredEventsEnd)?,
+          onStart:
+              invocation.namedArguments[#onStoredEventsStart]
+                  as void Function()?,
         );
         reqs.add(req);
         return req.controller.stream;
@@ -543,6 +556,34 @@ void main() {
 
       await deleted(message);
       expect((await rowOf(message))!.isDeleted, isTrue);
+    });
+  });
+
+  group('a live deletions REQ every relay refuses', () {
+    test('is asked for again when the DMs replay their stored events, and '
+        'its deletion is applied', () async {
+      final relay = _Relay();
+      final repository = launch(relay);
+      addTearDown(repository.stopListening);
+      final message = nip04('take this back');
+
+      await repository.startListening();
+      relay.dmReqs.single
+        ..send(message)
+        ..end();
+      await stored(message);
+      relay.deletionReqs.single.refuse('restricted: sign in first');
+      await pumpEventQueue();
+
+      // After AUTH, the relay sends the DMs' stored events again.
+      relay.dmReqs.single
+        ..replay()
+        ..end();
+      expect(relay.deletionReqs, hasLength(2));
+      relay.deletionReqs.last.send(deletionOf([message.id]));
+
+      await deleted(message);
+      expect(relay.dmReqs, hasLength(1), reason: 'the DM REQ was opened again');
     });
   });
 

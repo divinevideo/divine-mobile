@@ -1695,8 +1695,9 @@ class DmRepository {
         if (!identical(_liveCatchUp, catchUp)) return;
         deletionsOpened = true;
         // A refusal from every relay says nothing about the DMs, and asking
-        // again would be refused again, so it ends this REQ alone. The next
-        // subscription asks for the deletions again.
+        // again at once would be refused again, so it ends this REQ alone.
+        // The DMs' next stored-events end asks again: a reconnect or an AUTH
+        // replay may have lifted it.
         var refused = false;
         _deletionsSubscription = _nostrClient
             .subscribe(
@@ -1713,6 +1714,7 @@ class DmRepository {
               onError: (Object error) {
                 if (error is RelaySubscriptionRefusedException) {
                   refused = true;
+                  deletionsOpened = false;
                   Log.warning(
                     'Every relay refused the live DM deletions REQ: '
                     '${error.reason}; the DMs stay subscribed',
