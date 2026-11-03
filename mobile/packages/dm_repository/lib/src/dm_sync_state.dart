@@ -161,7 +161,13 @@ class DmSyncState {
   /// Those installs skip the new relay-only read unless completion is re-armed.
   /// Spend one background recovery pass from now, retaining the earlier
   /// completion record so established inboxes stay ungated (#8550).
-  static const int currentDrainVersion = 6;
+  ///
+  /// Bumped to 7 for #9468: a relay that gates kinds 1059 and 4 behind NIP-42
+  /// answered the drain's mixed request with the deletions alone and never
+  /// asked to authenticate, so an install whose drain completed against it
+  /// never read those gift wraps. The drain now reads them in a request of
+  /// their own; spend one background re-drain so the latched installs do too.
+  static const int currentDrainVersion = 7;
 
   /// Maximum clock skew, in seconds, tolerated on a self-asserted DM
   /// `created_at` before callers should stop treating it as an honest send

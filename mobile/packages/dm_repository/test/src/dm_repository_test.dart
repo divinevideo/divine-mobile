@@ -31,6 +31,8 @@ import 'package:nostr_sdk/subscription.dart';
 import 'package:nostr_sdk/utils/relay_url_policy.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+import 'support/live_dm_reads.dart';
+
 class _MockOutgoingDmsDao extends Mock implements OutgoingDmsDao {}
 
 /// A local-key signer that can decrypt in an isolate, used to drive the
@@ -241,6 +243,10 @@ class _InMemoryRemovedConversationsDao extends Mock
 }
 
 class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+
   // An empty pool unless a test stubs one: history restore's own inbox read
   // asks which relays the pool already covers (#8528).
   @override
@@ -822,6 +828,21 @@ T _resolve<T>(FakeAsync async, Future<T> future) {
   return value;
 }
 
+/// The outgoing NIP-04 recovery read, `authors:[self]` kind 4: the only read
+/// these stubs answer. The deletion recovery pass (#9468) is answered apart.
+final Matcher _nip04RecoveryRead = isA<List<nostr_filter.Filter>>().having(
+  (filters) => filters.single.authors,
+  'authors',
+  isNotNull,
+);
+
+/// The deletion recovery read, `#p:[self]` kind 5 (#9468).
+final Matcher _deletionRecoveryRead = isA<List<nostr_filter.Filter>>().having(
+  (filters) => filters.single.kinds,
+  'kinds',
+  equals([EventKind.eventDeletion]),
+);
+
 void main() {
   group(DmRepository, () {
     late _MockNostrClient mockNostrClient;
@@ -1174,10 +1195,9 @@ void main() {
       ),
     ).thenAnswer((_) async => answeredList(const <Event>[]));
 
-    // The outgoing-NIP-04 recovery pass (#5304) reads through `readEvents`
-    // once the gift-wrap drain reaches the end. Answered and empty: the
-    // account sent no NIP-04, so the pass lets the drain complete.
-    void stubNip04RecoveryAnsweredEmpty() =>
+    /// Answers both end-of-drain recovery reads, outgoing NIP-04 (#5304) and
+    /// deletions, as settled and empty, so they let the drain complete.
+    void stubRecoveryPassesAnsweredEmpty() =>
         when(
           () => mockNostrClient.readEvents(
             any(),
@@ -2370,7 +2390,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -2476,7 +2496,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -2587,7 +2607,7 @@ void main() {
             ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
           // Track persist concurrency on the actual write inside the
           // transaction. Persists run under the event lock, so a yield here
           // would expose any overlap — there must be none.
@@ -2825,7 +2845,7 @@ void main() {
             ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
         });
 
         test(
@@ -3089,7 +3109,7 @@ void main() {
         void Function(StoredEventsEnd)? storedEventsEnd;
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3150,7 +3170,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3207,7 +3227,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3258,7 +3278,7 @@ void main() {
             final controller = StreamController<Event>();
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3300,7 +3320,7 @@ void main() {
             final controller = StreamController<Event>();
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3368,7 +3388,7 @@ void main() {
             void Function(StoredEventsEnd)? storedEventsEnd;
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3456,6 +3476,10 @@ void main() {
         late _FakeDmSyncState syncState;
         Completer<void>? pageGate;
         late bool pageCapped;
+        late List<nostr_filter.Filter> deletionPages;
+        late List<Event> Function(nostr_filter.Filter filter) answerDeletions;
+        late QueryEnd deletionsEnd;
+        late bool deletionsCapped;
 
         const window = 1690000000 - 2 * 86400;
 
@@ -3464,6 +3488,10 @@ void main() {
           pageGate = null;
           pageCapped = false;
           pages = [];
+          deletionPages = [];
+          answerDeletions = (_) => const <Event>[];
+          deletionsEnd = QueryEnd.complete;
+          deletionsCapped = false;
           poolRelays = ['wss://a.example', 'wss://b.example'];
           answerPage = (_) =>
               (events: <Event>[], timedOut: true, noRelays: false);
@@ -3475,7 +3503,7 @@ void main() {
           ).thenAnswer((_) => poolRelays);
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3516,6 +3544,16 @@ void main() {
                 (invocation.positionalArguments.first
                         as List<nostr_filter.Filter>)
                     .single;
+            // The kind-5 read paired with each page (#9468) is answered and
+            // recorded apart: most of these tests are about the DM reads.
+            if (filter.kinds!.contains(EventKind.eventDeletion)) {
+              deletionPages.add(filter);
+              return QueryResult(
+                events: answerDeletions(filter),
+                endedBy: deletionsEnd,
+                possiblyCapped: deletionsCapped,
+              );
+            }
             pages.add((
               filter: filter,
               relays: invocation.namedArguments[#tempRelays] as List<String>?,
@@ -3570,6 +3608,243 @@ void main() {
             ),
           ]);
           await repository.stopListening();
+        });
+
+        test('resumes where the DMs stopped when the deletions reach further '
+            'back', () async {
+          when(
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
+          when(
+            () => mockDirectMessagesDao.getMessageById(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => null);
+          // A relay returning two events per read, holding three DMs and one
+          // deletion far below them.
+          final dms = [
+            for (final (i, at) in [1700000100, 1700000090, 1700000080].indexed)
+              createGiftWrapEvent(id: '${i + 1}' * 64, createdAt: at),
+          ];
+          final deletion = Event.fromJson({
+            'id': 'd' * 64,
+            'pubkey': 'b' * 64,
+            'created_at': 1699990000,
+            'kind': EventKind.eventDeletion,
+            'tags': [
+              ['e', 'e' * 64],
+              ['p', _validPubkeyA],
+            ],
+            'content': '',
+            'sig': '',
+          });
+          bool within(nostr_filter.Filter filter, Event event) =>
+              event.createdAt <= filter.until! &&
+              event.createdAt >= (filter.since ?? 0);
+          answerPage = (filter) => (
+            events: dms.where((e) => within(filter, e)).take(2).toList(),
+            timedOut: false,
+            noRelays: false,
+          );
+          answerDeletions = (filter) =>
+              [deletion].where((e) => within(filter, e)).toList();
+          syncState.debt.add(
+            const DmCatchUpDebt(
+              relay: 'wss://a.example',
+              floor: window,
+              until: 1700000100,
+            ),
+          );
+          final repository = await start();
+
+          final untils = pages.map((page) => page.filter.until).toList();
+          expect(
+            untils.take(3),
+            [1700000100, 1700000090, 1700000080],
+            reason: 'the second page stepped past a DM the relay still held',
+          );
+          expect(deletionPages, isNotEmpty);
+          expect(syncState.debt, isEmpty);
+          await repository.stopListening();
+        });
+
+        group('with a deletions read beside the DMs', () {
+          bool within(nostr_filter.Filter filter, Event event) =>
+              event.createdAt <= filter.until! &&
+              event.createdAt >= (filter.since ?? 0);
+
+          Event deletionAt(int createdAt) => Event.fromJson({
+            'id': 'd' * 64,
+            'pubkey': 'b' * 64,
+            'created_at': createdAt,
+            'kind': EventKind.eventDeletion,
+            'tags': [
+              ['e', 'e' * 64],
+              ['p', _validPubkeyA],
+            ],
+            'content': '',
+            'sig': '',
+          });
+
+          setUp(() {
+            when(
+              () => mockDirectMessagesDao.hasGiftWrap(
+                any(),
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).thenAnswer((_) async => true);
+            when(
+              () => mockDirectMessagesDao.getMessageById(
+                any(),
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).thenAnswer((_) async => null);
+          });
+
+          test('clears the debt when a deletion above the oldest DM pins a '
+              'page at its top', () async {
+            // Two DMs per read, the relay saying it may hold more when it
+            // sends two, and one deletion between the newest two DMs: the
+            // second page resumes at the deletion and ends at its own top.
+            final dms = [
+              for (final (i, at) in [
+                1700000100,
+                1700000090,
+                1700000080,
+              ].indexed)
+                createGiftWrapEvent(id: '${i + 1}' * 64, createdAt: at),
+            ];
+            answerPage = (filter) {
+              final events = dms.where((e) => within(filter, e)).take(2);
+              pageCapped = events.length == 2;
+              return (
+                events: events.toList(),
+                timedOut: false,
+                noRelays: false,
+              );
+            };
+            final deletion = deletionAt(1700000095);
+            answerDeletions = (filter) =>
+                [deletion].where((e) => within(filter, e)).toList();
+            syncState.debt.add(
+              const DmCatchUpDebt(
+                relay: 'wss://a.example',
+                floor: window,
+                until: 1700000100,
+              ),
+            );
+            final repository = await start();
+
+            expect(
+              syncState.debt,
+              isEmpty,
+              reason:
+                  'the DMs read past the second the deletion pinned, yet it '
+                  'was kept as one they may have left unsent',
+            );
+            await repository.stopListening();
+          });
+
+          test('keeps the debt when the DM read may have more and sent '
+              'nothing beside a deletion', () async {
+            pageCapped = true;
+            answerPage = (_) =>
+                (events: <Event>[], timedOut: false, noRelays: false);
+            final deletion = deletionAt(1700000050);
+            answerDeletions = (filter) =>
+                [deletion].where((e) => within(filter, e)).toList();
+            syncState.debt.add(
+              const DmCatchUpDebt(
+                relay: 'wss://a.example',
+                floor: window,
+                until: 1700000100,
+              ),
+            );
+            final repository = await start();
+
+            expect(pages, hasLength(1));
+            expect(
+              syncState.debt,
+              const [
+                DmCatchUpDebt(
+                  relay: 'wss://a.example',
+                  floor: window,
+                  until: 1700000100,
+                ),
+              ],
+              reason: 'the walk moved past DMs the relay may still hold',
+            );
+            await repository.stopListening();
+          });
+
+          test('keeps the debt when the deletions read may have more and sent '
+              'nothing beside DMs', () async {
+            // The DMs alone would reach below the floor and clear the debt.
+            answerPage = (_) => (
+              events: [createGiftWrapEvent(createdAt: window - 5)],
+              timedOut: false,
+              noRelays: false,
+            );
+            deletionsCapped = true;
+            syncState.debt.add(
+              const DmCatchUpDebt(
+                relay: 'wss://a.example',
+                floor: window,
+                until: 1700000100,
+              ),
+            );
+            final repository = await start();
+
+            expect(deletionPages, hasLength(1));
+            expect(
+              syncState.debt,
+              const [
+                DmCatchUpDebt(
+                  relay: 'wss://a.example',
+                  floor: window,
+                  until: 1700000100,
+                ),
+              ],
+              reason: 'the walk moved past deletions the relay may still hold',
+            );
+            await repository.stopListening();
+          });
+
+          test('keeps the debt when the deletions read does not '
+              'settle', () async {
+            answerPage = (_) => (
+              events: [createGiftWrapEvent(createdAt: window - 5)],
+              timedOut: false,
+              noRelays: false,
+            );
+            deletionsEnd = QueryEnd.deadline;
+            syncState.debt.add(
+              const DmCatchUpDebt(
+                relay: 'wss://a.example',
+                floor: window,
+                until: 1700000100,
+              ),
+            );
+            final repository = await start();
+
+            expect(deletionPages, hasLength(1));
+            expect(
+              syncState.debt,
+              const [
+                DmCatchUpDebt(
+                  relay: 'wss://a.example',
+                  floor: window,
+                  until: 1700000100,
+                ),
+              ],
+              reason: 'an unsettled deletions read cleared the debt',
+            );
+            await repository.stopListening();
+          });
         });
 
         test('reads each relay from its own stamp down to its floor', () async {
@@ -3964,7 +4239,7 @@ void main() {
             void Function(StoredEventsEnd)? storedEventsEnd;
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4015,7 +4290,7 @@ void main() {
             void Function(StoredEventsEnd)? storedEventsEnd;
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4055,7 +4330,7 @@ void main() {
             final live = StreamController<Event>();
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4095,7 +4370,7 @@ void main() {
             final streams = <StreamController<Event>>[];
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4149,7 +4424,7 @@ void main() {
             final streams = <StreamController<Event>>[];
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4213,7 +4488,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4263,7 +4538,7 @@ void main() {
             void Function()? storedEventsStart;
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4298,7 +4573,7 @@ void main() {
           fakeAsync((async) {
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4343,7 +4618,7 @@ void main() {
             final streams = <StreamController<Event>>[];
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4424,7 +4699,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4488,7 +4763,7 @@ void main() {
         void Function(StoredEventsEnd)? storedEventsEnd;
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4543,7 +4818,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4736,7 +5011,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4806,7 +5081,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4879,7 +5154,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4940,7 +5215,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4999,7 +5274,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5070,7 +5345,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5218,7 +5493,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5403,7 +5678,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5524,7 +5799,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5585,7 +5860,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5652,7 +5927,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5729,7 +6004,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5804,7 +6079,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5895,7 +6170,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5925,7 +6200,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5940,7 +6215,7 @@ void main() {
 
         verify(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5955,7 +6230,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5971,7 +6246,7 @@ void main() {
 
         verify(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5982,11 +6257,175 @@ void main() {
         await controller.close();
       });
 
+      test(
+        'opens the deletions REQ once the hold limit passes without the DMs '
+        'stored events ending',
+        () {
+          fakeAsync((async) {
+            when(
+              () => mockNostrClient.storedEventsPossiblyCapped(any()),
+            ).thenReturn(const <String, int?>{});
+            // A relay that never ends the DMs' stored events, such as one that
+            // never answers our AUTH, must not keep deletions unread all
+            // session.
+            final dms = StreamController<Event>();
+            final deletions = <StreamController<Event>>[];
+            when(
+              () => mockNostrClient.subscribe(
+                any(that: isLiveDmRead),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer((_) => dms.stream);
+            when(
+              () => mockNostrClient.subscribe(
+                any(that: isLiveDeletionsRead),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+              ),
+            ).thenAnswer(
+              (_) => (deletions..add(StreamController<Event>())).last.stream,
+            );
+            when(
+              () => mockNostrClient.unsubscribe(any()),
+            ).thenAnswer((_) async {});
+            final repository = createRepository();
+
+            unawaited(repository.startListening());
+            async
+              ..flushMicrotasks()
+              ..elapse(const Duration(minutes: 1, seconds: 59));
+            expect(deletions, isEmpty);
+
+            async.elapse(const Duration(seconds: 1));
+            expect(deletions, hasLength(1));
+            expect(deletions.single.hasListener, isTrue);
+
+            unawaited(repository.stopListening());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
+      test('ends the DM REQ with its deletions REQ and re-opens both', () {
+        fakeAsync((async) {
+          final dms = <StreamController<Event>>[];
+          final deletions = <StreamController<Event>>[];
+          when(
+            () => mockNostrClient.subscribe(
+              any(that: isLiveDmRead),
+              subscriptionId: any(named: 'subscriptionId'),
+              tempRelays: any(named: 'tempRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer(
+            (invocation) => _openLiveDmRead(invocation, dms),
+          );
+          when(
+            () => mockNostrClient.subscribe(
+              any(that: isLiveDeletionsRead),
+              subscriptionId: any(named: 'subscriptionId'),
+              tempRelays: any(named: 'tempRelays'),
+            ),
+          ).thenAnswer(
+            (_) => (deletions..add(StreamController<Event>())).last.stream,
+          );
+          when(
+            () => mockNostrClient.unsubscribe(any()),
+          ).thenAnswer((_) async {});
+          final repository = createRepository();
+
+          unawaited(repository.startListening());
+          async.flushMicrotasks();
+          expect(dms, hasLength(1));
+          expect(deletions, hasLength(1));
+
+          unawaited(deletions.single.close());
+          async.flushMicrotasks();
+          expect(
+            dms.single.hasListener,
+            isFalse,
+            reason: 'the DM REQ outlived the deletions REQ it opened with',
+          );
+
+          async
+            ..elapse(const Duration(seconds: 3))
+            ..flushMicrotasks();
+          expect(dms, hasLength(2));
+          expect(deletions, hasLength(2));
+
+          unawaited(repository.stopListening());
+          async.flushMicrotasks();
+        });
+      });
+
+      for (final (how, end)
+          in <(String, void Function(StreamController<Event>))>[
+            ('closes', (dms) => unawaited(dms.close())),
+            ('fails', (dms) => dms.addError(Exception('relay refused'))),
+          ]) {
+        test('ends the deletions REQ when the DM REQ $how and re-opens '
+            'both', () {
+          fakeAsync((async) {
+            final dms = <StreamController<Event>>[];
+            final deletions = <StreamController<Event>>[];
+            when(
+              () => mockNostrClient.subscribe(
+                any(that: isLiveDmRead),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer(
+              (invocation) => _openLiveDmRead(invocation, dms),
+            );
+            when(
+              () => mockNostrClient.subscribe(
+                any(that: isLiveDeletionsRead),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+              ),
+            ).thenAnswer(
+              (_) => (deletions..add(StreamController<Event>())).last.stream,
+            );
+            when(
+              () => mockNostrClient.unsubscribe(any()),
+            ).thenAnswer((_) async {});
+            final repository = createRepository();
+
+            unawaited(repository.startListening());
+            async.flushMicrotasks();
+            expect(deletions.single.hasListener, isTrue);
+
+            end(dms.single);
+            async.flushMicrotasks();
+            expect(
+              deletions.single.hasListener,
+              isFalse,
+              reason: 'the deletions REQ outlived the DM REQ it opened with',
+            );
+
+            async
+              ..elapse(const Duration(seconds: 3))
+              ..flushMicrotasks();
+            expect(dms, hasLength(2));
+            expect(deletions, hasLength(2));
+
+            unawaited(repository.stopListening());
+            async.flushMicrotasks();
+          });
+        });
+      }
+
       test('stopListening unsubscribes', () async {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6000,9 +6439,12 @@ void main() {
         await repository.startListening();
         await repository.stopListening();
 
-        verify(
-          () => mockNostrClient.unsubscribe(any()),
-        ).called(1);
+        // Both live REQs: the DMs and their deletions (#9468).
+        final inbox = dmInboxSubscriptionId(_validPubkeyA);
+        expect(
+          verify(() => mockNostrClient.unsubscribe(captureAny())).captured,
+          [inbox, dmDeletionsSubscriptionId(inbox)],
+        );
 
         await controller.close();
       });
@@ -6013,7 +6455,7 @@ void main() {
         final controllers = <StreamController<Event>>[];
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6036,7 +6478,7 @@ void main() {
         // Both opens should have produced a subscribe call on the client.
         verify(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6071,7 +6513,7 @@ void main() {
         // The relay client must not have been asked to subscribe.
         verifyNever(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6112,7 +6554,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6162,7 +6604,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6176,7 +6618,7 @@ void main() {
           final captured =
               verify(
                     () => mockNostrClient.subscribe(
-                      captureAny(),
+                      captureAny(that: isLiveDmRead),
                       subscriptionId: any(named: 'subscriptionId'),
                       onStoredEventsStart: any(named: 'onStoredEventsStart'),
                       onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6199,7 +6641,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6213,7 +6655,7 @@ void main() {
           final captured =
               verify(
                     () => mockNostrClient.subscribe(
-                      captureAny(),
+                      captureAny(that: isLiveDmRead),
                       subscriptionId: any(named: 'subscriptionId'),
                       onStoredEventsStart: any(named: 'onStoredEventsStart'),
                       onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6242,7 +6684,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6258,7 +6700,7 @@ void main() {
           final captured =
               verify(
                     () => mockNostrClient.subscribe(
-                      captureAny(),
+                      captureAny(that: isLiveDmRead),
                       subscriptionId: any(named: 'subscriptionId'),
                       onStoredEventsStart: any(named: 'onStoredEventsStart'),
                       onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6292,7 +6734,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6308,7 +6750,7 @@ void main() {
           final captured =
               verify(
                     () => mockNostrClient.subscribe(
-                      captureAny(),
+                      captureAny(that: isLiveDmRead),
                       subscriptionId: any(named: 'subscriptionId'),
                       onStoredEventsStart: any(named: 'onStoredEventsStart'),
                       onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6367,7 +6809,7 @@ void main() {
 
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -7454,7 +7896,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -7498,7 +7940,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -7512,7 +7954,7 @@ void main() {
 
           final captured = verify(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: captureAny(named: 'tempRelays'),
               targetRelays: captureAny(named: 'targetRelays'),
@@ -7542,7 +7984,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -7556,7 +7998,7 @@ void main() {
 
           final captured = verify(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: captureAny(named: 'tempRelays'),
               targetRelays: captureAny(named: 'targetRelays'),
@@ -7575,7 +8017,7 @@ void main() {
         'history drain targets the own kind-10050 inbox relays as tempRelays',
         () async {
           final capturedDrainTempRelays = <List<String>?>[];
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
           // The own kind-10050 resolve (#8212) and the drain pages (#8209)
           // both read through queryEventsDetailed, so one stub serves both and
           // branches on the filter.
@@ -7632,10 +8074,10 @@ void main() {
           var memoReads = 0;
           final drainLegs = <List<String>?>[];
           final controller = StreamController<Event>();
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -7700,10 +8142,10 @@ void main() {
           var resolveQueries = 0;
           final capturedDrainTempRelays = <List<String>?>[];
           final controller = StreamController<Event>();
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -7799,7 +8241,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -7839,7 +8281,7 @@ void main() {
           // A's continuation bailed — no subscription opened under A's id.
           verifyNever(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: dmInboxSubscriptionId(_validPubkeyA),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -7853,7 +8295,7 @@ void main() {
           final filter =
               verify(
                     () => mockNostrClient.subscribe(
-                      captureAny(),
+                      captureAny(that: isLiveDmRead),
                       subscriptionId: dmInboxSubscriptionId(_validPubkeyB),
                       tempRelays: any(named: 'tempRelays'),
                       targetRelays: any(named: 'targetRelays'),
@@ -8329,7 +8771,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -8970,7 +9412,7 @@ void main() {
 
     group('backfillHistoryIfNeeded', () {
       setUp(stubReadCursorRowMatched);
-      setUp(stubNip04RecoveryAnsweredEmpty);
+      setUp(stubRecoveryPassesAnsweredEmpty);
       // A deferred drain arms a relay-status listener (#8550). Default to a
       // pool with nothing connected and a stream that never speaks, so the
       // deferral tests below exercise the deferral itself; the resume tests
@@ -9139,12 +9581,15 @@ void main() {
             giftWrapPages.add((captured[i + 1], captured[i + 2]));
           }
           expect(giftWrapPages, isNotEmpty);
-          // Every gift-wrap page demands settlement, and none settles on a
-          // relay's refusal: only the NIP-04 pass below may weigh refusals.
-          expect(giftWrapPages, everyElement(equals((true, false))));
+          // Every gift-wrap page demands settlement, and settles beside a
+          // relay's refusal only when the refusal is final: the client leaves
+          // auth-required, error and other unanswered. A relay that refuses
+          // DMs for good (relay.damus.io once it rejects AUTH) would otherwise
+          // hold restore open forever (#9468).
+          expect(giftWrapPages, everyElement(equals((true, true))));
           verify(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: true,
@@ -9396,7 +9841,7 @@ void main() {
           final capturedFilters = <nostr_filter.Filter>[];
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -9594,7 +10039,7 @@ void main() {
           var nip04Pages = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -9744,7 +10189,7 @@ void main() {
           // "nothing to recover" and the drain must NOT be marked complete.
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -9812,7 +10257,7 @@ void main() {
           var nip04Pages = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -9959,6 +10404,34 @@ void main() {
             ..newestOverride = nowSec - 3600
             ..oldestOverride = oldestRumor
             ..drainVersionOverride = 3;
+          final repository = createRepository(syncState: syncState);
+
+          await repository.backfillHistoryIfNeeded();
+
+          expect(syncState.upgradedPubkeys, isNotEmpty);
+          expect(capturedUntil, isNotEmpty);
+          expect(capturedUntil.first, greaterThan(oldestRumor));
+          expect(syncState.drainCompleteOverride, isTrue);
+        },
+      );
+
+      test(
+        're-arms an install whose drain completed while a relay hid gift '
+        'wraps from the mixed request — #9468',
+        () async {
+          final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          final oldestRumor = nowSec - 90 * 86400;
+          final capturedUntil = <int?>[];
+          stubFiniteHistory(const <Event>[], capturedUntil);
+
+          // 6 is the last version to read kinds 1059 and 4 in one REQ with the
+          // deletions, which a NIP-42-gated relay answered without them.
+          // Hardcoded so this fails if #9468 ships without a bump.
+          final syncState = _FakeDmSyncState()
+            ..drainCompleteOverride = true
+            ..newestOverride = nowSec - 3600
+            ..oldestOverride = oldestRumor
+            ..drainVersionOverride = 6;
           final repository = createRepository(syncState: syncState);
 
           await repository.backfillHistoryIfNeeded();
@@ -10497,7 +10970,7 @@ void main() {
           final error = StateError('bad recovery state');
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -10524,7 +10997,7 @@ void main() {
         () async {
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11306,7 +11779,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11339,6 +11812,46 @@ void main() {
         });
       });
 
+      test('confirms an ambiguous refusal of the deletion pass on a deferred '
+          'retry', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var deletionReads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(that: _deletionRecoveryRead),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            deletionReads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {'wss://unavailable.example': 'error'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(deletionReads, 1);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(deletionReads, 2);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
       test('settles a terminal NIP-04 refusal on first sight', () {
         fakeAsync((async) {
           stubRelayStatus(
@@ -11347,7 +11860,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11386,7 +11899,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11462,7 +11975,7 @@ void main() {
             var nip04Reads = 0;
             when(
               () => mockNostrClient.readEvents(
-                any(),
+                any(that: _nip04RecoveryRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: any(named: 'useCache'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11498,7 +12011,7 @@ void main() {
         await LogCaptureService().clearAllLogs();
         when(
           () => mockNostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11548,7 +12061,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11608,7 +12121,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11656,7 +12169,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11712,7 +12225,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11756,7 +12269,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11804,7 +12317,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11851,7 +12364,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11917,7 +12430,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11999,7 +12512,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12064,7 +12577,7 @@ void main() {
           final subscription = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -12105,7 +12618,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12184,7 +12697,7 @@ void main() {
             );
             when(
               () => mockNostrClient.readEvents(
-                any(),
+                any(that: _nip04RecoveryRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: any(named: 'useCache'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12257,7 +12770,7 @@ void main() {
           );
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12306,7 +12819,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12351,7 +12864,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12411,7 +12924,7 @@ void main() {
           var giftWrapPages = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12673,7 +13186,7 @@ void main() {
           var nip04Pages = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12762,7 +13275,7 @@ void main() {
 
     group('history drain batch decryption (#5391)', () {
       setUp(stubNoCrossProtocolTwinAvailable);
-      setUp(stubNip04RecoveryAnsweredEmpty);
+      setUp(stubRecoveryPassesAnsweredEmpty);
 
       // A new recipient keypair per test so the real NIP-44 unwrap in the
       // batched decrypt worker succeeds (the shared _validPubkey* constants
@@ -13009,7 +13522,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -13081,7 +13594,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -13135,7 +13648,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -13178,7 +13691,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -13229,7 +13742,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -13288,7 +13801,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -13354,7 +13867,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -14773,7 +15286,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -14976,7 +15489,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -15033,7 +15546,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -15205,7 +15718,7 @@ void main() {
         addTearDown(controller.close);
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -15813,7 +16326,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -15976,7 +16489,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -16074,7 +16587,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -16966,7 +17479,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17259,7 +17772,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17336,7 +17849,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17439,7 +17952,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17529,7 +18042,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17577,7 +18090,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17647,7 +18160,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17742,7 +18255,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17811,7 +18324,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17900,7 +18413,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17967,7 +18480,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -18063,7 +18576,7 @@ void main() {
         void Function(StoredEventsEnd)? storedEventsEnd;
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -18161,7 +18674,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -18252,7 +18765,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -18320,7 +18833,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -18389,7 +18902,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -18450,7 +18963,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -18511,7 +19024,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -18611,7 +19124,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -18808,7 +19321,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -21359,7 +21872,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -21515,7 +22028,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -21698,7 +22211,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -21843,7 +22356,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -22013,7 +22526,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -23172,7 +23685,7 @@ void main() {
       void stubSubscription(StreamController<Event> controller) {
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -23620,7 +24133,7 @@ void main() {
       void stubWrappedDeleteSubscription(StreamController<Event> controller) {
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -23783,7 +24296,7 @@ void main() {
         ledger = _InMemoryProcessedGiftWrapsDao();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -24154,7 +24667,7 @@ void main() {
         ledger = _InMemoryProcessedGiftWrapsDao();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -25027,7 +25540,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -26369,7 +26882,7 @@ void main() {
 
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -26402,7 +26915,7 @@ void main() {
           final controller2 = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -33213,4 +33726,19 @@ void main() {
       });
     });
   });
+}
+
+/// Opens a live DM read on [dms] whose stored events end straight after, as
+/// a relay's do: the deletions REQ is opened only once they have.
+Stream<Event> _openLiveDmRead(
+  Invocation invocation,
+  List<StreamController<Event>> dms,
+) {
+  final onEnd =
+      invocation.namedArguments[#onStoredEventsEnd]
+          as void Function(StoredEventsEnd)?;
+  scheduleMicrotask(
+    () => onEnd?.call(const StoredEventsEnd(deliveredEventCount: 0)),
+  );
+  return (dms..add(StreamController<Event>())).last.stream;
 }

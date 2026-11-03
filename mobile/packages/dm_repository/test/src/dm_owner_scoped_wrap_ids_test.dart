@@ -12,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -52,10 +53,17 @@ Event _rumor({
 /// One listening [DmRepository] for [owner] over a shared database, the way
 /// the app builds a fresh one for each signed-in account.
 class _Session {
-  _Session._(this.repository, this._relay, this.owner, this.decryptedWrapIds);
+  _Session._(
+    this.repository,
+    this._relay,
+    this._deletionRelays,
+    this.owner,
+    this.decryptedWrapIds,
+  );
 
   final DmRepository repository;
   final StreamController<Event> _relay;
+  final List<StreamController<Event>> _deletionRelays;
   final String owner;
 
   /// Every wrap that reached the decryptor. A wrap skipped by the dedup
@@ -71,6 +79,7 @@ class _Session {
     final conversationsDao = ConversationsDao(db);
     final nostrClient = _MockNostrClient();
     final relay = StreamController<Event>();
+    final deletionRelays = <StreamController<Event>>[];
     final decrypted = <String>[];
 
     when(() => nostrClient.connectedRelayCount).thenReturn(1);
@@ -107,7 +116,24 @@ class _Session {
         onStoredEventsStart: any(named: 'onStoredEventsStart'),
         onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
       ),
-    ).thenAnswer((_) => relay.stream);
+    ).thenAnswer((invocation) {
+      final filters =
+          invocation.positionalArguments.first as List<nostr_filter.Filter>;
+      final deletionsOnly =
+          filters.isNotEmpty &&
+          filters.every((filter) {
+            final kinds = filter.kinds;
+            return kinds != null &&
+                kinds.length == 1 &&
+                kinds.single == EventKind.eventDeletion;
+          });
+      // A separate deletion read stays open and quiet; closing it would also
+      // end the live message read. Mixed-kind reads still use the relay.
+      if (!deletionsOnly) return relay.stream;
+      final deletions = StreamController<Event>();
+      deletionRelays.add(deletions);
+      return deletions.stream;
+    });
 
     final reactions =
         DmReactionsRepository(
@@ -136,7 +162,13 @@ class _Session {
       nip04Decryptor: (_, ciphertext) async => ciphertext,
     );
     await repository.startListening();
-    final session = _Session._(repository, relay, owner, decrypted);
+    final session = _Session._(
+      repository,
+      relay,
+      deletionRelays,
+      owner,
+      decrypted,
+    );
     addTearDown(session.stop);
     return session;
   }
@@ -194,6 +226,9 @@ class _Session {
     // reconnect timer that outlives this test.
     await repository.stopListening();
     await _relay.close();
+    for (final deletions in _deletionRelays) {
+      await deletions.close();
+    }
   }
 }
 
