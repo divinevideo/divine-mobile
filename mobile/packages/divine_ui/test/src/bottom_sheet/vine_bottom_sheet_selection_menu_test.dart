@@ -314,6 +314,45 @@ void main() {
       expect(selectedValue, 'popular');
       expect(find.text('Popular'), findsNothing);
     });
+
+    testWidgets('closes itself when opened from a nested navigator', (
+      tester,
+    ) async {
+      // The menu opens on the root navigator. Popping the opener's nearest
+      // navigator instead would pop the tab's page and leave the menu open.
+      String? selectedValue;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Navigator(
+              onGenerateRoute: (_) => MaterialPageRoute<void>(
+                builder: (context) => ElevatedButton(
+                  onPressed: () async {
+                    selectedValue = await VineBottomSheetSelectionMenu.show(
+                      context: context,
+                      options: testOptions,
+                    );
+                  },
+                  child: const Text('Show Menu'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show Menu'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Popular'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(selectedValue, 'popular');
+      expect(find.text('Popular'), findsNothing);
+      expect(find.text('Show Menu'), findsOneWidget);
+    });
   });
 
   group('VineBottomSheetSelectionOptionData', () {
