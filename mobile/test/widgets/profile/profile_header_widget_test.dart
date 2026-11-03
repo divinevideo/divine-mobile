@@ -48,6 +48,7 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/og_viner_cache_service.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
@@ -56,6 +57,7 @@ import 'package:openvine/services/supporter_repository.dart';
 import 'package:openvine/utils/divine_login_banner_dismissal.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/secure_account_prompt_dismissal.dart';
+import 'package:openvine/utils/supporter_prompt_dismissal.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/og_beta_badge.dart';
 import 'package:openvine/widgets/og_viner_badge.dart';
@@ -547,8 +549,10 @@ void main() {
             mockFollowRepository: mockFollowRepository,
             supporterApiClient: supporterClient,
           ),
-          if (supporterRepository != null)
+          if (supporterRepository != null) ...[
             supporterRepositoryProvider.overrideWithValue(supporterRepository),
+            supporterStoreBillingAvailableProvider.overrideWithValue(false),
+          ],
           profileVanishedProvider(userIdHex).overrideWith((ref) => isVanished),
           if ((profile ?? suppliedProfile)?.nip05 case final String claim)
             nip05ClaimVerificationProvider(
@@ -717,37 +721,20 @@ void main() {
       }
 
       testWidgets(
-        '${ownProfile ? 'shows' : 'hides'} the supporter membership entry on '
+        'shows no supporter membership button under the identifier on '
         '${ownProfile ? 'your own' : "someone else's"} profile',
         (tester) async {
-          // The entry reads the signed-in account's membership, so on
-          // anyone else's profile it would show the viewer's status, not theirs.
+          // Joining is offered as a pending action on the avatar instead.
+          final supporterClient = _MockSupporterApiClient();
+          when(
+            () => supporterClient.fetchPublicRecognition(any()),
+          ).thenAnswer((_) async => false);
           await tester.pumpWidget(
             buildTestWidget(
               userIdHex: testUserHex,
               isOwnProfile: ownProfile,
               suppliedProfile: createTestProfile(displayName: 'Supporter'),
-            ),
-          );
-          await tester.pump();
-
-          expect(
-            find.byType(SupporterMembership),
-            ownProfile ? findsOneWidget : findsNothing,
-          );
-        },
-      );
-
-      testWidgets(
-        'hides supporter entries on a vanished '
-        '${ownProfile ? 'own' : 'other'} profile',
-        (tester) async {
-          await tester.pumpWidget(
-            buildTestWidget(
-              userIdHex: testUserHex,
-              isOwnProfile: ownProfile,
-              suppliedProfile: createTestProfile(displayName: 'Supporter'),
-              isVanished: true,
+              supporterClient: supporterClient,
             ),
           );
           await tester.pump();
@@ -795,6 +782,7 @@ void main() {
         WidgetTester tester, {
         required bool isSupporter,
         bool haloVisible = false,
+        bool read = true,
       }) async {
         final client = SupporterApiClient(
           baseUri: Uri.parse('https://supporters.test'),
@@ -819,14 +807,25 @@ void main() {
           }),
         );
         addTearDown(client.dispose);
+        final prefs = await SharedPreferences.getInstance();
+        if (!read) {
+          // A repository starts from its cached read, and earlier tests leave
+          // theirs under the same pubkey, so an unread one starts without it.
+          const key = 'divine_supporter_entitlement:$testUserHex';
+          final cached = prefs.getString(key);
+          await prefs.remove(key);
+          addTearDown(() async {
+            if (cached != null) await prefs.setString(key, cached);
+          });
+        }
         final repository = SupporterRepository(
           pubkey: testUserHex,
           validator: StubEntitlementValidator(),
-          prefs: await SharedPreferences.getInstance(),
+          prefs: prefs,
           apiClient: client,
         );
         addTearDown(repository.dispose);
-        await tester.runAsync(repository.refreshFromServer);
+        if (read) await tester.runAsync(repository.refreshFromServer);
         return repository;
       }
 
@@ -873,12 +872,14 @@ void main() {
         Locale locale = const Locale('en'),
         List<LocalizationsDelegate<dynamic>> extraDelegates = const [],
         ThemeData? theme,
+        SharedPreferences? sharedPreferences,
       }) async {
         await tester.pumpWidget(
           buildTestWidget(
             userIdHex: testUserHex,
             isOwnProfile: isOwnProfile,
             isVanished: isVanished,
+            sharedPreferences: sharedPreferences,
             suppliedProfile: createTestProfile(
               displayName: 'Ivy',
               picture: supporterPicture,
@@ -905,6 +906,185 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
       }
+
+      group('become a supporter action', () {
+        testWidgets(
+          'shows the green mascot pill to a confirmed non-supporter',
+          (
+            tester,
+          ) async {
+            final repository = await membership(tester, isSupporter: false);
+
+            await pumpHeader(
+              tester,
+              isOwnProfile: true,
+              ownMembership: repository,
+            );
+
+            final pill = find.text(l10n.supporterJoinLabel);
+            expect(pill, findsOneWidget);
+            final row = find
+                .ancestor(of: pill, matching: find.byType(Row))
+                .first;
+            expect(
+              find.descendant(of: row, matching: find.byType(DivineIcon)),
+              findsNothing,
+            );
+            final mascot = find.descendant(
+              of: row,
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is Image &&
+                    widget.image is ResizeImage &&
+                    (widget.image as ResizeImage).imageProvider ==
+                        const AssetImage('assets/icon/MascotCropped=yes.png'),
+              ),
+            );
+            expect(mascot, findsOneWidget);
+            expect(tester.getSize(mascot), const Size.square(27));
+            // Drawn larger than its slot, so the row keeps the label's height.
+            expect(tester.getSize(row).height, 20);
+            final label = tester.widget<Text>(pill);
+            expect(label.style?.color, VineTheme.onPrimary);
+            final fill = tester.widget<Container>(
+              find
+                  .ancestor(
+                    of: row,
+                    matching: find.byWidgetPredicate(
+                      (widget) =>
+                          widget is Container &&
+                          widget.decoration is BoxDecoration,
+                    ),
+                  )
+                  .first,
+            );
+            expect(
+              (fill.decoration! as BoxDecoration).color,
+              VineTheme.primary,
+            );
+          },
+        );
+
+        testWidgets('is not offered to a supporter', (tester) async {
+          final repository = await membership(tester, isSupporter: true);
+
+          await pumpHeader(
+            tester,
+            isOwnProfile: true,
+            ownMembership: repository,
+          );
+
+          expect(find.text(l10n.supporterJoinLabel), findsNothing);
+        });
+
+        testWidgets('is not offered before the membership is read', (
+          tester,
+        ) async {
+          final repository = await membership(
+            tester,
+            isSupporter: false,
+            read: false,
+          );
+
+          await pumpHeader(
+            tester,
+            isOwnProfile: true,
+            ownMembership: repository,
+          );
+
+          expect(find.text(l10n.supporterJoinLabel), findsNothing);
+
+          await tester.runAsync(repository.refreshFromServer);
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.supporterJoinLabel), findsOneWidget);
+        });
+
+        testWidgets('is not offered on your own vanished profile', (
+          tester,
+        ) async {
+          final repository = await membership(tester, isSupporter: false);
+
+          await pumpHeader(
+            tester,
+            isOwnProfile: true,
+            isVanished: true,
+            ownMembership: repository,
+          );
+
+          // A vanished profile has no profile info, so the pill offers to
+          // complete it; the supporter invitation must not queue behind it.
+          await tester.tap(find.text(l10n.profileCompleteYourProfile));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.profileMaybeLaterLabel));
+          await tester.pumpAndSettle();
+
+          expect(find.byType(ProfileActionsSheetContent), findsNothing);
+          expect(find.byType(SupporterContent), findsNothing);
+        });
+
+        testWidgets('opens the supporter content in the actions sheet', (
+          tester,
+        ) async {
+          final repository = await membership(tester, isSupporter: false);
+          await pumpHeader(
+            tester,
+            isOwnProfile: true,
+            ownMembership: repository,
+          );
+
+          await tester.tap(find.text(l10n.supporterJoinLabel));
+          await tester.pumpAndSettle();
+
+          expect(
+            find.descendant(
+              of: find.byType(ProfileActionsSheetContent),
+              matching: find.byType(SupporterContent),
+            ),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets('Maybe Later hides the action for good', (tester) async {
+          final prefs = await SharedPreferences.getInstance();
+          final repository = await membership(tester, isSupporter: false);
+          addTearDown(
+            () => prefs.remove(
+              SupporterPromptDismissalStore.keyFor(testUserHex),
+            ),
+          );
+          await pumpHeader(
+            tester,
+            isOwnProfile: true,
+            ownMembership: repository,
+            sharedPreferences: prefs,
+          );
+
+          await tester.tap(find.text(l10n.supporterJoinLabel));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.profileMaybeLaterLabel));
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.supporterJoinLabel), findsNothing);
+          expect(
+            SupporterPromptDismissalStore(
+              prefs: prefs,
+              userIdHex: testUserHex,
+            ).isDismissed(),
+            isTrue,
+          );
+
+          await tester.pumpWidget(const SizedBox.shrink());
+          await pumpHeader(
+            tester,
+            isOwnProfile: true,
+            ownMembership: repository,
+            sharedPreferences: prefs,
+          );
+
+          expect(find.text(l10n.supporterJoinLabel), findsNothing);
+        });
+      });
 
       group('renders', () {
         for (final ownProfile in [false, true]) {
@@ -947,7 +1127,6 @@ void main() {
                 isTrue,
               );
               expect(find.byType(SupporterHaloWings), findsNothing);
-              expect(find.byType(SupporterMembership), findsNothing);
             },
           );
         }
@@ -977,7 +1156,7 @@ void main() {
                 confirmedExpired ? findsNothing : findsOneWidget,
               );
               expect(
-                find.byType(ActionChip),
+                find.text(l10n.supporterJoinLabel),
                 confirmedExpired ? findsOneWidget : findsNothing,
               );
             },
@@ -1144,7 +1323,7 @@ void main() {
               ),
             );
 
-            expect(find.byType(ActionChip), findsNothing);
+            expect(find.text(l10n.supporterJoinLabel), findsNothing);
             expect(find.text(l10n.supporterBadgeLabel), findsNothing);
           });
         }
