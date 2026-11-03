@@ -175,20 +175,23 @@ String _minorAccountReviewLoadingPath(String fromLocation) {
   ).toString();
 }
 
+/// Where a wait on the review-status loading screen was going, from its
+/// `from`, or null when that names no destination the account can be sent on
+/// to.
+String? _reviewStatusWaitTarget(String? from) {
+  if (from == null || from.isEmpty) return null;
+  final path = Uri.parse(from).path;
+  if (_isAuthEntryLocation(path) ||
+      path == MinorAccountReviewLoadingScreen.path) {
+    return null;
+  }
+  return from;
+}
+
 @visibleForTesting
 String minorAccountReviewReturnLocationForTest(Uri uri) {
-  final from = uri.queryParameters['from'];
-  if (from == null || from.isEmpty) {
-    return VideoFeedPage.pathForIndex(0);
-  }
-
-  final fromLocation = Uri.parse(from).path;
-  if (_isAuthEntryLocation(fromLocation) ||
-      fromLocation == MinorAccountReviewLoadingScreen.path) {
-    return VideoFeedPage.pathForIndex(0);
-  }
-
-  return from;
+  return _reviewStatusWaitTarget(uri.queryParameters['from']) ??
+      VideoFeedPage.pathForIndex(0);
 }
 
 String _minorAccountReviewReturnLocation(GoRouterState state) {
@@ -342,6 +345,70 @@ AsyncValue<MinorAccountReviewStatus> _routedReviewStatus(
           .lastKnownRestrictedFor(pubkeyHex);
     },
   );
+}
+
+/// Where a push held on the loading screen was going, or null when its
+/// `from` names no destination the account can be sent on to.
+String? _heldReviewStatusPushTarget(ImperativeRouteMatch page) =>
+    _reviewStatusWaitTarget(page.matches.uri.queryParameters['from']);
+
+/// The location of the page on top of [configuration].
+String _topLocation(RouteMatchList configuration) {
+  final last = configuration.matches.lastOrNull;
+  return last is ImperativeRouteMatch
+      ? last.matches.uri.toString()
+      : configuration.uri.toString();
+}
+
+/// Takes the pushes held on the review-status loading screen off the stack
+/// once the status has arrived and, with [reopen], pushes each one again to
+/// where it was going. Returns false when nothing was held.
+///
+/// A router refresh cannot do this. go_router re-runs redirects for the base
+/// location only, and replaces the whole stack once that base moves off the
+/// loading screen, so a notification tap made while an account's status
+/// first loaded was dropped and never opened. Only the held page's `from`
+/// still says where it was going. Its route extra is already gone, because
+/// go_router drops the extra when a redirect replaces a location.
+bool _releaseHeldReviewStatusPushes(GoRouter router, {required bool reopen}) {
+  final configuration = router.routerDelegate.currentConfiguration;
+  // The loading screen is a top-level route, so its pushes are top-level pages.
+  final held = configuration.matches
+      .whereType<ImperativeRouteMatch>()
+      .where(
+        (page) => page.matches.uri.path == MinorAccountReviewLoadingScreen.path,
+      )
+      .toList();
+  if (held.isEmpty) return false;
+
+  // Every push made while waiting is held, so removing the lowest held page,
+  // and with it the pages above, leaves only what was there before. The
+  // restore re-runs the base location's redirect, as a refresh would.
+  router.restore(configuration.remove(held.first));
+  if (!reopen) return true;
+
+  // Android can deliver a link to the router as well as to
+  // DeepLinkCoordinator, which pushes it, so the restored page may already be
+  // the held push's target. A target already on top isn't opened again.
+  var top = _topLocation(router.routerDelegate.currentConfiguration);
+  for (final page in held) {
+    final target = _heldReviewStatusPushTarget(page);
+    if (target == null || target == top) continue;
+    top = target;
+    Log.info(
+      'Router: review status arrived — reopening held push '
+      '${redactUriStringForLogs(target)}',
+      name: 'AppRouter',
+      category: LogCategory.auth,
+    );
+    runDetached(
+      router.push<void>(target),
+      'reopen a push held for the review status',
+      logName: 'AppRouter',
+      category: LogCategory.ui,
+    );
+  }
+  return true;
 }
 
 /// Top-level GoRouter redirect: divine:// scheme → universal-link rewrite →

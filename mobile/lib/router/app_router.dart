@@ -58,6 +58,7 @@ import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/deep_link_service.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/npub_hex.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
@@ -134,6 +135,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     ref,
     ref.read(currentMinorAccountReviewStatusProvider),
   );
+  late final GoRouter router;
   ref.listen(currentMinorAccountReviewStatusProvider, (_, next) {
     final routed = _routedReviewStatus(ref, next);
     final affectsRouting = minorAccountReviewStatusAffectsRouting(
@@ -146,6 +148,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     // and tears down a reel pushed on top mid-init. Only refresh when the
     // redirect outcome can actually change.
     if (!affectsRouting) return;
+    if (!_minorReviewRoutingSignature(routed).loadingWithoutValue &&
+        _releaseHeldReviewStatusPushes(
+          router,
+          reopen:
+              authService.authState == AuthState.authenticated &&
+              routed.value?.isRestricted != true,
+        )) {
+      return;
+    }
     refreshListenable.refresh();
   });
   bool deletionGateActiveForCurrentAccount(
@@ -181,7 +192,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   // A pushed hashtag (and other full-screen routes) must be shareable and
   // reloadable at its visible URL while retaining the source page for Back.
   GoRouter.optionURLReflectsImperativeAPIs = true;
-  final router = GoRouter(
+  router = GoRouter(
     navigatorKey: NavigatorKeys.root,
     // Start at /welcome - redirect logic will navigate to appropriate route.
     initialLocation:
