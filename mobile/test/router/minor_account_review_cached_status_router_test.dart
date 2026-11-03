@@ -14,6 +14,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/repositories/minor_account_review_repository.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/settings/legal_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
@@ -432,6 +433,24 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(location(router), MinorAccountReviewScreen.path);
+        expect(pages(router), hasLength(1));
+      });
+
+      testWidgets('does not reopen a held push to the sign-in screens', (
+        tester,
+      ) async {
+        final router = await pumpRouter(
+          tester,
+          startState: AuthState.authenticated,
+        );
+        unawaited(router.push<void>(WelcomeScreen.path));
+        await tester.pump();
+        expect(pages(router).last, isA<ImperativeRouteMatch>());
+
+        fetch.complete(MinorAccountReviewStatus.active());
+        await tester.pumpAndSettle();
+
+        expect(location(router), LegalScreen.path);
         expect(pages(router), hasLength(1));
       });
 
