@@ -918,7 +918,8 @@ class DmRepository {
 
   StreamSubscription<Event>? _giftWrapSubscription;
 
-  /// The live kind-5 read, opened and ended with [_giftWrapSubscription].
+  /// The live kind-5 read, opened once [_giftWrapSubscription]'s stored
+  /// events end or its hold limit passes, and ended with it.
   StreamSubscription<Event>? _deletionsSubscription;
 
   /// The live subscription's progress through stored events, or null while
@@ -3445,9 +3446,9 @@ class DmRepository {
     if (identical(_liveCatchUp, catchUp)) _liveCatchUp = null;
   }
 
-  /// Cancels both live REQs, the DMs and the deletions. They open together
-  /// and end together, so a re-subscribe never runs beside a REQ left over
-  /// from the previous pair.
+  /// Cancels both live REQs, the DMs and the deletions. They end together,
+  /// so a re-subscribe never runs beside a REQ left over from the previous
+  /// pair.
   void _endLiveSubscriptions() {
     unawaited(_giftWrapSubscription?.cancel());
     unawaited(_deletionsSubscription?.cancel());
