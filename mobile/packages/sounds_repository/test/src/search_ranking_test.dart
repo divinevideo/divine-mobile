@@ -61,6 +61,30 @@ void main() {
       expect(ranked, ['Sad violin', 'Sad trombone']);
     });
 
+    test('fits a repeated word only where the title repeats it', () {
+      final ranked = rank(
+        const [
+          (title: 'Boom', divine: false),
+          (title: 'Boom Boom', divine: false),
+        ],
+        'boom boom',
+      );
+
+      expect(ranked, ['Boom Boom', 'Boom']);
+    });
+
+    test('reads a title spaced out of shape as the words it holds', () {
+      final ranked = rank(
+        const [
+          (title: 'Rock anthem remix', divine: false),
+          (title: ' Rock  anthem ', divine: false),
+        ],
+        'rock anthem',
+      );
+
+      expect(ranked, [' Rock  anthem ', 'Rock anthem remix']);
+    });
+
     test('keeps the given order for equal matches and untitled ones', () {
       final ranked = rank(
         const [
