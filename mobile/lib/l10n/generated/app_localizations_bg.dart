@@ -4603,22 +4603,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'Корица на звука';
 
   @override
-  String get soundsShareKindLabel => 'Музика или ефект';
-
-  @override
-  String get soundsShareKindDescription =>
-      'По избор. Звукът ти се показва в Музика или Ефекти при филтриране.';
-
-  @override
-  String get soundsShareKindChoose => 'Избери';
-
-  @override
-  String get soundsShareKindEffect => 'Звуков ефект';
-
-  @override
-  String get soundsShareKindNeither => 'Нито едно';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'Този тип файл не се поддържа. Избери аудиофайл.';
 

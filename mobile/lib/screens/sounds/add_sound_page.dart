@@ -27,7 +27,6 @@ import 'package:openvine/screens/profile_setup/widgets/profile_image_actions_she
 import 'package:openvine/screens/profile_setup/widgets/profile_image_picker.dart';
 import 'package:openvine/screens/sounds/widgets/microphone_denied_notice.dart';
 import 'package:openvine/screens/sounds/widgets/share_cover_section.dart';
-import 'package:openvine/screens/sounds/widgets/share_kind_section.dart';
 import 'package:openvine/screens/sounds/widgets/sound_recording_panel.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/audio/public_audio_credit_editor.dart';
@@ -547,10 +546,6 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
                                     ShareCoverSection(
                                       coverImage: state.coverImage,
                                       onChangeCover: _changeCover,
-                                    ),
-                                    ShareKindSection(
-                                      kind: state.soundKind,
-                                      onChanged: cubit.setSoundKind,
                                     ),
                                     PublicAudioCreditEditor(
                                       key: ValueKey(audio.id),

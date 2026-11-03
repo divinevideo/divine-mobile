@@ -4269,22 +4269,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'サウンドのカバー';
 
   @override
-  String get soundsShareKindLabel => '音楽か効果音か';
-
-  @override
-  String get soundsShareKindDescription =>
-      '任意です。絞り込み時に、あなたのサウンドが音楽または効果音に表示されます。';
-
-  @override
-  String get soundsShareKindChoose => '選択';
-
-  @override
-  String get soundsShareKindEffect => '効果音';
-
-  @override
-  String get soundsShareKindNeither => 'どちらでもない';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'このファイル形式には対応していません。音声ファイルを選んでください。';
 

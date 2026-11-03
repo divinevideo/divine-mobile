@@ -4542,22 +4542,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'Kulit bunyi';
 
   @override
-  String get soundsShareKindLabel => 'Muzik atau kesan';
-
-  @override
-  String get soundsShareKindDescription =>
-      'Pilihan. Bunyi anda muncul di bawah Muzik atau Kesan bunyi apabila orang menapis.';
-
-  @override
-  String get soundsShareKindChoose => 'Pilih';
-
-  @override
-  String get soundsShareKindEffect => 'Kesan bunyi';
-
-  @override
-  String get soundsShareKindNeither => 'Bukan kedua-duanya';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'Jenis fail itu tidak disokong. Pilih fail audio.';
 

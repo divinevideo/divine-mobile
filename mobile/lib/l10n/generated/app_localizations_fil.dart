@@ -4578,22 +4578,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'Cover ng sound';
 
   @override
-  String get soundsShareKindLabel => 'Musika o sound effect';
-
-  @override
-  String get soundsShareKindDescription =>
-      'Opsyonal. Lalabas ang tunog mo sa Musika o Sound effects kapag nagfi-filter ang iba.';
-
-  @override
-  String get soundsShareKindChoose => 'Pumili';
-
-  @override
-  String get soundsShareKindEffect => 'Sound effect';
-
-  @override
-  String get soundsShareKindNeither => 'Wala sa dalawa';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'Hindi suportado ang file type na iyan. Pumili ng audio file.';
 

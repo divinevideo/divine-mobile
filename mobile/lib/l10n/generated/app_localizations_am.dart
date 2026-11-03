@@ -4444,22 +4444,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'የድምፅ ሽፋን';
 
   @override
-  String get soundsShareKindLabel => 'ሙዚቃ ወይስ የድምፅ ውጤት';
-
-  @override
-  String get soundsShareKindDescription =>
-      'አማራጭ። ሰዎች ሲያጣሩ ድምፅህ በሙዚቃ ወይም በየድምፅ ውጤቶች ስር ይታያል።';
-
-  @override
-  String get soundsShareKindChoose => 'ምረጥ';
-
-  @override
-  String get soundsShareKindEffect => 'የድምፅ ውጤት';
-
-  @override
-  String get soundsShareKindNeither => 'ሁለቱም አይደለም';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'ይህ የፋይል አይነት አይደገፍም። የድምፅ ፋይል ይምረጡ።';
 

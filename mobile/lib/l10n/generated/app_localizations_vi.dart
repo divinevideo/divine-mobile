@@ -4513,22 +4513,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'Ảnh bìa âm thanh';
 
   @override
-  String get soundsShareKindLabel => 'Âm nhạc hay hiệu ứng';
-
-  @override
-  String get soundsShareKindDescription =>
-      'Không bắt buộc. Âm thanh của bạn sẽ xuất hiện trong Âm nhạc hoặc Hiệu ứng âm thanh khi mọi người lọc.';
-
-  @override
-  String get soundsShareKindChoose => 'Chọn';
-
-  @override
-  String get soundsShareKindEffect => 'Hiệu ứng âm thanh';
-
-  @override
-  String get soundsShareKindNeither => 'Không phải cả hai';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'Loại tệp đó không được hỗ trợ. Hãy chọn một tệp âm thanh.';
 

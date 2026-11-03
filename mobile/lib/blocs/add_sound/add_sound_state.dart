@@ -5,7 +5,7 @@
 import 'dart:typed_data';
 
 import 'package:equatable/equatable.dart';
-import 'package:models/models.dart' show AudioEvent, SoundKind;
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 
@@ -80,7 +80,6 @@ class AddSoundState extends Equatable {
     this.sharePublicly = false,
     this.attribution,
     this.coverImage,
-    this.soundKind,
     this.publishedSound,
     this.failure,
     this.savedResult,
@@ -113,11 +112,6 @@ class AddSoundState extends Equatable {
   /// share it without one. Uploaded only when the sound is shared, so a cover
   /// the user drops never leaves the device.
   final Uint8List? coverImage;
-
-  /// Whether the sound is shared as music or as a sound effect, or `null`
-  /// for neither. Published as its kind's public tag, which decides where the
-  /// sound shows when people filter for one.
-  final SoundKind? soundKind;
 
   /// The sound as a relay acknowledged it, once shared.
   ///
@@ -161,7 +155,6 @@ class AddSoundState extends Equatable {
     bool? sharePublicly,
     Object? attribution = _unset,
     Object? coverImage = _unset,
-    Object? soundKind = _unset,
     Object? publishedSound = _unset,
     Object? failure = _unset,
     Object? savedResult = _unset,
@@ -182,9 +175,6 @@ class AddSoundState extends Equatable {
       coverImage: identical(coverImage, _unset)
           ? this.coverImage
           : coverImage as Uint8List?,
-      soundKind: identical(soundKind, _unset)
-          ? this.soundKind
-          : soundKind as SoundKind?,
       publishedSound: identical(publishedSound, _unset)
           ? this.publishedSound
           : publishedSound as AudioEvent?,
@@ -206,7 +196,6 @@ class AddSoundState extends Equatable {
     sharePublicly,
     attribution,
     coverImage,
-    soundKind,
     publishedSound,
     failure,
     savedResult,

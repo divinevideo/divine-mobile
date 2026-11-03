@@ -4473,22 +4473,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'Sampul suara';
 
   @override
-  String get soundsShareKindLabel => 'Musik atau efek';
-
-  @override
-  String get soundsShareKindDescription =>
-      'Opsional. Suaramu muncul di Musik atau Efek suara saat orang memfilter.';
-
-  @override
-  String get soundsShareKindChoose => 'Pilih';
-
-  @override
-  String get soundsShareKindEffect => 'Efek suara';
-
-  @override
-  String get soundsShareKindNeither => 'Bukan keduanya';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'Jenis file itu tidak didukung. Pilih file audio.';
 

@@ -4490,22 +4490,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'Ses kapağı';
 
   @override
-  String get soundsShareKindLabel => 'Müzik mi efekt mi';
-
-  @override
-  String get soundsShareKindDescription =>
-      'İsteğe bağlı. Filtreleme yapıldığında sesin Müzik ya da Efektler altında görünür.';
-
-  @override
-  String get soundsShareKindChoose => 'Seç';
-
-  @override
-  String get soundsShareKindEffect => 'Ses efekti';
-
-  @override
-  String get soundsShareKindNeither => 'Hiçbiri';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'Bu dosya türü desteklenmiyor. Bir ses dosyası seç.';
 

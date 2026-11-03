@@ -43,34 +43,5 @@ void main() {
         expect(published(const ['funny']).soundKind, isNull);
       });
     });
-
-    group('retag', () {
-      test('adds the chosen kind and drops any other', () {
-        expect(
-          SoundKind.retag(const ['funny', 'Music', 'SFX'], SoundKind.effect),
-          ['funny', 'sfx'],
-        );
-        expect(
-          SoundKind.retag(const ['funny'], SoundKind.music),
-          ['funny', 'music'],
-        );
-      });
-
-      test('drops every kind for none', () {
-        expect(SoundKind.retag(const ['music', 'beat'], null), ['beat']);
-      });
-
-      test('reads back as the kind it was given', () {
-        for (final kind in SoundKind.values) {
-          final sound = AudioEvent(
-            id: 'id',
-            pubkey: 'pubkey',
-            createdAt: 0,
-            publicTags: SoundKind.retag(const [], kind),
-          );
-          expect(sound.soundKind, kind);
-        }
-      });
-    });
   });
 }

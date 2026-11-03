@@ -4251,21 +4251,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundsShareCoverSheetTitle => '声音封面';
 
   @override
-  String get soundsShareKindLabel => '音乐还是音效';
-
-  @override
-  String get soundsShareKindDescription => '可选。别人筛选时，你的声音会出现在“音乐”或“音效”下。';
-
-  @override
-  String get soundsShareKindChoose => '选择';
-
-  @override
-  String get soundsShareKindEffect => '音效';
-
-  @override
-  String get soundsShareKindNeither => '都不是';
-
-  @override
   String get soundsImportUnsupportedFormat => '不支持该文件类型。请选择音频文件。';
 
   @override

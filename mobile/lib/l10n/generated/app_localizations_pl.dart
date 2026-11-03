@@ -4687,22 +4687,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'Okładka dźwięku';
 
   @override
-  String get soundsShareKindLabel => 'Muzyka czy efekt';
-
-  @override
-  String get soundsShareKindDescription =>
-      'Opcjonalnie. Twój dźwięk pojawi się w Muzyce lub Efektach przy filtrowaniu.';
-
-  @override
-  String get soundsShareKindChoose => 'Wybierz';
-
-  @override
-  String get soundsShareKindEffect => 'Efekt dźwiękowy';
-
-  @override
-  String get soundsShareKindNeither => 'Żadne';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'Ten typ pliku nie jest obsługiwany. Wybierz plik audio.';
 
