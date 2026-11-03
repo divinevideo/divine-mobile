@@ -80,7 +80,13 @@ class _GatedRelay {
     this.unsettledKinds = const {},
     this.finallyRefusingRelay = false,
     this.inboxOnly = const [],
+    this.protectedLiveReadAfter,
   });
+
+  /// When set, a live read of the protected kinds is served only once this
+  /// completes, as a gated relay serves it after AUTH and the replay, while
+  /// a deletions-only read is served at once.
+  final Future<void>? protectedLiveReadAfter;
 
   /// The account's own kind-10050 inbox relay, outside the pool.
   static const inboxUrl = 'wss://own-inbox.test';
@@ -265,10 +271,20 @@ void main() {
         filters,
         tempRelays: invocation.namedArguments[#tempRelays] as List<String>?,
       );
-      scheduleMicrotask(() {
+      void deliver() {
         events.forEach(controller.add);
         onEnd?.call(StoredEventsEnd(deliveredEventCount: events.length));
-      });
+      }
+
+      final heldUntil = relay.protectedLiveReadAfter;
+      final readsDeletions = filters.any(
+        (filter) => filter.kinds?.contains(EventKind.eventDeletion) ?? false,
+      );
+      if (heldUntil != null && !readsDeletions) {
+        unawaited(heldUntil.then((_) => deliver()));
+      } else {
+        scheduleMicrotask(deliver);
+      }
       return controller.stream;
     }
 
@@ -504,6 +520,54 @@ void main() {
               const Duration(seconds: 10),
               onTimeout: () => fail(
                 'the deletion was never applied; live REQs: ${relay.liveKinds}',
+              ),
+            );
+
+        final row = await DirectMessagesDao(
+          db,
+        ).getMessageById(message.id, ownerPubkey: _owner);
+        expect(row!.isDeleted, isTrue);
+        await repository.stopListening();
+      },
+    );
+  });
+
+  group('live deletions behind AUTH', () {
+    test(
+      'applies a deletion the relay serves before the DMs it holds for AUTH',
+      () async {
+        final at = now();
+        final message = nip04At(createdAt: at - 2000, content: 'retract me');
+        final deletion = nip04DeletionAt(
+          createdAt: at - 1000,
+          target: message.id,
+        );
+        final authenticated = Completer<void>();
+        final relay = _GatedRelay(
+          [message, deletion],
+          gated: true,
+          protectedLiveReadAfter: authenticated.future,
+        );
+        final repository = launch(relay);
+
+        await repository.startListening();
+        await pumpEventQueue();
+        authenticated.complete();
+        await db
+            .customSelect(
+              'SELECT is_deleted FROM direct_messages WHERE id = ?1',
+              variables: [Variable.withString(message.id)],
+              readsFrom: {db.directMessages},
+            )
+            .watch()
+            .firstWhere(
+              (rows) => rows.isNotEmpty && rows.single.read<bool>('is_deleted'),
+            )
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: () => fail(
+                'the deletion arrived before its message and was dropped; '
+                'live REQs: ${relay.liveKinds}',
               ),
             );
 

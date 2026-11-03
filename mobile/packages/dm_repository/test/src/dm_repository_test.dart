@@ -6216,7 +6216,7 @@ void main() {
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer(
-            (_) => (dms..add(StreamController<Event>())).last.stream,
+            (invocation) => _openLiveDmRead(invocation, dms),
           );
           when(
             () => mockNostrClient.subscribe(
@@ -6275,7 +6275,7 @@ void main() {
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
               ),
             ).thenAnswer(
-              (_) => (dms..add(StreamController<Event>())).last.stream,
+              (invocation) => _openLiveDmRead(invocation, dms),
             );
             when(
               () => mockNostrClient.subscribe(
@@ -33592,4 +33592,19 @@ void main() {
       });
     });
   });
+}
+
+/// Opens a live DM read on [dms] whose stored events end straight after, as
+/// a relay's do: the deletions REQ is opened only once they have.
+Stream<Event> _openLiveDmRead(
+  Invocation invocation,
+  List<StreamController<Event>> dms,
+) {
+  final onEnd =
+      invocation.namedArguments[#onStoredEventsEnd]
+          as void Function(StoredEventsEnd)?;
+  scheduleMicrotask(
+    () => onEnd?.call(const StoredEventsEnd(deliveredEventCount: 0)),
+  );
+  return (dms..add(StreamController<Event>())).last.stream;
 }

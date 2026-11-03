@@ -1680,6 +1680,41 @@ class DmRepository {
         );
         _maybeCommitCatchUp(catchUp);
       });
+      // Deletions are asked for once the DMs' stored events have ended, the
+      // AUTH replay's included: a gated relay answers a deletions-only REQ at
+      // once but holds the DMs, and a deletion handled before the message it
+      // names finds nothing to retract. No catch-up either: a deletion saves
+      // no stamp, so it cannot move a window.
+      var deletionsOpened = false;
+      void openDeletions() {
+        if (deletionsOpened || _disposed) return;
+        if (!identical(_liveCatchUp, catchUp)) return;
+        deletionsOpened = true;
+        _deletionsSubscription = _nostrClient
+            .subscribe(
+              [deletionsFilter],
+              subscriptionId: dmDeletionsSubscriptionId(subscriptionId),
+              tempRelays: ownInbox,
+            )
+            .listen(
+              _handleIncomingEvent,
+              onError: (Object error) {
+                Log.error(
+                  'DM deletions subscription error: $error',
+                  category: LogCategory.system,
+                );
+                _endLiveSubscriptions();
+                _dropLiveCatchUp(catchUp);
+                if (!_disposed) _scheduleReconnect();
+              },
+              onDone: () {
+                _endLiveSubscriptions();
+                _dropLiveCatchUp(catchUp);
+                if (!_disposed) _scheduleReconnect();
+              },
+            );
+      }
+
       final stream = _nostrClient.subscribe(
         [filter],
         subscriptionId: subscriptionId,
@@ -1695,6 +1730,7 @@ class DmRepository {
             ..markCapped(end.possiblyCappedRelays);
           _maybeCommitCatchUp(catchUp);
           _readCatchUpDebt(catchUp);
+          openDeletions();
         },
       );
       _liveCatchUp = catchUp;
@@ -1734,30 +1770,6 @@ class DmRepository {
           }
         },
       );
-      // No catch-up: a deletion saves no stamp, so it cannot move a window.
-      _deletionsSubscription = _nostrClient
-          .subscribe(
-            [deletionsFilter],
-            subscriptionId: dmDeletionsSubscriptionId(subscriptionId),
-            tempRelays: ownInbox,
-          )
-          .listen(
-            _handleIncomingEvent,
-            onError: (Object error) {
-              Log.error(
-                'DM deletions subscription error: $error',
-                category: LogCategory.system,
-              );
-              _endLiveSubscriptions();
-              _dropLiveCatchUp(catchUp);
-              if (!_disposed) _scheduleReconnect();
-            },
-            onDone: () {
-              _endLiveSubscriptions();
-              _dropLiveCatchUp(catchUp);
-              if (!_disposed) _scheduleReconnect();
-            },
-          );
     } finally {
       _subscribing = false;
     }
