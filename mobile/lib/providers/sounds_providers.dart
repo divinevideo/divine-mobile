@@ -70,8 +70,16 @@ SoundsRepository soundsRepository(Ref ref) {
 /// page asks for twice the usual to keep enough to fill the screen.
 const _relayPageSize = 100;
 
+/// How many sounds a list loads by itself, a little more than fill the
+/// screen, before it waits to be scrolled.
+const _screenfulOfSounds = 20;
+
+/// The most pages a list loads by itself to reach [_screenfulOfSounds].
+const _pagesLoadedUnasked = 5;
+
 /// The newest sounds, the picker's "New" list, loading older ones page by
-/// page as it is scrolled ([TrendingSounds.loadMore]).
+/// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
+/// it fills a screen.
 ///
 /// Unnamed sounds nobody reused are left out
 /// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
@@ -87,8 +95,10 @@ class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
 
   @override
   Future<PagedSounds> build() async {
+    _keepForReopen(ref);
     final repository = ref.watch(soundsRepositoryProvider);
     _hideAuthorsBlockedLater();
+    _fillAScreen();
     _pager = _NewestFirstPager(
       fetch: (until) => repository.fetchTrendingSounds(
         limit: _relayPageSize,
@@ -339,7 +349,8 @@ Future<List<AudioEvent>> divineSounds(Ref ref) {
 
 /// The newest sounds published by people the viewer follows, for the
 /// picker's "For you" list, loading older ones page by page as it is
-/// scrolled ([ForYouSounds.loadMore]).
+/// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
+/// screen.
 ///
 /// Divine's own sounds are left out even when the viewer follows a Divine
 /// sound account: the picker lists them from [divineSounds], tied to the
@@ -357,6 +368,7 @@ class ForYouSounds extends _$ForYouSounds with _LoadsMoreSounds {
     final following = ref.watch(followRepositoryProvider).followingPubkeys;
     final repository = ref.watch(soundsRepositoryProvider);
     _hideAuthorsBlockedLater();
+    _fillAScreen();
     _pager = _NewestFirstPager(
       fetch: (until) => repository.fetchSoundsByCreators(
         following,
@@ -384,6 +396,14 @@ mixin _LoadsMoreSounds {
   AsyncValue<PagedSounds> get state;
   set state(AsyncValue<PagedSounds> value);
   Ref get ref;
+  void Function() listenSelf(
+    void Function(
+      AsyncValue<PagedSounds>? previous,
+      AsyncValue<PagedSounds> next,
+    )
+    listener, {
+    void Function(Object error, StackTrace stackTrace)? onError,
+  });
 
   /// The page after the ones the list holds.
   Future<SoundPage> _nextPage();
@@ -402,6 +422,38 @@ mixin _LoadsMoreSounds {
       if (current == null) return;
       final repository = ref.read(soundsRepositoryProvider);
       state = AsyncData(current.narrowed(repository.withoutBlockedAuthors));
+    });
+  }
+
+  /// Loads further pages on its own while the list holds fewer than
+  /// [_screenfulOfSounds], rather than when it is scrolled to its end.
+  ///
+  /// A relay page may keep only a handful: most of the newest sounds are
+  /// unnamed uploads nobody reused, which the lists leave out. A list loaded
+  /// behind another tab would show that handful, and only ask for more once
+  /// opened. It stops after [_pagesLoadedUnasked], so a stretch of nothing
+  /// but left-out sounds does not page through the whole relay. Called from
+  /// `build`.
+  void _fillAScreen() {
+    final ref = this.ref;
+    listenSelf((_, next) {
+      final loaded = next.isLoading || next.hasError ? null : next.value;
+      if (loaded == null ||
+          !loaded.canLoadMore ||
+          loaded.sounds.length >= _screenfulOfSounds ||
+          loaded.pages.length >= _pagesLoadedUnasked) {
+        return;
+      }
+      // After the notification that called here, which must not change the
+      // state it reports.
+      scheduleMicrotask(() {
+        if (!ref.mounted) return;
+        runProviderDetached(
+          loadMore(),
+          'load sounds to fill the screen',
+          logName: 'SoundsProviders',
+        );
+      });
     });
   }
 
