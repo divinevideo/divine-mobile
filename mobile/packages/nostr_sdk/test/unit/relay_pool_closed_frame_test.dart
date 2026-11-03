@@ -716,6 +716,111 @@ void main() {
       expect(result.closedRelayReasons, {'wss://gated.example': 'restricted'});
     });
 
+    group('a relay re-added under a removed URL', () {
+      const url = 'wss://gated.example';
+      late Nostr nostr;
+      late _ControlledQueryRelay answering;
+      late _ControlledQueryRelay removed;
+
+      setUp(() async {
+        nostr = Nostr(
+          LocalNostrSigner(
+            '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+          ),
+          [],
+          dummyTempRelay,
+        );
+        answering = _ControlledQueryRelay('wss://answering.example');
+        removed = _ControlledQueryRelay(url);
+        expect(await nostr.relayPool.add(answering), isTrue);
+        expect(await nostr.relayPool.add(removed), isTrue);
+        await removed.deliver(['AUTH', 'removed-challenge']);
+      });
+
+      Future<_ControlledQueryRelay> readd() async {
+        nostr.relayPool.remove(url);
+        final readded = _ControlledQueryRelay(url);
+        expect(await nostr.relayPool.add(readded), isTrue);
+        return readded;
+      }
+
+      /// Reads with [readded] refusing until AUTH, then authenticating and
+      /// answering, and returns how [readded] ended the read.
+      Future<String?> refusedThenAnswered(_ControlledQueryRelay readded) async {
+        var completed = false;
+        final pending = nostr.readEvents(
+          [
+            {
+              'kinds': [1059],
+            },
+          ],
+          requireAllRelaysSettled: true,
+          timeout: const Duration(seconds: 30),
+        )..whenComplete(() => completed = true).ignore();
+        final answeredId = await answering.awaitPendingQuery();
+        final refusedId = await readded.awaitPendingQuery();
+        await answering.deliver(['EOSE', answeredId]);
+        await readded.deliver(['CLOSED', refusedId, 'auth-required: sign in']);
+        await pumpEventQueue();
+        expect(
+          completed,
+          isFalse,
+          reason: 'the new socket was judged on the removed one',
+        );
+
+        if (readded.capturedAuthEventId == null) {
+          await readded.deliver(['AUTH', 'readded-challenge']);
+        }
+        await readded.deliver(['OK', readded.capturedAuthEventId, true, '']);
+        await readded.awaitReqCount(2);
+        await readded.deliver(['EOSE', refusedId]);
+        final result = await pending.timeout(
+          const Duration(seconds: 2),
+          onTimeout: () => fail('the replayed read never ended'),
+        );
+        return result.closedRelayReasons[url];
+      }
+
+      test('does not inherit an AUTH rejection', () async {
+        await removed.deliver([
+          'OK',
+          removed.capturedAuthEventId,
+          false,
+          'restricted: not allowed',
+        ]);
+        final readded = await readd();
+
+        expect(await refusedThenAnswered(readded), isNot('restricted'));
+      });
+
+      test("is not judged on a verdict that arrives late for the removed "
+          "relay's AUTH", () async {
+        final readded = await readd();
+        await removed.deliver([
+          'OK',
+          removed.capturedAuthEventId,
+          false,
+          'restricted: not allowed',
+        ]);
+
+        expect(await refusedThenAnswered(readded), isNot('restricted'));
+      });
+
+      test("is not judged on a late verdict for the removed relay's AUTH "
+          'after its own first challenge', () async {
+        final readded = await readd();
+        await readded.deliver(['AUTH', 'readded-challenge']);
+        await removed.deliver([
+          'OK',
+          removed.capturedAuthEventId,
+          false,
+          'restricted: not allowed',
+        ]);
+
+        expect(await refusedThenAnswered(readded), isNot('restricted'));
+      });
+    });
+
     test('a rejection of an AUTH for a superseded challenge leaves the read '
         'parked for the current one', () async {
       final nostr = Nostr(

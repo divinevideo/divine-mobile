@@ -851,10 +851,19 @@ class RelayPool {
 
   /// Drops the pool-side state keyed by [url] so a relay that comes back is
   /// not judged on the previous instance's connection.
+  ///
+  /// The AUTH epoch moves on rather than being dropped, as on a connection
+  /// transition: a verdict for the removed instance's AUTH can still arrive,
+  /// and a counter that restarted could match it to the new socket's
+  /// challenge.
   void _forgetRelayBookkeeping(String url) {
     _lastSilentRepairAt.remove(url);
     _authHandshakeStartedAt.remove(url);
     _authGateClosed.remove(url);
+    _authRejected.remove(url);
+    _queriesParkedForAuth.remove(url);
+    _queriesHeldAfterEose.remove(url);
+    _authEpoch[url] = (_authEpoch[url] ?? 0) + 1;
   }
 
   void remove(String url, {int relayType = RelayType.normal}) {
