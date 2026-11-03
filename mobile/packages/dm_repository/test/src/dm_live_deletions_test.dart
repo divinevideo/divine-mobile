@@ -1,5 +1,5 @@
-// ABOUTME: Deletions the live kind-5 REQ reads (#9468): one that arrives
-// ABOUTME: before the message it names, and a batch a relay capped.
+// ABOUTME: Deletions the live kind-5 REQ reads (#9468): early ones, a batch a
+// ABOUTME: relay capped, and their handling across an account switch.
 
 import 'dart:async';
 
@@ -73,6 +73,35 @@ class _LiveReq {
   void end({Map<String, int?> capped = const {}}) => onEnd?.call(
     StoredEventsEnd(deliveredEventCount: _sent, possiblyCappedRelays: capped),
   );
+}
+
+/// Holds each lookup of a message id the test named until it is released, and
+/// answers it with no row.
+class _GatedMessagesDao extends DirectMessagesDao {
+  _GatedMessagesDao(super.attachedDatabase);
+
+  final Map<String, Completer<void>> _gates = {};
+
+  /// Every id looked up so far, in order.
+  final List<String> lookups = [];
+
+  void hold(String id) => _gates[id] = Completer<void>();
+
+  void release(String id) => _gates.remove(id)?.complete();
+
+  void releaseAll() => _gates.keys.toList().forEach(release);
+
+  @override
+  Future<DirectMessageRow?> getMessageById(
+    String id, {
+    String? ownerPubkey,
+  }) async {
+    lookups.add(id);
+    final gate = _gates[id];
+    if (gate == null) return super.getMessageById(id, ownerPubkey: ownerPubkey);
+    await gate.future;
+    return null;
+  }
 }
 
 /// The pool's one relay: the live REQs the repository opened, in order, and
@@ -200,8 +229,8 @@ void main() {
     return client;
   }
 
-  DmRepository launch(_Relay relay) {
-    final messagesDao = DirectMessagesDao(db);
+  DmRepository launch(_Relay relay, {DirectMessagesDao? messagesDao}) {
+    messagesDao ??= DirectMessagesDao(db);
     final conversationsDao = ConversationsDao(db);
     return DmRepository(
       nostrClient: clientFor(relay),
@@ -459,10 +488,6 @@ void main() {
       await deliverDeletions([
         deletionOf([message.id], p: [_owner, _other]),
       ]);
-      // The marker's deletion is still refreshing its preview. A switch in
-      // the middle of it frees the next account's event lock early, and the
-      // two messages below would then no longer be handled in turn.
-      await pumpEventQueue();
 
       repository.setCredentials(
         userPubkey: _other,
@@ -518,6 +543,57 @@ void main() {
 
       await deleted(message);
       expect((await rowOf(message))!.isDeleted, isTrue);
+    });
+  });
+
+  group('live deletions across an account switch', () {
+    test("are handled one at a time while the previous account's last one "
+        'finishes', () async {
+      final relay = _Relay();
+      final dao = _GatedMessagesDao(db);
+      final repository = launch(relay, messagesDao: dao);
+      addTearDown(repository.stopListening);
+      addTearDown(dao.releaseAll);
+      final previous = '1' * 64;
+      final first = '2' * 64;
+      final second = '3' * 64;
+      dao
+        ..hold(previous)
+        ..hold(first);
+
+      await repository.startListening();
+      relay.dmReqs.single.end();
+      relay.deletionReqs.single.send(deletionOf([previous]));
+      await pumpEventQueue();
+      expect(dao.lookups, contains(previous));
+
+      repository.setCredentials(
+        userPubkey: _other,
+        signer: LocalNostrSigner(_otherSecret),
+        messageService: _MockNip17MessageService(),
+      );
+      await repository.startListening();
+      relay.dmReqs.last.end();
+      final live = relay.deletionReqs.last
+        ..send(deletionOf([first], p: [_other]));
+      await pumpEventQueue();
+      expect(dao.lookups, contains(first));
+
+      // The previous account's handler ends while the next account's first
+      // one is still under way.
+      dao.release(previous);
+      await pumpEventQueue();
+      live.send(deletionOf([second], p: [_other]));
+      await pumpEventQueue();
+      expect(
+        dao.lookups,
+        isNot(contains(second)),
+        reason: 'the next deletion ran beside the one still being handled',
+      );
+
+      dao.release(first);
+      await pumpEventQueue();
+      expect(dao.lookups, contains(second));
     });
   });
 }

@@ -3877,11 +3877,15 @@ class DmRepository {
       await _eventLock;
     }
     final completer = Completer<void>();
-    _eventLock = completer.future;
+    final lock = completer.future;
+    _eventLock = lock;
     try {
       await body();
     } finally {
-      _eventLock = null;
+      // [_resetState] drops the lock, and the next session may hold its own
+      // by the time a previous session's handler ends. Clearing that one
+      // would let two of its handlers run at once.
+      if (identical(_eventLock, lock)) _eventLock = null;
       completer.complete();
     }
   }
