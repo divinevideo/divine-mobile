@@ -10,6 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/routes/interactive_sticker_routes.dart';
@@ -57,6 +58,8 @@ void main() {
           overrides: [
             dmRepositoryProvider.overrideWithValue(_MockDmRepository()),
             videoResponsesRepositoryProvider.overrideWithValue(responses),
+            // The creator's warning settings are not what this tests.
+            repliesWarningsProvider.overrideWithValue((replies) => replies),
             userProfileReactiveProvider(
               _creator,
             ).overrideWith((ref) => const Stream<UserProfile?>.empty()),

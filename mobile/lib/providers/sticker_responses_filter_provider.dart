@@ -1,12 +1,14 @@
-// ABOUTME: The filter an Add yours or replies sticker's responses pass through:
-// ABOUTME: the same blocks, mutes, deletions and content filters as the feeds.
+// ABOUTME: The filter an Add yours or replies sticker's responses pass through,
+// ABOUTME: as the feeds filter, and the warnings on a creator's own replies.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/blocs/sticker_responses/sticker_responses_cubit.dart';
+import 'package:openvine/blocs/video_replies/video_replies_cubit.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/services/nsfw_content_filter.dart';
 
 /// Filters the responses an Add yours or replies sticker shows, and the feed
 /// it opens, the way the feeds filter: blocks and mutes either way, deleted
@@ -33,4 +35,24 @@ final stickerResponsesFilterProvider = Provider<StickerResponsesFilter>((ref) {
     for (final response in responses)
       if (!videoService.shouldHideVideo(response)) response,
   ], includeFeedShape: false);
+});
+
+/// Puts on each of a creator's video replies the warnings their content
+/// settings call for, leaving none out: their replies page lists every reply
+/// so they can hide it, and blurs one the settings warn about or would hide.
+///
+/// Rebuilt when the account or its content settings change.
+final repliesWarningsProvider = Provider<RepliesWarnings>((ref) {
+  ref
+    ..watch(currentAuthStateProvider)
+    ..watch(contentFilterVersionProvider);
+  final authService = ref.watch(authServiceProvider);
+  final labels = createNsfwReviewLabels(
+    ref.watch(contentFilterServiceProvider),
+    moderationLabelService: ref.watch(moderationLabelServiceProvider),
+    viewerPubkey: () => authService.currentPublicKeyHex,
+  );
+  return (replies) => [
+    for (final reply in replies) reply.copyWith(warnLabels: labels(reply)),
+  ];
 });

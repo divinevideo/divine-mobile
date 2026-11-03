@@ -27,11 +27,13 @@ VideoEvent _reply(int id) => VideoEvent(
 void main() {
   group(VideoRepliesCubit, () {
     late _MockVideoResponsesRepository repository;
+    late RepliesWarnings warnings;
 
     setUpAll(() => registerFallbackValue(const RepliesCuration()));
 
     setUp(() {
       repository = _MockVideoResponsesRepository();
+      warnings = (replies) => replies;
       when(
         () => repository.saveCuration(
           any(),
@@ -42,6 +44,7 @@ void main() {
 
     VideoRepliesCubit build() => VideoRepliesCubit(
       repository: repository,
+      warnings: (replies) => warnings(replies),
       videoId: _hex(100),
       videoAddress: _address,
       creatorPubkey: _creator,
@@ -89,6 +92,42 @@ void main() {
             ),
           ).called(1);
         },
+      );
+
+      blocTest<VideoRepliesCubit, VideoRepliesState>(
+        "puts the creator's warnings on each reply, leaving none out",
+        setUp: () {
+          when(
+            () => repository.fetchReplies(
+              videoId: any(named: 'videoId'),
+              videoAddress: any(named: 'videoAddress'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer(
+            (_) async =>
+                VideoResponses(total: 2, videos: [_reply(1), _reply(2)]),
+          );
+          when(
+            () => repository.fetchCuration(
+              creatorPubkey: _creator,
+              videoAddress: _address,
+            ),
+          ).thenAnswer((_) async => const RepliesCuration());
+          warnings = (replies) => [
+            for (final reply in replies)
+              if (reply.id == _hex(2))
+                reply.copyWith(warnLabels: ['nudity'])
+              else
+                reply,
+          ];
+        },
+        build: build,
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        verify: (cubit) => expect(
+          cubit.state.replies.map((reply) => reply.shouldShowWarning),
+          equals([false, true]),
+        ),
       );
 
       blocTest<VideoRepliesCubit, VideoRepliesState>(

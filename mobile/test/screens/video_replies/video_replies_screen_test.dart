@@ -127,6 +127,34 @@ void main() {
         );
       });
 
+      testWidgets(
+        "a reply blurred by the creator's settings, not its own tag",
+        (
+          tester,
+        ) async {
+          await pump(
+            tester,
+            VideoRepliesState(
+              status: VideoRepliesStatus.loaded,
+              replies: [
+                _reply(1, name: 'Alice').copyWith(warnLabels: ['nudity']),
+                // Tagged by its author, while the creator's settings show it.
+                _reply(2, name: 'Bob').copyWith(contentWarningLabels: ['gore']),
+              ],
+            ),
+          );
+
+          expect(find.byType(ImageFiltered), findsOneWidget);
+          expect(
+            find.ancestor(
+              of: find.byType(ImageFiltered),
+              matching: find.widgetWithText(Row, 'Alice'),
+            ),
+            findsOneWidget,
+          );
+        },
+      );
+
       testWidgets('that there are none yet', (tester) async {
         await pump(
           tester,

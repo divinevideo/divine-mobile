@@ -9,24 +9,32 @@ import 'package:video_responses_repository/video_responses_repository.dart';
 
 part 'video_replies_state.dart';
 
+/// Puts on each reply the content warnings the creator's settings call for,
+/// leaving none out.
+typedef RepliesWarnings = List<VideoEvent> Function(List<VideoEvent> replies);
+
 /// Reads the video replies to the creator's video [videoId], published at
 /// [videoAddress], and saves which they pinned or hid.
 ///
-/// A change shows at once and is saved behind it; one that cannot be saved
-/// goes back to what it was.
+/// Every reply is listed, so the creator can hide it, each with the warnings
+/// [RepliesWarnings] puts on it. A change shows at once and is saved behind
+/// it; one that cannot be saved goes back to what it was.
 class VideoRepliesCubit extends Cubit<VideoRepliesState>
     with CloseGuardedEmit<VideoRepliesState> {
   VideoRepliesCubit({
     required VideoResponsesRepository repository,
+    required RepliesWarnings warnings,
     required this.videoId,
     required String videoAddress,
     required String creatorPubkey,
   }) : _repository = repository,
+       _warnings = warnings,
        _videoAddress = videoAddress,
        _creatorPubkey = creatorPubkey,
        super(const VideoRepliesState());
 
   final VideoResponsesRepository _repository;
+  final RepliesWarnings _warnings;
 
   /// The video whose replies these are.
   final String videoId;
@@ -54,7 +62,7 @@ class VideoRepliesCubit extends Cubit<VideoRepliesState>
       emitIfOpen(
         state.copyWith(
           status: VideoRepliesStatus.loaded,
-          replies: replies.videos,
+          replies: _warnings(replies.videos),
           curation: curation,
         ),
       );

@@ -11,6 +11,7 @@ import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -41,12 +42,15 @@ class VideoRepliesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final repository = ref.watch(videoResponsesRepositoryProvider);
+    // Rebuilt when the creator's content settings change.
+    final warnings = ref.watch(repliesWarningsProvider);
     return BlocProvider(
       // Another account saves its curation as itself.
-      key: ValueKey((repository, videoId, videoAddress)),
+      key: ValueKey((repository, warnings, videoId, videoAddress)),
       create: (_) {
         final cubit = VideoRepliesCubit(
           repository: repository,
+          warnings: warnings,
           videoId: videoId,
           videoAddress: videoAddress,
           creatorPubkey: videoAddress.split(':').elementAtOrNull(1) ?? '',
@@ -290,7 +294,7 @@ class _ReplyTile extends ConsumerWidget {
   }
 }
 
-/// A reply's thumbnail, blurred when it carries a content warning, and
+/// A reply's thumbnail, blurred when the creator's settings warn about it, and
 /// faded while it is hidden.
 class _Thumbnail extends StatelessWidget {
   const _Thumbnail({required this.reply, required this.dimmed});
@@ -309,7 +313,9 @@ class _Thumbnail extends StatelessWidget {
             placeholder: (_, _) => placeholder,
             errorWidget: (_, _, _) => placeholder,
           );
-    if (reply.hasContentWarning) {
+    // The warnings the creator's settings call for: the page lists every
+    // reply, so one their settings would hide is blurred here instead.
+    if (reply.shouldShowWarning) {
       picture = ImageFiltered(
         imageFilter: .blur(sigmaX: 12, sigmaY: 12),
         child: picture,

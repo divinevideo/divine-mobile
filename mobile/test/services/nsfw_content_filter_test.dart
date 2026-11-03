@@ -639,6 +639,56 @@ void main() {
       );
     });
 
+    group('createNsfwReviewLabels', () {
+      test('blurs what the preferences would hide or warn about, and leaves '
+          'what they show', () async {
+        await contentFilterService.setPreference(
+          ContentLabel.violence,
+          ContentFilterPreference.warn,
+        );
+        await contentFilterService.setPreference(
+          ContentLabel.spoiler,
+          ContentFilterPreference.show,
+        );
+        final resolver = createNsfwReviewLabels(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+        final hide = createNsfwFilter(
+          contentFilterService,
+          moderationLabelService: moderationLabelService,
+          viewerPubkey: () => _testPubkey,
+        );
+        final nudity = _createVideo(
+          contentWarningLabels: ['nudity'],
+          pubkey: _otherPubkey,
+        );
+
+        // A pin on it would otherwise be lost: the feeds hide it.
+        expect(hide(nudity), isTrue);
+        expect(resolver(nudity), equals(['nudity']));
+        expect(
+          resolver(
+            _createVideo(
+              contentWarningLabels: ['violence'],
+              pubkey: _otherPubkey,
+            ),
+          ),
+          equals(['violence']),
+        );
+        expect(
+          resolver(
+            _createVideo(
+              contentWarningLabels: ['spoiler'],
+              pubkey: _otherPubkey,
+            ),
+          ),
+          isEmpty,
+        );
+      });
+    });
+
     group('createNsfwWarnLabels', () {
       test('returns trusted hash-based warn labels', () async {
         await seedModerationLabels([
