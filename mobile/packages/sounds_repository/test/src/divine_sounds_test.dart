@@ -69,5 +69,20 @@ void main() {
       expect(linked, hasLength(1));
       expect(linked.single.linkedEventId, eventB);
     });
+
+    test('lists a sound the app does not ship once, as its newest event', () {
+      final linked = linkDivineSounds(
+        shipped: [shipped('wednesday')],
+        published: [
+          published(eventB, shippedId: 'dropped-from-the-app', createdAt: 2),
+          published(eventC, shippedId: 'dropped-from-the-app'),
+        ],
+      );
+
+      expect(linked.map((sound) => sound.id), [
+        '${AudioEvent.bundledMarker}_wednesday',
+        eventB,
+      ]);
+    });
   });
 }
