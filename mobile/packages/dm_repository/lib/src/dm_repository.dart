@@ -1671,20 +1671,12 @@ class DmRepository {
             normalizeRelayUrl(url) ?? url,
         },
       );
-      void limitHold() => catchUp.startHoldLimit(_storedEventsHoldLimit, () {
-        // A slow relay can hold the stored events open past the limit after
-        // another sent a batch that may be capped: that one is recorded
-        // before the limit saves anything.
-        catchUp.markCapped(
-          _nostrClient.storedEventsPossiblyCapped(subscriptionId),
-        );
-        _maybeCommitCatchUp(catchUp);
-      });
       // Deletions are asked for once the DMs' stored events have ended, the
       // AUTH replay's included: a gated relay answers a deletions-only REQ at
       // once but holds the DMs, and a deletion handled before the message it
-      // names finds nothing to retract. No catch-up either: a deletion saves
-      // no stamp, so it cannot move a window.
+      // names finds nothing to retract. The hold limit opens them too, as a
+      // relay can hold that end for the whole session. No catch-up either: a
+      // deletion saves no stamp, so it cannot move a window.
       var deletionsOpened = false;
       void openDeletions() {
         if (deletionsOpened || _disposed) return;
@@ -1714,6 +1706,17 @@ class DmRepository {
               },
             );
       }
+
+      void limitHold() => catchUp.startHoldLimit(_storedEventsHoldLimit, () {
+        // A slow relay can hold the stored events open past the limit after
+        // another sent a batch that may be capped: that one is recorded
+        // before the limit saves anything.
+        catchUp.markCapped(
+          _nostrClient.storedEventsPossiblyCapped(subscriptionId),
+        );
+        _maybeCommitCatchUp(catchUp);
+        openDeletions();
+      });
 
       final stream = _nostrClient.subscribe(
         [filter],

@@ -6203,6 +6203,58 @@ void main() {
         await controller.close();
       });
 
+      test(
+        'opens the deletions REQ once the hold limit passes without the DMs '
+        'stored events ending',
+        () {
+          fakeAsync((async) {
+            when(
+              () => mockNostrClient.storedEventsPossiblyCapped(any()),
+            ).thenReturn(const <String, int?>{});
+            // A relay that never ends the DMs' stored events, such as one that
+            // never answers our AUTH, must not keep deletions unread all
+            // session.
+            final dms = StreamController<Event>();
+            final deletions = <StreamController<Event>>[];
+            when(
+              () => mockNostrClient.subscribe(
+                any(that: isLiveDmRead),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer((_) => dms.stream);
+            when(
+              () => mockNostrClient.subscribe(
+                any(that: isLiveDeletionsRead),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+              ),
+            ).thenAnswer(
+              (_) => (deletions..add(StreamController<Event>())).last.stream,
+            );
+            when(
+              () => mockNostrClient.unsubscribe(any()),
+            ).thenAnswer((_) async {});
+            final repository = createRepository();
+
+            unawaited(repository.startListening());
+            async
+              ..flushMicrotasks()
+              ..elapse(const Duration(minutes: 1, seconds: 59));
+            expect(deletions, isEmpty);
+
+            async.elapse(const Duration(seconds: 1));
+            expect(deletions, hasLength(1));
+            expect(deletions.single.hasListener, isTrue);
+
+            unawaited(repository.stopListening());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
       test('ends the DM REQ with its deletions REQ and re-opens both', () {
         fakeAsync((async) {
           final dms = <StreamController<Event>>[];
