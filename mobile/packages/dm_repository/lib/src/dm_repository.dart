@@ -2289,7 +2289,8 @@ class DmRepository {
   /// The gift-wrap pages read only kinds 1059 and 4 (#9468), so deletions are
   /// read here, after them and after [_recoverOutgoingNip04]. Pages `#p:[self]`
   /// kind-5 newest→oldest on the relays those pages read, the account's own
-  /// inbox [tempRelays] included; see [_runRecoveryPass].
+  /// inbox [tempRelays] included; see [_runRecoveryPass]. A deletion this
+  /// pass finds no message for is dropped, not held.
   Future<bool> _recoverDeletions(
     String pubkey,
     int generation, {
@@ -2410,7 +2411,10 @@ class DmRepository {
         if (!authoritative) sawUnansweredPage = true;
         for (var i = 0; i < events.length; i++) {
           if (_ingestSessionEnded(pubkey, generation)) return false;
-          await _handleIncomingEvent(events[i]);
+          // History is stored by now, so a deletion that names none of it
+          // rarely finds its message later this session, and holding it
+          // could push a live deletion out of the cap.
+          await _handleIncomingEvent(events[i], holdEarlyDeletions: false);
           await _maybeYieldDuringDrain(i);
         }
         // Step strictly below the oldest event seen so the loop terminates;
@@ -3820,10 +3824,12 @@ class DmRepository {
   /// Routes an incoming event to the correct handler based on kind.
   ///
   /// Serialized via [_eventLock] so that subscription events never race
-  /// into the dedup/insert path concurrently.
+  /// into the dedup/insert path concurrently. With [holdEarlyDeletions]
+  /// false, a deletion naming a message not stored yet is not held.
   Future<void> _handleIncomingEvent(
     Event event, {
     _LiveCatchUp? deferWireTo,
+    bool holdEarlyDeletions = true,
   }) async {
     if (event.kind == EventKind.giftWrap) {
       final gen = _resetGeneration;
@@ -3840,7 +3846,7 @@ class DmRepository {
     }
     await _withEventLock(() async {
       if (event.kind == EventKind.eventDeletion) {
-        await _handleDeletionEvent(event);
+        await _handleDeletionEvent(event, holdIfAbsent: holdEarlyDeletions);
       } else if (event.kind == EventKind.directMessage) {
         await _handleNip04Event(event, deferWireTo: deferWireTo);
       }
@@ -3883,9 +3889,13 @@ class DmRepository {
   /// Handles an incoming NIP-09 kind 5 deletion event.
   ///
   /// For each `e` tag, validates that the event author matches the original
-  /// message sender (NIP-09 requirement) before soft-deleting. A target not
-  /// stored yet is held until it is; see [_applyEarlyDeletions].
-  Future<void> _handleDeletionEvent(Event deletionEvent) async {
+  /// message sender (NIP-09 requirement) before soft-deleting. With
+  /// [holdIfAbsent], a target not stored yet is held until it is; see
+  /// [_applyEarlyDeletions].
+  Future<void> _handleDeletionEvent(
+    Event deletionEvent, {
+    required bool holdIfAbsent,
+  }) async {
     final owner = _userPubkey;
     final generation = _resetGeneration;
     try {
@@ -3898,7 +3908,8 @@ class DmRepository {
         );
         // The message it names can still arrive, from another relay or out
         // of order on this one. Only an event id can name a stored message.
-        if (outcome == null &&
+        if (holdIfAbsent &&
+            outcome == null &&
             !_ingestSessionEnded(owner, generation) &&
             _eventIdPattern.hasMatch(target)) {
           _earlyDeletions.hold(target, deletionEvent);

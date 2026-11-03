@@ -404,6 +404,36 @@ void main() {
       );
     });
 
+    test("keeps its place when the history restore's deletions name "
+        'messages it never stored', () async {
+      final message = nip04('take this back');
+      await deliverDeletions([
+        deletionOf([message.id]),
+      ]);
+      final restored = nip04('restored');
+      relay.dmReqs.single.send(restored);
+      await stored(restored);
+      // A cap's worth of targets the restore never stored, after one it did.
+      relay.stored.add(
+        deletionOf([
+          restored.id,
+          for (var i = 0; i < DmRepository.maxHeldEarlyDeletions; i++)
+            i.toRadixString(16).padLeft(64, '0'),
+        ]),
+      );
+
+      await repository.backfillHistoryIfNeeded();
+      expect(
+        (await rowOf(restored))!.isDeleted,
+        isTrue,
+        reason: "the restore's deletion pass read the deletion",
+      );
+      relay.dmReqs.single.send(message);
+
+      await deleted(message);
+      expect((await rowOf(message))!.isDeleted, isTrue);
+    });
+
     test('is forgotten when the repository stops listening', () async {
       final message = nip04('take this back');
       await deliverDeletions([
