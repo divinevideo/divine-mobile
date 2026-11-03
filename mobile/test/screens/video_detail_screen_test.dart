@@ -109,13 +109,17 @@ void main() {
     Widget buildSubject({
       String videoId = 'test_video_id',
       List<String> fallbackVideoIds = const [],
+      Override? videoEventServiceOverride,
       List<Override> extraOverrides = const <Override>[],
     }) {
       return testMaterialApp(
         mockNostrService: mockNostrClient,
         mockFollowRepository: mockFollowRepository,
         additionalOverrides: [
-          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+          videoEventServiceOverride ??
+              videoEventServiceProvider.overrideWithValue(
+                mockVideoEventService,
+              ),
           contentBlocklistRepositoryProvider.overrideWithValue(
             mockBlocklistRepository,
           ),
@@ -1576,5 +1580,70 @@ void main() {
         expect(find.text(l10n.videoErrorNotFound), findsNothing);
       });
     });
+
+    group('session-scoped dependency refresh', () {
+      testWidgets(
+        'rebuilds without refreshing the video event service mid-build',
+        (tester) async {
+          // Stands in for a session-scoped dependency of the service, such as
+          // the likes repository, that is replaced once deferred startup
+          // signs in while a notification tap already shows this screen.
+          final sessionVersion = NotifierProvider<_SessionVersion, int>(
+            _SessionVersion.new,
+          );
+          final sessionDependency = Provider<Object>((ref) {
+            ref.watch(sessionVersion);
+            return Object();
+          });
+          final video = createTestVideoEvent(id: 'session_video_id');
+          when(
+            () =>
+                mockVideosRepository.lookupVideoForRouteId('session_video_id'),
+          ).thenAnswer((_) async => VideoRouteFound(video));
+
+          await tester.pumpWidget(
+            buildSubject(
+              videoId: 'session_video_id',
+              videoEventServiceOverride: videoEventServiceProvider.overrideWith(
+                (ref) {
+                  ref.watch(sessionDependency);
+                  return mockVideoEventService;
+                },
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(
+            find.byKey(const Key('video-feed-placeholder')),
+            findsOneWidget,
+          );
+
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(VideoDetailScreen)),
+          );
+          container.read(sessionVersion.notifier).bump();
+          await tester.pump();
+
+          // Any watched provider change rebuilds the screen; a stale service
+          // would then be rebuilt inside build() and schedule a provider
+          // refresh on the ProviderScope while the tree is building.
+          container.read(blocklistVersionProvider.notifier).increment();
+          await tester.pump();
+
+          expect(tester.takeException(), isNull);
+          expect(
+            find.byKey(const Key('video-feed-placeholder')),
+            findsOneWidget,
+          );
+        },
+      );
+    });
   });
+}
+
+class _SessionVersion extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void bump() => state++;
 }
