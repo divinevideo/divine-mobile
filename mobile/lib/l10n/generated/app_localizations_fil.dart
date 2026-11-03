@@ -7986,6 +7986,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi na-prepare ang text at stickers sa draft na ito. Buksan mo sa editor, tapos i-post ulit.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Hindi makakapag-post ang account mo ng question sticker, dahil dumarating ang mga sagot bilang private message. Alisin ito, saka mag-post ulit.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Hindi kaya ng device mo na i-export nang sabay-sabay ang ganito karaming na-detach na clip. Ibalik ang ilan sa timeline at subukan ulit.';
 

@@ -135,6 +135,7 @@
   "publishErrorPermissionDenied": "Divine'in yükleme izni yok. Ayarlarından uygulama izinlerini kontrol edip tekrar dene.",
   "publishErrorOutOfMemory": "Cihazının belleği azaldı. Bazı uygulamaları kapatıp tekrar dene.",
   "publishErrorOverlaysUnavailable": "Bu taslaktaki yazı ve çıkartmalar hazırlanamadı. Düzenleyicide aç ve tekrar paylaş.",
+  "publishErrorQuestionStickerRestricted": "Hesabın soru çıkartması paylaşamaz, çünkü yanıtlar özel mesaj olarak gelir. Çıkartmayı kaldır, sonra yeniden paylaş.",
   "publishErrorTooManyDetachedClips": "Cihazın bu kadar çok ayrılmış klibi aynı anda dışa aktaramıyor. Birkaçını zaman çizelgesine geri koyup tekrar dene.",
   "publishErrorDraftTooManyDetachedClips": "Cihazın bu kadar çok ayrılmış klibi aynı anda dışa aktaramıyor. Taslağı düzenleyicide aç, birkaçını zaman çizelgesine geri koy ve tekrar paylaş.",
   "publishErrorUnknownServer": "Bilinmeyen sunucu",

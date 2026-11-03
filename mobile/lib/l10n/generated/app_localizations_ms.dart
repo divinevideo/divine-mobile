@@ -7935,6 +7935,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Teks dan pelekat pada draf ini tidak dapat disediakan. Buka ia dalam penyunting, kemudian siarkan semula.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Akaun anda tidak boleh menyiarkan pelekat soalan, kerana jawapannya datang sebagai mesej peribadi. Alih keluar pelekat itu, kemudian siarkan semula.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Peranti anda tidak dapat mengeksport klip ditanggalkan sebanyak ini serentak. Kembalikan beberapa ke garis masa dan cuba lagi.';
 

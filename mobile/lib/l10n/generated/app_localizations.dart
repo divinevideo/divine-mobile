@@ -13306,6 +13306,12 @@ abstract class AppLocalizations {
   /// **'The text and stickers on this draft couldn’t be prepared. Open it in the editor, then post again.'**
   String get publishErrorOverlaysUnavailable;
 
+  /// Shown when a post was refused because it carries a question sticker and the account may message only Divine, a protected minor: answers to a question come as private messages, which the account cannot receive. Removing the sticker in the editor lets it post.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account can\'t post a question sticker, since its answers come as private messages. Remove it, then post again.'**
+  String get publishErrorQuestionStickerRestricted;
+
   /// Shown on the post screen when the export failed because the device could not decode every clip detached onto the editor canvas at the same time. Retrying fails the same way, so it tells the user to move some detached clips back onto the timeline (the action labelled videoEditorReattachLabel) and try again. Use the same noun for the clips as this locale's videoEditorDetachedClipLabel.
   ///
   /// In en, this message translates to:

@@ -7927,6 +7927,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Texten och dekalerna i det här utkastet kunde inte förberedas. Öppna det i redigeraren och posta igen.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Ditt konto kan inte publicera ett frågeklistermärke, eftersom svaren kommer som privata meddelanden. Ta bort det och publicera sedan igen.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Din enhet kan inte exportera så många lossade klipp på en gång. Lägg tillbaka några på tidslinjen och försök igen.';
 

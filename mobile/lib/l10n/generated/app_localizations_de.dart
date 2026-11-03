@@ -8034,6 +8034,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Text und Sticker dieses Entwurfs konnten nicht vorbereitet werden. Öffne ihn im Editor und poste dann erneut.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Dein Konto kann keinen Frage-Sticker posten, weil die Antworten als private Nachrichten kommen. Entferne ihn und poste dann erneut.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Dein Gerät kann so viele abgelöste Clips nicht auf einmal exportieren. Leg ein paar zurück auf die Timeline und versuch es erneut.';
 

@@ -7940,6 +7940,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر تجهيز النص والملصقات في هذه المسودة. افتحها في المحرّر ثم انشر مرّة أخرى.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'لا يمكن لحسابك نشر ملصق سؤال، لأن إجاباته تصل كرسائل خاصة. أزله، ثم انشر مجددًا.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'لا يستطيع جهازك تصدير هذا العدد من المقاطع المفصولة دفعة واحدة. يُرجى إرجاع بعضها إلى الجدول الزمني ثم المحاولة مرّة أخرى.';
 

@@ -31,6 +31,7 @@ import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
+import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/scheduled_posts_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
@@ -255,6 +256,7 @@ VideoPublishService createBackgroundPublishService(
     ),
     scheduledPostsRepository: ref.read(scheduledPostsRepositoryProvider),
     performanceMonitor: ref.read(performanceMonitoringServiceProvider),
+    isDmRestricted: () => ref.read(isDmRestrictedProvider),
     onProgressChanged: ({required String draftId, required double progress}) {
       onProgress(draftId: draftId, progress: progress);
     },

@@ -7891,6 +7891,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không chuẩn bị được chữ và nhãn dán trên bản nháp này. Mở nó trong trình chỉnh sửa rồi đăng lại.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Tài khoản của bạn không thể đăng nhãn dán câu hỏi, vì câu trả lời đến dưới dạng tin nhắn riêng. Hãy gỡ nó ra rồi đăng lại.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Thiết bị của bạn không thể xuất cùng lúc nhiều clip đã tách rời như vậy. Đưa vài clip trở lại timeline rồi thử lại nhé.';
 

@@ -3921,6 +3921,7 @@
   "publishErrorPermissionDenied": "Divine không có quyền tải lên. Kiểm tra quyền ứng dụng trong cài đặt của bạn rồi thử lại.",
   "publishErrorOutOfMemory": "Thiết bị của bạn sắp hết bộ nhớ. Đóng bớt ứng dụng rồi thử lại nhé.",
   "publishErrorOverlaysUnavailable": "Không chuẩn bị được chữ và nhãn dán trên bản nháp này. Mở nó trong trình chỉnh sửa rồi đăng lại.",
+  "publishErrorQuestionStickerRestricted": "Tài khoản của bạn không thể đăng nhãn dán câu hỏi, vì câu trả lời đến dưới dạng tin nhắn riêng. Hãy gỡ nó ra rồi đăng lại.",
   "publishErrorTooManyDetachedClips": "Thiết bị của bạn không thể xuất cùng lúc nhiều clip đã tách rời như vậy. Đưa vài clip trở lại timeline rồi thử lại nhé.",
   "publishErrorDraftTooManyDetachedClips": "Thiết bị của bạn không thể xuất cùng lúc nhiều clip đã tách rời như vậy. Mở bản nháp trong trình chỉnh sửa, đưa vài clip trở lại timeline rồi đăng lại nhé.",
   "publishErrorUnknownServer": "Máy chủ không xác định",

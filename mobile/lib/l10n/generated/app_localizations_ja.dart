@@ -7522,6 +7522,10 @@ class AppLocalizationsJa extends AppLocalizations {
       'この下書きのテキストとステッカーを準備できなかったよ。エディタで開いてから、もう一回投稿してみて。';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'このアカウントでは質問ステッカーを投稿できないよ。回答はプライベートメッセージで届くから。ステッカーを外してから、もう一回投稿してみて。';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'この端末では、切り離したクリップをこれほど多く同時に書き出せません。いくつかをタイムラインに戻してから、もう一度お試しください。';
 

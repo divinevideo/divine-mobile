@@ -7847,6 +7847,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Teks dan stiker di draf ini tidak bisa disiapkan. Buka di editor, lalu posting lagi.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Akunmu tidak bisa memposting stiker pertanyaan, karena jawabannya datang sebagai pesan pribadi. Hapus stikernya, lalu posting lagi.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Perangkatmu tidak bisa mengekspor klip terlepas sebanyak ini sekaligus. Kembalikan beberapa ke timeline lalu coba lagi.';
 

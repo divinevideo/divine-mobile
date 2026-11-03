@@ -7749,6 +7749,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'የዚህ ረቂቅ ጽሑፍና ተለጣፊዎች ሊዘጋጁ አልቻሉም። በአራሚው ውስጥ ይክፈቱት፣ ከዚያ እንደገና ይለጥፉ።';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'መለያዎ የጥያቄ ተለጣፊ መለጠፍ አይችልም፣ ምክንያቱም መልሶቹ እንደ የግል መልዕክቶች ይመጣሉ። ያስወግዱት፣ ከዚያ እንደገና ይለጥፉ።';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'መሣሪያዎ ይህን ያህል የተነጠሉ ቅንጥቦችን በአንድ ጊዜ ወደ ውጭ መላክ አይችልም። ጥቂቶቹን ወደ ጊዜ መስመሩ ይመልሱ እና እንደገና ይሞክሩ።';
 

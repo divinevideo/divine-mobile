@@ -7855,6 +7855,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu taslaktaki yazı ve çıkartmalar hazırlanamadı. Düzenleyicide aç ve tekrar paylaş.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Hesabın soru çıkartması paylaşamaz, çünkü yanıtlar özel mesaj olarak gelir. Çıkartmayı kaldır, sonra yeniden paylaş.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Cihazın bu kadar çok ayrılmış klibi aynı anda dışa aktaramıyor. Birkaçını zaman çizelgesine geri koyup tekrar dene.';
 

@@ -135,6 +135,7 @@
   "publishErrorPermissionDenied": "O Divine não tem permissão para enviar. Verifique as permissões do app nas suas configurações e tente novamente.",
   "publishErrorOutOfMemory": "Seu dispositivo está com pouca memória. Feche alguns apps e tente novamente.",
   "publishErrorOverlaysUnavailable": "Não foi possível preparar o texto e os stickers deste rascunho. Abra no editor e poste de novo.",
+  "publishErrorQuestionStickerRestricted": "Sua conta não pode publicar um sticker de pergunta, porque as respostas chegam como mensagens privadas. Remova-o e publique de novo.",
   "publishErrorTooManyDetachedClips": "Seu dispositivo não consegue exportar tantos clipes separados de uma vez. Devolva alguns à linha do tempo e tente novamente.",
   "publishErrorDraftTooManyDetachedClips": "Seu dispositivo não consegue exportar tantos clipes separados de uma vez. Abra o rascunho no editor, devolva alguns à linha do tempo e poste de novo.",
   "publishErrorUnknownServer": "Servidor desconhecido",

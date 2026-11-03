@@ -8010,6 +8010,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Текстът и стикерите в тази чернова не можаха да се подготвят. Отвори я в редактора и публикувай пак.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Профилът ти не може да публикува стикер с въпрос, защото отговорите идват като лични съобщения. Премахни го и публикувай отново.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Устройството ти не може да експортира толкова много откачени клипове наведнъж. Върни няколко на времевата линия и опитай пак.';
 

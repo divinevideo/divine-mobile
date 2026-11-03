@@ -8027,6 +8027,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'The text and stickers on this draft couldn’t be prepared. Open it in the editor, then post again.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Your account can\'t post a question sticker, since its answers come as private messages. Remove it, then post again.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Your device can\'t export this many detached clips at once. Put a few back on the timeline and try again.';
 

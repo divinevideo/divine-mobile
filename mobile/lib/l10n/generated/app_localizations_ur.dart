@@ -7936,6 +7936,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'اس مسودے کا ٹیکسٹ اور اسٹیکرز تیار نہیں ہو سکے۔ اسے ایڈیٹر میں کھولیں، پھر دوبارہ پوسٹ کریں۔';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'آپ کا اکاؤنٹ سوال والا اسٹیکر پوسٹ نہیں کر سکتا، کیونکہ اس کے جواب نجی پیغامات کے طور پر آتے ہیں۔ اسے ہٹائیں، پھر دوبارہ پوسٹ کریں۔';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'آپ کی ڈیوائس ایک ساتھ اتنے زیادہ الگ کیے گئے کلپس ایکسپورٹ نہیں کر سکتی۔ کچھ کلپس واپس ٹائم لائن پر رکھیں اور دوبارہ کوشش کریں۔';
 

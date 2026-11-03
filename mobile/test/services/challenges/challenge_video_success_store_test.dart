@@ -404,6 +404,7 @@ void main() {
           final publisher = _Publisher();
           final blossom = _Blossom();
           final retry = VideoPublishService(
+            isDmRestricted: () => false,
             uploadManager: uploads,
             authService: auth,
             videoEventPublisher: publisher,

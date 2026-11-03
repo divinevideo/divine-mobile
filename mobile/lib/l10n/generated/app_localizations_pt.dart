@@ -8005,6 +8005,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível preparar o texto e os stickers deste rascunho. Abra no editor e poste de novo.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Sua conta não pode publicar um sticker de pergunta, porque as respostas chegam como mensagens privadas. Remova-o e publique de novo.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Seu dispositivo não consegue exportar tantos clipes separados de uma vez. Devolva alguns à linha do tempo e tente novamente.';
 

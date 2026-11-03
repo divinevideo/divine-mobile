@@ -8050,6 +8050,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Le texte et les stickers de ce brouillon n’ont pas pu être préparés. Ouvre-le dans l’éditeur, puis publie à nouveau.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Ton compte ne peut pas publier de sticker de question, car les réponses arrivent en messages privés. Retire-le, puis publie à nouveau.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Ton appareil ne peut pas exporter autant de clips détachés à la fois. Remets-en quelques-uns dans la timeline et réessaie.';
 
