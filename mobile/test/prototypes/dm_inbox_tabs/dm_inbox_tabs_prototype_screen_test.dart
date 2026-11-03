@@ -195,6 +195,31 @@ void main() {
         expect(find.textContaining('Lisbon'), findsOneWidget);
       });
 
+      testWidgets(
+        'a screen reader hears a hidden request once and can open it',
+        (
+          tester,
+        ) async {
+          final semantics = tester.ensureSemantics();
+          await pumpScreen(tester);
+          await openTab(tester, 'Requests');
+          const label =
+              'Message request from Priya Raman, content hidden. Tap to open.';
+
+          final node = find.semantics.byLabel(label);
+          expect(node, findsOne);
+          final data = node.evaluate().single.getSemanticsData();
+          expect(data.label, equals(label), reason: 'the title is read once');
+          expect(data.hasAction(SemanticsAction.tap), isTrue);
+
+          tester.semantics.tap(node);
+          await tester.pumpAndSettle();
+
+          expect(find.textContaining('Lisbon'), findsOneWidget);
+          semantics.dispose();
+        },
+      );
+
       testWidgets('opening a request clears its unread count', (tester) async {
         await pumpScreen(tester);
         await openTab(tester, 'Requests');

@@ -587,12 +587,17 @@ class _ConversationRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 10,
         children: [
+          // A hidden row is announced by its label alone, so the title is not
+          // read twice; excluding the children drops the InkWell's tap action,
+          // so the node carries it. An open row reads its own text.
           Semantics(
             container: true,
             button: _concealed,
             label: _concealed
                 ? 'Message request from $title, content hidden. Tap to open.'
-                : 'Conversation with $title',
+                : null,
+            onTap: _concealed ? () => actions.onReveal(conversation.id) : null,
+            excludeSemantics: _concealed,
             child: InkWell(
               onTap: _concealed
                   ? () => actions.onReveal(conversation.id)
