@@ -322,8 +322,8 @@ void main() {
               ),
               same(rootKey.currentState),
             );
-            expect(primaryCalls, 0);
-            expect(secondaryCalls, 0);
+            expect(primaryCalls, isZero);
+            expect(secondaryCalls, isZero);
             expect(result, isNull);
 
             await tester.tap(
@@ -331,9 +331,9 @@ void main() {
             );
             await tester.pumpAndSettle();
 
-            expect(result, useSecondary ? 'tried' : 'dismissed');
-            expect(primaryCalls, useSecondary ? 0 : 1);
-            expect(secondaryCalls, useSecondary ? 1 : 0);
+            expect(result, equals(useSecondary ? 'tried' : 'dismissed'));
+            expect(primaryCalls, equals(useSecondary ? 0 : 1));
+            expect(secondaryCalls, equals(useSecondary ? 1 : 0));
             expect(
               find.byType(VineBottomSheetFeatureAnnouncement),
               findsNothing,
