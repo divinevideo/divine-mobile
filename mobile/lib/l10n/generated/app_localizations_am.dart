@@ -8859,6 +8859,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'የማጉላት ብዥታ';
 
   @override
+  String get videoEditorEffectSpinBlur => 'የማሽከርከር ብዥታ';
+
+  @override
   String get videoEditorEffectComic => 'ኮሚክ';
 
   @override

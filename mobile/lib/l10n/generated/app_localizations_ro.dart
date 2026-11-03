@@ -9273,6 +9273,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Estompare zoom';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Estompare rotativă';
+
+  @override
   String get videoEditorEffectComic => 'Benzi desenate';
 
   @override

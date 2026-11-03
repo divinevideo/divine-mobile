@@ -2653,6 +2653,7 @@
   "videoEditorEffectBalloons": "Ballons",
   "videoEditorEffectTiltShift": "Tilt-shift",
   "videoEditorEffectZoomBlur": "Flou de zoom",
+  "videoEditorEffectSpinBlur": "Flou de rotation",
   "videoEditorEffectComic": "BD",
   "videoEditorEffectSwirl": "Tourbillon",
   "videoEditorEffectRipple": "Ondulation",

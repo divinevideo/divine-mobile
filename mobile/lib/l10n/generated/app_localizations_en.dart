@@ -9161,6 +9161,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Zoom Blur';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Spin Blur';
+
+  @override
   String get videoEditorEffectComic => 'Comic';
 
   @override

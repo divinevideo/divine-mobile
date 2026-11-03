@@ -578,6 +578,7 @@ flutter:
     - shaders/particles.frag
     - shaders/ripple.frag
     - shaders/riso.frag
+    - shaders/spin_blur.frag
     - shaders/swirl.frag
     - shaders/tilt_shift.frag
     - shaders/zoom_blur.frag

@@ -8981,6 +8981,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Zoom Bulanıklığı';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Dönme Bulanıklığı';
+
+  @override
   String get videoEditorEffectComic => 'Çizgi Roman';
 
   @override

@@ -2631,6 +2631,7 @@
   "videoEditorEffectBalloons": "Balon",
   "videoEditorEffectTiltShift": "Tilt-Shift",
   "videoEditorEffectZoomBlur": "Blur Zoom",
+  "videoEditorEffectSpinBlur": "Blur Putar",
   "videoEditorEffectComic": "Komik",
   "videoEditorEffectSwirl": "Pusaran",
   "videoEditorEffectRipple": "Riak",

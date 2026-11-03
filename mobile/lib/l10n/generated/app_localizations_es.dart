@@ -9159,6 +9159,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Desenfoque de zoom';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Desenfoque de giro';
+
+  @override
   String get videoEditorEffectComic => 'Cómic';
 
   @override

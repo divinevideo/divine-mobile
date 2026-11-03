@@ -9076,6 +9076,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'تمويه التكبير';
 
   @override
+  String get videoEditorEffectSpinBlur => 'تمويه الدوران';
+
+  @override
   String get videoEditorEffectComic => 'رسوم مصوّرة';
 
   @override

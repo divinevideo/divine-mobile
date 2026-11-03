@@ -9060,6 +9060,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Zoomoskärpa';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Rotationsoskärpa';
+
+  @override
   String get videoEditorEffectComic => 'Serie';
 
   @override

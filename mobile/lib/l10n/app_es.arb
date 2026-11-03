@@ -2661,6 +2661,7 @@
   "videoEditorEffectBalloons": "Globos",
   "videoEditorEffectTiltShift": "Tilt-shift",
   "videoEditorEffectZoomBlur": "Desenfoque de zoom",
+  "videoEditorEffectSpinBlur": "Desenfoque de giro",
   "videoEditorEffectComic": "Cómic",
   "videoEditorEffectSwirl": "Remolino",
   "videoEditorEffectRipple": "Ondulación",

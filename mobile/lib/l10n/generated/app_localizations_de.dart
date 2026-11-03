@@ -9180,6 +9180,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Zoom-Unschärfe';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Dreh-Unschärfe';
+
+  @override
   String get videoEditorEffectComic => 'Comic';
 
   @override

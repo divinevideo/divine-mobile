@@ -9104,6 +9104,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Zoomvervaging';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Draaivervaging';
+
+  @override
   String get videoEditorEffectComic => 'Strip';
 
   @override

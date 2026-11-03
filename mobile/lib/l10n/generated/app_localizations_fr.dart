@@ -9200,6 +9200,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorEffectZoomBlur => 'Flou de zoom';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Flou de rotation';
+
+  @override
   String get videoEditorEffectComic => 'BD';
 
   @override

@@ -2653,6 +2653,7 @@
   "videoEditorEffectBalloons": "Ballons",
   "videoEditorEffectTiltShift": "Tilt-Shift",
   "videoEditorEffectZoomBlur": "Zoom-Unschärfe",
+  "videoEditorEffectSpinBlur": "Dreh-Unschärfe",
   "videoEditorEffectComic": "Comic",
   "videoEditorEffectSwirl": "Strudel",
   "videoEditorEffectRipple": "Wellenringe",

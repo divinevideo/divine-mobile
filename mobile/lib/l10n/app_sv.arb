@@ -2653,6 +2653,7 @@
   "videoEditorEffectBalloons": "Ballonger",
   "videoEditorEffectTiltShift": "Tilt-shift",
   "videoEditorEffectZoomBlur": "Zoomoskärpa",
+  "videoEditorEffectSpinBlur": "Rotationsoskärpa",
   "videoEditorEffectComic": "Serie",
   "videoEditorEffectSwirl": "Virvel",
   "videoEditorEffectRipple": "Krusning",

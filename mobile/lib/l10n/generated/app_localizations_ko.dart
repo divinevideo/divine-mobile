@@ -8634,6 +8634,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectZoomBlur => '줌 블러';
 
   @override
+  String get videoEditorEffectSpinBlur => '스핀 블러';
+
+  @override
   String get videoEditorEffectComic => '만화';
 
   @override
