@@ -4093,6 +4093,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundsShareTitleRequiredHint => '给你的声音起个标题才能分享。';
 
   @override
+  String get soundsShareCoverLabel => '封面';
+
+  @override
+  String get soundsShareCoverDescription => '可选。大家挑选声音时，会在你的声音旁边看到它。';
+
+  @override
+  String get soundsShareCoverAdd => '添加封面';
+
+  @override
+  String get soundsShareCoverReplace => '替换';
+
+  @override
+  String get soundsShareCoverRemove => '移除封面';
+
+  @override
+  String get soundsShareCoverSheetTitle => '声音封面';
+
+  @override
+  String get soundsShareKindLabel => '音乐还是音效';
+
+  @override
+  String get soundsShareKindDescription => '可选。别人筛选时，你的声音会出现在“音乐”或“音效”下。';
+
+  @override
+  String get soundsShareKindChoose => '选择';
+
+  @override
+  String get soundsShareKindEffect => '音效';
+
+  @override
+  String get soundsShareKindNeither => '都不是';
+
+  @override
   String get soundsImportUnsupportedFormat => '不支持该文件类型。请选择音频文件。';
 
   @override
@@ -10300,16 +10333,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorAudioSegmentInstruction => '为你的视频选择音频片段';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => '社区';
 
   @override
-  String get videoEditorAudioCategoryFeatured => '精选';
+  String get videoEditorAudioCategoryMySounds => '我的声音';
 
   @override
-  String get videoEditorAudioCategoryMySounds => '我的声音';
+  String get videoEditorAudioFilterEffects => '音效';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => '箭头工具';

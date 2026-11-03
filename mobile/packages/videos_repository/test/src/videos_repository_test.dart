@@ -8250,30 +8250,76 @@ void main() {
         verifyNever(() => mockNostrClient.queryEvents(any()));
       });
 
-      test('queries with correct filters for addressable IDs', () async {
+      test('asks for every address in one filter', () async {
         when(
           () => mockNostrClient.queryEvents(any()),
         ).thenAnswer((_) async => <Event>[]);
 
-        final addressableIds = [
+        await repository.getVideosByAddressableIds([
           '${EventKind.videoVertical}:pubkey1:dtag1',
           '${EventKind.videoVertical}:pubkey2:dtag2',
-        ];
-        await repository.getVideosByAddressableIds(addressableIds);
+          '${EventKind.videoVertical}:pubkey1:dtag3',
+        ]);
+
+        final filter =
+            (verify(
+                      () => mockNostrClient.queryEvents(captureAny()),
+                    ).captured.single
+                    as List<Filter>)
+                .single;
+        expect(filter.kinds, equals([EventKind.videoVertical]));
+        expect(filter.authors, equals(['pubkey1', 'pubkey2']));
+        expect(filter.d, equals(['dtag1', 'dtag2', 'dtag3']));
+        // No limit: one may apply to the whole filter.
+        expect(filter.limit, isNull);
+      });
+
+      test('splits a long list into requests of fifty addresses', () async {
+        when(
+          () => mockNostrClient.queryEvents(any()),
+        ).thenAnswer((_) async => <Event>[]);
+
+        await repository.getVideosByAddressableIds([
+          for (var i = 0; i < 60; i++)
+            '${EventKind.videoVertical}:pubkey$i:dtag$i',
+        ]);
 
         final captured = verify(
           () => mockNostrClient.queryEvents(captureAny()),
         ).captured;
-        final filters = captured.first as List<Filter>;
+        expect(
+          captured.map((filters) => (filters as List<Filter>).single.d!.length),
+          [50, 10],
+        );
+      });
 
-        expect(filters, hasLength(2));
-        expect(filters[0].kinds, equals([EventKind.videoVertical]));
-        expect(filters[0].authors, equals(['pubkey1']));
-        expect(filters[0].d, equals(['dtag1']));
-        // No limit - addressable events are unique by kind:pubkey:d-tag
-        expect(filters[1].kinds, equals([EventKind.videoVertical]));
-        expect(filters[1].authors, equals(['pubkey2']));
-        expect(filters[1].d, equals(['dtag2']));
+      test('drops a video the combined filter matched by accident', () async {
+        // pubkey1's video under pubkey2's d-tag matches authors x d-tags but
+        // is not an address anyone asked for.
+        final asked = _createVideoEvent(
+          id: 'dtag1',
+          pubkey: 'pubkey1',
+          videoUrl: 'https://example.com/asked.mp4',
+          createdAt: 1704067200,
+        );
+        final accidental = _createVideoEvent(
+          id: 'dtag2',
+          pubkey: 'pubkey1',
+          videoUrl: 'https://example.com/accidental.mp4',
+          createdAt: 1704067200,
+        );
+        when(
+          () => mockNostrClient.queryEvents(any()),
+        ).thenAnswer((_) async => [asked, accidental]);
+
+        final result = await repository.getVideosByAddressableIds([
+          '${EventKind.videoVertical}:pubkey1:dtag1',
+          '${EventKind.videoVertical}:pubkey2:dtag2',
+        ]);
+
+        expect(result.map((video) => video.videoUrl), [
+          'https://example.com/asked.mp4',
+        ]);
       });
 
       test('transforms valid events to VideoEvents', () async {
@@ -8559,6 +8605,39 @@ void main() {
 
         setUp(() {
           mockFunnelcakeClient = MockFunnelcakeApiClient();
+        });
+
+        test('asks only the relays when relaysOnly is set', () async {
+          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+          final repositoryWithFunnelcake = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: mockFunnelcakeClient,
+          );
+          final found = _createVideoEvent(
+            id: 'dtag1',
+            pubkey: 'pubkey1',
+            videoUrl: 'https://example.com/video.mp4',
+            createdAt: 1704067200,
+          );
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => [found]);
+
+          final result = await repositoryWithFunnelcake
+              .getVideosByAddressableIds([
+                '${EventKind.videoVertical}:pubkey1:dtag1',
+                '${EventKind.videoVertical}:pubkey2:missing',
+              ], relaysOnly: true);
+
+          expect(result.map((video) => video.vineId), ['dtag1']);
+          verifyNever(
+            () => mockFunnelcakeClient.getVideosByAuthor(
+              pubkey: any(named: 'pubkey'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          );
+          verifyNever(() => mockFunnelcakeClient.getBulkVideoStats(any()));
         });
 
         test('does not call Funnelcake API when client is null', () async {

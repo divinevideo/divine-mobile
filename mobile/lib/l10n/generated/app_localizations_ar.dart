@@ -4380,6 +4380,41 @@ class AppLocalizationsAr extends AppLocalizations {
       'يلزم إعطاء الصوت عنوانًا لمشاركته.';
 
   @override
+  String get soundsShareCoverLabel => 'الغلاف';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'اختياري. يراه الناس بجانب صوتك عندما يختارون صوتًا.';
+
+  @override
+  String get soundsShareCoverAdd => 'إضافة غلاف';
+
+  @override
+  String get soundsShareCoverReplace => 'استبدال';
+
+  @override
+  String get soundsShareCoverRemove => 'إزالة الغلاف';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'غلاف الصوت';
+
+  @override
+  String get soundsShareKindLabel => 'موسيقى أم مؤثر';
+
+  @override
+  String get soundsShareKindDescription =>
+      'اختياري. يظهر صوتك ضمن موسيقى أو مؤثرات صوتية عند التصفية.';
+
+  @override
+  String get soundsShareKindChoose => 'اختر';
+
+  @override
+  String get soundsShareKindEffect => 'مؤثر صوتي';
+
+  @override
+  String get soundsShareKindNeither => 'لا هذا ولا ذاك';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'نوع الملف هذا غير مدعوم. يُرجى اختيار ملف صوتي.';
 
@@ -10937,16 +10972,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorAudioSegmentInstruction => 'حدّد مقطع الصوت لفيديوك';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'المجتمع';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'مميز';
+  String get videoEditorAudioCategoryMySounds => 'أصواتي';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'أصواتي';
+  String get videoEditorAudioFilterEffects => 'مؤثرات صوتية';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => 'أداة السهم';

@@ -4437,6 +4437,41 @@ class AppLocalizationsEs extends AppLocalizations {
       'Poné un título a tu sonido para compartirlo.';
 
   @override
+  String get soundsShareCoverLabel => 'Portada';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Opcional. La gente la ve junto a tu sonido cuando elige uno.';
+
+  @override
+  String get soundsShareCoverAdd => 'Agregar portada';
+
+  @override
+  String get soundsShareCoverReplace => 'Reemplazar';
+
+  @override
+  String get soundsShareCoverRemove => 'Quitar la portada';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Portada del sonido';
+
+  @override
+  String get soundsShareKindLabel => 'Música o efecto';
+
+  @override
+  String get soundsShareKindDescription =>
+      'Opcional. Así tu sonido aparece en Música o Efectos al filtrar.';
+
+  @override
+  String get soundsShareKindChoose => 'Elegir';
+
+  @override
+  String get soundsShareKindEffect => 'Efecto de sonido';
+
+  @override
+  String get soundsShareKindNeither => 'Ninguno';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Ese tipo de archivo no es compatible. Elegí un archivo de audio.';
 
@@ -11054,16 +11089,13 @@ class AppLocalizationsEs extends AppLocalizations {
       'Selecciona el segmento de audio para tu video';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Comunidad';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'Destacados';
+  String get videoEditorAudioCategoryMySounds => 'Mis sonidos';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'Mis sonidos';
+  String get videoEditorAudioFilterEffects => 'Efectos';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => 'Herramienta flecha';

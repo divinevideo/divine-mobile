@@ -4396,6 +4396,41 @@ class AppLocalizationsUr extends AppLocalizations {
       'شیئر کرنے کے لیے اپنی ساؤنڈ کو عنوان دیں۔';
 
   @override
+  String get soundsShareCoverLabel => 'کور';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'اختیاری۔ لوگ ساؤنڈ چنتے وقت اسے آپ کے ساؤنڈ کے ساتھ دیکھتے ہیں۔';
+
+  @override
+  String get soundsShareCoverAdd => 'کور شامل کریں';
+
+  @override
+  String get soundsShareCoverReplace => 'بدلیں';
+
+  @override
+  String get soundsShareCoverRemove => 'کور ہٹائیں';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'ساؤنڈ کا کور';
+
+  @override
+  String get soundsShareKindLabel => 'موسیقی یا صوتی اثر';
+
+  @override
+  String get soundsShareKindDescription =>
+      'اختیاری۔ فلٹر کرنے پر آپ کی آواز موسیقی یا صوتی اثرات میں دکھائی دیتی ہے۔';
+
+  @override
+  String get soundsShareKindChoose => 'منتخب کریں';
+
+  @override
+  String get soundsShareKindEffect => 'صوتی اثر';
+
+  @override
+  String get soundsShareKindNeither => 'کوئی بھی نہیں';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'یہ فائل کی قسم سپورٹ نہیں ہے۔ کوئی آڈیو فائل منتخب کریں۔';
 
@@ -10941,16 +10976,13 @@ class AppLocalizationsUr extends AppLocalizations {
       'اپنی ویڈیو کے لیے آڈیو حصہ منتخب کریں';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'کمیونٹی';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'نمایاں';
+  String get videoEditorAudioCategoryMySounds => 'میری آوازیں';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'میری آوازیں';
+  String get videoEditorAudioFilterEffects => 'صوتی اثرات';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => 'تیر ٹول';

@@ -1737,11 +1737,8 @@ class VideosRepository {
     return _hydrateVideosWithBulkStats(videos);
   }
 
-  /// Number of filters to batch in a single relay query.
-  ///
-  /// Batching improves performance while staying compatible with relays
-  /// that may have issues with too many filters in one REQ.
-  static const int _addressableIdBatchSize = 20;
+  /// Number of addresses asked for in one relay query.
+  static const int _addressableIdBatchSize = 50;
 
   /// Fetches videos by their addressable IDs.
   ///
@@ -1765,6 +1762,12 @@ class VideosRepository {
   /// [includeFeedShape] defaults to true. Profile pins opt out of feed shape
   /// filtering while retaining the other visibility policies.
   ///
+  /// [relaysOnly] skips the Funnelcake fallback and the bulk-stats merge below,
+  /// for a caller that needs only what the event itself carries, such as its
+  /// thumbnail, and would rather have it fast: both add a round trip after
+  /// the relays answer, the fallback one per author. Videos no relay returns
+  /// are then simply missing.
+  ///
   /// Returns a list of [VideoEvent] in the same order as [addressableIds].
   /// Videos that couldn't be found or failed to parse are omitted.
   ///
@@ -1776,40 +1779,37 @@ class VideosRepository {
     List<String> addressableIds, {
     bool cacheResults = false,
     bool includeFeedShape = true,
+    bool relaysOnly = false,
   }) async {
     if (addressableIds.isEmpty) return [];
 
-    // Parse addressable IDs and build filters
-    final filters = <Filter>[];
+    final addresses = [
+      for (final addressableId in addressableIds)
+        if (AId.fromString(addressableId) case final parsed?
+            when NIP71VideoKinds.isVideoKind(parsed.kind))
+          parsed,
+    ];
+    if (addresses.isEmpty) return [];
 
-    for (final addressableId in addressableIds) {
-      final parsed = AId.fromString(addressableId);
-      if (parsed != null && NIP71VideoKinds.isVideoKind(parsed.kind)) {
-        // Note: No limit needed - addressable events are unique by
-        // kind:pubkey:d-tag, so there's only one latest version per ID.
-        // Adding limit:1 per filter causes issues when batching multiple
-        // filters, as relays may apply a global limit.
-        filters.add(
-          Filter(
-            kinds: [parsed.kind],
-            authors: [parsed.pubkey],
-            d: [parsed.dTag],
-          ),
-        );
-      }
-    }
-
-    if (filters.isEmpty) return [];
-
-    // Batch filters to balance performance with relay compatibility.
-    // Some relays have issues with too many filters in a single REQ,
-    // so we batch them in chunks rather than sending all at once or
-    // querying one at a time.
+    // One filter per batch listing every author and d-tag in it, rather than
+    // a filter per address. relay.divine.video caps a REQ at ten filters, and
+    // answered 48 addresses as five ten-filter REQs in about 4 s against
+    // 0.3-0.6 s as one combined filter. The combined filter also matches an
+    // author's video under another address's d-tag; the exact address match
+    // below drops those. No limit: a relay may apply one limit to the whole
+    // filter, and each address has one latest revision.
     final futures = <Future<List<Event>>>[];
-    for (var i = 0; i < filters.length; i += _addressableIdBatchSize) {
-      final batchEnd = (i + _addressableIdBatchSize).clamp(0, filters.length);
-      final batch = filters.sublist(i, batchEnd);
-      futures.add(_nostrClient.queryEvents(batch));
+    for (var i = 0; i < addresses.length; i += _addressableIdBatchSize) {
+      final batch = addresses.skip(i).take(_addressableIdBatchSize);
+      futures.add(
+        _nostrClient.queryEvents([
+          Filter(
+            kinds: {for (final a in batch) a.kind}.toList(),
+            authors: {for (final a in batch) a.pubkey}.toList(),
+            d: {for (final a in batch) a.dTag}.toList(),
+          ),
+        ]),
+      );
     }
 
     final results = await Future.wait(futures);
@@ -1851,7 +1851,8 @@ class VideosRepository {
         .toList();
 
     // Try Funnelcake API fallback for missing videos
-    if (missingIds.isNotEmpty &&
+    if (!relaysOnly &&
+        missingIds.isNotEmpty &&
         _funnelcakeApiClient != null &&
         _funnelcakeApiClient.isAvailable) {
       await _fetchMissingVideosFromFunnelcake(
@@ -1870,7 +1871,7 @@ class VideosRepository {
       }
     }
 
-    return _hydrateVideosWithBulkStats(videos);
+    return relaysOnly ? videos : _hydrateVideosWithBulkStats(videos);
   }
 
   /// Fetches missing videos from Funnelcake API and adds them to [foundVideos].

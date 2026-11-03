@@ -2,8 +2,10 @@
 // ABOUTME: whether it is shared publicly, its public credit, and the save
 // ABOUTME: lifecycle.
 
+import 'dart:typed_data';
+
 import 'package:equatable/equatable.dart';
-import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart' show AudioEvent, SoundKind;
 import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 
@@ -77,6 +79,8 @@ class AddSoundState extends Equatable {
     this.source,
     this.sharePublicly = false,
     this.attribution,
+    this.coverImage,
+    this.soundKind,
     this.publishedSound,
     this.failure,
     this.savedResult,
@@ -104,6 +108,16 @@ class AddSoundState extends Equatable {
 
   /// The public credit the sound ships with when [sharePublicly] is on.
   final AudioShareAttribution? attribution;
+
+  /// The cover the sound is shared with, as the cropped JPEG, or `null` to
+  /// share it without one. Uploaded only when the sound is shared, so a cover
+  /// the user drops never leaves the device.
+  final Uint8List? coverImage;
+
+  /// Whether the sound is shared as music or as a sound effect, or `null`
+  /// for neither. Published as its kind's public tag, which decides where the
+  /// sound shows when people filter for one.
+  final SoundKind? soundKind;
 
   /// The sound as a relay acknowledged it, once shared.
   ///
@@ -146,6 +160,8 @@ class AddSoundState extends Equatable {
     Object? source = _unset,
     bool? sharePublicly,
     Object? attribution = _unset,
+    Object? coverImage = _unset,
+    Object? soundKind = _unset,
     Object? publishedSound = _unset,
     Object? failure = _unset,
     Object? savedResult = _unset,
@@ -163,6 +179,12 @@ class AddSoundState extends Equatable {
       attribution: identical(attribution, _unset)
           ? this.attribution
           : attribution as AudioShareAttribution?,
+      coverImage: identical(coverImage, _unset)
+          ? this.coverImage
+          : coverImage as Uint8List?,
+      soundKind: identical(soundKind, _unset)
+          ? this.soundKind
+          : soundKind as SoundKind?,
       publishedSound: identical(publishedSound, _unset)
           ? this.publishedSound
           : publishedSound as AudioEvent?,
@@ -183,6 +205,8 @@ class AddSoundState extends Equatable {
     source,
     sharePublicly,
     attribution,
+    coverImage,
+    soundKind,
     publishedSound,
     failure,
     savedResult,

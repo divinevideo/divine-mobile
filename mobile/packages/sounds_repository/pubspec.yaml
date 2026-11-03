@@ -9,6 +9,8 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  funnelcake_api_client:
+    path: ../funnelcake_api_client
   http: ^1.2.2
   meta: ^1.16.0
   models:
