@@ -571,6 +571,139 @@ void main() {
       expect(result.closedRelayReasons, {'wss://gated.example': 'restricted'});
     });
 
+    test('a rejection of an AUTH for a superseded challenge leaves the read '
+        'parked for the current one', () async {
+      final nostr = Nostr(
+        LocalNostrSigner(
+          '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+        ),
+        [],
+        dummyTempRelay,
+      );
+      final relay = _ControlledQueryRelay('wss://rechallenging.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+
+      final pending = nostr.readEvents(
+        [
+          {
+            'kinds': [1059],
+          },
+        ],
+        requireAllRelaysSettled: true,
+        timeout: const Duration(seconds: 30),
+      );
+      final subId = await relay.awaitPendingQuery();
+      await relay.deliver(['AUTH', 'first-challenge']);
+      final staleAuthId = relay.capturedAuthEventId;
+      await relay.deliver(['CLOSED', subId, 'auth-required: sign in first']);
+      // NIP-42 lets the relay challenge again on the same socket.
+      await relay.deliver(['AUTH', 'second-challenge']);
+      final currentAuthId = relay.capturedAuthEventId;
+      expect(currentAuthId, isNot(staleAuthId));
+
+      await relay.deliver([
+        'OK',
+        staleAuthId,
+        false,
+        'restricted: that challenge is gone',
+      ]);
+      expect(relay.checkQuery(subId), isTrue);
+
+      await relay.deliver(['OK', currentAuthId, true, '']);
+      await relay.awaitReqCount(2);
+      await relay.deliver(['EOSE', subId]);
+
+      final result = await pending.timeout(const Duration(seconds: 2));
+      expect(result.endedBy, QueryEnd.complete);
+      expect(result.closedRelayReasons, isEmpty);
+    });
+
+    test('a read held after an auth-hinted EOSE is closed on the relay once '
+        'AUTH is rejected', () async {
+      final nostr = Nostr(
+        LocalNostrSigner(
+          '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+        ),
+        [],
+        dummyTempRelay,
+      );
+      final answering = _ControlledQueryRelay('wss://answering.example');
+      final hinting = _ControlledQueryRelay('wss://hinting.example');
+      expect(await nostr.relayPool.add(answering), isTrue);
+      expect(await nostr.relayPool.add(hinting), isTrue);
+
+      final pending = nostr.readEvents(
+        [
+          {
+            'kinds': [1059],
+          },
+        ],
+        requireAllRelaysSettled: true,
+        timeout: const Duration(seconds: 30),
+      );
+      final answeredId = await answering.awaitPendingQuery();
+      final hintedId = await hinting.awaitPendingQuery();
+      await answering.deliver(['EOSE', answeredId]);
+      await hinting.deliver(['AUTH', 'test-challenge']);
+      await hinting.deliver([
+        'EOSE',
+        hintedId,
+        ['auth'],
+      ]);
+      await hinting.deliver([
+        'OK',
+        hinting.capturedAuthEventId,
+        false,
+        'restricted: not for this key',
+      ]);
+      await pending.timeout(const Duration(seconds: 2));
+
+      // The relay still had the subscription open after its EOSE.
+      expect(hinting.sentMessages, contains(equals(['CLOSE', hintedId])));
+    });
+
+    test('a rejected AUTH does not end a later read that reuses the id of '
+        'one parked before', () async {
+      final nostr = Nostr(
+        LocalNostrSigner(
+          '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+        ),
+        [],
+        dummyTempRelay,
+      );
+      final relay = _ControlledQueryRelay('wss://gated.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+      await relay.deliver(['AUTH', 'test-challenge']);
+      final authId = relay.capturedAuthEventId;
+
+      Future<QueryResult> page({required Duration timeout}) => nostr.readEvents(
+        [
+          {
+            'kinds': [1059],
+          },
+        ],
+        id: 'dm_drain_page_0',
+        requireAllRelaysSettled: true,
+        timeout: timeout,
+      );
+
+      final first = page(timeout: const Duration(milliseconds: 300));
+      final firstId = await relay.awaitPendingQuery();
+      await relay.deliver(['CLOSED', firstId, 'auth-required: sign in']);
+      await first;
+
+      final second = page(timeout: const Duration(seconds: 30));
+      final secondId = await relay.awaitPendingQuery();
+      expect(secondId, firstId);
+      await relay.deliver(['OK', authId, false, 'restricted: not allowed']);
+      // Only the earlier read was refused; this one is still being answered.
+      expect(relay.checkQuery(secondId), isTrue);
+
+      await relay.deliver(['EOSE', secondId]);
+      final result = await second.timeout(const Duration(seconds: 2));
+      expect(result.closedRelayReasons, isEmpty);
+    });
+
     test('a query refused while no AUTH was sent keeps its auth-required '
         'refusal', () async {
       final nostr = Nostr(_NoKeySigner(), [], dummyTempRelay);
