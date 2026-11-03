@@ -482,14 +482,10 @@ class DmInboxClassifier {
       }
     }
 
-    // Derived from the deduplicated participants, never from
-    // `DmConversation.isGroup`. That column is written from
-    // `participants.length > 2` and rewritten on every upsert, so it drifts
-    // from the row's real participants — #5374 is why
-    // `DmRepository.classifyPotentialRequests` stopped reading it. A drifted
-    // 1:1 was picking up the group weight and a reason line saying it had
-    // been added to a group.
-    if (unknown.length > 1) {
+    // Counted from the deduplicated participants, never from the drifting
+    // `DmConversation.isGroup` column (#5374). A followed member does not
+    // make a stranger's group invite any less of one.
+    if (others.length > 1) {
       add('Added you to a group', h.weightUnknownGroupInvite);
     }
 

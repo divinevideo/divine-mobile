@@ -498,6 +498,41 @@ void main() {
           contains('Added you to a group'),
         );
       });
+
+      test('a group with a followed member and a stranger earns it', () {
+        // Only the stranger is scored, but the followed member does not make
+        // the stranger's group invite any less of one.
+        final conversation = DmConversation(
+          id: 'mixed',
+          participantPubkeys: [_me, _stranger, _other]..sort(),
+          isGroup: false,
+          createdAt: 0,
+        );
+
+        final verdict = const DmInboxClassifier(officialIdentities: {})
+            .classify(
+              [conversation],
+              userPubkey: _me,
+              isFollowing: (pubkey) => pubkey == _other,
+              signalsFor: (_) => const DmSenderSignals(
+                daysSinceFirstObserved: 200,
+                divineVideoCount: 4,
+                hasProfileMetadata: true,
+                mutualConnectionCount: 1,
+              ),
+            )
+            .verdicts['mixed']!;
+
+        expect(
+          verdict.reasons.map((r) => r.label),
+          contains('Added you to a group'),
+        );
+        expect(
+          verdict.score,
+          equals(-40 + const DmSpamHeuristics().weightUnknownGroupInvite),
+          reason: 'the 1:1 baseline for these signals is pinned at -40',
+        );
+      });
     });
   });
 }
