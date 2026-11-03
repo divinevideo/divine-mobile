@@ -261,6 +261,90 @@ void main() {
     });
 
     group('show', () {
+      for (final useSecondary in [false, true]) {
+        testWidgets(
+          '${useSecondary ? 'secondary' : 'primary'} action closes the root '
+          'sheet from a tab and returns its value',
+          (tester) async {
+            final rootKey = GlobalKey<NavigatorState>();
+            final tabKey = GlobalKey<NavigatorState>();
+            String? result;
+            var primaryCalls = 0;
+            var secondaryCalls = 0;
+            await tester.pumpWidget(
+              MaterialApp(
+                navigatorKey: rootKey,
+                theme: VineTheme.theme,
+                home: Navigator(
+                  key: tabKey,
+                  onGenerateRoute: (_) => MaterialPageRoute<void>(
+                    builder: (context) => Scaffold(
+                      body: ElevatedButton(
+                        onPressed: () async {
+                          final navigator = Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          );
+                          result =
+                              await VineBottomSheetFeatureAnnouncement.show<
+                                String
+                              >(
+                                context: context,
+                                illustration: const SizedBox.shrink(),
+                                title: 'Captions',
+                                primaryButtonText: 'Got it',
+                                onPrimaryPressed: () {
+                                  primaryCalls++;
+                                  navigator.pop('dismissed');
+                                },
+                                secondaryButtonText: 'Try captions',
+                                onSecondaryPressed: () {
+                                  secondaryCalls++;
+                                  navigator.pop('tried');
+                                },
+                              );
+                        },
+                        child: const Text('Show from tab'),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+            await tester.tap(find.text('Show from tab'));
+            await tester.pumpAndSettle();
+
+            // The sheet covers the tab shell and the captured root navigator
+            // must be the navigator that can dismiss it.
+            expect(
+              Navigator.of(
+                tester.element(find.byType(VineBottomSheetFeatureAnnouncement)),
+              ),
+              same(rootKey.currentState),
+            );
+            expect(primaryCalls, 0);
+            expect(secondaryCalls, 0);
+            expect(result, isNull);
+
+            await tester.tap(
+              find.text(useSecondary ? 'Try captions' : 'Got it'),
+            );
+            await tester.pumpAndSettle();
+
+            expect(result, useSecondary ? 'tried' : 'dismissed');
+            expect(primaryCalls, useSecondary ? 0 : 1);
+            expect(secondaryCalls, useSecondary ? 1 : 0);
+            expect(
+              find.byType(VineBottomSheetFeatureAnnouncement),
+              findsNothing,
+            );
+            expect(find.text('Show from tab'), findsOneWidget);
+            expect(tabKey.currentState!.canPop(), isFalse);
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+
       testWidgets('opens as a modal and returns the popped value', (
         tester,
       ) async {

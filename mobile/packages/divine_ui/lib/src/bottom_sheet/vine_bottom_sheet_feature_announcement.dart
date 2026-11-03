@@ -106,12 +106,12 @@ class VineBottomSheetFeatureAnnouncement extends StatelessWidget {
   /// Callback for the secondary action. The sheet does not close itself.
   final VoidCallback? onSecondaryPressed;
 
-  /// Shows the announcement as a fixed modal bottom sheet.
+  /// Shows the announcement above the tab shell on the root navigator.
   ///
   /// Completes with the value a callback pops, or null when the user taps the
   /// scrim or drags the sheet down, which calls neither callback. Read the
-  /// [NavigatorState] before calling this, as the class example does: the
-  /// caller's context can unmount while the sheet is open.
+  /// root [NavigatorState] before calling this, as the class example does:
+  /// the caller's context can unmount while the sheet is open.
   static Future<T?> show<T>({
     required BuildContext context,
     required Widget illustration,
@@ -126,6 +126,7 @@ class VineBottomSheetFeatureAnnouncement extends StatelessWidget {
   }) {
     return VineBottomSheet.show<T>(
       context: context,
+      useRootNavigator: true,
       scrollable: false,
       showHeaderDivider: false,
       body: VineBottomSheetFeatureAnnouncement(
