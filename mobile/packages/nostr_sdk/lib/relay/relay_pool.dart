@@ -863,7 +863,21 @@ class RelayPool {
     _authRejected.remove(url);
     _queriesParkedForAuth.remove(url);
     _queriesHeldAfterEose.remove(url);
-    _authEpoch[url] = (_authEpoch[url] ?? 0) + 1;
+    _moveAuthEpochOn(url);
+  }
+
+  /// Moves [url]'s AUTH epoch on, for a new challenge or a new socket, and
+  /// returns it. The AUTH events sent to [url] before then are forgotten:
+  /// their verdicts no longer decide anything, and one that never arrives
+  /// would otherwise be kept for the session. An AUTH still being signed is
+  /// recorded afterwards, under the epoch it answered.
+  int _moveAuthEpochOn(String url) {
+    _pendingAuthEvents.removeWhere((eventId, relayUrl) {
+      if (relayUrl != url) return false;
+      _authEventEpoch.remove(eventId);
+      return true;
+    });
+    return _authEpoch[url] = (_authEpoch[url] ?? 0) + 1;
   }
 
   void remove(String url, {int relayType = RelayType.normal}) {
@@ -1580,7 +1594,7 @@ class RelayPool {
       _queriesParkedForAuth.remove(relay.url);
       _queriesHeldAfterEose.remove(relay.url);
       _authRejected.remove(relay.url);
-      _authEpoch[relay.url] = (_authEpoch[relay.url] ?? 0) + 1;
+      _moveAuthEpochOn(relay.url);
       _settleQueriesBlockedBy(relay);
       _recheckStoredEventsPhasesOf(relay);
     };
@@ -2558,7 +2572,7 @@ class RelayPool {
         // A new challenge supersedes whatever the last one concluded.
         _authGateClosed.remove(relay.url);
         _authRejected.remove(relay.url);
-        final epoch = _authEpoch[relay.url] = (_authEpoch[relay.url] ?? 0) + 1;
+        final epoch = _moveAuthEpochOn(relay.url);
         log('🔐 Challenge: $challenge');
         var tags = [
           ["relay", relay.url],

@@ -716,26 +716,95 @@ void main() {
       expect(result.closedRelayReasons, {'wss://gated.example': 'restricted'});
     });
 
+    group('an AUTH the relay left behind', () {
+      for (final (how, moveOn)
+          in <(String, Future<void> Function(_ControlledQueryRelay))>[
+            (
+              'after the socket reconnects',
+              (relay) async {
+                relay.onError('socket dropped');
+                relay.relayStatus.connected = ClientConnected.connected;
+                relay.relayStatusCallback?.call();
+              },
+            ),
+            (
+              'after the relay replaces its challenge',
+              (relay) => relay.deliver(['AUTH', 'second-challenge']),
+            ),
+          ]) {
+        test('does not authenticate the relay $how', () async {
+          final nostr = Nostr(
+            LocalNostrSigner(
+              '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+            ),
+            [],
+            dummyTempRelay,
+          );
+          final relay = _ControlledQueryRelay('wss://reconnecting.example');
+          expect(await nostr.relayPool.add(relay), isTrue);
+          await relay.deliver(['AUTH', 'first-challenge']);
+          final staleAuthId = relay.capturedAuthEventId;
+          await moveOn(relay);
+
+          await relay.deliver(['OK', staleAuthId, true, '']);
+          expect(
+            relay.relayStatus.authed,
+            isFalse,
+            reason: 'a verdict on an AUTH the relay left behind decided it',
+          );
+
+          // The current handshake still decides.
+          if (relay.capturedAuthEventId == staleAuthId) {
+            await relay.deliver(['AUTH', 'second-challenge']);
+          }
+          final currentAuthId = relay.capturedAuthEventId;
+          expect(currentAuthId, isNot(staleAuthId));
+          final pending = nostr.readEvents(
+            [
+              {
+                'kinds': [1059],
+              },
+            ],
+            requireAllRelaysSettled: true,
+            timeout: const Duration(seconds: 30),
+          );
+          final subId = await relay.awaitPendingQuery();
+          await relay.deliver(['CLOSED', subId, 'auth-required: sign in']);
+          await relay.deliver(['OK', currentAuthId, true, '']);
+          await relay.awaitReqCount(2);
+          await relay.deliver(['EOSE', subId]);
+          final result = await pending.timeout(const Duration(seconds: 2));
+          expect(result.endedBy, QueryEnd.complete);
+        });
+      }
+    });
+
     group('a relay re-added under a removed URL', () {
       const url = 'wss://gated.example';
+      late _SlowFirstAuthSigner signer;
       late Nostr nostr;
       late _ControlledQueryRelay answering;
       late _ControlledQueryRelay removed;
+      late Future<void> removedChallenge;
 
       setUp(() async {
-        nostr = Nostr(
-          LocalNostrSigner(
-            '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
-          ),
-          [],
-          dummyTempRelay,
+        signer = _SlowFirstAuthSigner(
+          '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
         );
+        nostr = Nostr(signer, [], dummyTempRelay);
         answering = _ControlledQueryRelay('wss://answering.example');
         removed = _ControlledQueryRelay(url);
         expect(await nostr.relayPool.add(answering), isTrue);
         expect(await nostr.relayPool.add(removed), isTrue);
-        await removed.deliver(['AUTH', 'removed-challenge']);
+        // Its AUTH is signed when the test says, as by a remote signer.
+        removedChallenge = removed.deliver(['AUTH', 'removed-challenge']);
+        await pumpEventQueue();
       });
+
+      Future<void> signRemovedAuth() async {
+        signer.releaseFirstAuth.complete();
+        await removedChallenge;
+      }
 
       Future<_ControlledQueryRelay> readd() async {
         nostr.relayPool.remove(url);
@@ -782,6 +851,7 @@ void main() {
       }
 
       test('does not inherit an AUTH rejection', () async {
+        await signRemovedAuth();
         await removed.deliver([
           'OK',
           removed.capturedAuthEventId,
@@ -795,6 +865,7 @@ void main() {
 
       test("is not judged on a verdict that arrives late for the removed "
           "relay's AUTH", () async {
+        await signRemovedAuth();
         final readded = await readd();
         await removed.deliver([
           'OK',
@@ -806,10 +877,11 @@ void main() {
         expect(await refusedThenAnswered(readded), isNot('restricted'));
       });
 
-      test("is not judged on a late verdict for the removed relay's AUTH "
-          'after its own first challenge', () async {
+      test("is not judged on a verdict for the removed relay's AUTH that was "
+          'signed after its own first challenge', () async {
         final readded = await readd();
         await readded.deliver(['AUTH', 'readded-challenge']);
+        await signRemovedAuth();
         await removed.deliver([
           'OK',
           removed.capturedAuthEventId,
