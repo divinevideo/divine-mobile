@@ -225,7 +225,10 @@ class _ReplyTile extends ConsumerWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {
-          if (!watchable) return;
+          // Read again: a label or a setting may have changed since the tile
+          // was drawn.
+          final hiddenBySettings = ref.read(repliesHiddenBySettingsProvider);
+          if (hiddenBySettings(reply)) return;
           final shown = [
             for (final video in cubit.state.shown)
               if (!hiddenBySettings(video)) video,

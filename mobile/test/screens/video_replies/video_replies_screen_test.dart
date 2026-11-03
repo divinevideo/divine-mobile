@@ -333,6 +333,13 @@ void main() {
         await tester.pumpAndSettle();
         expect(opened, isEmpty);
 
+        // Nor does one the settings hide only after the list was drawn.
+        hiddenBySettings.add(_reply(2).id);
+        await tester.tap(find.text('Bob'));
+        await tester.pumpAndSettle();
+        expect(opened, isEmpty);
+        hiddenBySettings.remove(_reply(2).id);
+
         // Nor does it play in the feed another reply opens.
         await tester.tap(find.text('Bob'));
         await tester.pumpAndSettle();

@@ -63,13 +63,15 @@ final repliesWarningsProvider = Provider<RepliesWarnings>((ref) {
 /// some of those categories are locked to hide for every account, and others
 /// until the account is verified as an adult.
 ///
-/// Rebuilt when the account or its content settings change.
+/// Rebuilt when the account, its content settings or its adult verification
+/// change.
 final repliesHiddenBySettingsProvider = Provider<bool Function(VideoEvent)>((
   ref,
 ) {
   ref
     ..watch(currentAuthStateProvider)
-    ..watch(contentFilterVersionProvider);
+    ..watch(contentFilterVersionProvider)
+    ..watch(adultContentVerificationVersionProvider);
   final authService = ref.watch(authServiceProvider);
   return createNsfwFilter(
     ref.watch(contentFilterServiceProvider),
