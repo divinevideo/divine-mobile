@@ -1025,15 +1025,18 @@ class _ReasonsPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 8,
       children: [
+        // excludeSemantics drops the InkWell's own tap action, so the
+        // Semantics node has to carry it or a screen reader cannot open it.
         Semantics(
           button: true,
           label: expanded ? 'Hide reasons' : 'Why is this here?',
+          onTap: onToggle,
           excludeSemantics: true,
           child: InkWell(
             onTap: onToggle,
             borderRadius: const BorderRadius.all(Radius.circular(8)),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 32),
+              constraints: const BoxConstraints(minHeight: 48),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 spacing: 7,

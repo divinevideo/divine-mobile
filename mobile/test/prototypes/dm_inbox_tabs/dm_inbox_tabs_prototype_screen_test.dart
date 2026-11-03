@@ -2,6 +2,7 @@
 // ABOUTME: request content stays concealed until the user opens it, and that
 // ABOUTME: sender context and request actions work before it is opened.
 
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tabs_prototype_screen.dart';
@@ -373,6 +374,39 @@ void main() {
           ),
           findsOneWidget,
         );
+      });
+
+      testWidgets('a screen reader can open the reasons', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpScreen(tester);
+        await openTab(tester, 'Requests');
+
+        final toggle = find.semantics.byLabel('Why is this here?').first;
+        expect(
+          toggle.evaluate().single.getSemanticsData().hasAction(
+            SemanticsAction.tap,
+          ),
+          isTrue,
+        );
+        expect(
+          tester
+              .getSize(
+                find
+                    .ancestor(
+                      of: find.text('Why is this here?').first,
+                      matching: find.byType(InkWell),
+                    )
+                    .first,
+              )
+              .height,
+          greaterThanOrEqualTo(48),
+        );
+
+        tester.semantics.tap(toggle);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Hide reasons'), findsOneWidget);
+        semantics.dispose();
       });
 
       testWidgets('a new presentation resets the session and shows caution', (
