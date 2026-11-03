@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:ui' show Tristate;
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -12,7 +13,6 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/widgets/audio/sound_cover_image.dart';
-import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_editor_selection_overlay.dart';
 import 'package:sound_service/sound_service.dart';
 
@@ -348,20 +348,93 @@ void main() {
     });
 
     group('Loading state', () {
-      testWidgets('shows loading indicator instead of play control', (
+      double ringOpacity(WidgetTester tester) => tester
+          .widget<FadeTransition>(
+            find
+                .ancestor(
+                  of: find.byType(DivineCircularProgressIndicator),
+                  matching: find.byType(FadeTransition),
+                )
+                .first,
+          )
+          .opacity
+          .value;
+
+      testWidgets('shows pause with a ring around it while the sound loads', (
         tester,
       ) async {
         await tester.pumpWidget(
           buildWidget(audio: _createTestAudio(title: 'Track'), isLoading: true),
         );
+        await tester.pump(const Duration(milliseconds: 400));
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(ringOpacity(tester), 1);
+        expect(
+          find.bySemanticsLabel(l10n.videoEditorAudioPausePreviewSemanticLabel),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('keeps the ring hidden through a load that ends at once', (
+        tester,
+      ) async {
+        final audio = _createTestAudio(title: 'Track');
+        // The card shows as the sound is picked, and its file starts loading
+        // right after.
+        await tester.pumpWidget(buildWidget(audio: audio));
+        await tester.pumpWidget(buildWidget(audio: audio, isLoading: true));
+        await tester.pump(const Duration(milliseconds: 150));
+
+        expect(ringOpacity(tester), 0);
+
+        await tester.pumpWidget(buildWidget(audio: audio));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+      });
+
+      testWidgets('ignores taps on play while the sound loads', (
+        tester,
+      ) async {
+        var toggled = false;
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudio(title: 'Track'),
+            onTogglePlayState: () => toggled = true,
+            isLoading: true,
+          ),
+        );
         await tester.pump();
 
         final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
-        expect(
-          find.bySemanticsLabel(l10n.videoEditorAudioPlayPreviewSemanticLabel),
-          findsNothing,
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorAudioPausePreviewSemanticLabel),
+          warnIfMissed: false,
         );
+        await tester.pump();
+
+        expect(toggled, isFalse);
+      });
+
+      testWidgets('keeps its size and layout once the sound has loaded', (
+        tester,
+      ) async {
+        final audio = _createTestAudio(title: 'Track');
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final card = find.byType(AudioEditorSelectionOverlay);
+        final use = find.text(l10n.videoEditorAudioUseSound);
+        await tester.pumpWidget(buildWidget(audio: audio, isLoading: true));
+        await tester.pump();
+        final loadingCard = tester.getSize(card);
+        final loadingUse = tester.getRect(use);
+
+        await tester.pumpWidget(buildWidget(audio: audio));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+        expect(tester.getSize(card), loadingCard);
+        expect(tester.getRect(use), loadingUse);
       });
     });
   });
