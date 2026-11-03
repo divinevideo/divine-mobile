@@ -318,6 +318,18 @@ void main() {
         );
       });
 
+      test('counts replies only as a floor when a relay may have stopped at '
+          'its limit', () async {
+        relayAnswers([_reply(201, createdAt: 1000)], capped: true);
+
+        final responses = await repository().fetchReplies(
+          videoId: _rootId,
+          videoAddress: _rootAddress,
+        );
+
+        expect(responses.totalIsAtLeast, isTrue);
+      });
+
       test('counts exactly when no relay stopped at its limit', () async {
         // Two filters' answers together can reach the read's limit without
         // either relay stopping at it.
