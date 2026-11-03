@@ -2,7 +2,6 @@
 // ABOUTME: Split from app_router.dart (#4508)
 
 import 'package:badge_repository/badge_repository.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -10,12 +9,12 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart';
 import 'package:openvine/models/authentication_source.dart';
-import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tabs_prototype_screen.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/go_router_page_name.dart';
 import 'package:openvine/router/providers/support_route_trail_provider.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/dm_inbox_prototype_routes.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/badges/badge_award_screen.dart';
 import 'package:openvine/screens/badges/badge_detail_screen.dart';
@@ -52,20 +51,6 @@ import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/feature_request_dialog.dart';
-
-/// PROTOTYPE (#8076): the four-tab DM inbox on fixture data. Remove with it.
-///
-/// Registered only in debug builds, matching its Developer Options tile:
-/// hiding the tile alone would leave the path reachable by typed URL.
-@visibleForTesting
-List<RouteBase> dmInboxPrototypeRoutes({bool enabled = kDebugMode}) => [
-  if (enabled)
-    GoRoute(
-      path: DmInboxTabsPrototypeScreen.path,
-      name: DmInboxTabsPrototypeScreen.routeName,
-      builder: (_, _) => const DmInboxTabsPrototypeScreen(),
-    ),
-];
 
 List<RouteBase> settingsRoutes(Ref ref) {
   return [

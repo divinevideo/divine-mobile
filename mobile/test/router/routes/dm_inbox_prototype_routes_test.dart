@@ -4,7 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tabs_prototype_screen.dart';
-import 'package:openvine/router/routes/settings_routes.dart';
+import 'package:openvine/router/routes/dm_inbox_prototype_routes.dart';
 
 void main() {
   group('dmInboxPrototypeRoutes', () {
