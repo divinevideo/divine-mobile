@@ -2,6 +2,7 @@
 // ABOUTME: Validates manifest loading, search, and custom sound import functionality
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
@@ -93,7 +94,7 @@ void main() {
             .where((sound) => sound.id.startsWith('soundbot_'))
             .toList();
 
-        expect(soundBotSounds, hasLength(39));
+        expect(soundBotSounds, hasLength(36));
 
         for (final sound in soundBotSounds) {
           expect(
@@ -111,6 +112,30 @@ void main() {
         );
       },
     );
+
+    test('real manifest bundles no silent MP3 sounds', () async {
+      final manifestFile = File('assets/sounds/sounds_manifest.json');
+      final sounds = SoundLibraryService.parseManifest(
+        await manifestFile.readAsString(),
+      );
+
+      final mp3Sounds = sounds
+          .where((sound) => sound.assetPath.endsWith('.mp3'))
+          .toList();
+      expect(mp3Sounds, isNotEmpty);
+
+      final silentSoundIds = [
+        for (final sound in mp3Sounds)
+          if (!_mp3HasCodedAudio(File(sound.assetPath).readAsBytesSync()))
+            sound.id,
+      ];
+
+      expect(
+        silentSoundIds,
+        isEmpty,
+        reason: 'these bundled sounds decode to pure digital silence',
+      );
+    });
 
     test('searchSounds filters by query', () {
       final sounds = [
@@ -275,4 +300,93 @@ void main() {
       },
     );
   });
+}
+
+/// Layer III bitrates in kbit/s by bitrate index; MPEG-2 and 2.5 share one.
+const _mpeg1Bitrates = [
+  0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, //
+];
+const _mpeg2Bitrates = [
+  0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, //
+];
+
+/// Sample rates in Hz by MPEG version bits, then sample-rate index.
+const _sampleRates = {
+  3: [44100, 48000, 32000],
+  2: [22050, 24000, 16000],
+  0: [11025, 12000, 8000],
+};
+
+/// Whether any MPEG Layer III frame in [bytes] carries coded audio.
+///
+/// A granule whose `part2_3_length` is zero holds no scale factors and no
+/// Huffman data, so it decodes to zero samples. A file in which every
+/// granule is empty plays nothing but digital silence.
+bool _mp3HasCodedAudio(Uint8List bytes) {
+  var offset = 0;
+  if (bytes.length >= 10 && String.fromCharCodes(bytes, 0, 3) == 'ID3') {
+    final tagSize =
+        (bytes[6] << 21) | (bytes[7] << 14) | (bytes[8] << 7) | bytes[9];
+    final hasFooter = bytes[5] & 0x10 != 0;
+    offset = 10 + tagSize + (hasFooter ? 10 : 0);
+  }
+
+  while (offset + 4 <= bytes.length) {
+    final header =
+        (bytes[offset] << 24) |
+        (bytes[offset + 1] << 16) |
+        (bytes[offset + 2] << 8) |
+        bytes[offset + 3];
+    final version = (header >> 19) & 3;
+    final layer = (header >> 17) & 3;
+    final bitrateIndex = (header >> 12) & 15;
+    final sampleRateIndex = (header >> 10) & 3;
+    final isValidLayerThree =
+        header >> 21 == 0x7FF &&
+        version != 1 &&
+        layer == 1 &&
+        bitrateIndex != 0 &&
+        bitrateIndex != 15 &&
+        sampleRateIndex != 3;
+    if (!isValidLayerThree) {
+      offset++;
+      continue;
+    }
+
+    final isMpeg1 = version == 3;
+    final bitrate =
+        (isMpeg1 ? _mpeg1Bitrates : _mpeg2Bitrates)[bitrateIndex] * 1000;
+    final sampleRate = _sampleRates[version]![sampleRateIndex];
+    final padding = (header >> 9) & 1;
+    final frameLength = (isMpeg1 ? 144 : 72) * bitrate ~/ sampleRate + padding;
+    if (offset + frameLength > bytes.length) return false;
+
+    final isMono = (header >> 6) & 3 == 3;
+    final channels = isMono ? 1 : 2;
+    final hasCrc = (header >> 16) & 1 == 0;
+    var bit = (offset + 4 + (hasCrc ? 2 : 0)) * 8;
+    if (isMpeg1) {
+      bit += 9 + (isMono ? 5 : 3) + 4 * channels;
+    } else {
+      bit += 8 + (isMono ? 1 : 2);
+    }
+
+    // Each granule of each channel opens with its 12-bit part2_3_length.
+    final blockCount = (isMpeg1 ? 2 : 1) * channels;
+    final blockBits = isMpeg1 ? 59 : 63;
+    for (var block = 0; block < blockCount; block++) {
+      if (_readBits(bytes, bit, 12) > 0) return true;
+      bit += blockBits;
+    }
+    offset += frameLength;
+  }
+  return false;
+}
+
+int _readBits(Uint8List bytes, int bitOffset, int count) {
+  var value = 0;
+  for (var i = bitOffset; i < bitOffset + count; i++) {
+    value = (value << 1) | ((bytes[i >> 3] >> (7 - (i & 7))) & 1);
+  }
+  return value;
 }
