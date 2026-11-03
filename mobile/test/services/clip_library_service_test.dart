@@ -848,33 +848,41 @@ void main() {
         }
       });
 
-      DivineVideoClip clipWithoutAssets(String id) => DivineVideoClip(
-        id: id,
-        video: EditorVideo.file(p.join(documentsDir.path, 'VID_$id.mp4')),
-        duration: const Duration(seconds: 2),
-        recordedAt: DateTime(2026, 6, 14),
-        targetAspectRatio: .vertical,
-        originalAspectRatio: 9 / 16,
+      DivineVideoClip clipWithoutAssets(String id, {DateTime? recordedAt}) =>
+          DivineVideoClip(
+            id: id,
+            video: EditorVideo.file(p.join(documentsDir.path, 'VID_$id.mp4')),
+            duration: const Duration(seconds: 2),
+            recordedAt: recordedAt ?? DateTime(2026, 6, 14),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
+
+      test(
+        'skips a clip whose video file is gone and recovers the rest',
+        () async {
+          final present = clipWithoutAssets('present');
+          File(present.video!.file!.path).writeAsBytesSync(const [0, 1, 2, 3]);
+          await service.saveClip(present);
+          // Newer, so getAllClips lists it first and recovery reaches it before
+          // the clip that can still be recovered.
+          await service.saveClip(
+            clipWithoutAssets('gone', recordedAt: DateTime(2026, 6, 15)),
+          );
+
+          final clips = await service.recoverMissingAssets(
+            await service.getAllClips(),
+          );
+
+          expect(extractor.videoPaths.toSet(), {present.video!.file!.path});
+          final gone = clips.singleWhere((clip) => clip.id == 'gone');
+          expect(gone.thumbnailPath, isNull);
+          expect(gone.ghostFramePath, isNull);
+          final recovered = clips.singleWhere((clip) => clip.id == 'present');
+          expect(recovered.thumbnailPath, isNotNull);
+          expect(recovered.ghostFramePath, isNotNull);
+        },
       );
-
-      test('skips a clip whose video file is gone', () async {
-        final present = clipWithoutAssets('present');
-        File(present.video!.file!.path).writeAsBytesSync(const [0, 1, 2, 3]);
-        await service.saveClip(present);
-        await service.saveClip(clipWithoutAssets('gone'));
-
-        final clips = await service.recoverMissingAssets(
-          await service.getAllClips(),
-        );
-
-        expect(extractor.videoPaths.toSet(), {present.video!.file!.path});
-        final gone = clips.singleWhere((clip) => clip.id == 'gone');
-        expect(gone.thumbnailPath, isNull);
-        expect(gone.ghostFramePath, isNull);
-        final recovered = clips.singleWhere((clip) => clip.id == 'present');
-        expect(recovered.thumbnailPath, isNotNull);
-        expect(recovered.ghostFramePath, isNotNull);
-      });
 
       test(
         'logs one warning naming every clip whose video file is gone',
