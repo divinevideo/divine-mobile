@@ -53,6 +53,23 @@ class RepliesCurationUnavailableException implements Exception {
   String toString() => 'RepliesCurationUnavailableException: $message';
 }
 
+/// Whether a video starts an Add yours chain could not be read: the relays
+/// timed out or none could be asked, and nothing came back.
+///
+/// Kept apart from a video read without a chain of its own. Treating a failed
+/// read as no chain would start the chain at the viewer's video instead, and
+/// an answer they publish would join that chain for good.
+class AddYoursChainUnavailableException implements Exception {
+  /// Creates the exception.
+  const AddYoursChainUnavailableException(this.message);
+
+  /// What went wrong.
+  final String message;
+
+  @override
+  String toString() => 'AddYoursChainUnavailableException: $message';
+}
+
 /// The videos responding to a video, and its creator's pins and hides.
 ///
 /// Funnelcake counts the responses and returns the latest when it can. When
@@ -174,10 +191,19 @@ class VideoResponsesRepository {
 
   /// Whether the video at [chainRoot] starts an Add yours chain with
   /// [hashtag]: it carries an Add yours of its own with that hashtag, not one
-  /// answering another video's. `false` when it cannot be read.
+  /// answering another video's. `false` when there is no such video.
+  ///
+  /// Throws an [AddYoursChainUnavailableException] when the relays timed out
+  /// or none could be asked and nothing came back.
   Future<bool> startsChain(String chainRoot, {required String hashtag}) async {
     if (!RepliesCuration.isAddress(chainRoot)) return false;
-    final events = await _nostrClient.queryEvents([_filterFor(chainRoot)]);
+    final (:events, :timedOut, :noRelays) = await _nostrClient
+        .queryEventsDetailed([_filterFor(chainRoot)]);
+    if (events.isEmpty && (timedOut || noRelays)) {
+      throw AddYoursChainUnavailableException(
+        noRelays ? 'No relay could be asked' : 'The relays did not answer',
+      );
+    }
     final first = _responsesIn(
       events,
       limit: 1,

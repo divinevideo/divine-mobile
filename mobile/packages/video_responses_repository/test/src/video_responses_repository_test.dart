@@ -502,7 +502,7 @@ void main() {
       test(
         'is true for a video with its own Add yours and the hashtag',
         () async {
-          relayAnswers([
+          curationAnswers([
             first(tags: [_addYoursSticker()]),
           ]);
 
@@ -512,7 +512,7 @@ void main() {
           );
           final filter =
               (verify(
-                        () => nostrClient.queryEvents(captureAny()),
+                        () => nostrClient.queryEventsDetailed(captureAny()),
                       ).captured.single
                       as List<Filter>)
                   .single;
@@ -522,7 +522,7 @@ void main() {
       );
 
       test('is false for a video whose Add yours answers another', () async {
-        relayAnswers([
+        curationAnswers([
           first(
             tags: [_addYoursSticker(chain: '34236:$_viewer:other-d')],
           ),
@@ -535,7 +535,7 @@ void main() {
       });
 
       test('is false for another hashtag, or no Add yours at all', () async {
-        relayAnswers([
+        curationAnswers([
           first(tags: [_addYoursSticker(hashtag: 'other')]),
         ]);
         expect(
@@ -543,15 +543,38 @@ void main() {
           isFalse,
         );
 
-        relayAnswers([first()]);
+        curationAnswers([first()]);
         expect(
           await repository().startsChain(_rootAddress, hashtag: 'desksetup'),
           isFalse,
         );
       });
 
+      test(
+        'throws when the relays timed out or none could be asked',
+        () async {
+          curationAnswers(const [], timedOut: true);
+          await expectLater(
+            repository().startsChain(_rootAddress, hashtag: 'desksetup'),
+            throwsA(isA<AddYoursChainUnavailableException>()),
+          );
+
+          curationAnswers(const [], noRelays: true);
+          await expectLater(
+            repository().startsChain(_rootAddress, hashtag: 'desksetup'),
+            throwsA(
+              isA<AddYoursChainUnavailableException>().having(
+                (error) => error.toString(),
+                'toString',
+                'AddYoursChainUnavailableException: No relay could be asked',
+              ),
+            ),
+          );
+        },
+      );
+
       test('is false when the video is not found or not an address', () async {
-        relayAnswers([]);
+        curationAnswers([]);
 
         expect(
           await repository().startsChain(_rootAddress, hashtag: 'desksetup'),

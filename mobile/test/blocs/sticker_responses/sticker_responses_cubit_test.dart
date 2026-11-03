@@ -357,6 +357,33 @@ void main() {
         );
 
         blocTest<StickerResponsesCubit, StickerResponsesState>(
+          'fails, offering no chain to join, when the named video cannot be '
+          'read',
+          setUp: () =>
+              when(
+                () => repository.startsChain(first, hashtag: 'desksetup'),
+              ).thenThrow(
+                const AddYoursChainUnavailableException(
+                  'The relays did not answer',
+                ),
+              ),
+          build: () => build(_region(VideoStickerKind.prompt, target: first)),
+          act: (cubit) => cubit.load(),
+          errors: () => [isA<AddYoursChainUnavailableException>()],
+          verify: (cubit) {
+            expect(cubit.state.status, equals(StickerResponsesStatus.failure));
+            expect(cubit.state.chainRoot, isNull);
+            verifyNever(
+              () => repository.fetchJoined(
+                chainRoot: any(named: 'chainRoot'),
+                hashtag: any(named: 'hashtag'),
+                limit: any(named: 'limit'),
+              ),
+            );
+          },
+        );
+
+        blocTest<StickerResponsesCubit, StickerResponsesState>(
           'starts its own chain when the named video starts none',
           setUp: () => when(
             () => repository.startsChain(first, hashtag: 'desksetup'),
