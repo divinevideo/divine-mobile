@@ -14,6 +14,8 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/file_cleanup_service.dart';
 import 'package:openvine/services/local_audio_cleanup_service.dart';
+import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
+import 'package:openvine/utils/editor_state_contents.dart';
 import 'package:openvine/utils/editor_state_history_stats.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
@@ -285,12 +287,14 @@ class DraftStorageService {
       ownerPubkey: ownerPubkey,
     );
     ownedFilesMemo?._remember(draft.id, newOwnedFilePaths);
+    final weight = _describeStoredDraft(draftData, draft);
     Log.info(
       '💾 Saved draft ${draft.id} in ${stopwatch.elapsedMilliseconds} ms: '
-      '${_describeStoredDraft(draftData, draft)}',
+      '$weight',
       name: 'DraftStorageService',
       category: LogCategory.video,
     );
+    InterruptedRenderMonitor.noteLastDraft('${draft.id}: $weight');
 
     // Reap orphaned files only after the new draft/clip rows are committed, so
     // this draft's old indexed references no longer protect them. When the
@@ -541,23 +545,38 @@ class DraftStorageService {
       documentsPath: documentsPath,
     );
     if (draft != null) {
+      final weight = _describeStoredDraft(row.data, draft);
+      final message =
+          '📂 Loaded draft $id in ${stopwatch.elapsedMilliseconds} ms: $weight';
       Log.info(
-        '📂 Loaded draft $id in ${stopwatch.elapsedMilliseconds} ms: '
-        '${_describeStoredDraft(row.data, draft)}',
+        message,
         name: 'DraftStorageService',
         category: LogCategory.video,
       );
+      // The in-app log dies with a session iOS kills for memory (#10677).
+      // The crash log keeps the line for any report this session still
+      // sends, and the render marker for the one the next session sends.
+      // Saves stay out of the crash log: every autosave would crowd its 64 KB.
+      _crashReporter.log(message);
+      InterruptedRenderMonitor.noteLastDraft('$id: $weight');
     }
     return draft;
   }
 
   /// How heavy the stored [draft] is: the size of its stored [data], its
-  /// clips, and what its editor history holds. A draft that grows too heavy
-  /// takes seconds to load and save, and can run the editor out of memory.
-  static String _describeStoredDraft(String data, DivineVideoDraft draft) =>
-      'data ${(data.length / 1024).toStringAsFixed(0)} KB, '
-      'clips ${draft.clips.length}, '
-      '${EditorStateHistoryStats.of(draft.editorStateHistory)}';
+  /// clips, how much its editor history holds, and what the shown step holds.
+  /// A draft that grows too heavy takes seconds to load and save, and can run
+  /// the editor out of memory.
+  static String _describeStoredDraft(String data, DivineVideoDraft draft) {
+    final contents = EditorStateContents.of(
+      history: draft.editorStateHistory,
+      clips: draft.clips,
+    ).toString();
+    return 'data ${(data.length / 1024).toStringAsFixed(0)} KB, '
+        'clips ${draft.clips.length}, '
+        '${EditorStateHistoryStats.of(draft.editorStateHistory)}'
+        '${contents.isEmpty ? '' : '; $contents'}';
+  }
 
   /// Whether a draft row with [id] exists at all, whoever owns it.
   ///

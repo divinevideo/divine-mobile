@@ -55,6 +55,72 @@ void main() {
       expect(NativePlaybackDiagnostics.fromMap(values), isNull);
     });
 
+    group('memory ledgers', () {
+      Map<String, Object> snapshot([Map<String, Object> ledgers = const {}]) =>
+          {
+            'version': 1,
+            'platform': 'ios',
+            'appState': 'active',
+            'footprintBytes': 2800000000,
+            'registeredPlayers': 1,
+            'liveInstances': 1,
+            'players': 1,
+            'playingPlayers': 0,
+            'textures': 1,
+            'pendingLoads': 0,
+            'disposedPlayers': 0,
+            'framesDelivered': 10,
+            ...ledgers,
+          };
+
+      test('reads the graphics, media and remaining-limit ledgers', () {
+        final result = NativePlaybackDiagnostics.fromMap(
+          snapshot({
+            'graphicsFootprintBytes': 900000000,
+            'mediaFootprintBytes': 400000000,
+            'memoryLimitRemainingBytes': 500000000,
+          }),
+        );
+
+        expect(result?.graphicsFootprintBytes, 900000000);
+        expect(result?.mediaFootprintBytes, 400000000);
+        expect(result?.memoryLimitRemainingBytes, 500000000);
+        expect(result?.toMap(), containsPair('mediaFootprintBytes', 400000000));
+      });
+
+      test('leaves them out for a native binary that sends none', () {
+        final result = NativePlaybackDiagnostics.fromMap(snapshot());
+
+        expect(result, isNotNull);
+        expect(result?.graphicsFootprintBytes, isNull);
+        expect(result?.mediaFootprintBytes, isNull);
+        expect(result?.memoryLimitRemainingBytes, isNull);
+      });
+
+      test('keeps -1 for a ledger the OS cannot tell', () {
+        final result = NativePlaybackDiagnostics.fromMap(
+          snapshot({'memoryLimitRemainingBytes': -1}),
+        );
+
+        expect(result?.memoryLimitRemainingBytes, -1);
+      });
+
+      test('rejects a malformed ledger', () {
+        expect(
+          NativePlaybackDiagnostics.fromMap(
+            snapshot({'graphicsFootprintBytes': -2}),
+          ),
+          isNull,
+        );
+        expect(
+          NativePlaybackDiagnostics.fromMap(
+            snapshot({'mediaFootprintBytes': 'private@example.invalid'}),
+          ),
+          isNull,
+        );
+      });
+    });
+
     test(
       'older binaries and unsupported platforms return unavailable',
       () async {

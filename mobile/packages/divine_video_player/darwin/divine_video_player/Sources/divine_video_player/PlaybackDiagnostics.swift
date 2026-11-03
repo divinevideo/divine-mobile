@@ -52,11 +52,15 @@ final class PlaybackDiagnostics {
             pendingLoads += state.pendingLoads
             if state.disposed && state.hasPlayer { disposedPlayers += 1 }
         }
+        let vm = Self.vmInfo()
         return [
             "version": 1,
             "platform": Self.platform,
             "appState": Self.appState,
-            "footprintBytes": Self.physicalFootprint(),
+            "footprintBytes": Self.vmField(vm, \.phys_footprint),
+            "graphicsFootprintBytes": Self.vmField(vm, \.ledger_tag_graphics_footprint),
+            "mediaFootprintBytes": Self.vmField(vm, \.ledger_tag_media_footprint),
+            "memoryLimitRemainingBytes": Self.vmField(vm, \.limit_bytes_remaining),
             "registeredPlayers": registeredPlayers,
             "liveInstances": states.count,
             "players": players,
@@ -89,9 +93,10 @@ final class PlaybackDiagnostics {
         #endif
     }
 
-    /// Apple's footprint includes compressed memory that RSS does not. Return
-    /// -1 on failure, never a misleading zero. This is not an allocation trace.
-    private static func physicalFootprint() -> Int64 {
+    /// The kernel's VM accounting for this process and how many of its bytes
+    /// the kernel filled in, or nil when the probe fails. An older OS fills a
+    /// shorter, earlier revision of the struct.
+    private static func vmInfo() -> (info: task_vm_info_data_t, filledBytes: Int)? {
         var info = task_vm_info_data_t()
         let capacity = MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size
         var count = mach_msg_type_number_t(capacity)
@@ -100,10 +105,23 @@ final class PlaybackDiagnostics {
                 task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
             }
         }
-        let footprintEnd = MemoryLayout<task_vm_info_data_t>.offset(of: \.phys_footprint)!
-            + MemoryLayout<UInt64>.size
-        guard status == KERN_SUCCESS,
-              Int(count) * MemoryLayout<integer_t>.size >= footprintEnd else { return -1 }
-        return Int64(clamping: info.phys_footprint)
+        guard status == KERN_SUCCESS else { return nil }
+        return (info, Int(count) * MemoryLayout<integer_t>.size)
+    }
+
+    /// One field of [vm], or -1 when the probe failed or this OS does not
+    /// fill it, never a misleading zero. Apple's footprint includes compressed
+    /// memory that RSS does not; the graphics and media ledgers are the parts
+    /// of it GPU resources and media buffers own; the remaining limit is how
+    /// far the footprint is from the point where the OS ends the app. None of
+    /// this is an allocation trace.
+    private static func vmField<T: BinaryInteger>(
+        _ vm: (info: task_vm_info_data_t, filledBytes: Int)?,
+        _ field: KeyPath<task_vm_info_data_t, T>
+    ) -> Int64 {
+        guard let vm,
+              let offset = MemoryLayout<task_vm_info_data_t>.offset(of: field),
+              vm.filledBytes >= offset + MemoryLayout<T>.size else { return -1 }
+        return Int64(clamping: vm.info[keyPath: field])
     }
 }
