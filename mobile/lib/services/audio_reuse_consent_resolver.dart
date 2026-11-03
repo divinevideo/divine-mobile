@@ -47,9 +47,11 @@ class AudioReuseConsentResolver {
       // out the legacy population:
       // `VideoEventPublisher` publishes the Kind 1063 before the video event
       // because the video needs the audio id for its `e` tag, so an unedited
-      // source is never older than its own sound.
+      // source is never older than its own sound. Measured by the revision's
+      // own time: `createdAt` keeps the first publication's, so an edit, which
+      // publishes a new sound, would read as older than it.
       source = matching.first;
-      if (source.createdAt < sound.createdAt) return false;
+      if (source.nostrCreatedAt < sound.createdAt) return false;
     } catch (error) {
       Log.warning(
         'Reuse consent lookup failed for source $sourceAddress: $error',
