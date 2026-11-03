@@ -8,12 +8,14 @@
 // the moment the wording changes. l10n happens when the shape is decided.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_classifier.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_fixtures.dart';
+import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_prototype_cubit.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_prototype_session.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_prototype_settings.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tuning_view.dart';
@@ -21,35 +23,40 @@ import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 
 /// Four-tab DM inbox prototype.
-class DmInboxTabsPrototypeScreen extends StatefulWidget {
-  const DmInboxTabsPrototypeScreen({super.key});
+class DmInboxTabsPrototypeScreen extends StatelessWidget {
+  const DmInboxTabsPrototypeScreen({this.fixtures, super.key});
 
   static const routeName = 'dm-inbox-tabs-prototype';
   static const String path = RoutePaths.dmInboxTabsPrototype;
 
+  /// The synthetic data to show; defaults to [DmInboxFixtures.build].
+  final DmInboxFixtures? fixtures;
+
   @override
-  State<DmInboxTabsPrototypeScreen> createState() =>
-      _DmInboxTabsPrototypeScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => DmInboxPrototypeCubit(
+        fixtures: fixtures ?? DmInboxFixtures.build(),
+      ),
+      child: const _DmInboxTabsPrototypeView(),
+    );
+  }
 }
 
-class _DmInboxTabsPrototypeScreenState extends State<DmInboxTabsPrototypeScreen>
+class _DmInboxTabsPrototypeView extends StatefulWidget {
+  const _DmInboxTabsPrototypeView();
+
+  @override
+  State<_DmInboxTabsPrototypeView> createState() =>
+      _DmInboxTabsPrototypeViewState();
+}
+
+class _DmInboxTabsPrototypeViewState extends State<_DmInboxTabsPrototypeView>
     with TickerProviderStateMixin, ReducedMotionTabControllerMixin {
-  final DmInboxFixtures _fixtures = DmInboxFixtures.build();
-
-  DmPrototypeSettings _settings = const DmPrototypeSettings();
-
-  /// What the participant has opened, replied to, marked or removed. Until a
-  /// request is opened its preview text stays concealed.
-  DmPrototypeSession _session = const DmPrototypeSession();
-
-  /// Rows whose reasons are expanded.
-  final _explained = <String>{};
+  DmInboxPrototypeCubit get _cubit => context.read<DmInboxPrototypeCubit>();
 
   @override
-  int get tabCount => _settings.placement == OfficialPlacement.ownTab ? 4 : 3;
-
-  @override
-  void onTabChanged() => setState(() {});
+  int get tabCount => _tabsFor(_cubit.state.settings.placement).length;
 
   @override
   void didChangeDependencies() {
@@ -57,8 +64,8 @@ class _DmInboxTabsPrototypeScreenState extends State<DmInboxTabsPrototypeScreen>
     syncTabController();
   }
 
-  List<DmInboxBucket> get _tabs =>
-      _settings.placement == OfficialPlacement.ownTab
+  static List<DmInboxBucket> _tabsFor(OfficialPlacement placement) =>
+      placement == OfficialPlacement.ownTab
       ? const [
           DmInboxBucket.inbox,
           DmInboxBucket.official,
@@ -72,22 +79,15 @@ class _DmInboxTabsPrototypeScreenState extends State<DmInboxTabsPrototypeScreen>
         ];
 
   Future<void> _openTuning() async {
+    final current = _cubit.state.settings;
     final updated = await Navigator.of(context).push<DmPrototypeSettings>(
       MaterialPageRoute<DmPrototypeSettings>(
-        builder: (_) => DmInboxTuningView(settings: _settings),
+        builder: (_) => DmInboxTuningView(settings: current),
       ),
     );
     if (updated == null || !mounted) return;
-    setState(() {
-      // A new condition starts from the same state as every other one.
-      if (updated.presentation != _settings.presentation) {
-        _session = const DmPrototypeSession();
-        _explained.clear();
-      }
-      final placementChanged = updated.placement != _settings.placement;
-      _settings = updated;
-      if (placementChanged) syncTabController(index: 0);
-    });
+    _cubit.applySettings(updated);
+    if (updated.placement != current.placement) syncTabController(index: 0);
   }
 
   void _showMessage(String message) {
@@ -100,47 +100,44 @@ class _DmInboxTabsPrototypeScreenState extends State<DmInboxTabsPrototypeScreen>
     final sent = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) =>
-            _ReplyComposer(recipient: _fixtures.titleFor(conversation)),
+            _ReplyComposer(recipient: _cubit.fixtures.titleFor(conversation)),
       ),
     );
     if (sent != true || !mounted) return;
-    setState(() => _session = _session.reply(conversation.id));
+    _cubit.reply(conversation.id);
     _showMessage('Reply sent. Moved to Inbox.');
   }
 
   void _markNotSpam(String id) {
-    setState(() => _session = _session.markNotSpam(id));
+    _cubit.markNotSpam(id);
     _showMessage('Moved to Requests.');
   }
 
   void _delete(String id) {
-    setState(() => _session = _session.remove(id));
+    _cubit.remove(id);
     _showMessage('Deleted.');
   }
 
   void _report(String id) {
-    setState(() => _session = _session.remove(id));
+    _cubit.remove(id);
     _showMessage('Reported and removed from your requests.');
   }
 
   void _block(String pubkey) {
-    setState(() => _session = _session.block(pubkey));
-    _showMessage('Blocked ${_fixtures.displayNameFor(pubkey)}.');
+    _cubit.block(pubkey);
+    _showMessage('Blocked ${_cubit.fixtures.displayNameFor(pubkey)}.');
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.vineColors;
-    final classification = classifyPrototype(
-      fixtures: _fixtures,
-      settings: _settings,
-      session: _session,
-    );
+    final cubit = context.watch<DmInboxPrototypeCubit>();
+    final DmInboxPrototypeState(:settings, :session, :explained) = cubit.state;
+    final classification = cubit.state.classification;
+    final tabs = _tabsFor(settings.placement);
     final actions = _RowActions(
-      onReveal: (id) => setState(() => _session = _session.reveal(id)),
-      onToggleExplain: (id) => setState(() {
-        if (!_explained.remove(id)) _explained.add(id);
-      }),
+      onReveal: cubit.reveal,
+      onToggleExplain: cubit.toggleReasons,
       onReply: _reply,
       onNotSpam: _markNotSpam,
       onDelete: _delete,
@@ -173,34 +170,34 @@ class _DmInboxTabsPrototypeScreenState extends State<DmInboxTabsPrototypeScreen>
         children: [
           _PrototypeStrip(
             spamCount: classification.likelySpam.length,
-            total: _fixtures.conversations.length,
+            total: cubit.fixtures.conversations.length,
             onTune: _openTuning,
           ),
           _InboxTabBar(
             controller: tabController,
-            tabs: _tabs,
+            tabs: tabs,
             classification: classification,
-            placement: _settings.placement,
+            placement: settings.placement,
           ),
           Divider(height: 1, thickness: 1, color: colors.outlineDisabled),
           Expanded(
             child: TabBarView(
               controller: tabController,
               children: [
-                for (final bucket in _tabs)
+                for (final bucket in tabs)
                   _BucketList(
                     bucket: bucket,
-                    conversations: _sorted(classification.bucket(bucket)),
+                    conversations: classification.bucket(bucket),
                     classification: classification,
-                    fixtures: _fixtures,
-                    settings: _settings,
-                    session: _session,
-                    explained: _explained,
+                    fixtures: cubit.fixtures,
+                    settings: settings,
+                    session: session,
+                    explained: explained,
                     pinnedOfficial:
                         bucket == DmInboxBucket.inbox &&
-                            _settings.placement ==
+                            settings.placement ==
                                 OfficialPlacement.pinnedInInbox
-                        ? _sorted(classification.official)
+                        ? classification.official
                         : const [],
                     actions: actions,
                   ),
@@ -211,10 +208,6 @@ class _DmInboxTabsPrototypeScreenState extends State<DmInboxTabsPrototypeScreen>
       ),
     );
   }
-
-  List<DmConversation> _sorted(List<DmConversation> conversations) =>
-      [...conversations]
-        ..sort((a, b) => b.effectiveTimestamp.compareTo(a.effectiveTimestamp));
 }
 
 /// What a row can ask the screen to do.
