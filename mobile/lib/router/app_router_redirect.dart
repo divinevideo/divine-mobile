@@ -175,20 +175,23 @@ String _minorAccountReviewLoadingPath(String fromLocation) {
   ).toString();
 }
 
+/// Where a wait on the review-status loading screen was going, from its
+/// `from`, or null when that names no destination the account can be sent on
+/// to.
+String? _reviewStatusWaitTarget(String? from) {
+  if (from == null || from.isEmpty) return null;
+  final path = Uri.parse(from).path;
+  if (_isAuthEntryLocation(path) ||
+      path == MinorAccountReviewLoadingScreen.path) {
+    return null;
+  }
+  return from;
+}
+
 @visibleForTesting
 String minorAccountReviewReturnLocationForTest(Uri uri) {
-  final from = uri.queryParameters['from'];
-  if (from == null || from.isEmpty) {
-    return VideoFeedPage.pathForIndex(0);
-  }
-
-  final fromLocation = Uri.parse(from).path;
-  if (_isAuthEntryLocation(fromLocation) ||
-      fromLocation == MinorAccountReviewLoadingScreen.path) {
-    return VideoFeedPage.pathForIndex(0);
-  }
-
-  return from;
+  return _reviewStatusWaitTarget(uri.queryParameters['from']) ??
+      VideoFeedPage.pathForIndex(0);
 }
 
 String _minorAccountReviewReturnLocation(GoRouterState state) {
@@ -346,16 +349,8 @@ AsyncValue<MinorAccountReviewStatus> _routedReviewStatus(
 
 /// Where a push held on the loading screen was going, or null when its
 /// `from` names no destination the account can be sent on to.
-String? _heldReviewStatusPushTarget(ImperativeRouteMatch page) {
-  final from = page.matches.uri.queryParameters['from'];
-  if (from == null || from.isEmpty) return null;
-  final path = Uri.parse(from).path;
-  if (_isAuthEntryLocation(path) ||
-      path == MinorAccountReviewLoadingScreen.path) {
-    return null;
-  }
-  return from;
-}
+String? _heldReviewStatusPushTarget(ImperativeRouteMatch page) =>
+    _reviewStatusWaitTarget(page.matches.uri.queryParameters['from']);
 
 /// The location of the page on top of [configuration].
 String _topLocation(RouteMatchList configuration) {
