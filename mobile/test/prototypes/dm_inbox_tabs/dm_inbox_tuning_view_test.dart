@@ -1,26 +1,55 @@
-// ABOUTME: PROTOTYPE (#8076) — pins that the tuning panel renders cleanly.
-// ABOUTME: Nothing pumped this view before, which is why a ListTile nested
-// ABOUTME: inside a coloured DecoratedBox went unnoticed.
+// ABOUTME: PROTOTYPE (#8076) — pins that the tuning panel renders cleanly,
+// ABOUTME: that Save returns the edited settings and back discards them.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_classifier.dart';
-import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tabs_prototype_screen.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_prototype_settings.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tuning_view.dart';
 
+import '../../helpers/scroll.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 void main() {
   group(DmInboxTuningView, () {
-    Future<void> pumpTuning(WidgetTester tester) async {
+    /// Pushes the panel over a launcher and records what it pops.
+    Future<List<DmPrototypeSettings?>> pumpTuning(WidgetTester tester) async {
+      final popped = <DmPrototypeSettings?>[];
       await tester.pumpWidget(
         testMaterialApp(
-          home: DmInboxTuningView(
-            heuristics: const DmSpamHeuristics(),
-            placement: OfficialPlacement.ownTab,
-            onPlacementChanged: (_) {},
+          home: Builder(
+            builder: (context) => Center(
+              child: TextButton(
+                onPressed: () async {
+                  popped.add(
+                    await Navigator.of(context).push<DmPrototypeSettings>(
+                      MaterialPageRoute<DmPrototypeSettings>(
+                        builder: (_) => const DmInboxTuningView(
+                          settings: DmPrototypeSettings(),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
           ),
         ),
       );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      return popped;
+    }
+
+    Future<void> scrollToAndTap(WidgetTester tester, String text) async {
+      final target = find.text(text);
+      await scrollUntilTappable(
+        tester,
+        target,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(target);
       await tester.pumpAndSettle();
     }
 
@@ -30,49 +59,45 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.text('My request filter'), findsOneWidget);
-      });
-
-      testWidgets('renders the placement switch cleanly', (tester) async {
-        await pumpTuning(tester);
-
-        expect(find.text('Official gets its own tab'), findsOneWidget);
-        expect(tester.takeException(), isNull);
+        expect(find.text('Shield: Default'), findsOneWidget);
       });
     });
 
     group('interactions', () {
-      testWidgets('toggling placement reports the new value', (tester) async {
-        OfficialPlacement? reported;
-        await tester.pumpWidget(
-          testMaterialApp(
-            home: DmInboxTuningView(
-              heuristics: const DmSpamHeuristics(),
-              placement: OfficialPlacement.ownTab,
-              onPlacementChanged: (value) => reported = value,
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.text('Official gets its own tab'));
-        await tester.pumpAndSettle();
-
-        expect(reported, OfficialPlacement.pinnedInInbox);
-        expect(tester.takeException(), isNull);
-      });
-
-      testWidgets('applying a community recipe replaces the weights', (
+      testWidgets('applying a community recipe names it in the hero', (
         tester,
       ) async {
         await pumpTuning(tester);
 
-        // The tap target is the recipe's own Remix button, not its title.
-        expect(find.text('Quiet Porch'), findsOneWidget);
         await tester.tap(find.text('Remix').first);
         await tester.pumpAndSettle();
 
         expect(find.textContaining('Quiet Porch applied'), findsOneWidget);
-        expect(tester.takeException(), isNull);
+        expect(find.text('Shield: Quiet Porch'), findsOneWidget);
+      });
+
+      testWidgets('Save returns every edited setting', (tester) async {
+        final popped = await pumpTuning(tester);
+
+        await scrollToAndTap(tester, 'Context and a caution label');
+        await scrollToAndTap(tester, 'Official gets its own tab');
+        await scrollToAndTap(tester, 'Save filter');
+
+        expect(popped, hasLength(1));
+        final saved = popped.single!;
+        expect(saved.placement, OfficialPlacement.pinnedInInbox);
+        expect(saved.presentation, RequestPresentation.contextWithCaution);
+      });
+
+      testWidgets('back discards every edit', (tester) async {
+        final popped = await pumpTuning(tester);
+
+        await scrollToAndTap(tester, 'Official gets its own tab');
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+
+        expect(popped, equals([null]));
+        expect(find.text('open'), findsOneWidget);
       });
     });
   });

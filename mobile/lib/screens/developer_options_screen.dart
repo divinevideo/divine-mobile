@@ -423,7 +423,7 @@ class _DeveloperOptionsScreenState
                   ),
                   subtitle: Text(
                     'Official / Inbox / Requests / Likely spam on fixture '
-                    'data, with live-tunable weights.',
+                    'data, with adjustable weights.',
                     style: VineTheme.bodyMediumFont(
                       color: context.vineColors.secondaryText,
                     ),

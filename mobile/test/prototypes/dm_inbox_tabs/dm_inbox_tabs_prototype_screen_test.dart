@@ -1,19 +1,83 @@
-// ABOUTME: PROTOTYPE (#8076) — proves the four-tab screen renders and that
-// ABOUTME: request content stays concealed until the user opens it.
+// ABOUTME: PROTOTYPE (#8076) — proves the four-tab screen renders, that
+// ABOUTME: request content stays concealed until the user opens it, and that
+// ABOUTME: sender context and request actions work before it is opened.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tabs_prototype_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/scroll.dart';
 import '../../helpers/test_provider_overrides.dart';
 
 void main() {
   group(DmInboxTabsPrototypeScreen, () {
-    Future<void> pumpScreen(WidgetTester tester) async {
+    /// Tall enough that every row of a tab is built without scrolling.
+    Future<void> pumpScreen(
+      WidgetTester tester, {
+      Size size = const Size(1000, 5000),
+      SharedPreferences? preferences,
+    }) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
       await tester.pumpWidget(
-        testMaterialApp(home: const DmInboxTabsPrototypeScreen()),
+        testMaterialApp(
+          home: const DmInboxTabsPrototypeScreen(),
+          mockSharedPreferences: preferences,
+        ),
       );
       await tester.pumpAndSettle();
+    }
+
+    Future<void> openTab(WidgetTester tester, String tab) async {
+      final target = find.widgetWithText(Tab, tab);
+      // The tab bar scrolls, so on a narrow screen a tab can be off-screen.
+      await tester.ensureVisible(target);
+      await tester.pumpAndSettle();
+      await tester.tap(target);
+      await tester.pumpAndSettle();
+    }
+
+    String badgeOn(String tab) {
+      final label = find.ancestor(
+        of: find.text(tab),
+        matching: find.byType(Tab),
+      );
+      return find
+          .descendant(of: label, matching: find.byType(Text))
+          .evaluate()
+          .map((e) => (e.widget as Text).data)
+          .join('|');
+    }
+
+    /// The row whose title is [title].
+    Finder rowOf(String title) => find.ancestor(
+      of: find.text(title),
+      matching: find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_ConversationRow',
+      ),
+    );
+
+    Future<void> tapLabel(WidgetTester tester, String label) async {
+      await tester.tap(find.bySemanticsLabel(label));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> saveTuningWith(WidgetTester tester, String option) async {
+      await tester.tap(find.text('Tune'));
+      await tester.pumpAndSettle();
+      for (final text in [option, 'Save filter']) {
+        final target = find.text(text).first;
+        await scrollUntilTappable(
+          tester,
+          target,
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.tap(target);
+        await tester.pumpAndSettle();
+      }
     }
 
     group('renders', () {
@@ -34,6 +98,82 @@ void main() {
         expect(find.text('Maya Okonkwo'), findsOneWidget);
         expect(find.text('crypto_signals_daily'), findsNothing);
       });
+
+      testWidgets('shows sender context on a request that is still hidden', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await pumpScreen(tester);
+        await openTab(tester, 'Requests');
+
+        expect(find.text('22 videos'), findsOneWidget);
+        expect(
+          find.text('Followed by Maya Okonkwo and 3 others'),
+          findsOneWidget,
+        );
+        expect(find.text('56K loops'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(RegExp('About this sender: 22 videos')),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Lisbon'), findsNothing);
+        expect(find.bySemanticsLabel(RegExp('Lisbon')), findsNothing);
+        semantics.dispose();
+      });
+
+      testWidgets('never shows an unknown count as zero', (tester) async {
+        await pumpScreen(tester);
+        await openTab(tester, 'Requests');
+
+        // Ines Duarte has nothing known; only Hollis Wray is a known zero.
+        expect(find.text('Ines Duarte'), findsOneWidget);
+        expect(find.text('No videos yet'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: rowOf('Ines Duarte'),
+            matching: find.textContaining('video'),
+          ),
+          findsNothing,
+        );
+        expect(find.text('0 loops'), findsNothing);
+      });
+
+      testWidgets('hides loops when the viewer has turned them off', (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues({
+          'stats_show_total_loops': false,
+        });
+        final preferences = await SharedPreferences.getInstance();
+        await pumpScreen(tester, preferences: preferences);
+        await openTab(tester, 'Requests');
+
+        expect(find.text('22 videos'), findsOneWidget);
+        expect(find.text('56K loops'), findsNothing);
+      });
+
+      testWidgets('shows no scores or threshold to a participant', (
+        tester,
+      ) async {
+        await pumpScreen(tester);
+        await openTab(tester, 'Likely spam');
+
+        expect(find.text('crypto_signals_daily'), findsOneWidget);
+        expect(find.textContaining('risk '), findsNothing);
+        expect(find.textContaining('filtered at'), findsNothing);
+      });
+
+      testWidgets('lays out on a narrow phone at a large text size', (
+        tester,
+      ) async {
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pumpScreen(tester, size: const Size(320, 8000));
+        await openTab(tester, 'Requests');
+
+        expect(find.text('Priya Raman'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
     });
 
     group('interactions', () {
@@ -41,8 +181,7 @@ void main() {
         tester,
       ) async {
         await pumpScreen(tester);
-        await tester.tap(find.text('Requests'));
-        await tester.pumpAndSettle();
+        await openTab(tester, 'Requests');
 
         expect(find.text('Priya Raman'), findsOneWidget);
         expect(find.textContaining('Lisbon'), findsNothing);
@@ -54,33 +193,26 @@ void main() {
         expect(find.textContaining('Lisbon'), findsOneWidget);
       });
 
+      testWidgets('opening a request clears its unread count', (tester) async {
+        await pumpScreen(tester);
+        await openTab(tester, 'Requests');
+        final before = int.parse(badgeOn('Requests').split('|').last);
+
+        await tester.tap(find.text('Priya Raman'));
+        await tester.pumpAndSettle();
+
+        expect(badgeOn('Requests'), equals('Requests|${before - 1}'));
+      });
+
       testWidgets('counts pinned official rows in the Inbox badge', (
         tester,
       ) async {
         await pumpScreen(tester);
 
-        String badgeOn(String tab) {
-          final label = find.ancestor(
-            of: find.text(tab),
-            matching: find.byType(Tab),
-          );
-          return find
-              .descendant(of: label, matching: find.byType(Text))
-              .evaluate()
-              .map((e) => (e.widget as Text).data)
-              .join('|');
-        }
-
         expect(badgeOn('Inbox'), equals('Inbox|2'));
         expect(badgeOn('Official'), equals('Official|2'));
 
-        // Move Official into Inbox; its rows now render there.
-        await tester.tap(find.text('Tune'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Official gets its own tab'));
-        await tester.pumpAndSettle();
-        await tester.pageBack();
-        await tester.pumpAndSettle();
+        await saveTuningWith(tester, 'Official gets its own tab');
 
         expect(find.text('Official'), findsNothing);
         expect(find.text('Divine Support'), findsOneWidget);
@@ -93,17 +225,178 @@ void main() {
         tester,
       ) async {
         await pumpScreen(tester);
-        await tester.tap(find.text('Official'));
-        await tester.pumpAndSettle();
+        await openTab(tester, 'Official');
 
         expect(find.text('Divine Support'), findsOneWidget);
         expect(find.textContaining('report you filed'), findsOneWidget);
-        expect(
-          find.textContaining('cannot be blocked'),
-          findsWidgets,
-        );
+        expect(find.textContaining('cannot be blocked'), findsWidgets);
         expect(find.text('Liz · Divine team'), findsOneWidget);
         expect(find.text('Reportable · blockable'), findsWidgets);
+      });
+
+      testWidgets('blocks a hidden request without opening it', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await pumpScreen(tester);
+        await openTab(tester, 'Requests');
+
+        await tapLabel(tester, 'Block Priya Raman');
+
+        expect(find.text('Priya Raman'), findsNothing);
+        expect(find.textContaining('Lisbon'), findsNothing);
+        expect(find.text('Blocked Priya Raman.'), findsOneWidget);
+        semantics.dispose();
+      });
+
+      testWidgets('deletes a hidden request without opening it', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await pumpScreen(tester);
+        await openTab(tester, 'Requests');
+
+        await tapLabel(tester, 'Delete request from Tobias Lund');
+
+        expect(find.text('Tobias Lund'), findsNothing);
+        expect(find.textContaining('quick question'), findsNothing);
+        expect(find.text('Priya Raman'), findsOneWidget);
+        semantics.dispose();
+      });
+
+      testWidgets('reporting a hidden request removes it', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpScreen(tester);
+        await openTab(tester, 'Requests');
+
+        await tapLabel(tester, 'Report Nadia Broussard');
+
+        expect(find.text('Nadia Broussard'), findsNothing);
+        expect(
+          find.text('Reported and removed from your requests.'),
+          findsOneWidget,
+        );
+        semantics.dispose();
+      });
+
+      testWidgets('cancelling a reply leaves the request in place', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await pumpScreen(tester);
+        await openTab(tester, 'Requests');
+        await tester.tap(find.text('Priya Raman'));
+        await tester.pumpAndSettle();
+
+        await tapLabel(tester, 'Reply to Priya Raman');
+        expect(find.byType(TextField), findsOneWidget);
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+
+        expect(find.text('Priya Raman'), findsOneWidget);
+        expect(find.textContaining('Moved to Inbox'), findsNothing);
+        semantics.dispose();
+      });
+
+      testWidgets('a sent reply moves the request to Inbox', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpScreen(tester);
+        await openTab(tester, 'Requests');
+        await tester.tap(find.text('Priya Raman'));
+        await tester.pumpAndSettle();
+        await tapLabel(tester, 'Reply to Priya Raman');
+
+        await tester.enterText(find.byType(TextField), 'yes! still filming');
+        await tester.pump();
+        await tester.tap(find.text('Send'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Reply sent. Moved to Inbox.'), findsOneWidget);
+        expect(find.text('Priya Raman'), findsNothing);
+        await openTab(tester, 'Inbox');
+        expect(find.text('Priya Raman'), findsOneWidget);
+        semantics.dispose();
+      });
+
+      testWidgets('not spam survives a change to the weights', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpScreen(tester);
+        await openTab(tester, 'Likely spam');
+
+        await tapLabel(
+          tester,
+          'Not spam: move crypto_signals_daily to Requests',
+        );
+        expect(find.text('crypto_signals_daily'), findsNothing);
+
+        await saveTuningWith(tester, 'Remix');
+        await openTab(tester, 'Requests');
+
+        expect(find.text('crypto_signals_daily'), findsOneWidget);
+        semantics.dispose();
+      });
+
+      testWidgets('holds back message facts until the request is opened', (
+        tester,
+      ) async {
+        await pumpScreen(tester);
+        await openTab(tester, 'Requests');
+        final camille = rowOf('Camille Ndiaye');
+
+        await tester.tap(
+          find.descendant(
+            of: camille,
+            matching: find.text('Why is this here?'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.descendant(of: camille, matching: find.text('Follows you')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: camille,
+            matching: find.text('First message contains a link'),
+          ),
+          findsNothing,
+        );
+
+        await tester.tap(find.text('Camille Ndiaye'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.descendant(
+            of: camille,
+            matching: find.text('First message contains a link'),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('a new presentation resets the session and shows caution', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await pumpScreen(tester);
+        await openTab(tester, 'Requests');
+        await tapLabel(tester, 'Delete request from Tobias Lund');
+        expect(find.text('Tobias Lund'), findsNothing);
+
+        await saveTuningWith(tester, 'Context and a caution label');
+        await openTab(tester, 'Requests');
+
+        expect(find.text('Tobias Lund'), findsOneWidget);
+        expect(find.text('Why is this here?'), findsNothing);
+        expect(
+          find.descendant(
+            of: rowOf('Jules Amari'),
+            matching: find.text('First seen recently'),
+          ),
+          findsOneWidget,
+        );
+        semantics.dispose();
       });
     });
   });

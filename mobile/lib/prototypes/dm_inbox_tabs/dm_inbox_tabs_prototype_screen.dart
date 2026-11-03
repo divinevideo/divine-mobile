@@ -8,26 +8,17 @@
 // the moment the wording changes. l10n happens when the shape is decided.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_classifier.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_fixtures.dart';
+import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_prototype_session.dart';
+import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_prototype_settings.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tuning_view.dart';
+import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/router/route_paths.dart';
-
-/// Where the Official bucket is rendered.
-enum OfficialPlacement {
-  /// Official gets its own tab. Findable and impersonation-resistant, but it
-  /// is a fifth place to look — a support message about a report lands
-  /// somewhere the user is not looking by default.
-  ownTab,
-
-  /// Official is pinned to the top of Inbox. Matches "official messages go
-  /// directly to the inbox" literally, still visually distinct, still
-  /// unblockable.
-  pinnedInInbox,
-}
 
 /// Four-tab DM inbox prototype.
 class DmInboxTabsPrototypeScreen extends StatefulWidget {
@@ -45,18 +36,17 @@ class _DmInboxTabsPrototypeScreenState extends State<DmInboxTabsPrototypeScreen>
     with TickerProviderStateMixin, ReducedMotionTabControllerMixin {
   final DmInboxFixtures _fixtures = DmInboxFixtures.build();
 
-  DmSpamHeuristics _heuristics = const DmSpamHeuristics();
-  OfficialPlacement _placement = OfficialPlacement.ownTab;
+  DmPrototypeSettings _settings = const DmPrototypeSettings();
 
-  /// Conversations the user has affirmatively opened. Until then the preview
-  /// text stays concealed — that is the whole point of the requests bucket.
-  final _revealed = <String>{};
+  /// What the participant has opened, replied to, marked or removed. Until a
+  /// request is opened its preview text stays concealed.
+  DmPrototypeSession _session = const DmPrototypeSession();
 
-  /// Rows whose scoring breakdown is expanded.
+  /// Rows whose reasons are expanded.
   final _explained = <String>{};
 
   @override
-  int get tabCount => _placement == OfficialPlacement.ownTab ? 4 : 3;
+  int get tabCount => _settings.placement == OfficialPlacement.ownTab ? 4 : 3;
 
   @override
   void onTabChanged() => setState(() {});
@@ -67,19 +57,8 @@ class _DmInboxTabsPrototypeScreenState extends State<DmInboxTabsPrototypeScreen>
     syncTabController();
   }
 
-  DmInboxClassification get _classification =>
-      DmInboxClassifier(
-        officialIdentities: _fixtures.officialIdentities,
-        heuristics: _heuristics,
-      ).classify(
-        _fixtures.dmConversations,
-        userPubkey: _fixtures.userPubkey,
-        isFollowing: _fixtures.isFollowing,
-        signalsFor: _fixtures.signalsFor,
-        messageSignalsFor: _fixtures.messageSignalsFor,
-      );
-
-  List<DmInboxBucket> get _tabs => _placement == OfficialPlacement.ownTab
+  List<DmInboxBucket> get _tabs =>
+      _settings.placement == OfficialPlacement.ownTab
       ? const [
           DmInboxBucket.inbox,
           DmInboxBucket.official,
@@ -93,29 +72,81 @@ class _DmInboxTabsPrototypeScreenState extends State<DmInboxTabsPrototypeScreen>
         ];
 
   Future<void> _openTuning() async {
-    final updated = await Navigator.of(context).push<DmSpamHeuristics>(
-      MaterialPageRoute<DmSpamHeuristics>(
-        builder: (_) => DmInboxTuningView(
-          heuristics: _heuristics,
-          placement: _placement,
-          onPlacementChanged: (placement) {
-            setState(() {
-              _placement = placement;
-              syncTabController(index: 0);
-            });
-          },
-        ),
+    final updated = await Navigator.of(context).push<DmPrototypeSettings>(
+      MaterialPageRoute<DmPrototypeSettings>(
+        builder: (_) => DmInboxTuningView(settings: _settings),
       ),
     );
-    if (updated != null && mounted) {
-      setState(() => _heuristics = updated);
-    }
+    if (updated == null || !mounted) return;
+    setState(() {
+      // A new condition starts from the same state as every other one.
+      if (updated.presentation != _settings.presentation) {
+        _session = const DmPrototypeSession();
+        _explained.clear();
+      }
+      final placementChanged = updated.placement != _settings.placement;
+      _settings = updated;
+      if (placementChanged) syncTabController(index: 0);
+    });
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _reply(DmConversation conversation) async {
+    final sent = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) =>
+            _ReplyComposer(recipient: _fixtures.titleFor(conversation)),
+      ),
+    );
+    if (sent != true || !mounted) return;
+    setState(() => _session = _session.reply(conversation.id));
+    _showMessage('Reply sent. Moved to Inbox.');
+  }
+
+  void _markNotSpam(String id) {
+    setState(() => _session = _session.markNotSpam(id));
+    _showMessage('Moved to Requests.');
+  }
+
+  void _delete(String id) {
+    setState(() => _session = _session.remove(id));
+    _showMessage('Deleted.');
+  }
+
+  void _report(String id) {
+    setState(() => _session = _session.remove(id));
+    _showMessage('Reported and removed from your requests.');
+  }
+
+  void _block(String pubkey) {
+    setState(() => _session = _session.block(pubkey));
+    _showMessage('Blocked ${_fixtures.displayNameFor(pubkey)}.');
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.vineColors;
-    final classification = _classification;
+    final classification = classifyPrototype(
+      fixtures: _fixtures,
+      settings: _settings,
+      session: _session,
+    );
+    final actions = _RowActions(
+      onReveal: (id) => setState(() => _session = _session.reveal(id)),
+      onToggleExplain: (id) => setState(() {
+        if (!_explained.remove(id)) _explained.add(id);
+      }),
+      onReply: _reply,
+      onNotSpam: _markNotSpam,
+      onDelete: _delete,
+      onReport: _report,
+      onBlock: _block,
+    );
 
     return Scaffold(
       backgroundColor: colors.background,
@@ -149,7 +180,7 @@ class _DmInboxTabsPrototypeScreenState extends State<DmInboxTabsPrototypeScreen>
             controller: tabController,
             tabs: _tabs,
             classification: classification,
-            placement: _placement,
+            placement: _settings.placement,
           ),
           Divider(height: 1, thickness: 1, color: colors.outlineDisabled),
           Expanded(
@@ -162,18 +193,16 @@ class _DmInboxTabsPrototypeScreenState extends State<DmInboxTabsPrototypeScreen>
                     conversations: _sorted(classification.bucket(bucket)),
                     classification: classification,
                     fixtures: _fixtures,
-                    revealed: _revealed,
+                    settings: _settings,
+                    session: _session,
                     explained: _explained,
-                    threshold: _heuristics.spamThreshold,
                     pinnedOfficial:
                         bucket == DmInboxBucket.inbox &&
-                            _placement == OfficialPlacement.pinnedInInbox
+                            _settings.placement ==
+                                OfficialPlacement.pinnedInInbox
                         ? _sorted(classification.official)
                         : const [],
-                    onReveal: (id) => setState(() => _revealed.add(id)),
-                    onToggleExplain: (id) => setState(() {
-                      if (!_explained.remove(id)) _explained.add(id);
-                    }),
+                    actions: actions,
                   ),
               ],
             ),
@@ -186,6 +215,27 @@ class _DmInboxTabsPrototypeScreenState extends State<DmInboxTabsPrototypeScreen>
   List<DmConversation> _sorted(List<DmConversation> conversations) =>
       [...conversations]
         ..sort((a, b) => b.effectiveTimestamp.compareTo(a.effectiveTimestamp));
+}
+
+/// What a row can ask the screen to do.
+class _RowActions {
+  const _RowActions({
+    required this.onReveal,
+    required this.onToggleExplain,
+    required this.onReply,
+    required this.onNotSpam,
+    required this.onDelete,
+    required this.onReport,
+    required this.onBlock,
+  });
+
+  final ValueChanged<String> onReveal;
+  final ValueChanged<String> onToggleExplain;
+  final ValueChanged<DmConversation> onReply;
+  final ValueChanged<String> onNotSpam;
+  final ValueChanged<String> onDelete;
+  final ValueChanged<String> onReport;
+  final ValueChanged<String> onBlock;
 }
 
 class _PrototypeStrip extends StatelessWidget {
@@ -373,24 +423,22 @@ class _BucketList extends StatelessWidget {
     required this.conversations,
     required this.classification,
     required this.fixtures,
-    required this.revealed,
+    required this.settings,
+    required this.session,
     required this.explained,
-    required this.threshold,
     required this.pinnedOfficial,
-    required this.onReveal,
-    required this.onToggleExplain,
+    required this.actions,
   });
 
   final DmInboxBucket bucket;
   final List<DmConversation> conversations;
   final DmInboxClassification classification;
   final DmInboxFixtures fixtures;
-  final Set<String> revealed;
+  final DmPrototypeSettings settings;
+  final DmPrototypeSession session;
   final Set<String> explained;
-  final int threshold;
   final List<DmConversation> pinnedOfficial;
-  final ValueChanged<String> onReveal;
-  final ValueChanged<String> onToggleExplain;
+  final _RowActions actions;
 
   @override
   Widget build(BuildContext context) {
@@ -411,13 +459,12 @@ class _BucketList extends StatelessWidget {
           conversation: conversation,
           fixtures: fixtures,
           verdict: classification.verdicts[conversation.id],
-          threshold: threshold,
+          settings: settings,
           // A pinned official row keeps official semantics inside Inbox.
           bucket: isPinned ? DmInboxBucket.official : bucket,
-          revealed: revealed.contains(conversation.id),
+          revealed: session.isRevealed(conversation.id),
           explained: explained.contains(conversation.id),
-          onReveal: () => onReveal(conversation.id),
-          onToggleExplain: () => onToggleExplain(conversation.id),
+          actions: actions,
         );
       },
     );
@@ -503,23 +550,25 @@ class _ConversationRow extends StatelessWidget {
     required this.conversation,
     required this.fixtures,
     required this.verdict,
-    required this.threshold,
+    required this.settings,
     required this.bucket,
     required this.revealed,
     required this.explained,
-    required this.onReveal,
-    required this.onToggleExplain,
+    required this.actions,
   });
+
+  /// Width of the avatar plus its gap, so request details line up under the
+  /// title.
+  static const _detailsInset = 58.0;
 
   final DmConversation conversation;
   final DmInboxFixtures fixtures;
   final DmVerdict? verdict;
-  final int threshold;
+  final DmPrototypeSettings settings;
   final DmInboxBucket bucket;
   final bool revealed;
   final bool explained;
-  final VoidCallback onReveal;
-  final VoidCallback onToggleExplain;
+  final _RowActions actions;
 
   bool get _isOfficial => bucket == DmInboxBucket.official;
 
@@ -532,62 +581,56 @@ class _ConversationRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.vineColors;
     final title = fixtures.titleFor(conversation);
-    final unread = !conversation.isRead;
+    final verdict = this.verdict;
 
-    return Semantics(
-      button: _concealed,
-      label: _concealed
-          ? 'Message request from $title, content hidden. Tap to open.'
-          : 'Conversation with $title',
-      child: InkWell(
-        onTap: _concealed ? onReveal : null,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: colors.outlineDisabled, width: 0.5),
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 14,
-            children: [
-              _Avatar(
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: colors.outlineDisabled, width: 0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 10,
+        children: [
+          Semantics(
+            container: true,
+            button: _concealed,
+            label: _concealed
+                ? 'Message request from $title, content hidden. Tap to open.'
+                : 'Conversation with $title',
+            child: InkWell(
+              onTap: _concealed
+                  ? () => actions.onReveal(conversation.id)
+                  : null,
+              child: _RowHeader(
+                conversation: conversation,
                 title: title,
                 isOfficial: _isOfficial,
                 concealed: _concealed,
+                timestamp: _relativeTime(),
+                officialIdentity: _isOfficial
+                    ? verdict?.officialIdentity
+                    : null,
               ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 3,
-                  children: [
-                    _TitleRow(
-                      title: title,
-                      unread: unread,
-                      isOfficial: _isOfficial,
-                      timestamp: _relativeTime(),
-                    ),
-                    _PreviewText(
-                      conversation: conversation,
-                      concealed: _concealed,
-                      unread: unread,
-                    ),
-                    if (_isOfficial && verdict?.officialIdentity != null)
-                      _OfficialFooter(identity: verdict!.officialIdentity!),
-                    if (_isScored && verdict != null)
-                      _RiskFooter(
-                        verdict: verdict!,
-                        threshold: threshold,
-                        expanded: explained,
-                        onToggle: onToggleExplain,
-                      ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          if (_isScored && verdict != null)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: _detailsInset),
+              child: _RequestDetails(
+                conversation: conversation,
+                title: title,
+                fixtures: fixtures,
+                verdict: verdict,
+                settings: settings,
+                concealed: _concealed,
+                explained: explained,
+                actions: actions,
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -600,6 +643,57 @@ class _ConversationRow extends StatelessWidget {
     if (elapsed.inMinutes < 60) return '${elapsed.inMinutes}m';
     if (elapsed.inHours < 24) return '${elapsed.inHours}h';
     return '${elapsed.inDays}d';
+  }
+}
+
+class _RowHeader extends StatelessWidget {
+  const _RowHeader({
+    required this.conversation,
+    required this.title,
+    required this.isOfficial,
+    required this.concealed,
+    required this.timestamp,
+    required this.officialIdentity,
+  });
+
+  final DmConversation conversation;
+  final String title;
+  final bool isOfficial;
+  final bool concealed;
+  final String timestamp;
+  final DivineOfficialIdentity? officialIdentity;
+
+  @override
+  Widget build(BuildContext context) {
+    final unread = !conversation.isRead;
+    final identity = officialIdentity;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 14,
+      children: [
+        _Avatar(title: title, isOfficial: isOfficial, concealed: concealed),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 3,
+            children: [
+              _TitleRow(
+                title: title,
+                unread: unread,
+                isOfficial: isOfficial,
+                timestamp: timestamp,
+              ),
+              _PreviewText(
+                conversation: conversation,
+                concealed: concealed,
+                unread: unread,
+              ),
+              if (identity != null) _OfficialFooter(identity: identity),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -622,23 +716,31 @@ class _TitleRow extends StatelessWidget {
     return Row(
       spacing: 6,
       children: [
-        Flexible(
-          child: Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: unread
-                ? VineTheme.titleSmallFont(color: colors.primaryText)
-                : VineTheme.bodyLargeFont(color: colors.primaryText),
+        // Expanded, not Flexible beside a Spacer: the two split the free
+        // width, which cut names off with half the row still empty.
+        Expanded(
+          child: Row(
+            spacing: 6,
+            children: [
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: unread
+                      ? VineTheme.titleSmallFont(color: colors.primaryText)
+                      : VineTheme.bodyLargeFont(color: colors.primaryText),
+                ),
+              ),
+              if (isOfficial)
+                const DivineIcon(
+                  icon: DivineIconName.sealCheckFill,
+                  color: VineTheme.primary,
+                  size: 15,
+                ),
+            ],
           ),
         ),
-        if (isOfficial)
-          const DivineIcon(
-            icon: DivineIconName.sealCheckFill,
-            color: VineTheme.primary,
-            size: 15,
-          ),
-        const Spacer(),
         Text(
           timestamp,
           style: VineTheme.bodySmallFont(color: colors.onSurfaceMuted),
@@ -772,48 +874,170 @@ class _PreviewText extends StatelessWidget {
   }
 }
 
-/// The "Why is this here?" affordance.
-///
-/// Collapsed it is one quiet line; expanded it lists the signals that fired.
-/// A real build would not show the numeric score or the threshold — that is
-/// an evasion recipe — but this is the tuning surface, so it does.
-class _RiskFooter extends StatelessWidget {
-  const _RiskFooter({
+/// Everything under a request's header: who the sender is, why it is here,
+/// and what the user can do about it — all usable before it is opened.
+class _RequestDetails extends StatelessWidget {
+  const _RequestDetails({
+    required this.conversation,
+    required this.title,
+    required this.fixtures,
     required this.verdict,
-    required this.threshold,
+    required this.settings,
+    required this.concealed,
+    required this.explained,
+    required this.actions,
+  });
+
+  final DmConversation conversation;
+  final String title;
+  final DmInboxFixtures fixtures;
+  final DmVerdict verdict;
+  final DmPrototypeSettings settings;
+  final bool concealed;
+  final bool explained;
+  final _RowActions actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final counterparty = soleCounterparty(conversation, fixtures.userPubkey);
+    // Facts about the hidden message wait until it is opened (D8). The
+    // facilitator view shows them so the score stays explainable.
+    final includeMessageReasons = !concealed || settings.showScores;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 8,
+      children: [
+        if (counterparty != null)
+          _SenderContext(
+            signals: fixtures.signalsFor(counterparty),
+            mutualName: fixtures.mutualNameFor(counterparty),
+          ),
+        switch (settings.presentation) {
+          RequestPresentation.contextOnly => const SizedBox.shrink(),
+          RequestPresentation.contextWithReasons => _ReasonsPanel(
+            verdict: verdict,
+            includeMessageReasons: includeMessageReasons,
+            showScores: settings.showScores,
+            expanded: explained,
+            onToggle: () => actions.onToggleExplain(conversation.id),
+          ),
+          RequestPresentation.contextWithCaution => _CautionLine(
+            reason: cautionReason(
+              verdict,
+              includeMessageReasons: includeMessageReasons,
+            ),
+          ),
+        },
+        if (settings.showScores)
+          _FacilitatorScore(
+            score: verdict.score,
+            threshold: settings.heuristics.spamThreshold,
+            isSpam: verdict.bucket == DmInboxBucket.likelySpam,
+          ),
+        _RequestActionBar(
+          conversation: conversation,
+          title: title,
+          counterparty: counterparty,
+          isSpam: verdict.bucket == DmInboxBucket.likelySpam,
+          concealed: concealed,
+          actions: actions,
+        ),
+      ],
+    );
+  }
+}
+
+/// Videos, a mutual connection and loops, as facts with no safety verdict.
+class _SenderContext extends ConsumerWidget {
+  const _SenderContext({required this.signals, required this.mutualName});
+
+  final DmSenderSignals signals;
+  final String? mutualName;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsVisibility = ref.watch(statsVisibilityPreferencesProvider);
+    return ListenableBuilder(
+      listenable: statsVisibility,
+      builder: (context, _) {
+        final parts = senderContextParts(
+          signals,
+          // The viewer's choice on profiles applies here too.
+          showLoops: statsVisibility.showTotalLoops,
+          mutualName: mutualName,
+        );
+        if (parts.isEmpty) return const SizedBox.shrink();
+        final style = VineTheme.bodySmallFont(
+          color: context.vineColors.onSurfaceVariant,
+        );
+        return Semantics(
+          container: true,
+          label: 'About this sender: ${parts.join(', ')}',
+          excludeSemantics: true,
+          // Wraps rather than truncating, so a long mutual name and large
+          // text sizes stay readable; the order keeps videos first.
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 2,
+            children: [
+              for (final (index, part) in parts.indexed) ...[
+                if (index > 0) Text('·', style: style),
+                Text(part, style: style),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The "Why is this here?" affordance: one quiet line that expands into the
+/// plain-language reasons. Points only appear in the facilitator view.
+class _ReasonsPanel extends StatelessWidget {
+  const _ReasonsPanel({
+    required this.verdict,
+    required this.includeMessageReasons,
+    required this.showScores,
     required this.expanded,
     required this.onToggle,
   });
 
   final DmVerdict verdict;
-  final int threshold;
+  final bool includeMessageReasons;
+  final bool showScores;
   final bool expanded;
   final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
-    if (verdict.reasons.isEmpty) return const SizedBox.shrink();
+    final reasons = visibleReasons(
+      verdict,
+      includeMessageReasons: includeMessageReasons,
+    );
+    if (reasons.isEmpty) return const SizedBox.shrink();
     final colors = context.vineColors;
-    final isSpam = verdict.bucket == DmInboxBucket.likelySpam;
-    final accent = isSpam ? VineTheme.error : colors.onSurfaceMuted;
+    final accent = verdict.bucket == DmInboxBucket.likelySpam
+        ? VineTheme.error
+        : colors.onSurfaceMuted;
 
-    return Padding(
-      padding: const EdgeInsets.only(top: 9),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 8,
-        children: [
-          Semantics(
-            button: true,
-            label: expanded ? 'Hide reasons' : 'Why is this here?',
-            child: InkWell(
-              onTap: onToggle,
-              borderRadius: const BorderRadius.all(Radius.circular(8)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 8,
+      children: [
+        Semantics(
+          button: true,
+          label: expanded ? 'Hide reasons' : 'Why is this here?',
+          excludeSemantics: true,
+          child: InkWell(
+            onTap: onToggle,
+            borderRadius: const BorderRadius.all(Radius.circular(8)),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 32),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 spacing: 7,
                 children: [
-                  _ScorePill(score: verdict.score, isSpam: isSpam),
                   Text(
                     expanded ? 'Hide reasons' : 'Why is this here?',
                     style: VineTheme.labelSmallFont(color: accent),
@@ -829,17 +1053,111 @@ class _RiskFooter extends StatelessWidget {
               ),
             ),
           ),
-          if (expanded) _ReasonList(verdict: verdict, threshold: threshold),
+        ),
+        if (expanded)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors.surfaceContainer.withValues(alpha: 0.55),
+              borderRadius: const BorderRadius.all(Radius.circular(10)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 6,
+              children: [
+                for (final reason in reasons)
+                  _ReasonRow(reason: reason, showPoints: showScores),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ReasonRow extends StatelessWidget {
+  const _ReasonRow({required this.reason, required this.showPoints});
+
+  final DmRiskReason reason;
+  final bool showPoints;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vineColors;
+    final tint = reason.isMitigating ? colors.accentPositive : VineTheme.error;
+    return Row(
+      spacing: 8,
+      children: [
+        DivineIcon(
+          icon: reason.isMitigating
+              ? DivineIconName.checkCircle
+              : DivineIconName.warningCircle,
+          color: tint,
+          size: 13,
+        ),
+        Expanded(
+          child: Text(
+            reason.label,
+            style: VineTheme.bodySmallFont(color: colors.onSurfaceVariant),
+          ),
+        ),
+        if (showPoints)
+          Text(
+            '${reason.points > 0 ? '+' : ''}${reason.points}',
+            style: VineTheme.labelMediumFont(color: tint),
+          ),
+      ],
+    );
+  }
+}
+
+/// One line of factual caution, such as "First seen recently".
+class _CautionLine extends StatelessWidget {
+  const _CautionLine({required this.reason});
+
+  final DmRiskReason? reason;
+
+  @override
+  Widget build(BuildContext context) {
+    final reason = this.reason;
+    if (reason == null) return const SizedBox.shrink();
+    final colors = context.vineColors;
+    return Semantics(
+      container: true,
+      label: 'Caution: ${reason.label}',
+      excludeSemantics: true,
+      child: Row(
+        spacing: 6,
+        children: [
+          DivineIcon(
+            icon: DivineIconName.warningCircle,
+            color: colors.onSurfaceVariant,
+            size: 13,
+          ),
+          Flexible(
+            child: Text(
+              reason.label,
+              style: VineTheme.bodySmallFont(color: colors.onSurfaceVariant),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _ScorePill extends StatelessWidget {
-  const _ScorePill({required this.score, required this.isSpam});
+/// The numeric score and threshold. Facilitator view only: shown to a
+/// participant, the numbers are an evasion recipe.
+class _FacilitatorScore extends StatelessWidget {
+  const _FacilitatorScore({
+    required this.score,
+    required this.threshold,
+    required this.isSpam,
+  });
 
   final int score;
+  final int threshold;
   final bool isSpam;
 
   @override
@@ -855,7 +1173,7 @@ class _ScorePill extends StatelessWidget {
           borderRadius: const BorderRadius.all(Radius.circular(6)),
         ),
         child: Text(
-          'risk $score',
+          'risk $score · filtered at $threshold',
           style: VineTheme.labelSmallFont(
             color: isSpam ? VineTheme.error : colors.onSurfaceMuted,
           ),
@@ -865,70 +1183,140 @@ class _ScorePill extends StatelessWidget {
   }
 }
 
-class _ReasonList extends StatelessWidget {
-  const _ReasonList({required this.verdict, required this.threshold});
+/// Request actions. Block, Report and Delete work on a hidden request, so
+/// nobody has to read unwanted content to reject it. Reply needs it opened.
+class _RequestActionBar extends StatelessWidget {
+  const _RequestActionBar({
+    required this.conversation,
+    required this.title,
+    required this.counterparty,
+    required this.isSpam,
+    required this.concealed,
+    required this.actions,
+  });
 
-  final DmVerdict verdict;
-  final int threshold;
+  final DmConversation conversation;
+  final String title;
+
+  /// Null for a group, which has no single sender to block.
+  final String? counterparty;
+  final bool isSpam;
+  final bool concealed;
+  final _RowActions actions;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.vineColors;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainer.withValues(alpha: 0.55),
-        borderRadius: const BorderRadius.all(Radius.circular(10)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 6,
-        children: [
-          for (final reason in verdict.reasons) _ReasonRow(reason: reason),
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(
-              'Total ${verdict.score} · filtered at $threshold or above',
-              style: VineTheme.labelSmallFont(color: colors.onSurfaceMuted),
-            ),
+    final id = conversation.id;
+    final counterparty = this.counterparty;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        if (!concealed)
+          DivineButton(
+            label: 'Reply',
+            size: DivineButtonSize.small,
+            semanticLabel: 'Reply to $title',
+            onPressed: () => actions.onReply(conversation),
           ),
-        ],
-      ),
+        if (isSpam)
+          DivineButton(
+            label: 'Not spam',
+            size: DivineButtonSize.small,
+            type: DivineButtonType.secondary,
+            semanticLabel: 'Not spam: move $title to Requests',
+            onPressed: () => actions.onNotSpam(id),
+          ),
+        if (counterparty != null)
+          DivineButton(
+            label: 'Block',
+            size: DivineButtonSize.small,
+            type: DivineButtonType.secondary,
+            semanticLabel: 'Block $title',
+            onPressed: () => actions.onBlock(counterparty),
+          ),
+        DivineButton(
+          label: 'Report',
+          size: DivineButtonSize.small,
+          type: DivineButtonType.secondary,
+          semanticLabel: 'Report $title',
+          onPressed: () => actions.onReport(id),
+        ),
+        DivineButton(
+          label: 'Delete',
+          size: DivineButtonSize.small,
+          type: DivineButtonType.secondary,
+          semanticLabel: 'Delete request from $title',
+          onPressed: () => actions.onDelete(id),
+        ),
+      ],
     );
   }
 }
 
-class _ReasonRow extends StatelessWidget {
-  const _ReasonRow({required this.reason});
+/// Full-screen reply. Pops true only when the user sends; nothing is
+/// published from the prototype.
+class _ReplyComposer extends StatefulWidget {
+  const _ReplyComposer({required this.recipient});
 
-  final DmRiskReason reason;
+  final String recipient;
+
+  @override
+  State<_ReplyComposer> createState() => _ReplyComposerState();
+}
+
+class _ReplyComposerState extends State<_ReplyComposer> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.vineColors;
-    final tint = reason.isMitigating ? colors.accentPositive : VineTheme.error;
-    return Row(
-      spacing: 8,
-      children: [
-        DivineIcon(
-          icon: reason.isMitigating
-              ? DivineIconName.arrowDown
-              : DivineIconName.arrowUp,
-          color: tint,
-          size: 11,
+    final canSend = _controller.text.trim().isNotEmpty;
+    return Scaffold(
+      backgroundColor: colors.background,
+      appBar: AppBar(
+        backgroundColor: colors.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Text(
+          'Reply to ${widget.recipient}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: VineTheme.titleLargeFont(color: colors.primaryText),
         ),
-        Expanded(
-          child: Text(
-            reason.label,
-            style: VineTheme.bodySmallFont(color: colors.onSurfaceVariant),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        children: [
+          Text(
+            'Prototype: nothing is sent. Sending moves this request to Inbox.',
+            style: VineTheme.bodySmallFont(color: colors.onSurfaceMuted),
           ),
-        ),
-        Text(
-          '${reason.points > 0 ? '+' : ''}${reason.points}',
-          style: VineTheme.labelMediumFont(color: tint),
-        ),
-      ],
+          const SizedBox(height: 16),
+          DivineTextField(
+            controller: _controller,
+            labelText: 'Message',
+            minLines: 3,
+            maxLines: 6,
+            autofocus: true,
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.newline,
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 16),
+          DivineButton(
+            label: 'Send',
+            expanded: true,
+            onPressed: canSend ? () => Navigator.of(context).pop(true) : null,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -964,8 +1352,8 @@ extension on DmInboxBucket {
       'People you have not replied to. Open one to read it — nothing here is '
           'marked as seen until you do.',
     DmInboxBucket.likelySpam =>
-      'Filtered out of your requests. Nothing is deleted; open anything to '
-          'read it or move it back.',
+      'Filtered out of your requests. Nothing is deleted unless you delete '
+          'it. Mark anything as not spam to move it back.',
   };
 
   String get emptyCopy => switch (this) {

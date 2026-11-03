@@ -6,33 +6,47 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_classifier.dart';
-import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tabs_prototype_screen.dart';
+import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_prototype_settings.dart';
 
-/// Full-screen tuning panel. Pops the edited heuristics back to the caller.
+/// Full-screen tuning panel.
+///
+/// Save pops the edited [DmPrototypeSettings]; back pops nothing, which
+/// discards every edit.
 class DmInboxTuningView extends StatefulWidget {
-  const DmInboxTuningView({
-    required this.heuristics,
-    required this.placement,
-    required this.onPlacementChanged,
-    super.key,
-  });
+  const DmInboxTuningView({required this.settings, super.key});
 
-  final DmSpamHeuristics heuristics;
-  final OfficialPlacement placement;
-  final ValueChanged<OfficialPlacement> onPlacementChanged;
+  final DmPrototypeSettings settings;
 
   @override
   State<DmInboxTuningView> createState() => _DmInboxTuningViewState();
 }
 
 class _DmInboxTuningViewState extends State<DmInboxTuningView> {
-  late DmSpamHeuristics _heuristics = widget.heuristics;
-  late OfficialPlacement _placement = widget.placement;
+  late DmPrototypeSettings _settings = widget.settings;
 
-  void _update(DmSpamHeuristics next) => setState(() => _heuristics = next);
+  /// The recipe the current weights came from, or null once hand-edited.
+  String? _recipeName;
+  bool _edited = false;
+
+  String get _shieldLabel => _recipeName ?? (_edited ? 'Custom' : 'Default');
+
+  void _update(DmSpamHeuristics next) => setState(() {
+    _settings = _settings.copyWith(heuristics: next);
+    _recipeName = null;
+    _edited = true;
+  });
+
+  void _reset() => setState(() {
+    _settings = _settings.copyWith(heuristics: const DmSpamHeuristics());
+    _recipeName = null;
+    _edited = false;
+  });
 
   void _applyRecipe(String name, DmSpamHeuristics recipe) {
-    _update(recipe);
+    setState(() {
+      _settings = _settings.copyWith(heuristics: recipe);
+      _recipeName = name;
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('$name applied. Review the sliders before saving.'),
@@ -53,319 +67,342 @@ class _DmInboxTuningViewState extends State<DmInboxTuningView> {
   @override
   Widget build(BuildContext context) {
     final colors = context.vineColors;
-    final h = _heuristics;
+    final h = _settings.heuristics;
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) Navigator.of(context).pop(_heuristics);
-      },
-      child: Scaffold(
+    return Scaffold(
+      backgroundColor: colors.background,
+      appBar: AppBar(
         backgroundColor: colors.background,
-        appBar: AppBar(
-          backgroundColor: colors.background,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          titleSpacing: 4,
-          title: Text(
-            'My request filter',
-            style: VineTheme.titleLargeFont(color: colors.primaryText),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        titleSpacing: 4,
+        title: Text(
+          'My request filter',
+          style: VineTheme.titleLargeFont(color: colors.primaryText),
+        ),
+        actions: [
+          DivineIconButton(
+            icon: DivineIconName.share,
+            tooltip: 'Share filter recipe',
+            semanticLabel: 'Share filter recipe',
+            onPressed: _shareRecipe,
           ),
-          actions: [
-            DivineIconButton(
-              icon: DivineIconName.share,
-              tooltip: 'Share filter recipe',
-              semanticLabel: 'Share filter recipe',
-              onPressed: _shareRecipe,
-            ),
-            DivineIconButton(
-              icon: DivineIconName.arrowCounterClockwise,
-              tooltip: 'Reset to defaults',
-              semanticLabel: 'Reset to defaults',
-              onPressed: () => _update(const DmSpamHeuristics()),
-            ),
-            const SizedBox(width: 12),
-          ],
-        ),
-        body: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 48),
-          children: [
-            _FilterHero(onShare: _shareRecipe),
-            const SizedBox(height: 20),
-            _Section(
-              title: 'Remix a community filter',
-              icon: DivineIconName.users,
-              blurb:
-                  'Start with settings someone else shared, then make them '
-                  'yours. Recipes never include messages, contacts, or '
-                  'account data.',
-              children: [
-                _RecipeTile(
-                  title: 'Quiet Porch',
-                  author: 'Liz',
-                  description:
-                      'Strict on bursts and links; generous to creators.',
-                  onApply: () => _applyRecipe(
-                    'Quiet Porch',
-                    const DmSpamHeuristics(
-                      spamThreshold: 42,
-                      weightHighFanOut: 70,
-                      weightContainsLink: 45,
-                      weightReportedByOthers: 75,
-                      weightHasDivineVideos: -25,
-                      weightPriorPublicInteraction: -40,
+          DivineIconButton(
+            icon: DivineIconName.arrowCounterClockwise,
+            tooltip: 'Reset to defaults',
+            semanticLabel: 'Reset to defaults',
+            onPressed: _reset,
+          ),
+          const SizedBox(width: 12),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 48),
+        children: [
+          _FilterHero(label: _shieldLabel, onShare: _shareRecipe),
+          const SizedBox(height: 20),
+          _Section(
+            title: 'Remix a community filter',
+            icon: DivineIconName.users,
+            blurb:
+                'Start with settings someone else shared, then make them '
+                'yours. Recipes never include messages, contacts, or '
+                'account data.',
+            children: [
+              _RecipeTile(
+                title: 'Quiet Porch',
+                author: 'Liz',
+                description:
+                    'Strict on bursts and links; generous to creators.',
+                onApply: () => _applyRecipe(
+                  'Quiet Porch',
+                  const DmSpamHeuristics(
+                    spamThreshold: 42,
+                    weightHighFanOut: 70,
+                    weightContainsLink: 45,
+                    weightReportedByOthers: 75,
+                    weightHasDivineVideos: -25,
+                    weightPriorPublicInteraction: -40,
+                  ),
+                ),
+              ),
+              _RecipeTile(
+                title: 'Creator Open Door',
+                author: 'Community Safety',
+                description:
+                    'Welcomes established creators and trusted mutuals.',
+                onApply: () => _applyRecipe(
+                  'Creator Open Door',
+                  const DmSpamHeuristics(
+                    spamThreshold: 65,
+                    weightHighFanOut: 65,
+                    weightReportedByOthers: 80,
+                    weightPerMutualConnection: -18,
+                    weightHasDivineVideos: -30,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          _Section(
+            title: 'Research session',
+            icon: DivineIconName.eye,
+            blurb:
+                'For facilitators. Changing the presentation resets what '
+                'was opened, replied to or removed, so each condition '
+                'starts the same.',
+            children: [
+              for (final presentation in RequestPresentation.values)
+                DivineSelectableRow(
+                  title: presentation.label,
+                  subtitle: presentation.description,
+                  isSelected: _settings.presentation == presentation,
+                  onTap: () => setState(
+                    () => _settings = _settings.copyWith(
+                      presentation: presentation,
                     ),
                   ),
                 ),
-                _RecipeTile(
-                  title: 'Creator Open Door',
-                  author: 'Community Safety',
-                  description:
-                      'Welcomes established creators and trusted mutuals.',
-                  onApply: () => _applyRecipe(
-                    'Creator Open Door',
-                    const DmSpamHeuristics(
-                      spamThreshold: 65,
-                      weightHighFanOut: 65,
-                      weightReportedByOthers: 80,
-                      weightPerMutualConnection: -18,
-                      weightHasDivineVideos: -30,
-                    ),
-                  ),
+              DivineSwitchTile(
+                title: 'Show scores',
+                subtitle:
+                    'Numbers and the threshold on each row. Keep this off '
+                    'while a participant is using the app.',
+                value: _settings.showScores,
+                onChanged: (value) => setState(
+                  () => _settings = _settings.copyWith(showScores: value),
                 ),
-              ],
-            ),
-            _Section(
-              title: 'Layout',
-              icon: DivineIconName.sealCheckFill,
-              children: [
-                _PlacementPicker(
-                  placement: _placement,
-                  onChanged: (value) {
-                    setState(() => _placement = value);
-                    widget.onPlacementChanged(value);
-                  },
+              ),
+            ],
+          ),
+          _Section(
+            title: 'Layout',
+            icon: DivineIconName.sealCheckFill,
+            children: [
+              _PlacementPicker(
+                placement: _settings.placement,
+                onChanged: (value) => setState(
+                  () => _settings = _settings.copyWith(placement: value),
                 ),
-              ],
-            ),
-            _Section(
-              title: 'Threshold',
-              icon: DivineIconName.prohibit,
-              blurb:
-                  'A request collapses into Likely spam once its risk score '
-                  'reaches this. Lower catches more spam, and more innocent '
-                  'people with it.',
-              children: [
-                _Slider(
-                  label: 'Likely-spam threshold',
-                  value: h.spamThreshold,
-                  min: 10,
-                  max: 150,
-                  onChanged: (v) => _update(h.copyWith(spamThreshold: v)),
-                ),
-              ],
-            ),
-            _Section(
-              title: 'Risk signals',
-              icon: DivineIconName.warning,
-              accent: VineTheme.error,
-              blurb:
-                  'Added to the score when the signal fires. The strongest '
-                  'two are behavioural — what the sender did to other people '
-                  '— rather than anything about who they are.',
-              children: [
-                _Slider(
-                  label: 'Reported by other people',
-                  value: h.weightReportedByOthers,
-                  min: 0,
-                  max: 100,
-                  onChanged: (v) =>
-                      _update(h.copyWith(weightReportedByOthers: v)),
-                ),
-                _Slider(
-                  label: 'Messaged many new people recently',
-                  value: h.weightHighFanOut,
-                  min: 0,
-                  max: 100,
-                  onChanged: (v) => _update(h.copyWith(weightHighFanOut: v)),
-                ),
-                _Slider(
-                  label: 'New account',
-                  value: h.weightNewAccount,
-                  min: 0,
-                  max: 100,
-                  onChanged: (v) => _update(h.copyWith(weightNewAccount: v)),
-                ),
-                _Slider(
-                  label: 'Has not posted on Divine',
-                  value: h.weightNoDivineVideos,
-                  min: 0,
-                  max: 100,
-                  onChanged: (v) =>
-                      _update(h.copyWith(weightNoDivineVideos: v)),
-                ),
-                _Slider(
-                  label: 'No profile name or photo',
-                  value: h.weightNoProfileMetadata,
-                  min: 0,
-                  max: 100,
-                  onChanged: (v) =>
-                      _update(h.copyWith(weightNoProfileMetadata: v)),
-                ),
-                _Slider(
-                  label: 'No connections in common',
-                  value: h.weightNoMutualConnections,
-                  min: 0,
-                  max: 100,
-                  onChanged: (v) =>
-                      _update(h.copyWith(weightNoMutualConnections: v)),
-                ),
-                _Slider(
-                  label: 'First message contains a link',
-                  value: h.weightContainsLink,
-                  min: 0,
-                  max: 100,
-                  onChanged: (v) => _update(h.copyWith(weightContainsLink: v)),
-                ),
-                _Slider(
-                  label: 'First message contains media',
-                  value: h.weightContainsMedia,
-                  min: 0,
-                  max: 100,
-                  onChanged: (v) => _update(h.copyWith(weightContainsMedia: v)),
-                ),
-                _Slider(
-                  label: 'Added you to a group',
-                  value: h.weightUnknownGroupInvite,
-                  min: 0,
-                  max: 100,
-                  onChanged: (v) =>
-                      _update(h.copyWith(weightUnknownGroupInvite: v)),
-                ),
-              ],
-            ),
-            _Section(
-              title: 'Mitigating signals',
-              icon: DivineIconName.shieldCheck,
-              accent: VineTheme.primary,
-              blurb:
-                  'Subtracted from the score. These are what keep a real '
-                  'person with an unusual profile out of the spam bucket.',
-              children: [
-                _Slider(
-                  label: 'You have interacted before',
-                  value: -h.weightPriorPublicInteraction,
-                  min: 0,
-                  max: 100,
-                  onChanged: (v) =>
-                      _update(h.copyWith(weightPriorPublicInteraction: -v)),
-                ),
-                _Slider(
-                  label: 'Follows you',
-                  value: -h.weightFollowsMe,
-                  min: 0,
-                  max: 100,
-                  onChanged: (v) => _update(h.copyWith(weightFollowsMe: -v)),
-                ),
-                _Slider(
-                  label: 'Per connection in common',
-                  value: -h.weightPerMutualConnection,
-                  min: 0,
-                  max: 50,
-                  onChanged: (v) =>
-                      _update(h.copyWith(weightPerMutualConnection: -v)),
-                ),
-                _Slider(
-                  label: 'Posts on Divine',
-                  value: -h.weightHasDivineVideos,
-                  min: 0,
-                  max: 100,
-                  onChanged: (v) =>
-                      _update(h.copyWith(weightHasDivineVideos: -v)),
-                ),
-                _Slider(
-                  label: 'Long-standing account',
-                  value: -h.weightEstablishedAccount,
-                  min: 0,
-                  max: 100,
-                  onChanged: (v) =>
-                      _update(h.copyWith(weightEstablishedAccount: -v)),
-                ),
-              ],
-            ),
-            _Section(
-              title: 'Signal definitions',
-              icon: DivineIconName.info,
-              blurb:
-                  'There is no authoritative npub creation date, so account '
-                  'age means "days since Divine first observed a signed '
-                  'event".',
-              children: [
-                _Slider(
-                  label: 'New account is under',
-                  unit: 'days',
-                  value: h.newAccountDays,
-                  min: 1,
-                  max: 90,
-                  onChanged: (v) => _update(h.copyWith(newAccountDays: v)),
-                ),
-                _Slider(
-                  label: 'Long-standing account is over',
-                  unit: 'days',
-                  value: h.establishedAccountDays,
-                  min: 30,
-                  max: 730,
-                  onChanged: (v) =>
-                      _update(h.copyWith(establishedAccountDays: v)),
-                ),
-                _Slider(
-                  label: 'High fan-out is',
-                  unit: 'new chats',
-                  value: h.fanOutThreshold,
-                  min: 1,
-                  max: 100,
-                  onChanged: (v) => _update(h.copyWith(fanOutThreshold: v)),
-                ),
-                _Slider(
-                  label: 'Reported is',
-                  unit: 'reporters',
-                  value: h.reporterThreshold,
-                  min: 1,
-                  max: 25,
-                  onChanged: (v) => _update(h.copyWith(reporterThreshold: v)),
-                ),
-                _Slider(
-                  label: 'Connections stop counting after',
-                  value: h.mutualConnectionCap,
-                  min: 1,
-                  max: 20,
-                  onChanged: (v) => _update(h.copyWith(mutualConnectionCap: v)),
-                ),
-              ],
-            ),
-            DivineButton(
-              label: 'Save filter',
-              expanded: true,
-              onPressed: () => Navigator.of(context).pop(_heuristics),
-            ),
-            const SizedBox(height: 10),
-            DivineButton(
-              label: 'Share as a filter recipe',
-              leadingIcon: DivineIconName.shareNetwork,
-              expanded: true,
-              type: DivineButtonType.secondary,
-              onPressed: _shareRecipe,
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+          _Section(
+            title: 'Threshold',
+            icon: DivineIconName.prohibit,
+            blurb:
+                'A request collapses into Likely spam once its risk score '
+                'reaches this. Lower catches more spam, and more innocent '
+                'people with it.',
+            children: [
+              _Slider(
+                label: 'Likely-spam threshold',
+                value: h.spamThreshold,
+                min: 10,
+                max: 150,
+                onChanged: (v) => _update(h.copyWith(spamThreshold: v)),
+              ),
+            ],
+          ),
+          _Section(
+            title: 'Risk signals',
+            icon: DivineIconName.warning,
+            accent: VineTheme.error,
+            blurb:
+                'Added to the score when the signal fires. The strongest '
+                'two are behavioural — what the sender did to other people '
+                '— rather than anything about who they are.',
+            children: [
+              _Slider(
+                label: 'Reported by other people',
+                value: h.weightReportedByOthers,
+                min: 0,
+                max: 100,
+                onChanged: (v) =>
+                    _update(h.copyWith(weightReportedByOthers: v)),
+              ),
+              _Slider(
+                label: 'Messaged many new people recently',
+                value: h.weightHighFanOut,
+                min: 0,
+                max: 100,
+                onChanged: (v) => _update(h.copyWith(weightHighFanOut: v)),
+              ),
+              _Slider(
+                label: 'First seen recently',
+                value: h.weightNewAccount,
+                min: 0,
+                max: 100,
+                onChanged: (v) => _update(h.copyWith(weightNewAccount: v)),
+              ),
+              _Slider(
+                label: 'Has not posted on Divine',
+                value: h.weightNoDivineVideos,
+                min: 0,
+                max: 100,
+                onChanged: (v) => _update(h.copyWith(weightNoDivineVideos: v)),
+              ),
+              _Slider(
+                label: 'No profile name or photo',
+                value: h.weightNoProfileMetadata,
+                min: 0,
+                max: 100,
+                onChanged: (v) =>
+                    _update(h.copyWith(weightNoProfileMetadata: v)),
+              ),
+              _Slider(
+                label: 'No connections in common',
+                value: h.weightNoMutualConnections,
+                min: 0,
+                max: 100,
+                onChanged: (v) =>
+                    _update(h.copyWith(weightNoMutualConnections: v)),
+              ),
+              _Slider(
+                label: 'First message contains a link',
+                value: h.weightContainsLink,
+                min: 0,
+                max: 100,
+                onChanged: (v) => _update(h.copyWith(weightContainsLink: v)),
+              ),
+              _Slider(
+                label: 'First message contains media',
+                value: h.weightContainsMedia,
+                min: 0,
+                max: 100,
+                onChanged: (v) => _update(h.copyWith(weightContainsMedia: v)),
+              ),
+              _Slider(
+                label: 'Added you to a group',
+                value: h.weightUnknownGroupInvite,
+                min: 0,
+                max: 100,
+                onChanged: (v) =>
+                    _update(h.copyWith(weightUnknownGroupInvite: v)),
+              ),
+            ],
+          ),
+          _Section(
+            title: 'Mitigating signals',
+            icon: DivineIconName.shieldCheck,
+            accent: VineTheme.primary,
+            blurb:
+                'Subtracted from the score. These are what keep a real '
+                'person with an unusual profile out of the spam bucket.',
+            children: [
+              _Slider(
+                label: 'You have interacted before',
+                value: -h.weightPriorPublicInteraction,
+                min: 0,
+                max: 100,
+                onChanged: (v) =>
+                    _update(h.copyWith(weightPriorPublicInteraction: -v)),
+              ),
+              _Slider(
+                label: 'Follows you',
+                value: -h.weightFollowsMe,
+                min: 0,
+                max: 100,
+                onChanged: (v) => _update(h.copyWith(weightFollowsMe: -v)),
+              ),
+              _Slider(
+                label: 'Per connection in common',
+                value: -h.weightPerMutualConnection,
+                min: 0,
+                max: 50,
+                onChanged: (v) =>
+                    _update(h.copyWith(weightPerMutualConnection: -v)),
+              ),
+              _Slider(
+                label: 'Posts on Divine',
+                value: -h.weightHasDivineVideos,
+                min: 0,
+                max: 100,
+                onChanged: (v) =>
+                    _update(h.copyWith(weightHasDivineVideos: -v)),
+              ),
+              _Slider(
+                label: 'Seen on Divine for a long time',
+                value: -h.weightEstablishedAccount,
+                min: 0,
+                max: 100,
+                onChanged: (v) =>
+                    _update(h.copyWith(weightEstablishedAccount: -v)),
+              ),
+            ],
+          ),
+          _Section(
+            title: 'Signal definitions',
+            icon: DivineIconName.info,
+            blurb:
+                'There is no authoritative npub creation date, so these '
+                'count days since Divine first observed a signed event.',
+            children: [
+              _Slider(
+                label: 'First seen recently is under',
+                unit: 'days',
+                value: h.newAccountDays,
+                min: 1,
+                max: 90,
+                onChanged: (v) => _update(h.copyWith(newAccountDays: v)),
+              ),
+              _Slider(
+                label: 'Seen for a long time is over',
+                unit: 'days',
+                value: h.establishedAccountDays,
+                min: 30,
+                max: 730,
+                onChanged: (v) =>
+                    _update(h.copyWith(establishedAccountDays: v)),
+              ),
+              _Slider(
+                label: 'High fan-out is',
+                unit: 'new chats',
+                value: h.fanOutThreshold,
+                min: 1,
+                max: 100,
+                onChanged: (v) => _update(h.copyWith(fanOutThreshold: v)),
+              ),
+              _Slider(
+                label: 'Reported is',
+                unit: 'reporters',
+                value: h.reporterThreshold,
+                min: 1,
+                max: 25,
+                onChanged: (v) => _update(h.copyWith(reporterThreshold: v)),
+              ),
+              _Slider(
+                label: 'Connections stop counting after',
+                value: h.mutualConnectionCap,
+                min: 1,
+                max: 20,
+                onChanged: (v) => _update(h.copyWith(mutualConnectionCap: v)),
+              ),
+            ],
+          ),
+          DivineButton(
+            label: 'Save filter',
+            expanded: true,
+            onPressed: () => Navigator.of(context).pop(_settings),
+          ),
+          const SizedBox(height: 10),
+          DivineButton(
+            label: 'Share as a filter recipe',
+            leadingIcon: DivineIconName.shareNetwork,
+            expanded: true,
+            type: DivineButtonType.secondary,
+            onPressed: _shareRecipe,
+          ),
+        ],
       ),
     );
   }
 }
 
 class _FilterHero extends StatelessWidget {
-  const _FilterHero({required this.onShare});
+  const _FilterHero({required this.label, required this.onShare});
 
+  final String label;
   final VoidCallback onShare;
 
   @override
@@ -393,7 +430,7 @@ class _FilterHero extends StatelessWidget {
               spacing: 6,
               children: [
                 Text(
-                  'Shield: Balanced',
+                  'Shield: $label',
                   style: VineTheme.titleLargeFont(color: colors.primaryText),
                 ),
                 Text(
@@ -635,4 +672,21 @@ class _ValueChip extends StatelessWidget {
       ),
     );
   }
+}
+
+extension on RequestPresentation {
+  String get label => switch (this) {
+    RequestPresentation.contextOnly => 'Sender context only',
+    RequestPresentation.contextWithReasons => 'Context and reasons',
+    RequestPresentation.contextWithCaution => 'Context and a caution label',
+  };
+
+  String get description => switch (this) {
+    RequestPresentation.contextOnly =>
+      'Videos, loops and a mutual connection. No reasons.',
+    RequestPresentation.contextWithReasons =>
+      'Adds a "Why is this here?" control people can open.',
+    RequestPresentation.contextWithCaution =>
+      'Adds one line of factual caution, such as "First seen recently".',
+  };
 }
