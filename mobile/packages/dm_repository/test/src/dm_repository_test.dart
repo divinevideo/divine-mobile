@@ -6259,6 +6259,65 @@ void main() {
         });
       });
 
+      for (final (how, end)
+          in <(String, void Function(StreamController<Event>))>[
+            ('closes', (dms) => unawaited(dms.close())),
+            ('fails', (dms) => dms.addError(Exception('relay refused'))),
+          ]) {
+        test('ends the deletions REQ when the DM REQ $how and re-opens '
+            'both', () {
+          fakeAsync((async) {
+            final dms = <StreamController<Event>>[];
+            final deletions = <StreamController<Event>>[];
+            when(
+              () => mockNostrClient.subscribe(
+                any(that: isLiveDmRead),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer(
+              (_) => (dms..add(StreamController<Event>())).last.stream,
+            );
+            when(
+              () => mockNostrClient.subscribe(
+                any(that: isLiveDeletionsRead),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+              ),
+            ).thenAnswer(
+              (_) => (deletions..add(StreamController<Event>())).last.stream,
+            );
+            when(
+              () => mockNostrClient.unsubscribe(any()),
+            ).thenAnswer((_) async {});
+            final repository = createRepository();
+
+            unawaited(repository.startListening());
+            async.flushMicrotasks();
+            expect(deletions.single.hasListener, isTrue);
+
+            end(dms.single);
+            async.flushMicrotasks();
+            expect(
+              deletions.single.hasListener,
+              isFalse,
+              reason: 'the deletions REQ outlived the DM REQ it opened with',
+            );
+
+            async
+              ..elapse(const Duration(seconds: 3))
+              ..flushMicrotasks();
+            expect(dms, hasLength(2));
+            expect(deletions, hasLength(2));
+
+            unawaited(repository.stopListening());
+            async.flushMicrotasks();
+          });
+        });
+      }
+
       test('stopListening unsubscribes', () async {
         final controller = StreamController<Event>();
         when(
