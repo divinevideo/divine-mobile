@@ -920,7 +920,8 @@ class DmRepository {
   StreamSubscription<Event>? _giftWrapSubscription;
 
   /// The live kind-5 read, opened once [_giftWrapSubscription]'s stored
-  /// events end or its hold limit passes, and ended with it.
+  /// events end or its hold limit passes, and ended with it. A refusal from
+  /// every relay ends it alone.
   StreamSubscription<Event>? _deletionsSubscription;
 
   /// The live subscription's progress through stored events, or null while
@@ -1693,6 +1694,10 @@ class DmRepository {
         if (deletionsOpened || _disposed) return;
         if (!identical(_liveCatchUp, catchUp)) return;
         deletionsOpened = true;
+        // A refusal from every relay says nothing about the DMs, and asking
+        // again would be refused again, so it ends this REQ alone. The next
+        // subscription asks for the deletions again.
+        var refused = false;
         _deletionsSubscription = _nostrClient
             .subscribe(
               [deletionsFilter],
@@ -1706,6 +1711,15 @@ class DmRepository {
             .listen(
               _handleIncomingEvent,
               onError: (Object error) {
+                if (error is RelaySubscriptionRefusedException) {
+                  refused = true;
+                  Log.warning(
+                    'Every relay refused the live DM deletions REQ: '
+                    '${error.reason}; the DMs stay subscribed',
+                    category: LogCategory.system,
+                  );
+                  return;
+                }
                 Log.error(
                   'DM deletions subscription error: $error',
                   category: LogCategory.system,
@@ -1715,6 +1729,7 @@ class DmRepository {
                 if (!_disposed) _scheduleReconnect();
               },
               onDone: () {
+                if (refused) return;
                 _endLiveSubscriptions();
                 _dropLiveCatchUp(catchUp);
                 if (!_disposed) _scheduleReconnect();

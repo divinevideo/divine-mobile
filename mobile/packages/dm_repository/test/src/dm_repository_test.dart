@@ -6364,6 +6364,82 @@ void main() {
         });
       });
 
+      for (final (how, endDeletions, recovers)
+          in <(String, void Function(StreamController<Event>), bool)>[
+            (
+              'is refused by every relay',
+              // NostrClient reports a REQ every relay ended with CLOSED as
+              // this error, then closes its stream.
+              (deletions) {
+                deletions.addError(
+                  const RelaySubscriptionRefusedException('restricted: no'),
+                );
+                unawaited(deletions.close());
+              },
+              false,
+            ),
+            (
+              'fails for another reason',
+              (deletions) => deletions.addError(Exception('socket error')),
+              true,
+            ),
+          ]) {
+        test(
+          recovers
+              ? 'ends the DM REQ when its deletions REQ $how and re-opens both'
+              : 'keeps the DM REQ when its deletions REQ $how, and asks for '
+                    'neither again',
+          () {
+            fakeAsync((async) {
+              final dms = <StreamController<Event>>[];
+              final deletions = <StreamController<Event>>[];
+              when(
+                () => mockNostrClient.subscribe(
+                  any(that: isLiveDmRead),
+                  subscriptionId: any(named: 'subscriptionId'),
+                  tempRelays: any(named: 'tempRelays'),
+                  onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                  onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+                ),
+              ).thenAnswer(
+                (invocation) => _openLiveDmRead(invocation, dms),
+              );
+              when(
+                () => mockNostrClient.subscribe(
+                  any(that: isLiveDeletionsRead),
+                  subscriptionId: any(named: 'subscriptionId'),
+                  tempRelays: any(named: 'tempRelays'),
+                  onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+                ),
+              ).thenAnswer(
+                (_) => (deletions..add(StreamController<Event>())).last.stream,
+              );
+              when(
+                () => mockNostrClient.unsubscribe(any()),
+              ).thenAnswer((_) async {});
+              final repository = createRepository();
+
+              unawaited(repository.startListening());
+              async.flushMicrotasks();
+              expect(deletions, hasLength(1));
+
+              endDeletions(deletions.single);
+              async.flushMicrotasks();
+              expect(dms.single.hasListener, !recovers);
+
+              async
+                ..elapse(const Duration(seconds: 3))
+                ..flushMicrotasks();
+              expect(dms, hasLength(recovers ? 2 : 1));
+              expect(deletions, hasLength(recovers ? 2 : 1));
+
+              unawaited(repository.stopListening());
+              async.flushMicrotasks();
+            });
+          },
+        );
+      }
+
       for (final (how, end)
           in <(String, void Function(StreamController<Event>))>[
             ('closes', (dms) => unawaited(dms.close())),
