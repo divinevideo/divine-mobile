@@ -23,6 +23,7 @@ import 'package:openvine/services/draft_storage_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../mocks/mock_path_provider_platform.dart';
 
@@ -874,6 +875,29 @@ void main() {
         expect(recovered.thumbnailPath, isNotNull);
         expect(recovered.ghostFramePath, isNotNull);
       });
+
+      test(
+        'logs one warning naming every clip whose video file is gone',
+        () async {
+          final logCapture = LogCaptureService();
+          await logCapture.clearAllLogs();
+          addTearDown(logCapture.clearAllLogs);
+          await service.saveClip(clipWithoutAssets('gone-a'));
+          await service.saveClip(clipWithoutAssets('gone-b'));
+
+          await service.recoverMissingAssets(await service.getAllClips());
+
+          final warnings = logCapture
+              .getRecentLogs()
+              .where((entry) => entry.name == 'ClipLibraryService')
+              .where((entry) => entry.level == LogLevel.warning);
+          expect(warnings, hasLength(1));
+          expect(
+            warnings.single.message,
+            allOf(contains('gone-a'), contains('gone-b')),
+          );
+        },
+      );
     });
 
     group('getAllClips', () {

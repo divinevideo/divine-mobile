@@ -988,12 +988,14 @@ class ClipLibraryService {
     if (incomplete.isEmpty) return clips;
 
     Log.info(
-      '📚 Recovering assets for ${incomplete.length} clip(s)',
+      '📚 Found ${incomplete.length} clip(s) missing a thumbnail or ghost '
+      'frame',
       name: 'ClipLibraryService',
       category: LogCategory.video,
     );
 
     var updated = false;
+    final missingVideoClipIds = <String>[];
 
     for (final clip in incomplete) {
       try {
@@ -1004,12 +1006,7 @@ class ClipLibraryService {
         // Nothing to extract from, and every attempt would report a failed
         // extraction to Crashlytics again on each library load.
         if (!File(videoPath).existsSync()) {
-          Log.debug(
-            '📚 Skipping asset recovery for clip ${clip.id}: video file is '
-            'missing',
-            name: 'ClipLibraryService',
-            category: LogCategory.video,
-          );
+          missingVideoClipIds.add(clip.id);
           continue;
         }
         var updatedClip = clip;
@@ -1054,6 +1051,17 @@ class ClipLibraryService {
           stackTrace: s,
         );
       }
+    }
+
+    if (missingVideoClipIds.isNotEmpty) {
+      // A warning, not a debug line, so the skip survives into bug-report
+      // log summaries, which keep warnings but drop older debug lines.
+      Log.warning(
+        '📚 Skipped asset recovery for ${missingVideoClipIds.length} clip(s) '
+        'whose video file is missing: ${missingVideoClipIds.join(', ')}',
+        name: 'ClipLibraryService',
+        category: LogCategory.video,
+      );
     }
 
     if (updated) {
