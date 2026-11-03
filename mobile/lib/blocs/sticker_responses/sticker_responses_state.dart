@@ -43,8 +43,9 @@ class StickerResponsesState extends Equatable {
   /// sticker.
   final RepliesCuration curation;
 
-  /// The address of the first video of the chain an Add yours counts and
-  /// joins, once read; `null` before then, or for a replies sticker.
+  /// The address of the first video of the chain an Add yours joins, once
+  /// read; `null` before then, for a replies sticker, or while a relay that
+  /// did not answer may hold the first video it names.
   final String? chainRoot;
 
   StickerResponsesState copyWith({

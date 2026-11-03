@@ -172,12 +172,16 @@ void main() {
         funnelcakeApiClient: withFunnelcake ? funnelcake : null,
       );
 
-  void relayAnswers(List<Event> events, {bool capped = false}) {
+  void relayAnswers(
+    List<Event> events, {
+    bool capped = false,
+    QueryEnd endedBy = QueryEnd.complete,
+  }) {
     when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => events);
     when(() => nostrClient.readEvents(any())).thenAnswer(
       (_) async => QueryResult(
         events: events,
-        endedBy: QueryEnd.complete,
+        endedBy: endedBy,
         possiblyCapped: capped,
       ),
     );
@@ -593,7 +597,7 @@ void main() {
       );
     });
 
-    group('startsChain', () {
+    group('chainStart', () {
       Event first({List<List<String>> tags = const []}) => _video(
         id: 100,
         createdAt: 500,
@@ -602,20 +606,21 @@ void main() {
         tags: tags,
       );
 
-      test(
-        'is true for a video with its own Add yours and the hashtag',
-        () async {
-          curationAnswers([
-            first(tags: [_addYoursSticker()]),
-          ]);
+      Future<AddYoursChainStart> chainStart(String chainRoot) =>
+          repository().chainStart(chainRoot, hashtag: 'desksetup');
 
-          expect(
-            await repository().startsChain(_rootAddress, hashtag: 'desksetup'),
-            isTrue,
-          );
+      test(
+        'starts it for a video with its own Add yours and the hashtag',
+        () async {
+          relayAnswers([
+            first(tags: [_addYoursSticker()]),
+          ], endedBy: QueryEnd.settledEarly);
+
+          // Read starting it, so a relay that stayed silent changes nothing.
+          expect(await chainStart(_rootAddress), AddYoursChainStart.starts);
           final filter =
               (verify(
-                        () => nostrClient.queryEventsDetailed(captureAny()),
+                        () => nostrClient.readEvents(captureAny()),
                       ).captured.single
                       as List<Filter>)
                   .single;
@@ -624,68 +629,89 @@ void main() {
         },
       );
 
-      test('is false for a video whose Add yours answers another', () async {
-        curationAnswers([
-          first(
-            tags: [_addYoursSticker(chain: '34236:$_viewer:other-d')],
-          ),
-        ]);
-
-        expect(
-          await repository().startsChain(_rootAddress, hashtag: 'desksetup'),
-          isFalse,
-        );
-      });
-
-      test('is false for another hashtag, or no Add yours at all', () async {
-        curationAnswers([
-          first(tags: [_addYoursSticker(hashtag: 'other')]),
-        ]);
-        expect(
-          await repository().startsChain(_rootAddress, hashtag: 'desksetup'),
-          isFalse,
-        );
-
-        curationAnswers([first()]);
-        expect(
-          await repository().startsChain(_rootAddress, hashtag: 'desksetup'),
-          isFalse,
-        );
-      });
-
       test(
-        'throws when the relays timed out or none could be asked',
+        'does not start it for a video whose Add yours answers another',
         () async {
-          curationAnswers(const [], timedOut: true);
-          await expectLater(
-            repository().startsChain(_rootAddress, hashtag: 'desksetup'),
-            throwsA(isA<AddYoursChainUnavailableException>()),
-          );
-
-          curationAnswers(const [], noRelays: true);
-          await expectLater(
-            repository().startsChain(_rootAddress, hashtag: 'desksetup'),
-            throwsA(
-              isA<AddYoursChainUnavailableException>().having(
-                (error) => error.toString(),
-                'toString',
-                'AddYoursChainUnavailableException: No relay could be asked',
-              ),
+          relayAnswers([
+            first(
+              tags: [_addYoursSticker(chain: '34236:$_viewer:other-d')],
             ),
+          ]);
+
+          expect(
+            await chainStart(_rootAddress),
+            AddYoursChainStart.doesNotStart,
           );
         },
       );
 
-      test('is false when the video is not found or not an address', () async {
-        curationAnswers([]);
-
+      test('does not start it for another hashtag, or no Add yours', () async {
+        relayAnswers([
+          first(tags: [_addYoursSticker(hashtag: 'other')]),
+        ]);
         expect(
-          await repository().startsChain(_rootAddress, hashtag: 'desksetup'),
-          isFalse,
+          await chainStart(_rootAddress),
+          AddYoursChainStart.doesNotStart,
         );
+
+        relayAnswers([first()]);
         expect(
-          await repository().startsChain(_rootId, hashtag: 'desksetup'),
-          isFalse,
+          await chainStart(_rootAddress),
+          AddYoursChainStart.doesNotStart,
+        );
+      });
+
+      test(
+        'does not start it when the video is not found or not an address',
+        () async {
+          relayAnswers([]);
+
+          expect(
+            await chainStart(_rootAddress),
+            AddYoursChainStart.doesNotStart,
+          );
+          expect(await chainStart(_rootId), AddYoursChainStart.doesNotStart);
+        },
+      );
+
+      test(
+        'is unconfirmed when a relay did not answer in full and the video '
+        'was not read starting it',
+        () async {
+          for (final endedBy in [
+            QueryEnd.settledEarly,
+            QueryEnd.relayClosed,
+            QueryEnd.socketDropped,
+            QueryEnd.deadline,
+          ]) {
+            relayAnswers([], endedBy: endedBy);
+            expect(
+              await chainStart(_rootAddress),
+              AddYoursChainStart.unconfirmed,
+              reason: '$endedBy',
+            );
+          }
+
+          relayAnswers([first()], endedBy: QueryEnd.settledEarly);
+          expect(
+            await chainStart(_rootAddress),
+            AddYoursChainStart.unconfirmed,
+          );
+        },
+      );
+
+      test('throws when no relay could be asked', () async {
+        relayAnswers([], endedBy: QueryEnd.noRelay);
+
+        await expectLater(
+          chainStart(_rootAddress),
+          throwsA(
+            isA<AddYoursChainUnavailableException>().having(
+              (error) => error.toString(),
+              'toString',
+              'AddYoursChainUnavailableException: No relay could be asked',
+            ),
+          ),
         );
       });
     });

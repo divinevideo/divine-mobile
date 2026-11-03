@@ -71,13 +71,14 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
         responses = await _withPinned(replies, curation);
       } else {
         final hashtag = _region.promptHashtag;
-        chainRoot = address == null || hashtag == null
+        final chain = address == null || hashtag == null
             ? null
-            : await _chainRoot(address, hashtag);
-        responses = chainRoot == null || hashtag == null
+            : await _chain(address, hashtag);
+        chainRoot = chain?.join;
+        responses = chain == null || hashtag == null
             ? const VideoResponses()
             : await _repository.fetchJoined(
-                chainRoot: chainRoot,
+                chainRoot: chain.read,
                 hashtag: hashtag,
                 limit: feedLimit,
                 // Before each person's answer is picked; filtering again
@@ -121,15 +122,27 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
   }
 
   /// The first video of the chain the Add yours on the video at [address]
-  /// counts and joins: the one it names, when that video starts a chain with
-  /// [hashtag]. Otherwise anyone could name any video as a chain's first and
-  /// pull answers onto it, so the chain starts here instead.
-  Future<String> _chainRoot(String address, String hashtag) async {
+  /// counts, [read], and the one a Join answers, [join]: the one it names,
+  /// when that video starts a chain with [hashtag]. Otherwise anyone could
+  /// name any video as a chain's first and pull answers onto it, so the chain
+  /// starts here instead.
+  ///
+  /// When a relay that did not answer may hold the named video, its chain is
+  /// counted but not joined: an answer would cite the wrong first video for
+  /// good.
+  Future<({String read, String? join})> _chain(
+    String address,
+    String hashtag,
+  ) async {
     final named = _region.promptChainRoot(address);
-    if (named == null || named == address) return address;
-    return await _repository.startsChain(named, hashtag: hashtag)
-        ? named
-        : address;
+    if (named == null || named == address) {
+      return (read: address, join: address);
+    }
+    return switch (await _repository.chainStart(named, hashtag: hashtag)) {
+      AddYoursChainStart.starts => (read: named, join: named),
+      AddYoursChainStart.doesNotStart => (read: address, join: address),
+      AddYoursChainStart.unconfirmed => (read: named, join: null),
+    };
   }
 
   void _emitShown(

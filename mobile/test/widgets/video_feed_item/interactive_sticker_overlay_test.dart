@@ -511,31 +511,51 @@ void main() {
         );
       });
 
-      testWidgets('joins its own chain when the video an answer names starts '
-          'none', (tester) async {
+      group('on an answer naming the first video', () {
         final first = '34236:$_viewer:first';
-        when(
-          () => repository.startsChain(first, hashtag: 'desksetup'),
-        ).thenAnswer((_) async => false);
-        await pump(
-          tester,
-          VideoStickerRegion(
-            kind: VideoStickerKind.prompt,
-            target: first,
-            centerX: 0.5,
-            centerY: 0.5,
-            width: 0.8,
-            height: 0.5,
-            style: 'light',
-            label: 'Show your desk\ndesksetup',
-          ),
+        final answer = VideoStickerRegion(
+          kind: VideoStickerKind.prompt,
+          target: first,
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.8,
+          height: 0.5,
+          style: 'light',
+          label: 'Show your desk\ndesksetup',
         );
-        await tester.pump();
 
-        await tester.tap(find.text(l10n(tester).videoStickerAddYoursButton));
-        await tester.pumpAndSettle();
+        testWidgets('joins its own chain when that video starts none', (
+          tester,
+        ) async {
+          when(
+            () => repository.chainStart(first, hashtag: 'desksetup'),
+          ).thenAnswer((_) async => AddYoursChainStart.doesNotStart);
+          await pump(tester, answer);
+          await tester.pump();
 
-        expect(addYoursWhileOpen?.chainRoot, equals(_video.addressableId));
+          await tester.tap(find.text(l10n(tester).videoStickerAddYoursButton));
+          await tester.pumpAndSettle();
+
+          expect(addYoursWhileOpen?.chainRoot, equals(_video.addressableId));
+        });
+
+        testWidgets('shows who joined but opens no camera while a relay that '
+            'did not answer may hold that video', (tester) async {
+          when(
+            () => repository.chainStart(first, hashtag: 'desksetup'),
+          ).thenAnswer((_) async => AddYoursChainStart.unconfirmed);
+          await pump(tester, answer);
+          await tester.pump();
+
+          await tester.tap(find.text(l10n(tester).videoStickerAddYoursButton));
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text(l10n(tester).videoStickerAddYoursJoined(12)),
+            findsOneWidget,
+          );
+          expect(pushed, isEmpty);
+        });
       });
 
       testWidgets('asks someone signed out to sign in to add yours', (

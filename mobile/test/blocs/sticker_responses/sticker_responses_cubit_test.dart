@@ -327,7 +327,7 @@ void main() {
           ).called(1);
           // The first video of its own chain is not checked.
           verifyNever(
-            () => repository.startsChain(
+            () => repository.chainStart(
               any(),
               hashtag: any(named: 'hashtag'),
             ),
@@ -412,8 +412,8 @@ void main() {
         blocTest<StickerResponsesCubit, StickerResponsesState>(
           'reads the chain the answer joined, not the answer itself',
           setUp: () => when(
-            () => repository.startsChain(first, hashtag: 'desksetup'),
-          ).thenAnswer((_) async => true),
+            () => repository.chainStart(first, hashtag: 'desksetup'),
+          ).thenAnswer((_) async => AddYoursChainStart.starts),
           build: () => build(_region(VideoStickerKind.prompt, target: first)),
           act: (cubit) => cubit.load(),
           verify: (cubit) {
@@ -430,14 +430,35 @@ void main() {
         );
 
         blocTest<StickerResponsesCubit, StickerResponsesState>(
-          'fails, offering no chain to join, when the named video cannot be '
-          'read',
+          'counts the named chain but offers no Join while a relay that did '
+          'not answer may hold the named video',
+          setUp: () => when(
+            () => repository.chainStart(first, hashtag: 'desksetup'),
+          ).thenAnswer((_) async => AddYoursChainStart.unconfirmed),
+          build: () => build(_region(VideoStickerKind.prompt, target: first)),
+          act: (cubit) => cubit.load(),
+          verify: (cubit) {
+            expect(cubit.state.status, equals(StickerResponsesStatus.loaded));
+            expect(cubit.state.chainRoot, isNull);
+            verify(
+              () => repository.fetchJoined(
+                chainRoot: first,
+                hashtag: 'desksetup',
+                limit: StickerResponsesCubit.feedLimit,
+                filter: any(named: 'filter'),
+              ),
+            ).called(1);
+          },
+        );
+
+        blocTest<StickerResponsesCubit, StickerResponsesState>(
+          'fails, offering no chain to join, when no relay could be asked',
           setUp: () =>
               when(
-                () => repository.startsChain(first, hashtag: 'desksetup'),
+                () => repository.chainStart(first, hashtag: 'desksetup'),
               ).thenThrow(
                 const AddYoursChainUnavailableException(
-                  'The relays did not answer',
+                  'No relay could be asked',
                 ),
               ),
           build: () => build(_region(VideoStickerKind.prompt, target: first)),
@@ -460,8 +481,8 @@ void main() {
         blocTest<StickerResponsesCubit, StickerResponsesState>(
           'starts its own chain when the named video starts none',
           setUp: () => when(
-            () => repository.startsChain(first, hashtag: 'desksetup'),
-          ).thenAnswer((_) async => false),
+            () => repository.chainStart(first, hashtag: 'desksetup'),
+          ).thenAnswer((_) async => AddYoursChainStart.doesNotStart),
           build: () => build(_region(VideoStickerKind.prompt, target: first)),
           act: (cubit) => cubit.load(),
           verify: (cubit) {

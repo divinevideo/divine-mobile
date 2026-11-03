@@ -7,7 +7,7 @@ import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart'
-    show Event, Filter, NostrTimestamp, PublishOutcome;
+    show Event, Filter, NostrTimestamp, PublishOutcome, QueryEnd;
 import 'package:video_responses_repository/src/replies_curation.dart';
 import 'package:video_responses_repository/src/video_responses.dart';
 
@@ -53,8 +53,22 @@ class RepliesCurationUnavailableException implements Exception {
   String toString() => 'RepliesCurationUnavailableException: $message';
 }
 
-/// Whether a video starts an Add yours chain could not be read: the relays
-/// timed out or none could be asked, and nothing came back.
+/// Whether the video an Add yours names as its chain's first starts that
+/// chain, as [VideoResponsesRepository.chainStart] reads it.
+enum AddYoursChainStart {
+  /// It carries an Add yours of its own with the hashtag.
+  starts,
+
+  /// Every relay answered, and it carries no such Add yours, or is not there.
+  doesNotStart,
+
+  /// It was not read starting the chain, and a relay did not answer in full:
+  /// that relay may hold it.
+  unconfirmed,
+}
+
+/// Whether a video starts an Add yours chain could not be read: no relay
+/// could be asked, and nothing came back.
 ///
 /// Kept apart from a video read without a chain of its own. Treating a failed
 /// read as no chain would start the chain at the viewer's video instead, and
@@ -198,30 +212,41 @@ class VideoResponsesRepository {
 
   /// Whether the video at [chainRoot] starts an Add yours chain with
   /// [hashtag]: it carries an Add yours of its own with that hashtag, not one
-  /// answering another video's. `false` when there is no such video.
+  /// answering another video's.
   ///
-  /// Throws an [AddYoursChainUnavailableException] when the relays timed out
-  /// or none could be asked and nothing came back.
-  Future<bool> startsChain(String chainRoot, {required String hashtag}) async {
-    if (!RepliesCuration.isAddress(chainRoot)) return false;
-    final (:events, :timedOut, :noRelays) = await _nostrClient
-        .queryEventsDetailed([_filterFor(chainRoot)]);
-    if (events.isEmpty && (timedOut || noRelays)) {
-      throw AddYoursChainUnavailableException(
-        noRelays ? 'No relay could be asked' : 'The relays did not answer',
-      );
+  /// [AddYoursChainStart.unconfirmed] when it was not read starting the chain
+  /// and a relay stayed silent, refused or dropped. The read does not wait
+  /// for such a relay, so a chain whose first video is read stays prompt.
+  ///
+  /// Throws an [AddYoursChainUnavailableException] when no relay could be
+  /// asked and nothing came back.
+  Future<AddYoursChainStart> chainStart(
+    String chainRoot, {
+    required String hashtag,
+  }) async {
+    if (!RepliesCuration.isAddress(chainRoot)) {
+      return AddYoursChainStart.doesNotStart;
+    }
+    final read = await _nostrClient.readEvents([_filterFor(chainRoot)]);
+    if (read.events.isEmpty && read.endedBy == QueryEnd.noRelay) {
+      throw const AddYoursChainUnavailableException('No relay could be asked');
     }
     final first = _responsesIn(
-      events,
+      read.events,
       limit: 1,
       where: (video) => video.addressableId == chainRoot,
     ).videos.firstOrNull;
-    return first?.stickerRegions.any(
+    final starts =
+        first?.stickerRegions.any(
           (region) =>
               region.promptChainRoot(chainRoot) == chainRoot &&
               region.promptHashtag == hashtag,
         ) ??
         false;
+    if (starts) return AddYoursChainStart.starts;
+    return read.endedBy == QueryEnd.complete
+        ? AddYoursChainStart.doesNotStart
+        : AddYoursChainStart.unconfirmed;
   }
 
   /// The reply to the video [videoId] names, published at [videoAddress],

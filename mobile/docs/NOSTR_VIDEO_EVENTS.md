@@ -315,7 +315,10 @@ then show the sticker only as it is in the frames.
   also tells it from a video inspired by the first one for its sound. A
   sticker's first video is honored only when that video carries an Add yours
   of its own with the same hashtag; otherwise the chain starts at the
-  sticker's own video. The player shows how many people joined, each counted
+  sticker's own video. While it was not read carrying one and a relay that
+  did not answer in full may hold it, the player counts the named chain but
+  offers no Join, since an answer would cite the wrong first video for good.
+  The player shows how many people joined, each counted
   once by their newest answer the viewer's filters let through, and their
   avatars; a tap on them opens the answers in the full-screen feed.
 - **Replies.** The player shows how many video replies the video has (kind
