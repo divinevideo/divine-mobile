@@ -1873,20 +1873,59 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// The most videos one reuse policy refresh asks about, the server's limit.
+  static const maxAudioReusePolicySubjects = 100;
+
   /// Refreshes the action-time takedown decision for one selected video.
   Future<AudioReusePolicy> refreshAudioReusePolicy({
     required int kind,
     required String pubkey,
     required String dTag,
   }) async {
-    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
-    if (kind != 34235 && kind != 34236) {
-      throw const FunnelcakeException('Unsupported video kind');
-    }
-    if (!RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(pubkey) || dTag.isEmpty) {
-      throw const FunnelcakeException('Invalid video coordinate');
-    }
+    final policies = await refreshAudioReusePolicies([
+      (kind: kind, pubkey: pubkey, dTag: dTag),
+    ]);
+    return policies.single;
+  }
 
+  /// Refreshes the reuse decisions for [videos], in their order.
+  ///
+  /// Asks in batches of [maxAudioReusePolicySubjects], side by side.
+  ///
+  /// Throws [FunnelcakeException] for a coordinate that is not an addressable
+  /// video, before asking anything, and when any batch fails.
+  Future<List<AudioReusePolicy>> refreshAudioReusePolicies(
+    List<({int kind, String pubkey, String dTag})> videos,
+  ) async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    for (final video in videos) {
+      if (video.kind != 34235 && video.kind != 34236) {
+        throw const FunnelcakeException('Unsupported video kind');
+      }
+      if (!RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(video.pubkey) ||
+          video.dTag.isEmpty) {
+        throw const FunnelcakeException('Invalid video coordinate');
+      }
+    }
+    final batches = await Future.wait([
+      for (
+        var start = 0;
+        start < videos.length;
+        start += maxAudioReusePolicySubjects
+      )
+        _refreshAudioReusePolicyBatch(
+          videos.sublist(
+            start,
+            math.min(start + maxAudioReusePolicySubjects, videos.length),
+          ),
+        ),
+    ]);
+    return [for (final batch in batches) ...batch];
+  }
+
+  Future<List<AudioReusePolicy>> _refreshAudioReusePolicyBatch(
+    List<({int kind, String pubkey, String dTag})> videos,
+  ) async {
     final uri = Uri.parse('$_baseUrl/api/videos/audio-reuse/bulk');
     final elapsed = Stopwatch()..start();
     try {
@@ -1894,13 +1933,22 @@ class FunnelcakeApiClient {
         uri,
         body: {
           'videos': [
-            {'kind': kind, 'pubkey': pubkey.toLowerCase(), 'd_tag': dTag},
+            for (final video in videos)
+              {
+                'kind': video.kind,
+                'pubkey': video.pubkey.toLowerCase(),
+                'd_tag': video.dTag,
+              },
           ],
         },
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return AudioReusePolicy.fromRefreshJson(data, elapsed: elapsed.elapsed);
+        return AudioReusePolicy.listFromRefreshJson(
+          data,
+          count: videos.length,
+          elapsed: elapsed.elapsed,
+        );
       }
       throw FunnelcakeApiException(
         message: 'Failed to refresh audio reuse policy',
