@@ -658,6 +658,7 @@ void main() {
       }
 
       setUp(() async {
+        InterruptedRenderMonitor.resetForTesting();
         reporter = _RecordingCrashReporter();
         reportingService = DraftStorageService(
           draftsDao: database.draftsDao,

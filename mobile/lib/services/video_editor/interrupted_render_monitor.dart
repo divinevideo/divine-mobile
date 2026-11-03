@@ -34,6 +34,16 @@ class InterruptedRenderException implements Exception {
   String toString() => 'InterruptedRenderException: $summary';
 }
 
+/// The parts of the memory footprint the OS accounts on their own, in bytes:
+/// what GPU resources own, what media buffers (decoders, encoders) own, and
+/// how far the footprint is from the point where the OS ends the app. A part
+/// the platform cannot tell is `null`.
+typedef RenderMemoryLedgers = ({
+  int? graphics,
+  int? media,
+  int? limitRemaining,
+});
+
 /// Notices renders that end with the process instead of with a result.
 ///
 /// iOS ends an app that outgrows its memory limit without a crash report, so a
@@ -81,6 +91,13 @@ class InterruptedRenderMonitor {
   @visibleForTesting
   static Future<int?> Function() readFootprintBytes = _readNativeFootprintBytes;
 
+  /// Reads which parts of the footprint GPU resources and media buffers own,
+  /// and how far it is from the point where the OS ends the app, or `null`
+  /// when the platform cannot tell.
+  @visibleForTesting
+  static Future<RenderMemoryLedgers?> Function() readMemoryLedgers =
+      _readNativeMemoryLedgers;
+
   /// Reads the app's lifecycle state, or `null` before the binding exists.
   @visibleForTesting
   static String? Function() readLifecycleState = _readLifecycleState;
@@ -112,6 +129,65 @@ class InterruptedRenderMonitor {
   /// logs no longer hold the killed session's draft load line (#10677). The
   /// marker carries it across instead.
   static void noteLastDraft(String summary) => _lastDraft = summary;
+
+  /// How many editor steps a marker keeps, oldest dropped first.
+  static const _editorPhaseLimit = 10;
+
+  /// The steps the editor went through since it last opened, as
+  /// `phase@ms:footprintMb`, see [noteEditorPhase].
+  static final List<String> _editorPhases = [];
+  static final Stopwatch _editorClock = Stopwatch();
+
+  /// Notes that the editor reached [phase], with the memory footprint at that
+  /// moment, for every running marker and every marker opened from now on.
+  ///
+  /// [restart] begins a new list when the editor opens again. A memory kill
+  /// in the editor rarely lands in the step that grew the footprint: the
+  /// steps show which of them did (#10677). Never throws.
+  static void noteEditorPhase(String phase, {bool restart = false}) {
+    if (restart) {
+      _editorPhases.clear();
+      _editorOpenings++;
+      _editorClock
+        ..reset()
+        ..start();
+    }
+    unawaited(
+      _recordEditorPhase(
+        phase,
+        _editorClock.elapsedMilliseconds,
+        _editorOpenings,
+      ),
+    );
+  }
+
+  /// Bumped by every restart of [noteEditorPhase], so a step whose footprint
+  /// read outlives the editor it belongs to does not land in the next one.
+  static int _editorOpenings = 0;
+
+  static Future<void> _recordEditorPhase(
+    String phase,
+    int atMs,
+    int opening,
+  ) async {
+    int? footprint;
+    try {
+      footprint = await readFootprintBytes().timeout(
+        const Duration(seconds: 1),
+      );
+    } on Object {
+      // The step still counts without its footprint.
+      footprint = null;
+    }
+    if (opening != _editorOpenings) return;
+    _editorPhases.add(
+      '$phase@$atMs:${footprint == null ? '?' : _RenderMarker._mb(footprint)}',
+    );
+    if (_editorPhases.length > _editorPhaseLimit) _editorPhases.removeAt(0);
+    for (final marker in _active) {
+      marker.noteEditorPhases(_editorPhases);
+    }
+  }
 
   /// Resolves where markers live, then reports and deletes every marker a
   /// previous process left behind.
@@ -302,6 +378,10 @@ class InterruptedRenderMonitor {
     _active.clear();
     _directory = null;
     _lastDraft = null;
+    _editorPhases.clear();
+    _editorClock
+      ..stop()
+      ..reset();
     if (_observingLifecycle) {
       WidgetsBinding.instance.removeObserver(_lifecycleObserver);
       _observingLifecycle = false;
@@ -331,6 +411,17 @@ class InterruptedRenderMonitor {
     final diagnostics = await NativePlaybackDiagnostics.read();
     final bytes = diagnostics?.footprintBytes;
     return bytes == null || bytes < 0 ? null : bytes;
+  }
+
+  static Future<RenderMemoryLedgers?> _readNativeMemoryLedgers() async {
+    final diagnostics = await NativePlaybackDiagnostics.read();
+    if (diagnostics == null) return null;
+    int? known(int? bytes) => bytes == null || bytes < 0 ? null : bytes;
+    return (
+      graphics: known(diagnostics.graphicsFootprintBytes),
+      media: known(diagnostics.mediaFootprintBytes),
+      limitRemaining: known(diagnostics.memoryLimitRemainingBytes),
+    );
   }
 
   static String? _readLifecycleState() {
@@ -368,6 +459,9 @@ class _RenderMarker {
   bool _closed = false;
   int _samples = 0;
   int? _peakFootprint;
+  int? _peakGraphics;
+  int? _peakMedia;
+  int? _minLimitRemaining;
 
   /// The cancel request noted last, see [noteCancelRequested].
   Object? _cancelRequest;
@@ -394,6 +488,8 @@ class _RenderMarker {
           'startedAt': DateTime.now().toUtc().toIso8601String(),
           'details': details,
           'lastDraft': ?InterruptedRenderMonitor._lastDraft,
+          if (InterruptedRenderMonitor._editorPhases.isNotEmpty)
+            'editorPhases': List.of(InterruptedRenderMonitor._editorPhases),
           'lifecycleHistory': <String>[
             '${InterruptedRenderMonitor.readLifecycleState() ?? 'unknown'}@0',
           ],
@@ -436,6 +532,17 @@ class _RenderMarker {
         _content['footprintMb'] = _mb(footprint);
         _content['peakFootprintMb'] = _mb(_peakFootprint!);
       }
+      RenderMemoryLedgers? ledgers;
+      try {
+        ledgers = await InterruptedRenderMonitor.readMemoryLedgers().timeout(
+          const Duration(seconds: 1),
+        );
+      } on Object {
+        // The breakdown is extra; the footprint above is what the marker needs.
+        ledgers = null;
+      }
+      if (_closed) return;
+      if (ledgers != null) _recordLedgers(ledgers);
       _samples++;
       _content['samples'] = _samples;
       _write();
@@ -460,6 +567,13 @@ class _RenderMarker {
   void noteNow(String field) {
     if (_closed) return;
     _content[field] = _stopwatch.elapsedMilliseconds;
+    _write();
+  }
+
+  /// Replaces the editor steps with [phases] and writes the marker at once.
+  void noteEditorPhases(List<String> phases) {
+    if (_closed) return;
+    _content['editorPhases'] = List.of(phases);
     _write();
   }
 
@@ -506,6 +620,27 @@ class _RenderMarker {
     }
   }
 
+  /// Keeps what GPU resources and media buffers held when the render started
+  /// and at their peak, and how close the footprint came to the OS limit:
+  /// whether the memory that killed a render was textures, codecs or the
+  /// rest of the app (#10677).
+  void _recordLedgers(RenderMemoryLedgers ledgers) {
+    if (ledgers.graphics case final graphics?) {
+      _content['startGraphicsMb'] ??= _mb(graphics);
+      _peakGraphics = math.max(_peakGraphics ?? 0, graphics);
+      _content['peakGraphicsMb'] = _mb(_peakGraphics!);
+    }
+    if (ledgers.media case final media?) {
+      _content['startMediaMb'] ??= _mb(media);
+      _peakMedia = math.max(_peakMedia ?? 0, media);
+      _content['peakMediaMb'] = _mb(_peakMedia!);
+    }
+    if (ledgers.limitRemaining case final remaining?) {
+      _minLimitRemaining = math.min(_minLimitRemaining ?? remaining, remaining);
+      _content['minLimitRemainingMb'] = _mb(_minLimitRemaining!);
+    }
+  }
+
   static int _mb(int bytes) => bytes ~/ (1024 * 1024);
 }
 
@@ -520,9 +655,18 @@ String summarizeMarker(Map<String, Object?> marker) {
     'startFootprintMb': marker['startFootprintMb'],
     'footprintMb': marker['footprintMb'],
     'peakFootprintMb': marker['peakFootprintMb'],
+    'startGraphicsMb': marker['startGraphicsMb'],
+    'peakGraphicsMb': marker['peakGraphicsMb'],
+    'startMediaMb': marker['startMediaMb'],
+    'peakMediaMb': marker['peakMediaMb'],
+    'minLimitRemainingMb': marker['minLimitRemainingMb'],
     'lifecycle': marker['lifecycle'],
     'lifecycleHistory': switch (marker['lifecycleHistory']) {
       final List<Object?> history => history.join(','),
+      _ => null,
+    },
+    'editorPhases': switch (marker['editorPhases']) {
+      final List<Object?> phases => phases.join(','),
       _ => null,
     },
     'watchdogFiredAtMs': marker['watchdogFiredAtMs'],

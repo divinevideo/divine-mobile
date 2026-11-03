@@ -1136,6 +1136,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       name: 'VideoEditorCanvas',
       category: LogCategory.video,
     );
+    InterruptedRenderMonitor.noteEditorPhase('editorClosed');
     _settleLayerCaptureTracking();
     _playheadInterpolator.dispose();
     _stopMotionClock.dispose();
@@ -1952,6 +1953,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     }
 
     _endClipLoad(generation, isReady: true);
+    InterruptedRenderMonitor.noteEditorPhase('playerReady');
 
     // Setup state stream listener
     _videoPlayerSubscription = player.stateStream.listen(_onPlayerStateChanged);
@@ -3740,6 +3742,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   category: LogCategory.video,
                 );
                 _isImportingHistory = true;
+                InterruptedRenderMonitor.noteEditorPhase('historyImportStart');
               },
               onImportHistoryEnd: (state, import) {
                 Log.debug(
@@ -3748,6 +3751,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   category: LogCategory.video,
                 );
                 _isImportingHistory = false;
+                InterruptedRenderMonitor.noteEditorPhase('historyImported');
                 _syncMainCapabilities(scope, bloc);
               },
               onStateHistoryChange: (_, _) {
