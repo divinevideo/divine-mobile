@@ -87,8 +87,6 @@ class _ControlledQueryRelay extends Relay {
   }
 }
 
-/// A signer that cannot produce a public key yet, like a remote signer that
-/// is still starting.
 /// Signs like [LocalNostrSigner], but holds its first AUTH signature until
 /// [releaseFirstAuth] completes: a remote signer still working on it.
 class _SlowFirstAuthSigner implements NostrSigner {
@@ -133,6 +131,8 @@ class _SlowFirstAuthSigner implements NostrSigner {
   void close() => _inner.close();
 }
 
+/// A signer that cannot produce a public key yet, like a remote signer that
+/// is still starting.
 class _NoKeySigner implements NostrSigner {
   @override
   Future<String?> getPublicKey() async => null;
