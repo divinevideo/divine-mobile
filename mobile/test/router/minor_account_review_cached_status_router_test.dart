@@ -436,6 +436,35 @@ void main() {
         expect(pages(router), hasLength(1));
       });
 
+      testWidgets('reopens every held push, in the order they were made', (
+        tester,
+      ) async {
+        final otherVideoPath = VideoDetailScreen.pathForId(
+          'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9',
+        );
+        final router = await pumpRouter(
+          tester,
+          startState: AuthState.authenticated,
+        );
+        unawaited(router.push<void>(videoPath));
+        await tester.pump();
+        unawaited(router.push<void>(otherVideoPath));
+        await tester.pump();
+
+        fetch.complete(MinorAccountReviewStatus.active());
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // Each held tap is something the person asked to open, so Back steps
+        // through them in tap order, as it would have without the wait.
+        expect(
+          pages(router)
+              .whereType<ImperativeRouteMatch>()
+              .map((page) => page.matches.uri.path),
+          [videoPath, otherVideoPath],
+        );
+      });
+
       testWidgets('does not reopen a held push to the sign-in screens', (
         tester,
       ) async {
