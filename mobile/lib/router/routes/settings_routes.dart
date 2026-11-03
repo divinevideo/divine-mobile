@@ -2,6 +2,7 @@
 // ABOUTME: Split from app_router.dart (#4508)
 
 import 'package:badge_repository/badge_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -51,6 +52,20 @@ import 'package:openvine/screens/settings/support_center_screen.dart';
 import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/feature_request_dialog.dart';
+
+/// PROTOTYPE (#8076): the four-tab DM inbox on fixture data. Remove with it.
+///
+/// Registered only in debug builds, matching its Developer Options tile:
+/// hiding the tile alone would leave the path reachable by typed URL.
+@visibleForTesting
+List<RouteBase> dmInboxPrototypeRoutes({bool enabled = kDebugMode}) => [
+  if (enabled)
+    GoRoute(
+      path: DmInboxTabsPrototypeScreen.path,
+      name: DmInboxTabsPrototypeScreen.routeName,
+      builder: (_, _) => const DmInboxTabsPrototypeScreen(),
+    ),
+];
 
 List<RouteBase> settingsRoutes(Ref ref) {
   return [
@@ -297,12 +312,7 @@ List<RouteBase> settingsRoutes(Ref ref) {
       name: ClipRecoveryScreen.routeName,
       builder: (_, _) => const ClipRecoveryScreen(),
     ),
-    // PROTOTYPE (#8076): four-tab DM inbox on fixture data. Remove with it.
-    GoRoute(
-      path: DmInboxTabsPrototypeScreen.path,
-      name: DmInboxTabsPrototypeScreen.routeName,
-      builder: (_, _) => const DmInboxTabsPrototypeScreen(),
-    ),
+    ...dmInboxPrototypeRoutes(),
     GoRoute(
       path: DeveloperOptionsScreen.path,
       name: DeveloperOptionsScreen.routeName,
