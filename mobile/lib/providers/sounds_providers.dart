@@ -1,16 +1,30 @@
 // ABOUTME: Riverpod providers for the sounds/audio reuse feature.
 // ABOUTME: Provides reactive state management for sounds from SoundsRepository.
 
+import 'dart:async';
+import 'dart:math' show min;
+
 import 'package:models/models.dart' show AudioEvent, searchTermsOf;
+import 'package:nostr_sdk/nostr_sdk.dart' show AId;
+import 'package:openvine/config/official_accounts.dart'
+    show kDivineSoundPublisherPubkeys;
+import 'package:openvine/extensions/divine_sound_extensions.dart';
+import 'package:openvine/models/paged_sounds.dart';
+import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/curation_providers.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/audio_reuse_consent_resolver.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sounds_repository/sounds_repository.dart';
+import 'package:unified_logger/unified_logger.dart';
+import 'package:videos_repository/videos_repository.dart' show VideosRepository;
 
 part 'sounds_providers.g.dart';
 
@@ -31,7 +45,13 @@ part 'sounds_providers.g.dart';
 @Riverpod(keepAlive: true)
 SoundsRepository soundsRepository(Ref ref) {
   final nostrClient = ref.watch(nostrServiceProvider);
-  final repository = SoundsRepository(nostrClient: nostrClient);
+  final repository = SoundsRepository(
+    nostrClient: nostrClient,
+    funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
+    divineSoundPublishers: kDivineSoundPublisherPubkeys,
+    // The same rule the feed hides blocked and muted accounts by.
+    blockFilter: createBlockedAuthorFilter(ref),
+  );
 
   // Initialize asynchronously to start fetching sounds
   runProviderDetached(
@@ -45,37 +65,44 @@ SoundsRepository soundsRepository(Ref ref) {
   return repository;
 }
 
-/// Async provider for trending sounds.
+/// How many sounds a page of a relay list asks for. Four in five of the
+/// newest are unnamed sounds nobody reused, which the lists leave out, so a
+/// page asks for twice the usual to keep enough to fill the screen.
+const _relayPageSize = 100;
+
+/// The newest sounds, the picker's "New" list, loading older ones page by
+/// page as it is scrolled ([TrendingSounds.loadMore]).
 ///
-/// Fetches and returns a list of trending audio events sorted by creation time
-/// (newest first). Results are automatically cached in the repository.
+/// Unnamed sounds nobody reused are left out
+/// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
 ///
 /// Usage:
 /// ```dart
-/// final trendingSoundsAsync = ref.watch(trendingSoundsProvider);
-/// trendingSoundsAsync.when(
-///   data: (sounds) => SoundList(sounds: sounds),
-///   loading: () => LoadingSpinner(),
-///   error: (e, s) => ErrorWidget(message: e.toString()),
-/// );
+/// final newest = ref.watch(trendingSoundsProvider);
+/// ref.read(trendingSoundsProvider.notifier).loadMore();
 /// ```
 @riverpod
-class TrendingSounds extends _$TrendingSounds {
+class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
+  late _NewestFirstPager _pager;
+
   @override
-  Future<List<AudioEvent>> build() async {
+  Future<PagedSounds> build() async {
     final repository = ref.watch(soundsRepositoryProvider);
-    return repository.fetchTrendingSounds();
+    _hideAuthorsBlockedLater();
+    _pager = _NewestFirstPager(
+      fetch: (until) => repository.fetchTrendingSounds(
+        limit: _relayPageSize,
+        until: until,
+      ),
+      keep: (sounds) => repository.withoutUnusedOriginals(
+        repository.withoutBlockedAuthors(sounds),
+      ),
+    );
+    return PagedSounds.first(await _pager.next());
   }
 
-  /// Refresh the trending sounds list from relays.
-  Future<void> refresh() async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      final repository = ref.read(soundsRepositoryProvider);
-      await repository.refresh();
-      return repository.cachedSounds;
-    });
-  }
+  @override
+  Future<SoundPage> _nextPage() => _pager.next();
 }
 
 /// Community sounds matching a free-text [query].
@@ -196,14 +223,361 @@ Future<int?> soundUsageCount(Ref ref, String audioEventId) async {
 /// ```
 @riverpod
 Future<Map<String, int>> trendingSoundUsageCounts(Ref ref) async {
-  final sounds = await ref.watch(trendingSoundsProvider.future);
+  final pages = await ref.watch(
+    trendingSoundsProvider.selectAsync((list) => list.pages),
+  );
   final ids = <String>{
-    for (final sound in sounds) ?sound.attributionEventId,
+    for (final page in pages)
+      for (final sound in page) ?sound.attributionEventId,
   };
   if (ids.isEmpty) return const {};
 
   final repository = ref.watch(soundsRepositoryProvider);
   return repository.fetchVideosUsingSoundCounts(ids);
+}
+
+/// The sounds people are picking up right now, the most trending first,
+/// with how many videos use each, loading further down the ranking page by
+/// page as the list is scrolled ([PopularSounds.loadMore]).
+///
+/// Usage:
+/// ```dart
+/// final popular = ref.watch(popularSoundsProvider);
+/// ```
+@riverpod
+class PopularSounds extends _$PopularSounds with _LoadsMoreSounds {
+  late SoundsRepository _repository;
+  final _seen = <String>{};
+  var _offset = 0;
+
+  @override
+  Future<PagedSounds> build() async {
+    _keepForReopen(ref);
+    _repository = ref.watch(soundsRepositoryProvider);
+    _hideAuthorsBlockedLater();
+    _seen.clear();
+    _offset = 0;
+    return PagedSounds.first(await _nextPage());
+  }
+
+  @override
+  Future<SoundPage> _nextPage() async {
+    final popular = await _repository.fetchPopularSounds(offset: _offset);
+    _offset += SoundsRepository.popularPageSize;
+    // The ranking moves while it is paged through, so a sound can come
+    // round again on a later page.
+    return (
+      sounds: [
+        for (final sound in popular.sounds)
+          if (_seen.add(sound.id)) sound,
+      ],
+      usageCounts: popular.usageCounts,
+      hasMore: popular.usageCounts.length >= SoundsRepository.popularPageSize,
+    );
+  }
+}
+
+/// Divine's own sounds published on the network, for the picker to show
+/// beside, and tie to, the ones the app ships (`linkDivineSounds`).
+///
+/// A failed lookup leaves just the shipped sounds, which need no network.
+@riverpod
+Future<List<AudioEvent>> divineSounds(Ref ref) {
+  _keepForReopen(ref);
+  return ref.watch(soundsRepositoryProvider).fetchDivineSounds();
+}
+
+/// The newest sounds published by people the viewer follows, for the
+/// picker's "For you" list, loading older ones page by page as it is
+/// scrolled ([ForYouSounds.loadMore]).
+///
+/// Divine's own sounds are left out even when the viewer follows a Divine
+/// sound account: the picker lists them from [divineSounds], tied to the
+/// ones the app ships, and would otherwise show each twice.
+///
+/// A single empty page when the viewer follows nobody yet; the picker then
+/// leads with Divine's own sounds.
+@riverpod
+class ForYouSounds extends _$ForYouSounds with _LoadsMoreSounds {
+  late _NewestFirstPager _pager;
+
+  @override
+  Future<PagedSounds> build() async {
+    _keepForReopen(ref);
+    final following = ref.watch(followRepositoryProvider).followingPubkeys;
+    final repository = ref.watch(soundsRepositoryProvider);
+    _hideAuthorsBlockedLater();
+    _pager = _NewestFirstPager(
+      fetch: (until) => repository.fetchSoundsByCreators(
+        following,
+        limit: _relayPageSize,
+        until: until,
+      ),
+      // Most of what people share is the unnamed sound of a video, which
+      // only earns a place here once someone else has used it.
+      keep: (sounds) => repository.withoutUnusedOriginals([
+        for (final sound in repository.withoutBlockedAuthors(sounds))
+          if (!sound.isDivine) sound,
+      ]),
+    );
+    if (following.isEmpty) return const PagedSounds(pages: [[]]);
+    return PagedSounds.first(await _pager.next());
+  }
+
+  @override
+  Future<SoundPage> _nextPage() => _pager.next();
+}
+
+/// Loading the next page, shared by the picker's lists that grow as they are
+/// scrolled.
+mixin _LoadsMoreSounds {
+  AsyncValue<PagedSounds> get state;
+  set state(AsyncValue<PagedSounds> value);
+  Ref get ref;
+
+  /// The page after the ones the list holds.
+  Future<SoundPage> _nextPage();
+
+  /// Takes the sounds of an author the viewer blocks or mutes out of the
+  /// pages already loaded, as soon as they do, rather than when the list
+  /// next loads. Called from `build`.
+  void _hideAuthorsBlockedLater() {
+    ref.listen(blocklistVersionProvider, (_, _) {
+      final current = state.value;
+      if (current == null) return;
+      final repository = ref.read(soundsRepositoryProvider);
+      state = AsyncData(current.narrowed(repository.withoutBlockedAuthors));
+    });
+  }
+
+  /// Adds the next page to the list, unless one is loading or none is left.
+  ///
+  /// A page that fails ends the paging rather than the list: what loaded
+  /// stays, where retrying would loop, since the end of the list asks again
+  /// as soon as it shows.
+  Future<void> loadMore() async {
+    final current = state.value;
+    if (current == null || !current.canLoadMore) return;
+    // Taken first: after a rebuild it is no longer mounted, and the page
+    // belongs to the list that rebuild replaced.
+    final ref = this.ref;
+    state = AsyncData(current.copyWith(isLoadingMore: true));
+    SoundPage? page;
+    try {
+      page = await _nextPage();
+    } on Object catch (e) {
+      Log.warning(
+        'Could not load more sounds, ending the list here: $e',
+        name: 'SoundsProviders',
+        category: LogCategory.api,
+      );
+    }
+    if (!ref.mounted) return;
+    // The list as it is now: a block while the page loaded may have
+    // narrowed it.
+    final latest = state.value ?? current;
+    state = AsyncData(
+      page == null
+          ? latest.copyWith(hasMore: false, isLoadingMore: false)
+          : latest.withPage(page),
+    );
+  }
+}
+
+/// Walks a newest-first relay list back in time, a page per [next], each
+/// holding only sounds the pages before it did not.
+class _NewestFirstPager {
+  _NewestFirstPager({required this.fetch, required this.keep});
+
+  /// Fetches a page of the newest sounds, or with `until` of the newest
+  /// published at or before that Unix time.
+  final Future<List<AudioEvent>> Function(int? until) fetch;
+
+  /// Narrows a fetched page to the sounds the list shows.
+  final Future<List<AudioEvent>> Function(List<AudioEvent> sounds) keep;
+
+  final _seen = <String>{};
+  int? _until;
+
+  /// The next page. It holds fewer sounds than were fetched where [keep]
+  /// left some out, possibly none, while there are more to come.
+  Future<SoundPage> next() async {
+    final fetched = await fetch(_until);
+    final fresh = [
+      for (final sound in fetched)
+        if (_seen.add(sound.id)) sound,
+    ];
+    if (fresh.isEmpty) {
+      return (
+        sounds: const <AudioEvent>[],
+        usageCounts: const <String, int>{},
+        hasMore: false,
+      );
+    }
+    // `until` takes in the second it names, so sounds sharing the oldest
+    // second with this page are not skipped; the ones listed already are
+    // dropped above.
+    _until = fresh.map((sound) => sound.createdAt).reduce(min);
+    return (
+      sounds: await keep(fresh),
+      usageCounts: const <String, int>{},
+      hasMore: true,
+    );
+  }
+}
+
+/// Covers for the newest sounds list, keyed by
+/// [AudioEvent.sourceVideoReference], `null` for a video looked up and not
+/// found: deleted, or filtered out for this viewer. A sound the lookup has
+/// not reached yet, or could not, is absent.
+///
+/// Like [trendingSoundUsageCounts], the whole list resolves in one batched
+/// lookup rather than one per row, and the list never waits on it. Sounds
+/// that came from no video are absent too.
+///
+/// Usage:
+/// ```dart
+/// final covers = ref.watch(trendingSoundCoversProvider).value;
+/// final cover = covers?[sound.sourceVideoReference];
+/// ```
+@riverpod
+Future<Map<String, SoundCover?>> trendingSoundCovers(Ref ref) async {
+  _keepForReopen(ref);
+  final pages = await ref.watch(
+    trendingSoundsProvider.selectAsync((list) => list.pages),
+  );
+  return _coversFor(ref, pages);
+}
+
+/// Covers for [popularSounds], keyed like [trendingSoundCovers].
+@riverpod
+Future<Map<String, SoundCover?>> popularSoundCovers(Ref ref) async {
+  _keepForReopen(ref);
+  final pages = await ref.watch(
+    popularSoundsProvider.selectAsync((list) => list.pages),
+  );
+  return _coversFor(ref, pages);
+}
+
+/// Covers for [forYouSounds], keyed like [trendingSoundCovers].
+@riverpod
+Future<Map<String, SoundCover?>> forYouSoundCovers(Ref ref) async {
+  _keepForReopen(ref);
+  final pages = await ref.watch(
+    forYouSoundsProvider.selectAsync((list) => list.pages),
+  );
+  return _coversFor(ref, pages);
+}
+
+/// Covers for the sounds a community search reached, keyed like
+/// [trendingSoundCovers].
+@riverpod
+Future<Map<String, SoundCover?>> soundSearchCovers(
+  Ref ref,
+  String query,
+) async {
+  final sounds = await ref.watch(soundSearchResultsProvider(query).future);
+  return _coversFor(ref, [sounds]);
+}
+
+/// How long the picker's lists and covers outlive the picker.
+///
+/// Long enough that trying one sound and reopening the picker for another
+/// shows everything at once, short enough that a later edit sees new sounds.
+const _pickerCacheDuration = Duration(minutes: 5);
+
+/// Keeps [ref]'s value for [_pickerCacheDuration] once nothing watches it.
+void _keepForReopen(Ref ref) {
+  final link = ref.keepAlive();
+  final timer = Timer(_pickerCacheDuration, link.close);
+  ref.onDispose(timer.cancel);
+}
+
+Future<Map<String, SoundCover?>> _coversFor(
+  Ref ref,
+  List<List<AudioEvent>> pages,
+) {
+  final references = {
+    for (final page in pages)
+      for (final sound in page) ?sound.sourceVideoReference,
+  };
+  if (references.isEmpty) return Future.value(const {});
+  return ref.watch(_soundCoverCacheProvider).coversFor(references);
+}
+
+/// The covers the picker's lists have looked up, shared by them, so a list
+/// that loads more asks only about its new rows.
+///
+/// Made anew with the videos repository, whose viewer decides which videos
+/// are found.
+@riverpod
+_SoundCoverCache _soundCoverCache(Ref ref) {
+  _keepForReopen(ref);
+  return _SoundCoverCache(ref.watch(videosRepositoryProvider));
+}
+
+class _SoundCoverCache {
+  _SoundCoverCache(this._videos);
+
+  final VideosRepository _videos;
+  final _covers = <String, SoundCover?>{};
+
+  /// Covers for [references], keyed like [trendingSoundCovers]. A reference
+  /// looked up before keeps its answer, and the rest are looked up now in
+  /// one batch. When that fails they are left out, unanswered, so their rows
+  /// show no cover and the next lookup asks again.
+  Future<Map<String, SoundCover?>> coversFor(Set<String> references) async {
+    final unknown = {
+      for (final reference in references)
+        if (!_covers.containsKey(reference)) reference,
+    };
+    if (unknown.isNotEmpty) {
+      try {
+        _covers.addAll(await _sourceVideoCovers(_videos, unknown));
+      } on Object catch (e) {
+        Log.warning(
+          'Could not look up sound covers: $e',
+          name: 'SoundsProviders',
+          category: LogCategory.api,
+        );
+      }
+    }
+    return {
+      for (final reference in references)
+        if (_covers.containsKey(reference)) reference: _covers[reference],
+    };
+  }
+}
+
+Future<Map<String, SoundCover?>> _sourceVideoCovers(
+  VideosRepository repository,
+  Set<String> references,
+) async {
+  // The feed's shape preference decides what the feed plays, not where a
+  // sound came from, so it does not hide a cover. Every other visibility
+  // rule — blocks, deletions, content filters — still applies.
+  // Relays only: a cover needs nothing the Funnelcake fallback and stats add,
+  // and with them 48 covers took 1.0-3.5 s against 0.65 s without.
+  final videos = await repository.getVideosByAddressableIds(
+    references.toList(),
+    includeFeedShape: false,
+    relaysOnly: true,
+  );
+  // Matched on author and d-tag, which name the video whichever kind the
+  // reference spells; the parsed video reports only the vertical one.
+  final coversByAuthorAndDTag = {
+    for (final video in videos)
+      if (video.addressableDTag case final dTag?)
+        '${video.pubkey}:$dTag': SoundCover.fromSourceVideo(video),
+  };
+  return {
+    for (final reference in references)
+      reference: switch (AId.fromString(reference)) {
+        final address? =>
+          coversByAuthorAndDTag['${address.pubkey}:${address.dTag}'],
+        null => null,
+      },
+  };
 }
 
 /// Viewer-independent public reuse terms for sounds.

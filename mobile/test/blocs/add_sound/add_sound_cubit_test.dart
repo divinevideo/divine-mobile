@@ -3,10 +3,11 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' show AudioEvent;
+import 'package:models/models.dart' show AudioEvent, SoundKind;
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/blocs/add_sound/add_sound_cubit.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
@@ -108,6 +109,7 @@ void main() {
           audio: any(named: 'audio'),
           attribution: any(named: 'attribution'),
           allowAudioReuse: any(named: 'allowAudioReuse'),
+          coverImage: any(named: 'coverImage'),
         ),
       ).thenAnswer((_) => answer());
     }
@@ -511,6 +513,73 @@ void main() {
           ).called(1);
         },
       );
+
+      test('shares the cover the user chose', () async {
+        stubPublish(() async => LocalAudioPublished(_publishedEvent()));
+        final cover = Uint8List.fromList(const [1, 2, 3]);
+        final cubit = await sharingCubit();
+        addTearDown(cubit.close);
+
+        cubit.setCoverImage(cover);
+        await cubit.save();
+
+        expect(cubit.state.status, AddSoundStatus.saved);
+        verify(
+          () => publisher.publish(
+            audio: any(named: 'audio'),
+            attribution: any(named: 'attribution'),
+            allowAudioReuse: true,
+            coverImage: cover,
+          ),
+        ).called(1);
+      });
+
+      test('shares the chosen kind as its tag, over a typed one', () async {
+        stubPublish(() async => LocalAudioPublished(_publishedEvent()));
+        final cubit = await sharingCubit();
+        addTearDown(cubit.close);
+        cubit.updateAttribution(
+          cubit.state.attribution!.copyWith(
+            publicTags: const ['beat', 'music'],
+          ),
+        );
+
+        cubit.setSoundKind(SoundKind.effect);
+        await cubit.save();
+
+        final shared =
+            verify(
+                  () => publisher.publish(
+                    audio: any(named: 'audio'),
+                    attribution: captureAny(named: 'attribution'),
+                    allowAudioReuse: true,
+                  ),
+                ).captured.single
+                as AudioShareAttribution;
+        expect(shared.publicTags, ['beat', 'sfx']);
+      });
+
+      test('shares the hashtags as typed without a chosen kind', () async {
+        stubPublish(() async => LocalAudioPublished(_publishedEvent()));
+        final cubit = await sharingCubit();
+        addTearDown(cubit.close);
+        cubit.updateAttribution(
+          cubit.state.attribution!.copyWith(publicTags: const ['music']),
+        );
+
+        await cubit.save();
+
+        final shared =
+            verify(
+                  () => publisher.publish(
+                    audio: any(named: 'audio'),
+                    attribution: captureAny(named: 'attribution'),
+                    allowAudioReuse: true,
+                  ),
+                ).captured.single
+                as AudioShareAttribution;
+        expect(shared.publicTags, ['music']);
+      });
 
       test('maps a failed publish back to ready and saves nothing', () async {
         stubPublish(

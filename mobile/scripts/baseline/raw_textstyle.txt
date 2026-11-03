@@ -66,7 +66,7 @@ lib/widgets/upload_progress_dialog.dart	2
 lib/widgets/user_name.dart	1
 lib/widgets/video_editor/audio_editor/audio_editor_selection_overlay.dart	1
 lib/widgets/video_editor/audio_editor/audio_list_tile.dart	1
-lib/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart	3
+lib/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart	2
 lib/widgets/video_feed_item/actions/share_sheet_header.dart	2
 lib/widgets/video_feed_item/actions/share_sheet_message_input.dart	2
 lib/widgets/video_feed_item/actions/share_sheet_more_actions.dart	2

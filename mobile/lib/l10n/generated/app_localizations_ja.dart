@@ -4250,6 +4250,41 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundsShareTitleRequiredHint => '共有するにはサウンドにタイトルを付けてください。';
 
   @override
+  String get soundsShareCoverLabel => 'カバー';
+
+  @override
+  String get soundsShareCoverDescription =>
+      '任意です。サウンドを選ぶときに、あなたのサウンドの横に表示されます。';
+
+  @override
+  String get soundsShareCoverAdd => 'カバーを追加';
+
+  @override
+  String get soundsShareCoverReplace => '差し替え';
+
+  @override
+  String get soundsShareCoverRemove => 'カバーを削除';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'サウンドのカバー';
+
+  @override
+  String get soundsShareKindLabel => '音楽か効果音か';
+
+  @override
+  String get soundsShareKindDescription =>
+      '任意です。絞り込み時に、あなたのサウンドが音楽または効果音に表示されます。';
+
+  @override
+  String get soundsShareKindChoose => '選択';
+
+  @override
+  String get soundsShareKindEffect => '効果音';
+
+  @override
+  String get soundsShareKindNeither => 'どちらでもない';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'このファイル形式には対応していません。音声ファイルを選んでください。';
 
@@ -10571,16 +10606,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorAudioSegmentInstruction => '動画に使うオーディオ範囲を選択';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'コミュニティ';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'おすすめ';
+  String get videoEditorAudioCategoryMySounds => 'マイサウンド';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'マイサウンド';
+  String get videoEditorAudioFilterEffects => '効果音';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => '矢印ツール';

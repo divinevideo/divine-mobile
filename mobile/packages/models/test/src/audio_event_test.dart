@@ -648,6 +648,23 @@ void main() {
       });
     });
 
+    group('hasDefaultTitle', () {
+      AudioEvent titled(String? title) =>
+          AudioEvent(id: 'id', pubkey: '', createdAt: 1700000000, title: title);
+
+      test('is true without a title of its own', () {
+        expect(titled(null).hasDefaultTitle, isTrue);
+        expect(titled('  ').hasDefaultTitle, isTrue);
+        expect(titled(AudioEvent.originalSoundTitle).hasDefaultTitle, isTrue);
+        expect(titled(' original SOUND ').hasDefaultTitle, isTrue);
+      });
+
+      test('is false for a named sound', () {
+        expect(titled('Original sound remix').hasDefaultTitle, isFalse);
+        expect(titled('Wednesday My Dudes').hasDefaultTitle, isFalse);
+      });
+    });
+
     group('fromLocalImport', () {
       test('creates draft-local audio event', () {
         final event = AudioEvent.fromLocalImport(
@@ -1049,6 +1066,157 @@ void main() {
 
         expect(audioEvent.toJson(), isNot(contains('externalSource')));
         expect(audioEvent.isExternalProviderSound, isFalse);
+      });
+    });
+
+    group('cover image', () {
+      const imageUrl = 'https://blossom.example/cover.jpg';
+      const blurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
+
+      AudioEvent parse(List<List<String>> coverTags) =>
+          AudioEvent.fromNostrEvent(
+            Event(testPubkey, 1063, [
+              ['url', 'https://blossom.example/sound.m4a'],
+              ['m', 'audio/mp4'],
+              ...coverTags,
+            ], ''),
+          );
+
+      test('reads the NIP-94 image and blurhash tags', () {
+        final audio = parse([
+          ['image', imageUrl],
+          ['thumb', 'https://blossom.example/thumb.jpg'],
+          ['blurhash', blurhash],
+        ]);
+
+        expect(audio.imageUrl, equals(imageUrl));
+        expect(audio.blurhash, equals(blurhash));
+      });
+
+      test('falls back to the thumb tag when there is no image', () {
+        final audio = parse([
+          ['thumb', 'https://blossom.example/thumb.jpg'],
+        ]);
+
+        expect(audio.imageUrl, equals('https://blossom.example/thumb.jpg'));
+      });
+
+      test('publishes the cover back as image and blurhash tags', () {
+        final audio = AudioEvent(
+          id: 'cover-id',
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+          url: 'https://blossom.example/sound.m4a',
+          imageUrl: imageUrl,
+          blurhash: blurhash,
+        );
+
+        expect(
+          audio.toTags(),
+          containsAll([
+            ['image', imageUrl],
+            ['blurhash', blurhash],
+          ]),
+        );
+      });
+
+      test('keeps the cover through toJson and fromJson', () {
+        final restored = AudioEvent.fromJson(
+          AudioEvent(
+            id: 'cover-id',
+            pubkey: testPubkey,
+            createdAt: 1700000000,
+            imageUrl: imageUrl,
+            blurhash: blurhash,
+          ).toJson(),
+        );
+
+        expect(restored.imageUrl, equals(imageUrl));
+        expect(restored.blurhash, equals(blurhash));
+      });
+    });
+
+    group('divine sound id', () {
+      test('reads the manifest id Divine publishes a shipped sound under', () {
+        final audio = AudioEvent.fromNostrEvent(
+          Event(testPubkey, 1063, [
+            ['url', 'https://blossom.example/wednesday.mp3'],
+            ['m', 'audio/mpeg'],
+            [AudioEvent.divineSoundTag, 'wednesday'],
+          ], ''),
+        );
+
+        expect(audio.divineSoundId, 'wednesday');
+      });
+
+      test('writes it back, and keeps it through copyWith and JSON', () {
+        final audio = AudioEvent(
+          id: 'divine-id',
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+          divineSoundId: 'wednesday',
+        );
+
+        expect(
+          audio.toTags(),
+          contains(equals([AudioEvent.divineSoundTag, 'wednesday'])),
+        );
+        expect(audio.copyWith(title: 'Wed').divineSoundId, 'wednesday');
+        expect(AudioEvent.fromJson(audio.toJson()).divineSoundId, 'wednesday');
+      });
+    });
+
+    group('linkedEventId', () {
+      final eventId = 'a' * 64;
+
+      test('stands in as the attribution of a shipped sound', () {
+        final bundled = AudioEvent.fromBundledSound(
+          VineSound(
+            id: 'wednesday',
+            title: 'Wednesday My Dudes',
+            assetPath: 'assets/sounds/wednesday.mp3',
+            duration: const Duration(seconds: 6),
+          ),
+        );
+
+        expect(bundled.attributionEventId, isNull);
+        expect(
+          bundled.copyWith(linkedEventId: eventId).attributionEventId,
+          eventId,
+        );
+      });
+
+      test('never overrides a sound that is an event itself', () {
+        final published = AudioEvent(
+          id: 'b' * 64,
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+          linkedEventId: eventId,
+        );
+
+        expect(published.attributionEventId, 'b' * 64);
+      });
+
+      test('ignores a value that is not an event id', () {
+        final bundled = AudioEvent(
+          id: '${AudioEvent.bundledMarker}_wednesday',
+          pubkey: AudioEvent.bundledMarker,
+          createdAt: 0,
+          linkedEventId: 'not-an-id',
+        );
+
+        expect(bundled.attributionEventId, isNull);
+      });
+
+      test('survives JSON, as a draft stores it', () {
+        final bundled = AudioEvent(
+          id: '${AudioEvent.bundledMarker}_wednesday',
+          pubkey: AudioEvent.bundledMarker,
+          createdAt: 0,
+          linkedEventId: eventId,
+        );
+
+        expect(AudioEvent.fromJson(bundled.toJson()).linkedEventId, eventId);
       });
     });
 

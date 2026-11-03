@@ -4454,6 +4454,41 @@ class AppLocalizationsId extends AppLocalizations {
       'Beri judul pada suaramu untuk membagikannya.';
 
   @override
+  String get soundsShareCoverLabel => 'Sampul';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Opsional. Orang melihatnya di samping suaramu saat memilih suara.';
+
+  @override
+  String get soundsShareCoverAdd => 'Tambah sampul';
+
+  @override
+  String get soundsShareCoverReplace => 'Ganti';
+
+  @override
+  String get soundsShareCoverRemove => 'Hapus sampul';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Sampul suara';
+
+  @override
+  String get soundsShareKindLabel => 'Musik atau efek';
+
+  @override
+  String get soundsShareKindDescription =>
+      'Opsional. Suaramu muncul di Musik atau Efek suara saat orang memfilter.';
+
+  @override
+  String get soundsShareKindChoose => 'Pilih';
+
+  @override
+  String get soundsShareKindEffect => 'Efek suara';
+
+  @override
+  String get soundsShareKindNeither => 'Bukan keduanya';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Jenis file itu tidak didukung. Pilih file audio.';
 
@@ -11016,16 +11051,13 @@ class AppLocalizationsId extends AppLocalizations {
       'Pilih segmen audio untuk videomu';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Komunitas';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'Unggulan';
+  String get videoEditorAudioCategoryMySounds => 'Suara Saya';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'Suara Saya';
+  String get videoEditorAudioFilterEffects => 'Efek suara';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => 'Alat panah';

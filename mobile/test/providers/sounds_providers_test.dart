@@ -3,26 +3,57 @@
 
 import 'dart:async';
 
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:content_policy/content_policy.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/curation_providers.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:sounds_repository/sounds_repository.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 // Mock classes
 class MockNostrClient extends Mock implements NostrClient {}
 
 class MockSoundsRepository extends Mock implements SoundsRepository {}
 
+/// Lets [repository] keep every sound, as it does each one its publisher
+/// named.
+void _keepEverySound(MockSoundsRepository repository) {
+  when(() => repository.withoutUnusedOriginals(any())).thenAnswer(
+    (invocation) async =>
+        invocation.positionalArguments.single as List<AudioEvent>,
+  );
+  when(() => repository.withoutBlockedAuthors(any())).thenAnswer(
+    (invocation) => invocation.positionalArguments.single as List<AudioEvent>,
+  );
+}
+
 class MockSoundLibraryService extends Mock implements SoundLibraryService {}
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
+
+class _MockFollowRepository extends Mock implements FollowRepository {}
+
+class _MockContentBlocklistRepository extends Mock
+    implements ContentBlocklistRepository {}
 
 class _StubAuthService extends Mock implements AuthService {
   _StubAuthService(this._pubkey);
@@ -69,6 +100,7 @@ void main() {
 
     setUp(() {
       registerFallbackValue(const <String>[]);
+      registerFallbackValue(const <AudioEvent>[]);
       mockNostrClient = MockNostrClient();
       mockRepository = MockSoundsRepository();
 
@@ -87,22 +119,54 @@ void main() {
     });
 
     group('soundsRepositoryProvider', () {
-      test('creates SoundsRepository with nostrClient', () {
+      late _MockContentBlocklistRepository blocklist;
+
+      setUp(() {
+        blocklist = _MockContentBlocklistRepository();
+        when(() => blocklist.currentState).thenReturn(
+          const ContentPolicyState(
+            currentUserPubkey: 'viewer',
+            mutedPubkeys: {'muted'},
+            blockedPubkeys: {'blocked'},
+            pubkeysBlockingUs: {},
+            pubkeysMutingUs: {},
+          ),
+        );
+      });
+
+      ProviderContainer buildContainer() {
         final container = ProviderContainer(
-          overrides: [nostrServiceProvider.overrideWithValue(mockNostrClient)],
+          overrides: [
+            nostrServiceProvider.overrideWithValue(mockNostrClient),
+            funnelcakeApiClientProvider.overrideWithValue(
+              FunnelcakeApiClient(baseUrl: ''),
+            ),
+            contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+          ],
         );
         addTearDown(container.dispose);
+        return container;
+      }
 
-        final repository = container.read(soundsRepositoryProvider);
+      test('creates SoundsRepository with nostrClient', () {
+        final repository = buildContainer().read(soundsRepositoryProvider);
 
         expect(repository, isA<SoundsRepository>());
       });
 
+      test('leaves out the sounds of authors the viewer blocked or muted', () {
+        final repository = buildContainer().read(soundsRepositoryProvider);
+
+        final kept = repository.withoutBlockedAuthors([
+          for (final pubkey in ['followed', 'blocked', 'muted'])
+            createTestAudioEvent(id: pubkey).copyWith(pubkey: pubkey),
+        ]);
+
+        expect(kept.map((sound) => sound.pubkey), ['followed']);
+      });
+
       test('repository is kept alive (not auto-disposed)', () async {
-        final container = ProviderContainer(
-          overrides: [nostrServiceProvider.overrideWithValue(mockNostrClient)],
-        );
-        addTearDown(container.dispose);
+        final container = buildContainer();
 
         final repo1 = container.read(soundsRepositoryProvider);
 
@@ -170,66 +234,401 @@ void main() {
     });
 
     group('trendingSoundsProvider', () {
-      test('fetches trending sounds from repository', () async {
-        final testSounds = [
-          createTestAudioEvent(id: 'trend-1', createdAt: 1704067300),
-          createTestAudioEvent(id: 'trend-2'),
-        ];
-
-        when(
-          () => mockRepository.fetchTrendingSounds(),
-        ).thenAnswer((_) async => testSounds);
-        when(() => mockRepository.cachedSounds).thenReturn(testSounds);
+      setUp(() {
+        _keepEverySound(mockRepository);
         when(() => mockRepository.initialize()).thenAnswer((_) async {});
         when(() => mockRepository.dispose()).thenAnswer((_) async {});
-
-        final container = ProviderContainer(
-          overrides: [
-            soundsRepositoryProvider.overrideWithValue(mockRepository),
-          ],
-        );
-        addTearDown(container.dispose);
-
-        // Wait for the async provider to complete
-        final result = await container.read(trendingSoundsProvider.future);
-
-        expect(result.length, equals(2));
-        expect(result[0].id, equals('trend-1'));
-        expect(result[1].id, equals('trend-2'));
-        verify(() => mockRepository.fetchTrendingSounds()).called(1);
       });
 
-      test('refresh() clears cache and fetches fresh data', () async {
-        final initialSounds = [createTestAudioEvent(id: 'old-1')];
-        final refreshedSounds = [
-          createTestAudioEvent(id: 'new-1'),
-          createTestAudioEvent(id: 'new-2'),
-        ];
-
-        var fetchCount = 0;
-        when(() => mockRepository.fetchTrendingSounds()).thenAnswer((_) async {
-          fetchCount++;
-          return fetchCount == 1 ? initialSounds : refreshedSounds;
-        });
-        when(() => mockRepository.refresh()).thenAnswer((_) async {});
-        when(() => mockRepository.cachedSounds).thenReturn(refreshedSounds);
-        when(() => mockRepository.initialize()).thenAnswer((_) async {});
-        when(() => mockRepository.dispose()).thenAnswer((_) async {});
-
+      ProviderContainer buildContainer() {
         final container = ProviderContainer(
           overrides: [
             soundsRepositoryProvider.overrideWithValue(mockRepository),
           ],
         );
         addTearDown(container.dispose);
+        return container;
+      }
 
-        // Initial fetch
+      /// Answers each newest-sounds fetch with the next of [pages].
+      void stubPages(List<List<AudioEvent>> pages) {
+        var call = 0;
+        when(
+          () => mockRepository.fetchTrendingSounds(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+          ),
+        ).thenAnswer((_) async => pages[call++]);
+      }
+
+      test('loads the newest page from the repository', () async {
+        stubPages([
+          [
+            createTestAudioEvent(id: 'trend-1', createdAt: 1704067300),
+            createTestAudioEvent(id: 'trend-2'),
+          ],
+        ]);
+
+        final result = await buildContainer().read(
+          trendingSoundsProvider.future,
+        );
+
+        expect(result.sounds.map((sound) => sound.id), ['trend-1', 'trend-2']);
+        expect(result.hasMore, isTrue);
+        verify(
+          () => mockRepository.fetchTrendingSounds(limit: 100),
+        ).called(1);
+      });
+
+      test('leaves out the unnamed sounds nobody reused', () async {
+        final named = createTestAudioEvent(id: 'named');
+        final unused = createTestAudioEvent(id: 'unused');
+        stubPages([
+          [named, unused],
+        ]);
+        when(
+          () => mockRepository.withoutUnusedOriginals([named, unused]),
+        ).thenAnswer((_) async => [named]);
+
+        final result = await buildContainer().read(
+          trendingSoundsProvider.future,
+        );
+
+        expect(result.sounds, [named]);
+      });
+
+      test('leaves out the sounds of authors the viewer blocked', () async {
+        final kept = createTestAudioEvent(id: 'kept');
+        final blocked = createTestAudioEvent(id: 'blocked');
+        stubPages([
+          [kept, blocked],
+        ]);
+        when(
+          () => mockRepository.withoutBlockedAuthors([kept, blocked]),
+        ).thenReturn([kept]);
+
+        final result = await buildContainer().read(
+          trendingSoundsProvider.future,
+        );
+
+        expect(result.sounds, [kept]);
+      });
+
+      test('drops a newly blocked author from the loaded pages, '
+          'without loading them again', () async {
+        final kept = createTestAudioEvent(id: 'kept');
+        final blockedLater = createTestAudioEvent(id: 'blocked-later');
+        stubPages([
+          [kept, blockedLater],
+        ]);
+        final container = buildContainer();
+        final subscription = container.listen(
+          trendingSoundsProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
         await container.read(trendingSoundsProvider.future);
+        expect(
+          container.read(trendingSoundsProvider).requireValue.sounds,
+          [kept, blockedLater],
+        );
 
-        // Refresh
-        await container.read(trendingSoundsProvider.notifier).refresh();
+        when(() => mockRepository.withoutBlockedAuthors(any())).thenAnswer(
+          (invocation) => [
+            for (final sound
+                in invocation.positionalArguments.single as List<AudioEvent>)
+              if (sound != blockedLater) sound,
+          ],
+        );
+        container.read(blocklistVersionProvider.notifier).increment();
 
-        verify(() => mockRepository.refresh()).called(1);
+        expect(
+          container.read(trendingSoundsProvider).requireValue.sounds,
+          [kept],
+        );
+        verify(
+          () => mockRepository.fetchTrendingSounds(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+          ),
+        ).called(1);
+      });
+
+      group('loadMore', () {
+        final newest = createTestAudioEvent(id: 'newest', createdAt: 300);
+        final older = createTestAudioEvent(id: 'older', createdAt: 200);
+        final oldest = createTestAudioEvent(id: 'oldest', createdAt: 100);
+
+        test('adds the sounds published up to the oldest it has', () async {
+          stubPages([
+            [newest, older],
+            // `until` takes in its own second, so the oldest comes again.
+            [older, oldest],
+          ]);
+          final container = buildContainer();
+          await container.read(trendingSoundsProvider.future);
+
+          await container.read(trendingSoundsProvider.notifier).loadMore();
+
+          final result = container.read(trendingSoundsProvider).requireValue;
+          expect(result.pages, [
+            [newest, older],
+            [oldest],
+          ]);
+          expect(result.hasMore, isTrue);
+          expect(result.isLoadingMore, isFalse);
+          verify(
+            () => mockRepository.fetchTrendingSounds(limit: 100, until: 200),
+          ).called(1);
+        });
+
+        test('keeps a block made while a page loaded', () async {
+          final page = Completer<List<AudioEvent>>();
+          var call = 0;
+          when(
+            () => mockRepository.fetchTrendingSounds(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+            ),
+          ).thenAnswer(
+            (_) async => call++ == 0 ? [newest, older] : page.future,
+          );
+          final container = buildContainer();
+          final subscription = container.listen(
+            trendingSoundsProvider,
+            (_, _) {},
+          );
+          addTearDown(subscription.close);
+          await container.read(trendingSoundsProvider.future);
+
+          final loading = container
+              .read(trendingSoundsProvider.notifier)
+              .loadMore();
+          when(() => mockRepository.withoutBlockedAuthors(any())).thenAnswer(
+            (invocation) => [
+              for (final sound
+                  in invocation.positionalArguments.single as List<AudioEvent>)
+                if (sound != older) sound,
+            ],
+          );
+          container.read(blocklistVersionProvider.notifier).increment();
+          page.complete([oldest]);
+          await loading;
+
+          expect(
+            container.read(trendingSoundsProvider).requireValue.sounds,
+            [newest, oldest],
+          );
+        });
+
+        test('ends the list once a page adds nothing new', () async {
+          stubPages([
+            [newest, older],
+            [older],
+          ]);
+          final container = buildContainer();
+          await container.read(trendingSoundsProvider.future);
+
+          await container.read(trendingSoundsProvider.notifier).loadMore();
+          await container.read(trendingSoundsProvider.notifier).loadMore();
+
+          final result = container.read(trendingSoundsProvider).requireValue;
+          expect(result.sounds, [newest, older]);
+          expect(result.hasMore, isFalse);
+          verify(
+            () => mockRepository.fetchTrendingSounds(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+            ),
+          ).called(2);
+        });
+
+        test('keeps what loaded and ends the list when a page fails', () async {
+          var call = 0;
+          when(
+            () => mockRepository.fetchTrendingSounds(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+            ),
+          ).thenAnswer((_) async {
+            if (call++ > 0) throw Exception('relay down');
+            return [newest];
+          });
+          final container = buildContainer();
+          await container.read(trendingSoundsProvider.future);
+
+          await container.read(trendingSoundsProvider.notifier).loadMore();
+
+          final result = container.read(trendingSoundsProvider).requireValue;
+          expect(result.sounds, [newest]);
+          expect(result.hasMore, isFalse);
+          expect(result.isLoadingMore, isFalse);
+        });
+
+        test('asks once while a page is loading', () async {
+          final page = Completer<List<AudioEvent>>();
+          var call = 0;
+          when(
+            () => mockRepository.fetchTrendingSounds(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+            ),
+          ).thenAnswer((_) async => call++ == 0 ? [newest] : page.future);
+          final container = buildContainer();
+          await container.read(trendingSoundsProvider.future);
+          final notifier = container.read(trendingSoundsProvider.notifier);
+
+          final first = notifier.loadMore();
+          expect(
+            container.read(trendingSoundsProvider).requireValue.isLoadingMore,
+            isTrue,
+          );
+          await notifier.loadMore();
+          page.complete([oldest]);
+          await first;
+
+          expect(
+            container.read(trendingSoundsProvider).requireValue.sounds,
+            [newest, oldest],
+          );
+          expect(call, 2);
+        });
+
+        test('drops a page that lands after the list started over', () async {
+          final page = Completer<List<AudioEvent>>();
+          var call = 0;
+          when(
+            () => mockRepository.fetchTrendingSounds(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+            ),
+          ).thenAnswer(
+            (_) async => switch (call++) {
+              1 => page.future,
+              _ => [newest],
+            },
+          );
+          final container = buildContainer();
+          final subscription = container.listen(
+            trendingSoundsProvider,
+            (_, _) {},
+          );
+          addTearDown(subscription.close);
+          await container.read(trendingSoundsProvider.future);
+
+          final loading = container
+              .read(trendingSoundsProvider.notifier)
+              .loadMore();
+          container.invalidate(trendingSoundsProvider);
+          await container.read(trendingSoundsProvider.future);
+          page.complete([oldest]);
+          await loading;
+
+          expect(
+            container.read(trendingSoundsProvider).requireValue.sounds,
+            [newest],
+          );
+        });
+
+        test('does nothing before the first page is in', () async {
+          final first = Completer<List<AudioEvent>>();
+          when(
+            () => mockRepository.fetchTrendingSounds(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+            ),
+          ).thenAnswer((_) => first.future);
+          final container = buildContainer();
+          final subscription = container.listen(
+            trendingSoundsProvider,
+            (_, _) {},
+          );
+          addTearDown(subscription.close);
+
+          await container.read(trendingSoundsProvider.notifier).loadMore();
+
+          verify(
+            () => mockRepository.fetchTrendingSounds(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+            ),
+          ).called(1);
+          first.complete(const []);
+        });
+      });
+    });
+
+    group('popularSoundsProvider', () {
+      setUp(() {
+        when(() => mockRepository.initialize()).thenAnswer((_) async {});
+        when(() => mockRepository.dispose()).thenAnswer((_) async {});
+      });
+
+      ProviderContainer buildContainer() {
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+        return container;
+      }
+
+      /// A full page of the ranking, of which the relays returned [sounds].
+      RankedSounds rankedPage(List<AudioEvent> sounds, {int? ranked}) => (
+        sounds: sounds,
+        usageCounts: {
+          for (var i = 0; i < (ranked ?? SoundsRepository.popularPageSize); i++)
+            i < sounds.length ? sounds[i].id : 'ranked-$i': i,
+        },
+      );
+
+      test('loads further down the ranking as it is scrolled', () async {
+        final first = createTestAudioEvent(id: 'first');
+        final again = createTestAudioEvent(id: 'again');
+        final second = createTestAudioEvent(id: 'second');
+        when(
+          () => mockRepository.fetchPopularSounds(
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer(
+          (invocation) async => switch (invocation.namedArguments[#offset]) {
+            50 => rankedPage([again, second]),
+            _ => rankedPage([first, again]),
+          },
+        );
+        final container = buildContainer();
+
+        final firstPage = await container.read(popularSoundsProvider.future);
+        expect(firstPage.sounds, [first, again]);
+        expect(firstPage.hasMore, isTrue);
+
+        await container.read(popularSoundsProvider.notifier).loadMore();
+
+        final result = container.read(popularSoundsProvider).requireValue;
+        expect(result.pages, [
+          [first, again],
+          [second],
+        ]);
+        expect(result.usageCounts['second'], 1);
+        // The ranking moved, so a sound from the first page came round again.
+        verify(() => mockRepository.fetchPopularSounds(offset: 50)).called(1);
+      });
+
+      test('ends where the ranking does', () async {
+        final last = createTestAudioEvent(id: 'last');
+        when(
+          () => mockRepository.fetchPopularSounds(
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer((_) async => rankedPage([last], ranked: 3));
+
+        final result = await buildContainer().read(
+          popularSoundsProvider.future,
+        );
+
+        expect(result.sounds, [last]);
+        expect(result.hasMore, isFalse);
       });
     });
 
@@ -561,8 +960,12 @@ void main() {
 
       ProviderContainer buildContainer(List<AudioEvent> trending) {
         when(
-          () => mockRepository.fetchTrendingSounds(),
+          () => mockRepository.fetchTrendingSounds(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+          ),
         ).thenAnswer((_) async => trending);
+        _keepEverySound(mockRepository);
         when(() => mockRepository.initialize()).thenAnswer((_) async {});
         when(() => mockRepository.dispose()).thenAnswer((_) async {});
 
@@ -629,6 +1032,406 @@ void main() {
 
         expect(counts, isEmpty);
         verifyNever(() => mockRepository.fetchVideosUsingSoundCounts(any()));
+      });
+    });
+
+    group('divineSoundsProvider', () {
+      test("hands over the repository's Divine sounds", () async {
+        final divine = createTestAudioEvent(id: 'divine-sound');
+        when(
+          () => mockRepository.fetchDivineSounds(),
+        ).thenAnswer((_) async => [divine]);
+        when(() => mockRepository.initialize()).thenAnswer((_) async {});
+        when(() => mockRepository.dispose()).thenAnswer((_) async {});
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        expect(await container.read(divineSoundsProvider.future), [divine]);
+      });
+    });
+
+    group('forYouSoundsProvider', () {
+      late _MockFollowRepository followRepository;
+
+      setUp(() {
+        followRepository = _MockFollowRepository();
+        _keepEverySound(mockRepository);
+        when(() => mockRepository.initialize()).thenAnswer((_) async {});
+        when(() => mockRepository.dispose()).thenAnswer((_) async {});
+      });
+
+      ProviderContainer buildContainer(List<String> following) {
+        when(() => followRepository.followingPubkeys).thenReturn(following);
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+            followRepositoryProvider.overrideWithValue(followRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+        return container;
+      }
+
+      void stubCreatorSounds(
+        Future<List<AudioEvent>> Function(Invocation invocation) answer,
+      ) {
+        when(
+          () => mockRepository.fetchSoundsByCreators(
+            any(),
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+          ),
+        ).thenAnswer(answer);
+      }
+
+      test('asks for the sounds of everyone the viewer follows', () async {
+        final followed = createTestAudioEvent(id: 'followed-sound');
+        stubCreatorSounds((_) async => [followed]);
+
+        final container = buildContainer(const ['alice', 'bob']);
+
+        final result = await container.read(forYouSoundsProvider.future);
+        expect(result.sounds, [followed]);
+        expect(result.hasMore, isTrue);
+        verify(
+          () => mockRepository.fetchSoundsByCreators(const [
+            'alice',
+            'bob',
+          ], limit: 100),
+        ).called(1);
+      });
+
+      test('leaves out the unnamed sounds nobody reused', () async {
+        final named = createTestAudioEvent(id: 'named');
+        final unused = createTestAudioEvent(id: 'unused');
+        stubCreatorSounds((_) async => [named, unused]);
+        when(
+          () => mockRepository.withoutUnusedOriginals([named, unused]),
+        ).thenAnswer((_) async => [named]);
+
+        final container = buildContainer(const ['alice']);
+
+        final result = await container.read(forYouSoundsProvider.future);
+        expect(result.sounds, [named]);
+      });
+
+      test(
+        "leaves out Divine's own sounds, which the picker lists already",
+        () async {
+          final library = createTestAudioEvent(id: 'divine-library-sound')
+              .copyWith(pubkey: kHqPubkeyHex);
+          final hqVideoSound = createTestAudioEvent(id: 'hq-video-sound')
+              .copyWith(
+                pubkey: kHqPubkeyHex,
+                sourceVideoReference: '34236:$kHqPubkeyHex:clip',
+              );
+          stubCreatorSounds((_) async => [library, hqVideoSound]);
+
+          final container = buildContainer(const [kHqPubkeyHex]);
+
+          final result = await container.read(forYouSoundsProvider.future);
+          expect(result.sounds, [hqVideoSound]);
+        },
+      );
+
+      test('leaves out the sounds of authors the viewer blocked', () async {
+        final kept = createTestAudioEvent(id: 'kept');
+        final muted = createTestAudioEvent(id: 'muted');
+        stubCreatorSounds((_) async => [kept, muted]);
+        when(
+          () => mockRepository.withoutBlockedAuthors([kept, muted]),
+        ).thenReturn([kept]);
+
+        final container = buildContainer(const ['alice']);
+
+        final result = await container.read(forYouSoundsProvider.future);
+        expect(result.sounds, [kept]);
+      });
+
+      test('loads older sounds as it is scrolled', () async {
+        final newer = createTestAudioEvent(id: 'newer', createdAt: 200);
+        final older = createTestAudioEvent(id: 'older', createdAt: 100);
+        stubCreatorSounds(
+          (invocation) async =>
+              invocation.namedArguments[#until] == null ? [newer] : [older],
+        );
+        final container = buildContainer(const ['alice']);
+        await container.read(forYouSoundsProvider.future);
+
+        await container.read(forYouSoundsProvider.notifier).loadMore();
+
+        expect(container.read(forYouSoundsProvider).requireValue.pages, [
+          [newer],
+          [older],
+        ]);
+        verify(
+          () => mockRepository.fetchSoundsByCreators(
+            const ['alice'],
+            limit: 100,
+            until: 200,
+          ),
+        ).called(1);
+      });
+
+      test('outlives the picker for five minutes, then asks again', () {
+        fakeAsync((async) {
+          stubCreatorSounds((_) async => const []);
+          final container = buildContainer(const ['alice']);
+
+          // Each read opens and closes the picker: nothing listens after it.
+          container.read(forYouSoundsProvider.future).ignore();
+          async.elapse(const Duration(minutes: 4));
+          container.read(forYouSoundsProvider.future).ignore();
+          async.flushMicrotasks();
+          verify(
+            () => mockRepository.fetchSoundsByCreators(
+              any(),
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+            ),
+          ).called(1);
+
+          async.elapse(const Duration(minutes: 2));
+          container.read(forYouSoundsProvider.future).ignore();
+          async.flushMicrotasks();
+          verify(
+            () => mockRepository.fetchSoundsByCreators(
+              any(),
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+            ),
+          ).called(1);
+        });
+      });
+
+      test('queries nothing while the viewer follows nobody', () async {
+        final container = buildContainer(const []);
+
+        final result = await container.read(forYouSoundsProvider.future);
+        expect(result.sounds, isEmpty);
+        expect(result.hasMore, isFalse);
+        verifyNever(
+          () => mockRepository.fetchSoundsByCreators(
+            any(),
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+          ),
+        );
+      });
+    });
+
+    group('trendingSoundCoversProvider', () {
+      const authorA =
+          'a1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012';
+      const authorB =
+          'b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012a1';
+      const verticalReference = '34236:$authorA:clip-a';
+      const normalReference = '34235:$authorB:clip-b';
+      const deletedReference = '34236:$authorA:deleted-clip';
+
+      late _MockVideosRepository videosRepository;
+
+      setUp(() {
+        videosRepository = _MockVideosRepository();
+      });
+
+      VideoEvent sourceVideo(String pubkey, String dTag) => VideoEvent(
+        id: 'video-$dTag',
+        pubkey: pubkey,
+        createdAt: 1704067200,
+        content: '',
+        timestamp: DateTime.utc(2024),
+        addressableDTag: dTag,
+        thumbnailUrl: 'https://example.com/$dTag.jpg',
+      );
+
+      ProviderContainer buildContainer(List<AudioEvent> trending) {
+        when(
+          () => mockRepository.fetchTrendingSounds(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+          ),
+        ).thenAnswer((_) async => trending);
+        _keepEverySound(mockRepository);
+        when(() => mockRepository.initialize()).thenAnswer((_) async {});
+        when(() => mockRepository.dispose()).thenAnswer((_) async {});
+
+        final container = ProviderContainer(
+          overrides: [
+            soundsRepositoryProvider.overrideWithValue(mockRepository),
+            videosRepositoryProvider.overrideWithValue(videosRepository),
+          ],
+        );
+        addTearDown(container.dispose);
+        return container;
+      }
+
+      test(
+        'maps each sound to its source video through one lookup',
+        () async {
+          when(
+            () => videosRepository.getVideosByAddressableIds(
+              any(),
+              includeFeedShape: any(named: 'includeFeedShape'),
+              relaysOnly: any(named: 'relaysOnly'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              sourceVideo(authorA, 'clip-a'),
+              sourceVideo(authorB, 'clip-b'),
+            ],
+          );
+
+          final container = buildContainer([
+            for (final (index, reference) in const [
+              verticalReference,
+              normalReference,
+              deletedReference,
+            ].indexed)
+              createTestAudioEvent(
+                id: 'sound-$index',
+              ).copyWith(sourceVideoReference: reference),
+          ]);
+
+          final covers = await container.read(
+            trendingSoundCoversProvider.future,
+          );
+
+          expect(covers, {
+            verticalReference: const SoundCover(
+              imageUrl: 'https://example.com/clip-a.jpg',
+            ),
+            normalReference: const SoundCover(
+              imageUrl: 'https://example.com/clip-b.jpg',
+            ),
+            deletedReference: null,
+          });
+          final captured = verify(
+            () => videosRepository.getVideosByAddressableIds(
+              captureAny(),
+              includeFeedShape: false,
+              relaysOnly: true,
+            ),
+          ).captured;
+          expect(captured, hasLength(1));
+          expect((captured.single as List<String>).toSet(), {
+            verticalReference,
+            normalReference,
+            deletedReference,
+          });
+        },
+      );
+
+      test('looks up only the sounds a new page added', () async {
+        final newer = createTestAudioEvent(
+          id: 'newer',
+          createdAt: 200,
+        ).copyWith(sourceVideoReference: verticalReference);
+        final older = createTestAudioEvent(
+          id: 'older',
+          createdAt: 100,
+        ).copyWith(sourceVideoReference: normalReference);
+        final container = buildContainer([newer]);
+        when(
+          () => mockRepository.fetchTrendingSounds(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+          ),
+        ).thenAnswer(
+          (invocation) async =>
+              invocation.namedArguments[#until] == null ? [newer] : [older],
+        );
+        when(
+          () => videosRepository.getVideosByAddressableIds(
+            any(),
+            includeFeedShape: any(named: 'includeFeedShape'),
+            relaysOnly: any(named: 'relaysOnly'),
+          ),
+        ).thenAnswer(
+          (invocation) async => [
+            if ((invocation.positionalArguments.single as List<String>)
+                .contains(verticalReference))
+              sourceVideo(authorA, 'clip-a'),
+            sourceVideo(authorB, 'clip-b'),
+          ],
+        );
+        final subscription = container.listen(
+          trendingSoundCoversProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await container.read(trendingSoundCoversProvider.future);
+
+        await container.read(trendingSoundsProvider.notifier).loadMore();
+        // The covers hear of the new page once its sounds have settled.
+        await pumpEventQueue();
+        final covers = await container.read(trendingSoundCoversProvider.future);
+
+        expect(covers.keys, {verticalReference, normalReference});
+        expect(covers[verticalReference], isNotNull);
+        expect(covers[normalReference], isNotNull);
+        final lookups = verify(
+          () => videosRepository.getVideosByAddressableIds(
+            captureAny(),
+            includeFeedShape: false,
+            relaysOnly: true,
+          ),
+        ).captured;
+        expect(lookups, [
+          [verticalReference],
+          [normalReference],
+        ]);
+      });
+
+      test('leaves sounds out when the lookup fails, to ask again', () async {
+        var lookups = 0;
+        when(
+          () => videosRepository.getVideosByAddressableIds(
+            any(),
+            includeFeedShape: any(named: 'includeFeedShape'),
+            relaysOnly: any(named: 'relaysOnly'),
+          ),
+        ).thenAnswer((_) async {
+          if (lookups++ == 0) throw Exception('relay down');
+          return [sourceVideo(authorA, 'clip-a')];
+        });
+        final container = buildContainer([
+          createTestAudioEvent(
+            id: 'sound',
+          ).copyWith(sourceVideoReference: verticalReference),
+        ]);
+        final subscription = container.listen(
+          trendingSoundCoversProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+
+        expect(await container.read(trendingSoundCoversProvider.future), {});
+
+        container.invalidate(trendingSoundCoversProvider);
+        final covers = await container.read(trendingSoundCoversProvider.future);
+        expect(covers[verticalReference], isNotNull);
+      });
+
+      test('never looks up videos when no sound came from one', () async {
+        final container = buildContainer([
+          createTestAudioEvent(id: '${AudioEvent.bundledMarker}_wednesday'),
+        ]);
+
+        final covers = await container.read(trendingSoundCoversProvider.future);
+
+        expect(covers, isEmpty);
+        verifyNever(
+          () => videosRepository.getVideosByAddressableIds(
+            any(),
+            includeFeedShape: any(named: 'includeFeedShape'),
+            relaysOnly: any(named: 'relaysOnly'),
+          ),
+        );
       });
     });
 

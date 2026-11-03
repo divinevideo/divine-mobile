@@ -4267,6 +4267,41 @@ class AppLocalizationsKo extends AppLocalizations {
   String get soundsShareTitleRequiredHint => '공유하려면 사운드 제목을 입력해 주세요.';
 
   @override
+  String get soundsShareCoverLabel => '커버';
+
+  @override
+  String get soundsShareCoverDescription =>
+      '선택 사항이에요. 사운드를 고를 때 내 사운드 옆에 표시돼요.';
+
+  @override
+  String get soundsShareCoverAdd => '커버 추가';
+
+  @override
+  String get soundsShareCoverReplace => '교체';
+
+  @override
+  String get soundsShareCoverRemove => '커버 삭제';
+
+  @override
+  String get soundsShareCoverSheetTitle => '사운드 커버';
+
+  @override
+  String get soundsShareKindLabel => '음악 또는 효과음';
+
+  @override
+  String get soundsShareKindDescription =>
+      '선택 사항이에요. 필터링할 때 내 사운드가 음악 또는 효과음에 표시돼요.';
+
+  @override
+  String get soundsShareKindChoose => '선택';
+
+  @override
+  String get soundsShareKindEffect => '효과음';
+
+  @override
+  String get soundsShareKindNeither => '둘 다 아님';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       '지원하지 않는 파일 형식이에요. 오디오 파일을 골라 주세요.';
 
@@ -10592,16 +10627,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorAudioSegmentInstruction => '동영상에 사용할 오디오 구간을 선택하세요';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => '커뮤니티';
 
   @override
-  String get videoEditorAudioCategoryFeatured => '추천';
+  String get videoEditorAudioCategoryMySounds => '내 사운드';
 
   @override
-  String get videoEditorAudioCategoryMySounds => '내 사운드';
+  String get videoEditorAudioFilterEffects => '효과음';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => '화살표 도구';

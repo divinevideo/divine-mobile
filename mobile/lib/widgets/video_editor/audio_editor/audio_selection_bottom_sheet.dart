@@ -1,19 +1,24 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show AudioEvent, VineSound;
+import 'package:models/models.dart'
+    show AudioEvent, AudioEventKind, SoundKind, VineSound, VineSoundKind;
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/divine_sound_extensions.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
+import 'package:openvine/models/paged_sounds.dart';
+import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
@@ -24,20 +29,13 @@ import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/private_key_search_warning.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_category_bar.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_editor_selection_overlay.dart';
+import 'package:openvine/widgets/video_editor/audio_editor/audio_kind_filter_pill.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_list_tile.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:sound_service/sound_service.dart';
+import 'package:sounds_repository/sounds_repository.dart'
+    show linkDivineSounds, rankForYouSounds, rankSearchMatches;
 import 'package:unified_logger/unified_logger.dart';
-
-final _featuredVineSounds = [
-  VineSound(
-    id: 'wednesday',
-    title: 'Wednesday My Dudes',
-    assetPath: 'assets/sounds/wednesday.mp3',
-    duration: const Duration(milliseconds: 6269),
-    tags: const ['featured'],
-  ),
-];
 
 class AudioSelectionBottomSheet extends ConsumerStatefulWidget {
   const AudioSelectionBottomSheet({
@@ -76,45 +74,14 @@ class AudioSelectionBottomSheet extends ConsumerStatefulWidget {
   /// as the button that leaves the page it fills.
   final Widget? categoryBarLeading;
 
+  /// Presents the picker as a full-height sheet, closed by dragging it down.
+  /// It has no title row, so the lists get the room.
   static Future<AudioEvent?> show(BuildContext context) {
-    final navigator = Navigator.of(context);
     return VineBottomSheet.show<AudioEvent>(
       context: context,
       maxChildSize: 1,
       initialChildSize: 1,
       minChildSize: VineTheme.bottomSheetDismissFloor,
-      headerPadding: const EdgeInsetsDirectional.only(
-        start: 12,
-        end: 12,
-        top: 8,
-      ),
-      title: Row(
-        mainAxisAlignment: .spaceBetween,
-        spacing: 8,
-        children: [
-          DivineIconButton(
-            icon: .x,
-            onPressed: navigator.pop,
-            type: .secondary,
-            size: .small,
-          ),
-
-          Flexible(child: Text(context.l10n.videoEditorAudioAddAudio)),
-
-          const IgnorePointer(
-            child: ExcludeSemantics(
-              child: Opacity(
-                opacity: 0,
-                child: DivineIconButton(
-                  icon: .x,
-                  onPressed: null,
-                  size: .small,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
       buildScrollBody: (scrollController) =>
           AudioSelectionBottomSheet(scrollController: scrollController),
     );
@@ -132,7 +99,10 @@ class _AudioSelectionBottomSheetState
   final _searchController = TextEditingController();
   String? _loadedSoundId;
   AudioEvent? _selectedItem;
-  AudioCategory _category = .divine;
+  AudioCategory _category = .forYou;
+
+  /// The kind every list is narrowed to, or `null` for all sounds.
+  SoundKind? _kind;
   String _searchQuery = '';
 
   /// [_searchQuery] as it stood when the user last paused typing.
@@ -206,13 +176,18 @@ class _AudioSelectionBottomSheetState
   }
 
   List<AudioEvent> _filterAudioEvents(List<AudioEvent> sounds) {
-    if (_searchQuery.isEmpty) return sounds;
+    if (_searchQuery.isEmpty && _kind == null) return sounds;
     return sounds
         .where((sound) => sound.matchesSearch(_searchQuery))
+        .where(_isOfKind)
         .toList(growable: false);
   }
 
-  /// The community list to show for the current query.
+  /// Whether [sound] is of the chosen kind. A sound of unknown kind only
+  /// shows while no kind is chosen.
+  bool _isOfKind(AudioEvent sound) => _kind == null || sound.soundKind == _kind;
+
+  /// The newest community sounds to show for the current query.
   ///
   /// The loaded page is filtered first, so the list narrows on the first
   /// keystroke instead of blanking while a debounced query is in flight. Once
@@ -227,13 +202,88 @@ class _AudioSelectionBottomSheetState
     List<AudioEvent> loaded,
     AsyncValue<List<AudioEvent>> searchResults,
   ) {
-    if (_searchQuery.isEmpty) return loaded;
     final matches = _filterAudioEvents(loaded);
+    if (_searchQuery.isEmpty) return matches;
     if (_debouncedQuery != _searchQuery) return matches;
     final reached = searchResults.value;
     if (reached == null) return matches;
     final listed = matches.map((sound) => sound.id).toSet();
-    return [...matches, ...reached.where((sound) => listed.add(sound.id))];
+    return [
+      ...matches,
+      ...reached.where(_isOfKind).where((sound) => listed.add(sound.id)),
+    ];
+  }
+
+  /// [matches] by how well their title fits the search, Divine's first among
+  /// equals; as given while nothing is searched.
+  List<T> _bySearchFit<T>(
+    List<T> matches, {
+    required String? Function(T item) titleOf,
+    required AudioEvent Function(T item) audioOf,
+  }) {
+    if (_searchQuery.isEmpty) return matches;
+    return rankSearchMatches(
+      matches,
+      _searchQuery,
+      titleOf: titleOf,
+      isDivine: (item) => audioOf(item).isDivine,
+    );
+  }
+
+  List<AudioEvent> _soundsBySearchFit(List<AudioEvent> matches) =>
+      _bySearchFit(matches, titleOf: (sound) => sound.title, audioOf: (s) => s);
+
+  /// The "For you" list unsearched: the first page of followed sounds ranked
+  /// in among Divine's own, and each later page ranked on its own after it.
+  ///
+  /// A later page holds only sounds older than the first's, so ranking it in
+  /// with the rest would move rows the user has scrolled past.
+  List<AudioEvent> _rankedForYou(
+    List<List<AudioEvent>> followedPages,
+    List<AudioEvent> divineSounds,
+  ) {
+    final now = clock.now();
+    return [
+      ...rankForYouSounds(
+        followed: followedPages.firstOrNull ?? const [],
+        divine: divineSounds,
+        now: now,
+      ),
+      for (final page in followedPages.skip(1))
+        ...rankForYouSounds(followed: page, divine: const [], now: now),
+    ];
+  }
+
+  /// Whether [sound] was taken from a video [lookup] looked for and did not
+  /// find: deleted, or hidden from this viewer.
+  ///
+  /// Such a sound can never pass the reuse check, so its row would only
+  /// refuse a tap. A sound [lookup] has not reached yet is not gone.
+  bool _sourceIsGone(
+    AudioEvent sound,
+    AsyncValue<Map<String, SoundCover?>>? lookup,
+  ) {
+    final reference = sound.sourceVideoReference;
+    final looked = lookup == null || lookup.hasError ? null : lookup.value;
+    return reference != null &&
+        looked != null &&
+        looked.containsKey(reference) &&
+        looked[reference] == null;
+  }
+
+  /// Loads [sound] into the preview player, stopping whatever played, and
+  /// returns it with the duration the file reports when the event carried
+  /// none, so the overlay and the row can show it.
+  Future<AudioEvent> _loadPreview(AudioEvent sound) async {
+    await _audioService.stop();
+    final loadedDuration = sound.isLocalImport && sound.localFilePath != null
+        ? await _audioService.loadAudioFromFile(sound.localFilePath!)
+        : await _audioService.loadAudio(sound.url!);
+    _loadedSoundId = sound.id;
+    if (sound.duration == null && loadedDuration != null) {
+      return sound.copyWith(duration: loadedDuration.inMilliseconds / 1000.0);
+    }
+    return sound;
   }
 
   Future<void> _togglePlayPause({bool enforcePlay = false}) async {
@@ -271,21 +321,8 @@ class _AudioSelectionBottomSheetState
       var resolvedSound = sound;
       if (shouldReload) {
         if (mounted) setState(() => _isLoadingAudio = true);
-        await _audioService.stop();
         try {
-          final loadedDuration =
-              sound.isLocalImport && sound.localFilePath != null
-              ? await _audioService.loadAudioFromFile(sound.localFilePath!)
-              : await _audioService.loadAudio(sound.url!);
-          _loadedSoundId = sound.id;
-          // Backfill missing duration so the selection overlay and list
-          // tile can show a correct timestamp for Nostr sounds that don't
-          // carry a duration tag.
-          if (sound.duration == null && loadedDuration != null) {
-            resolvedSound = sound.copyWith(
-              duration: loadedDuration.inMilliseconds / 1000.0,
-            );
-          }
+          resolvedSound = await _loadPreview(sound);
         } finally {
           if (mounted) setState(() => _isLoadingAudio = false);
         }
@@ -321,31 +358,36 @@ class _AudioSelectionBottomSheetState
     // never reach the resolver. Everything else — including the creator's own
     // sounds — is decided by `audioReuseConsentProvider`, which owns the owner
     // exception this call site used to be missing.
-    final canReuse =
-        sound.isBundled ||
-        sound.isLocalImport ||
-        sound.isExternalProviderSound ||
-        await ref.read(audioReuseConsentProvider(sound).future);
-    if (!mounted) return;
-    if (!canReuse) {
-      Log.info(
-        'Sound selection blocked because reuse consent could not be verified: '
-        '${sound.id}',
-        name: 'AudioSelectionBottomSheet',
-        category: LogCategory.ui,
+    final needsConsent =
+        !sound.isBundled &&
+        !sound.isLocalImport &&
+        !sound.isExternalProviderSound;
+    var preview = sound;
+    if (needsConsent) {
+      // The check asks the network about the source video and takes up to a
+      // second, so the row is picked now, with the overlay loading (and Done
+      // held) until it answers. The file loads meanwhile: both wait on the
+      // network, and side by side they take only as long as the slower one.
+      setState(() {
+        _selectedItem = sound;
+        _isLoadingAudio = true;
+      });
+      final loading = _loadPreview(sound).then<AudioEvent?>(
+        (loaded) => loaded,
+        // The preview below reloads and reports a file that would not load.
+        onError: (Object _) => null,
       );
-      // Replace rather than enqueue: the messenger outlives this sheet, so a
-      // burst of blocked taps would otherwise leave a backlog of identical
-      // toasts trailing the user into the editor (#6769).
-      ScaffoldMessenger.of(context)
-        ..removeCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.soundReuseUnavailable),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      return;
+      final canReuse = await ref.read(audioReuseConsentProvider(sound).future);
+      // Another tap came in meanwhile; that one decides.
+      if (!mounted || _selectedItem?.id != sound.id) return;
+      if (!canReuse) {
+        await _refuseReuse(sound);
+        return;
+      }
+      final loaded = await loading;
+      if (!mounted || _selectedItem?.id != sound.id) return;
+      preview = loaded ?? sound;
+      setState(() => _isLoadingAudio = false);
     }
 
     Log.info(
@@ -354,9 +396,36 @@ class _AudioSelectionBottomSheetState
       category: LogCategory.ui,
     );
     setState(() {
-      _selectedItem = sound;
+      _selectedItem = preview;
     });
     await _togglePlayPause(enforcePlay: true);
+  }
+
+  /// Unpicks [sound], whose creator does not allow reusing it, and says so.
+  Future<void> _refuseReuse(AudioEvent sound) async {
+    await _audioService.stop();
+    if (!mounted) return;
+    setState(() {
+      _selectedItem = null;
+      _isLoadingAudio = false;
+    });
+    Log.info(
+      'Sound selection blocked because reuse consent could not be verified: '
+      '${sound.id}',
+      name: 'AudioSelectionBottomSheet',
+      category: LogCategory.ui,
+    );
+    // Replace rather than enqueue: the messenger outlives this sheet, so a
+    // burst of blocked taps would otherwise leave a backlog of identical
+    // toasts trailing the user into the editor (#6769).
+    ScaffoldMessenger.of(context)
+      ..removeCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.soundReuseUnavailable),
+          duration: const Duration(seconds: 2),
+        ),
+      );
   }
 
   Future<void> _importAudio() async {
@@ -494,136 +563,281 @@ class _AudioSelectionBottomSheetState
   @override
   Widget build(BuildContext context) {
     final bundledSoundsAsync = ref.watch(soundLibraryServiceProvider);
-    final nostrSoundsAsync = ref.watch(trendingSoundsProvider);
-    // One batched query for the whole community list rather than a count
+    // Batched like the counts below and just as supplementary: a row waits on
+    // a plain tile while its list's covers load, then shows its cover, or its
+    // waveform if it has none. Every list keeps its own covers, so a tab that
+    // swipes in shows the ones it already has. A failed lookup settles as no
+    // covers, so its rows fall back to their waveforms instead of waiting.
+    Map<String, SoundCover?>? settled(
+      AsyncValue<Map<String, SoundCover?>> covers,
+    ) => covers.hasError ? const {} : covers.value;
+    // The open list loads first and the others once its covers are in, so
+    // their relay queries do not hold it up: with all three loading at once,
+    // For you's covers took 0.71-0.87 s against 0.43-0.57 s alone.
+    final openCovers = switch (_category) {
+      AudioCategory.forYou => settled(ref.watch(forYouSoundCoversProvider)),
+      AudioCategory.popular => settled(ref.watch(popularSoundCoversProvider)),
+      AudioCategory.newest => settled(ref.watch(trendingSoundCoversProvider)),
+      AudioCategory.mySounds => const <String, SoundCover?>{},
+    };
+    bool loads(AudioCategory category) =>
+        category == _category || openCovers != null;
+    final forYouAsync = loads(.forYou)
+        ? ref.watch(forYouSoundsProvider)
+        : const AsyncLoading<PagedSounds>();
+    final divineSoundsAsync = loads(.forYou)
+        ? ref.watch(divineSoundsProvider)
+        : null;
+    final popularAsync = loads(.popular)
+        ? ref.watch(popularSoundsProvider)
+        : const AsyncLoading<PagedSounds>();
+    final nostrSoundsAsync = loads(.newest)
+        ? ref.watch(trendingSoundsProvider)
+        : const AsyncLoading<PagedSounds>();
+    final forYouLookup = loads(.forYou)
+        ? ref.watch(forYouSoundCoversProvider)
+        : null;
+    final popularLookup = loads(.popular)
+        ? ref.watch(popularSoundCoversProvider)
+        : null;
+    final trendingLookup = loads(.newest)
+        ? ref.watch(trendingSoundCoversProvider)
+        : null;
+    final forYouCovers = forYouLookup == null ? null : settled(forYouLookup);
+    final popularCovers = popularLookup == null ? null : settled(popularLookup);
+    final trendingCovers = trendingLookup == null
+        ? null
+        : settled(trendingLookup);
+    // One batched query for the whole newest list rather than a count
     // provider per row. Absent while it resolves, and absent for good if it
     // fails: the counts are supplementary, so the list never waits on them.
-    final usageCounts = ref.watch(trendingSoundUsageCountsProvider).value;
+    final usageCounts = loads(.newest)
+        ? ref.watch(trendingSoundUsageCountsProvider).value
+        : null;
     final savedSoundsState = context.watch<SavedSoundsBloc>().state;
     // Searched as whole records, not as their bare audio: the label and
     // hashtags the user filed a sound under live on the record, and they are
     // the words they will reach for here.
-    final matchingSavedSounds = savedSoundsState.sounds
-        .where((sound) => sound.matchesSearch(_searchQuery))
-        .toList(growable: false);
-    // Only the Community tab shows relay results. The field is shared, so
-    // on any other tab the query stays local: on My sounds it is often a
-    // private label, which must not go out as a `#t` filter.
-    final searchResults = ref.watch(
-      soundSearchResultsProvider(
-        _category == AudioCategory.community ? _debouncedQuery : '',
-      ),
+    final matchingSavedSounds = _bySearchFit(
+      savedSoundsState.sounds
+          .where((sound) => sound.matchesSearch(_searchQuery))
+          .where((sound) => _isOfKind(sound.audio))
+          .toList(growable: false),
+      // The row shows the owner's label, so that is the title that fits.
+      titleOf: (sound) => sound.personalLabel ?? sound.audio.title,
+      audioOf: (sound) => sound.audio,
     );
+    // Only the Newest tab shows relay results. The field is shared, so on
+    // any other tab the query stays local: on My sounds it is often a
+    // private label, which must not go out as a `#t` filter.
+    final newestQuery = _category == AudioCategory.newest
+        ? _debouncedQuery
+        : '';
+    final searchResults = ref.watch(soundSearchResultsProvider(newestQuery));
+    final searchLookup = ref.watch(soundSearchCoversProvider(newestQuery));
+    final searchCovers = settled(searchLookup);
 
     final bundledVineSounds =
         bundledSoundsAsync.whenOrNull(data: (service) => service.sounds) ??
         <VineSound>[];
-    final filteredBundledVineSounds = _searchQuery.isEmpty
-        ? bundledVineSounds
-        : bundledVineSounds
-              .where((sound) => sound.matchesSearch(_searchQuery))
-              .toList();
-    final bundledSounds = filteredBundledVineSounds.indexed
-        .map((e) => AudioEvent.fromBundledSound(e.$2, index: e.$1))
+    // Divine's own sounds are matched as their manifest entries, whose tags
+    // the converted sounds below do not carry.
+    final filteredBundledVineSounds = bundledVineSounds
+        .where((sound) => sound.matchesSearch(_searchQuery))
+        .where((sound) => _kind == null || sound.soundKind == _kind)
         .toList();
-    final featuredSounds =
-        (_searchQuery.isEmpty
-                ? _featuredVineSounds
-                : _featuredVineSounds
-                      .where((sound) => sound.matchesSearch(_searchQuery))
-                      .toList())
-            .indexed
-            .map((e) => AudioEvent.fromBundledSound(e.$2, index: e.$1))
-            .toList();
-    const searchEmptyState = _SearchEmptyState();
+    final shownBundledIds = {
+      for (final sound in filteredBundledVineSounds)
+        '${AudioEvent.bundledMarker}_${sound.id}',
+    };
+    // Divine's sounds: the ones the app ships, each tied to the event Divine
+    // published for it, then the published ones it does not ship. Tied before
+    // they are narrowed, so a shipped sound a search leaves out cannot let
+    // its published event back in as a sound of its own.
+    final divineSounds = [
+      for (final sound in linkDivineSounds(
+        shipped: [
+          for (final (index, sound) in bundledVineSounds.indexed)
+            AudioEvent.fromBundledSound(sound, index: index),
+        ],
+        published: divineSoundsAsync?.value ?? const [],
+      ))
+        if (sound.isBundled
+            ? shownBundledIds.contains(sound.id)
+            : sound.matchesSearch(_searchQuery) && _isOfKind(sound))
+          sound,
+    ];
+    // Outside My sounds, importing is offered where a search came up empty:
+    // the sound the user wanted is not here, so it may be on their device.
+    final searchEmptyState = _SearchEmptyState(
+      hasQuery: _searchQuery.isNotEmpty,
+      onImport: _importAudio,
+    );
     final embedded = widget.onSoundPicked != null;
     // Embedded, there is no controller, so each list picks up the inner
     // controller of the NestedScrollView below as its primary one.
     final listScrollController = widget.scrollController;
 
     final categoryBar = AudioCategoryBar(
-      category: _category,
+      controller: tabController,
       onSelect: _selectCategory,
     );
     final searchInput = _PickerSearchInput(
       controller: _searchController,
       onChanged: _onSearchChanged,
+      // The kind narrows every list as the search does, so it sits in the
+      // search field.
+      suffix: AudioKindFilterPill(
+        selected: _kind,
+        onChanged: (kind) => setState(() => _kind = kind),
+      ),
     );
-    final importAction = _ImportAudioAction(onTap: _importAudio);
-    // Embedded, the import action is the lists' first row, so it scrolls with
-    // them and only comes back at the top: the floating search returns first.
-    final listLeading = embedded ? importAction : null;
-    final lists = TabBarView(
-      controller: tabController,
-      children: [
-        _SoundsContent(
-          scrollController: listScrollController,
-          leading: listLeading,
-          sounds: bundledSounds,
-          selectedSound: _selectedItem,
-          audioService: _audioService,
-          onSelect: _selectSound,
-        ),
-        nostrSoundsAsync.when(
-          data: (nostrSounds) {
-            return _SoundsContent(
+    // A kind narrows a list the way a search does, so an empty result
+    // says nothing matched rather than that there are no sounds at all.
+    final isNarrowed = _searchQuery.isNotEmpty || _kind != null;
+    final emptyState = isNarrowed ? searchEmptyState : const _EmptyState();
+    const loadingState = Center(child: BrandedLoadingIndicator());
+    // A list loads its next page when scrolled to its end, but not while a
+    // search or a kind narrows it. A search orders it by fit, which changes
+    // with every page. A kind may match nothing a page brings, so the end
+    // would stay in reach and ask on through the whole list: Popular's 1070
+    // sounds held not one effect.
+    final loadsMoreOnScroll = !isNarrowed;
+    final followedPages = [
+      for (final page in forYouAsync.value?.pages ?? const <List<AudioEvent>>[])
+        _filterAudioEvents(
+          page,
+        ).where((sound) => !_sourceIsGone(sound, forYouLookup)).toList(),
+    ];
+    // Its own Material, so the rows' ink shows over the sheet's background.
+    final lists = Material(
+      type: MaterialType.transparency,
+      child: TabBarView(
+        controller: tabController,
+        children: [
+          // Sounds from people the viewer follows, ranked in among Divine's own
+          // by how new they are. Divine's are always there, so a failed or empty
+          // lookup still leaves a list rather than an error.
+          if (forYouAsync.hasValue || forYouAsync.hasError)
+            _SoundsContent(
               scrollController: listScrollController,
-              leading: listLeading,
-              sounds: _communitySounds(nostrSounds, searchResults),
+              // A search orders by fit instead, with no daily mix.
+              sounds: _searchQuery.isEmpty
+                  ? _rankedForYou(followedPages, divineSounds)
+                  : _soundsBySearchFit([
+                      for (final page in followedPages) ...page,
+                      ...divineSounds,
+                    ]),
               selectedSound: _selectedItem,
               audioService: _audioService,
               onSelect: _selectSound,
-              usageCounts: usageCounts,
-              emptyState: _searchQuery.isNotEmpty
-                  ? searchEmptyState
-                  : const _EmptyState(),
-            );
-          },
-          loading: () => _LeadingAbove(
-            leading: listLeading,
-            child: const Center(child: BrandedLoadingIndicator()),
+              coversBySourceVideo: forYouCovers,
+              isLookingUpCovers: forYouLookup?.isLoading ?? false,
+              paging: loadsMoreOnScroll ? forYouAsync.value : null,
+              onLoadMore: ref.read(forYouSoundsProvider.notifier).loadMore,
+              emptyState: emptyState,
+            )
+          else
+            loadingState,
+          popularAsync.when(
+            data: (popular) => _SoundsContent(
+              scrollController: listScrollController,
+              sounds: _soundsBySearchFit(
+                _filterAudioEvents(popular.sounds)
+                    .where((sound) => !_sourceIsGone(sound, popularLookup))
+                    .toList(),
+              ),
+              selectedSound: _selectedItem,
+              audioService: _audioService,
+              onSelect: _selectSound,
+              usageCounts: popular.usageCounts,
+              coversBySourceVideo: popularCovers,
+              isLookingUpCovers: popularLookup?.isLoading ?? false,
+              paging: loadsMoreOnScroll ? popular : null,
+              onLoadMore: ref.read(popularSoundsProvider.notifier).loadMore,
+              emptyState: emptyState,
+            ),
+            loading: () => loadingState,
+            error: (error, stack) => _ErrorState(
+              error: error,
+              onRetry: () => ref.invalidate(popularSoundsProvider),
+            ),
           ),
-          error: (error, stack) => _LeadingAbove(
-            leading: listLeading,
-            child: _ErrorState(error: error),
-          ),
-        ),
-        _SoundsContent(
-          scrollController: listScrollController,
-          leading: listLeading,
-          sounds: featuredSounds,
-          selectedSound: _selectedItem,
-          audioService: _audioService,
-          onSelect: _selectSound,
-          emptyState: _searchQuery.isNotEmpty
-              ? searchEmptyState
-              : const _EmptyState(),
-        ),
-        _SoundsContent(
-          scrollController: listScrollController,
-          leading: listLeading,
-          sounds: matchingSavedSounds
-              .map((sound) => sound.audio)
-              .toList(growable: false),
-          displayTitles: {
-            for (final sound in matchingSavedSounds)
-              sound.id: ?sound.personalLabel,
-          },
-          selectedSound: _selectedItem,
-          audioService: _audioService,
-          onSelect: _selectSound,
-          // A saved entry whose file is gone stays listed but
-          // cannot be chosen: selecting it would attach a source
-          // that plays nothing to the draft (#8023).
-          unavailableSoundIds: savedSoundsState.missingFileSoundIds,
-          emptyState: _searchQuery.isNotEmpty
-              ? searchEmptyState
-              : _EmptyState(
-                  title: context.l10n.soundsSavedEmptyTitle,
-                  subtitle: context.l10n.soundsSavedEmptyDescription,
+          nostrSoundsAsync.when(
+            data: (newestList) {
+              final nostrSounds = newestList.sounds;
+              final newest = {for (final sound in nostrSounds) sound.id};
+              return _SoundsContent(
+                scrollController: listScrollController,
+                // A search result's video is looked up with the search.
+                sounds: _soundsBySearchFit(
+                  _communitySounds(nostrSounds, searchResults)
+                      .where(
+                        (sound) => !_sourceIsGone(
+                          sound,
+                          newest.contains(sound.id)
+                              ? trendingLookup
+                              : searchLookup,
+                        ),
+                      )
+                      .toList(),
                 ),
-        ),
-      ],
+                selectedSound: _selectedItem,
+                audioService: _audioService,
+                onSelect: _selectSound,
+                usageCounts: usageCounts,
+                coversBySourceVideo: trendingCovers == null
+                    ? null
+                    : {...trendingCovers, ...?searchCovers},
+                isLookingUpCovers:
+                    (trendingLookup?.isLoading ?? false) ||
+                    searchLookup.isLoading,
+                paging: loadsMoreOnScroll ? newestList : null,
+                onLoadMore: ref.read(trendingSoundsProvider.notifier).loadMore,
+                emptyState: emptyState,
+              );
+            },
+            loading: () => loadingState,
+            error: (error, stack) => _ErrorState(
+              error: error,
+              onRetry: () => ref.invalidate(trendingSoundsProvider),
+            ),
+          ),
+          // My sounds is where the user's own files live, so importing one
+          // stays its first row.
+          _SoundsContent(
+            scrollController: listScrollController,
+            leading: _ImportAudioAction(onTap: _importAudio),
+            sounds: matchingSavedSounds
+                .map((sound) => sound.audio)
+                .toList(growable: false),
+            displayTitles: {
+              for (final sound in matchingSavedSounds)
+                sound.id: ?sound.personalLabel,
+            },
+            // Saved sounds keep the frame of the video they were saved from, so
+            // their covers need no lookup.
+            covers: {
+              for (final sound in matchingSavedSounds)
+                if (sound.sourceContext?.thumbnailUrl case final thumbnailUrl?)
+                  sound.id: SoundCover(imageUrl: thumbnailUrl),
+            },
+            selectedSound: _selectedItem,
+            audioService: _audioService,
+            onSelect: _selectSound,
+            // A saved entry whose file is gone stays listed but
+            // cannot be chosen: selecting it would attach a source
+            // that plays nothing to the draft (#8023).
+            unavailableSoundIds: savedSoundsState.missingFileSoundIds,
+            emptyState: isNarrowed
+                ? _SearchEmptyState(hasQuery: _searchQuery.isNotEmpty)
+                : _EmptyState(
+                    title: context.l10n.soundsSavedEmptyTitle,
+                    subtitle: context.l10n.soundsSavedEmptyDescription,
+                  ),
+          ),
+        ],
+      ),
     );
 
     return Stack(
@@ -664,12 +878,12 @@ class _AudioSelectionBottomSheetState
             ],
           )
         else
+          // The search filters every list, so it sits above their tabs.
           Column(
             crossAxisAlignment: .stretch,
             children: [
-              categoryBar,
               searchInput,
-              importAction,
+              categoryBar,
               Expanded(child: lists),
             ],
           ),
@@ -694,6 +908,8 @@ class _AudioSelectionBottomSheetState
   }
 }
 
+/// My sounds' first row: imports an audio file from the device. Shaped like
+/// the sound rows below it, with a tile where their cover sits.
 class _ImportAudioAction extends StatelessWidget {
   const _ImportAudioAction({required this.onTap});
 
@@ -701,27 +917,35 @@ class _ImportAudioAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: context.vineColors.surface,
-      child: InkWell(
+    final colors = context.vineColors;
+    return Padding(
+      padding: const .symmetric(vertical: 4),
+      child: ListTile(
+        key: const Key('audio_import_action'),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Icon(Icons.upload_file, color: context.vineColors.primaryText),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  context.l10n.videoEditorAudioImportAudio,
-                  style: TextStyle(
-                    color: context.vineColors.primaryText,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+        minTileHeight: 48,
+        leading: SizedBox.square(
+          dimension: 48,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.surfaceContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: DivineIcon(
+                icon: DivineIconName.folderOpen,
+                color: colors.accentPositive,
               ),
-            ],
+            ),
           ),
+        ),
+        title: Text(
+          context.l10n.videoEditorAudioImportAudio,
+          style: VineTheme.titleMediumFont(color: colors.accentPositive),
+        ),
+        subtitle: Text(
+          context.l10n.soundUploadSupportedFormats,
+          style: VineTheme.bodyMediumFont(color: colors.onSurfaceVariant),
         ),
       ),
     );
@@ -729,10 +953,17 @@ class _ImportAudioAction extends StatelessWidget {
 }
 
 class _PickerSearchInput extends StatelessWidget {
-  const _PickerSearchInput({required this.controller, required this.onChanged});
+  const _PickerSearchInput({
+    required this.controller,
+    required this.onChanged,
+    required this.suffix,
+  });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+
+  /// Sits at the field's end, inside it.
+  final Widget suffix;
 
   @override
   Widget build(BuildContext context) {
@@ -752,10 +983,17 @@ class _PickerSearchInput extends StatelessWidget {
               style: TextStyle(color: context.vineColors.primaryText),
               decoration: InputDecoration(
                 hintText: context.l10n.soundsSearchHint,
-                hintStyle: TextStyle(color: context.vineColors.onSurfaceMuted),
+                hintStyle: TextStyle(
+                  color: context.vineColors.onSurfaceMuted,
+                ),
                 prefixIconConstraints: const BoxConstraints(),
+                suffixIconConstraints: const BoxConstraints(),
+                suffixIcon: suffix,
                 prefixIcon: Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 12, end: 8),
+                  padding: const EdgeInsetsDirectional.only(
+                    start: 12,
+                    end: 8,
+                  ),
                   child: DivineIcon(
                     icon: DivineIconName.search,
                     color: context.vineColors.onSurfaceMuted,
@@ -795,8 +1033,13 @@ class _SoundsContent extends StatelessWidget {
     required this.audioService,
     required this.onSelect,
     this.displayTitles = const {},
+    this.covers = const {},
+    this.coversBySourceVideo = const {},
+    this.isLookingUpCovers = false,
     this.unavailableSoundIds = const {},
     this.usageCounts,
+    this.paging,
+    this.onLoadMore,
     this.emptyState = const _EmptyState(),
     this.leading,
   });
@@ -815,6 +1058,19 @@ class _SoundsContent extends StatelessWidget {
   /// owner filed it.
   final Map<String, String> displayTitles;
 
+  /// Row covers keyed by `AudioEvent.id`.
+  final Map<String, SoundCover> covers;
+
+  /// Row covers keyed by `AudioEvent.sourceVideoReference`, for sounds whose
+  /// cover is the video they came from: `null` for a video looked up and not
+  /// found, absent for one not looked up. The map is `null` while the first
+  /// lookup runs.
+  final Map<String, SoundCover?>? coversBySourceVideo;
+
+  /// Whether a lookup for [coversBySourceVideo] is running, so rows it has
+  /// not reached yet wait for it.
+  final bool isLookingUpCovers;
+
   /// Sounds listed here but not selectable, because their device-local audio
   /// file is gone.
   final Set<String> unavailableSoundIds;
@@ -823,6 +1079,13 @@ class _SoundsContent extends StatelessWidget {
   /// list has no counts to show (bundled and saved tabs, or the community list
   /// before its batched query resolves).
   final Map<String, int>? usageCounts;
+
+  /// How far the list has loaded, when it loads its next page on reaching
+  /// its end through [onLoadMore]; `null` for a list that shows all it has.
+  final PagedSounds? paging;
+
+  /// Loads the next page of [paging].
+  final VoidCallback? onLoadMore;
 
   final Widget emptyState;
 
@@ -834,12 +1097,37 @@ class _SoundsContent extends StatelessWidget {
     return id == null ? null : usageCounts?[id];
   }
 
+  SoundCover? _coverFor(AudioEvent audio) {
+    // A cover the uploader chose wins over the frame of a source video.
+    if (SoundCover.publishedWith(audio) case final cover?) return cover;
+    if (covers[audio.id] case final cover?) return cover;
+    final reference = audio.sourceVideoReference;
+    return reference == null ? null : coversBySourceVideo?[reference];
+  }
+
+  /// Whether [audio]'s cover is still being looked up, so its row waits on a
+  /// plain tile rather than showing a waveform it may not keep.
+  bool _isCoverPending(AudioEvent audio) {
+    final reference = audio.sourceVideoReference;
+    if (reference == null || SoundCover.publishedWith(audio) != null) {
+      return false;
+    }
+    final covers = coversBySourceVideo;
+    return covers == null ||
+        (isLookingUpCovers && !covers.containsKey(reference));
+  }
+
   static const _bottomSpace = 120.0;
 
   @override
   Widget build(BuildContext context) {
     final leading = this.leading;
-    if (sounds.isEmpty) {
+    final paging = this.paging;
+    final onLoadMore = this.onLoadMore;
+    final loadsMore = paging != null && onLoadMore != null && paging.hasMore;
+    // Nothing to show yet may only mean the pages so far held nothing that
+    // fits, so a list with more to load goes on loading.
+    if (sounds.isEmpty && !loadsMore) {
       return _LeadingAbove(leading: leading, child: emptyState);
     }
 
@@ -852,10 +1140,20 @@ class _SoundsContent extends StatelessWidget {
         ),
 
         SliverList.separated(
-          itemCount: sounds.length,
+          // While more can load, one row after the sounds asks for them. A
+          // list builds its rows only as they near the screen, so it asks
+          // once the list is scrolled to its end.
+          itemCount: sounds.length + (loadsMore ? 1 : 0),
           separatorBuilder: (context, index) =>
               Divider(height: 1, color: context.vineColors.outlineDisabled),
           itemBuilder: (context, index) {
+            if (index == sounds.length) {
+              return _LoadMoreRow(
+                isLoading: paging!.isLoadingMore,
+                loadedPages: paging.pages.length,
+                onLoadMore: onLoadMore!,
+              );
+            }
             final audio = sounds[index];
             final isUnavailable = unavailableSoundIds.contains(audio.id);
             final isSelected = !isUnavailable && audio.id == selectedSound?.id;
@@ -863,6 +1161,8 @@ class _SoundsContent extends StatelessWidget {
               return AudioListTile(
                 audio: audio,
                 displayTitle: displayTitles[audio.id],
+                cover: _coverFor(audio),
+                isCoverPending: _isCoverPending(audio),
                 isSelected: false,
                 isUnavailable: isUnavailable,
                 videoCount: _videoCountFor(audio),
@@ -881,6 +1181,8 @@ class _SoundsContent extends StatelessWidget {
                 return AudioListTile(
                   audio: displayAudio,
                   displayTitle: displayTitles[displayAudio.id],
+                  cover: _coverFor(displayAudio),
+                  isCoverPending: _isCoverPending(displayAudio),
                   isSelected: true,
                   isPlaying: snapshot.data ?? false,
                   videoCount: _videoCountFor(displayAudio),
@@ -894,6 +1196,61 @@ class _SoundsContent extends StatelessWidget {
         const SliverToBoxAdapter(child: SizedBox(height: _bottomSpace)),
         const SliverBottomSafeArea(),
       ],
+    );
+  }
+}
+
+/// The row after a list's last sound while more can load. Built once the
+/// list nears its end, it asks for the next page, and again each time a page
+/// lands without pushing it out of reach; it spins while one loads.
+class _LoadMoreRow extends StatefulWidget {
+  const _LoadMoreRow({
+    required this.isLoading,
+    required this.loadedPages,
+    required this.onLoadMore,
+  });
+
+  final bool isLoading;
+
+  /// How many pages the list has loaded.
+  final int loadedPages;
+
+  final VoidCallback onLoadMore;
+
+  @override
+  State<_LoadMoreRow> createState() => _LoadMoreRowState();
+}
+
+class _LoadMoreRowState extends State<_LoadMoreRow> {
+  @override
+  void initState() {
+    super.initState();
+    _ask();
+  }
+
+  @override
+  void didUpdateWidget(_LoadMoreRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A page whose sounds were all left out adds no rows, so this row stays
+    // where it is, still in reach.
+    if (widget.loadedPages != oldWidget.loadedPages) _ask();
+  }
+
+  // Asked as the list builds, when a provider may not change yet.
+  void _ask() => scheduleMicrotask(widget.onLoadMore);
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 64,
+      child: widget.isLoading
+          ? Center(
+              child: DivineCircularProgressIndicator(
+                color: context.vineColors.accentPositive,
+                semanticsLabel: context.l10n.commonLoading,
+              ),
+            )
+          : null,
     );
   }
 }
@@ -937,7 +1294,14 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _SearchEmptyState extends StatelessWidget {
-  const _SearchEmptyState();
+  const _SearchEmptyState({required this.hasQuery, this.onImport});
+
+  /// Whether a search, rather than only the kind filter, narrowed the list;
+  /// only then does trying another term help.
+  final bool hasQuery;
+
+  /// Offers importing a file instead, or `null` where the list already does.
+  final VoidCallback? onImport;
 
   @override
   Widget build(BuildContext context) {
@@ -957,14 +1321,27 @@ class _SearchEmptyState extends StatelessWidget {
               color: context.vineColors.primaryText,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            context.l10n.soundsNoSoundsFoundDescription,
-            style: VineTheme.bodyMediumFont(
-              color: context.vineColors.secondaryText,
+          if (hasQuery) ...[
+            const SizedBox(height: 8),
+            Text(
+              context.l10n.soundsNoSoundsFoundDescription,
+              style: VineTheme.bodyMediumFont(
+                color: context.vineColors.secondaryText,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
+          ],
+          if (onImport case final onImport?) ...[
+            const SizedBox(height: 24),
+            DivineButton(
+              key: const Key('audio_search_import'),
+              label: context.l10n.videoEditorAudioImportAudio,
+              leadingIcon: DivineIconName.folderOpen,
+              type: DivineButtonType.secondary,
+              size: DivineButtonSize.small,
+              onPressed: onImport,
+            ),
+          ],
         ],
       ),
     );
@@ -993,13 +1370,16 @@ class _LeadingAbove extends StatelessWidget {
   }
 }
 
-class _ErrorState extends ConsumerWidget {
-  const _ErrorState({required this.error});
+class _ErrorState extends StatelessWidget {
+  const _ErrorState({required this.error, required this.onRetry});
 
   final Object error;
 
+  /// Loads the list that failed again.
+  final VoidCallback onRetry;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -1030,9 +1410,7 @@ class _ErrorState extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () {
-                ref.invalidate(trendingSoundsProvider);
-              },
+              onPressed: onRetry,
               icon: DivineIcon(
                 icon: DivineIconName.arrowClockwise,
                 color: context.vineColors.background,

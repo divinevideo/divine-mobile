@@ -2520,6 +2520,64 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Fetches the sounds being adopted right now, the most trending first,
+  /// each with its [SoundStats.usageCount].
+  ///
+  /// Trending weighs recent reuse, so a sound climbs as people start using
+  /// it rather than by its lifetime total.
+  ///
+  /// [limit] is the maximum number of results; the server caps it at 100.
+  /// [offset] skips that many of the ranking, for the pages after the first.
+  ///
+  /// Throws:
+  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
+  /// - [FunnelcakeApiException] if the request fails.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] for other errors.
+  Future<List<SoundStats>> getTrendingSounds({
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    if (!isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+
+    final uri = Uri.parse('$_baseUrl/api/sounds').replace(
+      queryParameters: {
+        'sort': 'trending',
+        'limit': limit.toString(),
+        if (offset > 0) 'offset': offset.toString(),
+      },
+    );
+
+    try {
+      final response = await _get(uri);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as List<dynamic>;
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(SoundStats.fromJson)
+            .toList();
+      } else {
+        throw FunnelcakeApiException(
+          message: 'Failed to fetch trending sounds',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (e) {
+      throw FunnelcakeException(
+        'Failed to fetch trending sounds: $e',
+        cause: e,
+      );
+    }
+  }
+
   /// Fetches a paginated list of followers for a user.
   ///
   /// [pubkey] is the user's public key (hex format).
