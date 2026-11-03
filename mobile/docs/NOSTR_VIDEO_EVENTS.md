@@ -88,7 +88,7 @@ Attribution reuses the same marker convention on `p` tags, and extends it to
 | Tag | Format | Description |
 |-----|--------|-------------|
 | `a` | `["a", "34236:<pubkey>:<d>", "<relay>", "mention"]` | The video the creator chose as their Inspired By source. Written at publish. |
-| `a` | `["a", "34236:<pubkey>:<d>", "<relay>", "inspired-by"]` | The same reference, rewritten by the metadata edit flow. |
+| `a` | `["a", "34236:<pubkey>:<d>", "<relay>", "inspired-by"]` | The same reference, rewritten by the metadata edit flow when the edit picks another video. An edit that keeps the same video keeps `mention`, which an Add yours answer needs to stay in its chain. |
 | `a` | `["a", "34236:<pubkey>:<d>", "<relay>", "clip-source"]` | A published video this one actually reuses footage from. One per distinct source. |
 | `p` | `["p", "<pubkey>", "<relay>", "inspired-by"]` | Notifies the Inspired By creator (NIP-27: a mention without a `p` tag does not notify). |
 | `p` | `["p", "<pubkey>", "<relay>", "clip-source"]` | Notifies the author of reused footage. |
@@ -134,7 +134,7 @@ conventions.
 The `sticker` tag's fields:
 
 - `kind` is `link`, `mention`, `hashtag`, `sound`, `place`, `countdown`,
-  `reply`, `poll`, `quiz` or `slider`.
+  `reply`, `poll`, `quiz`, `slider`, `question`, `prompt` or `replies`.
 - `target` is the full `http`/`https` address of a named host, the full hex
   pubkey, or the hashtag. A reader strips one leading `#` from a hashtag and
   lowercases it, as it does a pubkey. For `sound` it is the id the credited
@@ -150,7 +150,10 @@ The `sticker` tag's fields:
   time in seconds the countdown ends at. For `reply` it is the hex id of the
   comment or video the video replies to. For `poll`, `quiz` and `slider` it
   is the hex id of the NIP-88 `kind:1068` poll event; a reader takes any
-  other target as empty, and a sticker without its poll takes no vote.
+  other target as empty, and a sticker without its poll takes no vote. For
+  `prompt` (an Add yours) it is the address of the chain's first video,
+  `34236:<pubkey>:<d>`, or empty on that first video itself. For `question`
+  and `replies` it is always empty: they act on the video they are on.
 - The area gives the sticker's centre and its size before it is turned, as
   fractions of the video frame's width (`cx`, `w`) and height (`cy`, `h`).
 - `degrees` is how far it is turned clockwise around its centre.
@@ -164,7 +167,10 @@ The `sticker` tag's fields:
   of lyrics, one per line; a place's name as the sticker shows it; a
   countdown's title; for a reply, the name of whom it replies to and the
   comment, one per line; for a poll or a quiz, its question and then its
-  answers, and for a slider its question and then its emoji, one per line.
+  answers, and for a slider its question and then its emoji, one per line; a
+  question's question; for a `prompt`, its prompt and then the hashtag its
+  answers share, without `#`, one per line; a replies sticker's title. A
+  `question`, `prompt` or `replies` tag without that text is dropped.
 
 A reader drops the whole tag when:
 
@@ -270,8 +276,77 @@ The newer kinds:
   playing, and shows the votes after the viewer voted; the creator sees them
   straight away and does not vote.
 
+- `question`, `prompt` and `replies` are cards viewers act on, drawn like a
+  poll on one white card, and like a poll a video carries one of all these:
+  a poll, quiz, slider, question, Add yours or replies sticker. The editor
+  keeps it inside the part of the video the feed leaves clear and above every
+  other layer. The player reads who joined or replied only once the video is
+  the one playing, and draws the count, avatars and thumbnails over the card,
+  since a number drawn into the frames freezes at posting. See
+  [Question, Add yours and replies](#question-add-yours-and-replies).
+
 Older Divine versions drop a sticker tag whose `kind` they do not know, and
 then show the sticker only as it is in the frames.
+
+#### Question, Add yours and replies
+
+- **Question.** A tap on the answer field opens a page where the viewer
+  writes an answer, sent as a NIP-17 private message to the video's creator
+  through `DmRepository.sendSharedVideo`: it cites the video with a NIP-18
+  `q` tag, as a shared video does, and adds
+  `["divine:question", "<question>", "<video event id>"]`. Nobody else sees
+  it, and it is never sent as a plaintext kind 4 copy. The creator's
+  conversation shows the question above the answer and offers to answer it
+  with a video: a video reply to their own video, whose `reply` sticker shows
+  the question and the answer as its name and text, without who wrote it.
+  The video is read first and must be the creator's and the one cited; the
+  answer video is rooted at it, and its sticker shows the question on that
+  video's own question sticker, not the one in the message, which the sender
+  wrote. The creator does not answer their own question; a signed-out viewer
+  is asked to sign in. An account that may message only Divine, a protected
+  minor, is not offered the question sticker, a draft carrying one is refused
+  when it posts, and a tap on one tells it answering isn't available.
+- **Add yours (`prompt`).** A tap on its button opens the camera. The editor
+  places the same sticker on the answer, pointing at the same chain, and names
+  the chain's first video as what inspired the answer
+  (`["a", "<first video's address>", "<relay>", "mention"]`). The prompt's
+  hashtag is added to the answer like a hashtag sticker's. A video joined the
+  chain when it names the first video that way and carries the hashtag, which
+  also tells it from a video inspired by the first one for its sound. A
+  sticker's first video is honored only when that video carries an Add yours
+  of its own with the same hashtag; otherwise the chain starts at the
+  sticker's own video. While it was not read carrying one and a relay that
+  did not answer in full may hold it, the player counts the named chain but
+  offers no Join, since an answer would cite the wrong first video for good.
+  The player shows how many people joined, each counted
+  once by their newest answer the viewer's filters let through, and their
+  avatars; a tap on them opens the answers in the full-screen feed.
+- **Replies.** The player shows how many video replies the video has (kind
+  34236 videos whose NIP-22 `E` or `A` root tag names it), the avatars of the
+  latest, and their thumbnails in turn, held still under reduced motion. A tap
+  opens the replies in the full-screen feed, which applies the viewer's blocks
+  and content filters; a reply with a content warning shows only blurred on
+  the sticker. On the creator's own video a tap opens the list of replies,
+  where they pin one to the front and hide single ones. That curation is a
+  NIP-78 `kind:30078` event of the creator's with
+  `["d", "divine:replies:<video address>"]`, `["a", "<video address>"]` and,
+  per reply, a tag marked `pinned` or `hidden`: `["a", "<reply address>", "",
+  "hidden"]` for an addressable reply, so the mark outlives an edit of the
+  reply, or `["e", "<reply id>", "", "hidden"]` for one that is not. A newer
+  one replaces the one before. Viewers see the pinned reply first and none of
+  the hidden ones, on the sticker and in the feed.
+
+Funnelcake counts both and returns the latest
+(`GET /api/videos/{id}/responses?type=replies|joined&tag=<hashtag>`). For
+replies the app sends the video's event id, never its d-tag: a d-tag is unique
+only per author, and the server derives the address from the event, so replies
+to any version of the video still count. A chain is asked for by its first
+video's d-tag, and each answer it returns is checked as the relays' are.
+While it does not answer, the app reads them from the relay, at most 500 in one
+request, and shows the count with a plus, as a floor, when a relay may have
+stopped at its result-size limit.
+Reading lives in `mobile/packages/video_responses_repository`; the player's
+copy is `mobile/lib/widgets/video_feed_item/interactive_sticker_overlay.dart`.
 
 #### Polls
 

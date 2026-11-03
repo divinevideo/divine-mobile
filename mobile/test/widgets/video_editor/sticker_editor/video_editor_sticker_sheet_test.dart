@@ -11,6 +11,7 @@ import 'package:models/models.dart'
     show LocalizedText, StickerData, StickerPackData;
 import 'package:openvine/blocs/video_editor/sticker/video_editor_sticker_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_kind_row.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_sheet.dart';
 
 class MockVideoEditorStickerBloc
@@ -46,7 +47,10 @@ void main() {
       mockBloc = MockVideoEditorStickerBloc();
     });
 
-    Widget buildSubject({VideoEditorStickerState? state}) {
+    Widget buildSubject({
+      VideoEditorStickerState? state,
+      bool canAskQuestion = true,
+    }) {
       when(
         () => mockBloc.state,
       ).thenReturn(
@@ -64,8 +68,9 @@ void main() {
         home: Scaffold(
           body: BlocProvider<VideoEditorStickerBloc>.value(
             value: mockBloc,
-            child: const VideoEditorStickerSheet(
+            child: VideoEditorStickerSheet(
               enableSearchBar: true,
+              canAskQuestion: canAskQuestion,
             ),
           ),
         ),
@@ -140,6 +145,32 @@ void main() {
         );
 
         expect(find.text('No stickers found'), findsOneWidget);
+      });
+    });
+
+    group('interactive stickers', () {
+      testWidgets('offers no question to an account that may not ask one', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.pumpWidget(buildSubject(canAskQuestion: false));
+
+        expect(
+          find.text(l10n.videoEditorSocialStickerReplies),
+          findsOneWidget,
+        );
+        await tester.scrollUntilVisible(
+          find.text(l10n.videoEditorSocialStickerSlider),
+          200,
+          scrollable: find
+              .descendant(
+                of: find.byType(InteractiveStickerKindRow),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.pump();
+        expect(find.text(l10n.videoEditorSocialStickerQuestion), findsNothing);
       });
     });
 

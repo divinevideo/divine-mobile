@@ -14,6 +14,7 @@ import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/publish_error_kind_l10n.dart';
+import 'package:openvine/models/add_yours_context.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -21,6 +22,7 @@ import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_publish/video_publish_state.dart';
 import 'package:openvine/models/video_reply_context.dart';
+import 'package:openvine/providers/add_yours_context_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
@@ -175,6 +177,37 @@ void main() {
       verify(
         () => draftStorage.deleteDraft(VideoEditorConstants.autoSaveId),
       ).called(1);
+    });
+
+    test('clearAll drops the Add yours a published video answered', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final draftStorage = _MockDraftStorageService();
+      when(
+        () => draftStorage.draftExists(VideoEditorConstants.autoSaveId),
+      ).thenAnswer((_) async => false);
+      final scopedContainer = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          draftStorageServiceProvider.overrideWithValue(draftStorage),
+        ],
+      );
+      addTearDown(scopedContainer.dispose);
+      scopedContainer
+          .read(addYoursContextProvider.notifier)
+          .set(
+            AddYoursContext(
+              chainRoot: '34236:${'a' * 64}:chain',
+              prompt: 'Show your desk setup',
+              hashtag: 'showyourdesksetup',
+            ),
+          );
+
+      // Publishing leaves with go(), so the camera's pushed route never pops
+      // and its clear never runs; the next editor session must not join.
+      await scopedContainer.read(videoPublishProvider.notifier).clearAll();
+
+      expect(scopedContainer.read(addYoursContextProvider), isNull);
     });
 
     test('setError preserves other state values', () {

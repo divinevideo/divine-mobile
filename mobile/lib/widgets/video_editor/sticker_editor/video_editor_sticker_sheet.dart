@@ -26,7 +26,8 @@ class VideoEditorStickerSheet extends StatelessWidget {
     this.scrollController,
     this.soundCredit,
     this.reply,
-    this.hasPoll = false,
+    this.hasInteractiveCard = false,
+    this.canAskQuestion = true,
   });
 
   final ScrollController? scrollController;
@@ -40,9 +41,14 @@ class VideoEditorStickerSheet extends StatelessWidget {
   /// interactive sticker; `null` when it replies to nothing.
   final SocialStickerData? reply;
 
-  /// Whether the video has a poll, quiz or slider already, which leaves the
-  /// three out of the interactive stickers: a video carries one.
-  final bool hasPoll;
+  /// Whether the video has an interactive card already, a poll, quiz,
+  /// slider, question, Add yours or replies, which leaves them all out of
+  /// the interactive stickers: a video carries one.
+  final bool hasInteractiveCard;
+
+  /// Whether the account may ask a question, whose answers come as private
+  /// messages; see [InteractiveStickerKindRow.canAskQuestion].
+  final bool canAskQuestion;
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +104,11 @@ class VideoEditorStickerSheet extends StatelessWidget {
             ),
           ),
           SliverToBoxAdapter(
-            child: InteractiveStickerKindRow(reply: reply, hasPoll: hasPoll),
+            child: InteractiveStickerKindRow(
+              reply: reply,
+              hasInteractiveCard: hasInteractiveCard,
+              canAskQuestion: canAskQuestion,
+            ),
           ),
 
           SliverToBoxAdapter(

@@ -94,6 +94,7 @@ workspace:
   - packages/user_ranking
   - packages/verifier_client
   - packages/video_event_cache
+  - packages/video_responses_repository
   - packages/videos_repository
   - packages/voice_effects
 
@@ -319,6 +320,9 @@ dependencies:
 
   # Poll Repository - NIP-88 polls, quizzes and sliders on videos
   poll_repository:
+
+  # Video Responses Repository - a video's video replies and Add yours answers
+  video_responses_repository:
 
   # Profile Repository - Kind 0 user metadata persistence and search
   profile_repository:

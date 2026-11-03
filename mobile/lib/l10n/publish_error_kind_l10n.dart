@@ -64,6 +64,8 @@ extension PublishErrorKindL10n on AppLocalizations {
         return publishErrorOverlaysUnavailable;
       case PublishErrorKind.accountChanged:
         return publishErrorAccountChanged;
+      case PublishErrorKind.questionStickerRestricted:
+        return publishErrorQuestionStickerRestricted;
       case PublishErrorKind.generic:
         return publishErrorGeneric;
     }

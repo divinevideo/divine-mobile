@@ -2138,6 +2138,154 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get videoStickerQuestionAnswerHint => 'Tocá para responder';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'Responder: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'Sumá el tuyo';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count se sumaron',
+      many: '$count se sumaron',
+      one: '$count se sumó',
+      zero: 'Empezá vos',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count se sumaron';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'Ver quiénes se sumaron';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'Sumá el tuyo: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count respuestas',
+      many: '$count de respuestas',
+      one: '$count respuesta',
+      zero: 'Todavía no hay respuestas',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count respuestas';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ver $count respuestas en video',
+      many: 'Ver $count de respuestas en video',
+      one: 'Ver $count respuesta en video',
+      zero: 'Respuestas en video, todavía ninguna',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return 'Ver $count respuestas en video';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'Iniciá sesión para responder.';
+
+  @override
+  String get videoStickerQuestionUnavailable =>
+      'Responder preguntas no está disponible para tu cuenta.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'Responder';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'Tu respuesta';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'Solo $name ve tu respuesta. Puede que la comparta en un video, sin tu nombre.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'Enviar';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'Respuesta enviada.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'Esa respuesta es demasiado larga para enviarla.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'Tu respuesta no se envió. Probá de nuevo.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'Iniciá sesión para sumar el tuyo.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'Respuestas en video';
+
+  @override
+  String get videoStickerRepliesEmpty => 'Todavía no hay respuestas en video.';
+
+  @override
+  String get videoStickerRepliesLoadFailed =>
+      'No se pudieron cargar las respuestas.';
+
+  @override
+  String get videoStickerRepliesRetry => 'Probar de nuevo';
+
+  @override
+  String get videoStickerRepliesPin => 'Fijar';
+
+  @override
+  String get videoStickerRepliesUnpin => 'Dejar de fijar';
+
+  @override
+  String get videoStickerRepliesHide => 'Ocultar';
+
+  @override
+  String get videoStickerRepliesShow => 'Mostrar';
+
+  @override
+  String get videoStickerRepliesPinned => 'Fijada';
+
+  @override
+  String get videoStickerRepliesHidden => 'Oculta';
+
+  @override
+  String get videoStickerRepliesSaveFailed =>
+      'No se pudo guardar. Probá de nuevo.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'Ver la respuesta de $name';
+  }
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Este enlace se abre fuera de Divine. Revisa la dirección antes de continuar.';
 
@@ -4858,6 +5006,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get routeInvalidSoundId => 'ID de sonido inválido';
 
   @override
+  String get routeInvalidQuestion => 'Enlace de pregunta inválido';
+
+  @override
   String get routeInvalidCategory => 'Categoría inválida';
 
   @override
@@ -6242,6 +6393,19 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get dmReelReplyComposerSemanticLabel => 'Responder a este reel';
+
+  @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'Respondió tu pregunta: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'Respondiste: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'Responder con un video';
 
   @override
   String get dmReelReplyViewChat => 'Ver chat';
@@ -7859,6 +8023,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get publishErrorOverlaysUnavailable =>
       'No se pudieron preparar el texto y los stickers de este borrador. Abrilo en el editor y publicá de nuevo.';
+
+  @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Tu cuenta no puede publicar un sticker de pregunta, porque las respuestas llegan como mensajes privados. Quítalo y vuelve a publicar.';
 
   @override
   String get publishErrorTooManyDetachedClips =>
@@ -11241,8 +11409,53 @@ class AppLocalizationsEs extends AppLocalizations {
       'Quienes miren arrastran el emoji para responder y ven dónde queda en promedio.';
 
   @override
-  String get videoEditorPollAreaHint =>
-      'Las encuestas quedan dentro de este recuadro para que se puedan tocar';
+  String get videoEditorSocialStickerQuestion => 'Pregunta';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'Sumá el tuyo';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'Respuestas';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample =>
+      'Preguntame lo que quieras';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample =>
+      'Mostrá tu setup de escritorio';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'Respondé con un video';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'Tu pregunta';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      '¿Qué tiene que mostrar la gente?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'Título';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'Las respuestas te llegan como mensajes privados.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'Quienes miren responden con un video propio. Cada respuesta lleva este hashtag y enlaza a tu video.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'Muestra quiénes respondieron a este video con un video. Al tocarlo, se ven las respuestas.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'Este sticker se queda dentro de este recuadro para que se pueda tocar';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nota';

@@ -119,6 +119,25 @@ class DmMessage extends Equatable {
 
   static const _contentWarning = 'content-warning';
 
+  /// The name of the tag a private answer to a question sticker carries:
+  /// `["divine:question", <question>, <video event id>]`.
+  static const String questionTagName = 'divine:question';
+
+  List<String>? get _questionTag => tags
+      .where((tag) => tag.length >= 2 && tag.first == questionTagName)
+      .firstOrNull;
+
+  /// The question this message answers, when it is a private answer to a
+  /// question sticker on a video; `null` for any other message.
+  String? get answeredQuestion {
+    final question = _questionTag?[1].trim();
+    return question == null || question.isEmpty ? null : question;
+  }
+
+  /// The event id of the video whose question sticker this message answers,
+  /// when it names one.
+  String? get answeredVideoId => _questionTag?.elementAtOrNull(2);
+
   /// Whether this message was sent by the given pubkey.
   bool isSentBy(String pubkey) => senderPubkey == pubkey;
 

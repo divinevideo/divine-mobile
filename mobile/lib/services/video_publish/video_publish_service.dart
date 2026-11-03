@@ -59,6 +59,7 @@ class VideoPublishService {
     required this.blossomService,
     required this.draftService,
     required this.onProgressChanged,
+    required this.isDmRestricted,
     this.collaboratorInviteService,
     this.languagePreferenceService,
     this.mentionResolutionService,
@@ -97,6 +98,10 @@ class VideoPublishService {
 
   /// Callback when upload progress changes.
   final OnProgressChanged onProgressChanged;
+
+  /// Whether the signed-in account may message only Divine's own accounts, a
+  /// protected minor. Such an account cannot post a question sticker.
+  final bool Function() isDmRestricted;
 
   /// Language preference for NIP-32 tagging.
   final LanguagePreferenceService? languagePreferenceService;
@@ -251,6 +256,21 @@ class VideoPublishService {
             'Draft re-render did not produce a current final render',
           );
         }
+      }
+
+      // A protected minor may message only Divine's own accounts, so answers
+      // to a question could never reach them. The editor does not offer the
+      // sticker; a draft placed before the restriction is refused here.
+      if (isDmRestricted() &&
+          (draft.finalRenderedClip?.stickerRegions ?? const []).any(
+            (region) => region.kind == VideoStickerKind.question,
+          )) {
+        Log.warning(
+          '🚫 Refusing to publish draft ${draft.id}: a question sticker on an '
+          'account that may message only Divine',
+          category: .video,
+        );
+        return const PublishError(PublishErrorKind.questionStickerRestricted);
       }
 
       // Check if we have a background upload ID and its status.

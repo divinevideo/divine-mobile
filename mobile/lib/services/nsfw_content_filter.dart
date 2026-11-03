@@ -60,6 +60,37 @@ VideoWarningLabelsResolver createNsfwWarnLabels(
   };
 }
 
+/// Creates a [VideoWarningLabelsResolver] for a list that leaves nothing out,
+/// such as a creator's page of their video replies: the labels whose
+/// preference is [ContentFilterPreference.warn], and for a video the
+/// preferences would hide every label behind it, so it is blurred instead.
+VideoWarningLabelsResolver createNsfwReviewLabels(
+  ContentFilterService contentFilterService, {
+  ModerationLabelService? moderationLabelService,
+  String? Function()? viewerPubkey,
+}) {
+  return (VideoEvent video) {
+    final sources = _getContentLabelSources(
+      video,
+      moderationLabelService: moderationLabelService,
+    );
+    final decision = resolveEffectiveContentFilterDecision(
+      sources: sources,
+      moderationLabels: video.moderationLabels,
+      contentFilterService: contentFilterService,
+      isOwner: contentOwnerMatches(video.pubkey, viewerPubkey?.call()),
+    );
+    if (decision.preference != ContentFilterPreference.hide) {
+      return decision.warnLabels;
+    }
+    return {
+      ...sources.creator,
+      ...sources.trusted,
+      ...video.moderationLabels,
+    }.toList();
+  };
+}
+
 /// Extracts content label values from a [VideoEvent].
 ///
 /// Uses creator self-labels, trusted kind-1985 labels, and hashtag fallbacks.

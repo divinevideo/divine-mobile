@@ -113,6 +113,8 @@ void main() {
   late MockMentionResolutionService mockMentionResolutionService;
   late _FakePerformanceMonitor fakePerformanceMonitor;
   late VideoPublishService service;
+  // Whether the account may message only Divine, a protected minor.
+  var dmRestricted = false;
 
   late List<double> progressChanges;
 
@@ -135,6 +137,7 @@ void main() {
   });
 
   setUp(() {
+    dmRestricted = false;
     mockUploadManager = MockUploadManager();
     mockDraftMaterializer = _MockDraftUploadMaterializer();
     mockAuthService = MockAuthService();
@@ -172,6 +175,7 @@ void main() {
     );
 
     service = VideoPublishService(
+      isDmRestricted: () => dmRestricted,
       draftMaterializer: mockDraftMaterializer,
       uploadManager: mockUploadManager,
       authService: mockAuthService,
@@ -220,6 +224,7 @@ void main() {
   VideoPublishService retryService(
     Future<DivineVideoDraft> Function(DivineVideoDraft) render,
   ) => VideoPublishService(
+    isDmRestricted: () => dmRestricted,
     draftMaterializer: mockDraftMaterializer,
     uploadManager: mockUploadManager,
     authService: mockAuthService,
@@ -231,6 +236,66 @@ void main() {
   );
   group('VideoPublishService', () {
     group('publishVideo', () {
+      group('a question sticker', () {
+        const question = VideoStickerRegion(
+          kind: VideoStickerKind.question,
+          target: '',
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.8,
+          height: 0.3,
+          label: 'Ask me anything',
+        );
+        DivineVideoDraft asking() => _createTestDraft().copyWith(
+          finalRenderedClip: _createTestClip().copyWith(
+            stickerRegions: const [question],
+          ),
+        );
+
+        setUp(
+          () => _setupSuccessfulPublish(
+            mockAuthService: mockAuthService,
+            mockUploadManager: mockUploadManager,
+            mockDraftService: mockDraftService,
+            mockVideoEventPublisher: mockVideoEventPublisher,
+          ),
+        );
+
+        test('is refused for a protected minor, before anything is '
+            'uploaded', () async {
+          dmRestricted = true;
+
+          final result = await service.publishVideo(draft: asking());
+
+          expect(
+            result,
+            isA<PublishError>().having(
+              (error) => error.kind,
+              'kind',
+              PublishErrorKind.questionStickerRestricted,
+            ),
+          );
+          verifyZeroInteractions(mockUploadManager);
+          verifyZeroInteractions(mockVideoEventPublisher);
+        });
+
+        test('posts for an account that is not restricted', () async {
+          expect(
+            await service.publishVideo(draft: asking()),
+            isA<PublishSuccess>(),
+          );
+        });
+
+        test('leaves a protected minor free to post without one', () async {
+          dmRestricted = true;
+
+          expect(
+            await service.publishVideo(draft: _createTestDraft()),
+            isA<PublishSuccess>(),
+          );
+        });
+      });
+
       test('never uploads source media after a legacy render is invalidated', () async {
         _setupSuccessfulPublish(
           mockAuthService: mockAuthService,
@@ -897,6 +962,7 @@ void main() {
             ).thenAnswer((_) => Completer<BlossomUploadResult>().future);
 
             final boundedService = VideoPublishService(
+              isDmRestricted: () => dmRestricted,
               draftMaterializer: mockDraftMaterializer,
               uploadManager: mockUploadManager,
               authService: mockAuthService,
@@ -967,6 +1033,7 @@ void main() {
             ).thenAnswer((_) => Completer<String?>().future);
 
             final boundedService = VideoPublishService(
+              isDmRestricted: () => dmRestricted,
               draftMaterializer: mockDraftMaterializer,
               uploadManager: mockUploadManager,
               authService: mockAuthService,
@@ -3440,6 +3507,7 @@ void main() {
       final publishAtSecs = publishAt.millisecondsSinceEpoch ~/ 1000;
 
       VideoPublishService scheduledService() => VideoPublishService(
+        isDmRestricted: () => dmRestricted,
         draftMaterializer: mockDraftMaterializer,
         uploadManager: mockUploadManager,
         authService: mockAuthService,
@@ -3855,6 +3923,7 @@ void main() {
       VideoPublishService buildServiceWithLanguage(
         LanguagePreferenceService languageService,
       ) => VideoPublishService(
+        isDmRestricted: () => dmRestricted,
         draftMaterializer: mockDraftMaterializer,
         uploadManager: mockUploadManager,
         authService: mockAuthService,

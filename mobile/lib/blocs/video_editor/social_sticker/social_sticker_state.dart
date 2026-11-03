@@ -23,13 +23,14 @@ class SocialStickerState extends Equatable {
   /// Whether the last person picked cannot be mentioned.
   final bool personBlocked;
 
-  /// Whether this sticker's hashtag would take the post past the most
-  /// hashtags a video can carry.
+  /// Whether this sticker's hashtag, a hashtag sticker's or an Add yours's,
+  /// would take the post past the most hashtags a video can carry.
   bool get isOverHashtagLimit {
     final hashtag = data.hashtag;
-    if (data.kind != SocialStickerKind.hashtag || hashtag == null) {
-      return false;
-    }
+    final addsHashtag =
+        data.kind == SocialStickerKind.hashtag ||
+        data.kind == SocialStickerKind.addYours;
+    if (!addsHashtag || hashtag == null || hashtag.isEmpty) return false;
     return !otherHashtags.contains(hashtag) &&
         otherHashtags.length >= HashtagExtractor.maxHashtagsPerVideo;
   }

@@ -99,6 +99,12 @@ enum PublishErrorKind {
   /// would post the video under the wrong identity.
   accountChanged,
 
+  /// The draft carries a question sticker and the account may message only
+  /// Divine's own accounts, a protected minor: answers would come as private
+  /// messages it cannot receive. Removing the sticker in the editor lets it
+  /// post; retrying fails the same way.
+  questionStickerRestricted,
+
   /// Unclassified failure — generic "try again" copy.
   generic,
 }

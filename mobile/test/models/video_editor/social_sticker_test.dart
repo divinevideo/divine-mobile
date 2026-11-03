@@ -65,6 +65,12 @@ void main() {
             replyImageUrl: 'https://divine.video/thumb.jpg',
             replyToVideo: true,
           ),
+          const SocialStickerData(
+            kind: SocialStickerKind.addYours,
+            prompt: 'Show your desk',
+            hashtag: 'desksetup',
+            chainRoot: '34236:$_pubkey:desk-1',
+          ),
         ];
 
         for (final sticker in stickers) {
@@ -79,7 +85,7 @@ void main() {
         );
         final unknown = const SocialStickerData(
           kind: SocialStickerKind.hashtag,
-        ).toMeta()..['socialKind'] = 'question';
+        ).toMeta()..['socialKind'] = 'scavengerHunt';
 
         expect(SocialStickerData.fromMeta(info.toMeta()), isNull);
         expect(SocialStickerData.fromMeta(unknown), isNull);
@@ -605,6 +611,118 @@ void main() {
       });
     });
 
+    group('question, Add yours and replies', () {
+      const addYours = SocialStickerData(
+        kind: SocialStickerKind.addYours,
+        prompt: ' Show your desk ',
+        hashtag: 'DeskSetup',
+      );
+      const answer = SocialStickerData(
+        kind: SocialStickerKind.addYours,
+        prompt: 'Show your desk',
+        hashtag: 'desksetup',
+        chainRoot: '34236:$_pubkey:desk-1',
+      );
+
+      test('take their one white card, like a poll', () {
+        for (final kind in [
+          SocialStickerKind.question,
+          SocialStickerKind.addYours,
+          SocialStickerKind.replies,
+        ]) {
+          expect(kind.isInteractiveCard, isTrue);
+          expect(kind.isPoll, isFalse);
+          expect(kind.styles, equals([InfoStickerStyle.light]));
+        }
+        expect(SocialStickerKind.countdown.isInteractiveCard, isFalse);
+      });
+
+      test('need what they ask on one line, an Add yours its hashtag', () {
+        expect(
+          SocialStickerData.interactive(
+            SocialStickerKind.question,
+            prompt: 'Ask me anything',
+          ).isComplete,
+          isTrue,
+        );
+        expect(addYours.isComplete, isTrue);
+        expect(
+          [
+            SocialStickerData.interactive(SocialStickerKind.question),
+            SocialStickerData.interactive(
+              SocialStickerKind.replies,
+              prompt: 'Two\nlines',
+            ),
+            SocialStickerData.interactive(
+              SocialStickerKind.replies,
+              prompt: 'x' * (SocialStickerData.maxPromptLength + 1),
+            ),
+            addYours.copyWith(hashtag: '#'),
+          ].map((sticker) => sticker.isComplete),
+          everyElement(isFalse),
+        );
+      });
+
+      test('start an Add yours hashtag from the prompt', () {
+        expect(
+          SocialStickerData.hashtagForPrompt('Show your desk setup!'),
+          equals('showyourdesksetup'),
+        );
+        expect(SocialStickerData.hashtagForPrompt('!!!'), isNull);
+      });
+
+      test('are published by what they ask, and come back from the tag', () {
+        for (final sticker in [
+          SocialStickerData.interactive(
+            SocialStickerKind.question,
+            prompt: 'Ask me anything',
+          ),
+          SocialStickerData.interactive(
+            SocialStickerKind.replies,
+            prompt: 'Reply with a video',
+          ),
+          addYours,
+          answer,
+        ]) {
+          final region = VideoStickerRegion.fromTag(
+            VideoStickerRegion(
+              kind: sticker.tapKind,
+              target: sticker.tapTarget!,
+              centerX: 0.5,
+              centerY: 0.5,
+              width: 0.6,
+              height: 0.3,
+              style: sticker.style.name,
+              label: sticker.tapLabel,
+            ).toTag(),
+          );
+
+          expect(
+            SocialStickerData.ofRegion(region!),
+            equals(
+              SocialStickerData(
+                kind: sticker.kind,
+                prompt: sticker.prompt?.trim(),
+                hashtag: sticker.kind == SocialStickerKind.addYours
+                    ? 'desksetup'
+                    : null,
+                chainRoot: sticker.chainRoot,
+              ),
+            ),
+            reason: sticker.kind.name,
+          );
+        }
+      });
+
+      test('an Add yours points at its chain, or at nothing on its first '
+          'video', () {
+        expect(addYours.tapKind, equals(VideoStickerKind.prompt));
+        expect(addYours.tapTarget, isEmpty);
+        expect(answer.tapTarget, equals('34236:$_pubkey:desk-1'));
+        expect(addYours.tapLabel, equals('Show your desk\ndesksetup'));
+      });
+    });
+
     group('withLyric', () {
       test('drops a blank line of lyrics', () {
         const credit = SocialStickerData(
@@ -676,6 +794,35 @@ void main() {
         ]);
 
         expect(credits.poll?.question, equals('First?'));
+      });
+
+      test("adds an Add yours's hashtag, and nothing for a question or a "
+          'replies sticker', () {
+        final credits = SocialStickerCredits.of([
+          _layer(
+            const SocialStickerData(
+              kind: SocialStickerKind.addYours,
+              prompt: 'Show your desk',
+              hashtag: 'desksetup',
+            ).toMeta(),
+          ),
+          _layer(
+            SocialStickerData.interactive(
+              SocialStickerKind.question,
+              prompt: 'Ask me anything',
+            ).toMeta(),
+          ),
+          _layer(
+            SocialStickerData.interactive(
+              SocialStickerKind.replies,
+              prompt: 'Reply with a video',
+            ).toMeta(),
+          ),
+        ]);
+
+        expect(credits.hashtags, equals({'desksetup'}));
+        expect(credits.mentionPubkeys, isEmpty);
+        expect(credits.poll, isNull);
       });
     });
 

@@ -125,10 +125,10 @@ bool _isEditRebuiltTag(List<String> tag, {required bool isVideoReply}) {
     return true;
   }
   // Inspired-by a-tags (publish writes a 'mention' marker, edit writes
-  // 'inspired-by'). Only owned on non-reply videos; on a reply these are
-  // reply-threading metadata (or a genuine inspired-by the edit flow cannot
-  // represent) and are preserved verbatim. Unmarked reply-root a-tags are
-  // preserved either way. Match the marker case-insensitively to mirror the
+  // 'inspired-by' unless it keeps the same video). Only owned on non-reply
+  // videos; on a reply these are reply-threading metadata (or a genuine
+  // inspired-by the edit flow cannot represent) and are preserved verbatim.
+  // Unmarked reply-root a-tags are preserved either way. Match the marker case-insensitively to mirror the
   // parser and the collaborator check above.
   if (!isVideoReply &&
       name == 'a' &&
@@ -408,12 +408,23 @@ class VideoMetadataUpdateService {
       // The parser exposes an unmarked lowercase reply-root a-tag through
       // inspiredByVideo too. Do not turn that parent reference into creator
       // attribution when republishing a video reply.
-      if (editorState.inspiredByVideo != null && !isVideoReply) {
+      if (editorState.inspiredByVideo case final inspiredBy?
+          when !isVideoReply) {
+        // Publish marks the a-tag 'mention', and an Add yours answer counts
+        // as joining its chain only while it does, so an edit that keeps the
+        // same video keeps that marker.
+        final keepsMention = originalVideo.nostrEventTags.any(
+          (tag) =>
+              tag.length >= 4 &&
+              tag[0] == 'a' &&
+              tag[1] == inspiredBy.addressableId &&
+              tag[3].toLowerCase() == 'mention',
+        );
         tags.add([
           'a',
-          editorState.inspiredByVideo!.addressableId,
-          editorState.inspiredByVideo!.relayUrl ?? '',
-          'inspired-by',
+          inspiredBy.addressableId,
+          inspiredBy.relayUrl ?? '',
+          if (keepsMention) 'mention' else 'inspired-by',
         ]);
       }
 
