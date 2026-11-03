@@ -1248,12 +1248,6 @@ class AppDatabase extends _$AppDatabase {
         CREATE INDEX IF NOT EXISTS idx_dm_conversation_created
         ON direct_messages (conversation_id, created_at DESC)
       ''');
-      // This table has no owner_pubkey yet; the v32 step re-creates the index
-      // per account once the upgrade chain has added it.
-      await customStatement('''
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_dm_gift_wrap_id
-        ON direct_messages (gift_wrap_id)
-      ''');
       await customStatement('''
         CREATE INDEX IF NOT EXISTS idx_dm_sender
         ON direct_messages (sender_pubkey)
@@ -1349,9 +1343,9 @@ class AppDatabase extends _$AppDatabase {
       'is_deleted',
       'INTEGER NOT NULL DEFAULT 0',
     );
-    // Ensure the UNIQUE index on gift_wrap_id exists unconditionally.
-    // It was originally inside the "if table missing" block, so databases
-    // created by Drift's m.createAll() were missing it.
+    // Created only here, never with the legacy table above: that table has no
+    // owner_pubkey until the column is added, and an index made earlier would
+    // be the old device-wide one, which `IF NOT EXISTS` then keeps.
     await customStatement(_dmGiftWrapIndexSql);
     await customStatement('''
       CREATE INDEX IF NOT EXISTS idx_dm_owner_pubkey

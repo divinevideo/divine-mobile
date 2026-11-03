@@ -1626,6 +1626,59 @@ void main() {
     });
 
     group('schema repair', () {
+      test('recreating a missing direct_messages table leaves the gift-wrap '
+          'index unique per account', () async {
+        await database.customSelect('SELECT 1').get();
+        await database.close();
+        final raw = sqlite3.open(tempDbPath);
+        try {
+          raw.execute('DROP TABLE direct_messages;');
+        } finally {
+          raw.close();
+        }
+
+        // Recovery recreates the table in its legacy shape, which has no
+        // owner_pubkey yet, and then adds the column. The upgrade step that
+        // makes the index per account never runs on this path.
+        database = AppDatabase.test(NativeDatabase(File(tempDbPath)));
+        await database.customSelect('SELECT 1').get();
+
+        final indexed = await database
+            .customSelect('PRAGMA index_info(idx_dm_gift_wrap_id);')
+            .get();
+        expect(
+          indexed.map((row) => row.data['name'] as String),
+          equals(['gift_wrap_id', 'owner_pubkey']),
+        );
+        final ownerA = 'a' * 64;
+        final ownerB = 'b' * 64;
+        const wrapId = 'wrap_for_both';
+        final insertedForA = await database.directMessagesDao.insertMessage(
+          id: 'rumor_for_a',
+          conversationId: 'conv_a',
+          senderPubkey: ownerA,
+          content: 'sent',
+          createdAt: 1700000000,
+          giftWrapId: wrapId,
+          ownerPubkey: ownerA,
+        );
+        final insertedForB = await database.directMessagesDao.insertMessage(
+          id: 'rumor_for_a',
+          conversationId: 'conv_b',
+          senderPubkey: ownerA,
+          content: 'sent',
+          createdAt: 1700000000,
+          giftWrapId: wrapId,
+          ownerPubkey: ownerB,
+        );
+        expect(insertedForA, isTrue);
+        expect(
+          insertedForB,
+          isTrue,
+          reason: "the second account keeps its copy of the sender's wrap id",
+        );
+      });
+
       test(
         'restores the queued view-event recording version on a damaged '
         'current-version database',
