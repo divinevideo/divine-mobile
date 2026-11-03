@@ -2,6 +2,7 @@
 // ABOUTME: as the feeds filter, and the warnings on a creator's own replies.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:models/models.dart' show VideoEvent;
 import 'package:openvine/blocs/sticker_responses/sticker_responses_cubit.dart';
 import 'package:openvine/blocs/video_replies/video_replies_cubit.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -55,4 +56,24 @@ final repliesWarningsProvider = Provider<RepliesWarnings>((ref) {
   return (replies) => [
     for (final reply in replies) reply.copyWith(warnLabels: labels(reply)),
   ];
+});
+
+/// Whether the creator's content settings would hide a reply. Their replies
+/// page still lists it, blurred, so they can hide it, but never plays it:
+/// some of those categories are locked to hide for every account, and others
+/// until the account is verified as an adult.
+///
+/// Rebuilt when the account or its content settings change.
+final repliesHiddenBySettingsProvider = Provider<bool Function(VideoEvent)>((
+  ref,
+) {
+  ref
+    ..watch(currentAuthStateProvider)
+    ..watch(contentFilterVersionProvider);
+  final authService = ref.watch(authServiceProvider);
+  return createNsfwFilter(
+    ref.watch(contentFilterServiceProvider),
+    moderationLabelService: ref.watch(moderationLabelServiceProvider),
+    viewerPubkey: () => authService.currentPublicKeyHex,
+  );
 });

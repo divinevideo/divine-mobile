@@ -14,6 +14,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/video_replies/video_replies_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/feed_repository_provider.dart';
+import 'package:openvine/providers/sticker_responses_filter_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/video_replies/video_replies_screen.dart';
@@ -45,23 +46,29 @@ void main() {
   group(VideoRepliesView, () {
     late _MockVideoRepliesCubit cubit;
     late Map<String, UserProfile> profiles;
+    // The replies the creator's content settings would hide.
+    late Set<String> hiddenBySettings;
     final l10n = lookupAppLocalizations(const Locale('en'));
 
     setUp(() {
       cubit = _MockVideoRepliesCubit();
       profiles = {};
+      hiddenBySettings = <String>{};
       when(() => cubit.pinToggled(any())).thenAnswer((_) async {});
       when(() => cubit.hideToggled(any())).thenAnswer((_) async {});
       when(() => cubit.load()).thenAnswer((_) async {});
     });
 
     // The profiles of the replies' authors, read when a reply came without
-    // its author's name.
+    // its author's name, and the creator's content settings.
     List<Override> profileOverrides() => [
       for (final n in [1, 2])
         fetchUserProfileProvider(
           _reply(n).pubkey,
         ).overrideWith((ref) async => profiles[_reply(n).pubkey]),
+      repliesHiddenBySettingsProvider.overrideWithValue(
+        (reply) => hiddenBySettings.contains(reply.id),
+      ),
     ];
 
     Future<void> pump(WidgetTester tester, VideoRepliesState state) async {
@@ -268,6 +275,76 @@ void main() {
                 'initialVideoId',
                 _reply(2).id,
               ),
+        );
+      });
+
+      testWidgets("never plays a reply the creator's settings would hide", (
+        tester,
+      ) async {
+        final opened = <Object?>[];
+        hiddenBySettings = {_reply(1).id};
+        when(() => cubit.state).thenReturn(
+          VideoRepliesState(
+            status: VideoRepliesStatus.loaded,
+            replies: [
+              _reply(1, name: 'Alice'),
+              _reply(2, name: 'Bob'),
+            ],
+          ),
+        );
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (_, _) => BlocProvider<VideoRepliesCubit>.value(
+                value: cubit,
+                child: const VideoRepliesView(),
+              ),
+              routes: [
+                GoRoute(
+                  path: ':feed',
+                  builder: (_, state) {
+                    opened.add(state.extra);
+                    return const Scaffold();
+                  },
+                ),
+              ],
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              feedRepositoryProvider.overrideWithValue(_MockFeedRepository()),
+              ...profileOverrides(),
+            ],
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        );
+
+        // Still listed, so the creator can hide it, but it does not open.
+        expect(find.text('Alice'), findsOneWidget);
+        await tester.tap(find.text('Alice'));
+        await tester.pumpAndSettle();
+        expect(opened, isEmpty);
+
+        // Nor does it play in the feed another reply opens.
+        await tester.tap(find.text('Bob'));
+        await tester.pumpAndSettle();
+        expect(
+          opened.single,
+          isA<PooledFullscreenVideoFeedArgs>().having(
+            (args) => (args.source as VideoListViewSource).videos.map(
+              (video) => video.id,
+            ),
+            'videos',
+            [_reply(2).id],
+          ),
         );
       });
 

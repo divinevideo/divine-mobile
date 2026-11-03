@@ -179,7 +179,8 @@ class _ReplyList extends StatelessWidget {
 }
 
 /// One reply: its thumbnail, who posted it, whether it is pinned or hidden,
-/// and the buttons that change that. A tap watches the replies from it.
+/// and the buttons that change that. A tap watches the replies from it, but
+/// never one the creator's content settings would hide.
 class _ReplyTile extends ConsumerWidget {
   const _ReplyTile({required this.reply});
 
@@ -212,13 +213,23 @@ class _ReplyTile extends ConsumerWidget {
         : isHidden
         ? l10n.videoStickerRepliesHidden
         : null;
+    // Listed, blurred, so the creator can hide it, but not played: some of
+    // what the settings hide is locked to hide for the account.
+    final hiddenBySettings = ref.watch(repliesHiddenBySettingsProvider);
+    final watchable = !hiddenBySettings(reply);
     return Semantics(
-      button: true,
-      label: l10n.videoStickerRepliesWatchSemanticLabel(name),
+      button: watchable,
+      label: watchable
+          ? l10n.videoStickerRepliesWatchSemanticLabel(name)
+          : null,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {
-          final shown = cubit.state.shown;
+          if (!watchable) return;
+          final shown = [
+            for (final video in cubit.state.shown)
+              if (!hiddenBySettings(video)) video,
+          ];
           final videos = shown.any((video) => video.id == reply.id)
               ? shown
               : [reply];
