@@ -1,5 +1,5 @@
-// ABOUTME: Deletions the live kind-5 REQ reads (#9468), including one that
-// ABOUTME: arrives before the message it names.
+// ABOUTME: Deletions the live kind-5 REQ reads (#9468): one that arrives
+// ABOUTME: before the message it names, and a batch a relay capped.
 
 import 'dart:async';
 
@@ -13,6 +13,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/nip04/nip04.dart';
 import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
@@ -33,8 +34,26 @@ final String _owner = getPublicKey(_ownerSecret);
 final String _other = getPublicKey(_otherSecret);
 final String _alice = getPublicKey(_aliceSecret);
 
+const _day = 86400;
 const _relayUrl = 'wss://relay.test';
 const _settleTimeout = Duration(seconds: 10);
+
+bool _admits(nostr_filter.Filter filter, Event event) {
+  final kinds = filter.kinds;
+  if (kinds != null && !kinds.contains(event.kind)) return false;
+  final p = filter.p;
+  if (p != null &&
+      !event.tags.any(
+        (tag) => tag.length > 1 && tag[0] == 'p' && p.contains(tag[1]),
+      )) {
+    return false;
+  }
+  final since = filter.since;
+  if (since != null && event.createdAt < since) return false;
+  final until = filter.until;
+  if (until != null && event.createdAt > until) return false;
+  return true;
+}
 
 /// One live REQ the repository opened, sent to by the test.
 class _LiveReq {
@@ -56,10 +75,34 @@ class _LiveReq {
   );
 }
 
-/// The live REQs the repository opened, in order.
+/// The pool's one relay: the live REQs the repository opened, in order, and
+/// the events a read of its history is answered from.
 class _Relay {
   final List<_LiveReq> dmReqs = [];
   final List<_LiveReq> deletionReqs = [];
+  final List<Event> stored = [];
+
+  /// The relay's own result limit, which clamps a read's `limit`.
+  int? cap;
+
+  /// Answers a read of [filter] newest first, possibly capped once it fills
+  /// its limit, as the pool judges a single relay's page.
+  QueryResult read(nostr_filter.Filter filter) {
+    final asked = filter.limit;
+    final relayCap = cap;
+    final limit = asked == null || (relayCap != null && relayCap < asked)
+        ? relayCap
+        : asked;
+    final matching = stored.where((event) => _admits(filter, event)).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final events = limit == null ? matching : matching.take(limit).toList();
+    return QueryResult(
+      events: events,
+      endedBy: QueryEnd.complete,
+      answeredNetworkRelayCount: 1,
+      possiblyCapped: limit != null && events.length >= limit,
+    );
+  }
 }
 
 void main() {
@@ -126,10 +169,9 @@ void main() {
         maxCollectedBytes: any(named: 'maxCollectedBytes'),
       ),
     ).thenAnswer(
-      (_) async => const QueryResult(
-        events: [],
-        endedBy: QueryEnd.complete,
-        answeredNetworkRelayCount: 1,
+      (invocation) async => relay.read(
+        (invocation.positionalArguments.first as List<nostr_filter.Filter>)
+            .single,
       ),
     );
     when(() => client.unsubscribe(any())).thenAnswer((_) async {});
@@ -181,6 +223,21 @@ void main() {
   }
 
   int now() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+  /// An account whose history is restored and whose newest message was
+  /// stamped [wire], so the live REQs ask from two days before it.
+  Future<void> establish(int wire) async {
+    final sync = DmSyncState(prefs);
+    await sync.recordSeen(_owner, createdAt: wire);
+    await sync.recordWireSeen(_owner, createdAt: wire);
+    await sync.markHistoryDrainComplete(_owner);
+    await sync.setDrainVersion(_owner, DmSyncState.currentDrainVersion);
+    await sync.setDrainCoveredOwnInbox(_owner);
+    await sync.setGroupRecoveryVersion(
+      _owner,
+      DmSyncState.currentGroupRecoveryVersion,
+    );
+  }
 
   /// A NIP-04 message from Alice to [to].
   Event nip04(String content, {String? to, int? createdAt}) {
@@ -393,6 +450,44 @@ void main() {
       final row = await rowOf(message, owner: _other);
       expect(row, isNotNull, reason: 'the other account stored its copy');
       expect(row!.isDeleted, isFalse);
+    });
+  });
+
+  group('a capped live deletions batch', () {
+    test('leaves the older deletions to the catch-up debt walk', () async {
+      final at = now();
+      await establish(at - 10 * _day);
+      final message = nip04('take this back', createdAt: at - 5 * _day);
+      final deletion = deletionOf([message.id], createdAt: at - 4 * _day);
+      // The relay's two newest deletions name messages never received.
+      final newest = deletionOf(['1' * 64], createdAt: at - 2 * _day);
+      final next = deletionOf(['2' * 64], createdAt: at - 3 * _day);
+      final relay = _Relay()
+        ..cap = 2
+        ..stored.addAll([message, deletion, newest, next]);
+      final repository = launch(relay);
+      addTearDown(repository.stopListening);
+
+      await repository.startListening();
+      relay.dmReqs.single
+        ..send(message)
+        ..end();
+      await stored(message);
+      await pumpEventQueue();
+      expect(
+        DmSyncState(prefs).newestWireSyncedAt(_owner),
+        message.createdAt,
+        reason: "the DMs' window is saved before the deletions end",
+      );
+      // All the relay's limit lets it send: the deletion of the message is
+      // older than both.
+      relay.deletionReqs.single
+        ..send(newest)
+        ..send(next)
+        ..end(capped: {_relayUrl: next.createdAt});
+
+      await deleted(message);
+      expect((await rowOf(message))!.isDeleted, isTrue);
     });
   });
 }

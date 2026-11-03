@@ -6284,6 +6284,7 @@ void main() {
                 any(that: isLiveDeletionsRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 tempRelays: any(named: 'tempRelays'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
               ),
             ).thenAnswer(
               (_) => (deletions..add(StreamController<Event>())).last.stream,
@@ -6329,6 +6330,7 @@ void main() {
               any(that: isLiveDeletionsRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer(
             (_) => (deletions..add(StreamController<Event>())).last.stream,
@@ -6388,6 +6390,7 @@ void main() {
                 any(that: isLiveDeletionsRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 tempRelays: any(named: 'tempRelays'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
               ),
             ).thenAnswer(
               (_) => (deletions..add(StreamController<Event>())).last.stream,

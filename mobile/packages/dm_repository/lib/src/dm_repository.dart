@@ -1684,8 +1684,10 @@ class DmRepository {
       // once but holds the DMs, and a deletion handled before the message it
       // names waits for it only in memory, and only up to a cap. The hold
       // limit opens them too, as a relay can hold that end for the whole
-      // session. No catch-up either: a deletion saves no stamp, so it cannot
-      // move a window.
+      // session. A deletion saves no stamp, so none is held back for it, but
+      // a relay that stops its stored deletions at its result cap is recorded
+      // as catch-up debt, as one that stops its DMs is, and the walk reads
+      // both kinds (#10192).
       var deletionsOpened = false;
       void openDeletions() {
         if (deletionsOpened || _disposed) return;
@@ -1696,6 +1698,10 @@ class DmRepository {
               [deletionsFilter],
               subscriptionId: dmDeletionsSubscriptionId(subscriptionId),
               tempRelays: ownInbox,
+              onStoredEventsEnd: (end) {
+                catchUp.markCapped(end.possiblyCappedRelays);
+                _maybeCommitCatchUp(catchUp);
+              },
             )
             .listen(
               _handleIncomingEvent,
@@ -13908,7 +13914,9 @@ class _LiveCatchUp {
   ///
   /// A relay the hold limit already recorded is reported again when its
   /// phase ends, for the same batch; a part of the window already recorded
-  /// in this phase is not held again, or the walk would read it twice.
+  /// in this phase is not held again, or the walk would read it twice. The
+  /// deletions REQ reports into the same phase, which is safe because the
+  /// walk reads deletions beside the DMs.
   void markCapped(Map<String, int?> relays) {
     if (since == null) return;
     relays.forEach((url, oldest) {
