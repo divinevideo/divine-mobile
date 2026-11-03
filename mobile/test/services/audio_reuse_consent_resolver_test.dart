@@ -47,6 +47,7 @@ VideoEvent _video({
   String id = 'video-event',
   String vineId = 'source-video',
   int createdAt = 101,
+  int? eventCreatedAt,
   String? reuseMarker = 'true',
   bool isVerifiedArchive = false,
 }) {
@@ -58,6 +59,7 @@ VideoEvent _video({
     id: id,
     pubkey: _pubkey,
     createdAt: createdAt,
+    eventCreatedAt: eventCreatedAt,
     content: '',
     timestamp: DateTime.fromMillisecondsSinceEpoch(
       createdAt * 1000,
@@ -241,6 +243,23 @@ void main() {
 
     test('fails closed when the source video predates the sound', () async {
       stubSource([_video(createdAt: 99)]);
+
+      expect(await resolver.verify(_sound()), isFalse);
+    });
+
+    test(
+      'allows the sound of an edit, published after the video first was',
+      () async {
+        // An edit keeps the first publication time and publishes a new sound
+        // just before its own revision.
+        stubSource([_video(createdAt: 50, eventCreatedAt: 101)]);
+
+        expect(await resolver.verify(_sound()), isTrue);
+      },
+    );
+
+    test('fails closed when the edit it names predates the sound', () async {
+      stubSource([_video(createdAt: 50, eventCreatedAt: 99)]);
 
       expect(await resolver.verify(_sound()), isFalse);
     });
