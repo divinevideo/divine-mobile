@@ -541,7 +541,9 @@ Future<Map<String, SoundCover?>> soundSearchCovers(
 /// shows everything at once, short enough that a later edit sees new sounds.
 const _pickerCacheDuration = Duration(minutes: 5);
 
-/// Keeps [ref]'s value for [_pickerCacheDuration] once nothing watches it.
+/// Keeps [ref]'s value for [_pickerCacheDuration] from when it builds, even
+/// once nothing watches it. A picker left open for longer gives it up as it
+/// closes.
 void _keepForReopen(Ref ref) {
   final link = ref.keepAlive();
   final timer = Timer(_pickerCacheDuration, link.close);
