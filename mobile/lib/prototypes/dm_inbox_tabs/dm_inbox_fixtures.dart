@@ -12,11 +12,16 @@ class FixtureSender {
     required this.pubkey,
     required this.displayName,
     required this.signals,
+    this.mutualName,
   });
 
   final String pubkey;
   final String displayName;
   final DmSenderSignals signals;
+
+  /// One person the user follows who also follows this sender, for the
+  /// "Followed by" line. Null when no mutual can be named.
+  final String? mutualName;
 }
 
 /// One fixture row: the conversation, its participants, and its message hints.
@@ -61,6 +66,8 @@ class DmInboxFixtures {
 
   String displayNameFor(String pubkey) =>
       senders[pubkey]?.displayName ?? 'Unknown sender';
+
+  String? mutualNameFor(String pubkey) => senders[pubkey]?.mutualName;
 
   DmMessageSignals messageSignalsFor(DmConversation conversation) {
     for (final fixture in conversations) {
@@ -109,12 +116,18 @@ final _now = DateTime(2026, 8, 22, 14);
 
 DmInboxFixtures _build() {
   final senders = <String, FixtureSender>{};
-  void sender(String seed, String name, DmSenderSignals signals) {
+  void sender(
+    String seed,
+    String name,
+    DmSenderSignals signals, {
+    String? mutualName,
+  }) {
     final pubkey = _pk(seed);
     senders[pubkey] = FixtureSender(
       pubkey: pubkey,
       displayName: name,
       signals: signals,
+      mutualName: mutualName,
     );
   }
 
@@ -131,6 +144,7 @@ DmInboxFixtures _build() {
     'a1',
     'Maya Okonkwo',
     const DmSenderSignals(
+      totalLoopCount: 182000,
       followsMe: true,
       mutualConnectionCount: 12,
       divineVideoCount: 48,
@@ -143,6 +157,7 @@ DmInboxFixtures _build() {
     'b2',
     'Deshawn Pierce',
     const DmSenderSignals(
+      totalLoopCount: 4100,
       followsMe: true,
       mutualConnectionCount: 5,
       divineVideoCount: 9,
@@ -154,6 +169,7 @@ DmInboxFixtures _build() {
     'c3',
     'Rin Takahashi',
     const DmSenderSignals(
+      totalLoopCount: 2300000,
       followsMe: true,
       mutualConnectionCount: 8,
       divineVideoCount: 130,
@@ -168,33 +184,39 @@ DmInboxFixtures _build() {
     'd4',
     'Priya Raman',
     const DmSenderSignals(
+      totalLoopCount: 56000,
       mutualConnectionCount: 4,
       divineVideoCount: 22,
       daysSinceFirstObserved: 300,
       hasProfileMetadata: true,
     ),
+    mutualName: 'Maya Okonkwo',
   );
   sender(
     'e5',
     'Tobias Lund',
     const DmSenderSignals(
+      totalLoopCount: 900,
       followsMe: true,
       mutualConnectionCount: 1,
       divineVideoCount: 3,
       daysSinceFirstObserved: 95,
       hasProfileMetadata: true,
     ),
+    mutualName: 'Rin Takahashi',
   );
   sender(
     'f6',
     'Nadia Broussard',
     const DmSenderSignals(
+      totalLoopCount: 140,
       mutualConnectionCount: 2,
       divineVideoCount: 1,
       daysSinceFirstObserved: 45,
       hasProfileMetadata: true,
       hasPriorPublicInteraction: true,
     ),
+    mutualName: 'Deshawn Pierce',
   );
 
   // --- The borderline cases the sliders should move ----------------------
@@ -204,11 +226,13 @@ DmInboxFixtures _build() {
     '07',
     'Jules Amari',
     const DmSenderSignals(
+      totalLoopCount: 0,
       divineVideoCount: 2,
       daysSinceFirstObserved: 3,
       hasProfileMetadata: true,
       mutualConnectionCount: 1,
     ),
+    mutualName: 'Sofia Marchetti',
   );
   // Established lurker who has never posted. Punished hard by the
   // "has not posted on Divine" weight — the false-positive to watch.
@@ -216,16 +240,21 @@ DmInboxFixtures _build() {
     '18',
     'Hollis Wray',
     const DmSenderSignals(
+      divineVideoCount: 0,
+      totalLoopCount: 0,
       daysSinceFirstObserved: 610,
       hasProfileMetadata: true,
       mutualConnectionCount: 2,
     ),
+    mutualName: 'Maya Okonkwo',
   );
   // Fan with a link in the first message. Link weight decides the tab.
   sender(
     '29',
     'Camille Ndiaye',
     const DmSenderSignals(
+      mutualConnectionCount: 0,
+      totalLoopCount: 3400,
       divineVideoCount: 6,
       daysSinceFirstObserved: 140,
       hasProfileMetadata: true,
@@ -238,6 +267,10 @@ DmInboxFixtures _build() {
     '3a',
     'crypto_signals_daily',
     const DmSenderSignals(
+      divineVideoCount: 0,
+      totalLoopCount: 0,
+      hasProfileMetadata: false,
+      mutualConnectionCount: 0,
       daysSinceFirstObserved: 1,
       recentFirstContactCount: 240,
       distinctReporterCount: 31,
@@ -247,6 +280,10 @@ DmInboxFixtures _build() {
     '4b',
     'FREE V-BUCKS GIVEAWAY',
     const DmSenderSignals(
+      divineVideoCount: 0,
+      totalLoopCount: 0,
+      hasProfileMetadata: false,
+      mutualConnectionCount: 0,
       daysSinceFirstObserved: 0,
       recentFirstContactCount: 88,
       distinctReporterCount: 12,
@@ -256,6 +293,10 @@ DmInboxFixtures _build() {
     '5c',
     'noname',
     const DmSenderSignals(
+      divineVideoCount: 0,
+      totalLoopCount: 0,
+      hasProfileMetadata: false,
+      mutualConnectionCount: 0,
       daysSinceFirstObserved: 2,
       recentFirstContactCount: 41,
     ),
@@ -265,14 +306,37 @@ DmInboxFixtures _build() {
   sender(
     '6d',
     'youcanthide',
-    const DmSenderSignals(daysSinceFirstObserved: 0),
+    const DmSenderSignals(
+      daysSinceFirstObserved: 0,
+      divineVideoCount: 0,
+      totalLoopCount: 0,
+      hasProfileMetadata: false,
+      mutualConnectionCount: 0,
+    ),
   );
+
+  // --- Consent and missing data ------------------------------------------
+  // Not followed, but the user replied: consent comes from the reply alone.
+  sender(
+    'g7',
+    'Omar Haddad',
+    const DmSenderSignals(
+      divineVideoCount: 0,
+      totalLoopCount: 0,
+      daysSinceFirstObserved: 30,
+      hasProfileMetadata: true,
+      mutualConnectionCount: 0,
+    ),
+  );
+  // Nothing is known yet. Unknown must read as neutral, not as zero.
+  sender('h8', 'Ines Duarte', DmSenderSignals.unknown);
 
   // --- Group participants -------------------------------------------------
   sender(
     '7e',
     'Sofia Marchetti',
     const DmSenderSignals(
+      totalLoopCount: 47000,
       followsMe: true,
       mutualConnectionCount: 6,
       divineVideoCount: 15,
@@ -284,6 +348,10 @@ DmInboxFixtures _build() {
     '8f',
     'dropship_deals',
     const DmSenderSignals(
+      divineVideoCount: 0,
+      totalLoopCount: 0,
+      hasProfileMetadata: false,
+      mutualConnectionCount: 0,
       daysSinceFirstObserved: 4,
       recentFirstContactCount: 65,
       distinctReporterCount: 7,
@@ -386,6 +454,13 @@ DmInboxFixtures _build() {
       hoursAgo: 20,
       currentUserHasSent: true,
     ),
+    // Not followed, but replied to — the reply alone is consent.
+    conversation(
+      otherSeeds: ['g7'],
+      preview: 'thanks for the tip on lighting, it worked',
+      hoursAgo: 14,
+      currentUserHasSent: true,
+    ),
     // Followed, never replied to — inbox, not a request.
     conversation(
       otherSeeds: ['7e'],
@@ -444,6 +519,13 @@ DmInboxFixtures _build() {
       hoursAgo: 15,
       containsLink: true,
       isRead: false,
+    ),
+
+    // Nothing known about the sender — must stay a request, not spam.
+    conversation(
+      otherSeeds: ['h8'],
+      preview: 'hey, saw your post on the main feed',
+      hoursAgo: 11,
     ),
 
     // Likely spam.

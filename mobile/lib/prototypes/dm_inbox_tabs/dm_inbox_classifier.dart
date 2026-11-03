@@ -49,13 +49,17 @@ enum DmInboxBucket {
 /// decrypting message content server-side, and nothing here depends on the
 /// sender using Keycast or having an email on file — those must never affect
 /// spam classification.
+///
+/// A null count or flag means Divine does not know it. Unknown is scored as
+/// neutral, never as zero: missing data is not evidence against a sender.
 class DmSenderSignals {
   const DmSenderSignals({
     this.followsMe = false,
-    this.mutualConnectionCount = 0,
-    this.divineVideoCount = 0,
+    this.mutualConnectionCount,
+    this.divineVideoCount,
+    this.totalLoopCount,
     this.daysSinceFirstObserved,
-    this.hasProfileMetadata = false,
+    this.hasProfileMetadata,
     this.distinctReporterCount = 0,
     this.recentFirstContactCount = 0,
     this.hasPriorPublicInteraction = false,
@@ -68,10 +72,15 @@ class DmSenderSignals {
   final bool followsMe;
 
   /// How many accounts the current user follows also follow this sender.
-  final int mutualConnectionCount;
+  final int? mutualConnectionCount;
 
   /// Videos this sender has published on Divine.
-  final int divineVideoCount;
+  final int? divineVideoCount;
+
+  /// Lifetime loops across this sender's videos, the profile header's total.
+  ///
+  /// Shown as context only; it does not affect the score.
+  final int? totalLoopCount;
 
   /// Days since Divine first observed any signed event from this sender.
   ///
@@ -80,7 +89,7 @@ class DmSenderSignals {
   final int? daysSinceFirstObserved;
 
   /// Sender has both a display name and an avatar.
-  final bool hasProfileMetadata;
+  final bool? hasProfileMetadata;
 
   /// Distinct accounts that have reported this sender.
   final int distinctReporterCount;
@@ -110,7 +119,7 @@ class DmMessageSignals {
 
 /// One scored signal that fired, with the copy a user would see.
 class DmRiskReason {
-  const DmRiskReason(this.label, this.points);
+  const DmRiskReason(this.label, this.points, {this.aboutMessage = false});
 
   /// User-facing phrasing. Deliberately non-specific about thresholds so the
   /// panel does not double as an evasion recipe.
@@ -118,6 +127,10 @@ class DmRiskReason {
 
   /// Contribution to the risk score. Negative values are mitigating.
   final int points;
+
+  /// The reason describes the hidden message itself, such as containing a
+  /// link, so it must not be shown until the user opens the request.
+  final bool aboutMessage;
 
   bool get isMitigating => points < 0;
 }
@@ -318,6 +331,7 @@ class DmInboxClassifier {
     required bool Function(String pubkey) isFollowing,
     required DmSenderSignals Function(String pubkey) signalsFor,
     DmMessageSignals Function(DmConversation conversation)? messageSignalsFor,
+    bool Function(String conversationId)? markedNotSpam,
   }) {
     final official = <DmConversation>[];
     final inbox = <DmConversation>[];
@@ -330,7 +344,7 @@ class DmInboxClassifier {
           .where((pk) => pk != userPubkey)
           .toSet();
 
-      final verdict = _classifyOne(
+      var verdict = _classifyOne(
         conversation,
         others: others,
         isFollowing: isFollowing,
@@ -338,6 +352,19 @@ class DmInboxClassifier {
         messageSignals:
             messageSignalsFor?.call(conversation) ?? DmMessageSignals.none,
       );
+      // The user's own call outranks the score, whatever the weights become.
+      // It returns the row to Requests only; it is not consent.
+      if (verdict.bucket == DmInboxBucket.likelySpam &&
+          (markedNotSpam?.call(conversation.id) ?? false)) {
+        verdict = DmVerdict(
+          bucket: DmInboxBucket.requests,
+          score: verdict.score,
+          reasons: [
+            ...verdict.reasons,
+            const DmRiskReason('You marked this as not spam', 0),
+          ],
+        );
+      }
 
       verdicts[conversation.id] = verdict;
       switch (verdict.bucket) {
@@ -480,9 +507,9 @@ class DmInboxClassifier {
     final signals = signalsFor(pubkey);
     final reasons = <DmRiskReason>[];
 
-    void add(String label, int points) {
+    void add(String label, int points, {bool aboutMessage = false}) {
       if (points != 0) {
-        reasons.add(DmRiskReason(label, points));
+        reasons.add(DmRiskReason(label, points, aboutMessage: aboutMessage));
       }
     }
 
@@ -495,29 +522,34 @@ class DmInboxClassifier {
 
     final days = signals.daysSinceFirstObserved;
     if (days != null && days < h.newAccountDays) {
-      add('New account', h.weightNewAccount);
+      // "First seen", not "new account": Divine only knows when it first
+      // observed the key, not when the account was created.
+      add('First seen recently', h.weightNewAccount);
     } else if (days != null && days > h.establishedAccountDays) {
-      add('Long-standing account', h.weightEstablishedAccount);
+      add('Seen on Divine for a long time', h.weightEstablishedAccount);
     }
 
-    if (signals.divineVideoCount == 0) {
-      add('Has not posted on Divine', h.weightNoDivineVideos);
-    } else {
-      add('Posts on Divine', h.weightHasDivineVideos);
+    switch (signals.divineVideoCount) {
+      case null:
+        break;
+      case 0:
+        add('Has not posted on Divine', h.weightNoDivineVideos);
+      default:
+        add('Posts on Divine', h.weightHasDivineVideos);
     }
 
-    if (!signals.hasProfileMetadata) {
+    if (signals.hasProfileMetadata == false) {
       add('No profile name or photo', h.weightNoProfileMetadata);
     }
 
-    if (signals.mutualConnectionCount == 0) {
-      add('No connections in common', h.weightNoMutualConnections);
-    } else {
-      final counted = signals.mutualConnectionCount.clamp(
-        0,
-        h.mutualConnectionCap,
-      );
-      add('Connections in common', counted * h.weightPerMutualConnection);
+    switch (signals.mutualConnectionCount) {
+      case null:
+        break;
+      case 0:
+        add('No connections in common', h.weightNoMutualConnections);
+      case final count:
+        final counted = count.clamp(0, h.mutualConnectionCap);
+        add('Connections in common', counted * h.weightPerMutualConnection);
     }
 
     if (signals.followsMe) {
@@ -527,10 +559,18 @@ class DmInboxClassifier {
       add('You have interacted before', h.weightPriorPublicInteraction);
     }
     if (messageSignals.containsLink) {
-      add('First message contains a link', h.weightContainsLink);
+      add(
+        'First message contains a link',
+        h.weightContainsLink,
+        aboutMessage: true,
+      );
     }
     if (messageSignals.containsMedia) {
-      add('First message contains media', h.weightContainsMedia);
+      add(
+        'First message contains media',
+        h.weightContainsMedia,
+        aboutMessage: true,
+      );
     }
     return reasons;
   }

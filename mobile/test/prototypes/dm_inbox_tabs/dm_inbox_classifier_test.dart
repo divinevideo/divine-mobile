@@ -13,7 +13,10 @@ void main() {
 
     setUp(() => fixtures = DmInboxFixtures.build());
 
-    DmInboxClassification classify({DmSpamHeuristics? heuristics}) {
+    DmInboxClassification classify({
+      DmSpamHeuristics? heuristics,
+      bool Function(String conversationId)? markedNotSpam,
+    }) {
       return DmInboxClassifier(
         officialIdentities: fixtures.officialIdentities,
         heuristics: heuristics ?? const DmSpamHeuristics(),
@@ -23,7 +26,32 @@ void main() {
         isFollowing: fixtures.isFollowing,
         signalsFor: fixtures.signalsFor,
         messageSignalsFor: fixtures.messageSignalsFor,
+        markedNotSpam: markedNotSpam,
       );
+    }
+
+    DmVerdict soloVerdict(
+      DmSenderSignals signals, {
+      DmMessageSignals message = DmMessageSignals.none,
+      bool currentUserHasSent = false,
+    }) {
+      return const DmInboxClassifier(officialIdentities: {})
+          .classify(
+            [
+              DmConversation(
+                id: 'solo',
+                participantPubkeys: [_me, _stranger]..sort(),
+                isGroup: false,
+                createdAt: 0,
+                currentUserHasSent: currentUserHasSent,
+              ),
+            ],
+            userPubkey: _me,
+            isFollowing: (_) => false,
+            signalsFor: (_) => signals,
+            messageSignalsFor: (_) => message,
+          )
+          .verdicts['solo']!;
     }
 
     group('official', () {
@@ -117,6 +145,127 @@ void main() {
       });
     });
 
+    group('reply consent', () {
+      test('a reply alone moves an unfollowed sender into inbox', () {
+        const signals = DmSenderSignals(
+          daysSinceFirstObserved: 1,
+          divineVideoCount: 0,
+          hasProfileMetadata: false,
+          mutualConnectionCount: 0,
+        );
+
+        expect(soloVerdict(signals).bucket, DmInboxBucket.likelySpam);
+        expect(
+          soloVerdict(signals, currentUserHasSent: true).bucket,
+          DmInboxBucket.inbox,
+        );
+      });
+
+      test('the replied-to unfollowed fixture lands in inbox', () {
+        final result = classify();
+        final replied = fixtures.dmConversations.firstWhere(
+          (c) => fixtures.titleFor(c) == 'Omar Haddad',
+        );
+
+        expect(fixtures.isFollowing(replied.participantPubkeys.first), isFalse);
+        expect(replied.currentUserHasSent, isTrue);
+        expect(result.inbox, contains(replied));
+      });
+    });
+
+    group('unknown signals', () {
+      test('a sender with nothing known is scored neutral, not as zero', () {
+        final unknown = soloVerdict(DmSenderSignals.unknown);
+        final knownZero = soloVerdict(
+          const DmSenderSignals(
+            divineVideoCount: 0,
+            hasProfileMetadata: false,
+            mutualConnectionCount: 0,
+          ),
+        );
+
+        expect(unknown.score, equals(0));
+        expect(unknown.bucket, DmInboxBucket.requests);
+        expect(knownZero.score, greaterThanOrEqualTo(50));
+        expect(knownZero.bucket, DmInboxBucket.likelySpam);
+      });
+
+      test('the unknown-data fixture stays in requests', () {
+        final result = classify();
+        expect(result.requests.map(fixtures.titleFor), contains('Ines Duarte'));
+      });
+
+      test('a loop count does not change the score', () {
+        const base = DmSenderSignals(
+          divineVideoCount: 3,
+          hasProfileMetadata: true,
+          mutualConnectionCount: 1,
+        );
+        const withLoops = DmSenderSignals(
+          divineVideoCount: 3,
+          hasProfileMetadata: true,
+          mutualConnectionCount: 1,
+          totalLoopCount: 999999,
+        );
+
+        expect(soloVerdict(base).score, isNot(0));
+        expect(soloVerdict(withLoops).score, equals(soloVerdict(base).score));
+      });
+    });
+
+    group('reasons about the message', () {
+      test('marks link and media reasons as describing the message', () {
+        final verdict = soloVerdict(
+          const DmSenderSignals(divineVideoCount: 2),
+          message: const DmMessageSignals(
+            containsLink: true,
+            containsMedia: true,
+          ),
+        );
+
+        final aboutMessage = verdict.reasons
+            .where((r) => r.aboutMessage)
+            .map((r) => r.label);
+        final aboutSender = verdict.reasons
+            .where((r) => !r.aboutMessage)
+            .map((r) => r.label);
+        expect(
+          aboutMessage,
+          containsAll(<String>[
+            'First message contains a link',
+            'First message contains media',
+          ]),
+        );
+        expect(aboutSender, contains('Posts on Divine'));
+      });
+    });
+
+    group('not spam override', () {
+      test('keeps a likely-spam row in requests whatever the weights', () {
+        final spam = classify().likelySpam.first;
+
+        final strict = classify(
+          heuristics: const DmSpamHeuristics(spamThreshold: 1),
+          markedNotSpam: (id) => id == spam.id,
+        );
+
+        expect(strict.requests, contains(spam));
+        expect(strict.likelySpam, isNot(contains(spam)));
+        expect(strict.inbox, isNot(contains(spam)));
+      });
+
+      test('does not move a row that was never spam', () {
+        final request = classify().requests.first;
+        final result = classify(markedNotSpam: (id) => id == request.id);
+
+        expect(result.requests, contains(request));
+        expect(
+          result.verdicts[request.id]!.reasons.map((r) => r.label),
+          isNot(contains('You marked this as not spam')),
+        );
+      });
+    });
+
     group('likelySpam', () {
       test('catches the unambiguous spam senders at default weights', () {
         final result = classify();
@@ -196,7 +345,13 @@ void main() {
         hasPriorPublicInteraction: true,
         recentFirstContactCount: 25,
       );
-      const brandNew = DmSenderSignals(daysSinceFirstObserved: 1);
+      // Known to have nothing yet — every count is a known zero, not unknown.
+      const brandNew = DmSenderSignals(
+        daysSinceFirstObserved: 1,
+        divineVideoCount: 0,
+        hasProfileMetadata: false,
+        mutualConnectionCount: 0,
+      );
 
       int soloScore(DmSenderSignals signals) =>
           const DmInboxClassifier(officialIdentities: {})
@@ -268,7 +423,7 @@ void main() {
             .verdicts['room']!;
 
         final labels = verdict.reasons.map((r) => r.label);
-        expect(labels, contains('New account'));
+        expect(labels, contains('First seen recently'));
         expect(labels, contains('Has not posted on Divine'));
         // The established creator's mitigations must not describe this room.
         expect(labels, isNot(contains('Follows you')));
