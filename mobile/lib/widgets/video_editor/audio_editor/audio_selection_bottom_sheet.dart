@@ -124,6 +124,10 @@ class _AudioSelectionBottomSheetState
   void initState() {
     super.initState();
     _audioService = widget.audioService ?? AudioPlaybackService();
+    // A preview loops like the video it will play under. Played once, it
+    // would also leave its row animating: the player still counts as playing
+    // once it reaches the end.
+    _audioService.setLooping(looping: true);
   }
 
   @override
