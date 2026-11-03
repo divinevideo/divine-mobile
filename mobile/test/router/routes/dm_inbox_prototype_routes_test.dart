@@ -1,5 +1,5 @@
-// ABOUTME: Pins that the DM inbox prototype route exists only in debug
-// ABOUTME: builds, so a typed URL cannot reach it in a release build.
+// ABOUTME: Pins that the DM inbox prototype route registers only when
+// ABOUTME: enabled, which defaults to debug builds.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -19,7 +19,9 @@ void main() {
       );
     });
 
-    test('registers nothing when disabled, as in a release build', () {
+    test('registers nothing when disabled', () {
+      // The release-build gate itself is the const `kDebugMode` at the call
+      // site in settings_routes.dart, which a debug-mode test cannot reach.
       expect(dmInboxPrototypeRoutes(enabled: false), isEmpty);
     });
   });
