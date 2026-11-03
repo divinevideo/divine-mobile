@@ -2885,26 +2885,6 @@
   "@soundsShareCoverSheetTitle": {
     "description": "Title of the sheet that offers camera, gallery and remove for the cover image of a sound being shared."
   },
-  "soundsShareKindLabel": "Music or effect",
-  "@soundsShareKindLabel": {
-    "description": "Heading of the optional section on the Add sound screen, while a sound is set to be shared publicly, where the user files it as music or as a sound effect."
-  },
-  "soundsShareKindDescription": "Optional. Puts your sound under Music or Effects when people filter.",
-  "@soundsShareKindDescription": {
-    "description": "Helper text under the music-or-effect heading on the Add sound screen. 'Music' and 'Effects' are the names of the sound picker's filter options and should match their translations."
-  },
-  "soundsShareKindChoose": "Choose",
-  "@soundsShareKindChoose": {
-    "description": "Button on the Add sound screen, shown while no kind is chosen, that opens the menu to file the sound as music or as a sound effect."
-  },
-  "soundsShareKindEffect": "Sound effect",
-  "@soundsShareKindEffect": {
-    "description": "Option in the Add sound screen's music-or-effect menu, and the button label once chosen: the sound is a sound effect."
-  },
-  "soundsShareKindNeither": "Neither",
-  "@soundsShareKindNeither": {
-    "description": "Option in the Add sound screen's music-or-effect menu that files the sound as neither music nor a sound effect."
-  },
   "soundsImportUnsupportedFormat": "That file type isn't supported. Pick an audio file.",
   "@soundsImportUnsupportedFormat": {
     "description": "Shown when the picked file's extension is not a supported audio container."

@@ -11,23 +11,6 @@ enum SoundKind {
 
   /// The public tags that mark a sound as an effect.
   static const effectTags = {'sfx', 'effect', 'soundeffect', 'soundeffects'};
-
-  /// The public tag a sound of this kind is published with.
-  String get tag => switch (this) {
-    music => 'music',
-    effect => 'sfx',
-  };
-
-  /// [tags] marking a sound as of [kind], or as of no kind for `null`: every
-  /// tag that names a kind is dropped, then [kind]'s added, so a `#music`
-  /// typed by hand cannot contradict the choice.
-  static List<String> retag(Iterable<String> tags, SoundKind? kind) => [
-    for (final tag in tags)
-      if (tag.toLowerCase() != 'music' &&
-          !effectTags.contains(tag.toLowerCase()))
-        tag,
-    ?kind?.tag,
-  ];
 }
 
 /// [SoundKind] of a bundled Divine sound.

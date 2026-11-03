@@ -4415,22 +4415,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'ساؤنڈ کا کور';
 
   @override
-  String get soundsShareKindLabel => 'موسیقی یا صوتی اثر';
-
-  @override
-  String get soundsShareKindDescription =>
-      'اختیاری۔ فلٹر کرنے پر آپ کی آواز موسیقی یا صوتی اثرات میں دکھائی دیتی ہے۔';
-
-  @override
-  String get soundsShareKindChoose => 'منتخب کریں';
-
-  @override
-  String get soundsShareKindEffect => 'صوتی اثر';
-
-  @override
-  String get soundsShareKindNeither => 'کوئی بھی نہیں';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'یہ فائل کی قسم سپورٹ نہیں ہے۔ کوئی آڈیو فائل منتخب کریں۔';
 

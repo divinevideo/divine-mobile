@@ -4399,22 +4399,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'غلاف الصوت';
 
   @override
-  String get soundsShareKindLabel => 'موسيقى أم مؤثر';
-
-  @override
-  String get soundsShareKindDescription =>
-      'اختياري. يظهر صوتك ضمن موسيقى أو مؤثرات صوتية عند التصفية.';
-
-  @override
-  String get soundsShareKindChoose => 'اختر';
-
-  @override
-  String get soundsShareKindEffect => 'مؤثر صوتي';
-
-  @override
-  String get soundsShareKindNeither => 'لا هذا ولا ذاك';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'نوع الملف هذا غير مدعوم. يُرجى اختيار ملف صوتي.';
 

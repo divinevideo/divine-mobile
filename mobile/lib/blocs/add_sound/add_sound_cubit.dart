@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
-import 'package:models/models.dart' show AudioEvent, SoundKind;
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/add_sound/add_sound_state.dart';
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
@@ -280,13 +280,6 @@ class AddSoundCubit extends Cubit<AddSoundState>
     emitIfOpen(state.copyWith(coverImage: bytes));
   }
 
-  /// Shares the sound as music or as a sound effect, or as neither with
-  /// `null`.
-  void setSoundKind(SoundKind? kind) {
-    if (!state.canEdit) return;
-    emitIfOpen(state.copyWith(soundKind: kind));
-  }
-
   /// Applies an edit from the credit editor.
   ///
   /// The `p` tag follows ownership: confirmed own work credits the publisher's
@@ -415,15 +408,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
     try {
       final result = await _publisher().publish(
         audio: audio,
-        // A chosen kind travels as a public tag, the one the picker's filter
-        // reads, and wins over a kind tag typed among the hashtags. Without a
-        // choice the hashtags go out as typed.
-        attribution: switch (state.soundKind) {
-          final kind? => attribution.copyWith(
-            publicTags: SoundKind.retag(attribution.publicTags, kind),
-          ),
-          null => attribution,
-        },
+        attribution: attribution,
         allowAudioReuse: true,
         coverImage: state.coverImage,
       );

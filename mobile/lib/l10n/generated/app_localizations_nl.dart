@@ -4421,22 +4421,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'Geluidscover';
 
   @override
-  String get soundsShareKindLabel => 'Muziek of effect';
-
-  @override
-  String get soundsShareKindDescription =>
-      'Optioneel. Je geluid verschijnt onder Muziek of Effecten als mensen filteren.';
-
-  @override
-  String get soundsShareKindChoose => 'Kiezen';
-
-  @override
-  String get soundsShareKindEffect => 'Geluidseffect';
-
-  @override
-  String get soundsShareKindNeither => 'Geen van beide';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'Dit bestandstype wordt niet ondersteund. Kies een audiobestand.';
 

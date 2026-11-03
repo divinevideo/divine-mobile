@@ -4441,22 +4441,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'Capa do som';
 
   @override
-  String get soundsShareKindLabel => 'Música ou efeito';
-
-  @override
-  String get soundsShareKindDescription =>
-      'Opcional. Seu som aparece em Música ou Efeitos quando alguém filtra.';
-
-  @override
-  String get soundsShareKindChoose => 'Escolher';
-
-  @override
-  String get soundsShareKindEffect => 'Efeito sonoro';
-
-  @override
-  String get soundsShareKindNeither => 'Nenhum';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'Esse tipo de arquivo não é compatível. Escolha um arquivo de áudio.';
 

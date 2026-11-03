@@ -4402,22 +4402,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'Ljudets omslag';
 
   @override
-  String get soundsShareKindLabel => 'Musik eller effekt';
-
-  @override
-  String get soundsShareKindDescription =>
-      'Valfritt. Ditt ljud visas under Musik eller Ljudeffekter när folk filtrerar.';
-
-  @override
-  String get soundsShareKindChoose => 'Välj';
-
-  @override
-  String get soundsShareKindEffect => 'Ljudeffekt';
-
-  @override
-  String get soundsShareKindNeither => 'Ingetdera';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'Den filtypen stöds inte. Välj en ljudfil.';
 

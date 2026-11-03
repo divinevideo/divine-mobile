@@ -7453,36 +7453,6 @@ abstract class AppLocalizations {
   /// **'Sound cover'**
   String get soundsShareCoverSheetTitle;
 
-  /// Heading of the optional section on the Add sound screen, while a sound is set to be shared publicly, where the user files it as music or as a sound effect.
-  ///
-  /// In en, this message translates to:
-  /// **'Music or effect'**
-  String get soundsShareKindLabel;
-
-  /// Helper text under the music-or-effect heading on the Add sound screen. 'Music' and 'Effects' are the names of the sound picker's filter options and should match their translations.
-  ///
-  /// In en, this message translates to:
-  /// **'Optional. Puts your sound under Music or Effects when people filter.'**
-  String get soundsShareKindDescription;
-
-  /// Button on the Add sound screen, shown while no kind is chosen, that opens the menu to file the sound as music or as a sound effect.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose'**
-  String get soundsShareKindChoose;
-
-  /// Option in the Add sound screen's music-or-effect menu, and the button label once chosen: the sound is a sound effect.
-  ///
-  /// In en, this message translates to:
-  /// **'Sound effect'**
-  String get soundsShareKindEffect;
-
-  /// Option in the Add sound screen's music-or-effect menu that files the sound as neither music nor a sound effect.
-  ///
-  /// In en, this message translates to:
-  /// **'Neither'**
-  String get soundsShareKindNeither;
-
   /// Shown when the picked file's extension is not a supported audio container.
   ///
   /// In en, this message translates to:

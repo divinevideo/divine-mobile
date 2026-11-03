@@ -4485,22 +4485,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'Sound cover';
 
   @override
-  String get soundsShareKindLabel => 'Music or effect';
-
-  @override
-  String get soundsShareKindDescription =>
-      'Optional. Puts your sound under Music or Effects when people filter.';
-
-  @override
-  String get soundsShareKindChoose => 'Choose';
-
-  @override
-  String get soundsShareKindEffect => 'Sound effect';
-
-  @override
-  String get soundsShareKindNeither => 'Neither';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'That file type isn\'t supported. Pick an audio file.';
 

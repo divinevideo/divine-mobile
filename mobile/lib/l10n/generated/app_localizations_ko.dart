@@ -4146,22 +4146,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get soundsShareCoverSheetTitle => '사운드 커버';
 
   @override
-  String get soundsShareKindLabel => '음악 또는 효과음';
-
-  @override
-  String get soundsShareKindDescription =>
-      '선택 사항이에요. 필터링할 때 내 사운드가 음악 또는 효과음에 표시돼요.';
-
-  @override
-  String get soundsShareKindChoose => '선택';
-
-  @override
-  String get soundsShareKindEffect => '효과음';
-
-  @override
-  String get soundsShareKindNeither => '둘 다 아님';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       '지원하지 않는 파일 형식이에요. 오디오 파일을 골라 주세요.';
 

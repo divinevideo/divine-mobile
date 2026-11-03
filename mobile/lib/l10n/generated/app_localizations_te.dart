@@ -4565,22 +4565,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'సౌండ్ కవర్';
 
   @override
-  String get soundsShareKindLabel => 'సంగీతమా లేక సౌండ్ ఎఫెక్టా';
-
-  @override
-  String get soundsShareKindDescription =>
-      'ఐచ్ఛికం. ఫిల్టర్ చేసినప్పుడు మీ సౌండ్ సంగీతం లేదా సౌండ్ ఎఫెక్ట్స్ కింద కనిపిస్తుంది.';
-
-  @override
-  String get soundsShareKindChoose => 'ఎంచుకోండి';
-
-  @override
-  String get soundsShareKindEffect => 'సౌండ్ ఎఫెక్ట్';
-
-  @override
-  String get soundsShareKindNeither => 'రెండూ కాదు';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'ఆ ఫైల్ రకానికి మద్దతు లేదు. ఒక ఆడియో ఫైల్‌ను ఎంచుకోండి.';
 

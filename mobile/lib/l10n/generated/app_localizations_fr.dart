@@ -4479,22 +4479,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'Couverture du son';
 
   @override
-  String get soundsShareKindLabel => 'Musique ou effet';
-
-  @override
-  String get soundsShareKindDescription =>
-      'Facultatif. Ton son apparaît dans Musique ou Effets quand on filtre.';
-
-  @override
-  String get soundsShareKindChoose => 'Choisir';
-
-  @override
-  String get soundsShareKindEffect => 'Effet sonore';
-
-  @override
-  String get soundsShareKindNeither => 'Aucun des deux';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'Ce type de fichier n\'est pas pris en charge. Choisis un fichier audio.';
 

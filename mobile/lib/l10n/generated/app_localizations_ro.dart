@@ -4544,22 +4544,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get soundsShareCoverSheetTitle => 'Coperta sunetului';
 
   @override
-  String get soundsShareKindLabel => 'Muzică sau efect';
-
-  @override
-  String get soundsShareKindDescription =>
-      'Opțional. Sunetul tău apare la Muzică sau Efecte când se filtrează.';
-
-  @override
-  String get soundsShareKindChoose => 'Alege';
-
-  @override
-  String get soundsShareKindEffect => 'Efect sonor';
-
-  @override
-  String get soundsShareKindNeither => 'Niciuna';
-
-  @override
   String get soundsImportUnsupportedFormat =>
       'Acest tip de fișier nu este acceptat. Alege un fișier audio.';
 
