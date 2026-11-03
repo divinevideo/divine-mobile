@@ -3249,6 +3249,26 @@ class NotificationRepository {
     return true;
   }
 
+  /// Whether [n] is a like, comment or repost on one of the user's own
+  /// repost events.
+  ///
+  /// Funnelcake notifies the author of every event a source event tags, so
+  /// activity on a repost reaches the reposter even though the video is
+  /// someone else's. Rendering it would credit the user with that video.
+  static bool _targetsRepostEvent(RelayNotification n) {
+    final referencedKind = n.referencedEventKind;
+    if (referencedKind != EventKind.repost &&
+        referencedKind != EventKind.genericRepost) {
+      return false;
+    }
+    return switch (_mapNotificationKind(n)) {
+      NotificationKind.like ||
+      NotificationKind.comment ||
+      NotificationKind.repost => true,
+      _ => false,
+    };
+  }
+
   /// Maps a relay notification type string + source kind to
   /// [NotificationKind].
   ///
@@ -3281,26 +3301,6 @@ class NotificationRepository {
   /// [NotificationKind.comment]. A reply on another comment maps to
   /// [NotificationKind.reply], even when Funnelcake also includes the root
   /// video's metadata for navigation.
-  /// Whether [n] is a like, comment or repost on one of the user's own
-  /// repost events.
-  ///
-  /// Funnelcake notifies the author of every event a source event tags, so
-  /// activity on a repost reaches the reposter even though the video is
-  /// someone else's. Rendering it would credit the user with that video.
-  static bool _targetsRepostEvent(RelayNotification n) {
-    final referencedKind = n.referencedEventKind;
-    if (referencedKind != EventKind.repost &&
-        referencedKind != EventKind.genericRepost) {
-      return false;
-    }
-    return switch (_mapNotificationKind(n)) {
-      NotificationKind.like ||
-      NotificationKind.comment ||
-      NotificationKind.repost => true,
-      _ => false,
-    };
-  }
-
   static NotificationKind _mapNotificationKind(RelayNotification n) {
     final isReaction = switch (n.notificationType) {
       'reaction' || 'zap' => true,
