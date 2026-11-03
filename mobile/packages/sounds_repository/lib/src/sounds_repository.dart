@@ -377,7 +377,8 @@ class SoundsRepository {
   /// its publisher named. Keeps the order of [sounds].
   ///
   /// Costs one relay query, for the videos that reference the unnamed
-  /// sounds. When it fails the sounds come back unchanged, since a list with
+  /// sounds. When it fails, or runs out of time and so may have missed the
+  /// videos that reuse one, the sounds come back unchanged, since a list with
   /// them beats no list.
   Future<List<AudioEvent>> withoutUnusedOriginals(
     List<AudioEvent> sounds,
@@ -388,9 +389,9 @@ class SoundsRepository {
     };
     if (unnamed.isEmpty) return sounds;
 
-    final List<Event> videos;
+    final ({List<Event> events, bool timedOut, bool noRelays}) read;
     try {
-      videos = await _nostrClient.queryEvents([
+      read = await _nostrClient.queryEventsDetailed([
         Filter(
           kinds: const [NIP71VideoKinds.addressableShortVideo],
           e: unnamed.keys.toList(),
@@ -405,9 +406,17 @@ class SoundsRepository {
       );
       return sounds;
     }
+    if (read.timedOut || read.noRelays) {
+      Log.warning(
+        'Could not tell in time which unnamed sounds are reused, keeping them',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+      return sounds;
+    }
 
     final reused = <String>{};
-    for (final video in videos) {
+    for (final video in read.events) {
       final dTag = video.tags
           .where((tag) => tag.length >= 2 && tag[0] == 'd')
           .map((tag) => tag[1])
