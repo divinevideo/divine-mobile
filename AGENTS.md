@@ -267,6 +267,14 @@ These issues stay report-only regardless of assignee; see `<context-dir>/AGENT_T
 - Reuse shared components like `DivineButton`, `DivineIconButton`, `DivineAuthTextField`, and `VineBottomSheet` when they fit the job.
 - When changing user-facing copy, align with `brand-guidelines/AGENT_QUICK_REFERENCE.md` and `brand-guidelines/TONE_OF_VOICE.md`: direct, human, slightly playful, and never corporate.
 
+### Account Identifiers And NIP-05
+
+- Prefer displaying an account's NIP-05 identifier over its npub when a NIP-05 claim is available. Use the npub fallback when no NIP-05 is available.
+- A profile's `nip05` field is a claim, not proof. Reuse the shared verification service/providers to check that the claimed identifier resolves to that account's public key before treating it as valid. Cached verification must match both the identifier and public key; recheck when either changes.
+- Display verified NIP-05 identifiers normally. If verification confirms a claim is invalid, including a public-key mismatch, keep the claimed identifier visible with a strikethrough and expose its invalid state to accessibility. Never mark it as verified.
+- Pending checks and network errors mean unverified, not confirmed invalid. Do not apply a strikethrough solely because verification is loading or unavailable, and do not show a verified indicator before validation succeeds.
+- This preference applies to presentation. Keep the public key as the stable identity in protocol data and cryptographic operations; changing a display identifier must not change which account a mention targets. Retain the full-identifier logging rules below.
+
 ## Nostr And Async Rules
 
 - Never truncate Nostr IDs in code, logs, tests, analytics, or debug output. Use full values and let UI layout handle overflow visually. A truncated id *looks* correlatable and is not: `npub1abc...wxyz` cannot be grepped against relay logs, matched to a funnelcake row, or pasted into a support ticket, and 8 hex characters of an event id is 32 bits. Frozen at zero by `mobile/scripts/check_nostr_id_log_truncation.sh` (#3372), with baseline `mobile/scripts/baseline/nostr_id_log_truncation.txt`, over `mobile/lib`, `mobile/packages`, `mobile/test` and `mobile/integration_test`. The detector (`mobile/scripts/lib/nostr_id_log_truncation_detector.dart`) counts a public-ID shortening or secret value that reaches a **log/debug sink**, so display shortening in the UI stays allowed — but prefer `maxLines` + `TextOverflow.ellipsis` over cutting the string, so the value a user copies is still exact. After an intentional reduction, lock the win with `UPDATE_BASELINE=1 bash mobile/scripts/check_nostr_id_log_truncation.sh`. Runs in CI only, in the `Guards` job.
