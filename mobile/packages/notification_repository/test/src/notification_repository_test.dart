@@ -3813,8 +3813,6 @@ void main() {
               referencedEventKind: EventKind.genericRepost,
             ),
           ]);
-          stubProfiles({});
-
           final page = await repository.getNotifications();
 
           expect(page.items, isEmpty);
@@ -3831,8 +3829,6 @@ void main() {
               targetCommentId: 'evt1',
             ),
           ]);
-          stubProfiles({});
-
           final page = await repository.getNotifications();
 
           expect(page.items, isEmpty);
@@ -3853,6 +3849,51 @@ void main() {
           expect(item.type, equals(NotificationKind.like));
           expect(item.videoEventId, equals('my_video'));
         });
+
+        test('keeps a mention that references a repost', () async {
+          stubNotifications([
+            makeNotification(
+              sourceKind: 1,
+              notificationType: 'mention',
+              referencedEventId: 'my_repost',
+              referencedEventKind: EventKind.genericRepost,
+            ),
+          ]);
+
+          final page = await repository.getNotifications();
+
+          final item = page.items.single as ActorNotification;
+          expect(item.type, equals(NotificationKind.mention));
+        });
+      });
+
+      test('keeps several likes on one tagged video as separate tagged '
+          'likes', () async {
+        stubNotifications([
+          makeNotification(
+            id: 'like_alice',
+            referencedEventId: 'foreign_video',
+          ),
+          makeNotification(
+            id: 'like_bob',
+            sourcePubkey: 'pubkey_bob',
+            sourceEventId: 'evt2',
+            referencedEventId: 'foreign_video',
+          ),
+        ]);
+        stubVideoStats(
+          'foreign_video',
+          makeVideoStats(id: 'foreign_video', pubkey: 'other_owner_pubkey'),
+        );
+
+        final page = await repository.getNotifications();
+
+        expect(page.items, hasLength(2));
+        for (final item in page.items.cast<ActorNotification>()) {
+          expect(item.type, equals(NotificationKind.like));
+          expect(item.isTaggedVideo, isTrue);
+          expect(item.targetEventId, equals('foreign_video'));
+        }
       });
 
       test('comment anchored on a non-owned root video is reclassified as '
