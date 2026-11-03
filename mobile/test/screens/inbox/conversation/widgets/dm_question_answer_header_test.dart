@@ -38,6 +38,7 @@ DmMessage _answer({
   String answer = 'Pizza',
   String? questionVideoId,
   List<List<String>>? extraTags,
+  DmSharedVideoRef? citation,
 }) => DmMessage(
   id: 'a' * 64,
   conversationId: 'conversation',
@@ -49,11 +50,13 @@ DmMessage _answer({
     [DmMessage.questionTagName, question, questionVideoId ?? _videoId],
     ...?extraTags,
   ],
-  sharedVideoRef: DmSharedVideoRef(
-    coordinateOrId: '34236:${author ?? _creator}:video-d',
-    videoKind: DmSharedVideoKind.addressableShortVideo,
-    authorPubkey: author ?? _creator,
-  ),
+  sharedVideoRef:
+      citation ??
+      DmSharedVideoRef(
+        coordinateOrId: '34236:${author ?? _creator}:video-d',
+        videoKind: DmSharedVideoKind.addressableShortVideo,
+        authorPubkey: author ?? _creator,
+      ),
 );
 
 void main() {
@@ -125,6 +128,36 @@ void main() {
         );
 
         expect(context?.rootEventId, equals(_videoId));
+      });
+
+      test('names the cited video by its own address, whatever the sender '
+          'wrote', () {
+        // A sender's citation can spell the creator's pubkey in capitals, or
+        // cite one version of the video by its event id.
+        for (final citation in [
+          DmSharedVideoRef(
+            coordinateOrId: '34236:${_creator.toUpperCase()}:video-d',
+            videoKind: DmSharedVideoKind.addressableShortVideo,
+            authorPubkey: _creator,
+          ),
+          DmSharedVideoRef(
+            coordinateOrId: _videoId,
+            videoKind: DmSharedVideoKind.shortVideo,
+            authorPubkey: _creator,
+          ),
+        ]) {
+          final context = DmQuestionAnswerHeader.replyContextFor(
+            _answer(citation: citation),
+            citedVideo: _cited(),
+            creatorPubkey: _creator,
+          );
+
+          expect(context?.rootEventKind, equals(34236));
+          expect(
+            context?.rootAddressableId,
+            equals('34236:$_creator:video-d'),
+          );
+        }
       });
 
       test('answers nothing with a video that is not the one cited', () {
