@@ -112,6 +112,9 @@ void main() {
       testWidgets('Save returns every edited setting', (tester) async {
         final popped = await pumpTuning(tester);
 
+        await tester.tap(find.text('Remix').first);
+        await tester.pumpAndSettle();
+        await scrollToAndTap(tester, 'Show scores');
         await scrollToAndTap(tester, 'Context and a caution label');
         await scrollToAndTap(tester, 'Official gets its own tab');
         await scrollToAndTap(tester, 'Save filter');
@@ -120,6 +123,8 @@ void main() {
         final saved = popped.single!;
         expect(saved.placement, OfficialPlacement.pinnedInInbox);
         expect(saved.presentation, RequestPresentation.contextWithCaution);
+        expect(saved.heuristics.spamThreshold, equals(42));
+        expect(saved.showScores, isTrue);
       });
 
       testWidgets('back discards every edit', (tester) async {

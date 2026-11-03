@@ -118,6 +118,7 @@ void main() {
     group('inbox', () {
       test('includes conversations the user has replied to', () {
         final result = classify();
+        expect(result.inbox, isNotEmpty);
         expect(
           result.inbox.every(
             (c) => c.currentUserHasSent || _allFollowed(fixtures, c),
@@ -428,7 +429,7 @@ void main() {
         // The established creator's mitigations must not describe this room.
         expect(labels, isNot(contains('Follows you')));
         expect(labels, isNot(contains('You have interacted before')));
-        expect(labels, isNot(contains('Long-standing account')));
+        expect(labels, isNot(contains('Seen on Divine for a long time')));
       });
     });
 
@@ -541,6 +542,35 @@ void main() {
           verdict.reasons.map((r) => r.label),
           contains('Added you to a group'),
         );
+      });
+
+      test('a sender listed twice is still a one-to-one', () {
+        final conversation = DmConversation(
+          id: 'duplicated',
+          participantPubkeys: [_me, _stranger, _stranger],
+          isGroup: false,
+          createdAt: 0,
+        );
+
+        final verdict = const DmInboxClassifier(officialIdentities: {})
+            .classify(
+              [conversation],
+              userPubkey: _me,
+              isFollowing: (_) => false,
+              signalsFor: (_) => const DmSenderSignals(
+                daysSinceFirstObserved: 200,
+                divineVideoCount: 4,
+                hasProfileMetadata: true,
+                mutualConnectionCount: 1,
+              ),
+            )
+            .verdicts['duplicated']!;
+
+        expect(
+          verdict.reasons.map((r) => r.label),
+          isNot(contains('Added you to a group')),
+        );
+        expect(verdict.score, equals(-40));
       });
 
       test('a group with a followed member and a stranger earns it', () {

@@ -231,9 +231,21 @@ void main() {
 
         expect(find.text('Divine Support'), findsOneWidget);
         expect(find.textContaining('report you filed'), findsOneWidget);
-        expect(find.textContaining('cannot be blocked'), findsWidgets);
-        expect(find.text('Liz · Divine team'), findsOneWidget);
-        expect(find.text('Reportable · blockable'), findsWidgets);
+        // Scoped to rows: the tab header also says "cannot be blocked".
+        expect(
+          find.descendant(
+            of: rowOf('Divine Support'),
+            matching: find.text('Reportable · cannot be blocked'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: rowOf('Liz · Divine team'),
+            matching: find.text('Reportable · blockable'),
+          ),
+          findsOneWidget,
+        );
       });
 
       testWidgets('blocks a hidden request without opening it', (
@@ -317,6 +329,24 @@ void main() {
         expect(find.text('Priya Raman'), findsNothing);
         await openTab(tester, 'Inbox');
         expect(find.text('Priya Raman'), findsOneWidget);
+        semantics.dispose();
+      });
+
+      testWidgets('a blank reply cannot be sent', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpScreen(tester);
+        await openTab(tester, 'Requests');
+        await tester.tap(find.text('Priya Raman'));
+        await tester.pumpAndSettle();
+        await tapLabel(tester, 'Reply to Priya Raman');
+
+        await tester.enterText(find.byType(TextField), '   ');
+        await tester.pump();
+        await tester.tap(find.text('Send'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(TextField), findsOneWidget);
+        expect(find.textContaining('Moved to Inbox'), findsNothing);
         semantics.dispose();
       });
 
@@ -419,6 +449,52 @@ void main() {
           ),
           findsOneWidget,
         );
+      });
+
+      testWidgets('the caution line holds back message reasons until opened', (
+        tester,
+      ) async {
+        await pumpScreen(tester);
+        await saveTuningWith(tester, 'Context and a caution label');
+        await openTab(tester, 'Requests');
+        final camille = rowOf('Camille Ndiaye');
+        final linkReason = find.descendant(
+          of: camille,
+          matching: find.textContaining('contains a link'),
+        );
+
+        expect(linkReason, findsNothing);
+
+        await tester.tap(find.text('Camille Ndiaye'));
+        await tester.pumpAndSettle();
+
+        expect(linkReason, findsOneWidget);
+      });
+
+      testWidgets('shows reason points only in the facilitator view', (
+        tester,
+      ) async {
+        await pumpScreen(tester);
+        await openTab(tester, 'Requests');
+        Finder points() => find.descendant(
+          of: rowOf('Camille Ndiaye'),
+          matching: find.textContaining(RegExp(r'^[+-]\d+$')),
+        );
+        await tester.tap(
+          find.descendant(
+            of: rowOf('Camille Ndiaye'),
+            matching: find.text('Why is this here?'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Hide reasons'), findsOneWidget);
+        expect(points(), findsNothing);
+
+        await saveTuningWith(tester, 'Show scores');
+        await openTab(tester, 'Requests');
+
+        expect(points(), findsWidgets);
       });
 
       testWidgets('a screen reader can open the reasons', (tester) async {
