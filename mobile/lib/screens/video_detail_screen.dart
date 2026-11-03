@@ -231,7 +231,10 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
     ref.watch(blocklistVersionProvider);
     ref.watch(divineHostFilterVersionProvider);
     ref.watch(contentFilterVersionProvider);
-    final videoEventService = ref.read(videoEventServiceProvider);
+    // Watched, not read: a read leaves the service without a listener once the
+    // screen covers the feed, so Riverpod defers its post-sign-in rebuild to
+    // the next read — this build — where it schedules a refresh mid-build.
+    final videoEventService = ref.watch(videoEventServiceProvider);
     final screen = widget.screen;
 
     return BlocConsumer<VideoDetailCubit, VideoDetailState>(
