@@ -1274,16 +1274,18 @@ void main() {
         'maps each sound to its source video through one lookup',
         () async {
           when(
-            () => videosRepository.getVideosByAddressableIds(
+            () => videosRepository.getVideosFromRelaysByAddressableIds(
               any(),
               includeFeedShape: any(named: 'includeFeedShape'),
-              relaysOnly: any(named: 'relaysOnly'),
             ),
           ).thenAnswer(
-            (_) async => [
-              sourceVideo(authorA, 'clip-a'),
-              sourceVideo(authorB, 'clip-b'),
-            ],
+            (_) async => (
+              videos: [
+                sourceVideo(authorA, 'clip-a'),
+                sourceVideo(authorB, 'clip-b'),
+              ],
+              complete: true,
+            ),
           );
 
           final container = buildContainer([
@@ -1311,10 +1313,9 @@ void main() {
             deletedReference: null,
           });
           final captured = verify(
-            () => videosRepository.getVideosByAddressableIds(
+            () => videosRepository.getVideosFromRelaysByAddressableIds(
               captureAny(),
               includeFeedShape: false,
-              relaysOnly: true,
             ),
           ).captured;
           expect(captured, hasLength(1));
@@ -1346,18 +1347,20 @@ void main() {
               invocation.namedArguments[#until] == null ? [newer] : [older],
         );
         when(
-          () => videosRepository.getVideosByAddressableIds(
+          () => videosRepository.getVideosFromRelaysByAddressableIds(
             any(),
             includeFeedShape: any(named: 'includeFeedShape'),
-            relaysOnly: any(named: 'relaysOnly'),
           ),
         ).thenAnswer(
-          (invocation) async => [
-            if ((invocation.positionalArguments.single as List<String>)
-                .contains(verticalReference))
-              sourceVideo(authorA, 'clip-a'),
-            sourceVideo(authorB, 'clip-b'),
-          ],
+          (invocation) async => (
+            videos: [
+              if ((invocation.positionalArguments.single as List<String>)
+                  .contains(verticalReference))
+                sourceVideo(authorA, 'clip-a'),
+              sourceVideo(authorB, 'clip-b'),
+            ],
+            complete: true,
+          ),
         );
         final subscription = container.listen(
           trendingSoundCoversProvider,
@@ -1375,10 +1378,9 @@ void main() {
         expect(covers[verticalReference], isNotNull);
         expect(covers[normalReference], isNotNull);
         final lookups = verify(
-          () => videosRepository.getVideosByAddressableIds(
+          () => videosRepository.getVideosFromRelaysByAddressableIds(
             captureAny(),
             includeFeedShape: false,
-            relaysOnly: true,
           ),
         ).captured;
         expect(lookups, [
@@ -1390,14 +1392,13 @@ void main() {
       test('leaves sounds out when the lookup fails, to ask again', () async {
         var lookups = 0;
         when(
-          () => videosRepository.getVideosByAddressableIds(
+          () => videosRepository.getVideosFromRelaysByAddressableIds(
             any(),
             includeFeedShape: any(named: 'includeFeedShape'),
-            relaysOnly: any(named: 'relaysOnly'),
           ),
         ).thenAnswer((_) async {
           if (lookups++ == 0) throw Exception('relay down');
-          return [sourceVideo(authorA, 'clip-a')];
+          return (videos: [sourceVideo(authorA, 'clip-a')], complete: true);
         });
         final container = buildContainer([
           createTestAudioEvent(
@@ -1417,6 +1418,45 @@ void main() {
         expect(covers[verticalReference], isNotNull);
       });
 
+      test(
+        'does not take a video a relay never delivered for gone',
+        () async {
+          var lookups = 0;
+          when(
+            () => videosRepository.getVideosFromRelaysByAddressableIds(
+              any(),
+              includeFeedShape: any(named: 'includeFeedShape'),
+            ),
+          ).thenAnswer(
+            (_) async => lookups++ == 0
+                // A relay ran out of time before sending this video.
+                ? (videos: <VideoEvent>[], complete: false)
+                : (videos: [sourceVideo(authorA, 'clip-a')], complete: true),
+          );
+          final container = buildContainer([
+            createTestAudioEvent(
+              id: 'sound',
+            ).copyWith(sourceVideoReference: verticalReference),
+          ]);
+          final subscription = container.listen(
+            trendingSoundCoversProvider,
+            (_, _) {},
+          );
+          addTearDown(subscription.close);
+
+          final unfinished = await container.read(
+            trendingSoundCoversProvider.future,
+          );
+          expect(unfinished.containsKey(verticalReference), isFalse);
+
+          container.invalidate(trendingSoundCoversProvider);
+          final covers = await container.read(
+            trendingSoundCoversProvider.future,
+          );
+          expect(covers[verticalReference], isNotNull);
+        },
+      );
+
       test('never looks up videos when no sound came from one', () async {
         final container = buildContainer([
           createTestAudioEvent(id: '${AudioEvent.bundledMarker}_wednesday'),
@@ -1426,10 +1466,9 @@ void main() {
 
         expect(covers, isEmpty);
         verifyNever(
-          () => videosRepository.getVideosByAddressableIds(
+          () => videosRepository.getVideosFromRelaysByAddressableIds(
             any(),
             includeFeedShape: any(named: 'includeFeedShape'),
-            relaysOnly: any(named: 'relaysOnly'),
           ),
         );
       });
