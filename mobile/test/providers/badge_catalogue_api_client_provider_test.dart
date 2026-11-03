@@ -28,68 +28,71 @@ class _Auth extends Mock implements AuthService {}
 class _NostrClient extends Mock implements NostrClient {}
 
 void main() {
-  test(
-    'catalogue reads ignore an account relay serving forged issuer events',
-    () async {
-      SharedPreferences.setMockInitialValues({});
-      final preferences = await SharedPreferences.getInstance();
-      final auth = _Auth();
-      when(() => auth.currentPublicKeyHex).thenReturn('1' * 64);
-      when(() => auth.authStateStream).thenAnswer((_) => const Stream.empty());
-      final nostr = _NostrClient();
-      when(() => nostr.configuredRelays)
-          .thenReturn(['wss://custom-relay.example']);
-      final issuer = '2' * 64;
-      // Public hashes can be constructed without the issuer's signing key.
-      final forged = Event(
-        issuer,
-        EventKind.badgeDefinition,
-        [
-          ['d', 'forged'],
-          ['name', 'Forged from account relay'],
-        ],
-        '',
-        createdAt: 1000,
-      )..sig = '0' * 128;
-      final requests = <Uri>[];
-      final transport = MockClient((request) async {
-        requests.add(request.url);
-        return http.Response(
-          jsonEncode({
-            'badges': request.url.host == 'api.divine.video'
-                ? []
-                : [forged.toJson()],
-            'next_cursor': null,
-          }),
-          200,
+  group('badgeCatalogueApiClientProvider', () {
+    test(
+      'catalogue reads ignore an account relay serving forged issuer events',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final preferences = await SharedPreferences.getInstance();
+        final auth = _Auth();
+        when(() => auth.currentPublicKeyHex).thenReturn('1' * 64);
+        when(() => auth.authStateStream)
+            .thenAnswer((_) => const Stream.empty());
+        final nostr = _NostrClient();
+        when(() => nostr.configuredRelays)
+            .thenReturn(['wss://custom-relay.example']);
+        final issuer = '2' * 64;
+        // Public hashes can be constructed without the issuer's signing key.
+        final forged = Event(
+          issuer,
+          EventKind.badgeDefinition,
+          [
+            ['d', 'forged'],
+            ['name', 'Forged from account relay'],
+          ],
+          '',
+          createdAt: 1000,
+        )..sig = '0' * 128;
+        final requests = <Uri>[];
+        final transport = MockClient((request) async {
+          requests.add(request.url);
+          return http.Response(
+            jsonEncode({
+              'badges': request.url.host == 'api.divine.video'
+                  ? []
+                  : [forged.toJson()],
+              'next_cursor': null,
+            }),
+            200,
+          );
+        });
+        final container = ProviderContainer(
+          overrides: [
+            authServiceProvider.overrideWithValue(auth),
+            nostrServiceProvider.overrideWithValue(nostr),
+            sharedPreferencesProvider.overrideWithValue(preferences),
+            contentBlocklistRepositoryProvider.overrideWithValue(
+              ContentBlocklistRepository(),
+            ),
+            currentEnvironmentProvider.overrideWithValue(
+              EnvironmentConfig.production,
+            ),
+            appVersionProvider.overrideWithValue('1.0.0'),
+            instrumentedHttpClientFactoryProvider.overrideWithValue(
+              () => transport,
+            ),
+          ],
         );
-      });
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(auth),
-          nostrServiceProvider.overrideWithValue(nostr),
-          sharedPreferencesProvider.overrideWithValue(preferences),
-          contentBlocklistRepositoryProvider.overrideWithValue(
-            ContentBlocklistRepository(),
-          ),
-          currentEnvironmentProvider.overrideWithValue(
-            EnvironmentConfig.production,
-          ),
-          appVersionProvider.overrideWithValue('1.0.0'),
-          instrumentedHttpClientFactoryProvider.overrideWithValue(
-            () => transport,
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+        addTearDown(container.dispose);
 
-      final BadgeRepository repository = container.read(
-        badgeRepositoryProvider,
-      );
-      final definitions = await repository.loadDefinitionsByIssuers([issuer]);
+        final BadgeRepository repository = container.read(
+          badgeRepositoryProvider,
+        );
+        final definitions = await repository.loadDefinitionsByIssuers([issuer]);
 
-      expect(definitions, isEmpty);
-      expect(requests.map((uri) => uri.origin), ['https://api.divine.video']);
-    },
-  );
+        expect(definitions, isEmpty);
+        expect(requests.map((uri) => uri.origin), ['https://api.divine.video']);
+      },
+    );
+  });
 }

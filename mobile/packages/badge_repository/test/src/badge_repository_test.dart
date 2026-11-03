@@ -1200,6 +1200,7 @@ void main() {
               }) async => null,
           signer: () => dismissalSigner,
           funnelcakeApiClient: api,
+          stopwatchFactory: () => clock.stopwatch(),
         );
       });
 
@@ -1288,6 +1289,50 @@ void main() {
           () => api.getBadgeDefinitions(issuer: issuer, cursor: 'late'),
         );
       });
+
+      test(
+        'discards HTTP pages when the budget expires before the next page',
+        () {
+          fakeAsync((async) {
+            when(() => api.getBadgeDefinitions(issuer: issuer)).thenAnswer((_) {
+              // Spend the entire walk budget before the first page resolves.
+              async.elapseBlocking(const Duration(seconds: 15));
+              return Future.value(
+                BadgeDefinitionsResponse(badges: [daily], nextCursor: 'more'),
+              );
+            });
+            when(
+              () => api.getBadgeDefinitions(issuer: issuer, cursor: 'more'),
+            ).thenAnswer(
+              (_) async => BadgeDefinitionsResponse(badges: [daily]),
+            );
+
+            List<String>? identifiers;
+            unawaited(
+              apiRepository.loadDefinitionsByIssuers([issuer]).then((
+                definitions,
+              ) {
+                identifiers = definitions
+                    .map((definition) => definition.dTag)
+                    .toList();
+              }),
+            );
+            async.flushMicrotasks();
+
+            expect(identifiers, ['fallback']);
+            verify(() => api.getBadgeDefinitions(issuer: issuer)).called(1);
+            verifyNever(
+              () => api.getBadgeDefinitions(issuer: issuer, cursor: 'more'),
+            );
+            verify(
+              () => nostrClient.readAllEvents(
+                any(),
+                timeout: const Duration(seconds: 10),
+              ),
+            ).called(1);
+          });
+        },
+      );
 
       test('discards HTTP pages when a later request fails', () async {
         when(() => api.getBadgeDefinitions(issuer: issuer)).thenAnswer(
