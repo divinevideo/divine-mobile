@@ -357,6 +357,14 @@ String? _heldReviewStatusPushTarget(ImperativeRouteMatch page) {
   return from;
 }
 
+/// The location of the page on top of [configuration].
+String _topLocation(RouteMatchList configuration) {
+  final last = configuration.matches.lastOrNull;
+  return last is ImperativeRouteMatch
+      ? last.matches.uri.toString()
+      : configuration.uri.toString();
+}
+
 /// Takes the pushes held on the review-status loading screen off the stack
 /// once the status has arrived and, with [reopen], pushes each one again to
 /// where it was going. Returns false when nothing was held.
@@ -384,9 +392,14 @@ bool _releaseHeldReviewStatusPushes(GoRouter router, {required bool reopen}) {
   router.restore(configuration.remove(held.first));
   if (!reopen) return true;
 
+  // Android can deliver a link to the router as well as to
+  // DeepLinkCoordinator, which pushes it, so the restored page may already be
+  // the held push's target. A target already on top isn't opened again.
+  var top = _topLocation(router.routerDelegate.currentConfiguration);
   for (final page in held) {
     final target = _heldReviewStatusPushTarget(page);
-    if (target == null) continue;
+    if (target == null || target == top) continue;
+    top = target;
     Log.info(
       'Router: review status arrived — reopening held push '
       '${redactUriStringForLogs(target)}',

@@ -434,6 +434,50 @@ void main() {
         expect(location(router), MinorAccountReviewScreen.path);
         expect(pages(router), hasLength(1));
       });
+
+      testWidgets('opens once when the router got the same link', (
+        tester,
+      ) async {
+        final router = await pumpRouter(
+          tester,
+          startState: AuthState.authenticated,
+        );
+        // Android can hand a link to the router as well as to
+        // DeepLinkCoordinator, which pushes it.
+        router.go(videoPath);
+        await tester.pump();
+        unawaited(router.push<void>(videoPath));
+        await tester.pump();
+        expect(pages(router).last, isA<ImperativeRouteMatch>());
+
+        fetch.complete(MinorAccountReviewStatus.active());
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(location(router), videoPath);
+        expect(pages(router), hasLength(1));
+      });
+
+      testWidgets('opens once when the same push was held twice', (
+        tester,
+      ) async {
+        final router = await pumpRouter(
+          tester,
+          startState: AuthState.authenticated,
+        );
+        unawaited(router.push<void>(videoPath));
+        await tester.pump();
+        unawaited(router.push<void>(videoPath));
+        await tester.pump();
+        expect(pages(router), hasLength(3));
+
+        fetch.complete(MinorAccountReviewStatus.active());
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(location(router), videoPath);
+        expect(pages(router), hasLength(2));
+      });
     });
   });
 }
