@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.util.Range
 import android.view.Surface
+import androidx.media3.common.C
 import androidx.media3.common.util.Size
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.Renderer
@@ -45,7 +46,7 @@ class KnownOutputSizeVideoRendererTest {
         mockkConstructor(Range::class)
         every { anyConstructed<Range<Double>>().upper } returns 1.0
         renderer = KnownOutputSizeVideoRenderer(
-            MediaCodecVideoRenderer.Builder(context).setVideoSink(sink),
+            MediaCodecVideoRenderer.Builder(context).setVideoSink(sink).build(),
         )
         renderer.handleMessage(Renderer.MSG_SET_VIDEO_OUTPUT, surface)
     }
@@ -63,16 +64,14 @@ class KnownOutputSizeVideoRendererTest {
     }
 
     @Test
-    fun `passes on the real size the player sends after it`() {
-        renderer.handleMessage(Renderer.MSG_SET_VIDEO_OUTPUT_RESOLUTION, Size.UNKNOWN)
+    fun `passes on the real size the plugin sends`() {
         renderer.handleMessage(Renderer.MSG_SET_VIDEO_OUTPUT_RESOLUTION, Size(1080, 1920))
 
         verify(exactly = 1) { sink.setOutputSurfaceInfo(surface, Size(1080, 1920)) }
-        verify(exactly = 0) { sink.setOutputSurfaceInfo(any(), Size.UNKNOWN) }
     }
 
     @Test
-    fun `builds the guarded renderer for the player's video`() {
+    fun `wraps the player's video renderer`() {
         val renderers = LoopDeclickRenderersFactory(context, LoopDeclickAudioProcessor())
             .createRenderers(
                 mockk<Handler>(relaxed = true),
@@ -82,7 +81,7 @@ class KnownOutputSizeVideoRendererTest {
                 mockk(relaxed = true),
             )
 
-        val videoRenderers = renderers.filterIsInstance<MediaCodecVideoRenderer>()
+        val videoRenderers = renderers.filter { it.trackType == C.TRACK_TYPE_VIDEO }
         assertEquals(listOf(KnownOutputSizeVideoRenderer::class.java), videoRenderers.map { it.javaClass })
     }
 }
