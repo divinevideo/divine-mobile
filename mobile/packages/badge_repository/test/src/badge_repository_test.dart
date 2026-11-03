@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -20,6 +21,8 @@ const _SubscriptionRead _emptySubscriptionRead = (
 );
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockFunnelcakeClient extends Mock implements FunnelcakeApiClient {}
 
 void main() {
   group(BadgeReadIncompleteException, () {
@@ -1115,6 +1118,236 @@ void main() {
       ]);
     });
 
+    group('HTTP badge catalogue', () {
+      late _MockFunnelcakeClient api;
+      late BadgeRepository apiRepository;
+      late Event daily;
+      late String issuer;
+
+      setUp(() {
+        api = _MockFunnelcakeClient();
+        daily = Event(
+          _pubkey(2),
+          EventKind.badgeDefinition,
+          [
+            ['d', 'daily'],
+            ['name', 'Daily'],
+            ['image', 'https://example.com/daily.png'],
+          ],
+          '',
+          createdAt: 1000,
+        )..sign(_eventId(102));
+        issuer = daily.pubkey;
+        _stubPagedReads(
+          nostrClient,
+          (_) async => PagedQueryResult(
+            events: [
+              _definitionEvent(pubkey: issuer, dTag: 'fallback', name: 'Relay'),
+            ],
+            isComplete: true,
+            pages: 1,
+          ),
+        );
+        apiRepository = BadgeRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: preferences,
+          currentPubkey: () => _pubkey(1),
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => null,
+          signer: () => dismissalSigner,
+          funnelcakeApiClient: api,
+        );
+      });
+
+      tearDown(() => apiRepository.dispose());
+
+      test(
+        'loads signed definitions over HTTP without querying relays',
+        () async {
+          when(() => api.getBadgeDefinitions(issuer: issuer)).thenAnswer(
+            (_) async => BadgeDefinitionsResponse(badges: [daily]),
+          );
+          final definitions = await apiRepository.loadDefinitionsByIssuers([
+            'not-a-pubkey',
+            issuer,
+            issuer,
+          ]);
+          expect(definitions.single.name, 'Daily');
+          expect(definitions.single.event.isSigned, isTrue);
+          verify(() => api.getBadgeDefinitions(issuer: issuer)).called(1);
+          verifyZeroInteractions(nostrClient);
+        },
+      );
+
+      test('accepts an empty HTTP catalogue without querying relays', () async {
+        when(() => api.getBadgeDefinitions(issuer: issuer)).thenAnswer(
+          (_) async => const BadgeDefinitionsResponse(badges: []),
+        );
+        expect(await apiRepository.loadDefinitionsByIssuers([issuer]), isEmpty);
+        verifyZeroInteractions(nostrClient);
+      });
+
+      test('walks HTTP cursors and keeps the newest definition', () async {
+        final newer = Event(
+          issuer,
+          EventKind.badgeDefinition,
+          [
+            ['d', 'daily'],
+            ['name', 'Updated'],
+          ],
+          '',
+          createdAt: 1001,
+        )..sign(_eventId(102));
+        when(() => api.getBadgeDefinitions(issuer: issuer)).thenAnswer(
+          (_) async =>
+              BadgeDefinitionsResponse(badges: [daily], nextCursor: 'more'),
+        );
+        when(
+          () => api.getBadgeDefinitions(issuer: issuer, cursor: 'more'),
+        ).thenAnswer((_) async => BadgeDefinitionsResponse(badges: [newer]));
+        final definitions = await apiRepository.loadDefinitionsByIssuers([
+          issuer,
+        ]);
+        expect(definitions.single.name, 'Updated');
+        verifyZeroInteractions(nostrClient);
+      });
+
+      void stubFallback() {
+        _stubPagedReads(
+          nostrClient,
+          (_) async => PagedQueryResult(
+            events: [
+              _definitionEvent(pubkey: issuer, dTag: 'fallback', name: 'Relay'),
+            ],
+            isComplete: true,
+            pages: 1,
+          ),
+        );
+      }
+
+      testWidgets('bounds a stalled HTTP walk and stops further pages', (
+        tester,
+      ) async {
+        final pending = Completer<BadgeDefinitionsResponse>();
+        when(
+          () => api.getBadgeDefinitions(issuer: issuer),
+        ).thenAnswer((_) => pending.future);
+        final loaded = apiRepository.loadDefinitionsByIssuers([issuer]);
+        await tester.pump(const Duration(seconds: 15));
+        expect((await loaded).single.name, 'Relay');
+        pending.complete(
+          BadgeDefinitionsResponse(badges: [daily], nextCursor: 'late'),
+        );
+        await tester.pump();
+        verify(() => api.getBadgeDefinitions(issuer: issuer)).called(1);
+        verifyNever(
+          () => api.getBadgeDefinitions(issuer: issuer, cursor: 'late'),
+        );
+      });
+
+      test('discards HTTP pages when a later request fails', () async {
+        when(() => api.getBadgeDefinitions(issuer: issuer)).thenAnswer(
+          (_) async =>
+              BadgeDefinitionsResponse(badges: [daily], nextCursor: 'more'),
+        );
+        when(
+          () => api.getBadgeDefinitions(issuer: issuer, cursor: 'more'),
+        ).thenThrow(const FunnelcakeException('Second page unavailable'));
+        final loaded = await apiRepository.loadDefinitionsByIssuers([issuer]);
+        expect(loaded.single.dTag, 'fallback');
+      });
+
+      test('uses bounded relay fallback after HTTP fails', () async {
+        when(
+          () => api.getBadgeDefinitions(issuer: issuer),
+        ).thenThrow(const FunnelcakeException('HTTP unavailable'));
+        stubFallback();
+        final definitions = await apiRepository.loadDefinitionsByIssuers([
+          issuer,
+        ]);
+        expect(definitions.single.name, 'Relay');
+        verify(
+          () => nostrClient.readAllEvents(
+            any(),
+            timeout: const Duration(seconds: 10),
+          ),
+        ).called(1);
+      });
+
+      for (final invalid in [
+        'wrong issuer',
+        'tampered content',
+        'unsigned',
+        'wrong kind',
+      ]) {
+        test('rejects $invalid API events before relay fallback', () async {
+          final invalidEvent = Event.fromJson(daily.toJson());
+          if (invalid == 'wrong issuer') {
+            invalidEvent.tags = [
+              ['d', 'daily'],
+            ];
+            final other = Event(
+              _pubkey(3),
+              EventKind.badgeDefinition,
+              [
+                ['d', 'daily'],
+              ],
+              '',
+              createdAt: 1000,
+            )..sign(_eventId(103));
+            when(() => api.getBadgeDefinitions(issuer: issuer)).thenAnswer(
+              (_) async => BadgeDefinitionsResponse(badges: [other]),
+            );
+          } else {
+            if (invalid == 'tampered content') invalidEvent.content = 'forged';
+            if (invalid == 'unsigned') invalidEvent.sig = '';
+            final event = invalid == 'wrong kind'
+                ? (Event(
+                    issuer,
+                    1,
+                    [
+                      ['d', 'daily'],
+                    ],
+                    '',
+                    createdAt: 1000,
+                  )..sign(_eventId(102)))
+                : invalidEvent;
+            when(() => api.getBadgeDefinitions(issuer: issuer)).thenAnswer(
+              (_) async => BadgeDefinitionsResponse(badges: [event]),
+            );
+          }
+          stubFallback();
+          final definitions = await apiRepository.loadDefinitionsByIssuers([
+            issuer,
+          ]);
+          expect(definitions.single.name, 'Relay');
+        });
+      }
+
+      test('discards a partial HTTP walk when the cursor repeats', () async {
+        when(() => api.getBadgeDefinitions(issuer: issuer)).thenAnswer(
+          (_) async =>
+              BadgeDefinitionsResponse(badges: [daily], nextCursor: 'same'),
+        );
+        when(
+          () => api.getBadgeDefinitions(issuer: issuer, cursor: 'same'),
+        ).thenAnswer(
+          (_) async =>
+              const BadgeDefinitionsResponse(badges: [], nextCursor: 'same'),
+        );
+        stubFallback();
+        final definitions = await apiRepository.loadDefinitionsByIssuers([
+          issuer,
+        ]);
+        expect(definitions.single.dTag, 'fallback');
+      });
+    });
+
     test('loads the latest definitions from curated issuers', () async {
       final issuer = _pubkey(2);
       final secondIssuer = _pubkey(3);
@@ -1204,6 +1437,7 @@ void main() {
         () => nostrClient.readAllEvents(
           any(),
           tempRelays: ['wss://relay.example'],
+          timeout: const Duration(seconds: 10),
         ),
       ).thenAnswer(
         (_) async => PagedQueryResult(
@@ -1224,6 +1458,7 @@ void main() {
         () => nostrClient.readAllEvents(
           any(),
           tempRelays: ['wss://relay.example'],
+          timeout: const Duration(seconds: 10),
         ),
       ).called(1);
     });

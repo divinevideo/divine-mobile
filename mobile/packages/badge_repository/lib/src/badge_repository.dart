@@ -5,10 +5,12 @@ import 'package:badge_repository/src/badge_dismissal_sync.dart';
 import 'package:badge_repository/src/badge_read_incomplete_exception.dart';
 import 'package:badge_repository/src/nip58_badge_models.dart';
 import 'package:badge_repository/src/nip58_badge_parser.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:text_sanitizer/text_sanitizer.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 typedef BadgeCurrentPubkeyReader = String? Function();
 
@@ -357,8 +359,10 @@ class BadgeRepository {
     void Function(String owner, Future<void> Function() close)?
     onAccountCreated,
     String? definitionRelayUrl,
+    FunnelcakeApiClient? funnelcakeApiClient,
     Stream<void>? sessionChanges,
   }) : _nostrClient = nostrClient,
+       _funnelcakeApiClient = funnelcakeApiClient,
        _currentPubkey = currentPubkey,
        _signEvent = signEvent,
        _isHiddenPubkey = isHiddenPubkey,
@@ -375,6 +379,7 @@ class BadgeRepository {
   }
 
   final NostrClient _nostrClient;
+  final FunnelcakeApiClient? _funnelcakeApiClient;
   final BadgeCurrentPubkeyReader _currentPubkey;
   final BadgeEventSigner _signEvent;
   final BadgeDismissalSync _dismissalSync;
@@ -489,32 +494,94 @@ class BadgeRepository {
 
   /// Definitions from the issuers selected for Explore.
   ///
-  /// Throws [BadgeReadIncompleteException] when a relay walk is incomplete.
+  /// Reads the API catalogue first, including every cursor page. Only an API
+  /// failure triggers a relay walk; an empty HTTP success is authoritative.
+  /// Throws [BadgeReadIncompleteException] when that fallback is incomplete.
   Future<List<Nip58BadgeDefinition>> loadDefinitionsByIssuers(
     Iterable<String> issuerPubkeys,
   ) async {
     final definitions = <String, Nip58BadgeDefinition>{};
     for (final issuer in issuerPubkeys.toSet()) {
       if (!isBadgePubkey(issuer)) continue;
-      final result = await _nostrClient.readAllEvents(
-        Filter(authors: [issuer], kinds: [EventKind.badgeDefinition]),
-        tempRelays: _definitionRelayUrl == null ? null : [_definitionRelayUrl],
-      );
-      if (!result.isComplete) {
-        throw const BadgeReadIncompleteException(
-          'Badge definitions could not be fully loaded',
-        );
-      }
-      // The relay filters on authors; only the issuer's own signature counts.
-      final signed = result.events
-          .where((event) => event.pubkey == issuer)
-          .toList();
+      final events = await _loadIssuerDefinitions(issuer);
+      // Both sources are scoped to the issuer; retain the boundary check.
+      final signed = events.where((event) => event.pubkey == issuer).toList();
       for (final definition in _newestDefinitionPerIdentifier(signed)) {
         definitions[definition.coordinate] = definition;
       }
     }
     return definitions.values.toList(growable: false)
       ..sort((a, b) => (a.name ?? a.dTag).compareTo(b.name ?? b.dTag));
+  }
+
+  Future<List<Event>> _loadIssuerDefinitions(String issuer) async {
+    final api = _funnelcakeApiClient;
+    if (api != null) {
+      try {
+        return await _loadApiDefinitions(api, issuer);
+      } on Exception catch (error) {
+        Log.warning(
+          'Badge catalogue API failed (${error.runtimeType}); '
+          'using relay fallback',
+          name: 'BadgeRepository',
+          category: LogCategory.relay,
+        );
+      }
+    }
+    final result = await _nostrClient.readAllEvents(
+      Filter(authors: [issuer], kinds: [EventKind.badgeDefinition]),
+      timeout: const Duration(seconds: 10),
+      tempRelays: _definitionRelayUrl == null ? null : [_definitionRelayUrl],
+    );
+    if (!result.isComplete) {
+      throw const BadgeReadIncompleteException(
+        'Badge definitions could not be fully loaded',
+      );
+    }
+    return result.events;
+  }
+
+  Future<List<Event>> _loadApiDefinitions(
+    FunnelcakeApiClient api,
+    String issuer,
+  ) async {
+    // Bound the whole walk, rather than multiplying the client's retry budget
+    // by the number of pages. A timed-out request cannot start another page.
+    final stopwatch = Stopwatch()..start();
+    const budget = Duration(seconds: 15);
+    final events = <Event>[];
+    final cursors = <String>{};
+    String? cursor;
+    for (var pageNumber = 0; pageNumber < 50; pageNumber++) {
+      final remaining = budget - stopwatch.elapsed;
+      if (remaining <= Duration.zero) {
+        throw TimeoutException('Badge catalogue API deadline exceeded');
+      }
+      final page = await api
+          .getBadgeDefinitions(issuer: issuer, cursor: cursor)
+          .timeout(remaining);
+      if (page.badges.length > 100) {
+        throw const FormatException('Badge catalogue page exceeds its limit');
+      }
+      for (final event in page.badges) {
+        if (event.pubkey != issuer ||
+            event.kind != EventKind.badgeDefinition ||
+            !event.isValid ||
+            !event.isSigned ||
+            Nip58BadgeParser.parseDefinition(event) == null) {
+          throw const FormatException('Invalid signed badge definition');
+        }
+        events.add(event);
+      }
+      cursor = page.nextCursor;
+      if (cursor == null) return events;
+      if (cursor.isEmpty || !cursors.add(cursor)) {
+        throw const FormatException('Badge catalogue cursor did not advance');
+      }
+    }
+    throw const BadgeReadIncompleteException(
+      'Badge catalogue API pagination limit exceeded',
+    );
   }
 
   /// Every currently accepted holder with an issuer-signed award.

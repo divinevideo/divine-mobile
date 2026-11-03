@@ -5,11 +5,13 @@ import 'dart:async';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -21,6 +23,8 @@ class _MockNostrClient extends Mock implements NostrClient {}
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockBlocklist extends Mock implements ContentBlocklistRepository {}
+
+class _MockFunnelcakeClient extends Mock implements FunnelcakeApiClient {}
 
 void main() {
   group('badgeRepositoryProvider', () {
@@ -44,6 +48,9 @@ void main() {
       );
       final container = ProviderContainer(
         overrides: [
+          funnelcakeApiClientProvider.overrideWithValue(
+            _MockFunnelcakeClient(),
+          ),
           authServiceProvider.overrideWithValue(auth),
           nostrServiceProvider.overrideWithValue(client),
           contentBlocklistRepositoryProvider.overrideWithValue(
@@ -107,6 +114,9 @@ void main() {
           );
           final container = ProviderContainer(
             overrides: [
+              funnelcakeApiClientProvider.overrideWithValue(
+                _MockFunnelcakeClient(),
+              ),
               authServiceProvider.overrideWithValue(auth),
               nostrServiceProvider.overrideWithValue(client),
               contentBlocklistRepositoryProvider.overrideWithValue(
@@ -176,6 +186,9 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            funnelcakeApiClientProvider.overrideWithValue(
+              _MockFunnelcakeClient(),
+            ),
             authServiceProvider.overrideWithValue(auth),
             nostrServiceProvider.overrideWithValue(client),
             contentBlocklistRepositoryProvider.overrideWithValue(

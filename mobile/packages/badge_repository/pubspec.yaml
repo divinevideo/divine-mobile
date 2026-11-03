@@ -13,6 +13,8 @@ environment:
 dependencies:
   account_state_repository:
     path: ../account_state_repository
+  funnelcake_api_client:
+    path: ../funnelcake_api_client
   meta: ^1.17.0
   nostr_client:
     path: ../nostr_client

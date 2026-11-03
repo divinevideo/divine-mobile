@@ -2109,6 +2109,56 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// Fetches a page of raw badge definition events published by [issuer].
+  ///
+  /// [limit] is the page size (the API accepts 1 through 100). [cursor] is
+  /// the opaque [BadgeDefinitionsResponse.nextCursor] from the previous page.
+  /// HTTP failures and malformed responses throw instead of returning an
+  /// authoritative empty catalogue.
+  Future<BadgeDefinitionsResponse> getBadgeDefinitions({
+    required String issuer,
+    int limit = 100,
+    String? cursor,
+  }) async {
+    if (!isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+
+    final uri = Uri.parse('$_baseUrl/api/badges').replace(
+      queryParameters: {
+        'issuer': issuer,
+        'limit': limit.toString(),
+        'cursor': ?cursor,
+      },
+    );
+
+    try {
+      final response = await _get(uri);
+      if (response.statusCode != 200) {
+        throw FunnelcakeApiException(
+          message: 'Failed to fetch badge definitions',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+
+      final data = jsonDecode(response.body);
+      if (data is! Map<String, dynamic>) {
+        throw const FormatException('Malformed badge definitions response');
+      }
+      return BadgeDefinitionsResponse.fromJson(data);
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (error) {
+      throw FunnelcakeException(
+        'Failed to fetch badge definitions: $error',
+        cause: error,
+      );
+    }
+  }
+
   /// Fetches the full Nostr event for a specific video route ID.
   ///
   /// [videoId] accepts either a canonical event ID or a stable shared ID

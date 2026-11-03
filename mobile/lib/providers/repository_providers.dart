@@ -78,6 +78,7 @@ final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
   final accountClosers = <Future<void> Function()>[];
   var subscriptionAccount = authService.currentPublicKeyHex;
   final repository = BadgeRepository(
+    funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
     nostrClient: ref.watch(nostrServiceProvider),
     sharedPreferences: ref.watch(sharedPreferencesProvider),
     currentPubkey: () => authService.currentPublicKeyHex,
