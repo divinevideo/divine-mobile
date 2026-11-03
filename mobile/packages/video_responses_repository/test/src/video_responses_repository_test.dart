@@ -571,7 +571,7 @@ void main() {
           ).thenAnswer(
             (_) async => VideoResponsesResponse(
               videos: [
-                _stats(_hex(301), eventTags: joins(), createdAtMs: 1000000),
+                _stats(_hex(301), eventTags: joins()),
                 _stats(_hex(302), eventTags: joins(), createdAtMs: 2000000),
               ],
               total: 2,
