@@ -40,10 +40,9 @@ class ShareCoverSection extends StatelessWidget {
         spacing: 16,
         children: [
           // Tapping the preview opens the same sheet as the button, as the
-          // badge artwork and the profile picture do.
-          Semantics(
-            button: true,
-            label: label,
+          // badge artwork and the profile picture do. A screen reader stops
+          // only at the button, which says the same.
+          ExcludeSemantics(
             child: GestureDetector(
               onTap: onChangeCover,
               child: _CoverPreview(coverImage: coverImage),
