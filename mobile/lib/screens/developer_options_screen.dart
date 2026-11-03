@@ -15,7 +15,6 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
-import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tabs_prototype_screen.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -23,6 +22,7 @@ import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/dm_inbox_prototype_routes.dart';
 import 'package:openvine/screens/clip_recovery_screen.dart';
 import 'package:openvine/services/openvine_media_cache.dart';
 import 'package:openvine/services/video_format_preference.dart';
@@ -413,25 +413,6 @@ class _DeveloperOptionsScreenState
                     ),
                   ),
                 ),
-                // PROTOTYPE (#8076). Remove with the prototype.
-                ListTile(
-                  title: Text(
-                    'DM inbox: 4-tab prototype',
-                    style: VineTheme.titleMediumFont(
-                      color: context.vineColors.primaryText,
-                    ),
-                  ),
-                  subtitle: Text(
-                    'Official / Inbox / Requests / Likely spam on fixture '
-                    'data, with adjustable weights.',
-                    style: VineTheme.bodyMediumFont(
-                      color: context.vineColors.secondaryText,
-                    ),
-                  ),
-                  onTap: () => context.pushNamed(
-                    DmInboxTabsPrototypeScreen.routeName,
-                  ),
-                ),
                 ListTile(
                   title: Text(
                     context.l10n.devOptionsMinorReviewClearTitle,
@@ -654,6 +635,27 @@ class _DeveloperOptionsScreenState
                     ),
                   ),
                   onTap: _clearProtectedMinorOverride,
+                ),
+                // PROTOTYPE (#8076). Remove with the prototype. Its own block,
+                // so it does not read as part of a simulation above.
+                Divider(color: context.vineColors.outline, height: 32),
+                ListTile(
+                  title: Text(
+                    'DM inbox: 4-tab prototype',
+                    style: VineTheme.titleMediumFont(
+                      color: context.vineColors.primaryText,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Official / Inbox / Requests / Likely spam on fixture '
+                    'data, with adjustable weights.',
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.secondaryText,
+                    ),
+                  ),
+                  onTap: () => const DmInboxPrototypeRouteData().push<void>(
+                    context,
+                  ),
                 ),
               ],
 
