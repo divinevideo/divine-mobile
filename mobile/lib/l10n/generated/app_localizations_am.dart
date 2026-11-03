@@ -8891,6 +8891,36 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectRiso => 'ሪሶ ህትመት';
 
   @override
+  String get videoEditorEffectTealOrange => 'ቲል እና ብርቱካናማ';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'ሞቃት ፊልም';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'ስላይድ ፊልም';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'ቀዝቃዛ ፊልም';
+
+  @override
+  String get videoEditorEffectMatte => 'ደብዛዛ';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'ብሊች ባይፓስ';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'ክሮስ ፕሮሰስ';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'ወርቃማ ሰዓት';
+
+  @override
+  String get videoEditorEffectMoonlight => 'የጨረቃ ብርሃን';
+
+  @override
+  String get videoEditorEffectSilver => 'ብራማ';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'ሬትሮ';
 
   @override
@@ -8907,6 +8937,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryParticles => 'ቅንጣቶች';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'ገጽታዎች';
 
   @override
   String get videoEditorFilterCategoryNatural => 'ተፈጥሯዊ';

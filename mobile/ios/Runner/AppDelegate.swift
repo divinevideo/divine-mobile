@@ -33,6 +33,7 @@ extension FlutterError: @retroactive Error {}
     EightBitVideoEffect.register()
     AnaglyphVideoEffect.register()
     RisoVideoEffect.register()
+    LookVideoEffect.register()
     AdjustVideoEffect.register()
     #if DEBUG
     exportScreenshotLaunchConfig()

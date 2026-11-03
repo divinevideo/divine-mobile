@@ -9181,6 +9181,36 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectRiso => 'Ризограф';
 
   @override
+  String get videoEditorEffectTealOrange => 'Тюркоаз и оранжево';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'Топъл филм';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'Диапозитив';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'Студен филм';
+
+  @override
+  String get videoEditorEffectMatte => 'Матово';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'Без избелване';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'Кръстосана обработка';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'Златен час';
+
+  @override
+  String get videoEditorEffectMoonlight => 'Лунна светлина';
+
+  @override
+  String get videoEditorEffectSilver => 'Сребро';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Ретро';
 
   @override
@@ -9197,6 +9227,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryParticles => 'Частици';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'Визии';
 
   @override
   String get videoEditorFilterCategoryNatural => 'Естествени';

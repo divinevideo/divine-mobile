@@ -995,11 +995,14 @@ class VideoEditorRenderService {
         timelineMap: timelineMap,
         beats: beats,
       ),
-      // Adjust after the effects editor's effects, as in the preview; see
+      // The looks after the effects editor's other effects, and Adjust after
+      // all of them, as in the preview; see looksLast and
       // adjustVideoEffectsOf for why.
       customEffects: customVideoEffectsOnOutput(
         [
-          ...?parameters?.customVideoEffectsFromCompleteMeta,
+          ...looksLast(
+            parameters?.customVideoEffectsFromCompleteMeta ?? const [],
+          ),
           ...adjustVideoEffectsOf(parameters?.tuneAdjustments ?? const []),
         ],
         timelineMap,

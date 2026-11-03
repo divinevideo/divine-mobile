@@ -538,6 +538,7 @@ flutter:
     - assets/icon/
     - assets/illustrations/
     - assets/info_stickers/
+    - assets/looks/
     - assets/loading-brand-sprite.png
     - assets/seed_data/seed_events.json
     - assets/seed_data/classic_viner_profiles.json
@@ -575,6 +576,7 @@ flutter:
     - shaders/fluted_glass.frag
     - shaders/light_leak.frag
     - shaders/light_leak_transition.frag
+    - shaders/look.frag
     - shaders/particles.frag
     - shaders/ripple.frag
     - shaders/riso.frag

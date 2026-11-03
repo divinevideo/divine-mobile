@@ -8648,6 +8648,36 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectRiso => 'リソグラフ';
 
   @override
+  String get videoEditorEffectTealOrange => 'ティール＆オレンジ';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'ウォームフィルム';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'リバーサルフィルム';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'クールフィルム';
+
+  @override
+  String get videoEditorEffectMatte => 'マット';
+
+  @override
+  String get videoEditorEffectBleachBypass => '銀残し';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'クロスプロセス';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'ゴールデンアワー';
+
+  @override
+  String get videoEditorEffectMoonlight => '月明かり';
+
+  @override
+  String get videoEditorEffectSilver => 'シルバー';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'レトロ';
 
   @override
@@ -8664,6 +8694,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryParticles => 'パーティクル';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'ルック';
 
   @override
   String get videoEditorFilterCategoryNatural => 'ナチュラル';

@@ -22,6 +22,7 @@ import co.openvine.app.videoeffects.EightBitVideoEffect
 import co.openvine.app.videoeffects.FisheyeVideoEffect
 import co.openvine.app.videoeffects.FlutedGlassVideoEffect
 import co.openvine.app.videoeffects.LightLeakVideoEffect
+import co.openvine.app.videoeffects.LookVideoEffect
 import co.openvine.app.videoeffects.ParticlesVideoEffect
 import co.openvine.app.videoeffects.RippleVideoEffect
 import co.openvine.app.videoeffects.RisoVideoEffect
@@ -128,6 +129,7 @@ class MainActivity : FlutterFragmentActivity() {
         EightBitVideoEffect.register()
         AnaglyphVideoEffect.register()
         RisoVideoEffect.register()
+        LookVideoEffect.register(applicationContext.assets)
         AdjustVideoEffect.register()
 
         // Set up Nostr bridge frame attestation channel. Must run after

@@ -9097,6 +9097,36 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectRiso => 'ریسو پرنٹ';
 
   @override
+  String get videoEditorEffectTealOrange => 'ٹیل اور نارنجی';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'گرم فلم';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'سلائیڈ فلم';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'ٹھنڈی فلم';
+
+  @override
+  String get videoEditorEffectMatte => 'میٹ';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'بلیچ بائی پاس';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'کراس پروسیس';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'سنہری وقت';
+
+  @override
+  String get videoEditorEffectMoonlight => 'چاندنی';
+
+  @override
+  String get videoEditorEffectSilver => 'چاندی';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'ریٹرو';
 
   @override
@@ -9113,6 +9143,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryParticles => 'ذرات';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'انداز';
 
   @override
   String get videoEditorFilterCategoryNatural => 'قدرتی';

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -86,7 +87,11 @@ class _EffectItem extends StatelessWidget {
           : type == EditorEffectType.echo
           ? _EchoThumbnail(path: path)
           : switch (shaderTileOf(type)) {
-              final tile? => _ShaderThumbnail(path: path, tile: tile),
+              final tile? => _ShaderThumbnail(
+                path: path,
+                tile: tile,
+                table: lookTableAssets[type.customId],
+              ),
               null => VideoEffectPreview(
                 effects: [
                   if (type.builtIn case final builtIn?)
@@ -165,7 +170,8 @@ const _particlesTileSeconds = 3.0;
 /// `CIBumpDistortion` scale `FisheyeVideoEffect` uses at intensity 1; the
 /// drops show the default settings at a moment where two of them flow into
 /// each other; the particles' last value is the style the native
-/// `ParticlesVideoEffect` draws.
+/// `ParticlesVideoEffect` draws. The looks share one shader, which reads the
+/// look's table from [lookTableAssets].
 @visibleForTesting
 ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
   fisheyeVideoEffectId => (asset: 'shaders/fisheye.frag', values: const [0.8]),
@@ -265,6 +271,10 @@ ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
     values: const [1.0],
   ),
   risoVideoEffectId => (asset: 'shaders/riso.frag', values: const [1.0]),
+  final id? when lookTableAssets.containsKey(id) => (
+    asset: 'shaders/look.frag',
+    values: const [1.0],
+  ),
   _ => null,
 };
 
@@ -286,23 +296,28 @@ final List<double> _dropsTileValues = () {
 }();
 
 /// The tile of an effect Divine draws itself: the thumbnail through the
-/// [tile]'s shader.
+/// [tile]'s shader, which for a look also reads the look's [table].
 ///
 /// Shows the plain thumbnail where the backend has no shader image filter
 /// (Skia), as the chroma-key preview does.
 class _ShaderThumbnail extends StatefulWidget {
-  const _ShaderThumbnail({required this.path, required this.tile});
+  const _ShaderThumbnail({required this.path, required this.tile, this.table});
 
   final String path;
   final ShaderTile tile;
+
+  /// The asset of a look's lookup table, bound as the shader's second
+  /// texture; `null` for the other effects.
+  final String? table;
 
   @override
   State<_ShaderThumbnail> createState() => _ShaderThumbnailState();
 }
 
 class _ShaderThumbnailState extends State<_ShaderThumbnail> {
-  /// Each shader is read once, whichever tiles show it.
+  /// Each shader and each table is read once, whichever tiles show it.
   static final _programs = <String, Future<ui.FragmentProgram>>{};
+  static final _tables = <String, Future<ui.Image>>{};
 
   ui.FragmentShader? _shader;
 
@@ -315,7 +330,8 @@ class _ShaderThumbnailState extends State<_ShaderThumbnail> {
   @override
   void didUpdateWidget(_ShaderThumbnail oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.tile.asset != widget.tile.asset) {
+    if (oldWidget.tile.asset != widget.tile.asset ||
+        oldWidget.table != widget.table) {
       _shader?.dispose();
       _shader = null;
       _load();
@@ -328,17 +344,47 @@ class _ShaderThumbnailState extends State<_ShaderThumbnail> {
   void _load() {
     if (!ui.ImageFilter.isShaderFilterSupported) return;
     final asset = widget.tile.asset;
+    final table = widget.table;
+    Future<void> load() async {
+      final program = await (_programs[asset] ??= ui.FragmentProgram.fromAsset(
+        asset,
+      ));
+      final image = table == null
+          ? null
+          : await (_tables[table] ??= _decodeTable(table));
+      if (!mounted || widget.tile.asset != asset || widget.table != table) {
+        return;
+      }
+      final shader = _configure(program.fragmentShader());
+      // Sampler 0 is the thumbnail, which the engine binds. Bilinear
+      // filtering interpolates red and green within a slice of the table,
+      // as the native renderers do.
+      if (image != null) {
+        shader.setImageSampler(1, image, filterQuality: ui.FilterQuality.low);
+      }
+      setState(() => _shader = shader);
+    }
+
     runDetached(
-      (_programs[asset] ??= ui.FragmentProgram.fromAsset(asset)).then((
-        program,
-      ) {
-        if (!mounted || widget.tile.asset != asset) return;
-        setState(() => _shader = _configure(program.fragmentShader()));
-      }),
+      load(),
       'load the effect tile shader',
       logName: 'VideoEditorEffectsBottomBar',
       category: LogCategory.video,
     );
+  }
+
+  /// Decodes a look's table, whose PNG carries no colour profile, so the
+  /// shader reads exactly the values the native renderers do.
+  static Future<ui.Image> _decodeTable(String asset) async {
+    final data = await rootBundle.load(asset);
+    final codec = await ui.instantiateImageCodec(
+      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+    );
+    try {
+      return (await codec.getNextFrame()).image;
+    } finally {
+      codec.dispose();
+    }
   }
 
   /// Uniforms 0 and 1 are the bound texture's size, which the engine sets.
@@ -404,6 +450,16 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
     eightBitVideoEffectId => context.l10n.videoEditorEffectEightBit,
     anaglyphVideoEffectId => context.l10n.videoEditorEffectAnaglyph,
     risoVideoEffectId => context.l10n.videoEditorEffectRiso,
+    tealOrangeLookId => context.l10n.videoEditorEffectTealOrange,
+    warmFilmLookId => context.l10n.videoEditorEffectWarmFilm,
+    slideFilmLookId => context.l10n.videoEditorEffectSlideFilm,
+    coolFilmLookId => context.l10n.videoEditorEffectCoolFilm,
+    matteLookId => context.l10n.videoEditorEffectMatte,
+    bleachBypassLookId => context.l10n.videoEditorEffectBleachBypass,
+    crossProcessLookId => context.l10n.videoEditorEffectCrossProcess,
+    goldenHourLookId => context.l10n.videoEditorEffectGoldenHour,
+    moonlightLookId => context.l10n.videoEditorEffectMoonlight,
+    silverLookId => context.l10n.videoEditorEffectSilver,
     _ => context.l10n.videoEditorEffectEcho,
   };
 }
@@ -420,6 +476,7 @@ String _categoryLabel(
   EditorEffectCategory.motion => context.l10n.videoEditorEffectCategoryMotion,
   EditorEffectCategory.particles =>
     context.l10n.videoEditorEffectCategoryParticles,
+  EditorEffectCategory.looks => context.l10n.videoEditorEffectCategoryLooks,
 };
 
 /// The localized name of the built-in effect [type].

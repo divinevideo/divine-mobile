@@ -9014,6 +9014,36 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectRiso => 'Riso Baskı';
 
   @override
+  String get videoEditorEffectTealOrange => 'Turkuaz ve Turuncu';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'Sıcak Film';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'Slayt Filmi';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'Soğuk Film';
+
+  @override
+  String get videoEditorEffectMatte => 'Mat';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'Bleach Bypass';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'Çapraz İşlem';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'Altın Saat';
+
+  @override
+  String get videoEditorEffectMoonlight => 'Ay Işığı';
+
+  @override
+  String get videoEditorEffectSilver => 'Gümüş';
+
+  @override
   String get videoEditorEffectCategoryRetro => 'Retro';
 
   @override
@@ -9030,6 +9060,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorEffectCategoryParticles => 'Parçacıklar';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'Görünümler';
 
   @override
   String get videoEditorFilterCategoryNatural => 'Doğal';

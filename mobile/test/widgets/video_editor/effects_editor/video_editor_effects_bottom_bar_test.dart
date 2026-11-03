@@ -67,6 +67,7 @@ void main() {
       EditorEffectCategory.light: l10n.videoEditorEffectCategoryLight,
       EditorEffectCategory.motion: l10n.videoEditorEffectCategoryMotion,
       EditorEffectCategory.particles: l10n.videoEditorEffectCategoryParticles,
+      EditorEffectCategory.looks: l10n.videoEditorEffectCategoryLooks,
     };
 
     Finder grid() => find.byType(CustomScrollView);
@@ -429,6 +430,9 @@ void main() {
           l10n.videoEditorEffectEightBit,
           l10n.videoEditorEffectAnaglyph,
           l10n.videoEditorEffectRiso,
+          l10n.videoEditorEffectTealOrange,
+          l10n.videoEditorEffectBleachBypass,
+          l10n.videoEditorEffectSilver,
         ]),
       );
     });
@@ -465,6 +469,14 @@ void main() {
         ].map((type) => shaderTileOf(type)!.values.last),
         [for (var style = 0; style < 15; style++) style],
       );
+      // One shader draws every look, from the look's own table.
+      for (final type in EditorEffectCategory.looks.types) {
+        expect(
+          shaderTileOf(type)?.asset,
+          'shaders/look.frag',
+          reason: type.name,
+        );
+      }
     });
 
     testWidgets('marks the picked effect and the shown category as selected '
