@@ -168,8 +168,8 @@ abstract class DmHistoryDrainConfig {
   static const int unsettledPageRetriesPerRun = 2;
 
   /// Automatic retries after a drain defers. A relay reconnect can resume the
-  /// drain sooner and cancels the retry, except while an ambiguous NIP-04
-  /// refusal awaits confirmation.
+  /// drain sooner and cancels the retry, except while an ambiguous refusal
+  /// in an end-of-drain recovery pass awaits confirmation.
   static const List<Duration> deferredRetryDelays = [
     Duration(seconds: 5),
     Duration(seconds: 15),
@@ -5671,8 +5671,8 @@ class DmRepository {
       // wraps), so this bounded timestamp is a real send time and safe to
       // record as a cursor. A kind 4 is its own envelope — the stamp the
       // relay filters and the stamp the UI orders by are the same value — so
-      // it advances both boundaries. The live subscription's `since:` covers
-      // kinds [1059, 4, 5] with one filter, so the wire boundary has to track
+      // it advances both boundaries. The live DM REQ's `since:` covers kinds
+      // [1059, 4] with one filter, so the wire boundary has to track
       // whichever kind carried the newest wire stamp. See #8209.
       // Scoped to the delivering account, not whichever is current after the
       // decrypt and transaction return: nothing re-checks the session inside

@@ -1195,11 +1195,8 @@ void main() {
       ),
     ).thenAnswer((_) async => answeredList(const <Event>[]));
 
-    // The outgoing-NIP-04 recovery pass (#5304) reads through `readEvents`
-    // once the gift-wrap drain reaches the end. Answered and empty: the
-    // account sent no NIP-04, so the pass lets the drain complete.
-    /// Answers both end-of-drain recovery reads, outgoing NIP-04 and
-    /// deletions, as settled and empty.
+    /// Answers both end-of-drain recovery reads, outgoing NIP-04 (#5304) and
+    /// deletions, as settled and empty, so they let the drain complete.
     void stubRecoveryPassesAnsweredEmpty() =>
         when(
           () => mockNostrClient.readEvents(
