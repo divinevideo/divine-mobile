@@ -154,6 +154,11 @@ class RelayPool {
   /// for missing AUTH are final until a new challenge or a new socket.
   final Set<String> _authRejected = {};
 
+  /// Refusal categories of an AUTH rejection that do not land a relay in
+  /// [_authRejected]: being throttled, or having the event's stamp disputed,
+  /// says nothing about whether the key may read.
+  static const _inconclusiveAuthRejections = {'rate-limited', 'invalid'};
+
   /// Relay url -> queries in [_queriesParkedForAuth] that the relay ended with
   /// an `auth`-hinted `EOSE` rather than `CLOSED`, so their subscription is
   /// still open on the relay and needs a `CLOSE` if they are ended.
@@ -1488,10 +1493,13 @@ class RelayPool {
   /// already answered (#9468).
   ///
   /// Recorded as `restricted`, NIP-42's "performed AUTH but the key is not
-  /// allowed": a final refusal, not one a later AUTH may overturn. A gate
-  /// shut only because no AUTH could be signed is not this case, since the
-  /// signer may produce one later, so [_closeAuthGate] alone does not do it.
-  void _endQueriesParkedForAuth(Relay relay) {
+  /// allowed": a final refusal, not one a later AUTH may overturn. A
+  /// rejection that is not [rejectionIsFinal], one of
+  /// [_inconclusiveAuthRejections], records `auth-required` instead, so a
+  /// caller asks again rather than settling. A gate shut only because no AUTH
+  /// could be signed is not this case, since the signer may produce one
+  /// later, so [_closeAuthGate] alone does not do it.
+  void _endQueriesParkedForAuth(Relay relay, {bool rejectionIsFinal = true}) {
     final parked = _queriesParkedForAuth.remove(relay.url);
     final heldAfterEose = _queriesHeldAfterEose.remove(relay.url) ?? const {};
     if (parked == null) return;
@@ -1502,7 +1510,11 @@ class RelayPool {
         unawaited(relay.send(['CLOSE', subId], queueIfFailed: false));
       }
       relay.discardQuery(subId);
-      _recordQueryClosed(relay, subId, 'restricted');
+      _recordQueryClosed(
+        relay,
+        subId,
+        rejectionIsFinal ? 'restricted' : 'auth-required',
+      );
       _fireQueryCompleteIfSettled(
         subId,
         afterTerminalFrame: true,
@@ -2495,8 +2507,11 @@ class RelayPool {
           _rejectAuthRequiredPublishesForRelay(relay, message);
           // The gate stayed shut, so the queries parked for the post-AUTH
           // replay will never be replayed.
-          _authRejected.add(relay.url);
-          _endQueriesParkedForAuth(relay);
+          final rejectionIsFinal = !_inconclusiveAuthRejections.contains(
+            diagnosticReason,
+          );
+          if (rejectionIsFinal) _authRejected.add(relay.url);
+          _endQueriesParkedForAuth(relay, rejectionIsFinal: rejectionIsFinal);
           _closeAuthGate(relay);
         }
       }

@@ -491,6 +491,107 @@ void main() {
       expect(gated.checkQuery(refusedId), isFalse);
     });
 
+    for (final rejection in [
+      'rate-limited: slow down',
+      'invalid: created_at too far off',
+    ]) {
+      test('a query refused until AUTH ends as an auth-required refusal when '
+          "the relay answers AUTH with '$rejection'", () async {
+        final nostr = Nostr(
+          LocalNostrSigner(
+            '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+          ),
+          [],
+          dummyTempRelay,
+        );
+        final answering = _ControlledQueryRelay('wss://answering.example');
+        final gated = _ControlledQueryRelay('wss://gated.example');
+        expect(await nostr.relayPool.add(answering), isTrue);
+        expect(await nostr.relayPool.add(gated), isTrue);
+
+        final pending = nostr.readEvents(
+          [
+            {
+              'kinds': [1059],
+            },
+          ],
+          requireAllRelaysSettled: true,
+          timeout: const Duration(seconds: 30),
+        );
+        final answeredId = await answering.awaitPendingQuery();
+        final refusedId = await gated.awaitPendingQuery();
+        await answering.deliver(['EOSE', answeredId]);
+        await gated.deliver(['AUTH', 'test-challenge']);
+        await gated.deliver([
+          'CLOSED',
+          refusedId,
+          'auth-required: requested filter requires authentication',
+        ]);
+        await gated.deliver([
+          'OK',
+          gated.capturedAuthEventId,
+          false,
+          rejection,
+        ]);
+
+        final result = await pending.timeout(
+          const Duration(seconds: 2),
+          onTimeout: () =>
+              fail('the query waited for a replay that cannot come'),
+        );
+        // A later AUTH may still be accepted, so the refusal is not final.
+        expect(result.endedBy, QueryEnd.relayClosed);
+        expect(result.closedRelayReasons, {
+          'wss://gated.example': 'auth-required',
+        });
+      });
+    }
+
+    test('a refusal after the relay rate-limited AUTH on the connection keeps '
+        'its auth-required refusal', () async {
+      final nostr = Nostr(
+        LocalNostrSigner(
+          '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+        ),
+        [],
+        dummyTempRelay,
+      );
+      final answering = _ControlledQueryRelay('wss://answering.example');
+      final gated = _ControlledQueryRelay('wss://gated.example');
+      expect(await nostr.relayPool.add(answering), isTrue);
+      expect(await nostr.relayPool.add(gated), isTrue);
+      await gated.deliver(['AUTH', 'test-challenge']);
+      await gated.deliver([
+        'OK',
+        gated.capturedAuthEventId,
+        false,
+        'rate-limited: slow down',
+      ]);
+
+      final pending = nostr.readEvents(
+        [
+          {
+            'kinds': [1059],
+          },
+        ],
+        requireAllRelaysSettled: true,
+        timeout: const Duration(milliseconds: 300),
+      );
+      final answeredId = await answering.awaitPendingQuery();
+      final refusedId = await gated.awaitPendingQuery();
+      await answering.deliver(['EOSE', answeredId]);
+      await gated.deliver([
+        'CLOSED',
+        refusedId,
+        'auth-required: authentication required to read this event kind',
+      ]);
+
+      final result = await pending;
+      expect(result.closedRelayReasons, {
+        'wss://gated.example': 'auth-required',
+      });
+    });
+
     test('an EOSE with the auth hint holds the query for the post-AUTH '
         'replay', () async {
       final signer = LocalNostrSigner(
