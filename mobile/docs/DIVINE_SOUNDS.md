@@ -29,10 +29,10 @@ One NIP-94 Kind 1063 event per sound:
 | `size` | Bytes | |
 | `duration` | Seconds | |
 | `title` | Display title | Not "Original sound": that title marks an unnamed video sound, which the lists leave out until someone reuses it |
-| `t` | Search tags, including `music` or `sfx` | `music` or `sfx` decides whether the sound shows under Music or Effects |
+| `t` | Search tags, including `music` or `sfx` | `music` or `sfx` decides whether the sound shows under Music or Effects. Publish `sfx`; the app also reads `effect`, `soundeffect` and `soundeffects` as Effects (`SoundKind.effectTags`) |
 | `allow_audio_reuse` | `true` | Required. A sound without a source video is reusable only on its own signed terms |
 | `source`, `creator`, `license`, `license_url` | As the manifest has them | Credit for third-party recordings (Freesound and the like) |
-| `image`, `blurhash` | Optional cover | Must be on `media.divine.video`, which screens every image; the app ignores a cover stored elsewhere. Without one it shows a colour tile |
+| `image`, `blurhash` | Optional cover | Must be on Divine's media server (`media.divine.video`, `cdn.divine.video` or `blossom.divine.video`, see `SoundCover.isScreenedHost`), which screens every image; the app ignores a cover stored elsewhere. A `thumb` tag stands in for a missing `image`. Without either it shows a colour tile |
 | `divine_sound` | Manifest id, for a sound the app ships | `AudioEvent.divineSoundTag`; ties the event to the shipped file |
 
 No `a` tag: that is what marks a video's sound.
@@ -64,5 +64,5 @@ Publishing a sound again with the same `divine_sound` id replaces the link; the 
 ## Open decisions
 
 - **Signing account.** HQ is configured. A dedicated sound account keeps HQ's own posts apart; changing it is one line in `official_accounts.dart` and needs a release, like the other official sets.
-- **Tag schema.** `divine_sound` and the use of `music`/`sfx` should be confirmed before the first publish; the app reads exactly these.
+- **Tag schema.** `divine_sound` and the use of `music`/`sfx` should be confirmed before the first publish. The app also reads the effect synonyms above.
 - **The shipped set.** Once the library is published, the app can ship a small starter set and load the rest from the network.
