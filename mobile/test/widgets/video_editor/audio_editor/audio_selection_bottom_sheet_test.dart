@@ -1574,13 +1574,16 @@ void main() {
       });
 
       testWidgets('marks a tapped sound while its reuse check runs, and '
-          'unmarks it when the check refuses', (tester) async {
+          'unmarks it without playing it when the check refuses', (
+        tester,
+      ) async {
         final consent = Completer<bool>();
+        final audioService = _stubbedAudioService();
         await tester.pumpWidget(
           buildWidget(
             trendingSoundsAsync: AsyncValue.data(testSounds),
             pendingConsent: consent,
-            audioService: _stubbedAudioService(),
+            audioService: audioService,
           ),
         );
         await tester.pumpAndSettle();
@@ -1612,6 +1615,7 @@ void main() {
 
         expect(tile('Beta Song').isSelected, isFalse);
         expect(find.byType(AudioEditorSelectionOverlay), findsNothing);
+        verifyNever(audioService.play);
       });
 
       testWidgets('loads the sound while its reuse check runs', (tester) async {
