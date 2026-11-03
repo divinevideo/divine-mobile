@@ -5487,6 +5487,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Main pratonton",
   "videoEditorAudioPausePreviewSemanticLabel": "Jeda pratonton",
   "videoEditorAudioUntitledSound": "Bunyi tanpa tajuk",
+  "videoEditorAudioUseSound": "Guna",
   "videoEditorAudioFileMissing": "Fail audio sudah tiada pada peranti ini",
   "videoEditorAudioUntitled": "Tanpa tajuk",
   "videoEditorAudioAddAudio": "Tambah audio",
@@ -5797,7 +5798,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Rona",
-  "videoEditorDoneSemanticLabel": "Siap",
   "videoEditorLevelSemanticLabel": "Tahap",
   "videoEditorBrushSizeSemanticLabel": "Saiz berus",
   "videoMetadataClosePostDetailsSemanticLabel": "Tutup butiran siaran",

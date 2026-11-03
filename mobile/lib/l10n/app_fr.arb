@@ -3120,6 +3120,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Lire l'aperçu",
   "videoEditorAudioPausePreviewSemanticLabel": "Mettre l'aperçu en pause",
   "videoEditorAudioUntitledSound": "Son sans titre",
+  "videoEditorAudioUseSound": "Utiliser",
   "videoEditorAudioFileMissing": "Fichier audio absent de cet appareil",
   "videoEditorVolumeLongPressHint": "Couper ou rétablir le son de toutes les pistes",
   "videoEditorAudioUntitled": "Sans titre",
@@ -3302,7 +3303,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Teinte",
-  "videoEditorDoneSemanticLabel": "Terminé",
   "videoEditorLevelSemanticLabel": "Niveau",
   "videoEditorBrushSizeSemanticLabel": "Taille du pinceau",
   "videoMetadataClosePostDetailsSemanticLabel": "Fermer les détails de la publication",

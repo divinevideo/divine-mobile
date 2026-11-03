@@ -3120,6 +3120,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Reproduzir prévia",
   "videoEditorAudioPausePreviewSemanticLabel": "Pausar prévia",
   "videoEditorAudioUntitledSound": "Som sem título",
+  "videoEditorAudioUseSound": "Usar",
   "videoEditorAudioFileMissing": "O arquivo de áudio não está mais neste aparelho",
   "videoEditorVolumeLongPressHint": "Silenciar ou ativar todas as faixas",
   "videoEditorAudioUntitled": "Sem título",
@@ -3302,7 +3303,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Matiz",
-  "videoEditorDoneSemanticLabel": "Concluído",
   "videoEditorLevelSemanticLabel": "Nível",
   "videoEditorBrushSizeSemanticLabel": "Tamanho do pincel",
   "videoMetadataClosePostDetailsSemanticLabel": "Fechar detalhes da publicação",

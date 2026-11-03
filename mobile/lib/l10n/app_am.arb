@@ -3749,6 +3749,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "ቅድመ እይታን አጫውት።",
   "videoEditorAudioPausePreviewSemanticLabel": "ቅድመ እይታን ባለበት አቁም",
   "videoEditorAudioUntitledSound": "ርዕስ አልባ ድምጽ",
+  "videoEditorAudioUseSound": "ተጠቀም",
   "videoEditorAudioFileMissing": "የድምፅ ፋይሉ በዚህ መሣሪያ ላይ የለም",
   "videoEditorVolumeLongPressHint": "ሁሉንም ትራኮች ያጥፉ ወይም ያብሩ",
   "videoEditorAudioUntitled": "ርዕስ አልባ",
@@ -3932,7 +3933,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "ሁ",
-  "videoEditorDoneSemanticLabel": "ተከናውኗል",
   "videoEditorLevelSemanticLabel": "ደረጃ",
   "videoEditorBrushSizeSemanticLabel": "የብሩሽ መጠን",
   "videoMetadataClosePostDetailsSemanticLabel": "የልጥፍ ዝርዝሮችን ዝጋ",

@@ -11029,6 +11029,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Som sem título';
 
   @override
+  String get videoEditorAudioUseSound => 'Usar';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'O arquivo de áudio não está mais neste aparelho';
 
@@ -11766,9 +11769,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Matiz';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Concluído';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Nível';

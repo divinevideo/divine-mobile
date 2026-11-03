@@ -5487,6 +5487,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "播放预览",
   "videoEditorAudioPausePreviewSemanticLabel": "暂停预览",
   "videoEditorAudioUntitledSound": "未命名声音",
+  "videoEditorAudioUseSound": "使用",
   "videoEditorAudioFileMissing": "音频文件已经不在这台设备上了",
   "videoEditorAudioUntitled": "未命名",
   "videoEditorAudioAddAudio": "添加音频",
@@ -5797,7 +5798,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "色相",
-  "videoEditorDoneSemanticLabel": "完成",
   "videoEditorLevelSemanticLabel": "层级",
   "videoEditorBrushSizeSemanticLabel": "画笔大小",
   "videoMetadataClosePostDetailsSemanticLabel": "关闭帖子详情",

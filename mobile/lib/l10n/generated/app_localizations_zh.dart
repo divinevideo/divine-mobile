@@ -10297,6 +10297,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorAudioUntitledSound => '未命名声音';
 
   @override
+  String get videoEditorAudioUseSound => '使用';
+
+  @override
   String get videoEditorAudioFileMissing => '音频文件已经不在这台设备上了';
 
   @override
@@ -10967,9 +10970,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => '色相';
-
-  @override
-  String get videoEditorDoneSemanticLabel => '完成';
 
   @override
   String get videoEditorLevelSemanticLabel => '层级';

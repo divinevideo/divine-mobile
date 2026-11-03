@@ -18,6 +18,7 @@ import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/models/paged_sounds.dart';
+import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
@@ -256,6 +257,29 @@ class _AudioSelectionBottomSheetState
       for (final page in followedPages.skip(1))
         ...rankForYouSounds(followed: page, divine: const [], now: now),
     ];
+  }
+
+  /// The cover the picked sound's row shows: the one it was published with,
+  /// the frame its saved record keeps, or the frame of its source video.
+  SoundCover? _selectedCover({
+    required List<SavedSound> savedSounds,
+    required List<Map<String, SoundCover?>?> coversBySourceVideo,
+  }) {
+    final selected = _selectedItem;
+    if (selected == null) return null;
+    if (SoundCover.publishedWith(selected) case final cover?) return cover;
+    for (final saved in savedSounds) {
+      if (saved.id != selected.id) continue;
+      if (saved.sourceContext?.thumbnailUrl case final thumbnailUrl?) {
+        return SoundCover(imageUrl: thumbnailUrl);
+      }
+    }
+    final reference = selected.sourceVideoReference;
+    if (reference == null) return null;
+    for (final covers in coversBySourceVideo) {
+      if (covers?[reference] case final cover?) return cover;
+    }
+    return null;
   }
 
   /// Whether [sound] was taken from a video [lookup] looked for and did not
@@ -905,6 +929,15 @@ class _AudioSelectionBottomSheetState
             child: _selectedItem != null
                 ? AudioEditorSelectionOverlay(
                     audio: _selectedItem!,
+                    cover: _selectedCover(
+                      savedSounds: savedSoundsState.sounds,
+                      coversBySourceVideo: [
+                        forYouCovers,
+                        popularCovers,
+                        trendingCovers,
+                        searchCovers,
+                      ],
+                    ),
                     audioService: _audioService,
                     isLoading: _isLoadingAudio,
                     onTapDone: _handleDoneSelection,

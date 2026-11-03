@@ -5487,6 +5487,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Phát thử",
   "videoEditorAudioPausePreviewSemanticLabel": "Tạm dừng nghe thử",
   "videoEditorAudioUntitledSound": "Âm thanh chưa đặt tên",
+  "videoEditorAudioUseSound": "Dùng",
   "videoEditorAudioFileMissing": "Tệp âm thanh không còn trên thiết bị",
   "videoEditorAudioUntitled": "Chưa đặt tên",
   "videoEditorAudioAddAudio": "Thêm âm thanh",
@@ -5797,7 +5798,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Tông màu",
-  "videoEditorDoneSemanticLabel": "Xong",
   "videoEditorLevelSemanticLabel": "Mức",
   "videoEditorBrushSizeSemanticLabel": "Kích thước cọ",
   "videoMetadataClosePostDetailsSemanticLabel": "Đóng chi tiết bài đăng",

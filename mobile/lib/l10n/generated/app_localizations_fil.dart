@@ -11017,6 +11017,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Walang pamagat na sound';
 
   @override
+  String get videoEditorAudioUseSound => 'Gamitin';
+
+  @override
   String get videoEditorAudioFileMissing => 'Wala na sa device ang audio file';
 
   @override
@@ -11746,9 +11749,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Hue';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Tapos na';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Antas';

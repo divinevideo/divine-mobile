@@ -10850,6 +10850,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Başlıksız ses';
 
   @override
+  String get videoEditorAudioUseSound => 'Kullan';
+
+  @override
   String get videoEditorAudioFileMissing => 'Ses dosyası artık cihazda yok';
 
   @override
@@ -11576,9 +11579,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Ton';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Bitti';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Seviye';

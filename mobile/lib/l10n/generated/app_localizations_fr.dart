@@ -11102,6 +11102,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Son sans titre';
 
   @override
+  String get videoEditorAudioUseSound => 'Utiliser';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Fichier audio absent de cet appareil';
 
@@ -11841,9 +11844,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Teinte';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Terminé';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Niveau';

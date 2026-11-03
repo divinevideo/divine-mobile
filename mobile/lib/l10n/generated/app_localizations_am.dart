@@ -10687,6 +10687,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'ርዕስ አልባ ድምጽ';
 
   @override
+  String get videoEditorAudioUseSound => 'ተጠቀም';
+
+  @override
   String get videoEditorAudioFileMissing => 'የድምፅ ፋይሉ በዚህ መሣሪያ ላይ የለም';
 
   @override
@@ -11389,9 +11392,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'ሁ';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'ተከናውኗል';
 
   @override
   String get videoEditorLevelSemanticLabel => 'ደረጃ';

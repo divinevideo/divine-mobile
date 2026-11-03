@@ -10888,6 +10888,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Âm thanh chưa đặt tên';
 
   @override
+  String get videoEditorAudioUseSound => 'Dùng';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Tệp âm thanh không còn trên thiết bị';
 
@@ -11614,9 +11617,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Tông màu';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Xong';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Mức';

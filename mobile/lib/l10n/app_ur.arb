@@ -5487,6 +5487,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "پیش منظر چلائیں",
   "videoEditorAudioPausePreviewSemanticLabel": "پیش منظر روکیں",
   "videoEditorAudioUntitledSound": "بلا عنوان آواز",
+  "videoEditorAudioUseSound": "استعمال کریں",
   "videoEditorAudioFileMissing": "آڈیو فائل اب اس ڈیوائس پر نہیں ہے",
   "videoEditorAudioUntitled": "بلا عنوان",
   "videoEditorAudioAddAudio": "آڈیو شامل کریں",
@@ -5797,7 +5798,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "رنگت",
-  "videoEditorDoneSemanticLabel": "ہو گیا",
   "videoEditorLevelSemanticLabel": "سطح",
   "videoEditorBrushSizeSemanticLabel": "برش کا سائز",
   "videoMetadataClosePostDetailsSemanticLabel": "پوسٹ کی تفصیلات بند کریں",

@@ -18587,6 +18587,12 @@ abstract class AppLocalizations {
   /// **'Untitled sound'**
   String get videoEditorAudioUntitledSound;
 
+  /// Button on the card for the picked sound in the sound picker that adds the sound to the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Use'**
+  String get videoEditorAudioUseSound;
+
   /// Subtitle on a saved sound in the video editor's sound picker whose imported audio file is no longer on the device. The entry stays listed but cannot be selected, because attaching it would put a dead source on the draft.
   ///
   /// In en, this message translates to:
@@ -19760,12 +19766,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hue'**
   String get videoEditorHueSemanticLabel;
-
-  /// No description provided for @videoEditorDoneSemanticLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Done'**
-  String get videoEditorDoneSemanticLabel;
 
   /// No description provided for @videoEditorLevelSemanticLabel.
   ///

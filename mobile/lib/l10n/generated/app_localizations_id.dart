@@ -10841,6 +10841,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Suara tanpa judul';
 
   @override
+  String get videoEditorAudioUseSound => 'Gunakan';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'File audio sudah tidak ada di perangkat';
 
@@ -11562,9 +11565,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Rona';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Selesai';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Level';

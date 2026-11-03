@@ -10937,6 +10937,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'بلا عنوان آواز';
 
   @override
+  String get videoEditorAudioUseSound => 'استعمال کریں';
+
+  @override
   String get videoEditorAudioFileMissing => 'آڈیو فائل اب اس ڈیوائس پر نہیں ہے';
 
   @override
@@ -11662,9 +11665,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'رنگت';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'ہو گیا';
 
   @override
   String get videoEditorLevelSemanticLabel => 'سطح';
