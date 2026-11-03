@@ -299,16 +299,24 @@ then show the sticker only as it is in the frames.
   conversation shows the question above the answer and offers to answer it
   with a video: a video reply to their own video, whose `reply` sticker shows
   the question and the answer as its name and text, without who wrote it.
-  The creator does not answer their own question; a signed-out viewer is
-  asked to sign in.
+  The video is read first and must be the creator's and the one cited; the
+  answer video is rooted at it, and its sticker shows the question on that
+  video's own question sticker, not the one in the message, which the sender
+  wrote. The creator does not answer their own question; a signed-out viewer
+  is asked to sign in. An account that may message only Divine, a protected
+  minor, is not offered the question sticker, and a tap on one tells it
+  answering isn't available.
 - **Add yours (`prompt`).** A tap on its button opens the camera. The editor
   places the same sticker on the answer, pointing at the same chain, and names
   the chain's first video as what inspired the answer
   (`["a", "<first video's address>", "<relay>", "mention"]`). The prompt's
   hashtag is added to the answer like a hashtag sticker's. A video joined the
   chain when it names the first video that way and carries the hashtag, which
-  also tells it from a video inspired by the first one for its sound. The
-  player shows how many joined and their avatars; a tap on them opens the
+  also tells it from a video inspired by the first one for its sound. A
+  sticker's first video is honored only when that video carries an Add yours
+  of its own with the same hashtag; otherwise the chain starts at the
+  sticker's own video. The player shows how many people joined, each counted
+  once by their newest answer, and their avatars; a tap on them opens the
   answers in the full-screen feed.
 - **Replies.** The player shows how many video replies the video has (kind
   34236 videos whose NIP-22 `E` or `A` root tag names it), the avatars of the
@@ -330,8 +338,10 @@ Funnelcake counts both and returns the latest
 replies the app sends the video's event id, never its d-tag: a d-tag is unique
 only per author, and the server derives the address from the event, so replies
 to any version of the video still count. A chain is asked for by its first
-video's d-tag. While it does not answer, the app reads them from the relay, at
-most 500 in one request.
+video's d-tag, and each answer it returns is checked as the relays' are.
+While it does not answer, the app reads them from the relay, at most 500 in one
+request, and a read that reaches that many shows its count with a plus, as
+a floor.
 Reading lives in `mobile/packages/video_responses_repository`; the player's
 copy is `mobile/lib/widgets/video_feed_item/interactive_sticker_overlay.dart`.
 
