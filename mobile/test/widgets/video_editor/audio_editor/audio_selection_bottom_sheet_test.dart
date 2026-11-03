@@ -33,7 +33,8 @@ import 'package:openvine/widgets/video_editor/audio_editor/audio_list_tile.dart'
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:sound_service/sound_service.dart';
-import 'package:sounds_repository/sounds_repository.dart' show RankedSounds;
+import 'package:sounds_repository/sounds_repository.dart'
+    show RankedSounds, SoundsRepository;
 
 AudioEvent _createTestAudioEvent({
   String id = 'test-sound-id',
@@ -65,6 +66,8 @@ Finder _divineIcon(DivineIconName name) =>
     find.byWidgetPredicate((w) => w is DivineIcon && w.icon == name);
 
 class _MockAudioPlaybackService extends Mock implements AudioPlaybackService {}
+
+class _MockSoundsRepository extends Mock implements SoundsRepository {}
 
 class _MockAudioFilePickerService extends Mock
     implements AudioFilePickerService {}
@@ -249,6 +252,46 @@ void main() {
       _createTestAudioEvent(id: 'sound-2', title: 'Beta Song'),
       _createTestAudioEvent(id: 'sound-3', title: 'Gamma Beat'),
     ];
+
+    group('preload', () {
+      testWidgets("loads For you, its covers and Divine's sounds before the "
+          'picker opens', (tester) async {
+        final followed = _createTestAudioEvent(id: 'followed', title: 'Song');
+        final divine = _createTestAudioEvent(id: 'divine', title: 'Boom');
+        final sounds = _MockSoundsRepository();
+        when(sounds.fetchDivineSounds).thenAnswer((_) async => [divine]);
+        late WidgetRef preloadRef;
+        late ProviderContainer container;
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              forYouSoundsProvider.overrideWithBuild(
+                (_, _) async => PagedSounds(
+                  pages: [
+                    [followed],
+                  ],
+                ),
+              ),
+              soundsRepositoryProvider.overrideWithValue(sounds),
+            ],
+            child: Consumer(
+              builder: (context, ref, _) {
+                preloadRef = ref;
+                container = ProviderScope.containerOf(context);
+                return const SizedBox();
+              },
+            ),
+          ),
+        );
+
+        AudioSelectionBottomSheet.preload(preloadRef);
+        await tester.pump();
+
+        expect(container.read(forYouSoundsProvider).value?.sounds, [followed]);
+        expect(container.read(forYouSoundCoversProvider).hasValue, isTrue);
+        expect(container.read(divineSoundsProvider).value, [divine]);
+      });
+    });
 
     group('layout', () {
       test('takes either the sheet controller or an embedding callback', () {
