@@ -107,8 +107,8 @@ String? soleCounterparty(DmConversation conversation, String userPubkey) {
   return others.length == 1 ? others.single : null;
 }
 
-/// Factual sender context, in the order it should survive a narrow row:
-/// videos, then a mutual connection, then loops.
+/// Factual sender context, in display order: videos, then a mutual
+/// connection, then loops.
 ///
 /// Unknown values are left out rather than shown as zero. A known zero of
 /// loops is left out too, as the profile header does for other people.

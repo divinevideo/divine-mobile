@@ -7,7 +7,7 @@ import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_classifier.dart';
 /// Where the Official bucket is rendered.
 enum OfficialPlacement {
   /// Official gets its own tab. Findable and impersonation-resistant, but it
-  /// is a fifth place to look — a support message about a report lands
+  /// is an extra place to look — a support message about a report lands
   /// somewhere the user is not looking by default.
   ownTab,
 
@@ -42,8 +42,9 @@ class DmPrototypeSettings {
   final OfficialPlacement placement;
   final RequestPresentation presentation;
 
-  /// Facilitator view: shows numeric scores and the threshold on rows.
-  /// Off for participants, because the numbers double as an evasion recipe.
+  /// Facilitator view: shows numeric scores and the threshold on rows, and
+  /// reasons about a still-hidden message. Off for participants, because the
+  /// numbers double as an evasion recipe.
   final bool showScores;
 
   DmPrototypeSettings copyWith({

@@ -1,6 +1,6 @@
-// ABOUTME: PROTOTYPE (#8076) — live tuning panel for the inbox classifier.
+// ABOUTME: PROTOTYPE (#8076) — tuning panel for the inbox classifier.
 // ABOUTME: Every value here is a Trust & Safety product decision, surfaced as
-// ABOUTME: a slider so the tradeoffs can be argued about concretely rather
+// ABOUTME: a control so the tradeoffs can be argued about concretely rather
 // ABOUTME: than in the abstract.
 
 import 'package:divine_ui/divine_ui.dart';
@@ -143,8 +143,8 @@ class _DmInboxTuningViewState extends State<DmInboxTuningView> {
             icon: DivineIconName.eye,
             blurb:
                 'For facilitators. Changing the presentation resets what '
-                'was opened, replied to or removed, so each condition '
-                'starts the same.',
+                'was opened, replied to, marked not spam, removed or '
+                'blocked, so each condition starts the same.',
             children: [
               for (final presentation in RequestPresentation.values)
                 DivineSelectableRow(
@@ -160,7 +160,8 @@ class _DmInboxTuningViewState extends State<DmInboxTuningView> {
               DivineSwitchTile(
                 title: 'Show scores',
                 subtitle:
-                    'Numbers and the threshold on each row. Keep this off '
+                    'Numbers and the threshold on each row, and the link and '
+                    'media reasons on unopened requests. Keep this off '
                     'while a participant is using the app.',
                 value: _settings.showScores,
                 onChanged: (value) => setState(
@@ -329,8 +330,9 @@ class _DmInboxTuningViewState extends State<DmInboxTuningView> {
             title: 'Signal definitions',
             icon: DivineIconName.info,
             blurb:
-                'There is no authoritative npub creation date, so these '
-                'count days since Divine first observed a signed event.',
+                'There is no authoritative npub creation date, so the two '
+                'age thresholds count days since Divine first observed a '
+                'signed event.',
             children: [
               _Slider(
                 label: 'First seen recently is under',
@@ -575,7 +577,7 @@ class _PlacementPicker extends StatelessWidget {
     return DivineSwitchTile(
       title: 'Official gets its own tab',
       subtitle: isOwnTab
-          ? 'Four tabs. Findable and hard to impersonate, but it is a fifth '
+          ? 'Four tabs. Findable and hard to impersonate, but it is an extra '
                 'place to look.'
           : 'Three tabs. Official pins to the top of Inbox, matching '
                 '"official messages go directly to the inbox".',

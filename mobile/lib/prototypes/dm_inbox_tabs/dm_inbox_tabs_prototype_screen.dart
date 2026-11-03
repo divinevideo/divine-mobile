@@ -875,7 +875,8 @@ class _PreviewText extends StatelessWidget {
 }
 
 /// Everything under a request's header: who the sender is, why it is here,
-/// and what the user can do about it — all usable before it is opened.
+/// and what the user can do about it. Block, Report and Delete work before
+/// it is opened; Reply needs it opened.
 class _RequestDetails extends StatelessWidget {
   const _RequestDetails({
     required this.conversation,
@@ -900,7 +901,7 @@ class _RequestDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final counterparty = soleCounterparty(conversation, fixtures.userPubkey);
-    // Facts about the hidden message wait until it is opened (D8). The
+    // Facts about the hidden message wait until it is opened. The
     // facilitator view shows them so the score stays explainable.
     final includeMessageReasons = !concealed || settings.showScores;
     return Column(

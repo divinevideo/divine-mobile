@@ -87,8 +87,8 @@ void main() {
       });
 
       test('never routes an official account to requests or likely spam', () {
-        // The strictest possible config: everything is maximally suspicious
-        // and the threshold is at the floor. Official must still not move.
+        // A very strict config: identity weights raised, mitigations zeroed
+        // and the threshold at the floor. Official must still not move.
         final result = classify(
           heuristics: const DmSpamHeuristics(
             spamThreshold: 1,

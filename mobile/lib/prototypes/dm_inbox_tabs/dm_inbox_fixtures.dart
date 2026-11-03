@@ -91,8 +91,9 @@ class DmInboxFixtures {
   static DmInboxFixtures build() => _build();
 }
 
-// Synthetic 64-char hex. `_pk('a1')` -> 'a1' repeated to full length, so the
-// values look like pubkeys without resembling anyone's real key.
+// Synthetic 64-char keys. `_pk('a1')` -> 'a1' repeated to full length, so the
+// values look like pubkeys without resembling anyone's real key. Seeds such
+// as 'divinehq' are not hex, so these are not valid npub inputs.
 String _pk(String seed) {
   final buffer = StringBuffer();
   while (buffer.length < 64) {
@@ -139,7 +140,7 @@ DmInboxFixtures _build() {
   sender(_lizTeamPubkey, 'Liz · Divine team', DmSenderSignals.unknown);
   sender(_rabbleTeamPubkey, 'Rabble · Divine team', DmSenderSignals.unknown);
 
-  // --- Known, trusted people ---------------------------------------------
+  // Known, trusted people.
   sender(
     'a1',
     'Maya Okonkwo',
@@ -179,7 +180,7 @@ DmInboxFixtures _build() {
     ),
   );
 
-  // --- Plausible first contact (should read as a genuine request) ---------
+  // Plausible first contact (should read as a genuine request).
   sender(
     'd4',
     'Priya Raman',
@@ -219,8 +220,8 @@ DmInboxFixtures _build() {
     mutualName: 'Deshawn Pierce',
   );
 
-  // --- The borderline cases the sliders should move ----------------------
-  // Real creator, brand-new account, no mutuals. Genuine or not depending on
+  // The borderline cases the sliders should move.
+  // Real creator, brand-new account, one mutual. Genuine or not depending on
   // where the new-account weight sits.
   sender(
     '07',
@@ -262,7 +263,7 @@ DmInboxFixtures _build() {
     ),
   );
 
-  // --- Unambiguous spam ---------------------------------------------------
+  // Unambiguous spam.
   sender(
     '3a',
     'crypto_signals_daily',
@@ -315,7 +316,7 @@ DmInboxFixtures _build() {
     ),
   );
 
-  // --- Consent and missing data ------------------------------------------
+  // Consent and missing data.
   // Not followed, but the user replied: consent comes from the reply alone.
   sender(
     'g7',
@@ -331,7 +332,7 @@ DmInboxFixtures _build() {
   // Nothing is known yet. Unknown must read as neutral, not as zero.
   sender('h8', 'Ines Duarte', DmSenderSignals.unknown);
 
-  // --- Group participants -------------------------------------------------
+  // Group participants.
   sender(
     '7e',
     'Sofia Marchetti',

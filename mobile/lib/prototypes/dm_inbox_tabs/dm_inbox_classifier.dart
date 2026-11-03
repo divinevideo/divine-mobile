@@ -4,8 +4,11 @@
 // ABOUTME: and returns a human-readable reason trail for every verdict.
 //
 // Deliberately Flutter-free and dependency-free beyond `models` and `meta`,
-// so the same function can move into `packages/dm_repository` unchanged if
-// the shape survives the product discussion.
+// so it can move into `packages/dm_repository` if the shape survives the
+// product discussion. Moving it means adopting that package's self filter
+// first: `classifyPotentialRequests` drops the viewer with the
+// case-insensitive `pubkeysEqual` and hides self-only rows, where this uses
+// an exact `!=` and sends them to requests (#5374).
 
 import 'package:meta/meta.dart';
 import 'package:models/models.dart';
@@ -158,8 +161,8 @@ class DmVerdict {
 /// Tunable weights and thresholds.
 ///
 /// Every value here is a product decision, not an engineering one. They are
-/// exposed as a config object precisely so Trust & Safety can own them
-/// without a code change.
+/// a config object so Trust & Safety could own them; in the prototype they
+/// are const defaults that only the tuning panel changes.
 @immutable
 class DmSpamHeuristics {
   const DmSpamHeuristics({
@@ -353,8 +356,9 @@ class DmInboxClassification {
 /// 4. **Scored** — everything else is a request; risk score decides whether it
 ///    collapses into Likely spam.
 ///
-/// Official identity comes only from [officialIdentities], a signed,
-/// release-controlled registry of full pubkeys and role capabilities. Never
+/// Official identity comes only from [officialIdentities]. Production must
+/// supply it from a signed, release-controlled registry of full pubkeys and
+/// role capabilities; the prototype passes synthetic fixtures. Never
 /// from display name, profile metadata, badges, or follow state — all of which
 /// an impersonator controls.
 class DmInboxClassifier {
@@ -497,15 +501,9 @@ class DmInboxClassifier {
       return const [];
     }
 
-    // A group is only as safe as its least-known member — so "least known"
-    // has to be measured with the weights the verdict actually uses. The
-    // previous rank() read four signals while _scoreSender reads nine and
-    // weights them differently, so the two disagreed whenever the difference
-    // lived in a signal rank() could not see. A room holding a brand-new
-    // account (75 alone) and an established creator (-75 alone) scored -55
-    // and landed in requests, and the panel listed only the creator's
-    // mitigating reasons — explaining a person the user needed no warning
-    // about while the account that earned the risk stayed invisible.
+    // A group is only as safe as its least-known member: score each
+    // unfollowed member with the verdict's own weights and keep the worst,
+    // so the room inherits that member's score and reasons.
     var reasons = _scoreSender(unknown.first, signalsFor, messageSignals);
     var worst = reasons.fold(0, (sum, reason) => sum + reason.points);
     for (final pubkey in unknown.skip(1)) {
