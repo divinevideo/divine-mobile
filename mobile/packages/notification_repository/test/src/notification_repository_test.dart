@@ -3763,7 +3763,12 @@ void main() {
         expect(item.type, equals(NotificationKind.like));
         expect(item.isTaggedVideo, isTrue);
         expect(item.targetEventId, equals('foreign_video'));
-        expect(item.videoAddressableId, isNull);
+        // The creator's coordinate keeps the row routable after they edit
+        // the video, which replaces the event id (#4730).
+        expect(
+          item.videoAddressableId,
+          equals('34236:other_owner_pubkey:d_foreign_video'),
+        );
       });
 
       group("activity on the user's repost event", () {

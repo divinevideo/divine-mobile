@@ -2279,15 +2279,19 @@ class NotificationRepository {
     );
     final actors = _mapActorAnchored(consolidated, profiles);
     final reclassified = _reclassifyMisattributed(misattributed, profiles);
-    final tagged = taggedVideoLikes.map(
-      (n) => _buildActorNotification(
+    final tagged = taggedVideoLikes.map((n) {
+      final anchorId = _videoAnchorEventId(NotificationKind.like, n);
+      return _buildActorNotification(
         n,
         type: NotificationKind.like,
         profiles: profiles,
-        targetEventId: _videoAnchorEventId(NotificationKind.like, n),
+        targetEventId: anchorId,
+        videoAddressableId: _sourceVideoAddressableId(
+          video: videoMetadata.videosById[anchorId],
+        ),
         isTaggedVideo: true,
-      ),
-    );
+      );
+    });
 
     final items = <NotificationItem>[
       ...videos,
@@ -2766,6 +2770,7 @@ class NotificationRepository {
     required Map<String, UserProfile> profiles,
     NotificationKind? commentKind,
     String? targetEventId,
+    String? videoAddressableId,
     bool isTaggedVideo = false,
   }) {
     final quoteKind = commentKind ?? type;
@@ -2786,7 +2791,8 @@ class NotificationRepository {
       notificationIds: notification.dedupeKey.isNotEmpty
           ? [notification.dedupeKey]
           : const [],
-      videoAddressableId: _actorVideoAddressableId(type, notification),
+      videoAddressableId:
+          videoAddressableId ?? _actorVideoAddressableId(type, notification),
       hasCommentTarget: _actorHasCommentTarget(type, notification),
       commentEventId: type == NotificationKind.likeComment
           ? _nonEmpty(notification.targetCommentId)
