@@ -146,10 +146,14 @@ class VideoResponsesRepository {
   /// [chainRoot]: those that name it in an `a` tag marked `mention` and carry
   /// [hashtag]. One per person, the newest, at most [limit] of them, and how
   /// many people joined.
+  ///
+  /// [filter], the viewer's, runs before each person's answer is picked, so a
+  /// person whose newest answer it leaves out still shows by an older one.
   Future<VideoResponses> fetchJoined({
     required String chainRoot,
     required String hashtag,
     int limit = 20,
+    List<VideoEvent> Function(List<VideoEvent> answers)? filter,
   }) async {
     bool joined(VideoEvent answer) =>
         answer.addressableId != chainRoot &&
@@ -171,7 +175,7 @@ class VideoResponsesRepository {
     );
     // The server asks by the d tag, which another author's video may share,
     // so what it returns is checked as the relays' answers are.
-    if (server != null) return _joinedOf(server, joined);
+    if (server != null) return _joinedOf(server, joined, filter: filter);
 
     final events = await _nostrClient.queryEvents([
       Filter(
@@ -186,6 +190,7 @@ class VideoResponsesRepository {
       limit: limit,
       where: joined,
       onePerAuthor: true,
+      filter: filter,
     );
   }
 
@@ -275,15 +280,17 @@ class VideoResponsesRepository {
     }
   }
 
-  /// [responses] without those [where] rejects, one per person, counted
-  /// without those left out too; the rest of the count was not read, so it
-  /// stays as it is.
+  /// [responses] without those [where] or [filter] rejects, one per person,
+  /// counted without those left out too; the rest of the count was not read,
+  /// so it stays as it is.
   VideoResponses _joinedOf(
     VideoResponses responses,
-    bool Function(VideoEvent) where,
-  ) {
+    bool Function(VideoEvent) where, {
+    List<VideoEvent> Function(List<VideoEvent>)? filter,
+  }) {
+    final matching = responses.videos.where(where).toList();
     final kept = _onePerAuthor(
-      responses.videos.where(where).toList()
+      List.of(filter?.call(matching) ?? matching)
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
     );
     final leftOut = responses.videos.length - kept.length;
@@ -293,14 +300,16 @@ class VideoResponsesRepository {
     );
   }
 
-  /// The parsed [events] that [where] keeps, the newest first, one per
-  /// person when [onePerAuthor]: at most [limit] of them, counted in all. The
-  /// count is only a floor when the relays sent as many as one read asks for.
+  /// The parsed [events] that [where] and then [filter] keep, the newest
+  /// first, one per person when [onePerAuthor]: at most [limit] of them,
+  /// counted in all. The count is only a floor when the relays sent as many as
+  /// one read asks for.
   VideoResponses _responsesIn(
     List<Event> events, {
     required int limit,
     required bool Function(VideoEvent) where,
     bool onePerAuthor = false,
+    List<VideoEvent> Function(List<VideoEvent>)? filter,
   }) {
     final byId = <String, VideoEvent>{};
     for (final event in events) {
@@ -313,7 +322,8 @@ class VideoResponsesRepository {
       }
       if (where(video)) byId[video.id] = video;
     }
-    final newestFirst = byId.values.toList()
+    final read = byId.values.toList();
+    final newestFirst = List.of(filter?.call(read) ?? read)
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     final videos = onePerAuthor ? _onePerAuthor(newestFirst) : newestFirst;
     return VideoResponses(

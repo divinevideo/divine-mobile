@@ -316,7 +316,8 @@ then show the sticker only as it is in the frames.
   sticker's first video is honored only when that video carries an Add yours
   of its own with the same hashtag; otherwise the chain starts at the
   sticker's own video. The player shows how many people joined, each counted
-  once by their newest answer, and their avatars; a tap on them opens the
+  once by their newest answer the viewer's filters let through, and their
+  avatars; a tap on them opens the
   answers in the full-screen feed.
 - **Replies.** The player shows how many video replies the video has (kind
   34236 videos whose NIP-22 `E` or `A` root tag names it), the avatars of the

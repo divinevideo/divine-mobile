@@ -117,22 +117,25 @@ PublishOutcome _outcome({required bool accepted}) => PublishOutcome(
   noResponseFrom: const [],
 );
 
-VideoStats _stats(String id, {List<List<String>> eventTags = const []}) =>
-    VideoStats(
-      id: id,
-      pubkey: _viewer,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(1000000),
-      kind: 34236,
-      dTag: 'stats-$id',
-      eventTags: eventTags,
-      title: '',
-      thumbnail: '',
-      videoUrl: 'https://cdn.example/$id.mp4',
-      reactions: 0,
-      comments: 0,
-      reposts: 0,
-      engagementScore: 0,
-    );
+VideoStats _stats(
+  String id, {
+  List<List<String>> eventTags = const [],
+  int createdAtMs = 1000000,
+}) => VideoStats(
+  id: id,
+  pubkey: _viewer,
+  createdAt: DateTime.fromMillisecondsSinceEpoch(createdAtMs),
+  kind: 34236,
+  dTag: 'stats-$id',
+  eventTags: eventTags,
+  title: '',
+  thumbnail: '',
+  videoUrl: 'https://cdn.example/$id.mp4',
+  reactions: 0,
+  comments: 0,
+  reposts: 0,
+  engagementScore: 0,
+);
 
 void main() {
   late _MockNostrClient nostrClient;
@@ -370,6 +373,33 @@ void main() {
         );
       });
 
+      test(
+        "picks each person's answer after the viewer's filter",
+        () async {
+          relayAnswers([
+            _answer(301, createdAt: 1000, pubkey: _creator),
+            _answer(302, createdAt: 2000, pubkey: _creator),
+            _answer(303, createdAt: 1500),
+          ]);
+
+          // The viewer's filters leave out the creator's newest answer.
+          final responses = await repository().fetchJoined(
+            chainRoot: _rootAddress,
+            hashtag: 'desksetup',
+            filter: (answers) => [
+              for (final answer in answers)
+                if (answer.id != _hex(302)) answer,
+            ],
+          );
+
+          expect(responses.total, equals(2));
+          expect(
+            responses.videos.map((v) => v.id),
+            equals([_hex(303), _hex(301)]),
+          );
+        },
+      );
+
       test('leaves out an `a` tag not marked as a mention', () async {
         relayAnswers([
           _answer(301, createdAt: 1000),
@@ -488,6 +518,45 @@ void main() {
         expect(responses.videos, hasLength(1));
         expect(responses.total, equals(6));
       });
+
+      test(
+        "picks each person's Funnelcake answer after the viewer's filter",
+        () async {
+          when(() => funnelcake.isAvailable).thenReturn(true);
+          List<List<String>> joins() => [
+            ['a', _rootAddress, _relay, 'mention'],
+            ['t', 'desksetup'],
+          ];
+          when(
+            () => funnelcake.getVideoResponses(
+              videoId: any(named: 'videoId'),
+              type: any(named: 'type'),
+              hashtag: any(named: 'hashtag'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer(
+            (_) async => VideoResponsesResponse(
+              videos: [
+                _stats(_hex(301), eventTags: joins(), createdAtMs: 1000000),
+                _stats(_hex(302), eventTags: joins(), createdAtMs: 2000000),
+              ],
+              total: 2,
+            ),
+          );
+
+          // The viewer's filters leave out the person's newest answer.
+          final responses = await repository(withFunnelcake: true).fetchJoined(
+            chainRoot: _rootAddress,
+            hashtag: 'desksetup',
+            filter: (answers) => [
+              for (final answer in answers)
+                if (answer.id != _hex(302)) answer,
+            ],
+          );
+
+          expect(responses.videos.map((v) => v.id), equals([_hex(301)]));
+        },
+      );
     });
 
     group('startsChain', () {

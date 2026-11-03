@@ -80,6 +80,9 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
                 chainRoot: chainRoot,
                 hashtag: hashtag,
                 limit: feedLimit,
+                // Before each person's answer is picked; filtering again
+                // below changes nothing.
+                filter: _filter,
               );
       }
       _emitShown(responses, curation, chainRoot: chainRoot);

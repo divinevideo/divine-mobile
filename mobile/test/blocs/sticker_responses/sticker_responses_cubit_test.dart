@@ -244,6 +244,7 @@ void main() {
               chainRoot: any(named: 'chainRoot'),
               hashtag: any(named: 'hashtag'),
               limit: any(named: 'limit'),
+              filter: any(named: 'filter'),
             ),
           ).thenAnswer(
             (_) async => VideoResponses(total: 1, videos: [_video(1)]),
@@ -299,6 +300,7 @@ void main() {
                 chainRoot: any(named: 'chainRoot'),
                 hashtag: any(named: 'hashtag'),
                 limit: any(named: 'limit'),
+                filter: any(named: 'filter'),
               ),
             ).thenAnswer(
               (_) async => VideoResponses(total: 3, videos: [_video(5)]),
@@ -320,6 +322,7 @@ void main() {
               chainRoot: rootAddress,
               hashtag: 'desksetup',
               limit: StickerResponsesCubit.feedLimit,
+              filter: any(named: 'filter'),
             ),
           ).called(1);
           // The first video of its own chain is not checked.
@@ -333,6 +336,40 @@ void main() {
       );
 
       blocTest<StickerResponsesCubit, StickerResponsesState>(
+        "hands the joined read the viewer's filter, so each person's answer "
+        'is picked from what the viewer may see',
+        setUp: () {
+          filter = (videos) => [
+            for (final video in videos)
+              if (video.id != _video(6).id) video,
+          ];
+          when(
+            () => repository.fetchJoined(
+              chainRoot: any(named: 'chainRoot'),
+              hashtag: any(named: 'hashtag'),
+              limit: any(named: 'limit'),
+              filter: any(named: 'filter'),
+            ),
+          ).thenAnswer((_) async => const VideoResponses());
+        },
+        build: () => build(_region(VideoStickerKind.prompt)),
+        act: (cubit) => cubit.load(),
+        verify: (_) {
+          final handed =
+              verify(
+                    () => repository.fetchJoined(
+                      chainRoot: any(named: 'chainRoot'),
+                      hashtag: any(named: 'hashtag'),
+                      limit: any(named: 'limit'),
+                      filter: captureAny(named: 'filter'),
+                    ),
+                  ).captured.single
+                  as StickerResponsesFilter;
+          expect(handed([_video(5), _video(6)]), equals([_video(5)]));
+        },
+      );
+
+      blocTest<StickerResponsesCubit, StickerResponsesState>(
         'says when the count is only a floor',
         setUp: () =>
             when(
@@ -340,6 +377,7 @@ void main() {
                 chainRoot: any(named: 'chainRoot'),
                 hashtag: any(named: 'hashtag'),
                 limit: any(named: 'limit'),
+                filter: any(named: 'filter'),
               ),
             ).thenAnswer(
               (_) async => VideoResponses(
@@ -366,6 +404,7 @@ void main() {
               chainRoot: any(named: 'chainRoot'),
               hashtag: any(named: 'hashtag'),
               limit: any(named: 'limit'),
+              filter: any(named: 'filter'),
             ),
           ).thenAnswer((_) async => const VideoResponses()),
         );
@@ -384,6 +423,7 @@ void main() {
                 chainRoot: first,
                 hashtag: 'desksetup',
                 limit: StickerResponsesCubit.feedLimit,
+                filter: any(named: 'filter'),
               ),
             ).called(1);
           },
@@ -411,6 +451,7 @@ void main() {
                 chainRoot: any(named: 'chainRoot'),
                 hashtag: any(named: 'hashtag'),
                 limit: any(named: 'limit'),
+                filter: any(named: 'filter'),
               ),
             );
           },
@@ -430,6 +471,7 @@ void main() {
                 chainRoot: rootAddress,
                 hashtag: 'desksetup',
                 limit: StickerResponsesCubit.feedLimit,
+                filter: any(named: 'filter'),
               ),
             ).called(1);
           },
@@ -453,6 +495,7 @@ void main() {
             chainRoot: any(named: 'chainRoot'),
             hashtag: any(named: 'hashtag'),
             limit: any(named: 'limit'),
+            filter: any(named: 'filter'),
           ),
         ).thenThrow(Exception('offline')),
         build: () => build(_region(VideoStickerKind.prompt)),
