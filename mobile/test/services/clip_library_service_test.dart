@@ -28,7 +28,7 @@ import 'package:unified_logger/unified_logger.dart';
 import '../mocks/mock_path_provider_platform.dart';
 
 /// Answers every frame request with a one-byte frame and records the video
-/// each request read.
+/// path each request named.
 class _RecordingFrameExtractor extends ProVideoEditor {
   final videoPaths = <String?>[];
 
