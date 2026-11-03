@@ -89,6 +89,50 @@ class _ControlledQueryRelay extends Relay {
 
 /// A signer that cannot produce a public key yet, like a remote signer that
 /// is still starting.
+/// Signs like [LocalNostrSigner], but holds its first AUTH signature until
+/// [releaseFirstAuth] completes: a remote signer still working on it.
+class _SlowFirstAuthSigner implements NostrSigner {
+  _SlowFirstAuthSigner(String privateKey)
+    : _inner = LocalNostrSigner(privateKey);
+
+  final LocalNostrSigner _inner;
+  final releaseFirstAuth = Completer<void>();
+  var _authsStarted = 0;
+
+  @override
+  Future<String?> getPublicKey() => _inner.getPublicKey();
+
+  @override
+  Future<Event?> signEvent(Event event) async {
+    if (event.kind == EventKind.authentication && _authsStarted++ == 0) {
+      await releaseFirstAuth.future;
+    }
+    return _inner.signEvent(event);
+  }
+
+  @override
+  Future<Map?> getRelays() => _inner.getRelays();
+
+  @override
+  Future<String?> encrypt(String pubkey, String plaintext) =>
+      _inner.encrypt(pubkey, plaintext);
+
+  @override
+  Future<String?> decrypt(String pubkey, String ciphertext) =>
+      _inner.decrypt(pubkey, ciphertext);
+
+  @override
+  Future<String?> nip44Encrypt(String pubkey, String plaintext) =>
+      _inner.nip44Encrypt(pubkey, plaintext);
+
+  @override
+  Future<String?> nip44Decrypt(String pubkey, String ciphertext) =>
+      _inner.nip44Decrypt(pubkey, ciphertext);
+
+  @override
+  void close() => _inner.close();
+}
+
 class _NoKeySigner implements NostrSigner {
   @override
   Future<String?> getPublicKey() async => null;
@@ -606,6 +650,58 @@ void main() {
         staleAuthId,
         false,
         'restricted: that challenge is gone',
+      ]);
+      expect(relay.checkQuery(subId), isTrue);
+
+      await relay.deliver(['OK', currentAuthId, true, '']);
+      await relay.awaitReqCount(2);
+      await relay.deliver(['EOSE', subId]);
+
+      final result = await pending.timeout(const Duration(seconds: 2));
+      expect(result.endedBy, QueryEnd.complete);
+      expect(result.closedRelayReasons, isEmpty);
+    });
+
+    test('an AUTH signed for the previous socket and rejected on the new one '
+        'leaves the read parked for the new challenge', () async {
+      final signer = _SlowFirstAuthSigner(
+        '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+      );
+      final nostr = Nostr(signer, [], dummyTempRelay);
+      final relay = _ControlledQueryRelay('wss://reconnecting.example');
+      expect(await nostr.relayPool.add(relay), isTrue);
+
+      // The signer is still working on AUTH1 when the socket drops.
+      final firstChallenge = relay.deliver(['AUTH', 'first-challenge']);
+      await pumpEventQueue();
+      relay.onError('socket dropped');
+      relay.relayStatus.connected = ClientConnected.connected;
+      relay.relayStatusCallback?.call();
+
+      final pending = nostr.readEvents(
+        [
+          {
+            'kinds': [1059],
+          },
+        ],
+        requireAllRelaysSettled: true,
+        timeout: const Duration(seconds: 30),
+      );
+      final subId = await relay.awaitPendingQuery();
+      await relay.deliver(['AUTH', 'second-challenge']);
+      final currentAuthId = relay.capturedAuthEventId;
+      await relay.deliver(['CLOSED', subId, 'auth-required: sign in first']);
+
+      // AUTH1 finally goes out on the new socket and is rejected there.
+      signer.releaseFirstAuth.complete();
+      await firstChallenge;
+      final staleAuthId = relay.capturedAuthEventId;
+      expect(staleAuthId, isNot(currentAuthId));
+      await relay.deliver([
+        'OK',
+        staleAuthId,
+        false,
+        'auth-required: challenge does not match',
       ]);
       expect(relay.checkQuery(subId), isTrue);
 
