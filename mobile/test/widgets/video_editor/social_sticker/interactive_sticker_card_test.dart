@@ -82,6 +82,37 @@ void main() {
         expect(find.byType(ImageFiltered), findsNothing);
       });
 
+      testWidgets('a count that is only a floor with a plus', (tester) async {
+        const floor = StickerResponses(count: 500, countIsAtLeast: true);
+        await pump(
+          tester,
+          const InteractiveStickerCopy(data: addYours, responses: floor),
+        );
+        expect(
+          find.text(l10n.videoStickerAddYoursJoinedAtLeast('500+')),
+          findsOneWidget,
+        );
+
+        await pump(
+          tester,
+          InteractiveStickerCopy(
+            data: replies,
+            responses: floor,
+            onOpenResponses: () {},
+          ),
+        );
+        expect(
+          find.text(l10n.videoStickerRepliesCountAtLeast('500+')),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(
+            l10n.videoStickerRepliesSemanticLabelAtLeast('500+'),
+          ),
+          findsOneWidget,
+        );
+      });
+
       testWidgets('a replies sticker the same size with or without who '
           'replied, so the copy lies on the frames', (tester) async {
         await pump(

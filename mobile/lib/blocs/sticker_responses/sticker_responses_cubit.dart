@@ -122,6 +122,7 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
       StickerResponsesState(
         status: StickerResponsesStatus.loaded,
         total: math.max(shown.length, responses.total - leftOut),
+        totalIsAtLeast: responses.totalIsAtLeast,
         videos: shown,
         curation: curation,
       ),

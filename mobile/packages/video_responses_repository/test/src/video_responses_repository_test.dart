@@ -371,6 +371,24 @@ void main() {
         expect(responses.videos.map((v) => v.id), equals([_hex(301)]));
       });
 
+      test('counts only a floor when the relays sent a full read', () async {
+        relayAnswers([
+          for (var i = 0; i < VideoResponsesRepository.maxResponsesRead; i++)
+            _answer(1000 + i, createdAt: 1000 + i),
+        ]);
+
+        final responses = await repository().fetchJoined(
+          chainRoot: _rootAddress,
+          hashtag: 'desksetup',
+        );
+
+        expect(responses.totalIsAtLeast, isTrue);
+        expect(
+          responses.total,
+          equals(VideoResponsesRepository.maxResponsesRead),
+        );
+      });
+
       test('asks Funnelcake by the first video and the hashtag', () async {
         when(() => funnelcake.isAvailable).thenReturn(true);
         when(

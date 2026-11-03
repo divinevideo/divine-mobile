@@ -2181,6 +2181,11 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count మంది చేరారు';
+  }
+
+  @override
   String get videoStickerAddYoursOpenSemanticLabel => 'ఎవరు చేరారో చూడండి';
 
   @override
@@ -2201,6 +2206,11 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count ప్రత్యుత్తరాలు';
+  }
+
+  @override
   String videoStickerRepliesSemanticLabel(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -2210,6 +2220,11 @@ class AppLocalizationsTe extends AppLocalizations {
       zero: 'వీడియో ప్రత్యుత్తరాలు, ఇంకా ఏవీ లేవు',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return '$count వీడియో ప్రత్యుత్తరాలు చూడండి';
   }
 
   @override

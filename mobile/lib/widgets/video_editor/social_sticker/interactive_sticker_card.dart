@@ -39,16 +39,26 @@ class StickerResponsePreview extends Equatable {
 /// Who joined an Add yours or replied to a video, as its sticker shows it in
 /// the player: how many, and the latest ones first.
 class StickerResponses extends Equatable {
-  const StickerResponses({this.count = 0, this.latest = const []});
+  const StickerResponses({
+    this.count = 0,
+    this.countIsAtLeast = false,
+    this.latest = const [],
+  });
 
   /// How many there are in all.
   final int count;
 
+  /// Whether [count] is only a floor, shown as `500+`: there may be more.
+  final bool countIsAtLeast;
+
   /// The latest ones, the newest first.
   final List<StickerResponsePreview> latest;
 
+  /// [count] as the card writes it: `500+` when it is only a floor.
+  String get countAtLeastLabel => '$count+';
+
   @override
-  List<Object?> get props => [count, latest];
+  List<Object?> get props => [count, countIsAtLeast, latest];
 }
 
 /// The most avatars an interactive card shows.
@@ -282,7 +292,11 @@ class _AddYours extends StatelessWidget {
             child: responses == null
                 ? const SizedBox.shrink()
                 : StickerTextLine(
-                    text: l10n.videoStickerAddYoursJoined(responses.count),
+                    text: responses.countIsAtLeast
+                        ? l10n.videoStickerAddYoursJoinedAtLeast(
+                            responses.countAtLeastLabel,
+                          )
+                        : l10n.videoStickerAddYoursJoined(responses.count),
                     style: interactiveCardTextStyle(34),
                   ),
           ),
@@ -410,9 +424,13 @@ class _Replies extends StatelessWidget {
                       child: responses == null
                           ? const SizedBox.shrink()
                           : StickerTextLine(
-                              text: l10n.videoStickerRepliesCount(
-                                responses.count,
-                              ),
+                              text: responses.countIsAtLeast
+                                  ? l10n.videoStickerRepliesCountAtLeast(
+                                      responses.countAtLeastLabel,
+                                    )
+                                  : l10n.videoStickerRepliesCount(
+                                      responses.count,
+                                    ),
                               style: interactiveCardTextStyle(34),
                             ),
                     ),
@@ -428,7 +446,11 @@ class _Replies extends StatelessWidget {
     if (onOpen == null) return card;
     return Semantics(
       button: true,
-      label: l10n.videoStickerRepliesSemanticLabel(responses?.count ?? 0),
+      label: responses != null && responses.countIsAtLeast
+          ? l10n.videoStickerRepliesSemanticLabelAtLeast(
+              responses.countAtLeastLabel,
+            )
+          : l10n.videoStickerRepliesSemanticLabel(responses?.count ?? 0),
       excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,

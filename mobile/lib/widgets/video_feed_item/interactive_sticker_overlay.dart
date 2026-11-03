@@ -167,6 +167,7 @@ class _ResponsesSticker extends ConsumerWidget {
     final responses = state.status == StickerResponsesStatus.loaded
         ? StickerResponses(
             count: state.total,
+            countIsAtLeast: state.totalIsAtLeast,
             latest: [
               for (final video in state.videos.take(maxStickerAvatars))
                 StickerResponsePreview(

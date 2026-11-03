@@ -2101,6 +2101,11 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count người đã tham gia';
+  }
+
+  @override
   String get videoStickerAddYoursOpenSemanticLabel => 'Xem ai đã tham gia';
 
   @override
@@ -2121,6 +2126,11 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count phản hồi';
+  }
+
+  @override
   String videoStickerRepliesSemanticLabel(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -2130,6 +2140,11 @@ class AppLocalizationsVi extends AppLocalizations {
       zero: 'Video phản hồi, chưa có',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return 'Xem $count video phản hồi';
   }
 
   @override

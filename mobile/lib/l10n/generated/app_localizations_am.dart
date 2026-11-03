@@ -2087,6 +2087,11 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count ተሳታፊዎች';
+  }
+
+  @override
   String get videoStickerAddYoursOpenSemanticLabel => 'ተሳታፊዎችን ይመልከቱ';
 
   @override
@@ -2107,6 +2112,11 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count ምላሾች';
+  }
+
+  @override
   String videoStickerRepliesSemanticLabel(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -2116,6 +2126,11 @@ class AppLocalizationsAm extends AppLocalizations {
       zero: 'የቪዲዮ ምላሾች፣ እስካሁን የሉም',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return '$count የቪዲዮ ምላሾችን ይመልከቱ';
   }
 
   @override

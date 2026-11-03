@@ -320,6 +320,31 @@ void main() {
         );
       });
 
+      testWidgets('shows a count that is only a floor with a plus', (
+        tester,
+      ) async {
+        when(
+          () => repository.fetchReplies(
+            videoId: any(named: 'videoId'),
+            videoAddress: any(named: 'videoAddress'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) async => VideoResponses(
+            total: 500,
+            videos: [_reply(1)],
+            totalIsAtLeast: true,
+          ),
+        );
+        await pump(tester, replies);
+        await tester.pump();
+
+        expect(
+          find.text(l10n(tester).videoStickerRepliesCountAtLeast('500+')),
+          findsOneWidget,
+        );
+      });
+
       testWidgets('shows how many joined an Add yours', (tester) async {
         await pump(tester, addYours);
         await tester.pump();

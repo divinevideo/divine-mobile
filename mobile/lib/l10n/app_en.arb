@@ -1481,6 +1481,15 @@
       }
     }
   },
+  "videoStickerAddYoursJoinedAtLeast": "{count} joined",
+  "@videoStickerAddYoursJoinedAtLeast": {
+    "description": "On an Add yours sticker in the player: how many people answered its prompt with a video, when the count is only a floor. {count} is pre-formatted, such as 500+.",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
   "videoStickerAddYoursOpenSemanticLabel": "See who joined",
   "@videoStickerAddYoursOpenSemanticLabel": {
     "description": "Screen-reader label of the avatars and count on an Add yours sticker, which open the videos that answered it."
@@ -1503,12 +1512,30 @@
       }
     }
   },
+  "videoStickerRepliesCountAtLeast": "{count} replies",
+  "@videoStickerRepliesCountAtLeast": {
+    "description": "On a replies sticker in the player: how many video replies the video has, when the count is only a floor. {count} is pre-formatted, such as 500+.",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
   "videoStickerRepliesSemanticLabel": "{count, plural, =0{Video replies, none yet} =1{Watch 1 video reply} other{Watch {count} video replies}}",
   "@videoStickerRepliesSemanticLabel": {
     "description": "Screen-reader label of a replies sticker in the player, which opens the video replies.",
     "placeholders": {
       "count": {
         "type": "int"
+      }
+    }
+  },
+  "videoStickerRepliesSemanticLabelAtLeast": "Watch {count} video replies",
+  "@videoStickerRepliesSemanticLabelAtLeast": {
+    "description": "Screen-reader label of a replies sticker in the player, which opens the video replies, when their count is only a floor. {count} is pre-formatted, such as 500+.",
+    "placeholders": {
+      "count": {
+        "type": "String"
       }
     }
   },

@@ -246,7 +246,8 @@ class VideoResponsesRepository {
   }
 
   /// The parsed [events] that [where] keeps, the newest first, one per
-  /// person when [onePerAuthor]: at most [limit] of them, counted in all.
+  /// person when [onePerAuthor]: at most [limit] of them, counted in all. The
+  /// count is only a floor when the relays sent as many as one read asks for.
   VideoResponses _responsesIn(
     List<Event> events, {
     required int limit,
@@ -270,6 +271,7 @@ class VideoResponsesRepository {
     return VideoResponses(
       total: videos.length,
       videos: videos.take(limit).toList(),
+      totalIsAtLeast: events.length >= maxResponsesRead,
     );
   }
 

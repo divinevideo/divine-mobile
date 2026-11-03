@@ -1985,6 +1985,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count 人已参与';
+  }
+
+  @override
   String get videoStickerAddYoursOpenSemanticLabel => '看看谁参与了';
 
   @override
@@ -2005,6 +2010,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count 条回复';
+  }
+
+  @override
   String videoStickerRepliesSemanticLabel(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -2014,6 +2024,11 @@ class AppLocalizationsZh extends AppLocalizations {
       zero: '视频回复，暂无',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return '观看 $count 条视频回复';
   }
 
   @override

@@ -3577,6 +3577,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =0{Be the first} =1{1 joined} other{{count} joined}}'**
   String videoStickerAddYoursJoined(int count);
 
+  /// On an Add yours sticker in the player: how many people answered its prompt with a video, when the count is only a floor. {count} is pre-formatted, such as 500+.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} joined'**
+  String videoStickerAddYoursJoinedAtLeast(String count);
+
   /// Screen-reader label of the avatars and count on an Add yours sticker, which open the videos that answered it.
   ///
   /// In en, this message translates to:
@@ -3595,11 +3601,23 @@ abstract class AppLocalizations {
   /// **'{count, plural, =0{No replies yet} =1{1 reply} other{{count} replies}}'**
   String videoStickerRepliesCount(int count);
 
+  /// On a replies sticker in the player: how many video replies the video has, when the count is only a floor. {count} is pre-formatted, such as 500+.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} replies'**
+  String videoStickerRepliesCountAtLeast(String count);
+
   /// Screen-reader label of a replies sticker in the player, which opens the video replies.
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =0{Video replies, none yet} =1{Watch 1 video reply} other{Watch {count} video replies}}'**
   String videoStickerRepliesSemanticLabel(int count);
+
+  /// Screen-reader label of a replies sticker in the player, which opens the video replies, when their count is only a floor. {count} is pre-formatted, such as 500+.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch {count} video replies'**
+  String videoStickerRepliesSemanticLabelAtLeast(String count);
 
   /// Snackbar when someone who is not signed in taps a question sticker on a video.
   ///

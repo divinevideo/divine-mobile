@@ -1978,6 +1978,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count명 참여';
+  }
+
+  @override
   String get videoStickerAddYoursOpenSemanticLabel => '참여한 사람 보기';
 
   @override
@@ -1998,6 +2003,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '답글 $count개';
+  }
+
+  @override
   String videoStickerRepliesSemanticLabel(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -2007,6 +2017,11 @@ class AppLocalizationsKo extends AppLocalizations {
       zero: '영상 답글, 아직 없음',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return '영상 답글 $count개 보기';
   }
 
   @override

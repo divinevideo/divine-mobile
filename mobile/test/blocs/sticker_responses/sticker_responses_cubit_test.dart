@@ -290,6 +290,31 @@ void main() {
       );
 
       blocTest<StickerResponsesCubit, StickerResponsesState>(
+        'says when the count is only a floor',
+        setUp: () =>
+            when(
+              () => repository.fetchJoined(
+                chainRoot: any(named: 'chainRoot'),
+                hashtag: any(named: 'hashtag'),
+                limit: any(named: 'limit'),
+              ),
+            ).thenAnswer(
+              (_) async => VideoResponses(
+                total: 500,
+                videos: [_video(5)],
+                totalIsAtLeast: true,
+              ),
+            ),
+        build: () => build(_region(VideoStickerKind.prompt)),
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        verify: (cubit) {
+          expect(cubit.state.total, equals(500));
+          expect(cubit.state.totalIsAtLeast, isTrue);
+        },
+      );
+
+      blocTest<StickerResponsesCubit, StickerResponsesState>(
         'reads the chain an answer joined, not the answer itself',
         setUp: () => when(
           () => repository.fetchJoined(

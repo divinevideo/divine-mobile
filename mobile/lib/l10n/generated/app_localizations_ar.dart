@@ -2147,6 +2147,11 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count مشاركة';
+  }
+
+  @override
   String get videoStickerAddYoursOpenSemanticLabel => 'عرض المشاركات';
 
   @override
@@ -2170,6 +2175,11 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count رد';
+  }
+
+  @override
   String videoStickerRepliesSemanticLabel(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -2182,6 +2192,11 @@ class AppLocalizationsAr extends AppLocalizations {
       zero: 'ردود الفيديو، لا شيء بعد',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return 'مشاهدة $count رد بالفيديو';
   }
 
   @override

@@ -20,6 +20,7 @@ class StickerResponsesState extends Equatable {
   const StickerResponsesState({
     this.status = StickerResponsesStatus.initial,
     this.total = 0,
+    this.totalIsAtLeast = false,
     this.videos = const [],
     this.curation = const RepliesCuration(),
   });
@@ -29,6 +30,9 @@ class StickerResponsesState extends Equatable {
   /// How many there are in all that the viewer may see, more than [videos]
   /// may hold.
   final int total;
+
+  /// Whether [total] is only a floor: there may be more.
+  final bool totalIsAtLeast;
 
   /// The latest the viewer may see, in the order they show: a replies
   /// sticker's pinned reply first.
@@ -41,15 +45,23 @@ class StickerResponsesState extends Equatable {
   StickerResponsesState copyWith({
     StickerResponsesStatus? status,
     int? total,
+    bool? totalIsAtLeast,
     List<VideoEvent>? videos,
     RepliesCuration? curation,
   }) => StickerResponsesState(
     status: status ?? this.status,
     total: total ?? this.total,
+    totalIsAtLeast: totalIsAtLeast ?? this.totalIsAtLeast,
     videos: videos ?? this.videos,
     curation: curation ?? this.curation,
   );
 
   @override
-  List<Object?> get props => [status, total, videos, curation];
+  List<Object?> get props => [
+    status,
+    total,
+    totalIsAtLeast,
+    videos,
+    curation,
+  ];
 }

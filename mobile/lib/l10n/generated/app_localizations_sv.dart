@@ -2131,6 +2131,11 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count är med';
+  }
+
+  @override
   String get videoStickerAddYoursOpenSemanticLabel => 'Se vilka som är med';
 
   @override
@@ -2151,6 +2156,11 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count svar';
+  }
+
+  @override
   String videoStickerRepliesSemanticLabel(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -2160,6 +2170,11 @@ class AppLocalizationsSv extends AppLocalizations {
       zero: 'Videosvar, inga än',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return 'Titta på $count videosvar';
   }
 
   @override

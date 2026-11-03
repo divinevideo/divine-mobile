@@ -2133,6 +2133,11 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count ang sumali';
+  }
+
+  @override
   String get videoStickerAddYoursOpenSemanticLabel =>
       'Tingnan kung sino ang sumali';
 
@@ -2154,6 +2159,11 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count reply';
+  }
+
+  @override
   String videoStickerRepliesSemanticLabel(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -2163,6 +2173,11 @@ class AppLocalizationsFil extends AppLocalizations {
       zero: 'Mga video reply, wala pa',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return 'Panoorin ang $count video reply';
   }
 
   @override

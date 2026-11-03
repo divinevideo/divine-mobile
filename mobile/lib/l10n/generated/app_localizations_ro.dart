@@ -2196,6 +2196,11 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count de participări';
+  }
+
+  @override
   String get videoStickerAddYoursOpenSemanticLabel => 'Vezi cine participă';
 
   @override
@@ -2217,6 +2222,11 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count de răspunsuri';
+  }
+
+  @override
   String videoStickerRepliesSemanticLabel(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -2227,6 +2237,11 @@ class AppLocalizationsRo extends AppLocalizations {
       zero: 'Răspunsuri video, încă niciunul',
     );
     return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return 'Vezi $count de răspunsuri video';
   }
 
   @override
