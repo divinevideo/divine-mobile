@@ -214,7 +214,8 @@ Future<int?> soundUsageCount(Ref ref, String audioEventId) async {
 ///
 /// Sounds with no referenceable Nostr event — bundled assets, unpublished
 /// imports — carry no id and are absent from the map, and a list made only of
-/// those never reaches the repository at all.
+/// those never reaches the repository at all. So is a sound whose count could
+/// not be looked up.
 ///
 /// Usage:
 /// ```dart
@@ -232,8 +233,46 @@ Future<Map<String, int>> trendingSoundUsageCounts(Ref ref) async {
   };
   if (ids.isEmpty) return const {};
 
-  final repository = ref.watch(soundsRepositoryProvider);
-  return repository.fetchVideosUsingSoundCounts(ids);
+  return ref.watch(_soundUsageCountCacheProvider).countsFor(ids);
+}
+
+/// The reuse counts [trendingSoundUsageCounts] has looked up, so a list that
+/// loads more asks only about its new rows. Each lookup scans a capped number
+/// of videos for the whole batch, so asking again about every row loaded
+/// would also spread that cap ever thinner.
+@riverpod
+_SoundUsageCountCache _soundUsageCountCache(Ref ref) {
+  _keepForReopen(ref);
+  return _SoundUsageCountCache(ref.watch(soundsRepositoryProvider));
+}
+
+class _SoundUsageCountCache {
+  _SoundUsageCountCache(this._sounds);
+
+  final SoundsRepository _sounds;
+  final _counts = <String, int>{};
+
+  /// Counts for [ids]. An id counted before keeps its count, and the rest are
+  /// counted now in one batch. When that fails they are left out, so their
+  /// rows show no count and the next lookup asks again.
+  Future<Map<String, int>> countsFor(Set<String> ids) async {
+    final unknown = {
+      for (final id in ids)
+        if (!_counts.containsKey(id)) id,
+    };
+    if (unknown.isNotEmpty) {
+      try {
+        _counts.addAll(await _sounds.fetchVideosUsingSoundCounts(unknown));
+      } on Object catch (e) {
+        Log.warning(
+          'Could not count the videos using sounds: $e',
+          name: 'SoundsProviders',
+          category: LogCategory.api,
+        );
+      }
+    }
+    return {for (final id in ids) id: ?_counts[id]};
+  }
 }
 
 /// The sounds people are picking up right now, the most trending first,

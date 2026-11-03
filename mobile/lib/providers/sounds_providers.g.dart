@@ -755,7 +755,8 @@ final class SoundUsageCountFamily extends $Family
 ///
 /// Sounds with no referenceable Nostr event — bundled assets, unpublished
 /// imports — carry no id and are absent from the map, and a list made only of
-/// those never reaches the repository at all.
+/// those never reaches the repository at all. So is a sound whose count could
+/// not be looked up.
 ///
 /// Usage:
 /// ```dart
@@ -777,7 +778,8 @@ final trendingSoundUsageCountsProvider = TrendingSoundUsageCountsProvider._();
 ///
 /// Sounds with no referenceable Nostr event — bundled assets, unpublished
 /// imports — carry no id and are absent from the map, and a list made only of
-/// those never reaches the repository at all.
+/// those never reaches the repository at all. So is a sound whose count could
+/// not be looked up.
 ///
 /// Usage:
 /// ```dart
@@ -804,7 +806,8 @@ final class TrendingSoundUsageCountsProvider
   ///
   /// Sounds with no referenceable Nostr event — bundled assets, unpublished
   /// imports — carry no id and are absent from the map, and a list made only of
-  /// those never reaches the repository at all.
+  /// those never reaches the repository at all. So is a sound whose count could
+  /// not be looked up.
   ///
   /// Usage:
   /// ```dart
@@ -838,7 +841,69 @@ final class TrendingSoundUsageCountsProvider
 }
 
 String _$trendingSoundUsageCountsHash() =>
-    r'57a54f4480dd56b9256df8b3c4564569bad36bcb';
+    r'c5492e930811075fb6fa755317b14139e842cc43';
+
+/// The reuse counts [trendingSoundUsageCounts] has looked up, so a list that
+/// loads more asks only about its new rows. Each lookup scans a capped number
+/// of videos for the whole batch, so asking again about every row loaded
+/// would also spread that cap ever thinner.
+
+@ProviderFor(_soundUsageCountCache)
+final _soundUsageCountCacheProvider = _SoundUsageCountCacheProvider._();
+
+/// The reuse counts [trendingSoundUsageCounts] has looked up, so a list that
+/// loads more asks only about its new rows. Each lookup scans a capped number
+/// of videos for the whole batch, so asking again about every row loaded
+/// would also spread that cap ever thinner.
+
+final class _SoundUsageCountCacheProvider
+    extends
+        $FunctionalProvider<
+          _SoundUsageCountCache,
+          _SoundUsageCountCache,
+          _SoundUsageCountCache
+        >
+    with $Provider<_SoundUsageCountCache> {
+  /// The reuse counts [trendingSoundUsageCounts] has looked up, so a list that
+  /// loads more asks only about its new rows. Each lookup scans a capped number
+  /// of videos for the whole batch, so asking again about every row loaded
+  /// would also spread that cap ever thinner.
+  _SoundUsageCountCacheProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'_soundUsageCountCacheProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$_soundUsageCountCacheHash();
+
+  @$internal
+  @override
+  $ProviderElement<_SoundUsageCountCache> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  _SoundUsageCountCache create(Ref ref) {
+    return _soundUsageCountCache(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(_SoundUsageCountCache value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<_SoundUsageCountCache>(value),
+    );
+  }
+}
+
+String _$_soundUsageCountCacheHash() =>
+    r'47dc3de33708337d2aad049beee12c833d138479';
 
 /// The sounds people are picking up right now, the most trending first,
 /// with how many videos use each, loading further down the ranking page by
@@ -889,7 +954,7 @@ final class PopularSoundsProvider
   PopularSounds create() => PopularSounds();
 }
 
-String _$popularSoundsHash() => r'cf857f924554f88bcdf8210a52ae203ed169213f';
+String _$popularSoundsHash() => r'09b6fa7ab9ade92315821b460654f53e3a47bebf';
 
 /// The sounds people are picking up right now, the most trending first,
 /// with how many videos use each, loading further down the ranking page by
