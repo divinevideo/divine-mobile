@@ -558,11 +558,11 @@ Future<Map<String, SoundCover?>> _sourceVideoCovers(
   // rule — blocks, deletions, content filters — still applies.
   // Relays only: a cover needs nothing the Funnelcake fallback and stats add,
   // and with them 48 covers took 1.0-3.5 s against 0.65 s without.
-  final videos = await repository.getVideosByAddressableIds(
-    references.toList(),
-    includeFeedShape: false,
-    relaysOnly: true,
-  );
+  final (:videos, :complete) = await repository
+      .getVideosFromRelaysByAddressableIds(
+        references.toList(),
+        includeFeedShape: false,
+      );
   // Matched on author and d-tag, which name the video whichever kind the
   // reference spells; the parsed video reports only the vertical one.
   final coversByAuthorAndDTag = {
@@ -570,13 +570,18 @@ Future<Map<String, SoundCover?>> _sourceVideoCovers(
       if (video.addressableDTag case final dTag?)
         '${video.pubkey}:$dTag': SoundCover.fromSourceVideo(video),
   };
+  SoundCover? coverOf(AId? address) => address == null
+      ? null
+      : coversByAuthorAndDTag['${address.pubkey}:${address.dTag}'];
   return {
     for (final reference in references)
-      reference: switch (AId.fromString(reference)) {
-        final address? =>
-          coversByAuthorAndDTag['${address.pubkey}:${address.dTag}'],
-        null => null,
-      },
+      if (coverOf(AId.fromString(reference)) case final cover?)
+        reference: cover
+      // A video missing from a read some relay did not finish may only be
+      // late, and is asked about again; marked gone, its sound would be
+      // hidden from every list.
+      else if (complete)
+        reference: null,
   };
 }
 

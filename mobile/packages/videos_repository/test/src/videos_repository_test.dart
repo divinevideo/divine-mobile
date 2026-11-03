@@ -8607,39 +8607,6 @@ void main() {
           mockFunnelcakeClient = MockFunnelcakeApiClient();
         });
 
-        test('asks only the relays when relaysOnly is set', () async {
-          when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
-          final repositoryWithFunnelcake = VideosRepository(
-            nostrClient: mockNostrClient,
-            funnelcakeApiClient: mockFunnelcakeClient,
-          );
-          final found = _createVideoEvent(
-            id: 'dtag1',
-            pubkey: 'pubkey1',
-            videoUrl: 'https://example.com/video.mp4',
-            createdAt: 1704067200,
-          );
-          when(
-            () => mockNostrClient.queryEvents(any()),
-          ).thenAnswer((_) async => [found]);
-
-          final result = await repositoryWithFunnelcake
-              .getVideosByAddressableIds([
-                '${EventKind.videoVertical}:pubkey1:dtag1',
-                '${EventKind.videoVertical}:pubkey2:missing',
-              ], relaysOnly: true);
-
-          expect(result.map((video) => video.vineId), ['dtag1']);
-          verifyNever(
-            () => mockFunnelcakeClient.getVideosByAuthor(
-              pubkey: any(named: 'pubkey'),
-              limit: any(named: 'limit'),
-              before: any(named: 'before'),
-            ),
-          );
-          verifyNever(() => mockFunnelcakeClient.getBulkVideoStats(any()));
-        });
-
         test('does not call Funnelcake API when client is null', () async {
           // Repository without Funnelcake client
           when(
@@ -9067,6 +9034,77 @@ void main() {
             ),
           ).called(1);
         });
+      });
+    });
+
+    group('getVideosFromRelaysByAddressableIds', () {
+      const asked = '${EventKind.videoVertical}:pubkey1:dtag1';
+      const missing = '${EventKind.videoVertical}:pubkey2:missing';
+      final found = _createVideoEvent(
+        id: 'dtag1',
+        pubkey: 'pubkey1',
+        videoUrl: 'https://example.com/video.mp4',
+        createdAt: 1704067200,
+      );
+
+      void stubRead(QueryEnd endedBy) {
+        when(() => mockNostrClient.readEvents(any())).thenAnswer(
+          (_) async => QueryResult(events: [found], endedBy: endedBy),
+        );
+      }
+
+      test('asks only the relays', () async {
+        final funnelcake = MockFunnelcakeApiClient();
+        when(() => funnelcake.isAvailable).thenReturn(true);
+        stubRead(QueryEnd.complete);
+
+        final result = await VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: funnelcake,
+        ).getVideosFromRelaysByAddressableIds([asked, missing]);
+
+        expect(result.videos.map((video) => video.vineId), ['dtag1']);
+        expect(result.complete, isTrue);
+        final filter =
+            (verify(
+                      () => mockNostrClient.readEvents(captureAny()),
+                    ).captured.single
+                    as List<Filter>)
+                .single;
+        expect(filter.authors, ['pubkey1', 'pubkey2']);
+        expect(filter.d, ['dtag1', 'missing']);
+        verifyNever(
+          () => funnelcake.getVideosByAuthor(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        );
+        verifyNever(() => funnelcake.getBulkVideoStats(any()));
+      });
+
+      test('is not complete when a relay did not finish', () async {
+        stubRead(QueryEnd.settledEarly);
+
+        final result = await repository.getVideosFromRelaysByAddressableIds([
+          asked,
+          missing,
+        ]);
+
+        // What did arrive still counts.
+        expect(result.videos.map((video) => video.vineId), ['dtag1']);
+        expect(result.complete, isFalse);
+      });
+
+      test('is complete without asking when nothing is a video', () async {
+        final result = await repository.getVideosFromRelaysByAddressableIds([
+          'not-an-address',
+          '${EventKind.textNote}:pubkey1:dtag1',
+        ]);
+
+        expect(result.videos, isEmpty);
+        expect(result.complete, isTrue);
+        verifyNever(() => mockNostrClient.readEvents(any()));
       });
     });
 
