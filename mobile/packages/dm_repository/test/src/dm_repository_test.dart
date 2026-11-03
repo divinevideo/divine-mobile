@@ -3427,6 +3427,8 @@ void main() {
         late bool pageCapped;
         late List<nostr_filter.Filter> deletionPages;
         late List<Event> Function(nostr_filter.Filter filter) answerDeletions;
+        late QueryEnd deletionsEnd;
+        late bool deletionsCapped;
 
         const window = 1690000000 - 2 * 86400;
 
@@ -3437,6 +3439,8 @@ void main() {
           pages = [];
           deletionPages = [];
           answerDeletions = (_) => const <Event>[];
+          deletionsEnd = QueryEnd.complete;
+          deletionsCapped = false;
           poolRelays = ['wss://a.example', 'wss://b.example'];
           answerPage = (_) =>
               (events: <Event>[], timedOut: true, noRelays: false);
@@ -3495,7 +3499,8 @@ void main() {
               deletionPages.add(filter);
               return QueryResult(
                 events: answerDeletions(filter),
-                endedBy: QueryEnd.complete,
+                endedBy: deletionsEnd,
+                possiblyCapped: deletionsCapped,
               );
             }
             pages.add((
@@ -3721,6 +3726,71 @@ void main() {
                 ),
               ],
               reason: 'the walk moved past DMs the relay may still hold',
+            );
+            await repository.stopListening();
+          });
+
+          test('keeps the debt when the deletions read may have more and sent '
+              'nothing beside DMs', () async {
+            // The DMs alone would reach below the floor and clear the debt.
+            answerPage = (_) => (
+              events: [createGiftWrapEvent(createdAt: window - 5)],
+              timedOut: false,
+              noRelays: false,
+            );
+            deletionsCapped = true;
+            syncState.debt.add(
+              const DmCatchUpDebt(
+                relay: 'wss://a.example',
+                floor: window,
+                until: 1700000100,
+              ),
+            );
+            final repository = await start();
+
+            expect(deletionPages, hasLength(1));
+            expect(
+              syncState.debt,
+              const [
+                DmCatchUpDebt(
+                  relay: 'wss://a.example',
+                  floor: window,
+                  until: 1700000100,
+                ),
+              ],
+              reason: 'the walk moved past deletions the relay may still hold',
+            );
+            await repository.stopListening();
+          });
+
+          test('keeps the debt when the deletions read does not '
+              'settle', () async {
+            answerPage = (_) => (
+              events: [createGiftWrapEvent(createdAt: window - 5)],
+              timedOut: false,
+              noRelays: false,
+            );
+            deletionsEnd = QueryEnd.deadline;
+            syncState.debt.add(
+              const DmCatchUpDebt(
+                relay: 'wss://a.example',
+                floor: window,
+                until: 1700000100,
+              ),
+            );
+            final repository = await start();
+
+            expect(deletionPages, hasLength(1));
+            expect(
+              syncState.debt,
+              const [
+                DmCatchUpDebt(
+                  relay: 'wss://a.example',
+                  floor: window,
+                  until: 1700000100,
+                ),
+              ],
+              reason: 'an unsettled deletions read cleared the debt',
             );
             await repository.stopListening();
           });
