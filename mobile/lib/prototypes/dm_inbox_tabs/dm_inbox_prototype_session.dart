@@ -68,11 +68,11 @@ class DmPrototypeSession {
     Set<String>? blocked,
   }) {
     return DmPrototypeSession(
-      revealed: revealed ?? this.revealed,
-      replied: replied ?? this.replied,
-      notSpam: notSpam ?? this.notSpam,
-      removed: removed ?? this.removed,
-      blocked: blocked ?? this.blocked,
+      revealed: Set.unmodifiable(revealed ?? this.revealed),
+      replied: Set.unmodifiable(replied ?? this.replied),
+      notSpam: Set.unmodifiable(notSpam ?? this.notSpam),
+      removed: Set.unmodifiable(removed ?? this.removed),
+      blocked: Set.unmodifiable(blocked ?? this.blocked),
     );
   }
 }

@@ -126,6 +126,14 @@ void main() {
     });
 
     group(DmPrototypeSession, () {
+      test('hands out sets a caller cannot change behind its back', () {
+        final session = const DmPrototypeSession().reveal('a').block('b');
+
+        expect(() => session.revealed.add('c'), throwsUnsupportedError);
+        expect(() => session.blocked.add('c'), throwsUnsupportedError);
+        expect(session.revealed, equals({'a'}));
+      });
+
       test('a sent reply moves a request into inbox', () {
         final priya = byTitle('Priya Raman');
         expect(classify(const DmPrototypeSession()).requests, contains(priya));
