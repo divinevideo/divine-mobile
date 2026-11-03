@@ -3775,17 +3775,32 @@ void main() {
           ('kind 16 generic repost', EventKind.genericRepost),
         ]) {
           test('drops a like on a $label', () async {
+            final id = 'like_on_repost_$referencedEventKind';
             stubNotifications([
               makeNotification(
+                id: id,
                 referencedEventId: 'my_repost',
                 referencedEventKind: referencedEventKind,
               ),
             ]);
-            stubProfiles({});
 
             final page = await repository.getNotifications();
 
             expect(page.items, isEmpty);
+            expect(
+              LogCaptureService().getRecentLogs().where(
+                (entry) =>
+                    entry.name == 'NotificationRepository' &&
+                    entry.message.startsWith(
+                      'Dropping notification on a repost event',
+                    ) &&
+                    entry.message.contains('notificationId=$id ') &&
+                    entry.message.contains(
+                      'referencedEventKind=$referencedEventKind ',
+                    ),
+              ),
+              hasLength(1),
+            );
           });
         }
 

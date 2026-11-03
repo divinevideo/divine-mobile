@@ -2247,7 +2247,14 @@ class NotificationRepository {
     List<RelayNotification> unfiltered, {
     NotificationKind? filter,
   }) async {
-    final raw = unfiltered.where((n) => !_targetsRepostEvent(n)).toList();
+    final raw = <RelayNotification>[];
+    for (final n in unfiltered) {
+      if (_targetsRepostEvent(n)) {
+        _logDroppedRepostActivity(n);
+      } else {
+        raw.add(n);
+      }
+    }
     if (raw.isEmpty) return [];
 
     final pubkeys = raw.map((n) => n.sourcePubkey).toSet().toList();
@@ -3096,6 +3103,20 @@ class NotificationRepository {
       return true;
     }
     return false;
+  }
+
+  void _logDroppedRepostActivity(RelayNotification n) {
+    Log.info(
+      'Dropping notification on a repost event: '
+      'notificationId=${n.dedupeKey} '
+      'notificationType=${n.notificationType} '
+      'sourcePubkey=${pubkeyForLogs(n.sourcePubkey)} '
+      'referencedEventId=${n.referencedEventId} '
+      'referencedEventKind=${n.referencedEventKind} '
+      'currentUserPubkey=${pubkeyForLogs(_userPubkey)}',
+      name: 'NotificationRepository',
+      category: LogCategory.api,
+    );
   }
 
   void _logReclassifiedOwnerMismatch({
