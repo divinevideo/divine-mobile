@@ -134,10 +134,7 @@ class ActorNotification extends NotificationItem {
       videoAddressableId: videoAddressableId ?? this.videoAddressableId,
       hasCommentTarget: hasCommentTarget ?? this.hasCommentTarget,
       chatTarget: chatTarget ?? this.chatTarget,
-      // A tagged-video flag only means something on a like.
-      isTaggedVideo:
-          (type ?? this.type) == NotificationKind.like &&
-          (isTaggedVideo ?? this.isTaggedVideo),
+      isTaggedVideo: isTaggedVideo ?? this.isTaggedVideo,
     );
   }
 
