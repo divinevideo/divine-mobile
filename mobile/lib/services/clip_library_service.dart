@@ -2,6 +2,7 @@
 // ABOUTME: Saves, trashes and organizes library clips in Drift
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:db_client/db_client.dart';
 import 'package:models/models.dart' show NativeProofData;
@@ -972,7 +973,8 @@ class ClipLibraryService {
   }
 
   /// Recovers missing thumbnails and ghost frames for clips that were
-  /// persisted before their assets had been generated.
+  /// persisted before their assets had been generated. A clip whose video
+  /// file no longer exists is skipped.
   ///
   /// Returns the updated list if any clips were recovered, or the original
   /// list unchanged.
@@ -999,6 +1001,17 @@ class ClipLibraryService {
         // their thumbnail is the first captured frame.
         if (clip.isStopMotion) continue;
         final videoPath = await clip.video!.safeFilePath();
+        // Nothing to extract from, and every attempt would report a failed
+        // extraction to Crashlytics again on each library load.
+        if (!File(videoPath).existsSync()) {
+          Log.debug(
+            '📚 Skipping asset recovery for clip ${clip.id}: video file is '
+            'missing',
+            name: 'ClipLibraryService',
+            category: LogCategory.video,
+          );
+          continue;
+        }
         var updatedClip = clip;
 
         if (clip.thumbnailPath == null) {

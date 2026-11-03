@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' show Color;
 
 import 'package:db_client/db_client.dart';
@@ -24,6 +25,33 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 import '../mocks/mock_path_provider_platform.dart';
+
+/// Answers every frame request with a one-byte frame and records the video
+/// each request read.
+class _RecordingFrameExtractor extends ProVideoEditor {
+  final videoPaths = <String?>[];
+
+  @override
+  Stream<dynamic> initializeStream() => const Stream.empty();
+
+  @override
+  Future<List<Uint8List>> getThumbnails(
+    ThumbnailConfigs value, {
+    NativeLogLevel? nativeLogLevel,
+  }) async {
+    videoPaths.add(value.video.file?.path);
+    return [Uint8List(1)];
+  }
+
+  @override
+  Future<Uint8List?> getSingleThumbnail(
+    SingleThumbnailConfigs value, {
+    NativeLogLevel? nativeLogLevel,
+  }) async {
+    videoPaths.add(value.video.file?.path);
+    return Uint8List(1);
+  }
+}
 
 void main() {
   group('ClipLibraryService', () {
@@ -792,6 +820,59 @@ void main() {
           await database.clipsDao.getClipsByDraftId('draft_1782000000000'),
           hasLength(1),
         );
+      });
+    });
+
+    group('recoverMissingAssets', () {
+      late Directory documentsDir;
+      late PathProviderPlatform originalPathProvider;
+      late ProVideoEditor originalVideoEditor;
+      late _RecordingFrameExtractor extractor;
+
+      setUp(() {
+        documentsDir = Directory.systemTemp.createTempSync('clip_recovery_');
+        originalPathProvider = PathProviderPlatform.instance;
+        PathProviderPlatform.instance = MockPathProviderPlatform()
+          ..setApplicationDocumentsPath(documentsDir.path);
+        originalVideoEditor = ProVideoEditor.instance;
+        extractor = _RecordingFrameExtractor();
+        ProVideoEditor.instance = extractor;
+      });
+
+      tearDown(() {
+        ProVideoEditor.instance = originalVideoEditor;
+        PathProviderPlatform.instance = originalPathProvider;
+        if (documentsDir.existsSync()) {
+          documentsDir.deleteSync(recursive: true);
+        }
+      });
+
+      DivineVideoClip clipWithoutAssets(String id) => DivineVideoClip(
+        id: id,
+        video: EditorVideo.file(p.join(documentsDir.path, 'VID_$id.mp4')),
+        duration: const Duration(seconds: 2),
+        recordedAt: DateTime(2026, 6, 14),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+      );
+
+      test('skips a clip whose video file is gone', () async {
+        final present = clipWithoutAssets('present');
+        File(present.video!.file!.path).writeAsBytesSync(const [0, 1, 2, 3]);
+        await service.saveClip(present);
+        await service.saveClip(clipWithoutAssets('gone'));
+
+        final clips = await service.recoverMissingAssets(
+          await service.getAllClips(),
+        );
+
+        expect(extractor.videoPaths.toSet(), {present.video!.file!.path});
+        final gone = clips.singleWhere((clip) => clip.id == 'gone');
+        expect(gone.thumbnailPath, isNull);
+        expect(gone.ghostFramePath, isNull);
+        final recovered = clips.singleWhere((clip) => clip.id == 'present');
+        expect(recovered.thumbnailPath, isNotNull);
+        expect(recovered.ghostFramePath, isNotNull);
       });
     });
 
