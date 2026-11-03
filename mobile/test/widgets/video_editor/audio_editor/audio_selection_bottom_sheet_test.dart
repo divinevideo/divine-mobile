@@ -1946,7 +1946,14 @@ void main() {
         await tester.tap(find.text('Slow Load'));
         await tester.pump();
 
-        expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+        expect(
+          tester
+              .widget<AudioEditorSelectionOverlay>(
+                find.byType(AudioEditorSelectionOverlay),
+              )
+              .isLoading,
+          isTrue,
+        );
         verifyNever(() => audioService.loadAudio(sound.url!));
 
         stopCompleter.complete();

@@ -7,11 +7,11 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/utils/video_editor_utils.dart';
 import 'package:openvine/widgets/audio/sound_cover_image.dart';
-import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:sound_service/sound_service.dart';
 
 /// The picked sound as a small player, shaped like the picker's rows.
@@ -33,6 +33,8 @@ class AudioEditorSelectionOverlay extends StatelessWidget {
 
   /// The cover the sound's row shows, or `null` for its colour tile.
   final SoundCover? cover;
+
+  /// Whether the sound is still loading, or its reuse is still being checked.
   final bool isLoading;
 
   static const _coverSize = 48.0;
@@ -142,29 +144,62 @@ class _PlayPauseButton extends StatelessWidget {
   final VoidCallback onPressed;
   final bool isLoading;
 
-  static const double _size = 40;
+  /// How long a load runs before its ring starts to show, so a sound that
+  /// loads in a moment never flashes it.
+  static const _ringDelay = Duration(milliseconds: 200);
+  static const _ringFade = Duration(milliseconds: 200);
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: VineTheme.defaultAnimationDuration,
-      child: isLoading
-          ? const BrandedLoadingIndicator(size: _size)
-          : StreamBuilder<bool>(
-              stream: audioService.playingStream,
-              initialData: audioService.isPlaying,
-              builder: (context, snapshot) {
-                final isPlaying = snapshot.data ?? false;
-                return DivineIconButton(
-                  type: .ghostSecondary,
-                  icon: isPlaying ? .pauseFill : .playFill,
-                  semanticLabel: isPlaying
-                      ? context.l10n.videoEditorAudioPausePreviewSemanticLabel
-                      : context.l10n.videoEditorAudioPlayPreviewSemanticLabel,
-                  onPressed: onPressed,
-                );
-              },
+    final reduceMotion = context.reduceMotion;
+    return StreamBuilder<bool>(
+      stream: audioService.playingStream,
+      initialData: audioService.isPlaying,
+      builder: (context, snapshot) {
+        // Pause from the tap on: the sound is about to play, so the icon does
+        // not flip once its file has loaded.
+        final showsPause = isLoading || (snapshot.data ?? false);
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            IgnorePointer(
+              ignoring: isLoading,
+              child: DivineIconButton(
+                type: .ghostSecondary,
+                icon: showsPause ? .pauseFill : .playFill,
+                semanticLabel: showsPause
+                    ? context.l10n.videoEditorAudioPausePreviewSemanticLabel
+                    : context.l10n.videoEditorAudioPlayPreviewSemanticLabel,
+                onPressed: onPressed,
+              ),
             ),
+            IgnorePointer(
+              child: AnimatedSwitcher(
+                duration: reduceMotion ? Duration.zero : _ringDelay + _ringFade,
+                reverseDuration: reduceMotion ? Duration.zero : _ringFade,
+                switchInCurve: Interval(
+                  _ringDelay.inMilliseconds /
+                      (_ringDelay + _ringFade).inMilliseconds,
+                  1,
+                  curve: Curves.easeOut,
+                ),
+                switchOutCurve: Curves.easeIn,
+                child: isLoading
+                    ? SizedBox.square(
+                        key: const ValueKey('loading'),
+                        dimension: DivineIcon.scaleSize(context, 40),
+                        child: DivineCircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: context.vineColors.accentPositive,
+                          semanticsLabel: context.l10n.commonLoading,
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
