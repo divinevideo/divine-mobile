@@ -310,7 +310,7 @@ class _TestVisitor extends RecursiveAstVisitor<void> {
     return null;
   }
 
-  String _describe(Expression first) {
+  String _describe(Argument first) {
     final text = first.toSource().replaceAll(RegExp(r'\s+'), ' ');
     return text.length <= 70 ? text : '${text.substring(0, 67)}...';
   }
@@ -405,7 +405,7 @@ class _BodyScan extends RecursiveAstVisitor<void> {
     }
     if (node.realTarget == null && _assertions.contains(node.methodName.name)) {
       final positional = node.argumentList.arguments
-          .where((argument) => argument is! NamedExpression)
+          .whereType<Expression>()
           .toList();
       if (positional.length < 2) _otherAssertionCount++;
       if (positional.length >= 2) {
@@ -533,7 +533,7 @@ Expression _unwrapMatcher(Expression matcher) {
       stripped.realTarget == null &&
       _identityMatchers.contains(stripped.methodName.name)) {
     final positional = stripped.argumentList.arguments
-        .where((argument) => argument is! NamedExpression)
+        .whereType<Expression>()
         .toList();
     if (positional.length == 1) return _strip(positional.single);
   }
@@ -615,7 +615,7 @@ bool _cannotBeAbsent(Expression read) {
   }
   if (name != 'read' && name != 'watch') return false;
   final positional = read.argumentList.arguments
-      .where((argument) => argument is! NamedExpression)
+      .whereType<Expression>()
       .toList();
   if (positional.isEmpty) return read.typeArguments != null;
   return positional.length == 1 &&

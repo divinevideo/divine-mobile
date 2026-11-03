@@ -43,7 +43,9 @@ class _ListenerVisitor extends RecursiveAstVisitor<void> {
     final argument = _registeredCallback(node);
     if (argument != null) {
       final callback = _unwrapCallback(
-        argument is NamedExpression ? argument.expression : argument,
+        argument is NamedArgument
+            ? argument.argumentExpression
+            : argument as Expression,
       );
       final finder = _InvalidateSelfFinder(_functions);
       if (callback is FunctionExpression) {
@@ -79,7 +81,7 @@ class _ListenerVisitor extends RecursiveAstVisitor<void> {
 /// Most call `Listenable.addListener` directly. Providers that also need
 /// automatic removal use the shared `listenForProviderLifetime` helper, whose
 /// callback is its third argument.
-Expression? _registeredCallback(MethodInvocation node) {
+Argument? _registeredCallback(MethodInvocation node) {
   final arguments = node.argumentList.arguments;
   return switch (node.methodName.name) {
     'addListener' when arguments.isNotEmpty => arguments.first,
@@ -411,12 +413,7 @@ FormalParameterList? _parametersOf(AstNode node) => switch (node) {
 
 bool _parameterBinds(FormalParameterList parameters, String name) {
   for (final parameter in parameters.parameters) {
-    final normal = parameter is DefaultFormalParameter
-        ? parameter.parameter
-        : parameter;
-    if (normal is NormalFormalParameter && normal.name?.lexeme == name) {
-      return true;
-    }
+    if (parameter.name?.lexeme == name) return true;
   }
   return false;
 }

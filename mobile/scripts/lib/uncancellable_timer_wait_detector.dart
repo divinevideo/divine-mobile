@@ -187,9 +187,9 @@ class _Visitor extends RecursiveAstVisitor<void> {
   /// Whether any argument settles a `Completer`, as a tear-off or in a closure.
   bool _completesACompleter(ArgumentList arguments) {
     for (final argument in arguments.arguments) {
-      final expression = argument is NamedExpression
-          ? argument.expression
-          : argument;
+      final expression = argument is NamedArgument
+          ? argument.argumentExpression
+          : argument as Expression;
 
       // Tear-off: `completer.complete`
       if (expression is PrefixedIdentifier &&

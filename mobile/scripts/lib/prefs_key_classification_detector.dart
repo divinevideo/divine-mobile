@@ -145,8 +145,10 @@ class KeyUsageCollector extends RecursiveAstVisitor<void> {
     if (!_looksLikePrefsReceiver(node.target)) return;
     final arguments = node.argumentList.arguments;
     if (arguments.isEmpty) return;
+    final first = arguments.first;
+    if (first is! Expression) return;
     final value = resolveKey(
-      arguments.first,
+      first,
       constants,
       enclosingClass: _enclosing,
     );
