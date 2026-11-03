@@ -2,6 +2,7 @@
 // ABOUTME: request content stays concealed until the user opens it, and that
 // ABOUTME: sender context and request actions work before it is opened.
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -334,6 +335,50 @@ void main() {
         await openTab(tester, 'Requests');
 
         expect(find.text('crypto_signals_daily'), findsOneWidget);
+        semantics.dispose();
+      });
+
+      testWidgets("shows the user's own not-spam call as a note, not a risk", (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await pumpScreen(tester);
+        await openTab(tester, 'Likely spam');
+        await tapLabel(
+          tester,
+          'Not spam: move crypto_signals_daily to Requests',
+        );
+        await openTab(tester, 'Requests');
+        final row = rowOf('crypto_signals_daily');
+
+        await tester.tap(
+          find.descendant(of: row, matching: find.text('Why is this here?')),
+        );
+        await tester.pumpAndSettle();
+
+        DivineIconName iconBeside(String label) => tester
+            .widget<DivineIcon>(
+              find.descendant(
+                of: find
+                    .ancestor(
+                      of: find.text(label),
+                      matching: find.byType(Row),
+                    )
+                    .first,
+                matching: find.byType(DivineIcon),
+              ),
+            )
+            .icon;
+
+        expect(
+          iconBeside('You marked this as not spam'),
+          equals(DivineIconName.info),
+        );
+        expect(
+          iconBeside('Reported by other people'),
+          equals(DivineIconName.warningCircle),
+          reason: 'a real risk keeps the warning style',
+        );
         semantics.dispose();
       });
 

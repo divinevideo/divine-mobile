@@ -1088,19 +1088,17 @@ class _ReasonRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.vineColors;
-    final tint = reason.isMitigating
-        ? colors.accentPositive
-        : colors.onErrorContainer;
+    // A 0-point reason, such as the user's own "not spam", is a note rather
+    // than a risk, so it must not wear the warning style.
+    final (icon, tint) = switch (reason.points) {
+      < 0 => (DivineIconName.checkCircle, colors.accentPositive),
+      0 => (DivineIconName.info, colors.onSurfaceMuted),
+      _ => (DivineIconName.warningCircle, colors.onErrorContainer),
+    };
     return Row(
       spacing: 8,
       children: [
-        DivineIcon(
-          icon: reason.isMitigating
-              ? DivineIconName.checkCircle
-              : DivineIconName.warningCircle,
-          color: tint,
-          size: 13,
-        ),
+        DivineIcon(icon: icon, color: tint, size: 13),
         Expanded(
           child: Text(
             reason.label,
