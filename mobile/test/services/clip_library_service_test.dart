@@ -906,6 +906,21 @@ void main() {
           );
         },
       );
+
+      test(
+        'returns the same list when every incomplete clip is skipped',
+        () async {
+          await service.saveClip(clipWithoutAssets('gone'));
+          final clips = await service.getAllClips();
+          expect(clips, hasLength(1));
+
+          final result = await service.recoverMissingAssets(clips);
+
+          // ClipsLibraryBloc refreshes the grid only when it gets a new list
+          // back, so a load that recovers nothing must return the same one.
+          expect(result, same(clips));
+        },
+      );
     });
 
     group('getAllClips', () {
