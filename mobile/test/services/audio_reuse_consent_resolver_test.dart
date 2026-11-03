@@ -118,6 +118,31 @@ void main() {
       },
     );
 
+    test('checks a source video the caller already read without looking it '
+        'up again, and still asks for the policy', () async {
+      expect(
+        await resolver.verify(
+          _sound(allowsReuse: true, sha256: _audioSha256),
+          knownSource: _video(),
+        ),
+        isTrue,
+      );
+      verifyNever(() => videosRepository.getVideosByAddressableIds(any()));
+      verify(() => videosRepository.refreshAudioReusePolicy(any())).called(1);
+    });
+
+    test('refuses on the policy for a source video the caller read', () async {
+      stubPolicy(allowAudioReuse: false);
+
+      expect(
+        await resolver.verify(
+          _sound(allowsReuse: true, sha256: _audioSha256),
+          knownSource: _video(),
+        ),
+        isFalse,
+      );
+    });
+
     test('suppression overrides explicit true', () async {
       stubSource([_video()]);
       when(

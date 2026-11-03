@@ -306,11 +306,12 @@ class _AudioSelectionBottomSheetState
   }
 
   /// Whether [sound] was taken from a video [lookup] looked for and did not
-  /// find: deleted, or hidden from this viewer.
+  /// find, deleted or hidden from this viewer, or whose creator lets no one
+  /// else reuse its sound.
   ///
-  /// Such a sound can never pass the reuse check, so its row would only
-  /// refuse a tap. A sound [lookup] has not reached yet is not gone.
-  bool _sourceIsGone(
+  /// Such a sound would not pass the reuse check, so its row would only
+  /// refuse a tap. A sound [lookup] has not reached yet is not left out.
+  bool _cannotBeReused(
     AudioEvent sound,
     AsyncValue<Map<String, SoundCover?>>? lookup,
   ) {
@@ -421,10 +422,10 @@ class _AudioSelectionBottomSheetState
         !sound.isExternalProviderSound;
     var preview = sound;
     if (needsConsent) {
-      // The check asks the network about the source video and takes up to a
-      // second, so the row is picked now, with the overlay loading (and Done
-      // held) until it answers. The file loads meanwhile: both wait on the
-      // network, and side by side they take only as long as the slower one.
+      // A sound the check refuses must not play, so the preview waits for it,
+      // with the row picked and the overlay loading. The file loads
+      // meanwhile, and a sound picked from a list hands the check the source
+      // video its cover came from, so both take about as long.
       setState(() {
         _selectedItem = sound;
         _isLoadingAudio = true;
@@ -672,6 +673,15 @@ class _AudioSelectionBottomSheetState
         ? ref.watch(trendingSoundUsageCountsProvider).value
         : null;
     final savedSoundsState = context.watch<SavedSoundsBloc>().state;
+    final savedSourcesLookup = loads(.mySounds)
+        ? ref.watch(
+            savedSoundSourcesProvider(
+              SoundSourceReferences(
+                savedSoundsState.sounds.map((sound) => sound.audio),
+              ),
+            ),
+          )
+        : null;
     // Searched as whole records, not as their bare audio: the label and
     // hashtags the user filed a sound under live on the record, and they are
     // the words they will reach for here.
@@ -764,7 +774,7 @@ class _AudioSelectionBottomSheetState
       for (final page in forYouAsync.value?.pages ?? const <List<AudioEvent>>[])
         _filterAudioEvents(
           page,
-        ).where((sound) => !_sourceIsGone(sound, forYouLookup)).toList(),
+        ).where((sound) => !_cannotBeReused(sound, forYouLookup)).toList(),
     ];
     // Its own Material, so the rows' ink shows over the sheet's background.
     final lists = Material(
@@ -801,7 +811,7 @@ class _AudioSelectionBottomSheetState
               scrollController: listScrollController,
               sounds: _soundsBySearchFit(
                 _filterAudioEvents(popular.sounds)
-                    .where((sound) => !_sourceIsGone(sound, popularLookup))
+                    .where((sound) => !_cannotBeReused(sound, popularLookup))
                     .toList(),
               ),
               selectedSound: _selectedItem,
@@ -830,7 +840,7 @@ class _AudioSelectionBottomSheetState
                 sounds: _soundsBySearchFit(
                   _communitySounds(nostrSounds, searchResults)
                       .where(
-                        (sound) => !_sourceIsGone(
+                        (sound) => !_cannotBeReused(
                           sound,
                           newest.contains(sound.id)
                               ? trendingLookup
@@ -867,6 +877,7 @@ class _AudioSelectionBottomSheetState
             leading: _ImportAudioAction(onTap: _importAudio),
             sounds: matchingSavedSounds
                 .map((sound) => sound.audio)
+                .where((sound) => !_cannotBeReused(sound, savedSourcesLookup))
                 .toList(growable: false),
             displayTitles: {
               for (final sound in matchingSavedSounds)

@@ -4,7 +4,8 @@
 import 'dart:async';
 import 'dart:math' show min;
 
-import 'package:models/models.dart' show AudioEvent, searchTermsOf;
+import 'package:meta/meta.dart';
+import 'package:models/models.dart' show AudioEvent, VideoEvent, searchTermsOf;
 import 'package:nostr_sdk/nostr_sdk.dart' show AId;
 import 'package:openvine/config/official_accounts.dart'
     show kDivineSoundPublisherPubkeys;
@@ -614,35 +615,87 @@ Future<Map<String, SoundCover?>> _coversFor(
   return ref.watch(_soundCoverCacheProvider).coversFor(references);
 }
 
+/// What My sounds' saved sounds' source videos left: their covers, keyed and
+/// marked like [trendingSoundCovers], so the tab can leave out the sounds that
+/// can no longer be reused.
+@riverpod
+Future<Map<String, SoundCover?>> savedSoundSources(
+  Ref ref,
+  SoundSourceReferences sources,
+) {
+  if (sources.references.isEmpty) return Future.value(const {});
+  return ref.watch(_soundCoverCacheProvider).coversFor(sources.references);
+}
+
+/// The source videos of some sounds, as a provider key equal to another
+/// naming the same videos.
+@immutable
+class SoundSourceReferences {
+  SoundSourceReferences(Iterable<AudioEvent> sounds)
+    : references = {for (final sound in sounds) ?sound.sourceVideoReference};
+
+  /// The `kind:pubkey:d-tag` address of each source video.
+  final Set<String> references;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SoundSourceReferences &&
+      other.references.length == references.length &&
+      other.references.containsAll(references);
+
+  @override
+  int get hashCode => Object.hashAllUnordered(references);
+}
+
 /// The covers the picker's lists have looked up, shared by them, so a list
 /// that loads more asks only about its new rows.
 ///
 /// Made anew with the videos repository, whose viewer decides which videos
-/// are found.
+/// are found, and for each account, whose own sounds it may always reuse.
 @riverpod
 _SoundCoverCache _soundCoverCache(Ref ref) {
   _keepForReopen(ref);
-  return _SoundCoverCache(ref.watch(videosRepositoryProvider));
+  ref.watch(currentAuthStateProvider);
+  return _SoundCoverCache(
+    ref.watch(videosRepositoryProvider),
+    viewer: ref.watch(authServiceProvider).currentPublicKeyHex,
+  );
 }
 
 class _SoundCoverCache {
-  _SoundCoverCache(this._videos);
+  _SoundCoverCache(this._videos, {required String? viewer}) : _viewer = viewer;
 
   final VideosRepository _videos;
+  final String? _viewer;
   final _covers = <String, SoundCover?>{};
+  final _sources = <String, VideoEvent>{};
+
+  /// Videos whose creator lets no one else reuse their sound.
+  final _refused = <String>{};
+
+  /// The source video found for [reference], for the reuse check of a sound
+  /// picked from a list, which then need not look it up again.
+  VideoEvent? sourceOf(String reference) => _sources[reference];
 
   /// Covers for [references], keyed like [trendingSoundCovers]. A reference
   /// looked up before keeps its answer, and the rest are looked up now in
   /// one batch. When that fails they are left out, unanswered, so their rows
   /// show no cover and the next lookup asks again.
+  ///
+  /// A video whose creator lets no one else reuse its sound is marked like a
+  /// gone one, so its row is left out rather than refusing a tap.
   Future<Map<String, SoundCover?>> coversFor(Set<String> references) async {
     final unknown = {
       for (final reference in references)
         if (!_covers.containsKey(reference)) reference,
     };
     if (unknown.isNotEmpty) {
+      // Asked alongside the covers, and about as quick, so rows wait no longer.
+      final refusals = _refusedAmong(unknown);
       try {
-        _covers.addAll(await _sourceVideoCovers(_videos, unknown));
+        final (:covers, :sources) = await _sourceVideoCovers(_videos, unknown);
+        _covers.addAll(covers);
+        _sources.addAll(sources);
       } on Object catch (e) {
         Log.warning(
           'Could not look up sound covers: $e',
@@ -650,15 +703,47 @@ class _SoundCoverCache {
           category: LogCategory.api,
         );
       }
+      _refused.addAll(await refusals);
     }
     return {
       for (final reference in references)
-        if (_covers.containsKey(reference)) reference: _covers[reference],
+        if (_covers.containsKey(reference))
+          reference: _refused.contains(reference) ? null : _covers[reference],
     };
+  }
+
+  /// The videos among [references] whose creator lets no one else reuse
+  /// their sound, leaving out the viewer's own, which they may always reuse.
+  ///
+  /// Nothing when the server cannot say: the lists only show less, and the
+  /// reuse check on a tap still asks.
+  Future<Set<String>> _refusedAmong(Set<String> references) async {
+    final othersVideos = [
+      for (final reference in references)
+        if (AId.fromString(reference)?.pubkey != _viewer) reference,
+    ];
+    if (othersVideos.isEmpty) return const {};
+    try {
+      final policies = await _videos.refreshAudioReusePolicies(othersVideos);
+      return {
+        for (final MapEntry(key: reference, value: policy) in policies.entries)
+          if (!policy.allowAudioReuse) reference,
+      };
+    } on Object catch (e) {
+      Log.warning(
+        'Could not look up whether sounds may be reused: $e',
+        name: 'SoundsProviders',
+        category: LogCategory.api,
+      );
+      return const {};
+    }
   }
 }
 
-Future<Map<String, SoundCover?>> _sourceVideoCovers(
+/// The covers for [references], keyed and marked like [trendingSoundCovers],
+/// and the source videos found for them.
+Future<({Map<String, SoundCover?> covers, Map<String, VideoEvent> sources})>
+_sourceVideoCovers(
   VideosRepository repository,
   Set<String> references,
 ) async {
@@ -674,24 +759,34 @@ Future<Map<String, SoundCover?>> _sourceVideoCovers(
       );
   // Matched on author and d-tag, which name the video whichever kind the
   // reference spells; the parsed video reports only the vertical one.
-  final coversByAuthorAndDTag = {
+  final videosByAuthorAndDTag = {
     for (final video in videos)
       if (video.addressableDTag case final dTag?)
-        '${video.pubkey}:$dTag': SoundCover.fromSourceVideo(video),
+        '${video.pubkey}:$dTag': video,
   };
-  SoundCover? coverOf(AId? address) => address == null
-      ? null
-      : coversByAuthorAndDTag['${address.pubkey}:${address.dTag}'];
-  return {
-    for (final reference in references)
-      if (coverOf(AId.fromString(reference)) case final cover?)
-        reference: cover
-      // A video missing from a read some relay did not finish may only be
-      // late, and is asked about again; marked gone, its sound would be
-      // hidden from every list.
-      else if (complete)
-        reference: null,
+  VideoEvent? sourceOf(String reference) {
+    final address = AId.fromString(reference);
+    return address == null
+        ? null
+        : videosByAuthorAndDTag['${address.pubkey}:${address.dTag}'];
+  }
+
+  final sources = {
+    for (final reference in references) reference: ?sourceOf(reference),
   };
+  return (
+    covers: {
+      for (final reference in references)
+        if (sources[reference] case final video?)
+          reference: SoundCover.fromSourceVideo(video)
+        // A video missing from a read some relay did not finish may only be
+        // late, and is asked about again; marked gone, its sound would be
+        // hidden from every list.
+        else if (complete)
+          reference: null,
+    },
+    sources: sources,
+  );
 }
 
 /// Viewer-independent public reuse terms for sounds.
@@ -714,9 +809,17 @@ bool? audioReuseTermsFromEvent(AudioEvent sound) {
 Future<bool> audioReuseTerms(Ref ref, AudioEvent sound) {
   final knownTerms = audioReuseTermsFromEvent(sound);
   if (knownTerms == false) return Future.value(false);
+  final reference = sound.sourceVideoReference;
+  // Read, not watched: a sound picked from a list finds its source video
+  // there, which saves the check a lookup of about half a second. The cover
+  // lookup is no reason to check again. Not created here either, so a check
+  // outside the picker does not leave one waiting to expire.
+  final knownSource = reference != null && ref.exists(_soundCoverCacheProvider)
+      ? ref.read(_soundCoverCacheProvider).sourceOf(reference)
+      : null;
   return AudioReuseConsentResolver(
     videosRepository: ref.watch(videosRepositoryProvider),
-  ).verify(sound);
+  ).verify(sound, knownSource: knownSource);
 }
 
 /// Fail-closed reuse consent for explicit and legacy audio events.
