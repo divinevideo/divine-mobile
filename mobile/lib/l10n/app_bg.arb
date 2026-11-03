@@ -2642,6 +2642,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} хареса видео, в което си отбелязан(а)",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} харесаха коментара ти",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",

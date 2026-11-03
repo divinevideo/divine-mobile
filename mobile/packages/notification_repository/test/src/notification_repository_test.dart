@@ -10,6 +10,7 @@ import 'package:drift/native.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:notification_repository/notification_repository.dart';
@@ -199,6 +200,7 @@ void main() {
     DateTime? createdAt,
     bool read = false,
     String? referencedEventId = 'video_default',
+    int? referencedEventKind,
     String? referencedDTag,
     String? rootEventId,
     int? rootEventKind,
@@ -223,6 +225,7 @@ void main() {
       createdAt: createdAt ?? DateTime(2025),
       read: read,
       referencedEventId: referencedEventId,
+      referencedEventKind: referencedEventKind,
       referencedDTag: referencedDTag,
       rootEventId: rootEventId,
       rootEventKind: rootEventKind,
@@ -2941,9 +2944,9 @@ void main() {
                 rootEventPubkey: 'f' * 64,
               ),
           ]);
-          when(() => funnelcakeApiClient.getVideoStats(any())).thenAnswer(
-            (_) async => makeVideoStats(id: 'e' * 64, pubkey: 'f' * 64),
-          );
+          // A confirmed 404 on the anchor with a foreign root author is the
+          // #5634 fallback: likeComment without a confirmed comment target.
+          stubVideoStatsNotFound('e' * 64);
           final items = (await repository.getNotifications()).items;
           expect(items, hasLength(2));
           expect(
@@ -3739,12 +3742,11 @@ void main() {
         expect(item.targetEventId, equals('comment_event_xyz'));
       });
 
-      test('reaction on a non-owned video is reclassified as likeComment '
-          'instead of liked your video (#4813)', () async {
-        // No targetCommentId, so this genuinely exercises the owner-mismatch
-        // reclassification: _mapNotificationKind returns `like`, which the
-        // #4813 path rewrites to likeComment. A comment-like that *does* carry
-        // a targetCommentId is covered by the direct-classification test above.
+      test('reaction on a non-owned video is a like on a video the user is '
+          'tagged in, not liked your video or your comment', () async {
+        // No targetCommentId, and metadata resolves the anchor to another
+        // creator's video: the like is on that video itself. Funnelcake
+        // notifies everyone it tags, such as a collaborator.
         stubNotifications([
           makeNotification(referencedEventId: 'foreign_video'),
         ]);
@@ -3758,8 +3760,81 @@ void main() {
 
         expect(page.items, hasLength(1));
         final item = page.items.single as ActorNotification;
-        expect(item.type, equals(NotificationKind.likeComment));
+        expect(item.type, equals(NotificationKind.like));
+        expect(item.isTaggedVideo, isTrue);
         expect(item.targetEventId, equals('foreign_video'));
+        expect(item.videoAddressableId, isNull);
+      });
+
+      group("activity on the user's repost event", () {
+        for (final (label, referencedEventKind) in [
+          ('kind 6 repost', EventKind.repost),
+          ('kind 16 generic repost', EventKind.genericRepost),
+        ]) {
+          test('drops a like on a $label', () async {
+            stubNotifications([
+              makeNotification(
+                referencedEventId: 'my_repost',
+                referencedEventKind: referencedEventKind,
+              ),
+            ]);
+            stubProfiles({});
+
+            final page = await repository.getNotifications();
+
+            expect(page.items, isEmpty);
+          });
+        }
+
+        test('drops a repost of the repost', () async {
+          stubNotifications([
+            makeNotification(
+              notificationType: 'repost',
+              sourceKind: 16,
+              referencedEventId: 'my_repost',
+              referencedEventKind: EventKind.genericRepost,
+            ),
+          ]);
+          stubProfiles({});
+
+          final page = await repository.getNotifications();
+
+          expect(page.items, isEmpty);
+        });
+
+        test('drops a comment on the repost', () async {
+          stubNotifications([
+            makeNotification(
+              sourceKind: 1111,
+              notificationType: 'comment',
+              referencedEventId: 'my_repost',
+              referencedEventKind: EventKind.genericRepost,
+              rootEventId: 'my_repost',
+              targetCommentId: 'evt1',
+            ),
+          ]);
+          stubProfiles({});
+
+          final page = await repository.getNotifications();
+
+          expect(page.items, isEmpty);
+        });
+
+        test("keeps a like on the user's own video", () async {
+          stubNotifications([
+            makeNotification(
+              referencedEventId: 'my_video',
+              referencedEventKind: NIP71VideoKinds.addressableShortVideo,
+            ),
+          ]);
+          stubProfiles({});
+
+          final page = await repository.getNotifications();
+
+          final item = page.items.single as VideoNotification;
+          expect(item.type, equals(NotificationKind.like));
+          expect(item.videoEventId, equals('my_video'));
+        });
       });
 
       test('comment anchored on a non-owned root video is reclassified as '

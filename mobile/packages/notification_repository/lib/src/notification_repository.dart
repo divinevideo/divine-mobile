@@ -11,6 +11,7 @@ import 'package:db_client/db_client.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:meta/meta.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
@@ -2230,9 +2231,10 @@ class NotificationRepository {
   /// Enriches raw relay notifications with profile + video metadata, then
   /// groups them into [VideoNotification]s and [ActorNotification]s.
   Future<List<NotificationItem>> _enrichAndGroup(
-    List<RelayNotification> raw, {
+    List<RelayNotification> unfiltered, {
     NotificationKind? filter,
   }) async {
+    final raw = unfiltered.where((n) => !_targetsRepostEvent(n)).toList();
     if (raw.isEmpty) return [];
 
     final pubkeys = raw.map((n) => n.sourcePubkey).toSet().toList();
@@ -2255,18 +2257,33 @@ class NotificationRepository {
       }).toList(),
     );
     final misattributed = <RelayNotification>[];
+    final taggedVideoLikes = <RelayNotification>[];
     final videos = _groupVideoAnchored(
       consolidated,
       profiles,
       videoMetadata.videosById,
       videoNotFoundIds: videoMetadata.notFoundIds,
       misattributed: misattributed,
+      taggedVideoLikes: taggedVideoLikes,
     );
     final actors = _mapActorAnchored(consolidated, profiles);
     final reclassified = _reclassifyMisattributed(misattributed, profiles);
+    final tagged = taggedVideoLikes.map(
+      (n) => _buildActorNotification(
+        n,
+        type: NotificationKind.like,
+        profiles: profiles,
+        targetEventId: _videoAnchorEventId(NotificationKind.like, n),
+        isTaggedVideo: true,
+      ),
+    );
 
-    final items = <NotificationItem>[...videos, ...actors, ...reclassified]
-      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    final items = <NotificationItem>[
+      ...videos,
+      ...actors,
+      ...reclassified,
+      ...tagged,
+    ]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return _groupCommentLikes(
       _applyBlockFilter(_applyFeedFilter(items, filter)),
     );
@@ -2446,12 +2463,21 @@ class NotificationRepository {
   /// different user are collected in [misattributed] for reclassification
   /// as actor-anchored notifications (e.g. "liked your comment" instead of
   /// "liked your video"). This fixes #4813.
+  ///
+  /// A like whose anchor resolves through metadata to another creator's video
+  /// goes to [taggedVideoLikes] instead. It targets that video itself, not a
+  /// comment: Funnelcake marks every like on a comment with
+  /// `target_comment_id`, which makes it a likeComment before this point.
+  /// Funnelcake notifies everyone a like tags, such as a video's
+  /// collaborators, so the row must not claim either "your video" or "your
+  /// comment".
   List<VideoNotification> _groupVideoAnchored(
     List<RelayNotification> raw,
     Map<String, UserProfile> profiles,
     Map<String, VideoStats> videosById, {
     required Set<String> videoNotFoundIds,
     List<RelayNotification>? misattributed,
+    List<RelayNotification>? taggedVideoLikes,
   }) {
     final groups = <_VideoGroupKey, List<RelayNotification>>{};
     for (final n in raw) {
@@ -2481,7 +2507,11 @@ class NotificationRepository {
           referencedVideoOwnerPubkey: videosById[eventId]?.pubkey,
           rootEventPubkey: n.rootEventPubkey,
         );
-        misattributed?.add(n);
+        if (kind == NotificationKind.like && videosById[eventId] != null) {
+          taggedVideoLikes?.add(n);
+        } else {
+          misattributed?.add(n);
+        }
         continue;
       }
       final video = videosById[eventId];
@@ -2725,6 +2755,7 @@ class NotificationRepository {
     required Map<String, UserProfile> profiles,
     NotificationKind? commentKind,
     String? targetEventId,
+    bool isTaggedVideo = false,
   }) {
     final quoteKind = commentKind ?? type;
     return ActorNotification(
@@ -2749,6 +2780,7 @@ class NotificationRepository {
       commentEventId: type == NotificationKind.likeComment
           ? _nonEmpty(notification.targetCommentId)
           : null,
+      isTaggedVideo: isTaggedVideo,
     );
   }
 
@@ -3238,6 +3270,26 @@ class NotificationRepository {
   /// [NotificationKind.comment]. A reply on another comment maps to
   /// [NotificationKind.reply], even when Funnelcake also includes the root
   /// video's metadata for navigation.
+  /// Whether [n] is a like, comment or repost on one of the user's own
+  /// repost events.
+  ///
+  /// Funnelcake notifies the author of every event a source event tags, so
+  /// activity on a repost reaches the reposter even though the video is
+  /// someone else's. Rendering it would credit the user with that video.
+  static bool _targetsRepostEvent(RelayNotification n) {
+    final referencedKind = n.referencedEventKind;
+    if (referencedKind != EventKind.repost &&
+        referencedKind != EventKind.genericRepost) {
+      return false;
+    }
+    return switch (_mapNotificationKind(n)) {
+      NotificationKind.like ||
+      NotificationKind.comment ||
+      NotificationKind.repost => true,
+      _ => false,
+    };
+  }
+
   static NotificationKind _mapNotificationKind(RelayNotification n) {
     final isReaction = switch (n.notificationType) {
       'reaction' || 'zap' => true,

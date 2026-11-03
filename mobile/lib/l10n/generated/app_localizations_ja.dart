@@ -7979,6 +7979,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorNameさんがあなたがタグ付けされた動画にいいねしました';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorNameがあなたのコメントにいいねしました';
   }

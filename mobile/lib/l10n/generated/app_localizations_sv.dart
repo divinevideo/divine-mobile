@@ -8398,6 +8398,11 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName gillade en video som du är taggad i';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName gillade din kommentar';
   }

@@ -4263,6 +4263,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} نے ایک ایسی ویڈیو پسند کی جس میں آپ ٹیگ ہیں",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} نے آپ کا تبصرہ پسند کیا",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",

@@ -2351,6 +2351,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} le dio like a un video en el que te etiquetaron",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} le dieron like a tu comentario",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",

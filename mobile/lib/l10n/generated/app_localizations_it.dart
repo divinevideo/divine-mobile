@@ -8506,6 +8506,11 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName ha messo like a un video che ti tagga';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName hanno messo like al tuo commento';
   }

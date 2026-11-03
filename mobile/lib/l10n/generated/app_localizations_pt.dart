@@ -8482,6 +8482,11 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName curtiu um vídeo em que marcaram você';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName curtiram seu comentário';
   }

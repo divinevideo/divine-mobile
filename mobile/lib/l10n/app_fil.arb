@@ -1789,6 +1789,7 @@
   "contentLabelMisleading": "Nakakapagligaw",
   "contentLabelSensitiveContent": "Sensitibong Content",
   "notificationLikedYourVideo": "Ni-like ni {actorName} ang video mo",
+  "notificationLikedTaggedVideo": "Ni-like ni {actorName} ang isang video kung saan naka-tag ka",
   "notificationGroupLikedYourComment": "Ni-like nina {actorName} ang comment mo",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",

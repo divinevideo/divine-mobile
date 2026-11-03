@@ -244,7 +244,7 @@ class _MessageText extends StatelessWidget {
                 type == NotificationKind.likeComment &&
                     notification.additionalActors.isNotEmpty
                 ? l10n.notificationGroupLikedYourComment(actorName)
-                : _messageFor(l10n, type, actorName),
+                : _messageFor(l10n, notification, actorName),
             actorName: actorName,
             colors: context.vineColors,
           );
@@ -270,12 +270,15 @@ class _MessageText extends StatelessWidget {
 
 String _messageFor(
   AppLocalizations l10n,
-  NotificationKind type,
+  ActorNotification notification,
   String actorName,
 ) {
-  return switch (type) {
+  return switch (notification.type) {
     NotificationKind.follow => l10n.notificationStartedFollowing(actorName),
-    NotificationKind.like => l10n.notificationLikedYourVideo(actorName),
+    NotificationKind.like =>
+      notification.isTaggedVideo
+          ? l10n.notificationLikedTaggedVideo(actorName)
+          : l10n.notificationLikedYourVideo(actorName),
     NotificationKind.mention => l10n.notificationMentionedYou(actorName),
     NotificationKind.likeComment => l10n.notificationLikedYourComment(
       actorName,

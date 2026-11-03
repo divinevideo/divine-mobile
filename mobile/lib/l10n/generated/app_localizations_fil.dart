@@ -8467,6 +8467,11 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return 'Ni-like ni $actorName ang isang video kung saan naka-tag ka';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return 'Ni-like nina $actorName ang comment mo';
   }

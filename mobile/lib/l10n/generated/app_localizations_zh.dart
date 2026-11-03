@@ -7901,6 +7901,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName 点赞了一个标记了你的视频';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName 点赞了你的评论';
   }

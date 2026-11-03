@@ -8405,6 +8405,11 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName menyukai video yang menanda anda';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName menyukai komen anda';
   }

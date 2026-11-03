@@ -32,6 +32,7 @@ class ActorNotification extends NotificationItem {
     this.videoAddressableId,
     this.hasCommentTarget = false,
     this.chatTarget,
+    this.isTaggedVideo = false,
   }) : commentText = sanitizeUtf16OrNull(commentText),
        assert(
          type == NotificationKind.follow ||
@@ -42,6 +43,10 @@ class ActorNotification extends NotificationItem {
              type == NotificationKind.reply,
          'ActorNotification only supports follow, like, mention, system, '
          'likeComment, reply',
+       ),
+       assert(
+         !isTaggedVideo || type == NotificationKind.like,
+         'isTaggedVideo only applies to a like',
        );
 
   /// The actor who triggered this notification.
@@ -88,6 +93,13 @@ class ActorNotification extends NotificationItem {
   /// Present only for client-decrypted room mentions.
   final ChatNotificationTarget? chatTarget;
 
+  /// Whether this [NotificationKind.like] is on another creator's video that
+  /// only tags the user, such as a collaboration.
+  ///
+  /// The row must not say "your video" — nor "your comment", since the like
+  /// carries no comment target.
+  final bool isTaggedVideo;
+
   /// Returns a copy with the given fields replaced.
   ActorNotification copyWith({
     String? id,
@@ -105,6 +117,7 @@ class ActorNotification extends NotificationItem {
     String? videoAddressableId,
     bool? hasCommentTarget,
     ChatNotificationTarget? chatTarget,
+    bool? isTaggedVideo,
   }) {
     return ActorNotification(
       id: id ?? this.id,
@@ -122,6 +135,7 @@ class ActorNotification extends NotificationItem {
       videoAddressableId: videoAddressableId ?? this.videoAddressableId,
       hasCommentTarget: hasCommentTarget ?? this.hasCommentTarget,
       chatTarget: chatTarget ?? this.chatTarget,
+      isTaggedVideo: isTaggedVideo ?? this.isTaggedVideo,
     );
   }
 
@@ -142,6 +156,7 @@ class ActorNotification extends NotificationItem {
     videoAddressableId,
     hasCommentTarget,
     chatTarget,
+    isTaggedVideo,
   ];
 }
 

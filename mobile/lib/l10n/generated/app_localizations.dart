@@ -14155,6 +14155,12 @@ abstract class AppLocalizations {
   /// **'{actorName} liked your video'**
   String notificationLikedYourVideo(String actorName);
 
+  /// Notification text when someone likes another creator's video that tags the user, for example as a collaborator. The video is not the user's own, so the text must not say "your video".
+  ///
+  /// In en, this message translates to:
+  /// **'{actorName} liked a video you\'re tagged in'**
+  String notificationLikedTaggedVideo(String actorName);
+
   /// Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.
   ///
   /// In en, this message translates to:

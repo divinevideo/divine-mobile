@@ -8487,6 +8487,11 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName хареса видео, в което си отбелязан(а)';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName харесаха коментара ти';
   }

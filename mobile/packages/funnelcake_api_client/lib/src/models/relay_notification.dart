@@ -13,6 +13,7 @@ class RelayNotification {
     required this.createdAt,
     required this.read,
     this.referencedEventId,
+    this.referencedEventKind,
     this.content,
     this.isReferencedVideo = false,
     this.referencedVideoTitle,
@@ -56,6 +57,7 @@ class RelayNotification {
       sourceEventId: json['source_event_id'] as String? ?? '',
       sourceKind: json['source_kind'] as int? ?? 0,
       referencedEventId: json['referenced_event_id'] as String?,
+      referencedEventKind: _intValue(json['referenced_event_kind']),
       notificationType: json['notification_type'] as String? ?? '',
       createdAt: DateTime.fromMillisecondsSinceEpoch(
         (_intValue(json['source_created_at']) ??
@@ -102,6 +104,14 @@ class RelayNotification {
 
   /// The event ID that was referenced (e.g. the video that was liked).
   final String? referencedEventId;
+
+  /// Nostr kind of the event named by [referencedEventId], when Funnelcake
+  /// knows it.
+  ///
+  /// `null` means unknown, never "a video": Funnelcake only sets it on rows
+  /// materialized since 2026-08-24. A kind 6 or 16 means the activity
+  /// targeted the recipient's repost event rather than their own content.
+  final int? referencedEventKind;
 
   /// The notification type (e.g. 'reaction', 'reply', 'repost', 'zap').
   final String notificationType;

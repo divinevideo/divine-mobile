@@ -2343,6 +2343,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} polubił(a) wideo, na którym Cię oznaczono",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} polubili Twój komentarz",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",
