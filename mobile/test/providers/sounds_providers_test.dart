@@ -91,6 +91,14 @@ AudioEvent createTestAudioEvent({
   );
 }
 
+/// [sounds] followed by enough others to fill the screen, so a list whose
+/// first page this is does not load more by itself.
+List<AudioEvent> filledUp(List<AudioEvent> sounds) => [
+  ...sounds,
+  for (var i = sounds.length; i < 20; i++)
+    createTestAudioEvent(id: 'filler-$i'),
+];
+
 void main() {
   _ownerExceptionTests();
 
@@ -318,9 +326,8 @@ void main() {
           'without loading them again', () async {
         final kept = createTestAudioEvent(id: 'kept');
         final blockedLater = createTestAudioEvent(id: 'blocked-later');
-        stubPages([
-          [kept, blockedLater],
-        ]);
+        final page = filledUp([kept, blockedLater]);
+        stubPages([page]);
         final container = buildContainer();
         final subscription = container.listen(
           trendingSoundsProvider,
@@ -330,7 +337,7 @@ void main() {
         await container.read(trendingSoundsProvider.future);
         expect(
           container.read(trendingSoundsProvider).requireValue.sounds,
-          [kept, blockedLater],
+          page,
         );
 
         when(() => mockRepository.withoutBlockedAuthors(any())).thenAnswer(
@@ -344,14 +351,70 @@ void main() {
 
         expect(
           container.read(trendingSoundsProvider).requireValue.sounds,
-          [kept],
+          [
+            for (final sound in page)
+              if (sound != blockedLater) sound,
+          ],
         );
         verify(
           () => mockRepository.fetchTrendingSounds(
             limit: any(named: 'limit'),
-            until: any(named: 'until'),
+            until: any(named: 'until', that: isNull),
           ),
         ).called(1);
+      });
+
+      group('filling the screen', () {
+        test(
+          'loads on by itself while it holds less than a screenful',
+          () async {
+            final first = createTestAudioEvent(id: 'first', createdAt: 300);
+            final second = createTestAudioEvent(id: 'second', createdAt: 200);
+            final rest = [
+              for (var i = 0; i < 20; i++)
+                createTestAudioEvent(id: 'rest-$i', createdAt: 100),
+            ];
+            stubPages([
+              [first],
+              [second],
+              rest,
+            ]);
+            final container = buildContainer();
+
+            await container.read(trendingSoundsProvider.future);
+            await pumpEventQueue();
+
+            final result = container.read(trendingSoundsProvider).requireValue;
+            expect(result.pages, [
+              [first],
+              [second],
+              rest,
+            ]);
+            expect(result.hasMore, isTrue);
+          },
+        );
+
+        test('stops after five pages that each kept little', () async {
+          var call = 0;
+          when(
+            () => mockRepository.fetchTrendingSounds(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+            ),
+          ).thenAnswer((_) async {
+            call++;
+            return [createTestAudioEvent(id: 'sound-$call', createdAt: -call)];
+          });
+          final container = buildContainer();
+
+          await container.read(trendingSoundsProvider.future);
+          await pumpEventQueue();
+
+          final result = container.read(trendingSoundsProvider).requireValue;
+          expect(result.pages, hasLength(5));
+          expect(result.hasMore, isTrue);
+          expect(call, 5);
+        });
       });
 
       group('loadMore', () {
@@ -360,8 +423,9 @@ void main() {
         final oldest = createTestAudioEvent(id: 'oldest', createdAt: 100);
 
         test('adds the sounds published up to the oldest it has', () async {
+          final first = filledUp([newest, older]);
           stubPages([
-            [newest, older],
+            first,
             // `until` takes in its own second, so the oldest comes again.
             [older, oldest],
           ]);
@@ -372,7 +436,7 @@ void main() {
 
           final result = container.read(trendingSoundsProvider).requireValue;
           expect(result.pages, [
-            [newest, older],
+            first,
             [oldest],
           ]);
           expect(result.hasMore, isTrue);
@@ -383,6 +447,7 @@ void main() {
         });
 
         test('keeps a block made while a page loaded', () async {
+          final first = filledUp([newest, older]);
           final page = Completer<List<AudioEvent>>();
           var call = 0;
           when(
@@ -390,9 +455,7 @@ void main() {
               limit: any(named: 'limit'),
               until: any(named: 'until'),
             ),
-          ).thenAnswer(
-            (_) async => call++ == 0 ? [newest, older] : page.future,
-          );
+          ).thenAnswer((_) async => call++ == 0 ? first : page.future);
           final container = buildContainer();
           final subscription = container.listen(
             trendingSoundsProvider,
@@ -417,7 +480,11 @@ void main() {
 
           expect(
             container.read(trendingSoundsProvider).requireValue.sounds,
-            [newest, oldest],
+            [
+              for (final sound in first)
+                if (sound != older) sound,
+              oldest,
+            ],
           );
         });
 
@@ -466,6 +533,7 @@ void main() {
         });
 
         test('asks once while a page is loading', () async {
+          final first = filledUp([newest]);
           final page = Completer<List<AudioEvent>>();
           var call = 0;
           when(
@@ -473,23 +541,23 @@ void main() {
               limit: any(named: 'limit'),
               until: any(named: 'until'),
             ),
-          ).thenAnswer((_) async => call++ == 0 ? [newest] : page.future);
+          ).thenAnswer((_) async => call++ == 0 ? first : page.future);
           final container = buildContainer();
           await container.read(trendingSoundsProvider.future);
           final notifier = container.read(trendingSoundsProvider.notifier);
 
-          final first = notifier.loadMore();
+          final loading = notifier.loadMore();
           expect(
             container.read(trendingSoundsProvider).requireValue.isLoadingMore,
             isTrue,
           );
           await notifier.loadMore();
           page.complete([oldest]);
-          await first;
+          await loading;
 
           expect(
             container.read(trendingSoundsProvider).requireValue.sounds,
-            [newest, oldest],
+            [...first, oldest],
           );
           expect(call, 2);
         });
@@ -1098,23 +1166,25 @@ void main() {
               id: id == audioEventId1 ? 7 : 2,
           },
         );
-        final container = buildContainer([
-          createTestAudioEvent(id: audioEventId1, createdAt: 200),
-        ]);
+        final newer = createTestAudioEvent(id: audioEventId1, createdAt: 200);
+        final container = buildContainer([newer]);
+        // The list holds less than a screenful, so it loads the older page
+        // by itself.
+        when(
+          () => mockRepository.fetchTrendingSounds(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+          ),
+        ).thenAnswer(
+          (invocation) async =>
+              invocation.namedArguments[#until] == null ? [newer] : [older],
+        );
         final subscription = container.listen(
           trendingSoundUsageCountsProvider,
           (_, _) {},
         );
         addTearDown(subscription.close);
         await container.read(trendingSoundUsageCountsProvider.future);
-        when(
-          () => mockRepository.fetchTrendingSounds(
-            limit: any(named: 'limit'),
-            until: any(named: 'until'),
-          ),
-        ).thenAnswer((_) async => [older]);
-
-        await container.read(trendingSoundsProvider.notifier).loadMore();
         // The counts follow the new page once its change has gone round.
         await pumpEventQueue();
         final counts = await container.read(
@@ -1284,9 +1354,10 @@ void main() {
       test('loads older sounds as it is scrolled', () async {
         final newer = createTestAudioEvent(id: 'newer', createdAt: 200);
         final older = createTestAudioEvent(id: 'older', createdAt: 100);
+        final first = filledUp([newer]);
         stubCreatorSounds(
           (invocation) async =>
-              invocation.namedArguments[#until] == null ? [newer] : [older],
+              invocation.namedArguments[#until] == null ? first : [older],
         );
         final container = buildContainer(const ['alice']);
         await container.read(forYouSoundsProvider.future);
@@ -1294,7 +1365,7 @@ void main() {
         await container.read(forYouSoundsProvider.notifier).loadMore();
 
         expect(container.read(forYouSoundsProvider).requireValue.pages, [
-          [newer],
+          first,
           [older],
         ]);
         verify(
