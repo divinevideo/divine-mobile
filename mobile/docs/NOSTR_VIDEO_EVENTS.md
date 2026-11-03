@@ -88,7 +88,7 @@ Attribution reuses the same marker convention on `p` tags, and extends it to
 | Tag | Format | Description |
 |-----|--------|-------------|
 | `a` | `["a", "34236:<pubkey>:<d>", "<relay>", "mention"]` | The video the creator chose as their Inspired By source. Written at publish. |
-| `a` | `["a", "34236:<pubkey>:<d>", "<relay>", "inspired-by"]` | The same reference, rewritten by the metadata edit flow. |
+| `a` | `["a", "34236:<pubkey>:<d>", "<relay>", "inspired-by"]` | The same reference, rewritten by the metadata edit flow when the edit picks another video. An edit that keeps the same video keeps `mention`, which an Add yours answer needs to stay in its chain. |
 | `a` | `["a", "34236:<pubkey>:<d>", "<relay>", "clip-source"]` | A published video this one actually reuses footage from. One per distinct source. |
 | `p` | `["p", "<pubkey>", "<relay>", "inspired-by"]` | Notifies the Inspired By creator (NIP-27: a mention without a `p` tag does not notify). |
 | `p` | `["p", "<pubkey>", "<relay>", "clip-source"]` | Notifies the author of reused footage. |

@@ -1050,6 +1050,56 @@ void main() {
         );
       });
 
+      test(
+        'keeps the mention marker when the inspired-by video stays the same',
+        () async {
+          // An Add yours answer names its chain's first video this way, and
+          // counts as joined only while the marker is mention.
+          final video = _testVideo(
+            extraTags: const [
+              [
+                'a',
+                '34236:$_ownerPubkey:first-vid',
+                'wss://relay.divine.video',
+                'mention',
+              ],
+            ],
+          );
+          final editorState = VideoEditorProviderState(
+            inspiredByVideo: const InspiredByInfo(
+              addressableId: '34236:$_ownerPubkey:first-vid',
+              relayUrl: 'wss://relay.divine.video',
+            ),
+          );
+
+          final result = await service.updateVideo(
+            originalVideo: video,
+            editorState: editorState,
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateSuccess>());
+          final inspiredBy = capturedTags
+              .where(
+                (tag) =>
+                    tag.first == 'a' &&
+                    tag[1] == '34236:$_ownerPubkey:first-vid',
+              )
+              .toList();
+          expect(
+            inspiredBy,
+            equals([
+              [
+                'a',
+                '34236:$_ownerPubkey:first-vid',
+                'wss://relay.divine.video',
+                'mention',
+              ],
+            ]),
+          );
+        },
+      );
+
       test('replaces the inspired-by a-tag without duplicating it', () async {
         final video = _testVideo(
           extraTags: const [
