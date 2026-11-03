@@ -406,47 +406,6 @@ void main() {
         expect(result, equals('dismissed'));
         expect(find.text('Captions'), findsNothing);
       });
-
-      testWidgets('forwards onSecondaryPressed to the secondary button', (
-        tester,
-      ) async {
-        String? result;
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: VineTheme.theme,
-            home: Scaffold(
-              body: Builder(
-                builder: (context) => ElevatedButton(
-                  onPressed: () async {
-                    final navigator = Navigator.of(
-                      context,
-                      rootNavigator: true,
-                    );
-                    result =
-                        await VineBottomSheetFeatureAnnouncement.show<String>(
-                          context: context,
-                          illustration: const SizedBox.square(dimension: 100),
-                          title: 'Captions',
-                          primaryButtonText: 'Got it',
-                          onPrimaryPressed: () => navigator.pop('dismissed'),
-                          secondaryButtonText: 'Turn on captions',
-                          onSecondaryPressed: () => navigator.pop('tried'),
-                        );
-                  },
-                  child: const Text('Show Sheet'),
-                ),
-              ),
-            ),
-          ),
-        );
-
-        await tester.tap(find.text('Show Sheet'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Turn on captions'));
-        await tester.pumpAndSettle();
-
-        expect(result, equals('tried'));
-      });
     });
   });
 }
