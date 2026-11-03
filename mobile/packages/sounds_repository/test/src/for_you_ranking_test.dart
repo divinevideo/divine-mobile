@@ -88,6 +88,27 @@ void main() {
       expect(order(DateTime.utc(2026, 11, 3, 8)), isNot(morning));
     });
 
+    test('keeps the Divine order when one more sound joins the list', () {
+      final divine = [for (var i = 0; i < 20; i++) divineSound(i)];
+      List<String> order(List<AudioEvent> sounds) => [
+        for (final sound in rankForYouSounds(
+          followed: const [],
+          divine: sounds,
+          now: now,
+        ))
+          sound.id,
+      ];
+
+      final before = order(divine);
+      final after = order([...divine, divineSound(20)]);
+
+      expect(after, hasLength(21));
+      expect(
+        after.where((id) => id != '${AudioEvent.bundledMarker}_20'),
+        before,
+      );
+    });
+
     test('keeps equally new uploads in the order they came', () {
       final ranked = rankForYouSounds(
         followed: [

@@ -12,7 +12,9 @@ import 'package:models/models.dart';
 /// after it, so the two interleave: the newest uploads lead, and Divine's
 /// sounds come in among them from the first rows on. [now] dates the uploads
 /// and also seeds the order of Divine's sounds, so their mix changes from day
-/// to day but not from one rebuild to the next.
+/// to day but not from one rebuild to the next. Each Divine sound draws its
+/// place from its own id, so the others keep their order when one joins or
+/// leaves the list, as when a filter narrows it.
 List<AudioEvent> rankForYouSounds({
   required List<AudioEvent> followed,
   required List<AudioEvent> divine,
@@ -39,14 +41,17 @@ List<AudioEvent> rankForYouSounds({
     followedScores[index] = recency(sound) * pow(0.9, newer);
   }
 
-  final day = DateTime.utc(now.year, now.month, now.day);
-  final dailyDivine = List.of(divine)
-    ..shuffle(Random(day.millisecondsSinceEpoch ~/ 86400000));
+  final day =
+      DateTime.utc(now.year, now.month, now.day).millisecondsSinceEpoch ~/
+      86400000;
+  final dailyDivine = [
+    for (final sound in divine) (sound: sound, draw: _dailyDraw(sound.id, day)),
+  ]..sort((a, b) => a.draw.compareTo(b.draw));
   final scored = [
     for (final (index, sound) in followed.indexed)
       (sound: sound, score: followedScores[index]),
-    for (final (index, sound) in dailyDivine.indexed)
-      (sound: sound, score: 1.8 * pow(0.97, index)),
+    for (final (index, entry) in dailyDivine.indexed)
+      (sound: entry.sound, score: 1.8 * pow(0.97, index)),
   ];
   // List.sort is not stable, so ties keep their input order by index.
   final indexed = scored.indexed.toList()
@@ -55,4 +60,15 @@ List<AudioEvent> rankForYouSounds({
       return byScore != 0 ? byScore : a.$1.compareTo(b.$1);
     });
   return [for (final (_, entry) in indexed) entry.sound];
+}
+
+/// A draw for the sound [id] on [day], the same all day and another the
+/// next.
+double _dailyDraw(String id, int day) {
+  var seed = day;
+  for (final unit in id.codeUnits) {
+    // Kept below 2^31, so the sum stays exact where ints are doubles.
+    seed = (seed * 31 + unit) % 0x7fffffff;
+  }
+  return Random(seed).nextDouble();
 }
