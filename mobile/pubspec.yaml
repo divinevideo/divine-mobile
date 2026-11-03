@@ -144,9 +144,9 @@ dependencies:
 
   # State management
   bloc: ^9.2.1
-  flutter_riverpod: ^3.0.0
-  riverpod: ^3.3.2
-  riverpod_annotation: ^4.0.3
+  flutter_riverpod: ^3.4.3
+  riverpod: ^3.4.3
+  riverpod_annotation: ^4.0.7
   flutter_bloc: ^9.0.0
   bloc_concurrency: ^0.3.0
   provider: ^6.1.5+1
@@ -473,7 +473,9 @@ dev_dependencies:
   # AST to tell Cubit.emit (throws after close) from an event handler's
   # Emitter.call (cancelled, so a no-op). Already in the tree transitively via
   # build_runner; named here so the guard does not depend on that staying true.
-  analyzer: ^12.1.0
+  # Held below 14 by test 1.31.1, the only test release matching the test_api
+  # that Flutter 3.47.2's flutter_test pins.
+  analyzer: ^13.3.0
 
   # Testing
   file: ^7.0.1
@@ -493,14 +495,13 @@ dev_dependencies:
   # Code generation
   build_runner: ^2.15.0
   go_router_builder: ^4.5.2
-  hive_ce_generator: ^1.6.0
 
   # Integration test utilities
   postgres: ^3.5.0
 
   # CLI tools
   args: ^2.4.2
-  riverpod_generator: ^4.0.4
+  riverpod_generator: ^4.0.9
   # custom_lint: ^0.6.4  # Temporarily disabled due to rxdart version conflict
   # riverpod_lint: ^2.3.10  # Depends on custom_lint
   # go_router_builder 4.5.2 needs source_helper 1.4, which json_serializable's
