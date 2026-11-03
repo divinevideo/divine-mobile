@@ -111,6 +111,7 @@ void main() {
           chainRoot: any(named: 'chainRoot'),
           hashtag: any(named: 'hashtag'),
           limit: any(named: 'limit'),
+          filter: any(named: 'filter'),
         ),
       ).thenAnswer(
         (_) async => VideoResponses(total: 12, videos: [_reply(3)]),
@@ -358,6 +359,7 @@ void main() {
             chainRoot: _video.addressableId!,
             hashtag: 'desksetup',
             limit: any(named: 'limit'),
+            filter: any(named: 'filter'),
           ),
         ).called(1);
       });
