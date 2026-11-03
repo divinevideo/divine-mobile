@@ -349,12 +349,17 @@ mixin _LoadsMoreSounds {
   /// The page after the ones the list holds.
   Future<SoundPage> _nextPage();
 
+  /// The list as loaded, or `null` before that, after it failed, and while
+  /// it loads anew: its pages are then not the ones the build will hold.
+  PagedSounds? get _loaded =>
+      state.isLoading || state.hasError ? null : state.value;
+
   /// Takes the sounds of an author the viewer blocks or mutes out of the
   /// pages already loaded, as soon as they do, rather than when the list
   /// next loads. Called from `build`.
   void _hideAuthorsBlockedLater() {
     ref.listen(blocklistVersionProvider, (_, _) {
-      final current = state.value;
+      final current = _loaded;
       if (current == null) return;
       final repository = ref.read(soundsRepositoryProvider);
       state = AsyncData(current.narrowed(repository.withoutBlockedAuthors));
@@ -367,7 +372,7 @@ mixin _LoadsMoreSounds {
   /// stays, where retrying would loop, since the end of the list asks again
   /// as soon as it shows.
   Future<void> loadMore() async {
-    final current = state.value;
+    final current = _loaded;
     if (current == null || !current.canLoadMore) return;
     // Taken first: after a rebuild it is no longer mounted, and the page
     // belongs to the list that rebuild replaced.

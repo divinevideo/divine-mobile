@@ -530,6 +530,34 @@ void main() {
           );
         });
 
+        test('waits for the list to load anew before paging', () async {
+          when(
+            () => mockRepository.fetchTrendingSounds(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+            ),
+          ).thenAnswer(
+            (invocation) async =>
+                invocation.namedArguments[#until] == null ? [newest] : [older],
+          );
+          final container = buildContainer();
+          final subscription = container.listen(
+            trendingSoundsProvider,
+            (_, _) {},
+          );
+          addTearDown(subscription.close);
+          await container.read(trendingSoundsProvider.future);
+
+          container.invalidate(trendingSoundsProvider);
+          await container.read(trendingSoundsProvider.notifier).loadMore();
+          final result = await container.read(trendingSoundsProvider.future);
+
+          // Paged while it reloaded, the list would ask for its first page
+          // twice, find nothing new in the second and end.
+          expect(result.sounds, [newest]);
+          expect(result.hasMore, isTrue);
+        });
+
         test('does nothing before the first page is in', () async {
           final first = Completer<List<AudioEvent>>();
           when(
