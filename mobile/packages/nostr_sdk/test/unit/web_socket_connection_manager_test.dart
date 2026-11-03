@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:clock/clock.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:nostr_sdk/relay/web_socket_connection_manager.dart';
 import 'package:test/test.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -490,32 +491,58 @@ void main() {
       });
 
       test('a refusal frame before the close still counts against the '
-          'self-heal budget', () async {
-        final factory = MockWebSocketChannelFactory()
-          ..closeOnCreate = true
-          ..messageBeforeClose = '["NOTICE","rate-limited"]';
-        final refusingManager = WebSocketConnectionManager(
-          url: 'wss://refusing.relay.com',
-          channelFactory: factory,
-          logger: logMessages.add,
-          config: const WebSocketConfig(
-            maxReconnectAttempts: 3,
-            baseReconnectDelay: Duration(milliseconds: 10),
-            maxReconnectDelay: Duration(milliseconds: 10),
-            heartbeatInterval: Duration.zero,
-            idleTimeout: Duration.zero,
-          ),
-        );
-        addTearDown(refusingManager.dispose);
+          'self-heal budget', () {
+        fakeAsync((async) {
+          final factory = MockWebSocketChannelFactory()
+            ..closeOnCreate = true
+            ..messageBeforeClose = '["NOTICE","rate-limited"]';
+          final refusingManager = WebSocketConnectionManager(
+            url: 'wss://refusing.relay.com',
+            channelFactory: factory,
+            logger: logMessages.add,
+            config: const WebSocketConfig(
+              maxReconnectAttempts: 3,
+              baseReconnectDelay: Duration(milliseconds: 10),
+              maxReconnectDelay: Duration(milliseconds: 10),
+              heartbeatInterval: Duration.zero,
+              idleTimeout: Duration.zero,
+            ),
+          );
 
-        await refusingManager.connect();
-        await Future<void>.delayed(const Duration(milliseconds: 300));
+          // Timer.run means the next event turn, not a wall-clock guarantee
+          // that refusal preceded the stability interval on a busy test host.
+          try {
+            bool? connected;
+            unawaited(
+              refusingManager.connect().then((value) => connected = value),
+            );
+            async.flushMicrotasks();
+            expect(connected, isTrue);
+            async.elapse(Duration.zero);
+            for (var reconnect = 0; reconnect < 3; reconnect++) {
+              async.elapse(const Duration(milliseconds: 10));
+            }
 
-        // "The relay spoke before dropping us" is not usefulness: a NOTICE,
-        // CLOSED, or AUTH frame is how a refusing relay says no, and it must
-        // not clear the budget (#8992).
-        expect(factory.createdChannels, hasLength(4));
-        expect(refusingManager.state, equals(ConnectionState.disconnected));
+            // The relay's immediate refusal never proved the socket useful.
+            expect(factory.createdChannels, hasLength(4));
+            expect(refusingManager.state, equals(ConnectionState.disconnected));
+            expect(
+              logMessages.any(
+                (message) =>
+                    message.contains('Self-heal reconnect budget exhausted'),
+              ),
+              isTrue,
+            );
+            async.elapse(const Duration(milliseconds: 300));
+            expect(factory.createdChannels, hasLength(4));
+          } finally {
+            var disposed = false;
+            unawaited(refusingManager.dispose().then((_) => disposed = true));
+            async.flushMicrotasks();
+            async.elapse(Duration.zero);
+            expect(disposed, isTrue);
+          }
+        }, initialTime: DateTime.utc(2000));
       });
 
       test('a connection that carried traffic resets the self-heal '

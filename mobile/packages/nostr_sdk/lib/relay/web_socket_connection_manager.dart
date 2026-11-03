@@ -313,7 +313,7 @@ class WebSocketConnectionManager {
 
       // Track connection time as initial activity
       _lastActivityAt = DateTime.now();
-      _connectedAt = _lastActivityAt;
+      _connectedAt = clock.now();
 
       // Start heartbeat timer if configured
       _startHeartbeat();
@@ -456,7 +456,7 @@ class WebSocketConnectionManager {
   bool _closedConnectionWasStable() {
     final connectedAt = _connectedAt;
     if (connectedAt == null) return false;
-    final age = DateTime.now().difference(connectedAt);
+    final age = clock.now().difference(connectedAt);
     if (age < config.baseReconnectDelay) return false;
     if (_receivedMessageOnThisConnection) return true;
     if (config.idleTimeout == Duration.zero) return false;

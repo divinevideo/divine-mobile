@@ -317,25 +317,45 @@ void main() {
           connectedRelays: ['wss://slow.example'],
         );
 
-        final read = client.readEvents(
-          [_textNotes()],
-          useCache: false,
-          timeout: const Duration(milliseconds: 400),
-        );
-        final subId = await relay.awaitReq(0);
-        for (final note in notes) {
-          await relay.deliver(['EVENT', subId, note.toJson()]);
-        }
-
-        final result = await read;
-
-        expect(result.endedBy, QueryEnd.deadline);
-        expect(result.isComplete, isFalse);
-        expect(
-          result.events.map((event) => event.id),
-          unorderedEquals(notes.map((note) => note.id)),
-          reason: 'the read was cut short, not emptied',
-        );
+        // Delivery must precede expiry even when the host is busy. A fixed
+        // clock also catches a client/SDK mismatch in absolute deadline time.
+        fakeAsync((async) {
+          QueryResult? result;
+          unawaited(
+            client
+                .readEvents(
+                  [_textNotes()],
+                  useCache: false,
+                  timeout: const Duration(milliseconds: 400),
+                )
+                .then((value) => result = value),
+          );
+          async.flushMicrotasks();
+          expect(relay.reqSubIds, hasLength(1));
+          final subId = relay.reqSubIds.single;
+          expect(relay.checkQuery(subId), isTrue);
+          for (final note in notes) {
+            var delivered = false;
+            unawaited(
+              relay
+                  .deliver(['EVENT', subId, note.toJson()])
+                  .then((_) => delivered = true),
+            );
+            async.flushMicrotasks();
+            expect(delivered, isTrue);
+          }
+          expect(result, isNull);
+          async.elapse(const Duration(milliseconds: 400));
+          final completed = result;
+          expect(completed, isNotNull);
+          expect(completed!.endedBy, QueryEnd.deadline);
+          expect(completed.isComplete, isFalse);
+          expect(
+            completed.events.map((event) => event.id),
+            unorderedEquals(notes.map((note) => note.id)),
+            reason: 'the deadline preserves every admitted event',
+          );
+        }, initialTime: DateTime.utc(2000));
       },
     );
 
@@ -594,25 +614,45 @@ void main() {
           connectedRelays: ['wss://slow.example'],
         );
 
-        final read = client.queryEventsDetailed(
-          [_textNotes()],
-          useCache: false,
-          timeout: const Duration(milliseconds: 400),
-        );
-        final subId = await relay.awaitReq(0);
-        for (final note in notes) {
-          await relay.deliver(['EVENT', subId, note.toJson()]);
-        }
-
-        final result = await read;
-
-        expect(result.timedOut, isTrue);
-        expect(result.noRelays, isFalse);
-        expect(
-          result.events.map((event) => event.id),
-          unorderedEquals(notes.map((note) => note.id)),
-          reason: '#6238: a timed-out read used to return an empty list',
-        );
+        // Delivery must precede expiry even when the host is busy. A fixed
+        // clock also catches a client/SDK mismatch in absolute deadline time.
+        fakeAsync((async) {
+          ({List<Event> events, bool timedOut, bool noRelays})? result;
+          unawaited(
+            client
+                .queryEventsDetailed(
+                  [_textNotes()],
+                  useCache: false,
+                  timeout: const Duration(milliseconds: 400),
+                )
+                .then((value) => result = value),
+          );
+          async.flushMicrotasks();
+          expect(relay.reqSubIds, hasLength(1));
+          final subId = relay.reqSubIds.single;
+          expect(relay.checkQuery(subId), isTrue);
+          for (final note in notes) {
+            var delivered = false;
+            unawaited(
+              relay
+                  .deliver(['EVENT', subId, note.toJson()])
+                  .then((_) => delivered = true),
+            );
+            async.flushMicrotasks();
+            expect(delivered, isTrue);
+          }
+          expect(result, isNull);
+          async.elapse(const Duration(milliseconds: 400));
+          final completed = result;
+          expect(completed, isNotNull);
+          expect(completed!.timedOut, isTrue);
+          expect(completed.noRelays, isFalse);
+          expect(
+            completed.events.map((event) => event.id),
+            unorderedEquals(notes.map((note) => note.id)),
+            reason: 'the deadline preserves every admitted event',
+          );
+        }, initialTime: DateTime.utc(2000));
       },
     );
 
