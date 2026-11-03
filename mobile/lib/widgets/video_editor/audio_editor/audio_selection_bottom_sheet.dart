@@ -986,6 +986,8 @@ class _PickerSearchInput extends StatelessWidget {
             child: TextField(
               controller: controller,
               onChanged: onChanged,
+              keyboardType: TextInputType.text,
+              textInputAction: TextInputAction.search,
               style: TextStyle(color: context.vineColors.primaryText),
               decoration: InputDecoration(
                 hintText: context.l10n.soundsSearchHint,
