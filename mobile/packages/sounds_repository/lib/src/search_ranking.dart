@@ -20,10 +20,20 @@ List<T> rankSearchMatches<T>(
 }) {
   final terms = searchTermsOf(query);
   if (terms.isEmpty) return matches;
-  final phrase = terms.join(' ');
+  // The words as typed, repeats kept, so "boom boom" is not "Boom".
+  final phrase = [
+    for (final word in query.toLowerCase().split(_spaces))
+      if (word.replaceFirst(_leadingHashes, '') case final term
+          when term.isNotEmpty)
+        term,
+  ].join(' ');
 
   int fitOf(T item) {
-    final title = titleOf(item)?.trim().toLowerCase() ?? '';
+    final title = (titleOf(item) ?? '')
+        .toLowerCase()
+        .trim()
+        .split(_spaces)
+        .join(' ');
     if (title.isEmpty) return 0;
     if (title == phrase) return 4;
     if (title.startsWith(phrase)) return 3;
@@ -51,3 +61,9 @@ List<T> rankSearchMatches<T>(
 
 /// Anything between two words of a title: spaces, punctuation, symbols.
 final _wordBreak = RegExp(r'[^\p{L}\p{N}]+', unicode: true);
+
+/// The gap between two words of a query, or of a title read as one.
+final _spaces = RegExp(r'\s+');
+
+/// The `#` a hashtag typed into a search starts with.
+final _leadingHashes = RegExp('^#+');
