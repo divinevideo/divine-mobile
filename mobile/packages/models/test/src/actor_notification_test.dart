@@ -223,6 +223,19 @@ void main() {
         expect(tagged.isRead, isTrue);
       });
 
+      test('is set by copyWith', () {
+        expect(like().copyWith(isTaggedVideo: true).isTaggedVideo, isTrue);
+      });
+
+      test('is cleared when copyWith changes the kind away from like', () {
+        final changed = like(
+          isTaggedVideo: true,
+        ).copyWith(type: NotificationKind.likeComment);
+
+        expect(changed.type, equals(NotificationKind.likeComment));
+        expect(changed.isTaggedVideo, isFalse);
+      });
+
       test('is rejected on a kind other than like', () {
         expect(
           () => ActorNotification(
