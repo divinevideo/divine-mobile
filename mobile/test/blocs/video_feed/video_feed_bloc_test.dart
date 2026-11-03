@@ -16,6 +16,7 @@ import 'package:feed_tuning_repository/feed_tuning_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -25,6 +26,7 @@ import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -40,6 +42,8 @@ import 'package:videos_repository/videos_repository.dart';
 import '../../helpers/feed_bloc_test_helper.dart';
 
 class _MockBadgeNostrClient extends Mock implements NostrClient {}
+
+class _MockBadgeFunnelcakeClient extends Mock implements FunnelcakeApiClient {}
 
 class _MockBadgeAuthService extends Mock implements AuthService {}
 
@@ -2438,6 +2442,9 @@ void main() {
                     .thenReturn(false);
                 final container = ProviderContainer(
                   overrides: [
+                    funnelcakeApiClientProvider.overrideWithValue(
+                      _MockBadgeFunnelcakeClient(),
+                    ),
                     authServiceProvider.overrideWithValue(auth),
                     nostrServiceProvider.overrideWithValue(client),
                     contentBlocklistRepositoryProvider.overrideWithValue(

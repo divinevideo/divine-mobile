@@ -1283,6 +1283,7 @@ void main() {
         'wrong issuer',
         'tampered content',
         'unsigned',
+        'malformed signature',
         'wrong kind',
       ]) {
         test('rejects $invalid API events before relay fallback', () async {
@@ -1306,6 +1307,7 @@ void main() {
           } else {
             if (invalid == 'tampered content') invalidEvent.content = 'forged';
             if (invalid == 'unsigned') invalidEvent.sig = '';
+            if (invalid == 'malformed signature') invalidEvent.sig = 'z' * 128;
             final event = invalid == 'wrong kind'
                 ? (Event(
                     issuer,

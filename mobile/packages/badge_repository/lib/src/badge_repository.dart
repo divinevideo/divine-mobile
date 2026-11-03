@@ -30,6 +30,8 @@ const int _claimantCandidateEventLimit = 1000;
 const int _claimantProfileAuthorChunkSize = 100;
 const int _profileBadgeEventsPerAuthorLimit = 10;
 
+final _badgeSignaturePattern = RegExp(r'^[0-9a-fA-F]{128}$');
+
 typedef BadgeEventSigner =
     Future<Event?> Function({
       required int kind,
@@ -564,10 +566,13 @@ class BadgeRepository {
         throw const FormatException('Badge catalogue page exceeds its limit');
       }
       for (final event in page.badges) {
+        // The API verifies Schnorr signatures before serving its signed events.
+        // Repeating the pure-Dart curve math here blocks browser rendering for
+        // seconds. Keep the raw signature and verify the hash and scope locally.
         if (event.pubkey != issuer ||
             event.kind != EventKind.badgeDefinition ||
             !event.isValid ||
-            !event.isSigned ||
+            !_badgeSignaturePattern.hasMatch(event.sig) ||
             Nip58BadgeParser.parseDefinition(event) == null) {
           throw const FormatException('Invalid signed badge definition');
         }
