@@ -126,7 +126,6 @@ class VineBottomSheetFeatureAnnouncement extends StatelessWidget {
   }) {
     return VineBottomSheet.show<T>(
       context: context,
-      useRootNavigator: true,
       scrollable: false,
       showHeaderDivider: false,
       body: VineBottomSheetFeatureAnnouncement(
