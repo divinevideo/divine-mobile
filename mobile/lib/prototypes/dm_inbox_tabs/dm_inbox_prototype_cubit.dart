@@ -31,6 +31,12 @@ class DmInboxPrototypeState extends Equatable {
   /// The fixtures as [session] has changed them, each bucket newest first.
   final DmInboxClassification classification;
 
+  /// Conversations still shown: deleted, reported and blocked ones are gone.
+  int get conversationCount => DmInboxBucket.values.fold(
+    0,
+    (count, bucket) => count + classification.bucket(bucket).length,
+  );
+
   @override
   List<Object?> get props => [settings, session, explained, classification];
 }

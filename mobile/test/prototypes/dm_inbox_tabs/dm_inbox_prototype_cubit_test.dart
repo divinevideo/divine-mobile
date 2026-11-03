@@ -71,6 +71,17 @@ void main() {
       });
     });
 
+    group('conversationCount', () {
+      test('drops a removed conversation', () {
+        final before = cubit.state.conversationCount;
+        expect(before, equals(fixtures.dmConversations.length));
+
+        cubit.remove(conversationTitled('Priya Raman').id);
+
+        expect(cubit.state.conversationCount, equals(before - 1));
+      });
+    });
+
     group('toggleReasons', () {
       test('expands, then collapses, one row', () {
         cubit.toggleReasons('row');

@@ -170,7 +170,7 @@ class _DmInboxTabsPrototypeViewState extends State<_DmInboxTabsPrototypeView>
         children: [
           _PrototypeStrip(
             spamCount: classification.likelySpam.length,
-            total: cubit.fixtures.conversations.length,
+            total: cubit.state.conversationCount,
             onTune: _openTuning,
           ),
           _InboxTabBar(
