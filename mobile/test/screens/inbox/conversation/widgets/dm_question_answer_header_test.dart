@@ -21,16 +21,33 @@ final String _creator = 'c' * 64;
 final String _videoId = 'e' * 64;
 
 /// The creator's video the answer cites, as the relays have it.
-VideoEvent _cited({String? pubkey, String dTag = 'video-d', String? id}) =>
-    VideoEvent(
-      id: id ?? _videoId,
-      pubkey: pubkey ?? _creator,
-      createdAt: 1757385000,
-      content: '',
-      timestamp: DateTime.utc(2026),
-      vineId: dTag,
-      addressableDTag: dTag,
-    );
+VideoEvent _cited({
+  String? pubkey,
+  String dTag = 'video-d',
+  String? id,
+  String? question = 'Ask me anything',
+}) => VideoEvent(
+  id: id ?? _videoId,
+  pubkey: pubkey ?? _creator,
+  createdAt: 1757385000,
+  content: '',
+  timestamp: DateTime.utc(2026),
+  vineId: dTag,
+  addressableDTag: dTag,
+  stickerRegions: [
+    if (question != null)
+      VideoStickerRegion(
+        kind: VideoStickerKind.question,
+        target: '',
+        centerX: 0.5,
+        centerY: 0.5,
+        width: 0.8,
+        height: 0.3,
+        style: 'light',
+        label: question,
+      ),
+  ],
+);
 
 DmMessage _answer({
   String? author,
@@ -158,6 +175,28 @@ void main() {
             equals('34236:$_creator:video-d'),
           );
         }
+      });
+
+      test("puts the creator's own question on the sticker, not the "
+          "sender's", () {
+        final context = DmQuestionAnswerHeader.replyContextFor(
+          _answer(question: 'Free followers at example.com'),
+          citedVideo: _cited(),
+          creatorPubkey: _creator,
+        );
+
+        expect(context?.replyToName, equals('Ask me anything'));
+      });
+
+      test('answers nothing on a video that asks no question', () {
+        expect(
+          DmQuestionAnswerHeader.replyContextFor(
+            _answer(),
+            citedVideo: _cited(question: null),
+            creatorPubkey: _creator,
+          ),
+          isNull,
+        );
       });
 
       test('answers nothing with a video that is not the one cited', () {

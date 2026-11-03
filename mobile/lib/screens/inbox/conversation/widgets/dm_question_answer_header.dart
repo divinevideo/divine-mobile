@@ -12,6 +12,7 @@ import 'package:models/models.dart'
         DmSharedVideoRef,
         NIP71VideoKinds,
         VideoEvent,
+        VideoStickerKind,
         VideoStickerRegion;
 import 'package:openvine/blocs/question_answer/question_answer_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -68,17 +69,23 @@ class DmQuestionAnswerHeader extends ConsumerWidget {
   ///
   /// The citation alone names the video: the id the sender put beside the
   /// question is not checked against it, so a reply never lands on another
-  /// video. `null` when [citedVideo] is not the cited video, or it is not
-  /// [creatorPubkey]'s.
+  /// video. The question is the one on [citedVideo]'s own question sticker,
+  /// not the text the sender wrote, since the answer video shows it to
+  /// everyone. `null` when [citedVideo] is not the cited video, it is not
+  /// [creatorPubkey]'s, or it asks no question.
   static VideoReplyContext? replyContextFor(
     DmMessage message, {
     required VideoEvent citedVideo,
     required String? creatorPubkey,
   }) {
-    final question = questionOf(message);
+    final asked = citedVideo.stickerRegions
+        .where((region) => region.kind == VideoStickerKind.question)
+        .firstOrNull
+        ?.label;
     final citation = message.sharedVideoRef;
     final creator = creatorPubkey?.toLowerCase();
-    if (question == null ||
+    if (questionOf(message) == null ||
+        asked == null ||
         citation == null ||
         creator == null ||
         citedVideo.pubkey.toLowerCase() != creator ||
@@ -100,7 +107,7 @@ class DmQuestionAnswerHeader extends ConsumerWidget {
       rootEventKind: NIP71VideoKinds.addressableShortVideo,
       rootAuthorPubkey: creator,
       rootAddressableId: citedVideo.addressableId,
-      replyToName: question,
+      replyToName: _bounded(asked, VideoStickerRegion.maxLabelLength),
       replyToText: answer.isEmpty ? null : answer,
     );
   }
