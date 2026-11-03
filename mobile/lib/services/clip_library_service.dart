@@ -973,8 +973,10 @@ class ClipLibraryService {
   }
 
   /// Recovers missing thumbnails and ghost frames for clips that were
-  /// persisted before their assets had been generated. A clip whose video
-  /// file no longer exists is skipped.
+  /// persisted before their assets had been generated.
+  ///
+  /// Stop-motion clips and clips whose video file no longer exists are
+  /// skipped.
   ///
   /// Returns the updated list if any clips were recovered, or the original
   /// list unchanged.
