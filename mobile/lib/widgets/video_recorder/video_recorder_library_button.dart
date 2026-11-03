@@ -67,7 +67,9 @@ class _VideoRecorderLibraryButtonState
 
   Future<void> _openLibraryAndRefreshThumbnail() async {
     await openRecorderLibrary(context, ref);
-    if (!context.mounted) return;
+    // `mounted`, not `context.mounted`: reading `context` on a disposed State
+    // throws.
+    if (!mounted) return;
 
     // Refresh after returning — the user may have deleted clips or new
     // thumbnails may have been recovered in the library.

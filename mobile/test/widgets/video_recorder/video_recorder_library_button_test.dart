@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,8 +18,11 @@ import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_library_button.dart';
 import 'package:pro_video_editor/core/models/video/editor_video_model.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
+
+class _MockRecorderExitAuthGate extends Mock implements RecorderExitAuthGate {}
 
 class _MockVideoRecorderBloc
     extends MockBloc<VideoRecorderEvent, VideoRecorderBlocState>
@@ -43,6 +48,7 @@ void main() {
       List<DivineVideoClip>? clips,
       VideoRecorderBlocState recorderState = const VideoRecorderBlocState(),
       bool interactive = true,
+      RecorderExitAuthGate? authGate,
     }) {
       whenListen(
         recorderBloc,
@@ -55,6 +61,8 @@ void main() {
             () => _TestClipManagerNotifier(clips: clips ?? []),
           ),
           clipLibraryServiceProvider.overrideWithValue(mockClipLibraryService),
+          if (authGate != null)
+            recorderExitAuthGateProvider.overrideWithValue(authGate),
         ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -538,6 +546,62 @@ void main() {
           expect(detector.onTap, isNull);
         },
       );
+    });
+
+    group('opening the library', () {
+      late _MockRecorderExitAuthGate authGate;
+      late LogCaptureService logCapture;
+
+      setUp(() async {
+        authGate = _MockRecorderExitAuthGate();
+        when(() => authGate.isRestoring).thenReturn(false);
+        logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+      });
+
+      tearDown(() async {
+        await logCapture.clearAllLogs();
+      });
+
+      // #10658: the recorder can be torn down while the library navigation
+      // is still awaiting, and reading `State.context` afterwards threw.
+      testWidgets('does nothing once the button is gone before the library '
+          'navigation returns', (tester) async {
+        // Created inside the test: a completer from setUp completes outside
+        // the fake-async zone, so the awaiting code would never resume here.
+        final authenticated = Completer<bool>();
+        when(
+          authGate.waitForAuthenticatedOrTerminal,
+        ).thenAnswer((_) => authenticated.future);
+        final clips = [
+          DivineVideoClip(
+            id: 'clip1',
+            video: EditorVideo.file('/test/clip1.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime.now(),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          ),
+        ];
+
+        await tester.pumpWidget(buildWidget(clips: clips, authGate: authGate));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(VideoRecorderLibraryButton));
+        await tester.pump();
+        verify(authGate.waitForAuthenticatedOrTerminal).called(1);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        authenticated.complete(true);
+        await tester.pumpAndSettle();
+
+        final errors = logCapture
+            .getRecentLogs()
+            .where((entry) => entry.name == 'VideoRecorderLibraryButton')
+            .where((entry) => entry.level == LogLevel.error)
+            .map((entry) => '${entry.message} ${entry.error}');
+        expect(errors, isEmpty);
+        verify(() => mockClipLibraryService.getAllClips()).called(1);
+      });
     });
 
     group('non-interactive (editor-hosted recorder)', () {
