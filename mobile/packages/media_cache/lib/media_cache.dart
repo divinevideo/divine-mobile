@@ -59,6 +59,7 @@ export 'src/cancellable_downloader.dart'
         CancellableDownloadResult,
         CancellableDownloader,
         HttpCancellableDownloader;
+export 'src/image_info_dimensions.dart' show imageInfoDimensions;
 export 'src/media_cache_image_provider.dart'
     show MediaCacheImageLoadException, MediaCacheImageProvider;
 export 'src/media_cache_manager.dart'

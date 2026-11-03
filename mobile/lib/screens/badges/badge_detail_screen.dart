@@ -270,6 +270,12 @@ class _BadgeDetailBody extends StatelessWidget {
                       key: ObjectKey(detail),
                       coordinate: state.coordinate,
                     ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 24),
+                        child: _BadgeIssuer(coordinate: state.coordinate),
+                      ),
+                    ),
                     if (!detail.isOwner)
                       SliverToBoxAdapter(
                         child: Padding(
@@ -478,10 +484,15 @@ class _AcceptedHolders extends ConsumerWidget {
         ],
         child: SliverMainAxisGroup(
           slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 20, bottom: 20),
+                child: _BadgeEngagementActions(coordinate: coordinate),
+              ),
+            ),
+            _BadgeVideoGrid(coordinate: coordinate),
             const SliverToBoxAdapter(child: _HoldersHeader()),
             const _AcceptedHolderList(),
-            _BadgeVideoGrid(coordinate: coordinate),
-            const SliverToBoxAdapter(child: _SubscriptionAction()),
           ],
         ),
       ),
@@ -502,8 +513,10 @@ class _HoldersHeader extends StatelessWidget {
   );
 }
 
-class _SubscriptionAction extends StatelessWidget {
-  const _SubscriptionAction();
+class _BadgeEngagementActions extends StatelessWidget {
+  const _BadgeEngagementActions({required this.coordinate});
+
+  final BadgeCoordinate coordinate;
 
   @override
   Widget build(BuildContext context) {
@@ -512,37 +525,75 @@ class _SubscriptionAction extends StatelessWidget {
           (cubit.state.subscriptionStatus, cubit.state.isSubscribed),
     );
     final cubit = context.read<BadgeHoldersCubit>();
-    return switch (status) {
-      BadgeSubscriptionStatus.unavailable ||
-      BadgeSubscriptionStatus.initial => const SizedBox.shrink(),
-      BadgeSubscriptionStatus.failure => _DetailMessage(
-        message: context.l10n.badgeSubscriptionLoadError,
-        onRetry: cubit.retrySubscription,
-      ),
-      _ => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    final canSubscribe =
+        status != BadgeSubscriptionStatus.unavailable &&
+        status != BadgeSubscriptionStatus.initial &&
+        status != BadgeSubscriptionStatus.failure;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 12,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final buttonWidth = canSubscribe && constraints.maxWidth >= 480
+                ? (constraints.maxWidth - 12) / 2
+                : constraints.maxWidth;
+            return Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                if (canSubscribe)
+                  SizedBox(
+                    width: buttonWidth,
+                    child: DivineButton(
+                      label: status == BadgeSubscriptionStatus.loading
+                          ? context.l10n.commonLoading
+                          : subscribed
+                          ? context.l10n.badgeSubscribedAction
+                          : context.l10n.badgeSubscribeAction,
+                      expanded: true,
+                      onPressed: status == BadgeSubscriptionStatus.ready
+                          ? cubit.toggleSubscription
+                          : null,
+                    ),
+                  ),
+                SizedBox(
+                  width: buttonWidth,
+                  child: DivineButton(
+                    label: context.l10n.profileVideosLabel,
+                    leadingIcon: DivineIconName.playCircle,
+                    type: DivineButtonType.secondary,
+                    expanded: true,
+                    onPressed: () => context.push<void>(
+                      BadgeVideosScreen.pathFor(coordinate),
+                      extra:
+                          cubit.state.holdersStatus == BadgeHoldersStatus.loaded
+                          ? BadgeVideosSeed(
+                              coordinate: coordinate,
+                              holders: cubit.state.holders.toSet(),
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        if (canSubscribe)
           Text(
             context.l10n.badgeSubscriptionsPublicNotice,
             style: VineTheme.bodySmallFont(
               color: context.vineColors.onSurfaceVariant,
             ),
           ),
-          DivineButton(
-            label: status == BadgeSubscriptionStatus.loading
-                ? context.l10n.commonLoading
-                : subscribed
-                ? context.l10n.badgeSubscribedAction
-                : context.l10n.badgeSubscribeAction,
-            type: DivineButtonType.link,
-            size: DivineButtonSize.small,
-            onPressed: status == BadgeSubscriptionStatus.ready
-                ? cubit.toggleSubscription
-                : null,
+        if (status == BadgeSubscriptionStatus.failure)
+          _DetailMessage(
+            message: context.l10n.badgeSubscriptionLoadError,
+            onRetry: cubit.retrySubscription,
           ),
-        ],
-      ),
-    };
+      ],
+    );
   }
 }
 
@@ -554,7 +605,7 @@ class _AcceptedHolderList extends StatefulWidget {
 }
 
 class _AcceptedHolderListState extends State<_AcceptedHolderList> {
-  /// Holders shown before "Show more", so the video grid stays in reach.
+  /// Holders shown before "Show more" to keep the supporting list compact.
   static const _collapsedHolderCount = 6;
 
   bool _showAll = false;
@@ -644,32 +695,6 @@ class _BadgeVideoGrid extends ConsumerWidget {
     final cubit = context.read<BadgeVideosCubit>();
     return SliverMainAxisGroup(
       slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.only(top: 24, bottom: 12),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: DivineButton(
-                label: context.l10n.profileVideosLabel,
-                type: DivineButtonType.link,
-                size: DivineButtonSize.small,
-                onPressed: () => context.push<void>(
-                  BadgeVideosScreen.pathFor(coordinate),
-                  extra: holdersStatus == BadgeHoldersStatus.loaded
-                      ? BadgeVideosSeed(
-                          coordinate: coordinate,
-                          holders: context
-                              .read<BadgeHoldersCubit>()
-                              .state
-                              .holders
-                              .toSet(),
-                        )
-                      : null,
-                ),
-              ),
-            ),
-          ),
-        ),
         switch (state.status) {
           BadgeVideosStatus.initial => const SliverToBoxAdapter(
             child: SizedBox.shrink(),
@@ -775,43 +800,57 @@ class _BadgeHero extends StatelessWidget {
         (definition?.thumbnails.isNotEmpty ?? false
             ? definition!.thumbnails.first
             : null);
-    return Column(
-      spacing: 14,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: 16,
       children: [
         _BadgeArtwork(imageUrl: imageUrl),
-        Text(
-          definition?.name ?? coordinate.identifier,
-          textAlign: TextAlign.center,
-          style: VineTheme.titleLargeFont(color: context.vineColors.onSurface),
-        ),
-        if (definition?.description?.isNotEmpty ?? false)
-          Text(
-            definition!.description!,
-            textAlign: TextAlign.center,
-            style: VineTheme.bodyMediumFont(
-              color: context.vineColors.onSurfaceVariant,
-            ),
-          ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              context.l10n.badgeDetailMadeBy,
-              style: VineTheme.titleSmallFont(
-                color: context.vineColors.primaryText,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 8,
+            children: [
+              Text(
+                definition?.name ?? coordinate.identifier,
+                style: VineTheme.titleLargeFont(
+                  color: context.vineColors.onSurface,
+                ),
               ),
-            ),
-            UserProfileTile(
-              pubkey: coordinate.pubkey,
-              showFollowButton: false,
-              // The enclosing sliver already pads to the screen inset.
-              padding: const EdgeInsets.fromLTRB(0, 12, 16, 12),
-            ),
-          ],
+              if (definition?.description?.isNotEmpty ?? false)
+                Text(
+                  definition!.description!,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
         ),
       ],
     );
   }
+}
+
+class _BadgeIssuer extends StatelessWidget {
+  const _BadgeIssuer({required this.coordinate});
+
+  final BadgeCoordinate coordinate;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(
+        context.l10n.badgeDetailMadeBy,
+        style: VineTheme.titleSmallFont(color: context.vineColors.primaryText),
+      ),
+      UserProfileTile(
+        pubkey: coordinate.pubkey,
+        showFollowButton: false,
+        padding: const EdgeInsets.fromLTRB(0, 12, 16, 12),
+      ),
+    ],
+  );
 }
 
 class _BadgeArtwork extends StatelessWidget {
@@ -830,14 +869,14 @@ class _BadgeArtwork extends StatelessWidget {
         child: DivineIcon(
           icon: DivineIconName.sparkle,
           color: VineTheme.primaryDarkGreen,
-          size: 56,
+          size: 36,
         ),
       ),
     );
 
     return SizedBox(
-      width: 156,
-      height: 156,
+      width: 80,
+      height: 80,
       child: imageUrl == null || imageUrl!.isEmpty
           ? fallback
           : ClipOval(

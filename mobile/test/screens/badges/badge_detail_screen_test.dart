@@ -992,7 +992,62 @@ void main() {
       );
     }
 
-    testWidgets('opens the badge video page from the detail header', (
+    testWidgets('puts badge actions and videos before holders and issuer', (
+      tester,
+    ) async {
+      final videos = _MockVideosRepository();
+      final pager = _MockBadgeVideoPager();
+      when(() => repository.loadBadgeDetail(any())).thenAnswer(
+        (_) async => _detail(definition: _definition(), isOwner: false),
+      );
+      when(() => repository.loadAcceptedHolders(any()))
+          .thenAnswer((_) async => {_pubkey(3)});
+      when(() => repository.loadSubscriptions(requireComplete: true))
+          .thenAnswer((_) async => <BadgeCoordinate>{});
+      when(() => videos.createBadgeVideoPager(any())).thenReturn(pager);
+      when(pager.loadMore).thenAnswer((_) async => [_video()]);
+      when(() => pager.hasMore).thenReturn(false);
+
+      await tester.pumpWidget(
+        buildSubject(
+          videosRepository: videos,
+          overrides: [
+            authServiceProvider.overrideWithValue(
+              createMockAuthService(currentPublicKeyHex: _pubkey(1)),
+            ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final subscribe = find.text(l10n.badgeSubscribeAction);
+      final watch = find.text(l10n.profileVideosLabel);
+      final thumbnail = find.byType(VideoThumbnailWidget);
+      final holders = find.text(l10n.badgeAcceptedHoldersTitle);
+      final issuer = find.text(l10n.badgeDetailMadeBy);
+      expect(subscribe.hitTestable(), findsOneWidget);
+      expect(watch.hitTestable(), findsOneWidget);
+      expect(
+        tester.getBottomLeft(subscribe).dy,
+        lessThan(tester.getTopLeft(thumbnail).dy),
+      );
+      expect(
+        tester.getBottomLeft(thumbnail).dy,
+        lessThan(tester.getTopLeft(holders).dy),
+      );
+      await tester.scrollUntilVisible(
+        issuer,
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(holders).dy,
+        lessThan(tester.getTopLeft(issuer).dy),
+      );
+    });
+
+    testWidgets('opens the badge video page from the visible watch action', (
       tester,
     ) async {
       when(() => repository.loadBadgeDetail(any())).thenAnswer(
@@ -1000,12 +1055,7 @@ void main() {
       );
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.text(l10n.profileVideosLabel),
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pumpAndSettle();
+      expect(find.text(l10n.profileVideosLabel).hitTestable(), findsOneWidget);
       await tester.tap(find.text(l10n.profileVideosLabel));
       await tester.pumpAndSettle();
       expect(

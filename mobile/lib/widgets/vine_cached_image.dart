@@ -75,6 +75,9 @@ class VineCachedImage extends StatefulWidget {
   final ResizeImagePolicy resizePolicy;
   final Duration fadeInDuration;
   final Duration fadeOutDuration;
+
+  /// Called when decoded pixel dimensions are available. Browser HTML image
+  /// fallback can display an image without exposing its decoded pixels.
   final ImageDimensionsResolved? onImageDimensionsResolved;
 
   @override
@@ -148,20 +151,19 @@ class _VineCachedImageState extends State<VineCachedImage> {
 
     _listener = ImageStreamListener(
       (image, synchronousCall) {
-        final imageWidth = image.image.width;
-        final imageHeight = image.image.height;
+        final dimensions = imageInfoDimensions(image);
         final onImageDimensionsResolved = widget.onImageDimensionsResolved;
         image.dispose();
         if (!mounted) return;
-        if (onImageDimensionsResolved != null) {
+        if (onImageDimensionsResolved != null && dimensions != null) {
           if (synchronousCall) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
-                onImageDimensionsResolved(imageWidth, imageHeight);
+                onImageDimensionsResolved(dimensions.width, dimensions.height);
               }
             });
           } else {
-            onImageDimensionsResolved(imageWidth, imageHeight);
+            onImageDimensionsResolved(dimensions.width, dimensions.height);
           }
         }
         if (_hasImage) return;
