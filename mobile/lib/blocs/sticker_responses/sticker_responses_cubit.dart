@@ -113,6 +113,7 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
     return VideoResponses(
       total: replies.total,
       videos: [...replies.videos, pinned],
+      totalIsAtLeast: replies.totalIsAtLeast,
     );
   }
 

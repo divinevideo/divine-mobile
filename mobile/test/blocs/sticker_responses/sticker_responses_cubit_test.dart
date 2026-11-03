@@ -153,6 +153,39 @@ void main() {
         );
 
         blocTest<StickerResponsesCubit, StickerResponsesState>(
+          'keeps a count the relays cut off as a floor',
+          setUp: () {
+            when(
+              () => repository.fetchReplies(
+                videoId: any(named: 'videoId'),
+                videoAddress: any(named: 'videoAddress'),
+                limit: any(named: 'limit'),
+              ),
+            ).thenAnswer(
+              (_) async => VideoResponses(
+                total: 500,
+                videos: [_video(1), _video(2)],
+                totalIsAtLeast: true,
+              ),
+            );
+            when(
+              () => repository.fetchReply(
+                _hex(9),
+                videoId: root.id,
+                videoAddress: rootAddress,
+              ),
+            ).thenAnswer((_) async => _video(9));
+          },
+          build: () => build(_region(VideoStickerKind.replies)),
+          act: (cubit) => cubit.load(),
+          skip: 1,
+          verify: (cubit) {
+            expect(cubit.state.videos.first, equals(_video(9)));
+            expect(cubit.state.totalIsAtLeast, isTrue);
+          },
+        );
+
+        blocTest<StickerResponsesCubit, StickerResponsesState>(
           'shows the replies read when the pinned one is gone',
           setUp: () => when(
             () => repository.fetchReply(
