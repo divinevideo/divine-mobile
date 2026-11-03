@@ -1291,8 +1291,9 @@ class NotificationRepository {
       );
     }
 
-    // Actor-anchored kinds — `follow`, `actorLike`, `mention`, `likeComment`,
-    // `reply`, `system` (and unknown future types fall through to `system`).
+    // Actor-anchored kinds — `follow`, `actorLike`, `taggedVideoLike`,
+    // `mention`, `likeComment`, `reply`, `system` (and unknown future types
+    // fall through to `system`).
     return ActorNotification(
       id: row.id,
       type: _actorKindFromCachedType(row.type),
@@ -1304,6 +1305,7 @@ class NotificationRepository {
       notificationIds: row.id.isNotEmpty ? [row.id] : const [],
       videoAddressableId: _nonEmpty(row.videoAddressableId),
       hasCommentTarget: row.hasCommentTarget,
+      isTaggedVideo: row.type == _taggedVideoLikeCacheType,
     );
   }
 
@@ -1329,7 +1331,7 @@ class NotificationRepository {
   static NotificationKind _actorKindFromCachedType(String type) =>
       switch (type) {
         'follow' => NotificationKind.follow,
-        'actorLike' => NotificationKind.like,
+        'actorLike' || _taggedVideoLikeCacheType => NotificationKind.like,
         'mention' => NotificationKind.mention,
         'likeComment' => NotificationKind.likeComment,
         'reply' => NotificationKind.reply,
@@ -1471,11 +1473,20 @@ class NotificationRepository {
     );
   }
 
+  /// Cached `type` of a like on another creator's video that tags the user.
+  ///
+  /// Kept apart from `actorLike` so a cold start does not render the row as
+  /// "liked your video". An older build maps it to a system placeholder until
+  /// the first REST page replaces it.
+  static const _taggedVideoLikeCacheType = 'taggedVideoLike';
+
   /// String form persisted in the `type` column.
   ///
   /// Inverse of the placeholder type mappings and grouped-comment codec.
   static String _persistType(NotificationItem item) => switch (item) {
     VideoNotification(type: NotificationKind.mention) => 'videoMention',
+    ActorNotification(type: NotificationKind.like, isTaggedVideo: true) =>
+      _taggedVideoLikeCacheType,
     ActorNotification(type: NotificationKind.like) => 'actorLike',
     ActorNotification() when _isGroupedCommentLike(item) =>
       CommentLikeCacheCodec.type,

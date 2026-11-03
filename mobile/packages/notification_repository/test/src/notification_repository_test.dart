@@ -5755,6 +5755,79 @@ void main() {
       );
 
       test(
+        'a like on a video the user is tagged in stays tagged through the '
+        'cache',
+        () async {
+          final saved = Completer<List<NotificationCacheRow>>();
+          when(
+            () => notificationsDao.replaceAll(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((invocation) async {
+            if (!saved.isCompleted) {
+              saved.complete(
+                invocation.positionalArguments.first
+                    as List<NotificationCacheRow>,
+              );
+            }
+          });
+          stubNotifications([
+            makeNotification(
+              id: 'tagged_like',
+              referencedEventId: 'foreign_video',
+            ),
+          ]);
+          stubVideoStats(
+            'foreign_video',
+            makeVideoStats(id: 'foreign_video', pubkey: 'other_owner_pubkey'),
+          );
+          await repository.getNotifications();
+          final rows = await saved.future;
+          final row = rows.singleWhere((r) => r.type != 'seen_marker');
+          expect(row.type, equals('taggedVideoLike'));
+
+          when(
+            () => notificationsDao.getAllNotifications(
+              limit: any(named: 'limit'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              NotificationRow(
+                id: row.id,
+                type: row.type,
+                fromPubkey: row.fromPubkey,
+                timestamp: row.timestamp,
+                targetEventId: row.targetEventId,
+                videoAddressableId: row.videoAddressableId,
+                targetPubkey: row.targetPubkey,
+                content: row.content,
+                hasCommentTarget: row.hasCommentTarget,
+                isRead: row.isRead,
+                cachedAt: DateTime.now(),
+              ),
+            ],
+          );
+          final hydrated = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: notificationsDao,
+            userPubkey: userPubkey,
+          );
+          addTearDown(hydrated.close);
+
+          final page = await hydrated.watchSnapshot().firstWhere(
+            (page) => page.items.isNotEmpty,
+          );
+          final item = page.items.single as ActorNotification;
+          expect(item.type, equals(NotificationKind.like));
+          expect(item.isTaggedVideo, isTrue);
+          expect(item.targetEventId, equals('foreign_video'));
+        },
+      );
+
+      test(
         'cached video placeholders are enriched with actor and video metadata',
         () async {
           when(
