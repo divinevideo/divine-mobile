@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:clock/clock.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -1705,7 +1706,12 @@ void main() {
       });
 
       test('records the signed second in updatedAt on creation', () async {
-        final list = await service.createList(name: 'Test List');
+        // Signing reads the clock again. On the wall clock, a list created at
+        // x.999 signs in second x + 1, so pin the clock to that edge.
+        final list = await withClock(
+          Clock.fixed(DateTime.utc(2026, 11, 3, 10, 20, 32, 999)),
+          () => service.createList(name: 'Test List'),
+        );
 
         expect(
           list!.createdAt.millisecondsSinceEpoch ~/ 1000,
