@@ -3,6 +3,7 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_cache/media_cache.dart';
@@ -14,6 +15,10 @@ const _imageUrl =
     'AAIAAAUAAXpeqz8AAAAASUVORK5CYII=';
 
 void main() {
+  // The optimized native runner invokes main directly, bypassing TestOn.
+  // Keep these browser regressions out of that native test declaration pass.
+  if (!kIsWeb) return;
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('MediaCacheImageProvider on web', () {
