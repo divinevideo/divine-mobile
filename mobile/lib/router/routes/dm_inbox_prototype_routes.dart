@@ -11,7 +11,9 @@ part 'dm_inbox_prototype_routes.g.dart';
 /// The prototype's routes, registered only when [enabled].
 ///
 /// Defaults to debug builds, matching the Developer Options tile: hiding the
-/// tile alone would leave the path reachable by typed URL.
+/// tile alone would leave the path reachable by typed URL. The caller also
+/// gates on [kDebugMode], because only a const condition at the call site
+/// keeps the prototype out of a release binary.
 List<RouteBase> dmInboxPrototypeRoutes({bool enabled = kDebugMode}) =>
     enabled ? $appRoutes : const [];
 

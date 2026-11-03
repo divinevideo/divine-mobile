@@ -2,6 +2,7 @@
 // ABOUTME: Split from app_router.dart (#4508)
 
 import 'package:badge_repository/badge_repository.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -297,7 +298,9 @@ List<RouteBase> settingsRoutes(Ref ref) {
       name: ClipRecoveryScreen.routeName,
       builder: (_, _) => const ClipRecoveryScreen(),
     ),
-    ...dmInboxPrototypeRoutes(),
+    // A const gate here, not only the default parameter, is what lets a
+    // release build drop the prototype's code and fixtures entirely.
+    if (kDebugMode) ...dmInboxPrototypeRoutes(),
     GoRoute(
       path: DeveloperOptionsScreen.path,
       name: DeveloperOptionsScreen.routeName,
