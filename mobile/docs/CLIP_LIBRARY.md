@@ -107,7 +107,7 @@ Once the user is signed in, `AppLifecycleHandler` runs three clip steps in order
 
 Only the two purges are failure-isolated: each runs through `_runStartupSweep`, which logs a failure and carries on, so a failing purge neither blocks startup nor stops the other. Everything before them is awaited bare, so if `migrateOldClips` throws, neither purge runs on that launch.
 
-When the library loads, video clips missing a thumbnail or ghost frame get them regenerated in the background (`recoverMissingAssets`). The grid then refreshes in place with `ClipsLibraryClipsChanged`, not with a new load: a new load would start recovery again and could loop.
+When the library loads, video clips missing a thumbnail or ghost frame get them regenerated in the background (`recoverMissingAssets`). A clip whose video file is gone is skipped and logged as a warning, since there is nothing to extract from. The grid then refreshes in place with `ClipsLibraryClipsChanged`, not with a new load: a new load would start recovery again and could loop.
 
 ## How clips get in
 
