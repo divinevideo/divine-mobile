@@ -274,6 +274,33 @@ void main() {
         );
       });
 
+      testWidgets('"{actor} liked a video you\'re tagged in" for a like on '
+          "another creator's video", (tester) async {
+        await _pump(
+          tester,
+          notification: ActorNotification(
+            id: 'n1',
+            type: NotificationKind.like,
+            actor: _alice,
+            timestamp: DateTime.utc(2026, 5, 4, 12),
+            isTaggedVideo: true,
+          ),
+        );
+
+        expect(
+          find.textContaining(_l10n.notificationLikedTaggedVideo('Alice')),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining(_l10n.notificationLikedYourVideo('Alice')),
+          findsNothing,
+        );
+        expect(
+          find.textContaining(_l10n.notificationLikedYourComment('Alice')),
+          findsNothing,
+        );
+      });
+
       testWidgets('"{actor} replied to your comment" for reply', (
         tester,
       ) async {

@@ -2333,6 +2333,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName}さんがあなたがタグ付けされた動画にいいねしました",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName}があなたのコメントにいいねしました",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",

@@ -1879,6 +1879,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName}님이 회원님이 태그된 동영상을 좋아해요",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName}님이 회원님의 댓글을 좋아해요",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",

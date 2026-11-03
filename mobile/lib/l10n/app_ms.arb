@@ -4263,6 +4263,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} menyukai video yang menanda anda",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} menyukai komen anda",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",

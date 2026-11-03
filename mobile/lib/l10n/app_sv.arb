@@ -2343,6 +2343,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} gillade en video som du är taggad i",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} gillade din kommentar",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",

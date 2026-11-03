@@ -4263,6 +4263,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} 点赞了一个标记了你的视频",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} 点赞了你的评论",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",

@@ -8363,6 +8363,11 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName đã thích một video có gắn thẻ bạn';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName đã thích bình luận của bạn';
   }

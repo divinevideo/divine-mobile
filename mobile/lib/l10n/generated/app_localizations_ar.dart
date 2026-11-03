@@ -8403,6 +8403,11 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName أعجب بفيديو تمت الإشارة إليك فيه';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName أعجبوا بتعليقك';
   }

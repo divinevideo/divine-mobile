@@ -8324,6 +8324,11 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName etiketlendiğin bir videoyu beğendi';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName yorumunu beğendi';
   }

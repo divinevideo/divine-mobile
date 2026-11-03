@@ -11,6 +11,7 @@ import 'package:db_client/db_client.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:meta/meta.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
@@ -1290,8 +1291,9 @@ class NotificationRepository {
       );
     }
 
-    // Actor-anchored kinds — `follow`, `actorLike`, `mention`, `likeComment`,
-    // `reply`, `system` (and unknown future types fall through to `system`).
+    // Actor-anchored kinds — `follow`, `actorLike`, `taggedVideoLike`,
+    // `mention`, `likeComment`, `reply`, `system` (and unknown future types
+    // fall through to `system`).
     return ActorNotification(
       id: row.id,
       type: _actorKindFromCachedType(row.type),
@@ -1303,6 +1305,7 @@ class NotificationRepository {
       notificationIds: row.id.isNotEmpty ? [row.id] : const [],
       videoAddressableId: _nonEmpty(row.videoAddressableId),
       hasCommentTarget: row.hasCommentTarget,
+      isTaggedVideo: row.type == _taggedVideoLikeCacheType,
     );
   }
 
@@ -1328,7 +1331,7 @@ class NotificationRepository {
   static NotificationKind _actorKindFromCachedType(String type) =>
       switch (type) {
         'follow' => NotificationKind.follow,
-        'actorLike' => NotificationKind.like,
+        'actorLike' || _taggedVideoLikeCacheType => NotificationKind.like,
         'mention' => NotificationKind.mention,
         'likeComment' => NotificationKind.likeComment,
         'reply' => NotificationKind.reply,
@@ -1470,11 +1473,20 @@ class NotificationRepository {
     );
   }
 
+  /// Cached `type` of a like on another creator's video that tags the user.
+  ///
+  /// Kept apart from `actorLike` so a cold start does not render the row as
+  /// "liked your video". An older build maps it to a system placeholder until
+  /// the first REST page replaces it.
+  static const _taggedVideoLikeCacheType = 'taggedVideoLike';
+
   /// String form persisted in the `type` column.
   ///
   /// Inverse of the placeholder type mappings and grouped-comment codec.
   static String _persistType(NotificationItem item) => switch (item) {
     VideoNotification(type: NotificationKind.mention) => 'videoMention',
+    ActorNotification(type: NotificationKind.like, isTaggedVideo: true) =>
+      _taggedVideoLikeCacheType,
     ActorNotification(type: NotificationKind.like) => 'actorLike',
     ActorNotification() when _isGroupedCommentLike(item) =>
       CommentLikeCacheCodec.type,
@@ -2229,10 +2241,20 @@ class NotificationRepository {
 
   /// Enriches raw relay notifications with profile + video metadata, then
   /// groups them into [VideoNotification]s and [ActorNotification]s.
+  ///
+  /// Activity on repost events is dropped first; see [_targetsRepostEvent].
   Future<List<NotificationItem>> _enrichAndGroup(
-    List<RelayNotification> raw, {
+    List<RelayNotification> unfiltered, {
     NotificationKind? filter,
   }) async {
+    final raw = <RelayNotification>[];
+    for (final n in unfiltered) {
+      if (_targetsRepostEvent(n)) {
+        _logDroppedRepostActivity(n);
+      } else {
+        raw.add(n);
+      }
+    }
     if (raw.isEmpty) return [];
 
     final pubkeys = raw.map((n) => n.sourcePubkey).toSet().toList();
@@ -2255,18 +2277,37 @@ class NotificationRepository {
       }).toList(),
     );
     final misattributed = <RelayNotification>[];
+    final taggedVideoLikes = <RelayNotification>[];
     final videos = _groupVideoAnchored(
       consolidated,
       profiles,
       videoMetadata.videosById,
       videoNotFoundIds: videoMetadata.notFoundIds,
       misattributed: misattributed,
+      taggedVideoLikes: taggedVideoLikes,
     );
     final actors = _mapActorAnchored(consolidated, profiles);
     final reclassified = _reclassifyMisattributed(misattributed, profiles);
+    final tagged = taggedVideoLikes.map((n) {
+      final anchorId = _videoAnchorEventId(NotificationKind.like, n);
+      return _buildActorNotification(
+        n,
+        type: NotificationKind.like,
+        profiles: profiles,
+        targetEventId: anchorId,
+        videoAddressableId: _sourceVideoAddressableId(
+          video: videoMetadata.videosById[anchorId],
+        ),
+        isTaggedVideo: true,
+      );
+    });
 
-    final items = <NotificationItem>[...videos, ...actors, ...reclassified]
-      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    final items = <NotificationItem>[
+      ...videos,
+      ...actors,
+      ...reclassified,
+      ...tagged,
+    ]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
     return _groupCommentLikes(
       _applyBlockFilter(_applyFeedFilter(items, filter)),
     );
@@ -2442,16 +2483,23 @@ class NotificationRepository {
   /// a [VideoNotification], even if only one actor interacted. Comments can
   /// anchor on `rootEventId` when the payload omits `referencedEventId`.
   ///
-  /// Notifications whose referenced video is confirmed to belong to a
-  /// different user are collected in [misattributed] for reclassification
-  /// as actor-anchored notifications (e.g. "liked your comment" instead of
-  /// "liked your video"). This fixes #4813.
+  /// Notifications whose anchor is confirmed not to be the user's own video
+  /// are collected in [misattributed] for reclassification as actor-anchored
+  /// rows (#4813): comments become "replied to your comment", and likes whose
+  /// anchor 404'd under a foreign root author become "liked your comment".
+  ///
+  /// A like whose anchor metadata resolves to another creator's video goes to
+  /// [taggedVideoLikes] instead: Funnelcake notifies everyone a like tags, a
+  /// collaborator for example, so the row must not say "your video". A like
+  /// on the user's comment usually carries `target_comment_id` and is a
+  /// likeComment before this point.
   List<VideoNotification> _groupVideoAnchored(
     List<RelayNotification> raw,
     Map<String, UserProfile> profiles,
     Map<String, VideoStats> videosById, {
     required Set<String> videoNotFoundIds,
     List<RelayNotification>? misattributed,
+    List<RelayNotification>? taggedVideoLikes,
   }) {
     final groups = <_VideoGroupKey, List<RelayNotification>>{};
     for (final n in raw) {
@@ -2481,7 +2529,11 @@ class NotificationRepository {
           referencedVideoOwnerPubkey: videosById[eventId]?.pubkey,
           rootEventPubkey: n.rootEventPubkey,
         );
-        misattributed?.add(n);
+        if (kind == NotificationKind.like && videosById[eventId] != null) {
+          taggedVideoLikes?.add(n);
+        } else {
+          misattributed?.add(n);
+        }
         continue;
       }
       final video = videosById[eventId];
@@ -2685,8 +2737,8 @@ class NotificationRepository {
   ///
   /// Instead of silently dropping these, they are surfaced as
   /// [ActorNotification]s with the correct kind:
-  /// - `like` (reaction on someone else's video) → `likeComment`
-  ///   ("liked your comment")
+  /// - `like` whose anchor 404'd under a foreign `root_event_pubkey` (a
+  ///   reaction on the user's comment) → `likeComment` ("liked your comment")
   /// - `comment` (reply on someone else's video) → `reply`
   ///   ("replied to your comment")
   /// - `repost` remains dropped — a repost of someone else's video should
@@ -2725,6 +2777,8 @@ class NotificationRepository {
     required Map<String, UserProfile> profiles,
     NotificationKind? commentKind,
     String? targetEventId,
+    String? videoAddressableId,
+    bool isTaggedVideo = false,
   }) {
     final quoteKind = commentKind ?? type;
     return ActorNotification(
@@ -2744,11 +2798,13 @@ class NotificationRepository {
       notificationIds: notification.dedupeKey.isNotEmpty
           ? [notification.dedupeKey]
           : const [],
-      videoAddressableId: _actorVideoAddressableId(type, notification),
+      videoAddressableId:
+          videoAddressableId ?? _actorVideoAddressableId(type, notification),
       hasCommentTarget: _actorHasCommentTarget(type, notification),
       commentEventId: type == NotificationKind.likeComment
           ? _nonEmpty(notification.targetCommentId)
           : null,
+      isTaggedVideo: isTaggedVideo,
     );
   }
 
@@ -3049,6 +3105,20 @@ class NotificationRepository {
     return false;
   }
 
+  void _logDroppedRepostActivity(RelayNotification n) {
+    Log.info(
+      'Dropping notification on a repost event: '
+      'notificationId=${n.dedupeKey} '
+      'notificationType=${n.notificationType} '
+      'sourcePubkey=${pubkeyForLogs(n.sourcePubkey)} '
+      'referencedEventId=${n.referencedEventId} '
+      'referencedEventKind=${n.referencedEventKind} '
+      'currentUserPubkey=${pubkeyForLogs(_userPubkey)}',
+      name: 'NotificationRepository',
+      category: LogCategory.api,
+    );
+  }
+
   void _logReclassifiedOwnerMismatch({
     required String notificationId,
     required String sourcePubkey,
@@ -3204,6 +3274,26 @@ class NotificationRepository {
     if (_npubIdentifierPattern.hasMatch(name)) return false;
 
     return true;
+  }
+
+  /// Whether [n] is a like, comment or repost whose referenced event is a
+  /// repost (kind 6 or 16).
+  ///
+  /// Funnelcake notifies the author of every event a source event tags, so
+  /// activity on a repost reaches the reposter even though the video is
+  /// someone else's. Rendering it would credit the user with that video.
+  static bool _targetsRepostEvent(RelayNotification n) {
+    final referencedKind = n.referencedEventKind;
+    if (referencedKind != EventKind.repost &&
+        referencedKind != EventKind.genericRepost) {
+      return false;
+    }
+    return switch (_mapNotificationKind(n)) {
+      NotificationKind.like ||
+      NotificationKind.comment ||
+      NotificationKind.repost => true,
+      _ => false,
+    };
   }
 
   /// Maps a relay notification type string + source kind to

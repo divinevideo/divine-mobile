@@ -199,6 +199,44 @@ void main() {
       });
     });
 
+    group('isTaggedVideo', () {
+      ActorNotification like({bool isTaggedVideo = false}) => ActorNotification(
+        id: 'n1',
+        type: NotificationKind.like,
+        actor: actor,
+        timestamp: timestamp,
+        isTaggedVideo: isTaggedVideo,
+      );
+
+      test('defaults to false', () {
+        expect(like().isTaggedVideo, isFalse);
+      });
+
+      test('sets two otherwise-equal likes apart', () {
+        expect(like(isTaggedVideo: true), isNot(equals(like())));
+      });
+
+      test('survives copyWith', () {
+        final tagged = like(isTaggedVideo: true).copyWith(isRead: true);
+
+        expect(tagged.isTaggedVideo, isTrue);
+        expect(tagged.isRead, isTrue);
+      });
+
+      test('is rejected on a kind other than like', () {
+        expect(
+          () => ActorNotification(
+            id: 'n1',
+            type: NotificationKind.likeComment,
+            actor: actor,
+            timestamp: timestamp,
+            isTaggedVideo: true,
+          ),
+          throwsA(isA<AssertionError>()),
+        );
+      });
+    });
+
     group('copyWith', () {
       test('toggles isFollowingBack', () {
         final original = ActorNotification(

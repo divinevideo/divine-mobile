@@ -8211,6 +8211,11 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName የተጠቀስክበትን ቪዲዮ ወደውታል።';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName አስተያየትህን ወደውታል።';
   }

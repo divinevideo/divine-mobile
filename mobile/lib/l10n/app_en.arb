@@ -5796,6 +5796,15 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} liked a video you're tagged in",
+  "@notificationLikedTaggedVideo": {
+    "description": "Notification text when someone likes another creator's video that tags the user, for example as a collaborator. The video is not the user's own, so the text must not say \"your video\".",
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} liked your comment",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",

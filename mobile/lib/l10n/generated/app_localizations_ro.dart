@@ -8604,6 +8604,11 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName a apreciat un videoclip care te etichetează';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName au apreciat comentariul tău';
   }

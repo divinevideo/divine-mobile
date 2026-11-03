@@ -1,10 +1,12 @@
-// ABOUTME: Actor-anchored notification — follows, mentions, system, and
-// ABOUTME: reactions without a video anchor, including grouped comment likes.
+// ABOUTME: Actor-anchored notification — follows, mentions, system,
+// ABOUTME: reactions without a video anchor, grouped comment likes, and likes
+// ABOUTME: on another creator's video.
 
 part of 'notification_item.dart';
 
-/// A notification anchored to an actor (follow, mention, system, or an
-/// addressable reaction without a concrete video event ID).
+/// A notification anchored to an actor (follow, mention, system, an
+/// addressable reaction without a concrete video event ID, or a like on
+/// another creator's video — see [isTaggedVideo]).
 ///
 /// Comment likes with a confirmed comment ID share a row; other kinds
 /// remain one row per event.
@@ -32,6 +34,7 @@ class ActorNotification extends NotificationItem {
     this.videoAddressableId,
     this.hasCommentTarget = false,
     this.chatTarget,
+    this.isTaggedVideo = false,
   }) : commentText = sanitizeUtf16OrNull(commentText),
        assert(
          type == NotificationKind.follow ||
@@ -42,6 +45,10 @@ class ActorNotification extends NotificationItem {
              type == NotificationKind.reply,
          'ActorNotification only supports follow, like, mention, system, '
          'likeComment, reply',
+       ),
+       assert(
+         !isTaggedVideo || type == NotificationKind.like,
+         'isTaggedVideo only applies to a like',
        );
 
   /// The actor who triggered this notification.
@@ -88,6 +95,10 @@ class ActorNotification extends NotificationItem {
   /// Present only for client-decrypted room mentions.
   final ChatNotificationTarget? chatTarget;
 
+  /// Whether this [NotificationKind.like] is on a video another creator owns,
+  /// so the row must not say "your video" or "your comment".
+  final bool isTaggedVideo;
+
   /// Returns a copy with the given fields replaced.
   ActorNotification copyWith({
     String? id,
@@ -105,6 +116,7 @@ class ActorNotification extends NotificationItem {
     String? videoAddressableId,
     bool? hasCommentTarget,
     ChatNotificationTarget? chatTarget,
+    bool? isTaggedVideo,
   }) {
     return ActorNotification(
       id: id ?? this.id,
@@ -122,6 +134,7 @@ class ActorNotification extends NotificationItem {
       videoAddressableId: videoAddressableId ?? this.videoAddressableId,
       hasCommentTarget: hasCommentTarget ?? this.hasCommentTarget,
       chatTarget: chatTarget ?? this.chatTarget,
+      isTaggedVideo: isTaggedVideo ?? this.isTaggedVideo,
     );
   }
 
@@ -142,6 +155,7 @@ class ActorNotification extends NotificationItem {
     videoAddressableId,
     hasCommentTarget,
     chatTarget,
+    isTaggedVideo,
   ];
 }
 

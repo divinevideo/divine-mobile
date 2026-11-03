@@ -8653,6 +8653,11 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName మిమ్మల్ని ట్యాగ్ చేసిన వీడియోను ఇష్టపడ్డారు';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorNameమీ వ్యాఖ్యను ఇష్టపడ్డారు';
   }

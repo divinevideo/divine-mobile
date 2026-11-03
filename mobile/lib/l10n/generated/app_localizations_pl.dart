@@ -8606,6 +8606,11 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName polubił(a) wideo, na którym Cię oznaczono';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName polubili Twój komentarz';
   }

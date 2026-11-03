@@ -3031,6 +3031,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} የተጠቀስክበትን ቪዲዮ ወደውታል።",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} አስተያየትህን ወደውታል።",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",
