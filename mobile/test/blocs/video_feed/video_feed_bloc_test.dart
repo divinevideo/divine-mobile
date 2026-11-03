@@ -2442,7 +2442,7 @@ void main() {
                     .thenReturn(false);
                 final container = ProviderContainer(
                   overrides: [
-                    funnelcakeApiClientProvider.overrideWithValue(
+                    badgeCatalogueApiClientProvider.overrideWithValue(
                       _MockBadgeFunnelcakeClient(),
                     ),
                     authServiceProvider.overrideWithValue(auth),

@@ -381,6 +381,8 @@ class BadgeRepository {
   }
 
   final NostrClient _nostrClient;
+
+  /// Trusted catalogue API that verifies signatures before serving events.
   final FunnelcakeApiClient? _funnelcakeApiClient;
   final BadgeCurrentPubkeyReader _currentPubkey;
   final BadgeEventSigner _signEvent;

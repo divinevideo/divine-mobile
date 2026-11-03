@@ -48,7 +48,7 @@ void main() {
       );
       final container = ProviderContainer(
         overrides: [
-          funnelcakeApiClientProvider.overrideWithValue(
+          badgeCatalogueApiClientProvider.overrideWithValue(
             _MockFunnelcakeClient(),
           ),
           authServiceProvider.overrideWithValue(auth),
@@ -114,7 +114,7 @@ void main() {
           );
           final container = ProviderContainer(
             overrides: [
-              funnelcakeApiClientProvider.overrideWithValue(
+              badgeCatalogueApiClientProvider.overrideWithValue(
                 _MockFunnelcakeClient(),
               ),
               authServiceProvider.overrideWithValue(auth),
@@ -186,7 +186,7 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
-            funnelcakeApiClientProvider.overrideWithValue(
+            badgeCatalogueApiClientProvider.overrideWithValue(
               _MockFunnelcakeClient(),
             ),
             authServiceProvider.overrideWithValue(auth),

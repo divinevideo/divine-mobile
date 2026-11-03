@@ -88,7 +88,7 @@ void main() {
               .thenAnswer((_) => const Stream.empty());
           final container = ProviderContainer(
             overrides: [
-              funnelcakeApiClientProvider.overrideWithValue(
+              badgeCatalogueApiClientProvider.overrideWithValue(
                 _MockFunnelcakeClient(),
               ),
               authServiceProvider.overrideWithValue(auth),
