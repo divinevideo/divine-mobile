@@ -172,6 +172,25 @@ class VideoResponsesRepository {
     );
   }
 
+  /// Whether the video at [chainRoot] starts an Add yours chain with
+  /// [hashtag]: it carries an Add yours of its own with that hashtag, not one
+  /// answering another video's. `false` when it cannot be read.
+  Future<bool> startsChain(String chainRoot, {required String hashtag}) async {
+    if (!RepliesCuration.isAddress(chainRoot)) return false;
+    final events = await _nostrClient.queryEvents([_filterFor(chainRoot)]);
+    final first = _responsesIn(
+      events,
+      limit: 1,
+      where: (video) => video.addressableId == chainRoot,
+    ).videos.firstOrNull;
+    return first?.stickerRegions.any(
+          (region) =>
+              region.promptChainRoot(chainRoot) == chainRoot &&
+              region.promptHashtag == hashtag,
+        ) ??
+        false;
+  }
+
   /// The reply to the video [videoId] names, published at [videoAddress],
   /// that [key] names, its [RepliesCuration.keyOf]: the newest version of it.
   /// `null` when there is none, or it does not reply to that video.
@@ -180,15 +199,7 @@ class VideoResponsesRepository {
     required String videoId,
     String? videoAddress,
   }) async {
-    final address = key.split(':');
-    final filter = RepliesCuration.isAddress(key)
-        ? Filter(
-            kinds: [int.parse(address[0])],
-            authors: [address[1]],
-            d: [address.skip(2).join(':')],
-          )
-        : Filter(ids: [key]);
-    final events = await _nostrClient.queryEvents([filter]);
+    final events = await _nostrClient.queryEvents([_filterFor(key)]);
     final replies = _responsesIn(
       events,
       limit: 1,
@@ -200,6 +211,17 @@ class VideoResponsesRepository {
         reply.replyRootEventId == videoId ||
         (videoAddress != null && reply.replyRootAddressableId == videoAddress);
     return repliesToVideo ? reply : null;
+  }
+
+  /// The filter reading the video [key] names: its address, or its event id.
+  static Filter _filterFor(String key) {
+    if (!RepliesCuration.isAddress(key)) return Filter(ids: [key]);
+    final address = key.split(':');
+    return Filter(
+      kinds: [int.parse(address[0])],
+      authors: [address[1]],
+      d: [address.skip(2).join(':')],
+    );
   }
 
   Future<VideoResponses?> _fetchFromServer({

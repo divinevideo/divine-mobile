@@ -52,6 +52,7 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
       final address = _video.addressableId;
       final VideoResponses responses;
       var curation = const RepliesCuration();
+      String? chainRoot;
       if (_region.kind == VideoStickerKind.replies) {
         final results = await Future.wait<Object>([
           _repository.fetchReplies(
@@ -69,9 +70,11 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
         if (results.length > 1) curation = results[1] as RepliesCuration;
         responses = await _withPinned(replies, curation);
       } else {
-        final chainRoot = _region.promptChainRoot(address ?? '');
         final hashtag = _region.promptHashtag;
-        responses = chainRoot == null || chainRoot.isEmpty || hashtag == null
+        chainRoot = address == null || hashtag == null
+            ? null
+            : await _chainRoot(address, hashtag);
+        responses = chainRoot == null || hashtag == null
             ? const VideoResponses()
             : await _repository.fetchJoined(
                 chainRoot: chainRoot,
@@ -79,7 +82,7 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
                 limit: feedLimit,
               );
       }
-      _emitShown(responses, curation);
+      _emitShown(responses, curation, chainRoot: chainRoot);
     } catch (error, stackTrace) {
       addError(error, stackTrace);
       emitIfOpen(state.copyWith(status: StickerResponsesStatus.failure));
@@ -113,7 +116,23 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
     );
   }
 
-  void _emitShown(VideoResponses responses, RepliesCuration curation) {
+  /// The first video of the chain the Add yours on the video at [address]
+  /// counts and joins: the one it names, when that video starts a chain with
+  /// [hashtag]. Otherwise anyone could name any video as a chain's first and
+  /// pull answers onto it, so the chain starts here instead.
+  Future<String> _chainRoot(String address, String hashtag) async {
+    final named = _region.promptChainRoot(address);
+    if (named == null || named == address) return address;
+    return await _repository.startsChain(named, hashtag: hashtag)
+        ? named
+        : address;
+  }
+
+  void _emitShown(
+    VideoResponses responses,
+    RepliesCuration curation, {
+    String? chainRoot,
+  }) {
     final shown = curation.apply(_filter(responses.videos));
     // What is left out among those read is left out of the count too; the
     // rest of the count was not read, so it stays as it is.
@@ -125,6 +144,7 @@ class StickerResponsesCubit extends Cubit<StickerResponsesState>
         totalIsAtLeast: responses.totalIsAtLeast,
         videos: shown,
         curation: curation,
+        chainRoot: chainRoot,
       ),
     );
   }

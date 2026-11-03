@@ -278,15 +278,25 @@ void main() {
             status: StickerResponsesStatus.loaded,
             total: 3,
             videos: [_video(5)],
+            chainRoot: rootAddress,
           ),
         ],
-        verify: (_) => verify(
-          () => repository.fetchJoined(
-            chainRoot: rootAddress,
-            hashtag: 'desksetup',
-            limit: StickerResponsesCubit.feedLimit,
-          ),
-        ).called(1),
+        verify: (_) {
+          verify(
+            () => repository.fetchJoined(
+              chainRoot: rootAddress,
+              hashtag: 'desksetup',
+              limit: StickerResponsesCubit.feedLimit,
+            ),
+          ).called(1);
+          // The first video of its own chain is not checked.
+          verifyNever(
+            () => repository.startsChain(
+              any(),
+              hashtag: any(named: 'hashtag'),
+            ),
+          );
+        },
       );
 
       blocTest<StickerResponsesCubit, StickerResponsesState>(
@@ -314,27 +324,57 @@ void main() {
         },
       );
 
-      blocTest<StickerResponsesCubit, StickerResponsesState>(
-        'reads the chain an answer joined, not the answer itself',
-        setUp: () => when(
-          () => repository.fetchJoined(
-            chainRoot: any(named: 'chainRoot'),
-            hashtag: any(named: 'hashtag'),
-            limit: any(named: 'limit'),
-          ),
-        ).thenAnswer((_) async => const VideoResponses()),
-        build: () => build(
-          _region(VideoStickerKind.prompt, target: '34236:$_creator:first'),
-        ),
-        act: (cubit) => cubit.load(),
-        verify: (_) => verify(
-          () => repository.fetchJoined(
-            chainRoot: '34236:$_creator:first',
-            hashtag: 'desksetup',
-            limit: StickerResponsesCubit.feedLimit,
-          ),
-        ).called(1),
-      );
+      group('on an answer naming the first video', () {
+        final first = '34236:$_creator:first';
+
+        setUp(
+          () => when(
+            () => repository.fetchJoined(
+              chainRoot: any(named: 'chainRoot'),
+              hashtag: any(named: 'hashtag'),
+              limit: any(named: 'limit'),
+            ),
+          ).thenAnswer((_) async => const VideoResponses()),
+        );
+
+        blocTest<StickerResponsesCubit, StickerResponsesState>(
+          'reads the chain the answer joined, not the answer itself',
+          setUp: () => when(
+            () => repository.startsChain(first, hashtag: 'desksetup'),
+          ).thenAnswer((_) async => true),
+          build: () => build(_region(VideoStickerKind.prompt, target: first)),
+          act: (cubit) => cubit.load(),
+          verify: (cubit) {
+            expect(cubit.state.chainRoot, equals(first));
+            verify(
+              () => repository.fetchJoined(
+                chainRoot: first,
+                hashtag: 'desksetup',
+                limit: StickerResponsesCubit.feedLimit,
+              ),
+            ).called(1);
+          },
+        );
+
+        blocTest<StickerResponsesCubit, StickerResponsesState>(
+          'starts its own chain when the named video starts none',
+          setUp: () => when(
+            () => repository.startsChain(first, hashtag: 'desksetup'),
+          ).thenAnswer((_) async => false),
+          build: () => build(_region(VideoStickerKind.prompt, target: first)),
+          act: (cubit) => cubit.load(),
+          verify: (cubit) {
+            expect(cubit.state.chainRoot, equals(rootAddress));
+            verify(
+              () => repository.fetchJoined(
+                chainRoot: rootAddress,
+                hashtag: 'desksetup',
+                limit: StickerResponsesCubit.feedLimit,
+              ),
+            ).called(1);
+          },
+        );
+      });
 
       blocTest<StickerResponsesCubit, StickerResponsesState>(
         'shows nobody for an Add yours on a video with no address',

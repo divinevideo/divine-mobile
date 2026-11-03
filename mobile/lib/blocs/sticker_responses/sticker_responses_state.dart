@@ -23,6 +23,7 @@ class StickerResponsesState extends Equatable {
     this.totalIsAtLeast = false,
     this.videos = const [],
     this.curation = const RepliesCuration(),
+    this.chainRoot,
   });
 
   final StickerResponsesStatus status;
@@ -42,18 +43,24 @@ class StickerResponsesState extends Equatable {
   /// sticker.
   final RepliesCuration curation;
 
+  /// The address of the first video of the chain an Add yours counts and
+  /// joins, once read; `null` before then, or for a replies sticker.
+  final String? chainRoot;
+
   StickerResponsesState copyWith({
     StickerResponsesStatus? status,
     int? total,
     bool? totalIsAtLeast,
     List<VideoEvent>? videos,
     RepliesCuration? curation,
+    String? chainRoot,
   }) => StickerResponsesState(
     status: status ?? this.status,
     total: total ?? this.total,
     totalIsAtLeast: totalIsAtLeast ?? this.totalIsAtLeast,
     videos: videos ?? this.videos,
     curation: curation ?? this.curation,
+    chainRoot: chainRoot ?? this.chainRoot,
   );
 
   @override
@@ -63,5 +70,6 @@ class StickerResponsesState extends Equatable {
     totalIsAtLeast,
     videos,
     curation,
+    chainRoot,
   ];
 }

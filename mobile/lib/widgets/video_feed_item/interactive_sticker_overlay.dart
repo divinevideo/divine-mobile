@@ -191,10 +191,11 @@ class _ResponsesSticker extends ConsumerWidget {
     return InteractiveStickerCopy(
       data: data,
       responses: responses,
-      onJoin: isAddYours
+      // Once the chain it joins is known.
+      onJoin: isAddYours && state.chainRoot != null
           ? () {
               onInteraction?.call();
-              _join(context, ref);
+              _join(context, ref, chainRoot: state.chainRoot!);
             }
           : null,
       onOpenResponses: () {
@@ -204,15 +205,15 @@ class _ResponsesSticker extends ConsumerWidget {
     );
   }
 
-  /// Opens the camera to answer the Add yours, joining its chain.
-  void _join(BuildContext context, WidgetRef ref) {
+  /// Opens the camera to answer the Add yours, joining the chain starting at
+  /// [chainRoot].
+  void _join(BuildContext context, WidgetRef ref, {required String chainRoot}) {
     if (!isSignedIn) {
       _showSnackbar(context, context.l10n.videoStickerAddYoursSignIn);
       return;
     }
-    final chainRoot = region.promptChainRoot(video.addressableId ?? '');
     final hashtag = region.promptHashtag;
-    if (chainRoot == null || chainRoot.isEmpty || hashtag == null) return;
+    if (hashtag == null) return;
     final notifier = ref.read(addYoursContextProvider.notifier)
       ..set(
         AddYoursContext(

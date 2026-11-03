@@ -77,6 +77,21 @@ Event _answer(
   ],
 );
 
+/// The tag of an Add yours sticker naming [chain] as its first video, or
+/// none when it is the first.
+List<String> _addYoursSticker({
+  String chain = '',
+  String hashtag = 'desksetup',
+}) => VideoStickerRegion(
+  kind: VideoStickerKind.prompt,
+  target: chain,
+  centerX: 0.5,
+  centerY: 0.5,
+  width: 0.6,
+  height: 0.3,
+  label: 'Show your desk\n$hashtag',
+).toTag();
+
 Event _curationEvent({
   required int createdAt,
   List<List<String>> tags = const [],
@@ -472,6 +487,80 @@ void main() {
 
         expect(responses.videos, hasLength(1));
         expect(responses.total, equals(6));
+      });
+    });
+
+    group('startsChain', () {
+      Event first({List<List<String>> tags = const []}) => _video(
+        id: 100,
+        createdAt: 500,
+        pubkey: _creator,
+        dTag: 'root-d',
+        tags: tags,
+      );
+
+      test(
+        'is true for a video with its own Add yours and the hashtag',
+        () async {
+          relayAnswers([
+            first(tags: [_addYoursSticker()]),
+          ]);
+
+          expect(
+            await repository().startsChain(_rootAddress, hashtag: 'desksetup'),
+            isTrue,
+          );
+          final filter =
+              (verify(
+                        () => nostrClient.queryEvents(captureAny()),
+                      ).captured.single
+                      as List<Filter>)
+                  .single;
+          expect(filter.authors, equals([_creator]));
+          expect(filter.d, equals(['root-d']));
+        },
+      );
+
+      test('is false for a video whose Add yours answers another', () async {
+        relayAnswers([
+          first(
+            tags: [_addYoursSticker(chain: '34236:$_viewer:other-d')],
+          ),
+        ]);
+
+        expect(
+          await repository().startsChain(_rootAddress, hashtag: 'desksetup'),
+          isFalse,
+        );
+      });
+
+      test('is false for another hashtag, or no Add yours at all', () async {
+        relayAnswers([
+          first(tags: [_addYoursSticker(hashtag: 'other')]),
+        ]);
+        expect(
+          await repository().startsChain(_rootAddress, hashtag: 'desksetup'),
+          isFalse,
+        );
+
+        relayAnswers([first()]);
+        expect(
+          await repository().startsChain(_rootAddress, hashtag: 'desksetup'),
+          isFalse,
+        );
+      });
+
+      test('is false when the video is not found or not an address', () async {
+        relayAnswers([]);
+
+        expect(
+          await repository().startsChain(_rootAddress, hashtag: 'desksetup'),
+          isFalse,
+        );
+        expect(
+          await repository().startsChain(_rootId, hashtag: 'desksetup'),
+          isFalse,
+        );
       });
     });
 

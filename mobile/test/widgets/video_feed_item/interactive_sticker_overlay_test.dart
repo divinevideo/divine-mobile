@@ -509,6 +509,33 @@ void main() {
         );
       });
 
+      testWidgets('joins its own chain when the video an answer names starts '
+          'none', (tester) async {
+        final first = '34236:$_viewer:first';
+        when(
+          () => repository.startsChain(first, hashtag: 'desksetup'),
+        ).thenAnswer((_) async => false);
+        await pump(
+          tester,
+          VideoStickerRegion(
+            kind: VideoStickerKind.prompt,
+            target: first,
+            centerX: 0.5,
+            centerY: 0.5,
+            width: 0.8,
+            height: 0.5,
+            style: 'light',
+            label: 'Show your desk\ndesksetup',
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.text(l10n(tester).videoStickerAddYoursButton));
+        await tester.pumpAndSettle();
+
+        expect(addYoursWhileOpen?.chainRoot, equals(_video.addressableId));
+      });
+
       testWidgets('asks someone signed out to sign in to add yours', (
         tester,
       ) async {
