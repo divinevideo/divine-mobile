@@ -324,9 +324,10 @@ primary key through a table rebuild, with `owner_pubkey` NOT NULL DEFAULT `''`
 as `direct_messages` got in v12; a NULL owner is backfilled to `''` first, since
 a NULL cannot take part in a key. The rebuild copies every row (about 200 bytes
 each, #8668), once, at the upgrade, and creates the table if a damaged database
-lacks it. The legacy-v1 normalization still creates the old index definition,
-because its `direct_messages` has no `owner_pubkey` yet; the step replaces it at
-the end of the upgrade chain.
+lacks it. The legacy-v1 normalization creates the index only after it has added
+`owner_pubkey`, never with the legacy `direct_messages` table. An index made
+earlier would be the old device-wide one, and a damaged database recovered
+without an upgrade never reaches the v32 step to replace it.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only
