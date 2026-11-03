@@ -11340,6 +11340,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Sunet fără titlu';
 
   @override
+  String get videoEditorAudioUseSound => 'Folosește';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Fișierul audio nu mai este pe dispozitiv';
 
@@ -12125,9 +12128,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Nuanță';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Gata';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Nivel';

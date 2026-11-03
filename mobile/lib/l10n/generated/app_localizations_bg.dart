@@ -11206,6 +11206,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Звук без заглавие';
 
   @override
+  String get videoEditorAudioUseSound => 'Използвай';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Аудиофайлът вече го няма на устройството';
 
@@ -11980,9 +11983,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Нюанс';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Готово';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Ниво';

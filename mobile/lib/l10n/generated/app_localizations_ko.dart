@@ -10589,6 +10589,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorAudioUntitledSound => '제목 없는 사운드';
 
   @override
+  String get videoEditorAudioUseSound => '사용';
+
+  @override
   String get videoEditorAudioFileMissing => '오디오 파일이 기기에 없어요';
 
   @override
@@ -11317,9 +11320,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => '색조';
-
-  @override
-  String get videoEditorDoneSemanticLabel => '완료';
 
   @override
   String get videoEditorLevelSemanticLabel => '레벨';

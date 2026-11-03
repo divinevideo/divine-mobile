@@ -11397,6 +11397,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'శీర్షికలేని ధ్వని';
 
   @override
+  String get videoEditorAudioUseSound => 'ఉపయోగించు';
+
+  @override
   String get videoEditorAudioFileMissing => 'ఆడియో ఫైల్ ఈ పరికరంలో లేదు';
 
   @override
@@ -12175,9 +12178,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'రంగు';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'పూర్తయింది';
 
   @override
   String get videoEditorLevelSemanticLabel => 'స్థాయి';

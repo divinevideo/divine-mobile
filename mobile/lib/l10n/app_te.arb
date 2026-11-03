@@ -6367,6 +6367,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "ప్రివ్యూని ప్లే చేయండి",
   "videoEditorAudioPausePreviewSemanticLabel": "ప్రివ్యూను పాజ్ చేయండి",
   "videoEditorAudioUntitledSound": "శీర్షికలేని ధ్వని",
+  "videoEditorAudioUseSound": "ఉపయోగించు",
   "videoEditorAudioFileMissing": "ఆడియో ఫైల్ ఈ పరికరంలో లేదు",
   "videoEditorAudioUntitled": "శీర్షిక లేదు",
   "videoEditorAudioAddAudio": "ఆడియోని జోడించండి",
@@ -6677,7 +6678,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "రంగు",
-  "videoEditorDoneSemanticLabel": "పూర్తయింది",
   "videoEditorLevelSemanticLabel": "స్థాయి",
   "videoEditorBrushSizeSemanticLabel": "బ్రష్ పరిమాణం",
   "videoMetadataClosePostDetailsSemanticLabel": "పోస్ట్ వివరాలను మూసివేయండి",

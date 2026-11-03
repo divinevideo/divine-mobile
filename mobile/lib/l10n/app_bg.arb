@@ -3416,6 +3416,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Пусни предварителен преглед",
   "videoEditorAudioPausePreviewSemanticLabel": "Пауза на прегледа",
   "videoEditorAudioUntitledSound": "Звук без заглавие",
+  "videoEditorAudioUseSound": "Използвай",
   "videoEditorAudioFileMissing": "Аудиофайлът вече го няма на устройството",
   "videoEditorVolumeLongPressHint": "Заглуши или включи всички писти",
   "videoEditorAudioUntitled": "Без заглавие",
@@ -3599,7 +3600,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Нюанс",
-  "videoEditorDoneSemanticLabel": "Готово",
   "videoEditorLevelSemanticLabel": "Ниво",
   "videoEditorBrushSizeSemanticLabel": "Размер на четката",
   "videoMetadataClosePostDetailsSemanticLabel": "Затваряне на подробностите за публикацията",

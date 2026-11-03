@@ -3176,6 +3176,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Spela förhandsvisning",
   "videoEditorAudioPausePreviewSemanticLabel": "Pausa förhandsvisning",
   "videoEditorAudioUntitledSound": "Namnlöst ljud",
+  "videoEditorAudioUseSound": "Använd",
   "videoEditorAudioFileMissing": "Ljudfilen finns inte kvar på enheten",
   "videoEditorVolumeLongPressHint": "Tysta eller slå på alla spår",
   "videoEditorAudioUntitled": "Namnlös",
@@ -3358,7 +3359,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Nyans",
-  "videoEditorDoneSemanticLabel": "Klar",
   "videoEditorLevelSemanticLabel": "Nivå",
   "videoEditorBrushSizeSemanticLabel": "Penselstorlek",
   "videoMetadataClosePostDetailsSemanticLabel": "Stäng inläggsdetaljer",

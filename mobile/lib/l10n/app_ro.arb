@@ -3176,6 +3176,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Redă previzualizarea",
   "videoEditorAudioPausePreviewSemanticLabel": "Pune previzualizarea pe pauză",
   "videoEditorAudioUntitledSound": "Sunet fără titlu",
+  "videoEditorAudioUseSound": "Folosește",
   "videoEditorAudioFileMissing": "Fișierul audio nu mai este pe dispozitiv",
   "videoEditorVolumeLongPressHint": "Dezactivați sau activați sunetul tuturor pistelor",
   "videoEditorAudioUntitled": "Fără titlu",
@@ -3358,7 +3359,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Nuanță",
-  "videoEditorDoneSemanticLabel": "Gata",
   "videoEditorLevelSemanticLabel": "Nivel",
   "videoEditorBrushSizeSemanticLabel": "Dimensiunea pensulei",
   "videoMetadataClosePostDetailsSemanticLabel": "Închide detaliile postării",

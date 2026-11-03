@@ -8465,6 +8465,10 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Play preview",
   "videoEditorAudioPausePreviewSemanticLabel": "Pause preview",
   "videoEditorAudioUntitledSound": "Untitled sound",
+  "videoEditorAudioUseSound": "Use",
+  "@videoEditorAudioUseSound": {
+    "description": "Button on the card for the picked sound in the sound picker that adds the sound to the video."
+  },
   "videoEditorAudioFileMissing": "Audio file is gone from this device",
   "@videoEditorAudioFileMissing": {
     "description": "Subtitle on a saved sound in the video editor's sound picker whose imported audio file is no longer on the device. The entry stays listed but cannot be selected, because attaching it would put a dead source on the draft."
@@ -9321,7 +9325,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Hue",
-  "videoEditorDoneSemanticLabel": "Done",
   "videoEditorLevelSemanticLabel": "Level",
   "videoEditorBrushSizeSemanticLabel": "Brush size",
   "@videoEditorBrushSizeSemanticLabel": {

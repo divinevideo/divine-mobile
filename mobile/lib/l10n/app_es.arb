@@ -3184,6 +3184,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Reproducir vista previa",
   "videoEditorAudioPausePreviewSemanticLabel": "Pausar vista previa",
   "videoEditorAudioUntitledSound": "Sonido sin título",
+  "videoEditorAudioUseSound": "Usar",
   "videoEditorAudioFileMissing": "El archivo de audio ya no está en el dispositivo",
   "videoEditorVolumeLongPressHint": "Silenciar o activar todas las pistas",
   "videoEditorAudioUntitled": "Sin título",
@@ -3366,7 +3367,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Tono",
-  "videoEditorDoneSemanticLabel": "Listo",
   "videoEditorLevelSemanticLabel": "Nivel",
   "videoEditorBrushSizeSemanticLabel": "Tamaño del pincel",
   "videoMetadataClosePostDetailsSemanticLabel": "Cerrar detalles de la publicación",

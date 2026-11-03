@@ -3176,6 +3176,7 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Odtwórz podgląd",
   "videoEditorAudioPausePreviewSemanticLabel": "Wstrzymaj podgląd",
   "videoEditorAudioUntitledSound": "Nienazwany dźwięk",
+  "videoEditorAudioUseSound": "Użyj",
   "videoEditorAudioFileMissing": "Pliku audio już nie ma na tym urządzeniu",
   "videoEditorVolumeLongPressHint": "Wycisz lub wyłącz wyciszenie wszystkich ścieżek",
   "videoEditorAudioUntitled": "Bez tytułu",
@@ -3358,7 +3359,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Odcień",
-  "videoEditorDoneSemanticLabel": "Gotowe",
   "videoEditorLevelSemanticLabel": "Poziom",
   "videoEditorBrushSizeSemanticLabel": "Rozmiar pędzla",
   "videoMetadataClosePostDetailsSemanticLabel": "Zamknij szczegóły posta",

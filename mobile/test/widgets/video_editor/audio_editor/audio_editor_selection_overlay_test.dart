@@ -4,13 +4,14 @@
 import 'dart:async';
 import 'dart:ui' show Tristate;
 
-import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/sound_cover.dart';
+import 'package:openvine/widgets/audio/sound_cover_image.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_editor_selection_overlay.dart';
 import 'package:sound_service/sound_service.dart';
@@ -59,6 +60,7 @@ void main() {
       required AudioEvent audio,
       VoidCallback? onTogglePlayState,
       VoidCallback? onTapDone,
+      SoundCover? cover,
       bool isLoading = false,
     }) {
       return MaterialApp(
@@ -67,6 +69,7 @@ void main() {
         home: Scaffold(
           body: AudioEditorSelectionOverlay(
             audio: audio,
+            cover: cover,
             audioService: audioService,
             onTogglePlayState: onTogglePlayState ?? () {},
             onTapDone: onTapDone ?? () {},
@@ -125,6 +128,23 @@ void main() {
         expect(find.text('My Track'), findsOneWidget);
       });
 
+      testWidgets("leads with the cover of the sound's row", (tester) async {
+        const cover = SoundCover(imageUrl: 'https://media.divine.video/cover');
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudio(title: 'My Track'),
+            cover: cover,
+          ),
+        );
+        await tester.pump();
+
+        final image = tester.widget<SoundCoverImage>(
+          find.byType(SoundCoverImage),
+        );
+        expect(image.cover, cover);
+        expect(image.colorSeed, 'sound-id');
+      });
+
       testWidgets('renders untitled fallback when title is null', (
         tester,
       ) async {
@@ -176,7 +196,7 @@ void main() {
         expect(toggled, isTrue);
       });
 
-      testWidgets('calls onTapDone when done button is tapped', (tester) async {
+      testWidgets('calls onTapDone when Use is tapped', (tester) async {
         var done = false;
         await tester.pumpWidget(
           buildWidget(
@@ -187,15 +207,13 @@ void main() {
         await tester.pump();
 
         final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.tap(
-          find.bySemanticsLabel(l10n.videoEditorDoneSemanticLabel),
-        );
+        await tester.tap(find.text(l10n.videoEditorAudioUseSound));
         await tester.pump();
 
         expect(done, isTrue);
       });
 
-      testWidgets('disables done while audio is loading', (tester) async {
+      testWidgets('disables Use while audio is loading', (tester) async {
         var done = false;
         await tester.pumpWidget(
           buildWidget(
@@ -208,7 +226,7 @@ void main() {
 
         final l10n = lookupAppLocalizations(const Locale('en'));
         await tester.tap(
-          find.bySemanticsLabel(l10n.videoEditorDoneSemanticLabel),
+          find.text(l10n.videoEditorAudioUseSound),
           warnIfMissed: false,
         );
         await tester.pump();
@@ -237,7 +255,7 @@ void main() {
       });
     });
 
-    group('Progress ring', () {
+    group('Progress line', () {
       late StreamController<Duration> positionController;
 
       setUp(() {
@@ -252,24 +270,14 @@ void main() {
 
       tearDown(() => positionController.close());
 
-      // The ring is painted as the foreground of the box holding the
-      // play/pause button, so it is the outermost paint in that subtree.
-      CustomPainter progressPainter(WidgetTester tester) {
-        final paint = tester.widget<CustomPaint>(
-          find
-              .descendant(
-                of: find.byWidgetPredicate(
-                  (widget) =>
-                      widget is SizedBox &&
-                      widget.width == 42 &&
-                      widget.height == 42,
-                ),
-                matching: find.byType(CustomPaint),
-              )
-              .first,
-        );
-        return paint.foregroundPainter!;
-      }
+      double progress(WidgetTester tester) => tester
+          .widget<FractionallySizedBox>(
+            find.descendant(
+              of: find.byKey(const Key('audio_selection_progress')),
+              matching: find.byType(FractionallySizedBox),
+            ),
+          )
+          .widthFactor!;
 
       Future<void> emitPosition(WidgetTester tester, Duration position) async {
         positionController.add(position);
@@ -278,9 +286,9 @@ void main() {
       }
 
       // just_audio advances the position from the moment play() is requested,
-      // while the platform reports the true — smaller — position once it
-      // actually starts rendering audio. Painting that correction rewinds the
-      // ring at the start of every preview.
+      // while the platform reports the true, smaller, position once it
+      // actually starts rendering audio. Drawing that correction would wind
+      // the line back at the start of every preview.
       testWidgets('holds while the player corrects the position backwards', (
         tester,
       ) async {
@@ -288,54 +296,54 @@ void main() {
         await tester.pump();
 
         await emitPosition(tester, const Duration(milliseconds: 500));
-        final ahead = progressPainter(tester);
+        expect(progress(tester), 0.05);
 
         await emitPosition(tester, const Duration(milliseconds: 200));
-        expect(progressPainter(tester).shouldRepaint(ahead), isFalse);
+        expect(progress(tester), 0.05);
 
         await emitPosition(tester, const Duration(milliseconds: 800));
-        expect(progressPainter(tester).shouldRepaint(ahead), isTrue);
+        expect(progress(tester), 0.08);
       });
 
-      // Loading swaps the ring out for the spinner, so the position
-      // StreamBuilder remounts on the way back and its `initialData` of
-      // `Duration.zero` is what clears the previous sound's progress. Nothing
-      // else resets it on this path, so a change to that initial value would
-      // silently leave the old ring on screen while the next sound loads.
-      // pumpAndSettle is unusable here — the spinner animates forever.
-      testWidgets('resets after a loading round-trip', (tester) async {
+      testWidgets('starts over when the preview loops', (tester) async {
         await tester.pumpWidget(buildWidget(audio: _createTestAudio()));
         await tester.pump();
-        final atStart = progressPainter(tester);
 
+        await emitPosition(tester, const Duration(milliseconds: 9500));
+        expect(progress(tester), 0.95);
+
+        await emitPosition(tester, const Duration(milliseconds: 200));
+        expect(progress(tester), 0.02);
+      });
+
+      testWidgets('starts over when playback is back at the beginning', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWidget(audio: _createTestAudio()));
+        await tester.pump();
+
+        await emitPosition(tester, const Duration(milliseconds: 500));
+        expect(progress(tester), 0.05);
+
+        await emitPosition(tester, Duration.zero);
+        expect(progress(tester), 0);
+      });
+
+      testWidgets('is empty while the next sound loads', (tester) async {
+        await tester.pumpWidget(buildWidget(audio: _createTestAudio()));
+        await tester.pump();
         await emitPosition(tester, const Duration(seconds: 5));
-        expect(progressPainter(tester).shouldRepaint(atStart), isTrue);
+        expect(progress(tester), 0.5);
 
         await tester.pumpWidget(
           buildWidget(audio: _createTestAudio(), isLoading: true),
         );
         await tester.pump();
-        await tester.pump(VineTheme.defaultAnimationDuration);
+        expect(progress(tester), 0);
 
         await tester.pumpWidget(buildWidget(audio: _createTestAudio()));
         await tester.pump();
-        await tester.pump(VineTheme.defaultAnimationDuration);
-
-        expect(progressPainter(tester).shouldRepaint(atStart), isFalse);
-      });
-
-      testWidgets('rewinds when playback restarts at the beginning', (
-        tester,
-      ) async {
-        await tester.pumpWidget(buildWidget(audio: _createTestAudio()));
-        await tester.pump();
-        final atStart = progressPainter(tester);
-
-        await emitPosition(tester, const Duration(milliseconds: 500));
-        expect(progressPainter(tester).shouldRepaint(atStart), isTrue);
-
-        await emitPosition(tester, Duration.zero);
-        expect(progressPainter(tester).shouldRepaint(atStart), isFalse);
+        expect(progress(tester), 0);
       });
     });
 
