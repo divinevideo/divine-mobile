@@ -445,29 +445,57 @@ void main() {
         );
       });
 
+      test('rejects configs whose thresholds contradict each other', () {
+        expect(
+          () =>
+              DmSpamHeuristics(newAccountDays: 60, establishedAccountDays: 30),
+          throwsA(isA<AssertionError>()),
+        );
+        expect(
+          () => const DmSpamHeuristics().copyWith(reporterThreshold: 0),
+          throwsA(isA<AssertionError>()),
+        );
+      });
+
       test('a difference in any one field makes configs unequal', () {
         const base = DmSpamHeuristics();
         final variants = [
-          base.copyWith(spamThreshold: 999),
-          base.copyWith(newAccountDays: 999),
-          base.copyWith(establishedAccountDays: 999),
-          base.copyWith(fanOutThreshold: 999),
-          base.copyWith(reporterThreshold: 999),
-          base.copyWith(mutualConnectionCap: 999),
-          base.copyWith(weightNoDivineVideos: 999),
-          base.copyWith(weightNewAccount: 999),
-          base.copyWith(weightNoProfileMetadata: 999),
-          base.copyWith(weightNoMutualConnections: 999),
-          base.copyWith(weightContainsLink: 999),
-          base.copyWith(weightContainsMedia: 999),
-          base.copyWith(weightHighFanOut: 999),
-          base.copyWith(weightReportedByOthers: 999),
-          base.copyWith(weightUnknownGroupInvite: 999),
-          base.copyWith(weightFollowsMe: 999),
-          base.copyWith(weightPerMutualConnection: 999),
-          base.copyWith(weightEstablishedAccount: 999),
-          base.copyWith(weightHasDivineVideos: 999),
-          base.copyWith(weightPriorPublicInteraction: 999),
+          base.copyWith(spamThreshold: base.spamThreshold + 1),
+          base.copyWith(newAccountDays: base.newAccountDays + 1),
+          base.copyWith(
+            establishedAccountDays: base.establishedAccountDays + 1,
+          ),
+          base.copyWith(fanOutThreshold: base.fanOutThreshold + 1),
+          base.copyWith(reporterThreshold: base.reporterThreshold + 1),
+          base.copyWith(mutualConnectionCap: base.mutualConnectionCap + 1),
+          base.copyWith(weightNoDivineVideos: base.weightNoDivineVideos + 1),
+          base.copyWith(weightNewAccount: base.weightNewAccount + 1),
+          base.copyWith(
+            weightNoProfileMetadata: base.weightNoProfileMetadata + 1,
+          ),
+          base.copyWith(
+            weightNoMutualConnections: base.weightNoMutualConnections + 1,
+          ),
+          base.copyWith(weightContainsLink: base.weightContainsLink + 1),
+          base.copyWith(weightContainsMedia: base.weightContainsMedia + 1),
+          base.copyWith(weightHighFanOut: base.weightHighFanOut + 1),
+          base.copyWith(
+            weightReportedByOthers: base.weightReportedByOthers + 1,
+          ),
+          base.copyWith(
+            weightUnknownGroupInvite: base.weightUnknownGroupInvite + 1,
+          ),
+          base.copyWith(weightFollowsMe: base.weightFollowsMe + 1),
+          base.copyWith(
+            weightPerMutualConnection: base.weightPerMutualConnection + 1,
+          ),
+          base.copyWith(
+            weightEstablishedAccount: base.weightEstablishedAccount + 1,
+          ),
+          base.copyWith(weightHasDivineVideos: base.weightHasDivineVideos + 1),
+          base.copyWith(
+            weightPriorPublicInteraction: base.weightPriorPublicInteraction + 1,
+          ),
         ];
 
         expect(variants, hasLength(20));

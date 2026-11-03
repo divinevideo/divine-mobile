@@ -3,6 +3,8 @@
 // ABOUTME: a control so the tradeoffs can be argued about concretely rather
 // ABOUTME: than in the abstract.
 
+import 'dart:math' as math;
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_classifier.dart';
@@ -339,14 +341,16 @@ class _DmInboxTuningViewState extends State<DmInboxTuningView> {
                 unit: 'days',
                 value: h.newAccountDays,
                 min: 1,
-                max: 90,
+                // Kept under the other age threshold so no age counts as
+                // both new and established.
+                max: math.min(90, h.establishedAccountDays - 1),
                 onChanged: (v) => _update(h.copyWith(newAccountDays: v)),
               ),
               _Slider(
                 label: 'Seen for a long time is over',
                 unit: 'days',
                 value: h.establishedAccountDays,
-                min: 30,
+                min: math.max(30, h.newAccountDays + 1),
                 max: 730,
                 onChanged: (v) =>
                     _update(h.copyWith(establishedAccountDays: v)),

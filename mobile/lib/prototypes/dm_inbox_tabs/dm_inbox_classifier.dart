@@ -186,7 +186,13 @@ class DmSpamHeuristics {
     this.weightEstablishedAccount = -15,
     this.weightHasDivineVideos = -15,
     this.weightPriorPublicInteraction = -30,
-  });
+  }) : assert(
+         newAccountDays < establishedAccountDays,
+         'an age cannot count as both new and established',
+       ),
+       assert(fanOutThreshold >= 1, 'zero fan-out would flag everyone'),
+       assert(reporterThreshold >= 1, 'zero reporters would flag everyone'),
+       assert(mutualConnectionCap >= 1, 'a cap of zero credits no one');
 
   /// Score at or above which a request collapses into Likely spam.
   final int spamThreshold;
