@@ -83,6 +83,16 @@ class AudioSelectionBottomSheet extends ConsumerStatefulWidget {
       maxChildSize: 1,
       initialChildSize: 1,
       minChildSize: VineTheme.bottomSheetDismissFloor,
+      // The sheet's own messenger: a sound the reuse check refuses says so in
+      // a snackbar, which would otherwise land on the editor's scaffold,
+      // underneath the sheet.
+      contentWrapper: (_, sheet) => ScaffoldMessenger(
+        child: Scaffold(
+          backgroundColor: VineTheme.transparent,
+          resizeToAvoidBottomInset: false,
+          body: sheet,
+        ),
+      ),
       buildScrollBody: (scrollController) =>
           AudioSelectionBottomSheet(scrollController: scrollController),
     );
