@@ -1628,6 +1628,99 @@ void main() {
         expect(overlay.audio.title, 'Wednesday My Dudes');
       });
 
+      group('picking again while a sound loads', () {
+        final wednesday = VineSound(
+          id: 'wednesday',
+          title: 'Wednesday My Dudes',
+          assetPath: 'assets/sounds/wednesday.mp3',
+          duration: const Duration(milliseconds: 6269),
+        );
+        const wednesdayUrl = 'asset://assets/sounds/wednesday.mp3';
+        const betaUrl = 'https://example.com/audio/sound-2.mp3';
+
+        AudioEditorSelectionOverlay overlay(WidgetTester tester) =>
+            tester.widget<AudioEditorSelectionOverlay>(
+              find.byType(AudioEditorSelectionOverlay),
+            );
+
+        testWidgets('loads a sound played before anew, without the spinner '
+            'of the one picked meanwhile', (tester) async {
+          final consent = Completer<bool>();
+          final audioService = _stubbedAudioService();
+          // Beta Song's file is still on its way when Wednesday is picked back.
+          when(
+            () => audioService.loadAudio(betaUrl),
+          ).thenAnswer((_) => Completer<Duration?>().future);
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              pendingConsent: consent,
+              audioService: audioService,
+              bundledSounds: [wednesday],
+            ),
+          );
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text('Wednesday My Dudes'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Beta Song'));
+          await tester.pump();
+          await tester.tap(find.text(l10n.exploreTabForYou));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          await tester.tap(find.text('Wednesday My Dudes'));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          expect(overlay(tester).audio.title, 'Wednesday My Dudes');
+          expect(overlay(tester).isLoading, isFalse);
+          verify(() => audioService.loadAudio(wednesdayUrl)).called(2);
+          consent.complete(true);
+          await tester.pumpAndSettle();
+        });
+
+        testWidgets('holds Done for the later pick when the earlier one '
+            'finishes loading', (tester) async {
+          final consent = Completer<bool>();
+          final wednesdayLoad = Completer<Duration?>();
+          final audioService = _stubbedAudioService();
+          when(
+            () => audioService.loadAudio(wednesdayUrl),
+          ).thenAnswer((_) => wednesdayLoad.future);
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              pendingConsent: consent,
+              audioService: audioService,
+              bundledSounds: [wednesday],
+            ),
+          );
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text('Wednesday My Dudes'));
+          await tester.pump();
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          await tester.tap(find.text('Beta Song'));
+          await tester.pump();
+
+          wednesdayLoad.complete(const Duration(seconds: 6));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+
+          // Beta Song's reuse check is still open.
+          expect(overlay(tester).audio.title, 'Beta Song');
+          expect(overlay(tester).isLoading, isTrue);
+          consent.complete(true);
+          await tester.pumpAndSettle();
+          expect(overlay(tester).isLoading, isFalse);
+        });
+      });
+
       testWidgets('selects a legacy-policy verified archive original sound', (
         tester,
       ) async {

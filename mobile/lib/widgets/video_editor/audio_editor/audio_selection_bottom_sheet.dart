@@ -275,6 +275,9 @@ class _AudioSelectionBottomSheetState
   /// returns it with the duration the file reports when the event carried
   /// none, so the overlay and the row can show it.
   Future<AudioEvent> _loadPreview(AudioEvent sound) async {
+    // From here the player no longer holds the sound it held, so a sound
+    // picked while this loads is loaded anew rather than played from it.
+    _loadedSoundId = null;
     await _audioService.stop();
     final loadedDuration = sound.isLocalImport && sound.localFilePath != null
         ? await _audioService.loadAudioFromFile(sound.localFilePath!)
@@ -324,16 +327,19 @@ class _AudioSelectionBottomSheetState
         try {
           resolvedSound = await _loadPreview(sound);
         } finally {
-          if (mounted) setState(() => _isLoadingAudio = false);
+          // A sound picked meanwhile owns the flag, which holds Done while
+          // its reuse check runs.
+          if (mounted && _selectedItem?.id == sound.id) {
+            setState(() => _isLoadingAudio = false);
+          }
         }
       }
 
-      if (mounted) {
-        setState(() {
-          _selectedItem = resolvedSound;
-        });
-      }
-      if (!mounted) return;
+      // Another sound was picked while this one loaded; that one plays.
+      if (!mounted || _selectedItem?.id != sound.id) return;
+      setState(() {
+        _selectedItem = resolvedSound;
+      });
       // Blocks here for the entire duration of playback — only
       // releases once the song finishes playing to the end or was paused.
       await _audioService.play();
