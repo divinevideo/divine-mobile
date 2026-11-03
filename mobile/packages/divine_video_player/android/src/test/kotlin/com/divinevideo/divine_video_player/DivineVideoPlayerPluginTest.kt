@@ -3,6 +3,7 @@ package com.divinevideo.divine_video_player
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.BinaryMessenger
+import io.flutter.plugin.platform.PlatformViewRegistry
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -36,9 +37,11 @@ class DivineVideoPlayerPluginTest {
     private fun attachEngine(
         plugin: DivineVideoPlayerPlugin,
         messenger: BinaryMessenger = mockk(relaxed = true),
+        views: PlatformViewRegistry = mockk(relaxed = true),
     ): FlutterPlugin.FlutterPluginBinding {
         val binding = mockk<FlutterPlugin.FlutterPluginBinding>(relaxed = true)
         every { binding.binaryMessenger } returns messenger
+        every { binding.platformViewRegistry } returns views
         plugin.onAttachedToEngine(binding)
         attached += plugin to binding
         return binding
@@ -101,6 +104,16 @@ class DivineVideoPlayerPluginTest {
     }
 
     @Test
+    fun `UI engine gets the player view when a background engine attached first`() {
+        attachEngine(DivineVideoPlayerPlugin())
+        val uiViews = mockk<PlatformViewRegistry>(relaxed = true)
+
+        attachEngine(DivineVideoPlayerPlugin(), views = uiViews)
+
+        verify { uiViews.registerViewFactory("divine_video_player_view", any()) }
+    }
+
+    @Test
     fun `log sink belongs to the engine attached to the activity`() {
         attachEngine(DivineVideoPlayerPlugin())
         assertNull(DivineVideoPlayerLog.sink)
@@ -146,6 +159,22 @@ class DivineVideoPlayerPluginTest {
         val ui = DivineVideoPlayerPlugin()
         attachEngine(ui)
         attachActivity(ui)
+        val player = mockk<DivineVideoPlayerInstance>(relaxed = true)
+        PlayerRegistry.put(1, player)
+
+        detachEngine(ui)
+
+        verify { player.dispose() }
+        assertNull(DivineVideoPlayerLog.sink)
+    }
+
+    @Test
+    fun `UI engine detaching after a background engine attached disposes its players`() {
+        // A push can start the Firebase engine while the app is open.
+        val ui = DivineVideoPlayerPlugin()
+        attachEngine(ui)
+        attachActivity(ui)
+        attachEngine(DivineVideoPlayerPlugin())
         val player = mockk<DivineVideoPlayerInstance>(relaxed = true)
         PlayerRegistry.put(1, player)
 
