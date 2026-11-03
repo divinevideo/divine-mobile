@@ -1005,8 +1005,8 @@ class ClipLibraryService {
         // their thumbnail is the first captured frame.
         if (clip.isStopMotion) continue;
         final videoPath = await clip.video!.safeFilePath();
-        // Nothing to extract from, and every attempt would report a failed
-        // extraction to Crashlytics again on each library load.
+        // Nothing to extract from, and trying anyway reports a failed
+        // extraction to Crashlytics on every library load.
         if (!File(videoPath).existsSync()) {
           missingVideoClipIds.add(clip.id);
           continue;
