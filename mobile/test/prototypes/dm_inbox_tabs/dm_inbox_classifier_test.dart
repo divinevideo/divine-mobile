@@ -432,6 +432,50 @@ void main() {
       });
     });
 
+    group(DmSpamHeuristics, () {
+      test('configs with the same values are equal', () {
+        expect(
+          const DmSpamHeuristics(spamThreshold: 42),
+          equals(const DmSpamHeuristics().copyWith(spamThreshold: 42)),
+        );
+        expect(
+          const DmSpamHeuristics(spamThreshold: 42).hashCode,
+          equals(const DmSpamHeuristics().copyWith(spamThreshold: 42).hashCode),
+        );
+      });
+
+      test('a difference in any one field makes configs unequal', () {
+        const base = DmSpamHeuristics();
+        final variants = [
+          base.copyWith(spamThreshold: 999),
+          base.copyWith(newAccountDays: 999),
+          base.copyWith(establishedAccountDays: 999),
+          base.copyWith(fanOutThreshold: 999),
+          base.copyWith(reporterThreshold: 999),
+          base.copyWith(mutualConnectionCap: 999),
+          base.copyWith(weightNoDivineVideos: 999),
+          base.copyWith(weightNewAccount: 999),
+          base.copyWith(weightNoProfileMetadata: 999),
+          base.copyWith(weightNoMutualConnections: 999),
+          base.copyWith(weightContainsLink: 999),
+          base.copyWith(weightContainsMedia: 999),
+          base.copyWith(weightHighFanOut: 999),
+          base.copyWith(weightReportedByOthers: 999),
+          base.copyWith(weightUnknownGroupInvite: 999),
+          base.copyWith(weightFollowsMe: 999),
+          base.copyWith(weightPerMutualConnection: 999),
+          base.copyWith(weightEstablishedAccount: 999),
+          base.copyWith(weightHasDivineVideos: 999),
+          base.copyWith(weightPriorPublicInteraction: 999),
+        ];
+
+        expect(variants, hasLength(20));
+        for (final variant in variants) {
+          expect(variant, isNot(equals(base)));
+        }
+      });
+    });
+
     group('group invite weight', () {
       test('a 1:1 does not earn the group weight when isGroup has drifted', () {
         // `DmConversation.isGroup` is written from `participants.length > 2`

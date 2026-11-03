@@ -21,32 +21,45 @@ class DmInboxTuningView extends StatefulWidget {
   State<DmInboxTuningView> createState() => _DmInboxTuningViewState();
 }
 
+/// Community recipes, by name. The shield label is worked out from these, so
+/// it stays right when the panel is reopened on saved weights.
+const _recipes = {
+  'Quiet Porch': DmSpamHeuristics(
+    spamThreshold: 42,
+    weightHighFanOut: 70,
+    weightContainsLink: 45,
+    weightReportedByOthers: 75,
+    weightHasDivineVideos: -25,
+    weightPriorPublicInteraction: -40,
+  ),
+  'Creator Open Door': DmSpamHeuristics(
+    spamThreshold: 65,
+    weightHighFanOut: 65,
+    weightReportedByOthers: 80,
+    weightPerMutualConnection: -18,
+    weightHasDivineVideos: -30,
+  ),
+};
+
 class _DmInboxTuningViewState extends State<DmInboxTuningView> {
   late DmPrototypeSettings _settings = widget.settings;
 
-  /// The recipe the current weights came from, or null once hand-edited.
-  String? _recipeName;
-  bool _edited = false;
+  String get _shieldLabel {
+    final heuristics = _settings.heuristics;
+    if (heuristics == const DmSpamHeuristics()) return 'Default';
+    for (final MapEntry(:key, :value) in _recipes.entries) {
+      if (value == heuristics) return key;
+    }
+    return 'Custom';
+  }
 
-  String get _shieldLabel => _recipeName ?? (_edited ? 'Custom' : 'Default');
+  void _update(DmSpamHeuristics next) =>
+      setState(() => _settings = _settings.copyWith(heuristics: next));
 
-  void _update(DmSpamHeuristics next) => setState(() {
-    _settings = _settings.copyWith(heuristics: next);
-    _recipeName = null;
-    _edited = true;
-  });
+  void _reset() => _update(const DmSpamHeuristics());
 
-  void _reset() => setState(() {
-    _settings = _settings.copyWith(heuristics: const DmSpamHeuristics());
-    _recipeName = null;
-    _edited = false;
-  });
-
-  void _applyRecipe(String name, DmSpamHeuristics recipe) {
-    setState(() {
-      _settings = _settings.copyWith(heuristics: recipe);
-      _recipeName = name;
-    });
+  void _applyRecipe(String name) {
+    _update(_recipes[name]!);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('$name applied. Review the sliders before saving.'),
@@ -114,33 +127,14 @@ class _DmInboxTuningViewState extends State<DmInboxTuningView> {
                 author: 'Liz',
                 description:
                     'Strict on bursts and links; generous to creators.',
-                onApply: () => _applyRecipe(
-                  'Quiet Porch',
-                  const DmSpamHeuristics(
-                    spamThreshold: 42,
-                    weightHighFanOut: 70,
-                    weightContainsLink: 45,
-                    weightReportedByOthers: 75,
-                    weightHasDivineVideos: -25,
-                    weightPriorPublicInteraction: -40,
-                  ),
-                ),
+                onApply: () => _applyRecipe('Quiet Porch'),
               ),
               _RecipeTile(
                 title: 'Creator Open Door',
                 author: 'Community Safety',
                 description:
                     'Welcomes established creators and trusted mutuals.',
-                onApply: () => _applyRecipe(
-                  'Creator Open Door',
-                  const DmSpamHeuristics(
-                    spamThreshold: 65,
-                    weightHighFanOut: 65,
-                    weightReportedByOthers: 80,
-                    weightPerMutualConnection: -18,
-                    weightHasDivineVideos: -30,
-                  ),
-                ),
+                onApply: () => _applyRecipe('Creator Open Door'),
               ),
             ],
           ),

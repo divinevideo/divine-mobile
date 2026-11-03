@@ -3,6 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_classifier.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_prototype_settings.dart';
 import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tuning_view.dart';
 
@@ -12,7 +13,10 @@ import '../../helpers/test_provider_overrides.dart';
 void main() {
   group(DmInboxTuningView, () {
     /// Pushes the panel over a launcher and records what it pops.
-    Future<List<DmPrototypeSettings?>> pumpTuning(WidgetTester tester) async {
+    Future<List<DmPrototypeSettings?>> pumpTuning(
+      WidgetTester tester, {
+      DmPrototypeSettings settings = const DmPrototypeSettings(),
+    }) async {
       final popped = <DmPrototypeSettings?>[];
       await tester.pumpWidget(
         testMaterialApp(
@@ -23,9 +27,7 @@ void main() {
                   popped.add(
                     await Navigator.of(context).push<DmPrototypeSettings>(
                       MaterialPageRoute<DmPrototypeSettings>(
-                        builder: (_) => const DmInboxTuningView(
-                          settings: DmPrototypeSettings(),
-                        ),
+                        builder: (_) => DmInboxTuningView(settings: settings),
                       ),
                     ),
                   );
@@ -74,6 +76,37 @@ void main() {
 
         expect(find.textContaining('Quiet Porch applied'), findsOneWidget);
         expect(find.text('Shield: Quiet Porch'), findsOneWidget);
+      });
+
+      testWidgets('names the saved recipe when reopened', (tester) async {
+        await pumpTuning(
+          tester,
+          settings: const DmPrototypeSettings(
+            heuristics: DmSpamHeuristics(
+              spamThreshold: 42,
+              weightHighFanOut: 70,
+              weightContainsLink: 45,
+              weightReportedByOthers: 75,
+              weightHasDivineVideos: -25,
+              weightPriorPublicInteraction: -40,
+            ),
+          ),
+        );
+
+        expect(find.text('Shield: Quiet Porch'), findsOneWidget);
+      });
+
+      testWidgets('calls saved hand-edited weights custom when reopened', (
+        tester,
+      ) async {
+        await pumpTuning(
+          tester,
+          settings: const DmPrototypeSettings(
+            heuristics: DmSpamHeuristics(spamThreshold: 77),
+          ),
+        );
+
+        expect(find.text('Shield: Custom'), findsOneWidget);
       });
 
       testWidgets('Save returns every edited setting', (tester) async {

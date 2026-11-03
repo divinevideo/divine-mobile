@@ -3,10 +3,11 @@
 // ABOUTME: (followed/requests) to four (official/inbox/requests/likelySpam),
 // ABOUTME: and returns a human-readable reason trail for every verdict.
 //
-// Deliberately Flutter-free and dependency-free beyond `models`, so the same
-// function can move into `packages/dm_repository` unchanged if the shape
-// survives the product discussion.
+// Deliberately Flutter-free and dependency-free beyond `models` and `meta`,
+// so the same function can move into `packages/dm_repository` unchanged if
+// the shape survives the product discussion.
 
+import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 
 /// Why a sender is allowed into the cryptographically trusted Official tab.
@@ -159,6 +160,7 @@ class DmVerdict {
 /// Every value here is a product decision, not an engineering one. They are
 /// exposed as a config object precisely so Trust & Safety can own them
 /// without a code change.
+@immutable
 class DmSpamHeuristics {
   const DmSpamHeuristics({
     this.spamThreshold = 50,
@@ -270,6 +272,45 @@ class DmSpamHeuristics {
           weightPriorPublicInteraction ?? this.weightPriorPublicInteraction,
     );
   }
+
+  /// Every field, in declaration order. A new field must be added here too,
+  /// or two configs that differ only in it compare equal.
+  List<int> get _values => [
+    spamThreshold,
+    newAccountDays,
+    establishedAccountDays,
+    fanOutThreshold,
+    reporterThreshold,
+    mutualConnectionCap,
+    weightNoDivineVideos,
+    weightNewAccount,
+    weightNoProfileMetadata,
+    weightNoMutualConnections,
+    weightContainsLink,
+    weightContainsMedia,
+    weightHighFanOut,
+    weightReportedByOthers,
+    weightUnknownGroupInvite,
+    weightFollowsMe,
+    weightPerMutualConnection,
+    weightEstablishedAccount,
+    weightHasDivineVideos,
+    weightPriorPublicInteraction,
+  ];
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! DmSpamHeuristics) return false;
+    final mine = _values;
+    final theirs = other._values;
+    for (var i = 0; i < mine.length; i++) {
+      if (mine[i] != theirs[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hashAll(_values);
 }
 
 /// Result of classifying a whole list.
