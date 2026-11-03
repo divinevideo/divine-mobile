@@ -3557,7 +3557,10 @@ void main() {
         test('resumes where the DMs stopped when the deletions reach further '
             'back', () async {
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => true);
           when(
             () => mockDirectMessagesDao.getMessageById(
@@ -3633,7 +3636,10 @@ void main() {
 
           setUp(() {
             when(
-              () => mockDirectMessagesDao.hasGiftWrap(any()),
+              () => mockDirectMessagesDao.hasGiftWrap(
+                any(),
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
             ).thenAnswer((_) async => true);
             when(
               () => mockDirectMessagesDao.getMessageById(
