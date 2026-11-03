@@ -866,18 +866,18 @@ class RelayPool {
     _moveAuthEpochOn(url);
   }
 
-  /// Moves [url]'s AUTH epoch on, for a new challenge or a new socket, and
-  /// returns it. The AUTH events sent to [url] before then are forgotten:
-  /// their verdicts no longer decide anything, and one that never arrives
+  /// Moves [url]'s AUTH epoch on for a new socket, or for its removal, and
+  /// forgets the AUTH events sent to it before: a verdict on one says
+  /// nothing about a socket it was never sent on, and one that never arrives
   /// would otherwise be kept for the session. An AUTH still being signed is
   /// recorded afterwards, under the epoch it answered.
-  int _moveAuthEpochOn(String url) {
+  void _moveAuthEpochOn(String url) {
     _pendingAuthEvents.removeWhere((eventId, relayUrl) {
       if (relayUrl != url) return false;
       _authEventEpoch.remove(eventId);
       return true;
     });
-    return _authEpoch[url] = (_authEpoch[url] ?? 0) + 1;
+    _authEpoch[url] = (_authEpoch[url] ?? 0) + 1;
   }
 
   void remove(String url, {int relayType = RelayType.normal}) {
@@ -2517,8 +2517,14 @@ class RelayPool {
           await _retryAuthRequiredPublishesForRelay(relay);
         } else if (!isCurrent) {
           log('🔐 AUTH for a superseded challenge rejected by ${relay.url}');
+        } else if (relay.relayStatus.authed) {
+          // The socket accepted an earlier AUTH, which this rejection does
+          // not take back: the gate is already open.
+          log(
+            '🔐 AUTH rejected by ${relay.url}, which already accepted one on '
+            'this socket',
+          );
         } else {
-          relay.relayStatus.authed = false;
           final diagnosticReason = relayRefusalCategoryForDiagnostics(message);
           log('🔐 AUTH failed for ${relay.url}: reason=$diagnosticReason');
           _diagnose(
@@ -2572,7 +2578,9 @@ class RelayPool {
         // A new challenge supersedes whatever the last one concluded.
         _authGateClosed.remove(relay.url);
         _authRejected.remove(relay.url);
-        final epoch = _moveAuthEpochOn(relay.url);
+        // Earlier AUTHs on this socket stay known: an acceptance of one still
+        // authenticates it, and a rejection of one is judged superseded.
+        final epoch = _authEpoch[relay.url] = (_authEpoch[relay.url] ?? 0) + 1;
         log('🔐 Challenge: $challenge');
         var tags = [
           ["relay", relay.url],

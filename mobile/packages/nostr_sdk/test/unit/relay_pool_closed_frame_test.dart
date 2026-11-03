@@ -716,67 +716,152 @@ void main() {
       expect(result.closedRelayReasons, {'wss://gated.example': 'restricted'});
     });
 
-    group('an AUTH the relay left behind', () {
-      for (final (how, moveOn)
-          in <(String, Future<void> Function(_ControlledQueryRelay))>[
-            (
-              'after the socket reconnects',
-              (relay) async {
-                relay.onError('socket dropped');
-                relay.relayStatus.connected = ClientConnected.connected;
-                relay.relayStatusCallback?.call();
-              },
-            ),
-            (
-              'after the relay replaces its challenge',
-              (relay) => relay.deliver(['AUTH', 'second-challenge']),
-            ),
-          ]) {
-        test('does not authenticate the relay $how', () async {
-          final nostr = Nostr(
-            LocalNostrSigner(
-              '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
-            ),
-            [],
-            dummyTempRelay,
-          );
-          final relay = _ControlledQueryRelay('wss://reconnecting.example');
-          expect(await nostr.relayPool.add(relay), isTrue);
-          await relay.deliver(['AUTH', 'first-challenge']);
-          final staleAuthId = relay.capturedAuthEventId;
-          await moveOn(relay);
+    group('an earlier AUTH', () {
+      const url = 'wss://reconnecting.example';
+      late Nostr nostr;
+      late _ControlledQueryRelay relay;
 
-          await relay.deliver(['OK', staleAuthId, true, '']);
+      setUp(() async {
+        nostr = Nostr(
+          LocalNostrSigner(
+            '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+          ),
+          [],
+          dummyTempRelay,
+        );
+        relay = _ControlledQueryRelay(url);
+        expect(await nostr.relayPool.add(relay), isTrue);
+      });
+
+      /// A read [relay] refuses until AUTH, and its subscription id.
+      Future<(Future<QueryResult>, String)> refusedRead() async {
+        final pending = nostr.readEvents(
+          [
+            {
+              'kinds': [1059],
+            },
+          ],
+          requireAllRelaysSettled: true,
+          timeout: const Duration(seconds: 30),
+        );
+        final subId = await relay.awaitPendingQuery();
+        await relay.deliver(['CLOSED', subId, 'auth-required: sign in']);
+        return (pending, subId);
+      }
+
+      test('sent before the socket reconnected does not authenticate the new '
+          'one', () async {
+        await relay.deliver(['AUTH', 'first-challenge']);
+        final staleAuthId = relay.capturedAuthEventId;
+        relay.onError('socket dropped');
+        relay.relayStatus.connected = ClientConnected.connected;
+        relay.relayStatusCallback?.call();
+
+        await relay.deliver(['OK', staleAuthId, true, '']);
+        expect(
+          relay.relayStatus.authed,
+          isFalse,
+          reason: 'a verdict on an AUTH for the previous socket decided it',
+        );
+
+        // The new socket's own handshake still decides.
+        await relay.deliver(['AUTH', 'second-challenge']);
+        final currentAuthId = relay.capturedAuthEventId;
+        expect(currentAuthId, isNot(staleAuthId));
+        final (pending, subId) = await refusedRead();
+        await relay.deliver(['OK', currentAuthId, true, '']);
+        await relay.awaitReqCount(2);
+        await relay.deliver(['EOSE', subId]);
+        final result = await pending.timeout(const Duration(seconds: 2));
+        expect(result.endedBy, QueryEnd.complete);
+      });
+
+      test('accepted on the same socket after a new challenge authenticates '
+          'it', () async {
+        await relay.deliver(['AUTH', 'first-challenge']);
+        final earlierAuthId = relay.capturedAuthEventId;
+        await relay.deliver(['AUTH', 'second-challenge']);
+        final currentAuthId = relay.capturedAuthEventId;
+        expect(currentAuthId, isNot(earlierAuthId));
+        final (pending, subId) = await refusedRead();
+
+        await relay.deliver(['OK', earlierAuthId, true, '']);
+        expect(relay.relayStatus.authed, isTrue);
+        await relay.awaitReqCount(2);
+        await relay.deliver(['EOSE', subId]);
+        final result = await pending.timeout(const Duration(seconds: 2));
+        expect(result.endedBy, QueryEnd.complete);
+
+        // The current AUTH is still answered on the same socket.
+        await relay.deliver(['OK', currentAuthId, true, '']);
+        expect(relay.relayStatus.authed, isTrue);
+      });
+
+      test(
+        'accepted on the same socket keeps it authenticated, and its reads '
+        'from ending as restricted, when the current AUTH is rejected',
+        () async {
+          await relay.deliver(['AUTH', 'first-challenge']);
+          final earlierAuthId = relay.capturedAuthEventId;
+          await relay.deliver(['AUTH', 'second-challenge']);
+          final currentAuthId = relay.capturedAuthEventId;
+          final (pending, subId) = await refusedRead();
+
+          await relay.deliver(['OK', earlierAuthId, true, '']);
+          await relay.deliver([
+            'OK',
+            currentAuthId,
+            false,
+            'restricted: not allowed',
+          ]);
+          expect(
+            relay.checkQuery(subId),
+            isTrue,
+            reason: 'the rejection ended a read the earlier AUTH let through',
+          );
           expect(
             relay.relayStatus.authed,
-            isFalse,
-            reason: 'a verdict on an AUTH the relay left behind decided it',
+            isTrue,
+            reason: 'the rejection undid an acceptance on the same socket',
           );
-
-          // The current handshake still decides.
-          if (relay.capturedAuthEventId == staleAuthId) {
-            await relay.deliver(['AUTH', 'second-challenge']);
-          }
-          final currentAuthId = relay.capturedAuthEventId;
-          expect(currentAuthId, isNot(staleAuthId));
-          final pending = nostr.readEvents(
-            [
-              {
-                'kinds': [1059],
-              },
-            ],
-            requireAllRelaysSettled: true,
-            timeout: const Duration(seconds: 30),
-          );
-          final subId = await relay.awaitPendingQuery();
-          await relay.deliver(['CLOSED', subId, 'auth-required: sign in']);
-          await relay.deliver(['OK', currentAuthId, true, '']);
           await relay.awaitReqCount(2);
           await relay.deliver(['EOSE', subId]);
+
           final result = await pending.timeout(const Duration(seconds: 2));
-          expect(result.endedBy, QueryEnd.complete);
-        });
-      }
+          expect(result.closedRelayReasons[url], isNot('restricted'));
+        },
+      );
+
+      test('accepted on the same socket keeps a later refusal on it from '
+          'being final when the current AUTH is rejected', () async {
+        await relay.deliver(['AUTH', 'first-challenge']);
+        final earlierAuthId = relay.capturedAuthEventId;
+        await relay.deliver(['AUTH', 'second-challenge']);
+        final currentAuthId = relay.capturedAuthEventId;
+        await relay.deliver(['OK', earlierAuthId, true, '']);
+        await relay.deliver([
+          'OK',
+          currentAuthId,
+          false,
+          'restricted: not allowed',
+        ]);
+
+        final pending = nostr.readEvents(
+          [
+            {
+              'kinds': [1059],
+            },
+          ],
+          requireAllRelaysSettled: true,
+          timeout: const Duration(milliseconds: 300),
+        );
+        final subId = await relay.awaitPendingQuery();
+        await relay.deliver(['CLOSED', subId, 'auth-required: sign in']);
+
+        final result = await pending;
+        // As on any socket that authenticated: the relay is not rejected.
+        expect(result.closedRelayReasons, {url: 'auth-required'});
+      });
     });
 
     group('a relay re-added under a removed URL', () {
