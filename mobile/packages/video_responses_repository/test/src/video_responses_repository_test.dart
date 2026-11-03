@@ -172,9 +172,16 @@ void main() {
         funnelcakeApiClient: withFunnelcake ? funnelcake : null,
       );
 
-  void relayAnswers(List<Event> events) => when(
-    () => nostrClient.queryEvents(any()),
-  ).thenAnswer((_) async => events);
+  void relayAnswers(List<Event> events, {bool capped = false}) {
+    when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => events);
+    when(() => nostrClient.readEvents(any())).thenAnswer(
+      (_) async => QueryResult(
+        events: events,
+        endedBy: QueryEnd.complete,
+        possiblyCapped: capped,
+      ),
+    );
+  }
 
   void curationAnswers(
     List<Event> events, {
@@ -214,7 +221,7 @@ void main() {
         expect(responses.videos.map((v) => v.id), equals([_hex(202)]));
         final filters =
             verify(
-                  () => nostrClient.queryEvents(captureAny()),
+                  () => nostrClient.readEvents(captureAny()),
                 ).captured.single
                 as List<Filter>;
         expect(filters.map((f) => f.uppercaseE), anyElement(equals([_rootId])));
@@ -231,7 +238,7 @@ void main() {
         expect(responses.total, equals(1));
         final filters =
             verify(
-                  () => nostrClient.queryEvents(captureAny()),
+                  () => nostrClient.readEvents(captureAny()),
                 ).captured.single
                 as List<Filter>;
         expect(filters, hasLength(1));
@@ -269,7 +276,7 @@ void main() {
             limit: 3,
           ),
         ).called(1);
-        verifyNever(() => nostrClient.queryEvents(any()));
+        verifyNever(() => nostrClient.readEvents(any()));
       });
 
       test('reads the relays when Funnelcake does not answer', () async {
@@ -310,6 +317,22 @@ void main() {
           ),
         );
       });
+
+      test('counts exactly when no relay stopped at its limit', () async {
+        // Two filters' answers together can reach the read's limit without
+        // either relay stopping at it.
+        relayAnswers([
+          for (var i = 0; i < VideoResponsesRepository.maxResponsesRead; i++)
+            _reply(1000 + i, createdAt: 1000 + i),
+        ]);
+
+        final responses = await repository().fetchReplies(
+          videoId: _rootId,
+          videoAddress: _rootAddress,
+        );
+
+        expect(responses.totalIsAtLeast, isFalse);
+      });
     });
 
     group('fetchJoined', () {
@@ -346,7 +369,7 @@ void main() {
         );
         final filter =
             (verify(
-                      () => nostrClient.queryEvents(captureAny()),
+                      () => nostrClient.readEvents(captureAny()),
                     ).captured.single
                     as List<Filter>)
                 .single;
@@ -416,11 +439,13 @@ void main() {
         expect(responses.videos.map((v) => v.id), equals([_hex(301)]));
       });
 
-      test('counts only a floor when the relays sent a full read', () async {
+      test('counts only a floor when a relay may have stopped at its '
+          'limit', () async {
+        // A relay that stops below the read's limit still says it may have.
         relayAnswers([
-          for (var i = 0; i < VideoResponsesRepository.maxResponsesRead; i++)
-            _answer(1000 + i, createdAt: 1000 + i),
-        ]);
+          _answer(301, createdAt: 1000),
+          _answer(302, createdAt: 2000),
+        ], capped: true);
 
         final responses = await repository().fetchJoined(
           chainRoot: _rootAddress,
@@ -428,10 +453,7 @@ void main() {
         );
 
         expect(responses.totalIsAtLeast, isTrue);
-        expect(
-          responses.total,
-          equals(VideoResponsesRepository.maxResponsesRead),
-        );
+        expect(responses.total, equals(2));
       });
 
       test('asks Funnelcake by the first video and the hashtag', () async {

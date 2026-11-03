@@ -123,7 +123,7 @@ class VideoResponsesRepository {
     if (server != null) return server;
 
     final kinds = [NIP71VideoKinds.addressableShortVideo];
-    final events = await _nostrClient.queryEvents([
+    final read = await _nostrClient.readEvents([
       Filter(kinds: kinds, uppercaseE: [videoId], limit: maxResponsesRead),
       if (videoAddress != null)
         Filter(
@@ -133,8 +133,9 @@ class VideoResponsesRepository {
         ),
     ]);
     return _responsesIn(
-      events,
+      read.events,
       limit: limit,
+      possiblyCapped: read.possiblyCapped,
       where: (reply) =>
           reply.replyRootEventId == videoId ||
           (videoAddress != null &&
@@ -177,7 +178,7 @@ class VideoResponsesRepository {
     // so what it returns is checked as the relays' answers are.
     if (server != null) return _joinedOf(server, joined, filter: filter);
 
-    final events = await _nostrClient.queryEvents([
+    final read = await _nostrClient.readEvents([
       Filter(
         kinds: [NIP71VideoKinds.addressableShortVideo],
         a: [chainRoot],
@@ -186,8 +187,9 @@ class VideoResponsesRepository {
       ),
     ]);
     return _responsesIn(
-      events,
+      read.events,
       limit: limit,
+      possiblyCapped: read.possiblyCapped,
       where: joined,
       onePerAuthor: true,
       filter: filter,
@@ -302,12 +304,13 @@ class VideoResponsesRepository {
 
   /// The parsed [events] that [where] and then [filter] keep, the newest
   /// first, one per person when [onePerAuthor]: at most [limit] of them,
-  /// counted in all. The count is only a floor when the relays sent as many as
-  /// one read asks for.
+  /// counted in all. The count is only a floor when [possiblyCapped]: a relay
+  /// may have stopped at its result-size limit.
   VideoResponses _responsesIn(
     List<Event> events, {
     required int limit,
     required bool Function(VideoEvent) where,
+    bool possiblyCapped = false,
     bool onePerAuthor = false,
     List<VideoEvent> Function(List<VideoEvent>)? filter,
   }) {
@@ -329,7 +332,7 @@ class VideoResponsesRepository {
     return VideoResponses(
       total: videos.length,
       videos: videos.take(limit).toList(),
-      totalIsAtLeast: events.length >= maxResponsesRead,
+      totalIsAtLeast: possiblyCapped,
     );
   }
 
