@@ -276,7 +276,7 @@ void main() {
           titles,
           containsAll(<String>[
             'crypto_signals_daily',
-            'FREE V-BUCKS GIVEAWAY',
+            'FREE COINS GIVEAWAY',
             'noname',
           ]),
         );

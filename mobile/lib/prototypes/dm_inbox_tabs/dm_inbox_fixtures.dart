@@ -279,7 +279,7 @@ DmInboxFixtures _build() {
   );
   sender(
     '4b',
-    'FREE V-BUCKS GIVEAWAY',
+    'FREE COINS GIVEAWAY',
     const DmSenderSignals(
       divineVideoCount: 0,
       totalLoopCount: 0,
