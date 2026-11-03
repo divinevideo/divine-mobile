@@ -9,8 +9,8 @@ import 'package:models/models.dart' show AudioEvent;
 /// [AudioEvent.linkedEventId], so a video made with it references the event
 /// instead of passing the audio off as its creator's own. A shipped sound
 /// with no published event stays as it is. When Divine published one sound
-/// more than once, the newest event in [published] (which comes newest
-/// first) is the one it is tied to, and the others are dropped.
+/// more than once, shipped or not, only the newest event in [published]
+/// (which comes newest first) counts, and the others are dropped.
 List<AudioEvent> linkDivineSounds({
   required List<AudioEvent> shipped,
   required List<AudioEvent> published,
@@ -23,10 +23,12 @@ List<AudioEvent> linkDivineSounds({
   };
   final eventByShippedId = <String, AudioEvent>{};
   final notShipped = <AudioEvent>[];
+  final seenDivineIds = <String>{};
   for (final event in published) {
-    final shippedId = event.divineSoundId;
-    if (shippedId != null && shippedIds.contains(shippedId)) {
-      eventByShippedId.putIfAbsent(shippedId, () => event);
+    final divineId = event.divineSoundId;
+    if (divineId != null && !seenDivineIds.add(divineId)) continue;
+    if (divineId != null && shippedIds.contains(divineId)) {
+      eventByShippedId[divineId] = event;
     } else {
       notShipped.add(event);
     }
