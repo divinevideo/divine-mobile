@@ -15,9 +15,11 @@ import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/loop_repair_input.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
+import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -25,6 +27,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/video_editor/loop_repair.dart';
 import '../mocks/mock_path_provider_platform.dart';
+
+class _RecordingCrashReporter implements CrashReporter {
+  final logs = <String>[];
+
+  @override
+  void log(String message) => logs.add(message);
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {}
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+}
 
 void main() {
   group('DraftStorageService', () {
@@ -588,6 +607,116 @@ void main() {
         );
 
         expect(await service.getDraftById('draft_corrupt'), isNull);
+      });
+    });
+
+    group('draft weight', () {
+      late _RecordingCrashReporter reporter;
+      late DraftStorageService reportingService;
+      late Directory markers;
+      final originalMarkerDirectory = InterruptedRenderMonitor.markerDirectory;
+      final originalFootprint = InterruptedRenderMonitor.readFootprintBytes;
+
+      DivineVideoDraft weighedDraft() {
+        final now = DateTime.now();
+        return DivineVideoDraft(
+          id: 'draft_weighed',
+          clips: [
+            DivineVideoClip(
+              id: 'clip_weighed',
+              video: EditorVideo.file('/path/to/video.mp4'),
+              duration: const Duration(seconds: 6),
+              recordedAt: now,
+              targetAspectRatio: AspectRatio.square,
+              originalAspectRatio: 9 / 16,
+            ),
+          ],
+          title: 'draft_weighed',
+          description: '',
+          hashtags: {},
+          selectedApproach: 'hybrid',
+          createdAt: now,
+          lastModified: now,
+          publishStatus: PublishStatus.draft,
+          publishAttempts: 0,
+        );
+      }
+
+      /// The `lastDraft` a render marker opened right now records.
+      Future<Object?> lastDraftInNextMarker() async {
+        final close = InterruptedRenderMonitor.begin(
+          taskId: 'draft_weight_probe',
+          kind: 'video',
+          details: const {},
+        );
+        await pumpEventQueue();
+        final marker = jsonDecode(
+          markers.listSync().whereType<File>().single.readAsStringSync(),
+        ) as Map<String, Object?>;
+        close();
+        return marker['lastDraft'];
+      }
+
+      setUp(() async {
+        reporter = _RecordingCrashReporter();
+        reportingService = DraftStorageService(
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+          crashReporter: reporter,
+        );
+        markers = Directory.systemTemp.createTempSync('draft_weight_markers_');
+        InterruptedRenderMonitor.markerDirectory = () async => markers;
+        InterruptedRenderMonitor.readFootprintBytes = () async => null;
+        await InterruptedRenderMonitor.initialize();
+      });
+
+      tearDown(() {
+        InterruptedRenderMonitor.resetForTesting();
+        InterruptedRenderMonitor.markerDirectory = originalMarkerDirectory;
+        InterruptedRenderMonitor.readFootprintBytes = originalFootprint;
+        if (markers.existsSync()) markers.deleteSync(recursive: true);
+      });
+
+      test('writes the loaded draft weight to the crash log', () async {
+        await reportingService.saveDraft(weighedDraft());
+
+        await reportingService.getDraftById('draft_weighed');
+
+        expect(reporter.logs, hasLength(1));
+        expect(
+          reporter.logs.single,
+          allOf(
+            startsWith('📂 Loaded draft draft_weighed in '),
+            contains('clips 1'),
+          ),
+        );
+      });
+
+      test('keeps saves out of the crash log', () async {
+        await reportingService.saveDraft(weighedDraft());
+
+        expect(reporter.logs, isEmpty);
+      });
+
+      test('names the loaded draft in the next render marker', () async {
+        await reportingService.saveDraft(weighedDraft());
+        InterruptedRenderMonitor.noteLastDraft('draft_other: data 0 KB');
+
+        await reportingService.getDraftById('draft_weighed');
+
+        expect(
+          await lastDraftInNextMarker(),
+          allOf(startsWith('draft_weighed: data '), contains('clips 1')),
+        );
+      });
+
+      test('names the saved draft in the next render marker', () async {
+        await reportingService.saveDraft(weighedDraft());
+
+        expect(
+          await lastDraftInNextMarker(),
+          allOf(startsWith('draft_weighed: data '), contains('clips 1')),
+        );
       });
     });
 

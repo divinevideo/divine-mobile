@@ -102,6 +102,17 @@ class InterruptedRenderMonitor {
   static final _lifecycleObserver = _LifecycleObserver();
   static bool _observingLifecycle = false;
 
+  /// How heavy the draft loaded or saved last is, see [noteLastDraft].
+  static String? _lastDraft;
+
+  /// Notes [summary], how heavy the draft loaded or saved last is, for every
+  /// marker opened from now on.
+  ///
+  /// A render the app does not survive is reported by the next process, whose
+  /// logs no longer hold the killed session's draft load line (#10677). The
+  /// marker carries it across instead.
+  static void noteLastDraft(String summary) => _lastDraft = summary;
+
   /// Resolves where markers live, then reports and deletes every marker a
   /// previous process left behind.
   ///
@@ -281,7 +292,8 @@ class InterruptedRenderMonitor {
   static Future<void> sampleActiveRendersForTesting() =>
       Future.wait(_active.map((marker) => marker.sample()));
 
-  /// Forgets the marker folder and the running renders, leaving their files.
+  /// Forgets the marker folder, the running renders and the last draft,
+  /// leaving the marker files.
   @visibleForTesting
   static void resetForTesting() {
     for (final marker in _active) {
@@ -289,6 +301,7 @@ class InterruptedRenderMonitor {
     }
     _active.clear();
     _directory = null;
+    _lastDraft = null;
     if (_observingLifecycle) {
       WidgetsBinding.instance.removeObserver(_lifecycleObserver);
       _observingLifecycle = false;
@@ -380,6 +393,7 @@ class _RenderMarker {
           'kind': kind,
           'startedAt': DateTime.now().toUtc().toIso8601String(),
           'details': details,
+          'lastDraft': ?InterruptedRenderMonitor._lastDraft,
           'lifecycleHistory': <String>[
             '${InterruptedRenderMonitor.readLifecycleState() ?? 'unknown'}@0',
           ],
@@ -515,6 +529,8 @@ String summarizeMarker(Map<String, Object?> marker) {
     'cancelRequestedAtMs': marker['cancelRequestedAtMs'],
     'cancelReturnedAtMs': marker['cancelReturnedAtMs'],
     if (details is Map) ...details.cast<String, Object?>(),
+    // Last: unlike the fields before it, the draft summary contains spaces.
+    'lastDraft': marker['lastDraft'],
   };
   return fields.entries
       .where((entry) => entry.value != null)

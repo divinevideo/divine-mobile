@@ -194,6 +194,20 @@ void main() {
         await render;
       });
 
+      test('names the draft noted last in the marker', () async {
+        InterruptedRenderMonitor.noteLastDraft('draft_a: data 3 KB, clips 2');
+        final finish = Completer<String>();
+        final render = await startRender(finish);
+
+        expect(
+          readOnlyMarker()['lastDraft'],
+          equals('draft_a: data 3 KB, clips 2'),
+        );
+
+        finish.complete('out.mp4');
+        await render;
+      });
+
       test('deletes the marker once the render completes', () async {
         final finish = Completer<String>();
         final render = await startRender(finish);
@@ -783,6 +797,23 @@ void main() {
           'lifecycleHistory=resumed@0,inactive@2140,resumed@2610 '
           'watchdogFiredAtMs=119750 '
           'cancelRequestedAtMs=119751 segments=2',
+        ),
+      );
+    });
+
+    test('puts the last draft after the render details', () {
+      final summary = summarizeMarker(const {
+        'kind': 'video',
+        'elapsedMs': 7508,
+        'lastDraft': 'draft_a: data 3 KB, clips 2',
+        'details': {'segments': 1},
+      });
+
+      expect(
+        summary,
+        equals(
+          'kind=video elapsedMs=7508 segments=1 '
+          'lastDraft=draft_a: data 3 KB, clips 2',
         ),
       );
     });
