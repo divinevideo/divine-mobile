@@ -362,9 +362,11 @@ class BadgeRepository {
     onAccountCreated,
     String? definitionRelayUrl,
     FunnelcakeApiClient? funnelcakeApiClient,
+    Stopwatch Function()? stopwatchFactory,
     Stream<void>? sessionChanges,
   }) : _nostrClient = nostrClient,
        _funnelcakeApiClient = funnelcakeApiClient,
+       _stopwatchFactory = stopwatchFactory ?? Stopwatch.new,
        _currentPubkey = currentPubkey,
        _signEvent = signEvent,
        _isHiddenPubkey = isHiddenPubkey,
@@ -384,6 +386,7 @@ class BadgeRepository {
 
   /// Trusted catalogue API that verifies signatures before serving events.
   final FunnelcakeApiClient? _funnelcakeApiClient;
+  final Stopwatch Function() _stopwatchFactory;
   final BadgeCurrentPubkeyReader _currentPubkey;
   final BadgeEventSigner _signEvent;
   final BadgeDismissalSync _dismissalSync;
@@ -551,7 +554,7 @@ class BadgeRepository {
   ) async {
     // Bound the whole walk, rather than multiplying the client's retry budget
     // by the number of pages. A timed-out request cannot start another page.
-    final stopwatch = Stopwatch()..start();
+    final stopwatch = _stopwatchFactory()..start();
     const budget = Duration(seconds: 15);
     final events = <Event>[];
     final cursors = <String>{};
@@ -708,7 +711,7 @@ class BadgeRepository {
       return const {};
     }
     var expired = false;
-    final elapsed = Stopwatch()..start();
+    final elapsed = _stopwatchFactory()..start();
     Duration remainingBudget() {
       final remaining = timeout - elapsed.elapsed;
       if (remaining <= Duration.zero) {

@@ -450,14 +450,19 @@ void main() {
       test('reconnects on its own when relay closes connection', () async {
         await manager.connect();
 
+        final reconnected = manager.stateStream.firstWhere(
+          (state) =>
+              state == ConnectionState.connected &&
+              mockFactory.createdChannels.length > 1,
+        );
         mockFactory.lastChannel!.simulateClose();
-        await Future.delayed(const Duration(milliseconds: 50));
+        await reconnected;
 
         // A connection with no further outbound sends (a live REQ with
         // nothing else pending) never reaches the on-demand send() path,
         // so the manager must repair itself here or it would stay dead
-        // forever (#8992). `manager`'s setUp config uses a 10ms backoff,
-        // well inside this 50ms window.
+        // forever (#8992). Await the replacement connection itself, since
+        // a timer turn does not prove its asynchronous handshake finished.
         expect(manager.state, equals(ConnectionState.connected));
         expect(mockFactory.createdChannels.length, greaterThan(1));
       });
@@ -795,55 +800,98 @@ void main() {
     });
 
     group('on-demand reconnection', () {
-      test('send without a deadline stops at the reconnect budget', () async {
-        mockFactory.readyError = Exception('Connection failed');
-        final boundedManager = WebSocketConnectionManager(
-          url: 'wss://test.relay.com',
-          channelFactory: mockFactory,
-          logger: logMessages.add,
-          config: const WebSocketConfig(
-            maxReconnectAttempts: 10,
-            baseReconnectDelay: Duration(milliseconds: 10),
-            maxReconnectDelay: Duration(milliseconds: 100),
-            connectionTimeout: Duration(milliseconds: 500),
-            reconnectBudget: Duration(milliseconds: 25),
-          ),
-        );
-        addTearDown(boundedManager.dispose);
+      test('send without a deadline stops at the reconnect budget', () {
+        fakeAsync((async) {
+          final factory = MockWebSocketChannelFactory()
+            ..readyError = Exception('Connection failed');
+          Stopwatch? budgetStopwatch;
+          final boundedManager = WebSocketConnectionManager(
+            url: 'wss://test.relay.com',
+            channelFactory: factory,
+            stopwatchFactory: () => budgetStopwatch = clock.stopwatch(),
+            logger: logMessages.add,
+            config: const WebSocketConfig(
+              maxReconnectAttempts: 10,
+              baseReconnectDelay: Duration(milliseconds: 10),
+              maxReconnectDelay: Duration(milliseconds: 100),
+              connectionTimeout: Duration(milliseconds: 500),
+              reconnectBudget: Duration(milliseconds: 25),
+            ),
+          );
 
-        final stopwatch = Stopwatch()..start();
-        expect(await boundedManager.send('test'), isFalse);
-        stopwatch.stop();
+          try {
+            bool? result;
+            unawaited(
+              boundedManager.send('test').then((value) => result = value),
+            );
+            async.elapse(const Duration(milliseconds: 10));
 
-        expect(boundedManager.reconnectAttempts, lessThan(10));
-        expect(mockFactory.createdChannels, hasLength(1));
-        expect(stopwatch.elapsed, lessThan(const Duration(milliseconds: 250)));
+            // The failed first attempt leaves 15ms, too little for the next
+            // 20ms backoff. The injected stopwatch must advance with timers.
+            expect(budgetStopwatch, isNotNull);
+            expect(budgetStopwatch!.isRunning, isTrue);
+            expect(budgetStopwatch!.elapsed, const Duration(milliseconds: 10));
+            expect(result, isFalse);
+            expect(boundedManager.reconnectAttempts, lessThan(10));
+            expect(factory.createdChannels, hasLength(1));
+            expect(async.elapsed, lessThan(const Duration(milliseconds: 25)));
+          } finally {
+            var disposed = false;
+            unawaited(boundedManager.dispose().then((_) => disposed = true));
+            async.flushMicrotasks();
+            async.elapse(Duration.zero);
+            expect(disposed, isTrue);
+          }
+        });
       });
 
-      test('each send gets a fresh reconnect schedule', () async {
-        mockFactory.readyError = Exception('Connection failed');
-        final boundedManager = WebSocketConnectionManager(
-          url: 'wss://test.relay.com',
-          channelFactory: mockFactory,
-          logger: logMessages.add,
-          config: const WebSocketConfig(
-            maxReconnectAttempts: 4,
-            baseReconnectDelay: Duration(milliseconds: 1),
-            maxReconnectDelay: Duration(milliseconds: 4),
-            reconnectBudget: Duration(milliseconds: 50),
-          ),
-        );
-        addTearDown(boundedManager.dispose);
+      test('each send gets a fresh reconnect schedule', () {
+        fakeAsync((async) {
+          final factory = MockWebSocketChannelFactory()
+            ..readyError = Exception('Connection failed');
+          final boundedManager = WebSocketConnectionManager(
+            url: 'wss://test.relay.com',
+            channelFactory: factory,
+            stopwatchFactory: clock.stopwatch,
+            logger: logMessages.add,
+            config: const WebSocketConfig(
+              maxReconnectAttempts: 4,
+              baseReconnectDelay: Duration(milliseconds: 1),
+              maxReconnectDelay: Duration(milliseconds: 4),
+              reconnectBudget: Duration(milliseconds: 50),
+            ),
+          );
 
-        expect(await boundedManager.send('first'), isFalse);
-        final firstSendAttempts = boundedManager.reconnectAttempts;
-        expect(firstSendAttempts, 4);
-        expect(mockFactory.createdChannels, hasLength(4));
+          try {
+            bool? firstResult;
+            unawaited(
+              boundedManager.send('first').then((value) => firstResult = value),
+            );
+            async.elapse(const Duration(milliseconds: 11));
+            expect(firstResult, isFalse);
+            final firstSendAttempts = boundedManager.reconnectAttempts;
+            expect(firstSendAttempts, 4);
+            expect(factory.createdChannels, hasLength(4));
 
-        expect(await boundedManager.send('second'), isFalse);
-
-        expect(boundedManager.reconnectAttempts, firstSendAttempts);
-        expect(mockFactory.createdChannels, hasLength(8));
+            async.elapse(const Duration(milliseconds: 51));
+            bool? secondResult;
+            unawaited(
+              boundedManager
+                  .send('second')
+                  .then((value) => secondResult = value),
+            );
+            async.elapse(const Duration(milliseconds: 11));
+            expect(secondResult, isFalse);
+            expect(boundedManager.reconnectAttempts, firstSendAttempts);
+            expect(factory.createdChannels, hasLength(8));
+          } finally {
+            var disposed = false;
+            unawaited(boundedManager.dispose().then((_) => disposed = true));
+            async.flushMicrotasks();
+            async.elapse(Duration.zero);
+            expect(disposed, isTrue);
+          }
+        });
       });
 
       test('manager budget expiry reaches the error stream', () async {

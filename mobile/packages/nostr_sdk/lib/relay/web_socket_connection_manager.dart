@@ -16,9 +16,11 @@ class _ConnectionLimit {
     : _budget = null,
       _stopwatch = null;
 
-  _ConnectionLimit.monotonic(this._budget)
-    : _wallClockDeadline = null,
-      _stopwatch = (Stopwatch()..start());
+  _ConnectionLimit.monotonic(
+    this._budget,
+    Stopwatch Function() stopwatchFactory,
+  ) : _wallClockDeadline = null,
+      _stopwatch = (stopwatchFactory()..start());
 
   final DateTime? _wallClockDeadline;
   final Duration? _budget;
@@ -135,18 +137,24 @@ class DefaultWebSocketChannelFactory implements WebSocketChannelFactory {
 /// {@endtemplate}
 class WebSocketConnectionManager {
   /// {@macro web_socket_connection_manager}
+  ///
+  /// [stopwatchFactory] defaults to a native monotonic stopwatch. Tests can
+  /// inject a stopwatch that advances with their simulated timers.
   WebSocketConnectionManager({
     required this.url,
     this.config = WebSocketConfig.defaultConfig,
     WebSocketChannelFactory? channelFactory,
+    Stopwatch Function()? stopwatchFactory,
     void Function(String)? logger,
   }) : _channelFactory =
            channelFactory ?? const DefaultWebSocketChannelFactory(),
+       _stopwatchFactory = stopwatchFactory ?? Stopwatch.new,
        log = logger ?? _defaultLog;
 
   final String url;
   final WebSocketConfig config;
   final WebSocketChannelFactory _channelFactory;
+  final Stopwatch Function() _stopwatchFactory;
 
   WebSocketChannel? _channel;
   StreamSubscription? _channelSubscription;
@@ -618,7 +626,8 @@ class WebSocketConnectionManager {
 
   Future<bool> _tryReconnect({_ConnectionLimit? callerLimit}) async {
     final limit =
-        callerLimit ?? _ConnectionLimit.monotonic(config.reconnectBudget);
+        callerLimit ??
+        _ConnectionLimit.monotonic(config.reconnectBudget, _stopwatchFactory);
     var attempts = 0;
     _reconnectAttempts = 0;
     while (_shouldReconnect && _state == ConnectionState.disconnected) {

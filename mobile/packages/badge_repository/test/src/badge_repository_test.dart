@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:badge_repository/badge_repository.dart';
+import 'package:clock/clock.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
@@ -710,7 +712,7 @@ void main() {
 
       test(
         'timed out holder walks do not start deletion or profile reads after awards arrive',
-        () async {
+        () {
           final coordinate = BadgeCoordinate(
             pubkey: _pubkey(2),
             identifier: 'daily',
@@ -752,28 +754,65 @@ void main() {
               const PagedQueryResult(events: [], isComplete: true, pages: 1),
             );
           });
-          final walk = repository.loadSubscribedHolders(
-            timeout: const Duration(milliseconds: 10),
-          );
-          final expired = expectLater(walk, throwsA(isA<TimeoutException>()));
-          await started.future;
-          await expired;
-          awards.complete(
-            PagedQueryResult(
-              events: [
-                _awardEvent(
-                  id: _eventId(702),
-                  issuerPubkey: coordinate.pubkey,
-                  definitionCoordinate: coordinate.value,
-                  recipients: [_pubkey(10)],
+          fakeAsync((async) {
+            final timedRepository = BadgeRepository(
+              nostrClient: nostrClient,
+              sharedPreferences: preferences,
+              currentPubkey: () => _pubkey(1),
+              signEvent:
+                  ({
+                    required kind,
+                    required content,
+                    required tags,
+                    createdAt,
+                  }) async => null,
+              signer: () => dismissalSigner,
+              stopwatchFactory: clock.stopwatch,
+            );
+            try {
+              Object? failure;
+              unawaited(
+                timedRepository
+                    .loadSubscribedHolders(
+                      timeout: const Duration(milliseconds: 10),
+                    )
+                    .then(
+                      (_) => fail('The pending walk must time out'),
+                      onError: (Object error) {
+                        failure = error;
+                      },
+                    ),
+              );
+              async.flushMicrotasks();
+              expect(started.isCompleted, isTrue);
+              expect(failure, isNull);
+              async.elapse(const Duration(milliseconds: 10));
+              expect(failure, isA<TimeoutException>());
+              awards.complete(
+                PagedQueryResult(
+                  events: [
+                    _awardEvent(
+                      id: _eventId(702),
+                      issuerPubkey: coordinate.pubkey,
+                      definitionCoordinate: coordinate.value,
+                      recipients: [_pubkey(10)],
+                    ),
+                  ],
+                  isComplete: true,
+                  pages: 1,
                 ),
-              ],
-              isComplete: true,
-              pages: 1,
-            ),
-          );
-          await pumpEventQueue();
-          expect(filters, hasLength(1));
+              );
+              async.flushMicrotasks();
+              expect(filters, hasLength(1));
+            } finally {
+              var disposed = false;
+              unawaited(timedRepository.dispose().then((_) => disposed = true));
+              async
+                ..flushMicrotasks()
+                ..elapse(Duration.zero);
+              expect(disposed, isTrue);
+            }
+          });
         },
       );
 
@@ -2387,7 +2426,7 @@ void main() {
 
       test(
         'bounds concurrent holder walks and stops scheduling after timeout',
-        () async {
+        () {
           when(
             () => nostrClient.queryEventsDetailed(
               any(),
@@ -2424,18 +2463,59 @@ void main() {
             reads++;
             return pending.future;
           });
-          await expectLater(
-            repository.loadSubscribedHolders(
-              timeout: const Duration(milliseconds: 10),
-            ),
-            throwsA(isA<TimeoutException>()),
-          );
-          expect(reads, 2);
-          pending.complete(
-            const PagedQueryResult(events: [], isComplete: true, pages: 1),
-          );
-          await pumpEventQueue();
-          expect(reads, 2);
+          fakeAsync((async) {
+            final timedRepository = BadgeRepository(
+              nostrClient: nostrClient,
+              sharedPreferences: preferences,
+              currentPubkey: () => _pubkey(1),
+              signEvent:
+                  ({
+                    required kind,
+                    required content,
+                    required tags,
+                    createdAt,
+                  }) async => null,
+              signer: () => dismissalSigner,
+              stopwatchFactory: clock.stopwatch,
+            );
+            try {
+              Object? failure;
+              unawaited(
+                timedRepository
+                    .loadSubscribedHolders(
+                      timeout: const Duration(milliseconds: 10),
+                    )
+                    .then(
+                      (_) => fail('The pending walk must time out'),
+                      onError: (Object error) {
+                        failure = error;
+                      },
+                    ),
+              );
+              async.flushMicrotasks();
+              expect(reads, 2);
+              expect(failure, isNull);
+              async.elapse(const Duration(milliseconds: 10));
+              expect(failure, isA<TimeoutException>());
+              expect(reads, 2);
+              pending.complete(
+                const PagedQueryResult(
+                  events: [],
+                  isComplete: true,
+                  pages: 1,
+                ),
+              );
+              async.flushMicrotasks();
+              expect(reads, 2);
+            } finally {
+              var disposed = false;
+              unawaited(timedRepository.dispose().then((_) => disposed = true));
+              async
+                ..flushMicrotasks()
+                ..elapse(Duration.zero);
+              expect(disposed, isTrue);
+            }
+          });
         },
       );
 
