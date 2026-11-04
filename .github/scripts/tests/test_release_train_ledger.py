@@ -98,6 +98,20 @@ class GhLedgerStoreTests(unittest.TestCase):
         store.paths()
         self.assertEqual(len(run.calls), 3)
 
+    def test_lost_create_race_invalidates_paths_cache(self):
+        tree = json.dumps({"truncated": False, "tree": []})
+        store, run = self.store(
+            done(stdout=tree),
+            done(1, stderr="gh: Unprocessable Entity (HTTP 422)"),
+            done(stdout=json.dumps({"content": b64("{}")})),
+            done(stdout=tree),
+        )
+        store.paths()
+        self.assertFalse(store.create_json("p.json", {}, "m"))
+        store.paths()
+        tree_call = ["gh", "api", f"repos/{REPO}/git/trees/main?recursive=1"]
+        self.assertEqual(run.calls.count(tree_call), 2)
+
     def test_create_returns_false_when_path_exists(self):
         body = json.dumps({"content": b64("{}")})
         store, run = self.store(

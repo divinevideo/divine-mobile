@@ -558,6 +558,44 @@ class AllocateTest(unittest.TestCase):
         self.assertEqual(result.version, v("1.0.28"))
 
 
+class StaleViewStore(MemoryLedgerStore):
+    """Loses the create race for one claim and keeps a stale paths() view."""
+
+    def __init__(self, files, lost):
+        super().__init__(files)
+        self.lost = lost
+        self.snapshot = frozenset(self.files)
+
+    def paths(self):
+        return self.snapshot
+
+    def create_json(self, path, record, message):
+        if path == self.lost:
+            self.files[path] = record
+            return False
+        created = super().create_json(path, record, message)
+        self.snapshot = self.snapshot | {path}
+        return created
+
+
+class AndroidFloorGuardTest(unittest.TestCase):
+    def test_lost_race_claim_missing_from_view_trips_the_floor_check(self) -> None:
+        lost = "allocations/claims/1.0.50/play-production.json"
+        ledger = StaleViewStore(
+            {**BOOT, "releases/android/1.0.50+300.json": {}}, lost
+        )
+        with self.assertRaisesRegex(AllocationError, "1.0.50.*1.0.28|1.0.28.*1.0.50"):
+            run_allocate(
+                ledger,
+                "android",
+                store_version_codes=[300],
+                reservation_key="manual/abc",
+            )
+        self.assertFalse(
+            [p for p in ledger.creates if p.startswith("allocations/builds/")]
+        )
+
+
 class BootstrapTest(unittest.TestCase):
     def test_bootstrap_dry_run_writes_nothing(self) -> None:
         ledger = MemoryLedgerStore()

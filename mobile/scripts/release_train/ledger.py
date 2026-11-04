@@ -108,6 +108,7 @@ class GhLedgerStore:
                         f"create of {path} failed with 422 but path is unreadable: "
                         f"{stderr}; {error}"
                     ) from error
+                self._paths = None
                 return False
             raise LedgerError(f"create of {path} failed: {stderr}")
         raise LedgerError(f"create of {path} failed")  # pragma: no cover
