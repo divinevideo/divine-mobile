@@ -97,12 +97,14 @@ class IdentityClaimStatus {
   /// UI should say "could not check" rather than "not verified".
   final bool verifierReachable;
 
-  /// Why the verifier stopped counting a sign-in link, under the same
-  /// lowercased `platform:identity` key as [verifiedKeys].
+  /// The sign-in reason codes the verifier gave, under the same lowercased
+  /// `platform:identity` key as [verifiedKeys].
   ///
   /// Holds only claims the verifier judged negative with a sign-in reason
   /// code. That is a conclusive answer about that one claim, so it holds even
-  /// when [verifierReachable] is false because of another claim.
+  /// when [verifierReachable] is false because of another claim. A proof-post
+  /// claim on a platform with sign-in can carry one too, so check the claim's
+  /// proof before reading an entry as a lapsed sign-in link.
   final Map<String, SignInLapse> signInCodes;
 
   /// Whether [claim] carries a positive verdict.
@@ -608,7 +610,9 @@ class IdentityClaimsRepository {
   /// Builds and signs the identity event that links [claim], without
   /// publishing it. [confirmBinding] goes on the new claim's tag as a fourth
   /// value, for a sign-in the verifier confirms before it is published
-  /// (#10119). [replacingIdentity] is as for [publishClaim].
+  /// (#10119). [replacingIdentity] names another identity on the same
+  /// platform whose tag the event drops in this claim's place: the form sent
+  /// to the verifier, as for [publishClaim], or a sign-in link being renewed.
   ///
   /// With [replaceOnlySignIn], [replacingIdentity] is replaced only when every
   /// tag under it on the event is a sign-in link: renewing a sign-in must not

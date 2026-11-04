@@ -292,10 +292,10 @@ class _ConnectForm extends StatelessWidget {
           if (state.platform.key == 'bluesky') ...[
             // Same key as the copy in the proof block below: this field moves
             // between the two when appOAuthSupportProvider resolves, and the
-            // key is what carries the typed handle across the move. It has to
-            // sit on the child the list matches, not on the DivineTextField
-            // inside — keying the inner field leaves this element to be
-            // rebuilt by position, which loses the text anyway. It stays while
+            // key is what keeps the field, its focus and cursor across the
+            // move. It has to sit on the child the list matches, not on the
+            // DivineTextField inside — keying the inner field leaves this
+            // element to be rebuilt by position as a new field. It stays while
             // a sign-in waits for the same reason: a cancel brings back the
             // start button, and the handle has to still be in the field.
             _IdentityField(
@@ -433,8 +433,9 @@ class _IdentityField extends StatefulWidget {
 }
 
 class _IdentityFieldState extends State<_IdentityField> {
-  // Starts from the handle the flow opened with, which is the linked one when
-  // a sign-in is renewed. From then on the typing feeds the cubit.
+  // Seeded from the cubit's handle when this field is built, which is the
+  // linked one when a sign-in is renewed. From then on the typing feeds the
+  // cubit.
   late final _controller = TextEditingController(text: widget.state.identity);
 
   @override

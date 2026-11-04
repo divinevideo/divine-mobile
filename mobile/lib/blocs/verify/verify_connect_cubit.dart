@@ -41,7 +41,8 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   ///
   /// [replacingIdentity] is the handle of a sign-in link being renewed: the
   /// form starts with it, and a sign-in that returns another handle on the
-  /// same platform replaces that link rather than sitting beside it.
+  /// same platform replaces that link rather than sitting beside it, as long
+  /// as sign-in is all that links that handle.
   VerifyConnectCubit({
     required IdentityClaimsRepository repository,
     required String pubkey,

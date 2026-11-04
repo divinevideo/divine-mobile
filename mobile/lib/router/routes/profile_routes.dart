@@ -36,8 +36,8 @@ class VerifyRouteData extends GoRouteData with $VerifyRouteData {
   Widget build(BuildContext context, GoRouterState state) => const VerifyPage();
 }
 
-/// Links one NIP-39 platform; pops with a [VerifyConnectResult] once linked,
-/// if any.
+/// Links one NIP-39 platform; pops with a `VerifyConnectResult` once linked,
+/// or with null when left without linking.
 class VerifyConnectRouteData extends GoRouteData with $VerifyConnectRouteData {
   const VerifyConnectRouteData({
     required this.platform,

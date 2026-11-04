@@ -75,9 +75,10 @@ class VerifyCubit extends Cubit<VerifyState> {
   /// shown as verified because the connect flow only publishes claims the
   /// verifier had already confirmed. The next [load] reconciles.
   ///
-  /// [replacing] is the link a sign-in again renewed: the connect flow
-  /// published the new claim in its place, so its row goes too. Both keys
-  /// lose any reason the verifier gave for a lapsed sign-in.
+  /// [replacing] is the sign-in link a renewal under another handle took the
+  /// place of: the connect flow published the new claim instead of it, so its
+  /// row goes too. Both keys lose any reason the verifier gave for a lapsed
+  /// sign-in.
   void claimLinked(IdentityClaim claim, {IdentityClaim? replacing}) {
     final key = VerifyState.keyOf(claim);
     final dropped = {key, if (replacing != null) VerifyState.keyOf(replacing)};

@@ -23559,7 +23559,7 @@ abstract class AppLocalizations {
   /// **'Not verified'**
   String get verifyStatusUnverified;
 
-  /// Pill on a linked account whose sign-in no longer counts because it lapsed.
+  /// Pill on an account linked by signing in when no current sign-in verifies it: it lapsed, was unlinked, or was never confirmed.
   ///
   /// In en, this message translates to:
   /// **'Sign-in expired'**
@@ -23577,7 +23577,7 @@ abstract class AppLocalizations {
   /// **'Unlink {platform} account {identity}'**
   String verifyUnlinkSemanticLabel(String platform, String identity);
 
-  /// Button on a linked account that no longer verifies. Opens the platform's sign-in so the person can renew the link without unlinking it first.
+  /// Button on an account linked by signing in that no longer verifies. Opens the connect screen to sign in again, renewing the link without unlinking it first.
   ///
   /// In en, this message translates to:
   /// **'Sign in again'**

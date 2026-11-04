@@ -90,9 +90,9 @@ class VerifyState extends Equatable {
   /// "could not check" rather than "did not verify".
   final bool verifierReachable;
 
-  /// Why the verifier stopped counting a sign-in link, by the same key as
-  /// [verifiedKeys]. Holds only claims it judged negative with a sign-in
-  /// reason code.
+  /// The sign-in reason codes the verifier gave, by the same key as
+  /// [verifiedKeys]. Can include a proof-post link on a platform with
+  /// sign-in; read it through [signInLapse], which drops those.
   final Map<String, SignInLapse> signInCodes;
 
   /// Key of the claim currently being unlinked, if any.
