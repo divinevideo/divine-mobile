@@ -969,6 +969,7 @@ class DmRepository {
   /// How long a finished [_requeryBelowWindowIfDue] waits before the next.
   static const int _belowWindowRequeryIntervalSeconds = 86400;
   static const int _belowWindowRequeryMaxDepthSeconds = 30 * 86400;
+  static const int _belowWindowRequeryRetrySeconds = 3600;
 
   /// How long a catch-up may hold wire stamps back before the newest one
   /// handled is saved anyway.
@@ -1634,9 +1635,10 @@ class DmRepository {
       // that outer stamp to be backdated by a random 0..2 days. Deriving the
       // boundary from the rumor clock therefore consumes part of the 2-day
       // overlap before the window opens, and a wrap whose backdate exceeds
-      // the remainder is dropped by the relay. Nothing asks for it again:
-      // `newestWireSyncedAt` only advances, so `since:` only rises, and the
-      // history drain that would otherwise repair the gap latches complete.
+      // the remainder is dropped by the relay. Only the daily re-query below
+      // the window asks for it again (#8439): `newestWireSyncedAt` only
+      // advances, so `since:` only rises, and the history drain that would
+      // otherwise repair the gap latches complete.
       // The measured erosion equals the newest wrap's own backdate, which is
       // uniform on [0, 2d) — half the intended margin, on average. See #8209.
       //
@@ -2370,30 +2372,45 @@ class DmRepository {
   ///
   /// Silent: it starts no recovery, so the inbox shows no restore progress.
   /// What it finds is stored as it arrives, but the run is recorded only when
-  /// every relay it asked answered every page, so an unanswered run is asked
-  /// again on the next inbox open. Deletions are read after the messages, as
-  /// the drain reads them, so a deletion never precedes the message it names.
+  /// the inbox-relay list was read and every relay it asked answered every
+  /// page or refused for good; a run that was not is tried again an hour
+  /// later at the soonest. A gift wrap that never decrypts is queued for
+  /// retry again by each run whose band still holds it.
+  ///
+  /// Every relay's messages are read before any deletions, which are read
+  /// from now down, so a kind-5 deletion is handled after the message it
+  /// names. A gift-wrapped deletion comes with the messages and, read before
+  /// its target, waits for its next delivery, as in the drain.
   Future<void> _requeryBelowWindowIfDue(
     DmSyncState syncState,
     String pubkey,
     int generation,
   ) async {
-    final top = _liveWindowStart(pubkey);
-    if (top == null) return;
-    final startedAt = DmClock.now().nowSeconds;
-    final last = syncState.belowWindowRequeryAt(pubkey);
-    if (last != null && startedAt - last < _belowWindowRequeryIntervalSeconds) {
-      return;
-    }
-    // From a week below the window start the last finished run read below,
-    // when that is lower, so no stamp falls between two runs.
-    final lastTop = syncState.belowWindowRequeryTop(pubkey);
-    final readsBelow = lastTop != null && lastTop < top ? lastTop : top;
-    final floor = max(
-      readsBelow - _belowWindowRequeryDepthSeconds,
-      top - _belowWindowRequeryMaxDepthSeconds,
-    );
     try {
+      final top = _liveWindowStart(pubkey);
+      if (top == null) return;
+      final startedAt = DmClock.now().nowSeconds;
+      if (_isRecent(
+            syncState.belowWindowRequeryAt(pubkey),
+            startedAt,
+            _belowWindowRequeryIntervalSeconds,
+          ) ||
+          _isRecent(
+            syncState.belowWindowRequeryAttemptAt(pubkey),
+            startedAt,
+            _belowWindowRequeryRetrySeconds,
+          )) {
+        return;
+      }
+      await syncState.setBelowWindowRequeryAttemptAt(pubkey, startedAt);
+      // From a week below the window start the last finished run read below,
+      // when that is lower, so no stamp falls between two runs.
+      final lastTop = syncState.belowWindowRequeryTop(pubkey);
+      final readsBelow = lastTop != null && lastTop < top ? lastTop : top;
+      final floor = max(
+        readsBelow - _belowWindowRequeryDepthSeconds,
+        top - _belowWindowRequeryMaxDepthSeconds,
+      );
       final inbox = await _drainOwnInboxRelays(pubkey, generation);
       if (_ingestSessionEnded(pubkey, generation)) return;
       // Each relay is walked on its own: a merged answer resumes below its
@@ -2505,6 +2522,12 @@ class DmRepository {
   static bool _bandAnswered(List<_BandWalk> walks) =>
       walks.every((walk) => walk.answered || walk.refused) &&
       walks.any((walk) => walk.answered);
+
+  /// Whether [stamp] lies less than [interval] seconds before [now]. A stamp
+  /// from the future, written while the device clock ran fast, is not recent:
+  /// trusting it would switch the re-query off until the clock caught up.
+  static bool _isRecent(int? stamp, int now, int interval) =>
+      stamp != null && stamp <= now && now - stamp < interval;
 
   /// Walks one relay with [readPage] from [from] down to [floor], each page
   /// starting at or below the oldest stamp of the page before. Stops when the
@@ -2845,13 +2868,13 @@ class DmRepository {
   /// backfilling every conversation that still has events on a relay.
   /// See #4953.
   ///
-  /// Idempotent and resumable: returns immediately once a clean drain has
-  /// completed for the user ([DmSyncState.historyDrainComplete]); an
-  /// interrupted drain resumes from the persisted boundary on the next
-  /// call. Concurrent callers share one in-flight run. Runs in the
-  /// background — per-event decryption already offloads to a [compute]
-  /// isolate — so it is safe to fire-and-forget from the inbox BLoC on
-  /// every open.
+  /// Idempotent and resumable: once a clean drain has completed for the user
+  /// ([DmSyncState.historyDrainComplete]) a call only re-reads the stamps
+  /// below the live window, at most once a day (#8439); an interrupted drain
+  /// resumes from the persisted boundary on the next call. Concurrent
+  /// callers share one in-flight run. Runs in the background — per-event
+  /// decryption already offloads to a [compute] isolate — so it is safe to
+  /// fire-and-forget from the inbox BLoC on every open.
   Future<void> backfillHistoryIfNeeded() {
     return _backfillHistoryIfNeeded();
   }

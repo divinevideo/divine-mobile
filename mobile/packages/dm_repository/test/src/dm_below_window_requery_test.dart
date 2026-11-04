@@ -36,6 +36,7 @@ final String _owner = getPublicKey(_ownerSecret);
 final String _alice = getPublicKey(_aliceSecret);
 
 const _day = 86400;
+const _hour = 3600;
 const _settleTimeout = Duration(seconds: 20);
 const _inboxUrl = 'wss://inbox.example.com';
 const _refusingUrl = 'wss://refuses.example.com';
@@ -655,6 +656,7 @@ void main() {
     test('asks at most once a day', () async {
       final late = await wrapAt(wire: windowStart - 1, content: 'late');
       final relay = _Relay([inWindow, late]);
+      final sync = DmSyncState(prefs);
       int belowWindowReads() => relay.queryFilters.where(belowWindow).length;
 
       await openInbox(relay);
@@ -662,12 +664,17 @@ void main() {
       expect(afterFirst, greaterThan(0));
       expect(await isStored(late), isTrue);
 
+      // Past the hourly retry, but within a day of a finished run.
+      await sync.setBelowWindowRequeryAttemptAt(_owner, now() - 2 * _hour);
+      await sync.recordBelowWindowRequery(
+        _owner,
+        at: now() - _day + 60,
+        top: windowStart,
+      );
       await openInbox(relay);
       expect(belowWindowReads(), afterFirst);
 
-      await DmSyncState(
-        prefs,
-      ).recordBelowWindowRequery(
+      await sync.recordBelowWindowRequery(
         _owner,
         at: now() - _day - 1,
         top: windowStart,
@@ -676,22 +683,32 @@ void main() {
       expect(belowWindowReads(), greaterThan(afterFirst));
     });
 
-    test('asks again on the next open when a relay did not answer', () async {
+    test('asks again an hour later when a relay did not answer', () async {
       final late = await wrapAt(wire: windowStart - 1, content: 'late');
       var relayAnswers = false;
       final relay = _Relay([inWindow, late])
         ..timesOut = (filter) => belowWindow(filter) && !relayAnswers;
+      final sync = DmSyncState(prefs);
+      int belowWindowReads() => relay.queryFilters.where(belowWindow).length;
 
       await openInbox(relay);
-      expect(relay.queryFilters.where(belowWindow), isNotEmpty);
+      final afterFirst = belowWindowReads();
+      expect(afterFirst, greaterThan(0));
       expect(await isStored(late), isFalse);
+      expect(sync.belowWindowRequeryAt(_owner), isNull);
+      expect(sync.belowWindowRequeryTop(_owner), isNull);
 
       relayAnswers = true;
+      await sync.setBelowWindowRequeryAttemptAt(_owner, now() - _hour + 60);
+      await openInbox(relay);
+      expect(belowWindowReads(), afterFirst, reason: 'within the hour');
+
+      await sync.setBelowWindowRequeryAttemptAt(_owner, now() - _hour - 1);
       await openInbox(relay);
       expect(await isStored(late), isTrue);
     });
 
-    test('asks again on the next open when a relay read fails', () async {
+    test('asks again an hour later when a relay read fails', () async {
       final late = await wrapAt(wire: windowStart - 1, content: 'late');
       var relayWorks = false;
       final relay = _Relay([inWindow, late])
@@ -713,7 +730,27 @@ void main() {
       expect(reported, isEmpty, reason: 'a lost connection is expected');
 
       relayWorks = true;
+      await DmSyncState(
+        prefs,
+      ).setBelowWindowRequeryAttemptAt(_owner, now() - _hour - 1);
       await openInbox(relay);
+      expect(await isStored(late), isTrue);
+    });
+
+    test('asks again when its last run is stamped in the future', () async {
+      final late = await wrapAt(wire: windowStart - 1, content: 'late');
+      final sync = DmSyncState(prefs);
+      // Written while the device clock ran a year fast.
+      await sync.recordBelowWindowRequery(
+        _owner,
+        at: now() + 365 * _day,
+        top: windowStart,
+      );
+      await sync.setBelowWindowRequeryAttemptAt(_owner, now() + 365 * _day);
+      final relay = _Relay([inWindow, late]);
+
+      await openInbox(relay);
+
       expect(await isStored(late), isTrue);
     });
 
