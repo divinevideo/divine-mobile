@@ -138,7 +138,7 @@ void main() {
               required kind,
               required content,
               required tags,
-              createdAt,
+              int? createdAt,
             }) async => null,
           );
           await reopened.loadAwardedBadges();
