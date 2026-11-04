@@ -196,11 +196,13 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
         _previewProgressValue = 0;
         _previewProgress = _progressFor(audioService, total, session);
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
       Log.error(
-        'Failed to preview sound: $e',
+        'Failed to preview sound ${sound.id}',
         name: 'SoundsTab',
         category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
       );
       if (mounted && session == _previewSession) _clearPreviewState();
       return;
@@ -245,11 +247,13 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
     final playEpoch = ++_playEpoch;
     try {
       await audioService.play();
-    } catch (e) {
+    } catch (e, stackTrace) {
       Log.error(
-        'Failed to preview sound: $e',
+        'Failed to preview sound $soundId',
         name: 'SoundsTab',
         category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
       );
     }
     if (mounted &&
