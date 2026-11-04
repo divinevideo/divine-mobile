@@ -151,8 +151,14 @@ class RelayPool {
   final Map<String, Set<String>> _queriesParkedForAuth = {};
 
   /// Relays that rejected our AUTH on their current socket. Their refusals
-  /// for missing AUTH are final until a new challenge or a new socket.
+  /// for missing AUTH are final until a different challenge or a new socket.
   final Set<String> _authRejected = {};
+
+  /// Relay url -> the challenge its current socket last sent, read only beside
+  /// [_authRejected]. strfry sends one challenge per connection and repeats
+  /// it with every refused REQ, and an AUTH it rejected for that challenge is
+  /// rejected again (#9467).
+  final Map<String, String> _authChallenge = {};
 
   /// Refusal categories of an AUTH rejection that do not land a relay in
   /// [_authRejected]: being throttled, or having the event's stamp disputed,
@@ -189,8 +195,8 @@ class RelayPool {
   /// `auth-required`, rejected our AUTH event, or we could not answer its
   /// challenge at all. Absence is not evidence — a freshly connected relay
   /// that has not sent its challenge yet still has a handshake coming, so it
-  /// keeps holding the query. Cleared on a new challenge and on every
-  /// connection-state transition.
+  /// keeps holding the query. Cleared on every challenge we answer and on
+  /// every connection-state transition.
   final Set<String> _authGateClosed = {};
 
   /// Relays whose status callback this pool has already chained onto. Weak, so
@@ -542,6 +548,8 @@ class RelayPool {
     if (retriesForEvent != null && retriesForEvent.containsKey(relay.url)) {
       return false;
     }
+    // This socket rejected our AUTH, so no AUTH will replay the publish.
+    if (_authRejected.contains(relay.url)) return false;
     if (_isExplicitAuthRequiredReason(message)) return true;
     // A bare "restricted" reason is NIP-01's generic members-only rejection
     // and is only auth-retryable when the relay actually speaks NIP-42 (it
@@ -1567,6 +1575,7 @@ class RelayPool {
       // across a transition would let a relay that swallowed our AUTH event
       // read as "handshake outstanding" for the rest of the session.
       _authHandshakeStartedAt.remove(relay.url);
+      _authChallenge.remove(relay.url);
       _authGateClosed.remove(relay.url);
       _queriesParkedForAuth.remove(relay.url);
       _queriesHeldAfterEose.remove(relay.url);
@@ -2541,6 +2550,16 @@ class RelayPool {
         );
         final challenge = _stringAt(relay, json, 1, 'AUTH challenge');
         if (challenge == null) return;
+        // Signing again for a challenge this socket already rejected cannot
+        // succeed, and with a remote signer each signature is a round trip.
+        if (_authRejected.contains(relay.url) &&
+            _authChallenge[relay.url] == challenge) {
+          log('🔐 ${relay.url} already rejected AUTH for this challenge');
+          // What a fresh rejection would drop: frames parked since the last.
+          _rejectAuthRequiredPublishesForRelay(relay, '');
+          return;
+        }
+        _authChallenge[relay.url] = challenge;
         relay.relayStatus.alwaysAuth = true;
         // Marks the handshake outstanding before the async signing below, so
         // queries parked behind this gate keep waiting instead of reading the
