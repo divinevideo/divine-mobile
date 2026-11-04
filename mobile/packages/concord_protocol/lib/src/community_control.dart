@@ -109,10 +109,10 @@ class ConcordChannel {
   ConcordChannel(
     this.id,
     this.name,
-    this.isPrivate,
-    this.deleted,
-    this.metadata,
-  );
+    this.metadata, {
+    required this.isPrivate,
+    required this.deleted,
+  });
   final String id;
   final String name;
   final bool isPrivate;
@@ -180,12 +180,12 @@ List<ConcordEdition> _candidates(
   bool snapshot,
   Set<String> incomplete,
 ) {
-  final editions = {for (final e in list) e.rumorId: e}.values.toList();
-  editions.sort(
-    (a, b) => a.version != b.version
-        ? a.version.compareTo(b.version)
-        : a.rumorId.compareTo(b.rumorId),
-  );
+  final editions = {for (final e in list) e.rumorId: e}.values.toList()
+    ..sort(
+      (a, b) => a.version != b.version
+          ? a.version.compareTo(b.version)
+          : a.rumorId.compareTo(b.rumorId),
+    );
   final eligible = editions
       .where((e) => floor == null || e.version >= floor.version)
       .toList();
@@ -502,9 +502,7 @@ ConcordControlState _foldOnce(
     }
   }
   final capped = state.roles.keys.toList()..sort();
-  for (final id in capped.skip(100)) {
-    state.roles.remove(id);
-  }
+  capped.skip(100).forEach(state.roles.remove);
   final metadata = pick(candidates('0')[cid] ?? [], (e) {
     final j = json(e);
     return state.permits(e.author, 4) &&
@@ -537,9 +535,9 @@ ConcordControlState _foldOnce(
     state.channels[entry.key] = ConcordChannel(
       entry.key,
       j['name'] as String,
-      j['private'] == true,
-      deleted,
       j,
+      isPrivate: j['private'] == true,
+      deleted: deleted,
     );
   }
   final bans = candidates('4')[banlistLocator(cid)] ?? [];
@@ -565,12 +563,15 @@ ConcordControlState _foldOnce(
           standingBans.contains(e.author)) {
         continue;
       }
-      final next = named(
-        e,
-      )!.where((pk) => state.canActOnMember(e.author, pk, 16)).toSet();
-      next.addAll(
-        standingBans.where((pk) => !state.canActOnMember(e.author, pk, 16)),
-      );
+      final next =
+          named(
+              e,
+            )!.where((pk) => state.canActOnMember(e.author, pk, 16)).toSet()
+            ..addAll(
+              standingBans.where(
+                (pk) => !state.canActOnMember(e.author, pk, 16),
+              ),
+            );
       standingBans = next;
       standingAt[e] = next;
       admissibleBans.add(e);

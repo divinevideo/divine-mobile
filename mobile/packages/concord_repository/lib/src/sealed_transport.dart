@@ -449,9 +449,9 @@ Future<ConcordInviteBundle> openInviteBundle({
   return ConcordInviteBundle.fromJson(decoded, nowMs: nowMs);
 }
 
-/// Opens a CORD-02 Control wrap with the held split signer address and the
-/// community-root-derived read key. The inner plaintext seal proves authority
-/// independently of whoever knows the stream read material.
+/// Authenticates a Concord carrier with independently held signer and read
+/// material. The seal proves authorship; callers enforce plane binding and
+/// owner-rooted authority before accepting its contents.
 Future<Map<String, dynamic>> openVerifiedStreamWrap({
   required Map<String, dynamic> wrap,
   required GroupKey readKey,

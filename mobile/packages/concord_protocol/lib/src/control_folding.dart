@@ -1,6 +1,6 @@
 // MPL-2.0
-import 'package:concord_protocol/src/models.dart';
 import 'package:concord_protocol/src/community_control.dart';
+import 'package:concord_protocol/src/models.dart';
 
 class FoldedThread {
   FoldedThread(this.messages, this.reactions);

@@ -510,8 +510,9 @@ class ConcordRepository {
       final sealed = _sealed[id];
       if (sealed != null) {
         try {
-          if (canPublish?.call() == false)
+          if (canPublish?.call() == false) {
             throw StateError('Community authority is unavailable');
+          }
           await relay.publish(Map<String, dynamic>.from(sealed['wrap'] as Map));
         } on Object {
           if (_sealed[id]?['pending'] != false) rethrow;
@@ -670,8 +671,9 @@ class ConcordRepository {
       streamSeedHex: streamSeedHex,
       streamPubkey: streamPubkey,
     );
-    if (canPublish?.call() == false)
+    if (canPublish?.call() == false) {
       throw StateError('Community authority changed while signing');
+    }
     await _record(id, {'wrap': wrap, 'pending': true, 'expiresAt': expiresAt});
     _messages.add(
       ChatMessage(
@@ -687,8 +689,9 @@ class ConcordRepository {
     );
     _notify();
     try {
-      if (canPublish?.call() == false)
+      if (canPublish?.call() == false) {
         throw StateError('Community authority is unavailable');
+      }
       await relay.publish(wrap);
     } on Object {
       if (_sealed[id]?['pending'] != false) rethrow;
