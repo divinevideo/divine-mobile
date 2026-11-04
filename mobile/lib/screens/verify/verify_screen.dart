@@ -252,11 +252,7 @@ class _VerifyContent extends StatelessWidget {
               verifiedKeys: verifiedKeys,
               removingKey: removingKey,
               onRemove: () => _confirmRemove(context, claim),
-              // Like the renew action, only a sign-in link says why; a
-              // proof-post link stays on Verified / Not verified.
-              lapse: claim.proof == IdentityClaim.oauthProof
-                  ? signInLapse(claim)
-                  : null,
+              lapse: signInLapse(claim),
               onSignInAgain: oauthUsable && canSignInAgain(claim)
                   ? () =>
                         _openConnect(context, claim.platform, replacing: claim)

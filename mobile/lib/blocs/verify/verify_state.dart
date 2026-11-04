@@ -117,7 +117,13 @@ class VerifyState extends Equatable {
       !verifierReachable && claims.any((claim) => !isVerified(claim));
 
   /// Why the verifier stopped counting [claim] as a sign-in, if it said.
-  SignInLapse? signInLapse(IdentityClaim claim) => signInCodes[keyOf(claim)];
+  ///
+  /// Null for a proof-post link: the verifier can send a sign-in code for one
+  /// on a platform with sign-in, and it stays on Verified / Not verified.
+  SignInLapse? signInLapse(IdentityClaim claim) =>
+      claim.proof == IdentityClaim.oauthProof
+      ? signInCodes[keyOf(claim)]
+      : null;
 
   /// Whether [claim] is the one currently being unlinked.
   bool isRemoving(IdentityClaim claim) => removingKey == keyOf(claim);
@@ -130,7 +136,6 @@ class VerifyState extends Equatable {
   /// another link the verifier could not check does not hide it, and a link
   /// unverified for any other reason does not get it.
   bool canSignInAgain(IdentityClaim claim) {
-    if (claim.proof != IdentityClaim.oauthProof) return false;
     if (signInLapse(claim) == null || isVerified(claim)) return false;
     final platform = claim.platform.toLowerCase();
     return platforms.any(

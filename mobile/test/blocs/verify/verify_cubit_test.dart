@@ -712,6 +712,23 @@ void main() {
           equals(SignInLapse.accountChanged),
         );
       });
+
+      test('gives none for a proof-post link under a lapsed key', () {
+        // The verifier can send a sign-in code for a proof-post claim on a
+        // sign-in platform; only a sign-in link reads it.
+        const proofPost = IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'twitter',
+          identity: 'jack',
+          proof: '1234567890',
+        );
+        final state = VerifyState(
+          claims: const [proofPost],
+          signInCodes: const {'twitter:jack': SignInLapse.accountChanged},
+        );
+
+        expect(state.signInLapse(proofPost), isNull);
+      });
     });
   });
 }
