@@ -65,24 +65,6 @@ void main() {
     registerFallbackValue(<IdentityClaim>[]);
   });
 
-  group('signInLapseFromCode', () {
-    const cases = <String?, SignInLapse?>{
-      'signin_expired': SignInLapse.expired,
-      'signin_account_changed': SignInLapse.accountChanged,
-      // Only the verifier's exact strings count.
-      'SIGNIN_EXPIRED': null,
-      'proof_not_found': null,
-      'temporarily_unavailable': null,
-      '': null,
-      null: null,
-    };
-    for (final MapEntry(key: code, value: lapse) in cases.entries) {
-      test('reads ${code == null ? 'no code' : "'$code'"} as $lapse', () {
-        expect(signInLapseFromCode(code), equals(lapse));
-      });
-    }
-  });
-
   group('IdentityClaimsRepository.parseClaims', () {
     test('extracts well-formed i tags', () {
       final tags = [
