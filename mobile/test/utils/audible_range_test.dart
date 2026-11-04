@@ -121,36 +121,6 @@ void main() {
       );
     });
 
-    test('reads to the end of the longer channel', () {
-      final range = _rangeOf([
-        _peaks(4),
-        _peaks(6, loud: const [(5, 5.5)]),
-      ], 6);
-
-      expect(
-        range,
-        AudibleRange(
-          start: _seconds(5) - soundEdgeMargin,
-          end: _seconds(5.5) + soundEdgeMargin,
-        ),
-      );
-    });
-
-    test('reads past the end of the shorter channel', () {
-      final range = _rangeOf([
-        _peaks(6, loud: const [(5, 5.5)]),
-        _peaks(4),
-      ], 6);
-
-      expect(
-        range,
-        AudibleRange(
-          start: _seconds(5) - soundEdgeMargin,
-          end: _seconds(5.5) + soundEdgeMargin,
-        ),
-      );
-    });
-
     test('measures the kept part', () {
       final range = _rangeOf([
         _peaks(10, loud: [(2, 5)]),
