@@ -986,7 +986,7 @@
   },
   "feedReactionDismiss": "Hide reaction",
   "@feedReactionDismiss": {
-    "description": "Semantic label for the dimmed area around a video's top comment in reactions mode; activating it hides the comment."
+    "description": "Semantic label for the darkened area around a video's top comment in reactions mode; activating it hides the comment."
   },
   "feedReactionOpenComment": "Open in comments",
   "@feedReactionOpenComment": {

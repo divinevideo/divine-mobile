@@ -1,5 +1,5 @@
 // ABOUTME: Tests for FeedTopCommentCubit — top-comment selection with the Top
-// ABOUTME: ordering, replied-to context, failures, and overlay visibility.
+// ABOUTME: ordering, the empty case, failures, and overlay visibility.
 
 import 'dart:async';
 
@@ -89,14 +89,13 @@ void main() {
       rootEventId: _rootId,
       rootEventKind: 34236,
       rootAuthorPubkey: _creator,
-      rootContent: 'Amineeeee!',
       loopCompletions: loops.stream,
       now: () => _now,
     );
 
     group('load', () {
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-        'selects the most upvoted comment and answers the creator',
+        'selects the most upvoted comment',
         setUp: () {
           stubComments([_comment('a'), _comment('b', content: 'Wanna know')]);
           stubUpvotes({'a': 1, 'b': 9});
@@ -107,18 +106,12 @@ void main() {
         expect: () => [
           isA<FeedTopCommentState>()
               .having((s) => s.status, 'status', FeedTopCommentStatus.ready)
-              .having((s) => s.topComment?.id, 'topComment', 'b')
-              .having((s) => s.repliedToPubkey, 'repliedToPubkey', _creator)
-              .having(
-                (s) => s.repliedToContent,
-                'repliedToContent',
-                'Amineeeee!',
-              ),
+              .having((s) => s.topComment?.id, 'topComment', 'b'),
         ],
       );
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-        'answers the parent comment for a reply',
+        'can select a reply',
         setUp: () {
           stubComments([
             _comment('parent', content: 'Who made this?', author: _bob),
@@ -134,14 +127,11 @@ void main() {
         act: (cubit) => cubit.load(),
         skip: 1,
         expect: () => [
-          isA<FeedTopCommentState>()
-              .having((s) => s.topComment?.id, 'topComment', 'reply')
-              .having((s) => s.repliedToPubkey, 'repliedToPubkey', _bob)
-              .having(
-                (s) => s.repliedToContent,
-                'repliedToContent',
-                'Who made this?',
-              ),
+          isA<FeedTopCommentState>().having(
+            (s) => s.topComment?.id,
+            'topComment',
+            'reply',
+          ),
         ],
       );
 
@@ -174,13 +164,13 @@ void main() {
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
         'breaks a tie in favour of the newer comment',
-        // Neither has votes or replies, so both score zero.
+        // Same age and votes, so both score the same.
         setUp: () {
           stubComments([
-            _comment('older', age: const Duration(hours: 5)),
-            _comment('newer'),
+            _comment('older', age: const Duration(hours: 2)),
+            _comment('newer', age: const Duration(minutes: 119)),
           ]);
-          stubUpvotes({});
+          stubUpvotes({'older': 1, 'newer': 1});
         },
         build: buildCubit,
         act: (cubit) => cubit.load(),
@@ -225,9 +215,89 @@ void main() {
       );
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-        'still selects a comment when vote counts fail',
+        'shows the most recent comment when none has an upvote or a reply',
+        setUp: () {
+          stubComments([
+            _comment('older', age: const Duration(hours: 5)),
+            _comment('newest', age: const Duration(minutes: 5)),
+            _comment('middle', age: const Duration(hours: 2)),
+          ]);
+          stubUpvotes({});
+        },
+        build: buildCubit,
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        expect: () => [
+          isA<FeedTopCommentState>()
+              .having((s) => s.status, 'status', FeedTopCommentStatus.ready)
+              .having((s) => s.topComment?.id, 'topComment', 'newest'),
+        ],
+      );
+
+      blocTest<FeedTopCommentCubit, FeedTopCommentState>(
+        "never picks the creator's own comment",
+        setUp: () {
+          stubComments([
+            _comment('creator', author: _creator),
+            _comment('viewer', author: _bob),
+          ]);
+          stubUpvotes({'creator': 50, 'viewer': 1});
+        },
+        build: buildCubit,
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        expect: () => [
+          isA<FeedTopCommentState>().having(
+            (s) => s.topComment?.id,
+            'topComment',
+            'viewer',
+          ),
+        ],
+      );
+
+      blocTest<FeedTopCommentCubit, FeedTopCommentState>(
+        'is empty when only the creator commented',
+        setUp: () => stubComments([_comment('creator', author: _creator)]),
+        build: buildCubit,
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        expect: () => [
+          isA<FeedTopCommentState>().having(
+            (s) => s.status,
+            'status',
+            FeedTopCommentStatus.empty,
+          ),
+        ],
+      );
+
+      blocTest<FeedTopCommentCubit, FeedTopCommentState>(
+        'shows a lone comment without votes',
         setUp: () {
           stubComments([_comment('only')]);
+          stubUpvotes({});
+        },
+        build: buildCubit,
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        expect: () => [
+          isA<FeedTopCommentState>()
+              .having((s) => s.status, 'status', FeedTopCommentStatus.ready)
+              .having((s) => s.topComment?.id, 'topComment', 'only'),
+        ],
+      );
+
+      blocTest<FeedTopCommentCubit, FeedTopCommentState>(
+        'still selects a replied-to comment when vote counts fail',
+        setUp: () {
+          stubComments([
+            _comment('only'),
+            _comment(
+              'answer',
+              content: '',
+              replyToEventId: 'only',
+              replyToAuthorPubkey: _alice,
+            ),
+          ]);
           when(
             () => likesRepository.getVoteCounts(
               any(),
@@ -300,7 +370,7 @@ void main() {
     group('isOverlayVisible', () {
       setUp(() {
         stubComments([_comment('only')]);
-        stubUpvotes({});
+        stubUpvotes({'only': 1});
       });
 
       test('stays hidden until the first loop finishes', () async {

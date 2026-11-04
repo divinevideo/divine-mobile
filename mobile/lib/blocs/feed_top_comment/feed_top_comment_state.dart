@@ -8,8 +8,6 @@ class FeedTopCommentState extends Equatable {
   const FeedTopCommentState({
     this.status = FeedTopCommentStatus.initial,
     this.topComment,
-    this.repliedToPubkey,
-    this.repliedToContent,
     this.hasCompletedLoop = false,
     this.isDismissed = false,
   });
@@ -18,14 +16,6 @@ class FeedTopCommentState extends Equatable {
 
   /// The comment shown, set once [status] is [FeedTopCommentStatus.ready].
   final Comment? topComment;
-
-  /// Who [topComment] answered: the video's creator for a top-level comment,
-  /// the parent comment's author for a reply.
-  final String? repliedToPubkey;
-
-  /// What [topComment] answered: the video's description, or the parent
-  /// comment's text. `null` when the parent is not among the loaded comments.
-  final String? repliedToContent;
 
   /// Whether the video has finished playing through once.
   final bool hasCompletedLoop;
@@ -43,16 +33,12 @@ class FeedTopCommentState extends Equatable {
   FeedTopCommentState copyWith({
     FeedTopCommentStatus? status,
     Comment? topComment,
-    String? repliedToPubkey,
-    String? repliedToContent,
     bool? hasCompletedLoop,
     bool? isDismissed,
   }) {
     return FeedTopCommentState(
       status: status ?? this.status,
       topComment: topComment ?? this.topComment,
-      repliedToPubkey: repliedToPubkey ?? this.repliedToPubkey,
-      repliedToContent: repliedToContent ?? this.repliedToContent,
       hasCompletedLoop: hasCompletedLoop ?? this.hasCompletedLoop,
       isDismissed: isDismissed ?? this.isDismissed,
     );
@@ -62,8 +48,6 @@ class FeedTopCommentState extends Equatable {
   List<Object?> get props => [
     status,
     topComment,
-    repliedToPubkey,
-    repliedToContent,
     hasCompletedLoop,
     isDismissed,
   ];

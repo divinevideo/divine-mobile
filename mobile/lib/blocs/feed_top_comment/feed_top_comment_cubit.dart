@@ -15,7 +15,9 @@ import 'package:unified_logger/unified_logger.dart';
 part 'feed_top_comment_state.dart';
 
 /// Loads one video's comments and their vote counts, and selects the comment
-/// the comments sheet's Top ordering would list first.
+/// the comments sheet's Top ordering would list first, falling back to the
+/// most recent comment when none has an upvote or a reply. The video
+/// creator's own comments are not candidates.
 ///
 /// The overlay shows once the video has finished its first loop and the top
 /// comment is known, whichever happens last, and stays hidden after the
@@ -28,7 +30,6 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
     required String rootEventId,
     required int rootEventKind,
     required String rootAuthorPubkey,
-    required String rootContent,
     required Stream<void> loopCompletions,
     String? rootAddressableId,
     DateTime Function()? now,
@@ -37,7 +38,6 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
        _rootEventId = rootEventId,
        _rootEventKind = rootEventKind,
        _rootAuthorPubkey = rootAuthorPubkey,
-       _rootContent = rootContent,
        _rootAddressableId = rootAddressableId,
        _now = now ?? DateTime.now,
        super(const FeedTopCommentState()) {
@@ -51,8 +51,9 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
   final LikesRepository _likesRepository;
   final String _rootEventId;
   final int _rootEventKind;
+
+  /// The video's creator. Their own comments are never the reaction.
   final String _rootAuthorPubkey;
-  final String _rootContent;
   final String? _rootAddressableId;
   final DateTime Function() _now;
   late final StreamSubscription<void> _loopSubscription;
@@ -82,6 +83,7 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
     final candidates = comments
         .where(
           (comment) =>
+              comment.authorPubkey != _rootAuthorPubkey &&
               !comment.hasVideo &&
               comment.content.trim().isNotEmpty &&
               !comment.id.startsWith(commentPlaceholderIdPrefix),
@@ -96,20 +98,10 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
     if (isClosed) return;
 
     final top = _topComment(candidates, comments, upvotes);
-    final parentId = top.replyToEventId;
-    final parent = parentId == null
-        ? null
-        : comments.where((comment) => comment.id == parentId).firstOrNull;
-    final isReply = parentId != null && parentId.isNotEmpty;
-
     emitIfOpen(
       state.copyWith(
         status: FeedTopCommentStatus.ready,
         topComment: top,
-        repliedToPubkey: isReply
-            ? top.replyToAuthorPubkey ?? parent?.authorPubkey
-            : _rootAuthorPubkey,
-        repliedToContent: isReply ? parent?.content : _rootContent,
       ),
     );
   }
@@ -154,7 +146,8 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
   }
 
   /// The comment [CommentsSortMode.topEngagement] lists first. Equal scores go
-  /// to the newer comment, so the pick is stable across reloads.
+  /// to the newer comment, so when no comment has an upvote or a reply the
+  /// most recent one is shown, and a lone comment is always shown.
   Comment _topComment(
     List<Comment> candidates,
     List<Comment> allComments,

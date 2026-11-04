@@ -24,7 +24,6 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/comments/comment_synthetic_video_event.dart';
 import 'package:openvine/screens/comments/widgets/comment_options_modal.dart';
-import 'package:openvine/screens/comments/widgets/comment_reply_indicator.dart';
 import 'package:openvine/screens/comments/widgets/pending_video_reply_tile.dart';
 import 'package:openvine/screens/comments/widgets/video_comment_player.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
@@ -159,7 +158,7 @@ class _CommentItemState extends ConsumerState<CommentItem> {
                         // replies at depth 0
                         if (widget.depth == 0 &&
                             widget.comment.replyToAuthorPubkey != null)
-                          CommentReplyIndicator(
+                          _ReplyIndicator(
                             parentAuthorPubkey:
                                 widget.comment.replyToAuthorPubkey!,
                           ),
@@ -706,5 +705,55 @@ extension _ScoreFormatting on int {
       return '$prefix${CountFormatter.formatCompact(abs)}';
     }
     return '$this';
+  }
+}
+
+/// Shows "Re: {display_name}" indicator for replies
+/// Fetches parent author profile and displays their name
+class _ReplyIndicator extends ConsumerWidget {
+  const _ReplyIndicator({required this.parentAuthorPubkey});
+
+  final String parentAuthorPubkey;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref
+        .watch(userProfileReactiveProvider(parentAuthorPubkey))
+        .value;
+
+    // bestDisplayName is the same displayName -> name chain, but sanitized:
+    // a lone UTF-16 surrogate in either field crashes the paragraph builder
+    // when this renders.
+    final displayName =
+        profile?.bestDisplayName ??
+        UserProfile.generatedNameFor(parentAuthorPubkey);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          context.l10n.commentReplyToPrefix,
+          style: VineTheme.bodySmallFont(color: VineTheme.tabIndicatorGreen),
+        ),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Container(
+            decoration: BoxDecoration(
+              color: context.vineColors.containerLow,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+            child: Text(
+              displayName,
+              style: VineTheme.bodySmallFont(
+                color: VineTheme.tabIndicatorGreen,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

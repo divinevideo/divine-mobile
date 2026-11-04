@@ -2581,7 +2581,7 @@ abstract class AppLocalizations {
   /// **'Hide reactions'**
   String get videoSettingsReactionsDisable;
 
-  /// Semantic label for the dimmed area around a video's top comment in reactions mode; activating it hides the comment.
+  /// Semantic label for the darkened area around a video's top comment in reactions mode; activating it hides the comment.
   ///
   /// In en, this message translates to:
   /// **'Hide reaction'**
