@@ -3051,6 +3051,7 @@
   "@soundsImportUnreadable": {
     "description": "Shown when the picked file exists but cannot be opened or decoded as audio."
   },
+  "soundsAddSilent": "There's nothing to hear in this sound, so it can't be added.",
   "soundsImportAccountChanged": "You switched accounts, so this sound wasn't added.",
   "@soundsImportAccountChanged": {
     "description": "Shown when the account changes while a sound is being added, so it was abandoned rather than saved into the new account."

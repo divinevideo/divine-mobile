@@ -4432,6 +4432,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get soundsImportUnreadable => 'ያ የድምፅ ፋይል ሊነበብ አልቻለም።';
 
   @override
+  String get soundsAddSilent => 'በዚህ ድምፅ ውስጥ የሚሰማ ነገር የለም፣ ስለዚህ ማከል አይቻልም።';
+
+  @override
   String get soundsImportAccountChanged => 'መለያ ስለቀየሩ ይህ ድምፅ አልታከለም።';
 
   @override

@@ -4700,6 +4700,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get soundsImportUnreadable => 'ఆ ఆడియో ఫైల్‌ను చదవడం సాధ్యపడలేదు.';
 
   @override
+  String get soundsAddSilent =>
+      'ఈ సౌండ్‌లో ఏమీ వినిపించదు, కాబట్టి దీన్ని జోడించడం సాధ్యం కాదు.';
+
+  @override
   String get soundsImportAccountChanged =>
       'మీరు ఖాతా మార్చారు, కాబట్టి ఈ సౌండ్ జోడించబడలేదు.';
 

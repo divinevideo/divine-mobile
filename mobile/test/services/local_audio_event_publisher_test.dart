@@ -12,6 +12,7 @@ import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/local_audio_event_publisher.dart';
+import 'package:openvine/services/sound_silence_trimmer.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
@@ -19,6 +20,8 @@ class _MockAuthService extends Mock implements AuthService {}
 class _MockRelayPublisher extends Mock implements SignedEventRelayPublisher {}
 
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
+
+class _MockSoundSilenceTrimmer extends Mock implements SoundSilenceTrimmer {}
 
 class _FakeEvent extends Fake implements Event {}
 
@@ -53,10 +56,12 @@ void main() {
   late _MockAuthService authService;
   late _MockRelayPublisher relayPublisher;
   late _MockBlossomUploadService blossom;
+  late _MockSoundSilenceTrimmer trimmer;
 
   setUpAll(() {
     registerFallbackValue(_FakeEvent());
     registerFallbackValue(File('unused'));
+    registerFallbackValue(const AudibleSound(path: '', mimeType: ''));
   });
 
   setUp(() {
@@ -66,6 +71,19 @@ void main() {
     authService = _MockAuthService();
     relayPublisher = _MockRelayPublisher();
     blossom = _MockBlossomUploadService();
+    trimmer = _MockSoundSilenceTrimmer();
+    when(
+      () => trimmer.trim(
+        path: any(named: 'path'),
+        mimeType: any(named: 'mimeType'),
+      ),
+    ).thenAnswer(
+      (invocation) async => AudibleSound(
+        path: invocation.namedArguments[#path] as String,
+        mimeType: invocation.namedArguments[#mimeType] as String,
+      ),
+    );
+    when(() => trimmer.deleteTrimmedCopy(any())).thenAnswer((_) async {});
     when(() => authService.isAuthenticated).thenReturn(true);
     when(() => authService.currentPublicKeyHex).thenReturn(_self);
     when(
@@ -111,6 +129,7 @@ void main() {
         relayPublisher: relayPublisher,
         authService: authService,
         blossomUploadService: withBlossom ? blossom : null,
+        soundSilenceTrimmer: trimmer,
       );
 
   List<List<String>> signedTags() =>
@@ -203,6 +222,108 @@ void main() {
           'Source: https://example.com/source\n'
           'License: CC BY',
         );
+      });
+
+      test('refuses a file with nothing to hear without uploading', () async {
+        when(
+          () => trimmer.trim(
+            path: any(named: 'path'),
+            mimeType: any(named: 'mimeType'),
+          ),
+        ).thenAnswer((_) async => const SilentSound());
+
+        final result = await publisher().publish(
+          audio: importedSound(),
+          attribution: _ownWork,
+          allowAudioReuse: true,
+        );
+
+        expect(
+          result,
+          isA<LocalAudioPublishFailed>().having(
+            (r) => r.failure,
+            'failure',
+            LocalAudioPublishFailure.silent,
+          ),
+        );
+        verify(
+          () => trimmer.trim(path: audioFile.path, mimeType: 'audio/mp4'),
+        ).called(1);
+        verifyNever(
+          () => blossom.uploadAudio(
+            audioFile: any(named: 'audioFile'),
+            mimeType: any(named: 'mimeType'),
+          ),
+        );
+      });
+
+      test('publishes the cut copy with its own length and size', () async {
+        final copy = File('${tempDir.path}/trimmed.m4a')
+          ..writeAsBytesSync(const [1, 2]);
+        final cut = AudibleSound(
+          path: copy.path,
+          mimeType: 'audio/mp4',
+          trimmedDuration: const Duration(milliseconds: 2500),
+        );
+        when(
+          () => trimmer.trim(
+            path: any(named: 'path'),
+            mimeType: any(named: 'mimeType'),
+          ),
+        ).thenAnswer((_) async => cut);
+
+        final result = await publisher().publish(
+          audio: importedSound(),
+          attribution: _ownWork,
+          allowAudioReuse: true,
+        );
+
+        expect(result, isA<LocalAudioPublished>());
+        final uploaded =
+            verify(
+                  () => blossom.uploadAudio(
+                    audioFile: captureAny(named: 'audioFile'),
+                    mimeType: 'audio/mp4',
+                  ),
+                ).captured.single
+                as File;
+        expect(uploaded.path, copy.path);
+        final tags = signedTags();
+        expect(tags, anyElement(equals(['duration', '2.5'])));
+        expect(tags, anyElement(equals(['size', '2'])));
+        verify(() => trimmer.deleteTrimmedCopy(cut)).called(1);
+        expect(audioFile.existsSync(), isTrue);
+      });
+
+      test('deletes the cut copy when the upload fails', () async {
+        final cut = AudibleSound(
+          path: '${tempDir.path}/trimmed.m4a',
+          mimeType: 'audio/mp4',
+          trimmedDuration: const Duration(seconds: 2),
+        );
+        when(
+          () => trimmer.trim(
+            path: any(named: 'path'),
+            mimeType: any(named: 'mimeType'),
+          ),
+        ).thenAnswer((_) async => cut);
+        when(
+          () => blossom.uploadAudio(
+            audioFile: any(named: 'audioFile'),
+            mimeType: any(named: 'mimeType'),
+          ),
+        ).thenThrow(const SocketException('offline'));
+
+        await expectLater(
+          publisher().publish(
+            audio: importedSound(),
+            attribution: _ownWork,
+            allowAudioReuse: true,
+          ),
+          throwsA(isA<SocketException>()),
+        );
+
+        verify(() => trimmer.deleteTrimmedCopy(cut)).called(1);
       });
 
       test('refuses incomplete attribution before uploading', () async {

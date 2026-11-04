@@ -4257,6 +4257,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundsImportUnreadable => 'この音声ファイルを読み込めませんでした。';
 
   @override
+  String get soundsAddSilent => 'このサウンドには聞こえる音がないため、追加できません。';
+
+  @override
   String get soundsImportAccountChanged => 'アカウントが切り替わったため、このサウンドは追加されませんでした。';
 
   @override

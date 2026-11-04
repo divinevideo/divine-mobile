@@ -4216,6 +4216,7 @@
   "soundsShareTitleRequiredHint": "ለማጋራት ለድምፅዎ ርዕስ ይስጡት።",
   "soundsImportUnsupportedFormat": "ይህ የፋይል አይነት አይደገፍም። የድምፅ ፋይል ይምረጡ።",
   "soundsImportUnreadable": "ያ የድምፅ ፋይል ሊነበብ አልቻለም።",
+  "soundsAddSilent": "በዚህ ድምፅ ውስጥ የሚሰማ ነገር የለም፣ ስለዚህ ማከል አይቻልም።",
   "soundsImportAccountChanged": "መለያ ስለቀየሩ ይህ ድምፅ አልታከለም።",
   "soundsRemoveSavedSound": "ድምፁን አስወግድ",
   "savedSoundSaveAction": "አስቀምጥ",

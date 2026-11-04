@@ -4478,6 +4478,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get soundsImportUnreadable => 'Bu ses dosyası okunamadı.';
 
   @override
+  String get soundsAddSilent =>
+      'Bu seste hiçbir şey duyulmuyor, bu yüzden eklenemez.';
+
+  @override
   String get soundsImportAccountChanged =>
       'Hesap değiştirdin, bu yüzden ses eklenmedi.';
 

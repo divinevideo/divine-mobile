@@ -7627,6 +7627,12 @@ abstract class AppLocalizations {
   /// **'That audio file couldn\'t be read.'**
   String get soundsImportUnreadable;
 
+  /// No description provided for @soundsAddSilent.
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s nothing to hear in this sound, so it can\'t be added.'**
+  String get soundsAddSilent;
+
   /// Shown when the account changes while a sound is being added, so it was abandoned rather than saved into the new account.
   ///
   /// In en, this message translates to:

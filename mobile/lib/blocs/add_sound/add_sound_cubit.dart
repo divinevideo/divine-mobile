@@ -52,6 +52,9 @@ typedef _ImportStart = ({
 /// Reclaims a library audio file once nothing references it.
 typedef AudioImportReclaimer = Future<void> Function(String audioFilePath);
 
+/// Whether a measurement finds nothing audible in the audio file at the path.
+typedef SilentAudioChecker = Future<bool> Function(String audioFilePath);
+
 /// Reads the *current* signed-in account's pubkey hex, or null when signed out.
 typedef ViewerAccountIdReader = String? Function();
 
@@ -79,6 +82,9 @@ typedef LocalAudioPublisherReader = LocalAudioEventPublisher Function();
 ///   ([AddSoundState.accountId]). If the account changes while a copy or save
 ///   is in flight, the work is abandoned rather than writing one account's
 ///   sound into another account's library.
+/// * **Nothing silent.** A picked file or a recording with nothing to hear is
+///   refused right after import, so a silent sound never reaches My Sounds
+///   and never gets as far as a share.
 /// * **Cleanup.** A copy no private library record came to own — cancelled,
 ///   replaced by another pick, abandoned, or superseded by its published
 ///   upload — is handed to the reclaimer, which deletes it only when no draft
@@ -90,6 +96,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
     required AudioImportFilePicker pickFile,
     required SavedSoundSaver saveSound,
     required AudioImportReclaimer reclaimAudio,
+    required SilentAudioChecker isSilent,
     required ViewerAccountIdReader viewerAccountId,
     required LocalAudioPublisherReader publisher,
     required String publisherName,
@@ -98,6 +105,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
        _pickFile = pickFile,
        _saveSound = saveSound,
        _reclaimAudio = reclaimAudio,
+       _isSilent = isSilent,
        _viewerAccountId = viewerAccountId,
        _publisher = publisher,
        _publisherName = publisherName,
@@ -110,6 +118,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
   final AudioImportFilePicker _pickFile;
   final SavedSoundSaver _saveSound;
   final AudioImportReclaimer _reclaimAudio;
+  final SilentAudioChecker _isSilent;
   final ViewerAccountIdReader _viewerAccountId;
   final LocalAudioPublisherReader _publisher;
 
@@ -203,8 +212,8 @@ class AddSoundCubit extends Cubit<AddSoundState>
     return import;
   }
 
-  /// Runs [importAudio] and, unless it failed or the account changed while it
-  /// ran, makes its result the sound to add.
+  /// Runs [importAudio] and, unless it failed, has nothing to hear, or the
+  /// account changed while it ran, makes its result the sound to add.
   Future<void> _completeImport(
     _ImportStart import,
     Future<AudioEvent> Function() importAudio,
@@ -224,6 +233,12 @@ class AddSoundCubit extends Cubit<AddSoundState>
         stackTrace: stackTrace,
       );
       _failImport(import, AddSoundFailure.unreadableFile);
+      return;
+    }
+
+    if (await _hasNothingToHear(audio)) {
+      await _reclaim(audio);
+      _failImport(import, AddSoundFailure.silentSound);
       return;
     }
 
@@ -264,6 +279,25 @@ class AddSoundCubit extends Cubit<AddSoundState>
       ),
     );
     if (previous != null) await _reclaim(previous);
+  }
+
+  /// Whether [audio]'s copy measures silent. A check that fails counts as
+  /// audible: it is not evidence of silence, and the share path checks again.
+  Future<bool> _hasNothingToHear(AudioEvent audio) async {
+    final path = audio.localFilePath;
+    if (path == null) return false;
+    try {
+      return await _isSilent(path);
+    } catch (error, stackTrace) {
+      Log.warning(
+        'Could not check the imported audio for silence: $error',
+        name: _logName,
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
   }
 
   /// Chooses whether saving also shares the sound publicly.
@@ -410,6 +444,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
           _failSave(switch (failure) {
             LocalAudioPublishFailure.notAuthenticated =>
               AddSoundFailure.notSignedIn,
+            LocalAudioPublishFailure.silent => AddSoundFailure.silentSound,
             LocalAudioPublishFailure.invalidAttribution ||
             LocalAudioPublishFailure.fileUnavailable ||
             LocalAudioPublishFailure.uploadFailed ||

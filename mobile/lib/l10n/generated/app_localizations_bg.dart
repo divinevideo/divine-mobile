@@ -4591,6 +4591,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String get soundsImportUnreadable => 'Този аудиофайл не можа да се прочете.';
 
   @override
+  String get soundsAddSilent =>
+      'В този звук нищо не се чува, затова не може да се добави.';
+
+  @override
   String get soundsImportAccountChanged =>
       'Акаунтът беше сменен, затова звукът не беше добавен.';
 

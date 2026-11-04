@@ -4136,6 +4136,7 @@
   "soundsShareTitleRequiredHint": "Paylaşmak için sesine bir başlık ver.",
   "soundsImportUnsupportedFormat": "Bu dosya türü desteklenmiyor. Bir ses dosyası seç.",
   "soundsImportUnreadable": "Bu ses dosyası okunamadı.",
+  "soundsAddSilent": "Bu seste hiçbir şey duyulmuyor, bu yüzden eklenemez.",
   "soundsImportAccountChanged": "Hesap değiştirdin, bu yüzden ses eklenmedi.",
   "soundsRemoveSavedSound": "Sesi kaldır",
   "savedSoundSaveAction": "Kaydet",

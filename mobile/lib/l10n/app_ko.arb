@@ -3682,6 +3682,7 @@
   "soundsShareTitleRequiredHint": "공유하려면 사운드 제목을 입력해 주세요.",
   "soundsImportUnsupportedFormat": "지원하지 않는 파일 형식이에요. 오디오 파일을 골라 주세요.",
   "soundsImportUnreadable": "그 오디오 파일을 읽을 수 없어요.",
+  "soundsAddSilent": "이 사운드에는 들리는 소리가 없어서 추가할 수 없어요.",
   "soundsImportAccountChanged": "계정을 바꿔서 이 사운드는 추가되지 않았어요.",
   "soundsRemoveSavedSound": "사운드 제거",
   "savedSoundSaveAction": "저장",

@@ -4540,6 +4540,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get soundsImportUnreadable => 'تعذّرت قراءة هذا الملف الصوتي.';
 
   @override
+  String get soundsAddSilent =>
+      'لا يُسمع أي شيء في هذا الصوت، لذا لا يمكن إضافته.';
+
+  @override
   String get soundsImportAccountChanged =>
       'تم تبديل الحساب، لذا لم تتم إضافة هذا الصوت.';
 

@@ -4461,6 +4461,10 @@ class AppLocalizationsId extends AppLocalizations {
   String get soundsImportUnreadable => 'File audio itu tidak bisa dibaca.';
 
   @override
+  String get soundsAddSilent =>
+      'Tidak ada yang terdengar di suara ini, jadi suara ini tidak bisa ditambahkan.';
+
+  @override
   String get soundsImportAccountChanged =>
       'Kamu berganti akun, jadi suara ini tidak ditambahkan.';
 

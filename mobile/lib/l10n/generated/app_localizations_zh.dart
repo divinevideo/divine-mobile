@@ -4239,6 +4239,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundsImportUnreadable => '无法读取该音频文件。';
 
   @override
+  String get soundsAddSilent => '这个声音里听不到任何内容，因此无法添加。';
+
+  @override
   String get soundsImportAccountChanged => '你切换了账号，因此这个声音没有被添加。';
 
   @override

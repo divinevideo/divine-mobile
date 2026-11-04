@@ -4136,6 +4136,7 @@
   "soundsShareTitleRequiredHint": "Ge ditt ljud en titel för att dela det.",
   "soundsImportUnsupportedFormat": "Den filtypen stöds inte. Välj en ljudfil.",
   "soundsImportUnreadable": "Ljudfilen kunde inte läsas.",
+  "soundsAddSilent": "Det hörs ingenting i det här ljudet, så det kan inte läggas till.",
   "soundsImportAccountChanged": "Du bytte konto, så ljudet lades inte till.",
   "soundsRemoveSavedSound": "Ta bort ljud",
   "savedSoundSaveAction": "Spara",

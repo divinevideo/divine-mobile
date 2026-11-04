@@ -16,6 +16,7 @@ import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/local_audio_event_publisher.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
+import 'package:openvine/services/sound_silence_trimmer.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -53,6 +54,27 @@ final class VideoAudioResolved extends VideoAudioResolution {
   final bool reuseDegraded;
 }
 
+/// How publishing one of the video's own sounds as a Kind 1063 ended.
+sealed class _SoundOutcome {
+  const _SoundOutcome();
+}
+
+final class _SoundPublished extends _SoundOutcome {
+  const _SoundPublished(this.eventId);
+
+  final String eventId;
+}
+
+/// The sound has nothing to hear, so it was deliberately not published.
+final class _SoundSilent extends _SoundOutcome {
+  const _SoundSilent();
+}
+
+/// A step failed; the reason has already been logged.
+final class _SoundFailed extends _SoundOutcome {
+  const _SoundFailed();
+}
+
 /// Publishes the Kind 1063 audio events that accompany a video publish and
 /// resolves which sound reference the video event carries.
 ///
@@ -63,6 +85,10 @@ final class VideoAudioResolved extends VideoAudioResolution {
 ///   carries the provider's credit and license;
 /// * the video's own rendered audio, extracted and published as the
 ///   creator's reusable original sound.
+///
+/// The two sounds this publisher uploads go through [SoundSilenceTrimmer]
+/// first: one with nothing to hear is not published, and the video publishes
+/// without it rather than failing over it.
 ///
 /// [resolveForPublish] applies the consent rules and picks the path. It is the
 /// only place reuse consent is checked, so the methods that mint each Kind
@@ -79,6 +105,7 @@ class VideoAudioPublisher {
     SavedSoundsService? savedSoundsService,
     SoundSyncRepository? Function()? soundSyncRepositoryGetter,
     AudioReuseConsentChecker? audioReuseConsentChecker,
+    SoundSilenceTrimmer? soundSilenceTrimmer,
   }) : _nostrClient = nostrClient,
        _relayPublisher = relayPublisher,
        _authService = authService,
@@ -88,10 +115,12 @@ class VideoAudioPublisher {
        _savedSoundsService = savedSoundsService,
        _soundSyncRepositoryGetter = soundSyncRepositoryGetter,
        _audioReuseConsentChecker = audioReuseConsentChecker,
+       _soundSilenceTrimmer = soundSilenceTrimmer ?? SoundSilenceTrimmer(),
        _localAudioPublisher = LocalAudioEventPublisher(
          relayPublisher: relayPublisher,
          authService: authService,
          blossomUploadService: blossomUploadService,
+         soundSilenceTrimmer: soundSilenceTrimmer,
        );
 
   static const String _logName = 'VideoAudioPublisher';
@@ -119,6 +148,7 @@ class VideoAudioPublisher {
   /// reconcile pass on this device picks up anything that did not mirror.
   final SoundSyncRepository? Function()? _soundSyncRepositoryGetter;
   final AudioReuseConsentChecker? _audioReuseConsentChecker;
+  final SoundSilenceTrimmer _soundSilenceTrimmer;
 
   /// Resolves the audio reference for the video with [videoDTag], publishing
   /// whichever Kind 1063 event the selection requires first.
@@ -202,23 +232,35 @@ class VideoAudioPublisher {
           return const VideoAudioBlocked();
         }
 
-        selectedAudioReferenceId = await _publishImportedAudioEvent(
+        switch (await _publishImportedAudioEvent(
           audio: selectedAudio!,
           attribution: attribution,
           allowAudioReuse: true,
           videoDTag: videoDTag,
           pubkey: userPubkey,
           relayHint: relayHint,
-        );
-        selectedAudioReferenceRelay = relayHint;
-
-        if (selectedAudioReferenceId == null) {
-          Log.error(
-            'Imported audio publishing failed; blocking video publish',
-            name: _logName,
-            category: LogCategory.video,
-          );
-          return const VideoAudioBlocked();
+        )) {
+          case _SoundPublished(:final eventId):
+            selectedAudioReferenceId = eventId;
+            selectedAudioReferenceRelay = relayHint;
+          case _SoundSilent():
+            // Nothing of the import can be heard, so there is no sound to
+            // credit. The video still publishes, and the rendered-audio step
+            // below shares whatever the video does play.
+            Log.info(
+              'Imported audio is silent; publishing the video without it',
+              name: _logName,
+              category: LogCategory.video,
+            );
+            selectedAudioReferenceId = null;
+            selectedAudioReferenceRelay = null;
+          case _SoundFailed():
+            Log.error(
+              'Imported audio publishing failed; blocking video publish',
+              name: _logName,
+              category: LogCategory.video,
+            );
+            return const VideoAudioBlocked();
         }
       }
     } else if (selectedAudio?.isExternalProviderSound == true) {
@@ -330,7 +372,7 @@ class VideoAudioPublisher {
         final relayHint = _relayHint();
 
         // Publish audio event first (we need its ID for the video event)
-        final audioEventId = await _publishExtractedAudioEvent(
+        final extracted = await _publishExtractedAudioEvent(
           videoPath: upload.localVideoPath,
           videoDTag: videoDTag,
           pubkey: userPubkey,
@@ -339,11 +381,19 @@ class VideoAudioPublisher {
           attribution: audioShareAttribution,
         );
 
-        if (audioEventId != null) {
+        if (extracted case _SoundPublished(eventId: final audioEventId)) {
           // Format: ["e", <audio-event-id>, <relay-hint>, "audio"]
           tags.add(['e', audioEventId, relayHint, 'audio']);
           Log.info(
             'Added audio reference e tag: $audioEventId',
+            name: _logName,
+            category: LogCategory.video,
+          );
+        } else if (extracted is _SoundSilent) {
+          // Not a degrade: the video plays nothing to share, so there is no
+          // sound for a retry to recover, and the creator lost nothing.
+          Log.info(
+            'Video audio is silent; publishing without a reusable sound',
             name: _logName,
             category: LogCategory.video,
           );
@@ -429,11 +479,9 @@ class VideoAudioPublisher {
   /// Uploads an imported local sound to Blossom and publishes it as a Kind
   /// 1063 credited with [attribution].
   ///
-  /// Returns the published event id, or `null` when a step fails.
-  ///
   /// Throws [AccountRestrictedPublishException] when the authoritative relay
   /// reports the account suspended or banned.
-  Future<String?> _publishImportedAudioEvent({
+  Future<_SoundOutcome> _publishImportedAudioEvent({
     required AudioEvent audio,
     required AudioShareAttribution attribution,
     required bool allowAudioReuse,
@@ -448,11 +496,16 @@ class VideoAudioPublisher {
       sourceVideoReference: _sourceVideoReference(pubkey, videoDTag),
       sourceVideoRelay: relayHint,
     );
-    final signedAudioEvent = switch (result) {
-      LocalAudioPublished(:final event) => event,
-      LocalAudioPublishFailed() => null,
-    };
-    if (signedAudioEvent == null) return null;
+    final LocalAudioPublished published;
+    switch (result) {
+      case LocalAudioPublished():
+        published = result;
+      case LocalAudioPublishFailed(failure: LocalAudioPublishFailure.silent):
+        return const _SoundSilent();
+      case LocalAudioPublishFailed():
+        return const _SoundFailed();
+    }
+    final signedAudioEvent = published.event;
 
     final savedSoundsService = _savedSoundsService;
     if (savedSoundsService != null) {
@@ -469,7 +522,7 @@ class VideoAudioPublisher {
       }
     }
 
-    return signedAudioEvent.id;
+    return _SoundPublished(signedAudioEvent.id);
   }
 
   /// Publishes a Kind 1063 that credits an external-provider catalog sound
@@ -552,6 +605,10 @@ class VideoAudioPublisher {
   }
 
   /// Publishes an explicitly approved owner's original video sound.
+  ///
+  /// Returns the published event id, or `null` when nothing was published:
+  /// a step failed, the operation went stale, or the video has nothing to
+  /// hear.
   Future<String?> publishOriginalSound({
     required String videoPath,
     required String videoDTag,
@@ -564,7 +621,7 @@ class VideoAudioPublisher {
         _authService?.currentPublicKeyHex != ownerPubkey) {
       return null;
     }
-    return _publishExtractedAudioEvent(
+    final outcome = await _publishExtractedAudioEvent(
       videoPath: videoPath,
       videoDTag: videoDTag,
       videoTitle: videoTitle,
@@ -574,16 +631,21 @@ class VideoAudioPublisher {
       enforceOwner: true,
       isOperationCurrent: isOperationCurrent,
     );
+    return switch (outcome) {
+      _SoundPublished(:final eventId) => eventId,
+      _SoundSilent() || _SoundFailed() => null,
+    };
   }
 
-  /// Extracts the audio of the video at [videoPath], uploads it to Blossom,
-  /// and publishes it as the creator's Kind 1063 original sound.
+  /// Extracts the audio of the video at [videoPath], cuts its silent edges,
+  /// uploads it to Blossom, and publishes it as the creator's Kind 1063
+  /// original sound.
   ///
-  /// Returns the published event id, or `null` when any step fails; the
-  /// caller degrades to a video-only publish. The audio title uses
-  /// [attribution] or [videoTitle] when provided, falling back to
-  /// "Original sound - @username".
-  Future<String?> _publishExtractedAudioEvent({
+  /// Returns [_SoundSilent] when the video has nothing to hear and
+  /// [_SoundFailed] when any step fails; either way the caller publishes the
+  /// video without the sound. The audio title uses [attribution] or
+  /// [videoTitle] when provided, falling back to "Original sound - @username".
+  Future<_SoundOutcome> _publishExtractedAudioEvent({
     required String videoPath,
     required String videoDTag,
     required String pubkey,
@@ -607,13 +669,14 @@ class VideoAudioPublisher {
         name: _logName,
         category: LogCategory.video,
       );
-      return null;
+      return const _SoundFailed();
     }
 
     final audioExtractionService =
         _audioExtractionService ?? AudioExtractionService();
 
     AudioExtractionResult? extractionResult;
+    AudibleSound? sound;
     try {
       Log.info(
         'Step 1: Extracting audio from video: $videoPath',
@@ -638,21 +701,48 @@ class VideoAudioPublisher {
         category: LogCategory.video,
       );
 
+      switch (await _soundSilenceTrimmer.trim(
+        path: extractionResult.audioFilePath,
+        mimeType: extractionResult.mimeType,
+      )) {
+        case SilentSound():
+          Log.info(
+            'Extracted audio has nothing to hear; not publishing it',
+            name: _logName,
+            category: LogCategory.video,
+          );
+          return const _SoundSilent();
+        case final AudibleSound audible:
+          sound = audible;
+      }
+
+      // A cut copy is a new file: its hash, size and length are its own,
+      // and the sound starts at the cut, not where the video's audio does.
+      var sha256Hash = extractionResult.sha256Hash;
+      var fileSize = extractionResult.fileSize;
+      var duration = extractionResult.duration;
+      if (sound.trimmedDuration case final trimmed?) {
+        final hash = await HashUtil.sha256File(File(sound.path));
+        sha256Hash = hash.hash;
+        fileSize = hash.size;
+        duration = trimmed.inMicroseconds / Duration.microsecondsPerSecond;
+      }
+
       Log.info(
         'Step 2: Uploading audio to Blossom',
         name: _logName,
         category: LogCategory.video,
       );
 
-      final audioFile = File(extractionResult.audioFilePath);
+      final audioFile = File(sound.path);
       if (enforceOwner &&
           (isOperationCurrent?.call() == false ||
               _authService?.currentPublicKeyHex != pubkey)) {
-        return null;
+        return const _SoundFailed();
       }
       final uploadResult = await blossomService.uploadAudio(
         audioFile: audioFile,
-        mimeType: extractionResult.mimeType,
+        mimeType: sound.mimeType,
       );
 
       if (!uploadResult.success) {
@@ -661,7 +751,7 @@ class VideoAudioPublisher {
           name: _logName,
           category: LogCategory.video,
         );
-        return null;
+        return const _SoundFailed();
       }
 
       final audioUrl = uploadResult.fallbackUrl ?? uploadResult.url;
@@ -671,7 +761,7 @@ class VideoAudioPublisher {
           name: _logName,
           category: LogCategory.video,
         );
-        return null;
+        return const _SoundFailed();
       }
 
       Log.info(
@@ -717,10 +807,10 @@ class VideoAudioPublisher {
         pubkey: pubkey,
         createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
         url: audioUrl,
-        mimeType: extractionResult.mimeType,
-        sha256: extractionResult.sha256Hash,
-        fileSize: extractionResult.fileSize,
-        duration: extractionResult.duration,
+        mimeType: sound.mimeType,
+        sha256: sha256Hash,
+        fileSize: fileSize,
+        duration: duration,
         title: audioTitle,
         source: attribution?.sourceUrl,
         sourceVideoReference: sourceVideoKind == null
@@ -742,13 +832,13 @@ class VideoAudioPublisher {
           name: _logName,
           category: LogCategory.video,
         );
-        return null;
+        return const _SoundFailed();
       }
 
       if (enforceOwner &&
           (isOperationCurrent?.call() == false ||
               authService.currentPublicKeyHex != pubkey)) {
-        return null;
+        return const _SoundFailed();
       }
       final signedAudioEvent = await authService.createAndSignEvent(
         kind: audioEventKind,
@@ -771,7 +861,7 @@ class VideoAudioPublisher {
           name: _logName,
           category: LogCategory.video,
         );
-        return null;
+        return const _SoundFailed();
       }
 
       Log.info(
@@ -796,7 +886,7 @@ class VideoAudioPublisher {
           name: _logName,
           category: LogCategory.video,
         );
-        return null;
+        return const _SoundFailed();
       }
 
       Log.info(
@@ -806,7 +896,7 @@ class VideoAudioPublisher {
       );
 
       if (enforceOwner && isOperationCurrent?.call() == false) {
-        return signedAudioEvent.id;
+        return _SoundPublished(signedAudioEvent.id);
       }
       final savedSoundsService = _savedSoundsService;
       if (savedSoundsService != null) {
@@ -828,14 +918,14 @@ class VideoAudioPublisher {
         }
       }
 
-      return signedAudioEvent.id;
+      return _SoundPublished(signedAudioEvent.id);
     } on AudioExtractionException catch (e) {
       Log.warning(
         'Audio extraction failed: ${e.message}',
         name: _logName,
         category: LogCategory.video,
       );
-      return null;
+      return const _SoundFailed();
     } catch (e, stackTrace) {
       Log.error(
         'Audio publishing failed: $e',
@@ -847,8 +937,9 @@ class VideoAudioPublisher {
         name: _logName,
         category: LogCategory.video,
       );
-      return null;
+      return const _SoundFailed();
     } finally {
+      if (sound != null) await _soundSilenceTrimmer.deleteTrimmedCopy(sound);
       // Clean up temporary audio file
       if (extractionResult != null) {
         try {

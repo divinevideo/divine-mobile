@@ -4136,6 +4136,7 @@
   "soundsShareTitleRequiredHint": "Nadaj dźwiękowi tytuł, żeby go udostępnić.",
   "soundsImportUnsupportedFormat": "Ten typ pliku nie jest obsługiwany. Wybierz plik audio.",
   "soundsImportUnreadable": "Nie udało się odczytać tego pliku audio.",
+  "soundsAddSilent": "W tym dźwięku nic nie słychać, więc nie można go dodać.",
   "soundsImportAccountChanged": "Konto zostało zmienione, więc ten dźwięk nie został dodany.",
   "soundsRemoveSavedSound": "Usuń dźwięk",
   "savedSoundSaveAction": "Zapisz",

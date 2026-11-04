@@ -4599,6 +4599,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Diese Audiodatei konnte nicht gelesen werden.';
 
   @override
+  String get soundsAddSilent =>
+      'In diesem Sound ist nichts zu hören, deshalb kann er nicht hinzugefügt werden.';
+
+  @override
   String get soundsImportAccountChanged =>
       'Du hast das Konto gewechselt, deshalb wurde der Sound nicht hinzugefügt.';
 

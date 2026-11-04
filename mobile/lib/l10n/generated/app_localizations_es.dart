@@ -4592,6 +4592,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get soundsImportUnreadable => 'No se pudo leer ese archivo de audio.';
 
   @override
+  String get soundsAddSilent =>
+      'No se escucha nada en este sonido, así que no se puede agregar.';
+
+  @override
   String get soundsImportAccountChanged =>
       'Cambiaste de cuenta, así que este sonido no se agregó.';
 

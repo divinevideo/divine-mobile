@@ -4680,6 +4680,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String get soundsImportUnreadable => 'Fișierul audio nu a putut fi citit.';
 
   @override
+  String get soundsAddSilent =>
+      'În acest sunet nu se aude nimic, așa că nu poate fi adăugat.';
+
+  @override
   String get soundsImportAccountChanged =>
       'Ai schimbat contul, așa că sunetul nu a fost adăugat.';
 

@@ -2180,6 +2180,7 @@
   "soundsShareTitleRequiredHint": "شیئر کرنے کے لیے اپنی ساؤنڈ کو عنوان دیں۔",
   "soundsImportUnsupportedFormat": "یہ فائل کی قسم سپورٹ نہیں ہے۔ کوئی آڈیو فائل منتخب کریں۔",
   "soundsImportUnreadable": "وہ آڈیو فائل پڑھی نہیں جا سکی۔",
+  "soundsAddSilent": "اس ساؤنڈ میں کچھ سنائی نہیں دیتا، اس لیے اسے شامل نہیں کیا جا سکتا۔",
   "soundsImportAccountChanged": "آپ نے اکاؤنٹ بدل لیا، اس لیے یہ ساؤنڈ شامل نہیں ہوا۔",
   "soundsSavedLibraryTitle": "میری آوازیں",
   "soundsSavedEmptyTitle": "ابھی کوئی محفوظ آواز نہیں",

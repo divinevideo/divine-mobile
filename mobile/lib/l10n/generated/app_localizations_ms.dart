@@ -4530,6 +4530,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String get soundsImportUnreadable => 'Fail audio itu tidak dapat dibaca.';
 
   @override
+  String get soundsAddSilent =>
+      'Tiada apa-apa yang kedengaran dalam bunyi ini, jadi ia tidak boleh ditambah.';
+
+  @override
   String get soundsImportAccountChanged =>
       'Anda telah menukar akaun, jadi bunyi ini tidak ditambah.';
 

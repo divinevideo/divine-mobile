@@ -23,6 +23,7 @@ import 'package:openvine/services/ios_device_attestation_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/published_event_local_echo.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
+import 'package:openvine/services/sound_silence_trimmer.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_event_tag_source.dart';
@@ -71,6 +72,7 @@ class VideoEventPublisher {
     IosDeviceAttestationService? iosDeviceAttestationService,
     PublishedEventLocalEcho? publishedEventLocalEcho,
     ProofModePublishTagger? proofModeTagger,
+    SoundSilenceTrimmer? soundSilenceTrimmer,
   }) : assert(
          proofModeTagger == null || iosDeviceAttestationService == null,
          'An injected proofModeTagger ignores iosDeviceAttestationService; '
@@ -105,6 +107,7 @@ class VideoEventPublisher {
       savedSoundsService: savedSoundsService,
       soundSyncRepositoryGetter: soundSyncRepositoryGetter,
       audioReuseConsentChecker: audioReuseConsentChecker,
+      soundSilenceTrimmer: soundSilenceTrimmer,
     );
   }
 

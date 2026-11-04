@@ -4136,6 +4136,7 @@
   "soundsShareTitleRequiredHint": "Beri judul pada suaramu untuk membagikannya.",
   "soundsImportUnsupportedFormat": "Jenis file itu tidak didukung. Pilih file audio.",
   "soundsImportUnreadable": "File audio itu tidak bisa dibaca.",
+  "soundsAddSilent": "Tidak ada yang terdengar di suara ini, jadi suara ini tidak bisa ditambahkan.",
   "soundsImportAccountChanged": "Kamu berganti akun, jadi suara ini tidak ditambahkan.",
   "soundsRemoveSavedSound": "Hapus suara",
   "savedSoundSaveAction": "Simpan",

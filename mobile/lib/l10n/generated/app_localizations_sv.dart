@@ -4535,6 +4535,10 @@ class AppLocalizationsSv extends AppLocalizations {
   String get soundsImportUnreadable => 'Ljudfilen kunde inte läsas.';
 
   @override
+  String get soundsAddSilent =>
+      'Det hörs ingenting i det här ljudet, så det kan inte läggas till.';
+
+  @override
   String get soundsImportAccountChanged =>
       'Du bytte konto, så ljudet lades inte till.';
 
