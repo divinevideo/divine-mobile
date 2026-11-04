@@ -7,6 +7,7 @@ import 'dart:convert';
 
 import 'package:meta/meta.dart';
 import 'package:models/src/nip71_video_kinds.dart';
+import 'package:models/src/sound_credit.dart';
 import 'package:models/src/video_attribution.dart';
 import 'package:models/src/video_sticker_region.dart';
 import 'package:models/src/video_url_resolver.dart';
@@ -1229,9 +1230,16 @@ class VideoEvent {
   ///
   /// Computed once per instance: [content] is final, and the feed grid and
   /// player overlay read this on every rebuild.
+  ///
+  /// The sound credit line goes too: the sound pill shows it, from
+  /// [soundCredit] when the sound's own event cannot be read.
   late final String displayContent = sanitizeForDisplay(
-    stripInspiredByAttribution(content),
+    stripSoundCredit(stripInspiredByAttribution(content)),
   );
+
+  /// The credit for an Attribution-licensed sound the publisher put at the
+  /// end of [content], or `null` when there is none.
+  late final SoundCredit? soundCredit = soundCreditFromContent(content);
 
   /// Display-sanitized video title. Returns `null` when no title is set.
   String? get displayTitle => title != null ? sanitizeForDisplay(title!) : null;

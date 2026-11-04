@@ -261,6 +261,10 @@ class AudioEvent {
       duration: sound.durationInSeconds,
       title: sound.title,
       source: source,
+      // Only a licence with a link names one; the manifest marks the rest
+      // `unknown` or leaves them out.
+      licenseName: sound.licenseUrl == null ? null : sound.license,
+      licenseUrl: sound.licenseUrl,
     );
   }
 
@@ -520,6 +524,28 @@ class AudioEvent {
 
   /// Whether this audio is a draft-local imported file.
   bool get isLocalImport => id.startsWith('${localImportMarker}_');
+
+  /// Whether its licence asks a work made with it to credit it and say that
+  /// it was changed, as every Creative Commons Attribution licence does.
+  ///
+  /// Read from the provider's licence data when there is some, otherwise
+  /// from the licence link or name. Without licence data, nothing is asked.
+  bool get requiresAttribution {
+    if (externalSource case final external?) {
+      return external.license.requiresAttribution;
+    }
+    // Every licence under this path is an Attribution licence; public domain
+    // tools such as CC0 live under `/publicdomain/`.
+    if (licenseUrl?.toLowerCase().contains('creativecommons.org/licenses/') ??
+        false) {
+      return true;
+    }
+    final name = (licenseName ?? '').toLowerCase().replaceAll(
+      RegExp('[^a-z]'),
+      '',
+    );
+    return name.startsWith('ccby') || name.contains('attribution');
+  }
 
   /// Whether this audio was extracted from one of the draft's own clips.
   bool get isLocalExtracted => id.startsWith('${localExtractedMarker}_');
