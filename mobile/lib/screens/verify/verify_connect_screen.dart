@@ -335,64 +335,70 @@ class _ConnectForm extends StatelessWidget {
             const SizedBox(height: 24),
           ],
         ],
-        _SectionLabel(l10n.verifyConnectProofTitle),
-        // Bluesky's note says a sign-in above is all it takes, which reads
-        // wrong while the card above still asks to link the account.
-        if (!(signedInAccount != null && state.platform.key == 'bluesky')) ...[
-          Text(
-            verifyProofExplainer(l10n, state.platform.key),
-            style: VineTheme.bodyMediumFont(
-              color: context.vineColors.mutedText,
+        // Signing in again is the sign-in alone; the proof post adds nothing to
+        // it. Kept when sign-in cannot run here (iOS below 17.4, a platform
+        // without it, or the list still loading), else the page is empty.
+        if (!(state.isReplacing && showOAuth)) ...[
+          _SectionLabel(l10n.verifyConnectProofTitle),
+          // Bluesky's note says a sign-in above is all it takes, which reads
+          // wrong while the card above still asks to link the account.
+          if (!(signedInAccount != null &&
+              state.platform.key == 'bluesky')) ...[
+            Text(
+              verifyProofExplainer(l10n, state.platform.key),
+              style: VineTheme.bodyMediumFont(
+                color: context.vineColors.mutedText,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-        ],
-        _NpubCard(npub: npub),
-        const SizedBox(height: 16),
-        // Skipped when the pasted link already carries the account, and when
-        // the OAuth block above is already asking for it.
-        if (state.needsIdentityInput &&
-            !(showOAuth && state.platform.key == 'bluesky')) ...[
-          _IdentityField(
-            key: const ValueKey('verify-identity-field'),
-            state: state,
+            const SizedBox(height: 12),
+          ],
+          _NpubCard(npub: npub),
+          const SizedBox(height: 16),
+          // Skipped when the pasted link already carries the account, and when
+          // the OAuth block above is already asking for it.
+          if (state.needsIdentityInput &&
+              !(showOAuth && state.platform.key == 'bluesky')) ...[
+            _IdentityField(
+              key: const ValueKey('verify-identity-field'),
+              state: state,
+              enabled: inputsEnabled,
+            ),
+            const SizedBox(height: 12),
+          ],
+          // Keyed because the account field above is inserted and removed as the
+          // typed proof starts and stops parsing. Without a key the list matches
+          // these children by position, so the shift hands this slot to a
+          // different widget, the field is rebuilt from scratch, and the text and
+          // the keyboard go with it.
+          DivineTextField(
+            key: const ValueKey('verify-proof-field'),
+            labelText: l10n.verifyProofLabel,
+            hintText: verifyProofHint(state.platform.key),
+            filled: true,
             enabled: inputsEnabled,
+            textInputAction: .send,
+            keyboardType: TextInputType.url,
+            textCapitalization: TextCapitalization.none,
+            autocorrect: false,
+            onChanged: context.read<VerifyConnectCubit>().proofChanged,
+            onSubmitted: (_) => !inputsEnabled || !state.canSubmitProof
+                ? null
+                : context.read<VerifyConnectCubit>().submitProof(),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          DivineButton(
+            label: l10n.verifyConnectProofCta,
+            expanded: true,
+            // A sign-in being linked shows its own progress above.
+            isLoading:
+                signedInAccount == null &&
+                (state.status == VerifyConnectStatus.verifying ||
+                    state.status == VerifyConnectStatus.publishing),
+            onPressed: !inputsEnabled || !state.canSubmitProof
+                ? null
+                : context.read<VerifyConnectCubit>().submitProof,
+          ),
         ],
-        // Keyed because the account field above is inserted and removed as the
-        // typed proof starts and stops parsing. Without a key the list matches
-        // these children by position, so the shift hands this slot to a
-        // different widget, the field is rebuilt from scratch, and the text and
-        // the keyboard go with it.
-        DivineTextField(
-          key: const ValueKey('verify-proof-field'),
-          labelText: l10n.verifyProofLabel,
-          hintText: verifyProofHint(state.platform.key),
-          filled: true,
-          enabled: inputsEnabled,
-          textInputAction: .send,
-          keyboardType: TextInputType.url,
-          textCapitalization: TextCapitalization.none,
-          autocorrect: false,
-          onChanged: context.read<VerifyConnectCubit>().proofChanged,
-          onSubmitted: (_) => !inputsEnabled || !state.canSubmitProof
-              ? null
-              : context.read<VerifyConnectCubit>().submitProof(),
-        ),
-        const SizedBox(height: 16),
-        DivineButton(
-          label: l10n.verifyConnectProofCta,
-          expanded: true,
-          // A sign-in being linked shows its own progress above.
-          isLoading:
-              signedInAccount == null &&
-              (state.status == VerifyConnectStatus.verifying ||
-                  state.status == VerifyConnectStatus.publishing),
-          onPressed: !inputsEnabled || !state.canSubmitProof
-              ? null
-              : context.read<VerifyConnectCubit>().submitProof,
-        ),
       ],
     );
   }

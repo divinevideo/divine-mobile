@@ -624,6 +624,131 @@ void main() {
     });
   });
 
+  group('$VerifyConnectView signing in again', () {
+    const twitterOAuth = VerifierPlatform(
+      key: 'twitter',
+      label: 'Twitter / X',
+      supported: true,
+      oauth: true,
+    );
+    const blueskyOAuth = VerifierPlatform(
+      key: 'bluesky',
+      label: 'Bluesky',
+      supported: true,
+      oauth: true,
+    );
+    late VerifyConnectCubit cubit;
+
+    tearDown(() async {
+      await cubit.close();
+    });
+
+    Future<AppLocalizations> pump(
+      WidgetTester tester, {
+      required VerifierPlatform platform,
+      required bool oauthAvailable,
+      String? replacingIdentity,
+    }) async {
+      cubit = VerifyConnectCubit(
+        repository: _MockIdentityClaimsRepository(),
+        pubkey: _pubkey,
+        platform: platform,
+        oauthReturnUrl: _returnUrl,
+        analytics: const NoOpAnalyticsEventSink(),
+        launchOAuth: (_) async => null,
+        replacingIdentity: replacingIdentity,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: VineTheme.theme,
+          home: BlocProvider<VerifyConnectCubit>.value(
+            value: cubit,
+            child: VerifyConnectView(
+              npub: _npub,
+              oauthAvailable: oauthAvailable,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      return lookupAppLocalizations(const Locale('en'));
+    }
+
+    testWidgets('shows only the sign-in when sign-in can run', (tester) async {
+      final l10n = await pump(
+        tester,
+        platform: twitterOAuth,
+        oauthAvailable: true,
+        replacingIdentity: 'jack',
+      );
+
+      expect(find.text(l10n.verifyConnectOauthCta('Twitter / X')), findsOne);
+      expect(find.text(l10n.verifyConnectProofCta), findsNothing);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsNothing);
+      expect(find.text(l10n.verifyConnectProofTitle), findsNothing);
+    });
+
+    testWidgets("keeps Bluesky's handle field, filled in", (tester) async {
+      final l10n = await pump(
+        tester,
+        platform: blueskyOAuth,
+        oauthAvailable: true,
+        replacingIdentity: 'alice.bsky.social',
+      );
+
+      expect(find.byKey(const ValueKey('verify-identity-field')), findsOne);
+      expect(find.text('alice.bsky.social'), findsOneWidget);
+      expect(find.text(l10n.verifyConnectProofCta), findsNothing);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsNothing);
+    });
+
+    testWidgets('keeps the proof form where the app cannot sign in', (
+      tester,
+    ) async {
+      // iOS below 17.4: the page would be blank without it.
+      final l10n = await pump(
+        tester,
+        platform: twitterOAuth,
+        oauthAvailable: false,
+        replacingIdentity: 'jack',
+      );
+
+      expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
+    });
+
+    testWidgets('keeps the proof form where the platform has no sign-in', (
+      tester,
+    ) async {
+      // Also what a platform still loading from /platforms reports.
+      final l10n = await pump(
+        tester,
+        platform: _telegram,
+        oauthAvailable: true,
+        replacingIdentity: 'jack',
+      );
+
+      expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
+    });
+
+    testWidgets('keeps the proof form when not signing in again', (
+      tester,
+    ) async {
+      final l10n = await pump(
+        tester,
+        platform: twitterOAuth,
+        oauthAvailable: true,
+      );
+
+      expect(find.text(l10n.verifyConnectOauthCta('Twitter / X')), findsOne);
+      expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
+    });
+  });
+
   group('$VerifyConnectView after a sign-in returns', () {
     late _MockIdentityClaimsRepository repository;
     late VerifyConnectCubit cubit;

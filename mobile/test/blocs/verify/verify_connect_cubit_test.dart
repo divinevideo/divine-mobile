@@ -2408,6 +2408,22 @@ void main() {
             as String?;
       }
 
+      test('knows on its state which handle is being renewed', () {
+        final cubit = build(_twitter, replacingIdentity: 'jack');
+        addTearDown(cubit.close);
+
+        expect(cubit.state.replacingIdentity, equals('jack'));
+        expect(cubit.state.isReplacing, isTrue);
+      });
+
+      test('is not renewing anything on a plain connect', () {
+        final cubit = build(_twitter);
+        addTearDown(cubit.close);
+
+        expect(cubit.state.replacingIdentity, isNull);
+        expect(cubit.state.isReplacing, isFalse);
+      });
+
       test('starts with the linked handle filled in', () {
         final cubit = build(_bluesky, replacingIdentity: 'alice.bsky.social');
         addTearDown(cubit.close);

@@ -103,6 +103,7 @@ class VerifyConnectState extends Equatable {
     this.errorAttempt = 0,
     this.linkedClaim,
     this.replacedIdentity,
+    this.replacingIdentity,
     this.signedInAccount,
   });
 
@@ -135,6 +136,13 @@ class VerifyConnectState extends Equatable {
   /// renewal replaced one. Null when nothing was replaced, so the dashboard
   /// keeps that link's row.
   final String? replacedIdentity;
+
+  /// The handle of the sign-in link this flow renews, fixed when the flow
+  /// opens. Null on a plain connect.
+  final String? replacingIdentity;
+
+  /// Whether this flow renews a sign-in link rather than adding a new one.
+  bool get isReplacing => replacingIdentity != null;
 
   /// The account a sign-in returned, shown for the person to approve.
   final String? signedInAccount;
@@ -212,6 +220,7 @@ class VerifyConnectState extends Equatable {
     int? errorAttempt,
     IdentityClaim? linkedClaim,
     String? replacedIdentity,
+    String? replacingIdentity,
     String? signedInAccount,
     bool clearError = false,
     bool clearSignedInAccount = false,
@@ -225,6 +234,7 @@ class VerifyConnectState extends Equatable {
       errorAttempt: errorAttempt ?? this.errorAttempt,
       linkedClaim: linkedClaim ?? this.linkedClaim,
       replacedIdentity: replacedIdentity ?? this.replacedIdentity,
+      replacingIdentity: replacingIdentity ?? this.replacingIdentity,
       signedInAccount: clearSignedInAccount
           ? null
           : (signedInAccount ?? this.signedInAccount),
@@ -241,6 +251,7 @@ class VerifyConnectState extends Equatable {
     errorAttempt,
     linkedClaim,
     replacedIdentity,
+    replacingIdentity,
     signedInAccount,
   ];
 }

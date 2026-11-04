@@ -57,13 +57,13 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
        _pubkey = pubkey,
        _launchOAuth = launchOAuth,
        _oauthReturnUrl = oauthReturnUrl,
-       _replacingIdentity = replacingIdentity,
        _random = random ?? Random.secure(),
        _wait = wait,
        super(
          VerifyConnectState(
            platform: platform,
            identity: replacingIdentity ?? '',
+           replacingIdentity: replacingIdentity,
          ),
        );
 
@@ -72,7 +72,6 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   final VerifyOAuthLauncher _launchOAuth;
   final AnalyticsEventSink _analytics;
   final String _oauthReturnUrl;
-  final String? _replacingIdentity;
   final Random _random;
   // Tests pass their own; otherwise the wait is [_async]'s, so closing the
   // cubit ends it.
@@ -368,7 +367,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
         replacingIdentity: _replacedBy(pending.claim),
         // The handle came in on a route anyone can open, so only a sign-in
         // link under it is replaced, never a proof-post link.
-        replaceOnlySignIn: _replacingIdentity != null,
+        replaceOnlySignIn: state.isReplacing,
       );
       if (_superseded(pending)) return;
       if (!pending.confirmed) {
@@ -433,7 +432,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
         // Named only when the published event dropped that link.
         replacedIdentity: pending.signed?.replacedKey == null
             ? null
-            : _replacingIdentity,
+            : state.replacingIdentity,
         clearSignedInAccount: true,
       ),
     );
@@ -511,7 +510,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   // the same one, whose tag the signed event replaces anyway. Naming it as
   // replaced too would count the new link as removed.
   String? _replacedBy(IdentityClaim claim) {
-    final replacing = _replacingIdentity;
+    final replacing = state.replacingIdentity;
     if (replacing == null) return null;
     return replacing.toLowerCase() == claim.identity.toLowerCase()
         ? null
