@@ -1316,6 +1316,9 @@ void main() {
         verify: (cubit) {
           expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
           expect(cubit.state.signedInAccount, isNull);
+          // The sign-in reached the platform; a decline is not a sign-in that
+          // cannot start, so the proof post is not offered for it.
+          expect(cubit.state.signInFailedToStart, isFalse);
         },
         // Verifier refusals are expected domain outcomes. They are warning
         // logs, not Bloc errors, so they cannot be misclassified as
@@ -1428,6 +1431,7 @@ void main() {
         verify: (cubit) {
           expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
           expect(launched, isEmpty);
+          expect(cubit.state.signInFailedToStart, isFalse);
         },
         errors: () => [isA<VerifierTimeoutException>()],
       );
@@ -1466,6 +1470,50 @@ void main() {
           expect(cubit.state.signInFailedToStart, isTrue);
         },
         errors: () => [isA<FormatException>()],
+      );
+
+      test(
+        'keeps a failed start on record through a retry that reaches the platform',
+        () async {
+          var starts = 0;
+          when(
+            () => repository.startSignIn(
+              platform: any(named: 'platform'),
+              pubkey: any(named: 'pubkey'),
+              returnUrl: any(named: 'returnUrl'),
+              startCheck: any(named: 'startCheck'),
+              handle: any(named: 'handle'),
+            ),
+          ).thenAnswer((invocation) async {
+            if (starts++ == 0) {
+              throw const VerifierApiException(500, 'returned 500');
+            }
+            startedReturnUrl = invocation.namedArguments[#returnUrl] as String;
+            return Uri.parse('https://provider.example/authorize?state=s');
+          });
+          final browser = Completer<Uri?>();
+          final cubit = build(
+            _twitter,
+            replacingIdentity: 'jack',
+            launchOAuth: (_) => browser.future,
+          );
+          addTearDown(cubit.close);
+
+          await cubit.connectWithOAuth();
+          expect(cubit.state.signInFailedToStart, isTrue);
+
+          // Clearing it on the retry would hide the proof post while the
+          // browser is open, and bring it back only if this attempt fails too.
+          final retry = cubit.connectWithOAuth();
+          await pumpEventQueue();
+          expect(cubit.state.status, VerifyConnectStatus.authorizing);
+          expect(cubit.state.signInFailedToStart, isTrue);
+
+          browser.complete(answer(Uri.parse(startedReturnUrl!)));
+          await retry;
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+          expect(cubit.state.signInFailedToStart, isTrue);
+        },
       );
 
       test('returns quietly when closed before the browser returns', () async {

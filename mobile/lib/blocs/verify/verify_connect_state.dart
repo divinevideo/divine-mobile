@@ -145,7 +145,7 @@ class VerifyConnectState extends Equatable {
   /// Whether this flow renews a sign-in link rather than adding a new one.
   bool get isReplacing => replacingIdentity != null;
 
-  /// Whether a sign-in in this flow failed before reaching the platform.
+  /// Whether a sign-in in this flow failed to start or to launch.
   ///
   /// Stays set for the rest of the flow, so a renewal that cannot start a
   /// sign-in keeps the proof post on offer while the sign-in can be retried.
