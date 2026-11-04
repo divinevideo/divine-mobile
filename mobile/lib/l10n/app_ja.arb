@@ -3874,7 +3874,7 @@
   "authConfirmPasswordRequired": "パスワードを確認してね",
   "authPasswordsDoNotMatch": "パスワードが一致しないよ",
   "authConfirmNewPasswordLabel": "新しいパスワードの確認",
-  "listByAuthorPrefix": "作成者: ",
+  "listByAuthor": "作成者: {name}",
   "keyManagementYourPublicKeyLabel": "あなたの公開鍵 (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

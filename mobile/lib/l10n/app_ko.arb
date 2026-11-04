@@ -3420,7 +3420,7 @@
   "authConfirmPasswordRequired": "비밀번호를 다시 입력해주세요",
   "authPasswordsDoNotMatch": "비밀번호가 일치하지 않아요",
   "authConfirmNewPasswordLabel": "새 비밀번호 확인",
-  "listByAuthorPrefix": "작성자: ",
+  "listByAuthor": "작성자: {name}",
   "keyManagementYourPublicKeyLabel": "공개 키 (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

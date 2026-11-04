@@ -8905,11 +8905,11 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{{count} video} other{{count} videos}}'**
   String listVideoCount(int count);
 
-  /// No description provided for @listByAuthorPrefix.
+  /// Credits the author under a list's title. The name is shown as a link to their profile.
   ///
   /// In en, this message translates to:
-  /// **'By '**
-  String get listByAuthorPrefix;
+  /// **'by {name}'**
+  String listByAuthor(String name);
 
   /// No description provided for @listDone.
   ///

@@ -21,7 +21,9 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/lists_routes.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/utils/share_list_link.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
@@ -841,6 +843,8 @@ class _RosterHero extends StatelessWidget {
         previewPubkeys: [for (final member in state.members) member.pubkey],
         totalVideos: state.totalVideos,
         totalLoops: state.totalLoops,
+        authorPubkey: userList.isEditable ? null : ownerPubkey,
+        onAuthorTap: () => _openAuthorProfile(context),
         onViewAll: () => runDetached(
           PeopleListMembersRouteData(
             listId: userList.id,
@@ -851,6 +855,19 @@ class _RosterHero extends StatelessWidget {
           category: LogCategory.ui,
         ),
       ),
+    );
+  }
+
+  void _openAuthorProfile(BuildContext context) {
+    final owner = ownerPubkey;
+    if (owner == null) return;
+    runDetached(
+      OtherProfileRouteData(
+        npub: NostrKeyUtils.encodePubKey(owner),
+      ).push<void>(context),
+      'open people list author profile',
+      logName: 'RosterHero',
+      category: LogCategory.ui,
     );
   }
 }

@@ -18,6 +18,7 @@ import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/list_author_byline.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:riverpod/misc.dart' show Override;
 
@@ -245,7 +246,7 @@ void main() {
         expect(find.text('Puppets'), findsOneWidget);
         expect(find.text(l10n.listVideoCount(3)), findsOneWidget);
         expect(find.text(l10n.listVisibilityPrivate), findsOneWidget);
-        expect(find.text(l10n.listByAuthorPrefix), findsNothing);
+        expect(find.byType(ListAuthorByline), findsNothing);
       });
 
       testWidgets("shows author attribution for someone else's list", (
@@ -274,8 +275,13 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        expect(find.text(l10n.listByAuthorPrefix), findsOneWidget);
+        expect(find.byType(ListAuthorByline), findsOneWidget);
         expect(find.text(l10n.listVideoCount(3)), findsOneWidget);
+        // The byline sits between the title and the video count.
+        expect(
+          tester.getTopLeft(find.byType(ListAuthorByline)).dy,
+          lessThan(tester.getTopLeft(find.text(l10n.listVideoCount(3))).dy),
+        );
         expect(find.text(l10n.listVisibilityPublic), findsNothing);
       });
 

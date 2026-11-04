@@ -25,6 +25,7 @@ import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/list_author_byline.dart';
 import 'package:openvine/widgets/share_list_button.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -233,6 +234,17 @@ void main() {
         await tester.pump();
         await tester.pump();
       }
+
+      testWidgets("credits someone else's list to its author", (tester) async {
+        await pumpShareableList(tester);
+
+        expect(
+          tester
+              .widget<ListAuthorByline>(find.byType(ListAuthorByline))
+              .authorPubkey,
+          _otherOwnerPubkey,
+        );
+      });
 
       testWidgets('offers Share to a signed-out viewer', (tester) async {
         await pumpShareableList(tester);
@@ -930,6 +942,7 @@ void main() {
         await tester.pump();
 
         expect(find.text('Mine'), findsOneWidget);
+        expect(find.byType(ListAuthorByline), findsNothing);
         expect(find.byType(FollowListButton), findsNothing);
         expect(find.byType(ShareListButton), findsNothing);
         verifyNever(

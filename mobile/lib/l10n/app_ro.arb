@@ -3874,7 +3874,7 @@
   "nostrSettingsCouldNotRemoveKeys": "N-am putut elimina acest cont de pe acest dispozitiv. Încearcă din nou.",
   "nostrSettingsDeleteAccount": "Șterge contul și datele",
   "nostrSettingsDeleteAccountSubtitle": "Trimite cereri de ștergere pentru conținutul tău și te deconectează pe acest dispozitiv. Relay-urile, clienții, indexurile de căutare și alte dispozitive conectate pot păstra copii.",
-  "listByAuthorPrefix": "De ",
+  "listByAuthor": "de {name}",
   "keyManagementYourPublicKeyLabel": "Cheia ta publică (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

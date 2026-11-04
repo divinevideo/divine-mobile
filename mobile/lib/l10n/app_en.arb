@@ -3621,7 +3621,15 @@
       }
     }
   },
-  "listByAuthorPrefix": "By ",
+  "listByAuthor": "by {name}",
+  "@listByAuthor": {
+    "description": "Credits the author under a list's title. The name is shown as a link to their profile.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "listDone": "Done",
   "listErrorLoading": "Error loading lists",
   "listCreateNewList": "Create New List",

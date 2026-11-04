@@ -5293,7 +5293,9 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'از ';
+  String listByAuthor(String name) {
+    return 'از $name';
+  }
 
   @override
   String get listDone => 'ہو گیا';

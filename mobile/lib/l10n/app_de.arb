@@ -3874,7 +3874,7 @@
   "nostrSettingsCouldNotRemoveKeys": "Dieses Konto konnte nicht von diesem Gerät entfernt werden. Versuch es nochmal.",
   "nostrSettingsDeleteAccount": "Konto und Daten löschen",
   "nostrSettingsDeleteAccountSubtitle": "Sendet Löschanfragen für deine Inhalte und meldet dich auf diesem Gerät ab. Relays, Clients, Suchindizes und andere angemeldete Geräte behalten möglicherweise Kopien.",
-  "listByAuthorPrefix": "Von ",
+  "listByAuthor": "von {name}",
   "keyManagementYourPublicKeyLabel": "Dein Public Key (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

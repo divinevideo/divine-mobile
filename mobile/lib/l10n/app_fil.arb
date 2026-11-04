@@ -2896,7 +2896,7 @@
   "categoriesNoCategoriesAvailable": "Walang available na category",
   "exploreSearchHint": "Maghanap...",
   "categoryVideoCount": "{count} na video",
-  "listByAuthorPrefix": "Ni ",
+  "listByAuthor": "ni {name}",
   "videoActionLikeLabel": "I-like",
   "videoActionReplyLabel": "Sumagot",
   "videoActionRepostLabel": "Revine",

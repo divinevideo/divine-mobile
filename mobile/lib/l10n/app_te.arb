@@ -2962,7 +2962,7 @@
       }
     }
   },
-  "listByAuthorPrefix": "ద్వారా ",
+  "listByAuthor": "{name} ద్వారా",
   "listDone": "పూర్తయింది",
   "listErrorLoading": "జాబితాలను లోడ్ చేయడంలో లోపం",
   "listCreateNewList": "కొత్త జాబితాను సృష్టించండి",

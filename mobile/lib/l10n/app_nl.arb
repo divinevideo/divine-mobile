@@ -3874,7 +3874,7 @@
   "nostrSettingsCouldNotRemoveKeys": "Dit account kon niet van dit apparaat verwijderd worden. Probeer het opnieuw.",
   "nostrSettingsDeleteAccount": "Account en data verwijderen",
   "nostrSettingsDeleteAccountSubtitle": "Stuurt verwijderverzoeken voor je content en meldt je op dit apparaat af. Relays, clients, zoekindexen en andere aangemelde apparaten kunnen kopieën bewaren.",
-  "listByAuthorPrefix": "Door ",
+  "listByAuthor": "door {name}",
   "keyManagementYourPublicKeyLabel": "Je publieke sleutel (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

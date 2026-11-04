@@ -3984,7 +3984,7 @@
   "nostrSettingsCouldNotRemoveKeys": "Не успяхме да махнем този акаунт от това устройство. Опитай пак.",
   "nostrSettingsDeleteAccount": "Изтрий акаунта и данните",
   "nostrSettingsDeleteAccountSubtitle": "Изпраща заявки за изтриване на съдържанието ти и те отписва на това устройство. Релетата, клиентите, индексите за търсене и другите устройства с вход може да запазят копия.",
-  "listByAuthorPrefix": "От ",
+  "listByAuthor": "от {name}",
   "keyManagementYourPublicKeyLabel": "Твоят публичен ключ (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

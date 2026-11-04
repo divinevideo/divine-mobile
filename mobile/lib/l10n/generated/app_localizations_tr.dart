@@ -5228,7 +5228,9 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'Yazan ';
+  String listByAuthor(String name) {
+    return '$name tarafından';
+  }
 
   @override
   String get listDone => 'Bitti';

@@ -5321,7 +5321,9 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'Ni ';
+  String listByAuthor(String name) {
+    return 'ni $name';
+  }
 
   @override
   String get listDone => 'Tapos na';

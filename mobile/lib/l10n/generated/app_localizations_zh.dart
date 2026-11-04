@@ -4944,7 +4944,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => '来自 ';
+  String listByAuthor(String name) {
+    return '来自 $name';
+  }
 
   @override
   String get listDone => '完成';

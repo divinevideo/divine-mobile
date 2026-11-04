@@ -3874,7 +3874,7 @@
   "authConfirmPasswordRequired": "أكّد كلمة المرور",
   "authPasswordsDoNotMatch": "كلمتا المرور غير متطابقتين",
   "authConfirmNewPasswordLabel": "تأكيد كلمة المرور الجديدة",
-  "listByAuthorPrefix": "بقلم ",
+  "listByAuthor": "بقلم {name}",
   "keyManagementYourPublicKeyLabel": "مفتاحك العام (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

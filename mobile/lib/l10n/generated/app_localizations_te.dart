@@ -5467,7 +5467,9 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'ద్వారా ';
+  String listByAuthor(String name) {
+    return '$name ద్వారా';
+  }
 
   @override
   String get listDone => 'పూర్తయింది';

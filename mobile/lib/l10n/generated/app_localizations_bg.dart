@@ -5344,7 +5344,9 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'От ';
+  String listByAuthor(String name) {
+    return 'от $name';
+  }
 
   @override
   String get listDone => 'Готово';

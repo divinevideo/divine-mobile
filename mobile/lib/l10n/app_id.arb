@@ -3874,7 +3874,7 @@
   "nostrSettingsCouldNotRemoveKeys": "Gagal menghapus akun ini dari perangkat ini. Coba lagi.",
   "nostrSettingsDeleteAccount": "Hapus Akun dan Data",
   "nostrSettingsDeleteAccountSubtitle": "Mengirim permintaan penghapusan untuk kontenmu dan mengeluarkanmu dari akun di perangkat ini. Relay, klien, indeks pencarian, dan perangkat lain yang masih masuk mungkin menyimpan salinan.",
-  "listByAuthorPrefix": "Oleh ",
+  "listByAuthor": "oleh {name}",
   "keyManagementYourPublicKeyLabel": "Kunci publikmu (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

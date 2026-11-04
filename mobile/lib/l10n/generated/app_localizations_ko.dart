@@ -4989,7 +4989,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => '작성자: ';
+  String listByAuthor(String name) {
+    return '작성자: $name';
+  }
 
   @override
   String get listDone => '완료';

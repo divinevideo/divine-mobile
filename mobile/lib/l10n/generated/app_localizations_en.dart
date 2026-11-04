@@ -5368,7 +5368,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'By ';
+  String listByAuthor(String name) {
+    return 'by $name';
+  }
 
   @override
   String get listDone => 'Done';

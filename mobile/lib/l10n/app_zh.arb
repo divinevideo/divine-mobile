@@ -2540,7 +2540,7 @@
       }
     }
   },
-  "listByAuthorPrefix": "来自 ",
+  "listByAuthor": "来自 {name}",
   "listDone": "完成",
   "listErrorLoading": "加载列表出错",
   "listCreateNewList": "创建新列表",

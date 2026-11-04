@@ -3874,7 +3874,7 @@
   "nostrSettingsCouldNotRemoveKeys": "Kunde inte ta bort det här kontot från enheten. Försök igen.",
   "nostrSettingsDeleteAccount": "Radera konto och data",
   "nostrSettingsDeleteAccountSubtitle": "Skickar raderingsförfrågningar för ditt innehåll och loggar ut dig på den här enheten. Reläer, klienter, sökindex och andra inloggade enheter kan behålla kopior.",
-  "listByAuthorPrefix": "Av ",
+  "listByAuthor": "av {name}",
   "keyManagementYourPublicKeyLabel": "Din publika nyckel (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

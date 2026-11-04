@@ -5309,7 +5309,9 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'Door ';
+  String listByAuthor(String name) {
+    return 'door $name';
+  }
 
   @override
   String get listDone => 'Klaar';

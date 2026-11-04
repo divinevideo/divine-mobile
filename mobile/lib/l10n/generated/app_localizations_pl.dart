@@ -5440,7 +5440,9 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'Autor: ';
+  String listByAuthor(String name) {
+    return 'autor: $name';
+  }
 
   @override
   String get listDone => 'Gotowe';

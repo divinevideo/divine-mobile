@@ -3878,7 +3878,7 @@
   "nostrSettingsCouldNotRemoveKeys": "No se pudo quitar esta cuenta de este dispositivo. Probá de nuevo.",
   "nostrSettingsDeleteAccount": "Eliminar cuenta y datos",
   "nostrSettingsDeleteAccountSubtitle": "Envía solicitudes de eliminación de tu contenido y cierra tu sesión en este dispositivo. Los relays, clientes, índices de búsqueda y otros dispositivos con la sesión iniciada pueden conservar copias.",
-  "listByAuthorPrefix": "Por ",
+  "listByAuthor": "por {name}",
   "keyManagementYourPublicKeyLabel": "Tu clave pública (npub)",
   "@keyManagementYourPublicKeyLabel": {
     "description": "Label above the truncated npub display on the key management screen."

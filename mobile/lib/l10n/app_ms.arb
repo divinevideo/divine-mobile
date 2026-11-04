@@ -2540,7 +2540,7 @@
       }
     }
   },
-  "listByAuthorPrefix": "Oleh ",
+  "listByAuthor": "oleh {name}",
   "listDone": "Siap",
   "listErrorLoading": "Ralat memuatkan senarai",
   "listCreateNewList": "Cipta Senarai Baharu",

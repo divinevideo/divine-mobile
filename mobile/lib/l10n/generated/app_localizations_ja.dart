@@ -4970,7 +4970,9 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => '作成者: ';
+  String listByAuthor(String name) {
+    return '作成者: $name';
+  }
 
   @override
   String get listDone => '完了';

@@ -2224,7 +2224,7 @@
       }
     }
   },
-  "listByAuthorPrefix": "በ",
+  "listByAuthor": "በ{name}",
   "listDone": "ተከናውኗል",
   "listErrorLoading": "ዝርዝሮችን መጫን ላይ ስህተት",
   "listCreateNewList": "አዲስ ዝርዝር ይፍጠሩ",

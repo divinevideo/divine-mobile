@@ -2540,7 +2540,7 @@
       }
     }
   },
-  "listByAuthorPrefix": "از ",
+  "listByAuthor": "از {name}",
   "listDone": "ہو گیا",
   "listErrorLoading": "فہرستیں لوڈ کرنے میں خرابی",
   "listCreateNewList": "نئی فہرست بنائیں",
