@@ -633,40 +633,19 @@ void main() {
         expect(cubit.state.failure, AddSoundFailure.notSignedIn);
       });
 
-      test('drops a sound the share finds silent and reclaims it', () async {
+      test('names a sound with nothing to hear as its own failure', () async {
         stubPublish(
           () async =>
               const LocalAudioPublishFailed(LocalAudioPublishFailure.silent),
         );
         final cubit = await sharingCubit();
         addTearDown(cubit.close);
-        final copy = cubit.state.audio!.localFilePath;
 
         await cubit.save();
 
-        expect(cubit.state.status, AddSoundStatus.idle);
+        expect(cubit.state.status, AddSoundStatus.ready);
         expect(cubit.state.failure, AddSoundFailure.silentSound);
-        expect(cubit.state.audio, isNull);
-        expect(cubit.state.canSave, isFalse);
         expect(savedSounds, isEmpty);
-        expect(reclaimed, equals([copy]));
-      });
-
-      test('reclaims a silent share once when closed mid-share', () async {
-        final answer = Completer<LocalAudioPublishResult>();
-        stubPublish(() => answer.future);
-        final cubit = await sharingCubit();
-        final copy = cubit.state.audio!.localFilePath;
-
-        final saving = cubit.save();
-        await pumpEventQueue();
-        await cubit.close();
-        answer.complete(
-          const LocalAudioPublishFailed(LocalAudioPublishFailure.silent),
-        );
-        await saving;
-
-        expect(reclaimed, equals([copy]));
       });
 
       test('surfaces an account restriction', () async {

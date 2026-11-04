@@ -83,8 +83,7 @@ typedef LocalAudioPublisherReader = LocalAudioEventPublisher Function();
 ///   is in flight, the work is abandoned rather than writing one account's
 ///   sound into another account's library.
 /// * **Nothing silent.** A picked file or a recording measured as having
-///   nothing to hear is refused right after import, and one the share finds
-///   silent is dropped the same way, so it is neither saved nor shared.
+///   nothing to hear is refused right after import.
 /// * **Cleanup.** A copy no private library record came to own — cancelled,
 ///   replaced by another pick, abandoned, or superseded by its published
 ///   upload — is handed to the reclaimer, which deletes it only when no draft
@@ -353,7 +352,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
     if (sharePublicly) {
       published = state.publishedSound ?? await _publish(audio);
       if (published == null) {
-        if (isClosed || state.audio == null) await _reclaim(audio);
+        if (isClosed) await _reclaim(audio);
         return;
       }
       if (_accountChanged()) {
@@ -441,7 +440,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
         case LocalAudioPublished(audio: final published):
           return published;
         case LocalAudioPublishFailed(:final failure):
-          final reason = switch (failure) {
+          _failSave(switch (failure) {
             LocalAudioPublishFailure.notAuthenticated =>
               AddSoundFailure.notSignedIn,
             LocalAudioPublishFailure.silent => AddSoundFailure.silentSound,
@@ -451,20 +450,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
             LocalAudioPublishFailure.signingFailed ||
             LocalAudioPublishFailure.relayRejected =>
               AddSoundFailure.publishFailed,
-          };
-          if (reason == AddSoundFailure.silentSound) {
-            // The share heard what the import check could not: nothing. Drop
-            // the sound as the import refusal does, so it cannot be saved
-            // privately either; [save] reclaims the copy.
-            emitIfOpen(
-              AddSoundState(
-                sharePublicly: state.sharePublicly,
-                failure: reason,
-              ),
-            );
-          } else {
-            _failSave(reason);
-          }
+          });
       }
     } on AccountRestrictedPublishException catch (error, stackTrace) {
       addError(error, stackTrace);
