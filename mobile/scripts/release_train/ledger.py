@@ -75,7 +75,8 @@ class GhLedgerStore:
             raise LedgerError(f"cannot read {path}: {result.stderr.strip()}")
         try:
             content = json.loads(result.stdout)["content"]
-            record = json.loads(base64.b64decode(content, validate=True).decode("utf-8"))
+            raw = base64.b64decode("".join(content.split()), validate=True)
+            record = json.loads(raw.decode("utf-8"))
         except (ValueError, KeyError, TypeError) as error:
             raise LedgerError(f"unreadable content for {path}: {error!r}") from error
         if not isinstance(record, dict):

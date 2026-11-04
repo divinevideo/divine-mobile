@@ -147,6 +147,14 @@ class GhLedgerStoreTests(unittest.TestCase):
             run.calls, [["gh", "api", f"repos/{REPO}/contents/p.json?ref=main"]]
         )
 
+    def test_read_json_accepts_github_line_wrapped_base64(self):
+        record = {"key": "v" * 200, "n": 7}
+        raw = base64.b64encode(json.dumps(record).encode()).decode()
+        wrapped = "\n".join(raw[i : i + 60] for i in range(0, len(raw), 60)) + "\n"
+        self.assertIn("\n", wrapped[:-1])
+        store, _ = self.store(done(stdout=json.dumps({"content": wrapped})))
+        self.assertEqual(store.read_json("p.json"), record)
+
     def test_read_json_unreadable_bodies_raise_ledger_error(self):
         for body in (
             json.dumps([{"name": "a.json"}]),
