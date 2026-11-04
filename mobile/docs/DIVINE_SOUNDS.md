@@ -28,7 +28,7 @@ One NIP-94 Kind 1063 event per sound:
 | `x` | SHA-256 of the file | |
 | `size` | Bytes | |
 | `duration` | Seconds | |
-| `title` | Display title | Not "Original sound": that title marks an unnamed video sound, which the lists leave out until someone reuses it |
+| `title` | Display title | Not "Original sound" or "Original sound - …": without a `source` credit, either marks an unnamed video sound, which New and For You leave out and search lists last until another account uses it |
 | `t` | Search tags, including `music` or `sfx` | `music` or `sfx` decides whether the sound shows under Music or Effects. Publish `sfx`; the app also reads `effect`, `soundeffect` and `soundeffects` as Effects (`SoundKind.effectTags`) |
 | `allow_audio_reuse` | `true` | Required. A sound without a source video is reusable only on its own signed terms |
 | `source`, `creator`, `license`, `license_url` | As the manifest has them | Credit for third-party recordings (Freesound and the like) |

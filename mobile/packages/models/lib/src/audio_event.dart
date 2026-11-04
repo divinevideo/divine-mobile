@@ -559,7 +559,8 @@ class AudioEvent {
 
   /// Whether its publisher gave it no title of its own: none at all, the
   /// [originalSoundTitle] a shared video sound gets by default, or that
-  /// title followed by its creator ("Original sound - @name").
+  /// title followed by " - " and anything after it, which is how the app
+  /// names a shared sound after its creator ("Original sound - @name").
   bool get hasDefaultTitle {
     final title = this.title?.trim().toLowerCase() ?? '';
     final defaultTitle = originalSoundTitle.toLowerCase();
@@ -568,12 +569,13 @@ class AudioEvent {
         title.startsWith('$defaultTitle - ');
   }
 
-  /// Whether this is a video's own audio, shared when the video was posted
-  /// and left as it was: [hasDefaultTitle] and credited to no [source].
+  /// Whether this looks like a video's own audio, shared when the video was
+  /// posted and left as it was: [hasDefaultTitle], credited to no [source],
+  /// and neither [isBundled] nor [isExternalProviderSound].
   ///
-  /// Most of these are someone talking over their video, so the sound lists
-  /// rank them below the sounds their publishers named or credited, unless
-  /// another account has used one.
+  /// Judged from the title and credit alone; [sourceVideoReference] is not
+  /// read. Most of these are someone talking over their video, so the sound
+  /// lists hold them back until another account has used one.
   bool get isAutoSharedOriginal =>
       !isBundled &&
       !isExternalProviderSound &&

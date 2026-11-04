@@ -375,11 +375,13 @@ class SoundsRepository {
   /// Those are shared by default when a video is posted and make up most of
   /// the newest sounds while rarely being worth reusing. One that another
   /// account used has shown otherwise and stays, as does every sound its
-  /// publisher named or credited. The video it was taken from and its
-  /// creator's other videos do not count. Keeps the order of [sounds].
+  /// publisher named or credited. Videos by the sound's own publisher, the
+  /// one it was taken from included, do not count. Keeps the order of
+  /// [sounds].
   ///
-  /// Costs one relay query, for the videos that reference the unnamed
-  /// sounds. When it fails, or runs out of time and so may have missed the
+  /// Costs one relay query when [sounds] holds any, for the videos that
+  /// reference them. When that lookup fails, times out, reaches no relay or
+  /// fills its [maxBatchedUsageCountScan] limit, and so may have missed the
   /// videos that reuse one, the sounds come back unchanged, since a list with
   /// them beats no list.
   Future<List<AudioEvent>> withoutUnusedOriginals(
@@ -403,9 +405,9 @@ class SoundsRepository {
   ///
   /// For lists that show such sounds rather than leave them out
   /// ([withoutUnusedOriginals]), so that the sounds their publishers named
-  /// come first. Costs one relay query when [sounds] holds any. When it
-  /// fails, every one of them follows the rest: they are ranked down, not
-  /// hidden.
+  /// or credited come first. Costs one relay query when [sounds] holds any.
+  /// When that lookup cannot tell, as [withoutUnusedOriginals] describes,
+  /// every one of them follows the rest: they are ranked down, not hidden.
   @visibleForTesting
   Future<List<AudioEvent>> withUnusedOriginalsLast(
     List<AudioEvent> sounds,
@@ -438,7 +440,8 @@ class SoundsRepository {
   };
 
   /// The ids of [originals] that a video by an account other than the
-  /// sound's own uses, or `null` when the relays could not tell in time.
+  /// sound's own uses, or `null` when the lookup failed, timed out, reached
+  /// no relay or filled its limit, and so may have missed some.
   Future<Set<String>?> _usedByOtherAccounts(
     Map<String, AudioEvent> originals,
   ) async {
@@ -568,15 +571,20 @@ class SoundsRepository {
   /// them. Returns an empty list without querying when [query] holds no
   /// searchable term.
   ///
-  /// Newest first, except that a video's own audio left untitled and that no
-  /// other account used follows the rest ([withUnusedOriginalsLast]): a
-  /// search still finds those, after the sounds their publishers named.
+  /// Newest first, except that a video's own audio left untitled and
+  /// uncredited that no other account used follows the rest
+  /// ([withUnusedOriginalsLast]): a search still finds those, after the
+  /// sounds their publishers named or credited. Telling them apart costs a
+  /// second relay query, for up to [maxBatchedUsageCountScan] videos, when
+  /// the matches hold any.
   ///
   /// Best-effort on the relay half: a query that throws an [Exception] is
   /// logged and the cached matches are returned anyway, since a search over a
   /// partial index is already partial and fewer results read better than an
-  /// error over a list the user can see is there. Anything that is not an
-  /// [Exception] still propagates. Results are cached like any other fetch.
+  /// error over a list the user can see is there. Then the second query is
+  /// skipped and every unnamed match follows the rest, as it does when that
+  /// query cannot tell. Anything that is not an [Exception] still propagates,
+  /// from either query. Results are cached like any other fetch.
   Future<List<AudioEvent>> searchSounds(
     String query, {
     int limit = maxSearchResults,
