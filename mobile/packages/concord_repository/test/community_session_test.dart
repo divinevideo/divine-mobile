@@ -212,6 +212,66 @@ void main() {
       },
     );
     test(
+      'a lifecycle signal citing an out-of-range version cannot close Rooms',
+      () async {
+        // The dissolved address derives from the public community id, so any
+        // key can sign a carrier there.
+        final bundle = await openInviteBundle(
+          event: event,
+          expectedSigner: event['pubkey'] as String,
+          token: fragment.token,
+          nowMs: 0,
+        );
+        final address = groupKey(
+          'concord/dissolved',
+          bundle.communityId,
+          '00' * 32,
+        );
+        const stranger =
+            '0000000000000000000000000000000000000000000000000000000000000003';
+        final author = schnorr.getPublicKey(stranger);
+        final tags = [
+          ['vac', '00' * 32, '99999999999999999999', '00' * 32],
+        ];
+        final rumor = <String, dynamic>{
+          'pubkey': author,
+          'created_at': 1,
+          'kind': 1,
+          'tags': tags,
+          'content': '',
+        };
+        rumor['id'] = computeEventId(
+          pubkey: author,
+          createdAt: 1,
+          kind: 1,
+          tags: tags,
+          content: '',
+        );
+        final carrier = await wrapSeal(
+          seal: await sealRumor(
+            rumor: rumor,
+            sealKind: 20014,
+            streamSeedHex: address.seedHex,
+            streamPubkey: address.pubkey,
+            authorSecretHex: stranger,
+          ),
+          streamSeedHex: address.seedHex,
+          streamPubkey: address.pubkey,
+        );
+        final relay = _Relay([...events(), carrier]);
+        final s = session(
+          relay,
+          expected['member'] as String,
+          InMemoryConcordStore('aa' * 32),
+        );
+        await s.start();
+        expect(s.ready, isTrue);
+        expect(s.failure, isNull);
+        await s.close();
+        await relay.close();
+      },
+    );
+    test(
       'malformed relay carriers do not suppress valid community authority',
       () async {
         final carriers = events();

@@ -312,11 +312,7 @@ class ConcordCommunitySession {
           author == bundle!.owner &&
           tag('vsk') == '10' &&
           tag('eid') == bundle!.communityId;
-      final vac = tags.where((t) => t.length >= 4 && t[0] == 'vac').firstOrNull;
-      final citation =
-          vac != null && RegExp(r'^(0|[1-9][0-9]*)$').hasMatch(vac[2])
-          ? ConcordCitation(vac[1], int.parse(vac[2]), vac[3])
-          : null;
+      final citation = ConcordCitation.fromTags(tags);
       final rotation =
           signal['kind'] == 3303 &&
           signal['sealKind'] == 20013 &&

@@ -141,5 +141,77 @@ void main() {
         await restored.close();
       },
     );
+    test('a removal citing an out-of-range version is ignored', () async {
+      final stream = publicChannelKey('11' * 32, '22' * 32, 0);
+      final relay = _Relay();
+      final repo = ConcordRepository(
+        relay: relay,
+        store: InMemoryConcordStore('44' * 32),
+        cipher: _Cipher(),
+        sealedTransport: SealedChatTransport(
+          relay: relay,
+          signer: (_) async => throw UnimplementedError(),
+        ),
+      );
+      await repo.startChannel(
+        channelId: '22' * 32,
+        epoch: 0,
+        streamSeedHex: stream.seedHex,
+        streamPubkey: stream.pubkey,
+      );
+      Future<Map<String, dynamic>> carrier(
+        String secret,
+        int kind,
+        String content,
+        List<List<String>> extra,
+      ) async {
+        final author = schnorr.getPublicKey(secret);
+        final tags = [
+          ['channel', '22' * 32],
+          ['epoch', '0'],
+          ...extra,
+        ];
+        final rumor = <String, dynamic>{
+          'kind': kind,
+          'pubkey': author,
+          'created_at': 1793761619,
+          'tags': tags,
+          'content': content,
+        };
+        rumor['id'] = computeEventId(
+          pubkey: author,
+          createdAt: 1793761619,
+          kind: kind,
+          tags: tags,
+          content: content,
+        );
+        return wrapSeal(
+          seal: await sealRumor(
+            rumor: rumor,
+            sealKind: 20013,
+            streamSeedHex: stream.seedHex,
+            streamPubkey: stream.pubkey,
+            authorSecretHex: secret,
+          ),
+          streamSeedHex: stream.seedHex,
+          streamPubkey: stream.pubkey,
+        );
+      }
+
+      final message = await carrier('33' * 32, 9, 'Still here', []);
+      await repo.ingestSealedWrap(message);
+      final target = repo.timeline(now: 1793761700).messages.single.id;
+      await expectLater(
+        repo.ingestSealedWrap(
+          await carrier('55' * 32, 5, '', [
+            ['e', target],
+            ['vac', '00' * 32, '99999999999999999999', '00' * 32],
+          ]),
+        ),
+        completes,
+      );
+      expect(repo.timeline(now: 1793761700).messages.single.body, 'Still here');
+      await repo.close();
+    });
   });
 }

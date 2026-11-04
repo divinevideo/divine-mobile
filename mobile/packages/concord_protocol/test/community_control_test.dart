@@ -5,6 +5,43 @@ import 'package:test/test.dart';
 import 'fixture_reader.dart';
 
 void main() {
+  group('ConcordCitation.fromTags', () {
+    final entity = 'AB' * 32;
+    final hash = 'cd' * 32;
+    test('reads the first complete vac tag and lowercases its hashes', () {
+      final citation = ConcordCitation.fromTags([
+        ['vac', entity],
+        ['vac', entity, '7', hash],
+      ])!;
+      expect(citation.entityId, 'ab' * 32);
+      expect(citation.version, 7);
+      expect(citation.hash, hash);
+    });
+    test('an out-of-range version reads as no citation', () {
+      expect(
+        ConcordCitation.fromTags([
+          ['vac', entity, '99999999999999999999', hash],
+        ]),
+        isNull,
+      );
+    });
+    test('missing or malformed citations read as none', () {
+      for (final tags in [
+        <List<Object?>>[],
+        [
+          ['vac', entity, '07', hash],
+        ],
+        [
+          ['vac', 'zz', '1', hash],
+        ],
+        [
+          ['vac', entity, 1, hash],
+        ],
+      ]) {
+        expect(ConcordCitation.fromTags(tags), isNull, reason: '$tags');
+      }
+    });
+  });
   final owner = '11' * 32;
   final member = '22' * 32;
   final admin = '33' * 32;

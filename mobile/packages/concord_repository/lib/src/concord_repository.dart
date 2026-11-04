@@ -411,33 +411,6 @@ class ConcordRepository {
     });
   }
 
-  ConcordCitation? _citation(Map<String, dynamic> rumor) {
-    final tag = (rumor['tags'] as List)
-        .whereType<List<dynamic>>()
-        .where((t) => t.length >= 4 && t[0] == 'vac')
-        .firstOrNull;
-    if (tag == null ||
-        tag[1] is! String ||
-        tag[2] is! String ||
-        tag[3] is! String ||
-        !RegExp(
-          r'^[0-9a-f]{64}$',
-          caseSensitive: false,
-        ).hasMatch(tag[1] as String) ||
-        !RegExp(r'^(0|[1-9][0-9]*)$').hasMatch(tag[2] as String) ||
-        !RegExp(
-          r'^[0-9a-f]{64}$',
-          caseSensitive: false,
-        ).hasMatch(tag[3] as String)) {
-      return null;
-    }
-    return ConcordCitation(
-      (tag[1] as String).toLowerCase(),
-      int.parse(tag[2] as String),
-      (tag[3] as String).toLowerCase(),
-    );
-  }
-
   void _applyRumor(Map<String, dynamic> rumor) {
     final id = rumor['id'] as String;
     final kind = rumor['kind'] as int;
@@ -475,7 +448,9 @@ class ConcordRepository {
       _controls.add(
         ControlEvent(
           type: type,
-          citation: _citation(rumor),
+          citation: ConcordCitation.fromTags(
+            (rumor['tags'] as List).whereType<List<Object?>>(),
+          ),
           id: id,
           targetId: tag[1] as String,
           createdAt: rumor['created_at'] as int,

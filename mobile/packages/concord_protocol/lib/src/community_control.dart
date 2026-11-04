@@ -8,6 +8,27 @@ final _decimal = RegExp(r'^(0|[1-9][0-9]*)$');
 
 class ConcordCitation {
   const ConcordCitation(this.entityId, this.version, this.hash);
+
+  /// Reads the first CORD `vac` authority citation in [tags], or null when it
+  /// is absent or malformed. A version beyond `int` range can never match a
+  /// held head, so it reads as no citation instead of throwing.
+  static ConcordCitation? fromTags(Iterable<List<Object?>> tags) {
+    final tag = tags.where((t) => t.length >= 4 && t[0] == 'vac').firstOrNull;
+    if (tag == null) return null;
+    final [_, entity, version, hash, ...] = tag;
+    if (entity is! String ||
+        version is! String ||
+        hash is! String ||
+        !_hex.hasMatch(entity) ||
+        !_decimal.hasMatch(version) ||
+        !_hex.hasMatch(hash)) {
+      return null;
+    }
+    final parsed = int.tryParse(version);
+    if (parsed == null) return null;
+    return ConcordCitation(entity.toLowerCase(), parsed, hash.toLowerCase());
+  }
+
   final String entityId;
   final int version;
   final String hash;
@@ -57,19 +78,7 @@ class ConcordEdition {
     }
     final version = int.parse(ev);
     final previous = value('ep') == null ? null : hashTag('ep');
-    ConcordCitation? citation;
-    final vac = tag('vac');
-    if (vac != null &&
-        vac.length >= 4 &&
-        _hex.hasMatch(vac[1]) &&
-        _decimal.hasMatch(vac[2]) &&
-        _hex.hasMatch(vac[3])) {
-      citation = ConcordCitation(
-        vac[1].toLowerCase(),
-        int.parse(vac[2]),
-        vac[3].toLowerCase(),
-      );
-    }
+    final citation = ConcordCitation.fromTags(tags);
     final content = opened['content'] as String;
     return ConcordEdition._(
       author: opened['author'] as String,
