@@ -2538,6 +2538,7 @@
   "soundsShareCoverSheetTitle": "సౌండ్ కవర్",
   "soundsImportUnsupportedFormat": "ఆ ఫైల్ రకానికి మద్దతు లేదు. ఒక ఆడియో ఫైల్‌ను ఎంచుకోండి.",
   "soundsImportUnreadable": "ఆ ఆడియో ఫైల్‌ను చదవడం సాధ్యపడలేదు.",
+  "soundsAddSilent": "ఈ సౌండ్‌లో ఏమీ వినిపించదు, కాబట్టి దీన్ని జోడించడం సాధ్యం కాదు.",
   "soundsImportAccountChanged": "మీరు ఖాతా మార్చారు, కాబట్టి ఈ సౌండ్ జోడించబడలేదు.",
   "soundsSavedLibraryTitle": "నా సౌండ్స్",
   "soundsSavedEmptyTitle": "ఇంకా సేవ్ చేయబడిన శబ్దాలు లేవు",

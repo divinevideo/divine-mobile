@@ -69,6 +69,10 @@ enum AddSoundFailure {
 
   /// The relay reports the account suspended or banned. Retrying cannot help.
   accountRestricted,
+
+  /// Nothing in the picked file or recording is loud enough to hear, so it
+  /// was neither added to My Sounds nor shared. Retrying cannot help.
+  silentSound,
 }
 
 class AddSoundState extends Equatable {

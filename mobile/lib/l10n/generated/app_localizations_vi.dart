@@ -4520,6 +4520,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get soundsImportUnreadable => 'Không đọc được tệp âm thanh đó.';
 
   @override
+  String get soundsAddSilent =>
+      'Âm thanh này không có tiếng gì để nghe, nên không thể thêm.';
+
+  @override
   String get soundsImportAccountChanged =>
       'Bạn đã đổi tài khoản nên âm thanh này chưa được thêm.';
 

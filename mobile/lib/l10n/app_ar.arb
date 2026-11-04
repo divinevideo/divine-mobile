@@ -4141,6 +4141,7 @@
   "soundsShareCoverSheetTitle": "غلاف الصوت",
   "soundsImportUnsupportedFormat": "نوع الملف هذا غير مدعوم. يُرجى اختيار ملف صوتي.",
   "soundsImportUnreadable": "تعذّرت قراءة هذا الملف الصوتي.",
+  "soundsAddSilent": "لا يُسمع أي شيء في هذا الصوت، لذا لا يمكن إضافته.",
   "soundsImportAccountChanged": "تم تبديل الحساب، لذا لم تتم إضافة هذا الصوت.",
   "soundsRemoveSavedSound": "إزالة الصوت",
   "savedSoundSaveAction": "حفظ",

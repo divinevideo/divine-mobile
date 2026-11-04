@@ -4574,6 +4574,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Dit audiobestand kon niet worden gelezen.';
 
   @override
+  String get soundsAddSilent =>
+      'In dit geluid is niets te horen, dus het kan niet worden toegevoegd.';
+
+  @override
   String get soundsImportAccountChanged =>
       'Je bent van account gewisseld, dus deze sound is niet toegevoegd.';
 

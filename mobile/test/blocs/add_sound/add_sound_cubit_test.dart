@@ -56,6 +56,8 @@ void main() {
     late String? lastSavedLabel;
     late String? accountId;
     late Future<Duration?> Function(File file) durationFn;
+    late SilentAudioChecker isSilent;
+    late List<String> silenceChecked;
     late _MockPublisher publisher;
 
     setUp(() async {
@@ -67,6 +69,8 @@ void main() {
       lastSavedLabel = null;
       accountId = 'account-a';
       durationFn = (_) async => const Duration(seconds: 3);
+      isSilent = (_) async => false;
+      silenceChecked = <String>[];
       publisher = _MockPublisher();
     });
 
@@ -96,6 +100,10 @@ void main() {
               return SavedSoundSaveResult.saved;
             },
         reclaimAudio: (path) async => reclaimed.add(path),
+        isSilent: (path) {
+          silenceChecked.add(path);
+          return isSilent(path);
+        },
         viewerAccountId: () => accountId,
         publisher: () => publisher,
         publisherName: 'Alice',
@@ -220,6 +228,71 @@ void main() {
         },
       );
 
+      test(
+        'refuses a file with nothing to hear and reclaims its copy',
+        () async {
+          isSilent = (_) async => true;
+          final cubit = build();
+          addTearDown(cubit.close);
+
+          await cubit.pickFileAndImport();
+
+          expect(cubit.state.status, AddSoundStatus.idle);
+          expect(cubit.state.failure, AddSoundFailure.silentSound);
+          expect(cubit.state.audio, isNull);
+          final copy = silenceChecked.single;
+          expect(copy, startsWith(storageDir.path));
+          expect(reclaimed, equals([copy]));
+          expect(source.existsSync(), isTrue);
+        },
+      );
+
+      test('a silent re-pick keeps the current sound', () async {
+        final cubit = build();
+        addTearDown(cubit.close);
+        await cubit.pickFileAndImport();
+        final first = cubit.state.audio!;
+
+        isSilent = (_) async => true;
+        await cubit.pickFileAndImport();
+
+        expect(cubit.state.status, AddSoundStatus.ready);
+        expect(cubit.state.audio, same(first));
+        expect(cubit.state.failure, AddSoundFailure.silentSound);
+        expect(reclaimed, equals([silenceChecked.last]));
+        expect(reclaimed, isNot(contains(first.localFilePath)));
+      });
+
+      test(
+        'abandons the copy when the account changes during the silence check',
+        () async {
+          isSilent = (_) async {
+            accountId = 'account-b';
+            return false;
+          };
+          final cubit = build();
+          addTearDown(cubit.close);
+
+          await cubit.pickFileAndImport();
+
+          expect(cubit.state.failure, AddSoundFailure.accountChanged);
+          expect(cubit.state.audio, isNull);
+          expect(reclaimed, equals([silenceChecked.single]));
+        },
+      );
+
+      test('keeps the file when the silence check fails', () async {
+        isSilent = (_) async => throw StateError('decoder gone');
+        final cubit = build();
+        addTearDown(cubit.close);
+
+        await cubit.pickFileAndImport();
+
+        expect(cubit.state.status, AddSoundStatus.ready);
+        expect(cubit.state.failure, isNull);
+        expect(reclaimed, isEmpty);
+      });
+
       test('an unsupported extension reports an unsupported format', () async {
         final cubit = build(
           pickFile: () async =>
@@ -302,6 +375,22 @@ void main() {
         );
         expect(recording.existsSync(), isFalse);
         expect(reclaimed, equals([picked.localFilePath]));
+      });
+
+      test('a silent recording keeps the current sound', () async {
+        isSilent = (path) async => path.endsWith('.m4a');
+        final cubit = build();
+        addTearDown(cubit.close);
+        await cubit.pickFileAndImport();
+        final picked = cubit.state.audio!;
+
+        await cubit.importRecording(path: recording.path, title: 'Recording');
+
+        expect(cubit.state.failure, AddSoundFailure.silentSound);
+        expect(cubit.state.audio, same(picked));
+        expect(cubit.state.source, AddSoundSource.file);
+        expect(reclaimed, equals([silenceChecked.last]));
+        expect(silenceChecked.last, endsWith('.m4a'));
       });
 
       test('a recording that cannot be read keeps the current sound', () async {
@@ -566,6 +655,21 @@ void main() {
         expect(cubit.state.failure, AddSoundFailure.notSignedIn);
       });
 
+      test('names a sound with nothing to hear as its own failure', () async {
+        stubPublish(
+          () async =>
+              const LocalAudioPublishFailed(LocalAudioPublishFailure.silent),
+        );
+        final cubit = await sharingCubit();
+        addTearDown(cubit.close);
+
+        await cubit.save();
+
+        expect(cubit.state.status, AddSoundStatus.ready);
+        expect(cubit.state.failure, AddSoundFailure.silentSound);
+        expect(savedSounds, isEmpty);
+      });
+
       test('surfaces an account restriction', () async {
         stubPublish(
           () async => throw const AccountRestrictedPublishException(
@@ -639,6 +743,22 @@ void main() {
     });
 
     group('close', () {
+      test('reclaims a copy whose silence check outlives the cubit', () async {
+        final checked = Completer<bool>();
+        isSilent = (_) => checked.future;
+        final cubit = build();
+
+        final importing = cubit.pickFileAndImport();
+        while (silenceChecked.isEmpty) {
+          await pumpEventQueue();
+        }
+        await cubit.close();
+        checked.complete(false);
+        await importing;
+
+        expect(reclaimed, equals([silenceChecked.single]));
+      });
+
       test('reclaims an unsaved copy', () async {
         final cubit = build();
         await cubit.pickFileAndImport();

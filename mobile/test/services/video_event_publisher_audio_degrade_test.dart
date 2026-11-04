@@ -13,6 +13,7 @@ import 'package:openvine/exceptions/video_exceptions.dart';
 import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
+import 'package:openvine/services/sound_silence_trimmer.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_event_publisher.dart';
 
@@ -29,6 +30,8 @@ class _MockAudioExtractionService extends Mock
 
 class _MockPersonalEventCacheService extends Mock
     implements PersonalEventCacheService {}
+
+class _MockSoundSilenceTrimmer extends Mock implements SoundSilenceTrimmer {}
 
 class _FakeEvent extends Fake implements Event {}
 
@@ -50,6 +53,7 @@ void main() {
       registerFallbackValue(UploadStatus.pending);
       registerFallbackValue(File(''));
       registerFallbackValue(Duration.zero);
+      registerFallbackValue(const AudibleSound(path: '', mimeType: ''));
     });
 
     setUp(() {
@@ -59,6 +63,21 @@ void main() {
       mockBlossomUploadService = _MockBlossomUploadService();
       mockAudioExtractionService = _MockAudioExtractionService();
       mockPersonalEventCache = _MockPersonalEventCacheService();
+      // Every extracted sound counts as audible and uncut, so these tests
+      // exercise the degrade path rather than the silence check.
+      final trimmer = _MockSoundSilenceTrimmer();
+      when(
+        () => trimmer.trim(
+          path: any(named: 'path'),
+          mimeType: any(named: 'mimeType'),
+        ),
+      ).thenAnswer(
+        (invocation) async => AudibleSound(
+          path: invocation.namedArguments[#path] as String,
+          mimeType: invocation.namedArguments[#mimeType] as String,
+        ),
+      );
+      when(() => trimmer.deleteTrimmedCopy(any())).thenAnswer((_) async {});
 
       publisher = VideoEventPublisher(
         uploadManager: mockUploadManager,
@@ -67,6 +86,7 @@ void main() {
         personalEventCache: mockPersonalEventCache,
         blossomUploadService: mockBlossomUploadService,
         audioExtractionService: mockAudioExtractionService,
+        soundSilenceTrimmer: trimmer,
       );
 
       when(() => mockAuthService.isAuthenticated).thenReturn(true);

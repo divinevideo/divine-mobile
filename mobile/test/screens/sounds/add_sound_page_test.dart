@@ -27,12 +27,14 @@ import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/providers/documents_path_provider.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/sound_upload_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/screens/sounds/add_sound_page.dart';
 import 'package:openvine/screens/sounds/widgets/share_cover_section.dart';
 import 'package:openvine/services/local_audio_event_publisher.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
+import 'package:openvine/services/sound_silence_trimmer.dart';
 import 'package:openvine/services/video_editor/voice_over_recorder_service.dart';
 import 'package:openvine/widgets/audio/public_audio_credit_editor.dart';
 import 'package:permissions_service/permissions_service.dart';
@@ -42,6 +44,14 @@ import 'package:sound_service/sound_service.dart';
 import '../../helpers/scroll.dart';
 
 class _MockPublisher extends Mock implements LocalAudioEventPublisher {}
+
+/// Answers the import's silence check without decoding anything.
+class _FakeSoundSilenceTrimmer extends Fake implements SoundSilenceTrimmer {
+  bool silent = false;
+
+  @override
+  Future<bool> isSilent(String path) async => silent;
+}
 
 class _MockPermissionsService extends Mock implements PermissionsService {}
 
@@ -211,6 +221,7 @@ void main() {
   late _MockPermissionsService permissions;
   late _FakeRecorder recorder;
   late AppLocalizations l10n;
+  late _FakeSoundSilenceTrimmer trimmer;
   AudioImportPickedFile? nextPick;
 
   setUpAll(() {
@@ -234,6 +245,7 @@ void main() {
     ).thenAnswer((_) async => PermissionStatus.granted);
     when(permissions.openAppSettings).thenAnswer((_) async => true);
     l10n = lookupAppLocalizations(const Locale('en'));
+    trimmer = _FakeSoundSilenceTrimmer();
     nextPick = AudioImportPickedFile(path: source.path, name: 'beat.mp3');
     when(
       () => publisher.publish(
@@ -271,6 +283,7 @@ void main() {
       ProviderScope(
         overrides: [
           audioPlaybackServiceProvider.overrideWithValue(audio),
+          soundSilenceTrimmerProvider.overrideWithValue(trimmer),
           ...overrides,
         ],
         child: SavedSoundsScope(
@@ -308,6 +321,7 @@ void main() {
                 pickFile: () async => nextPick,
                 saveSound: context.read<SavedSoundsBloc>().saveSound,
                 reclaimAudio: (path) async => reclaimed.add(path),
+                isSilent: trimmer.isSilent,
                 viewerAccountId: () => _self,
                 publisher: () => publisher,
                 publisherName: 'Alice',
@@ -427,6 +441,24 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(reclaimed, hasLength(1));
+    });
+
+    testWidgets('refuses a silent pick through the app silence check', (
+      tester,
+    ) async {
+      trimmer.silent = true;
+      await pump(
+        tester,
+        page: const AddSoundPage(),
+        overrides: pageOverrides(),
+      );
+
+      await pickFile(tester);
+
+      expect(find.text(l10n.soundsAddSilent), findsOneWidget);
+      expect(find.byKey(const Key('add_sound_save')), findsNothing);
+      expect(reclaimed, hasLength(1));
+      expect(librarySounds(), isEmpty);
     });
   });
 
@@ -757,6 +789,21 @@ void main() {
         expect(librarySounds(), isEmpty);
       });
 
+      testWidgets('says a sound with nothing to hear cannot be added', (
+        tester,
+      ) async {
+        trimmer.silent = true;
+        await pumpView(tester);
+
+        await pickFile(tester);
+
+        expect(find.text(l10n.soundsAddSilent), findsOneWidget);
+        expect(find.byKey(const Key('add_sound_pick')), findsOneWidget);
+        expect(find.byKey(const Key('add_sound_save')), findsNothing);
+        expect(reclaimed, equals(['${storageDir.path}/beat.mp3']));
+        expect(librarySounds(), isEmpty);
+      });
+
       testWidgets('disables share until the credit is complete', (
         tester,
       ) async {
@@ -885,6 +932,30 @@ void main() {
         expect(router.state.uri.path, '/add');
         expect(find.text(l10n.soundUploadFailed), findsOneWidget);
         expect(find.byKey(const Key('audio_credit_title')), findsOneWidget);
+        expect(librarySounds(), isEmpty);
+      });
+
+      testWidgets('says why a silent sound is not shared', (tester) async {
+        when(
+          () => publisher.publish(
+            audio: any(named: 'audio'),
+            attribution: any(named: 'attribution'),
+            allowAudioReuse: any(named: 'allowAudioReuse'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              const LocalAudioPublishFailed(LocalAudioPublishFailure.silent),
+        );
+        final router = await pumpView(tester);
+        await pickFile(tester);
+        await sharePublicly(tester);
+
+        await tester.tap(find.byKey(const Key('add_sound_save')));
+        await tester.pumpAndSettle();
+
+        expect(router.state.uri.path, '/add');
+        expect(find.text(l10n.soundsAddSilent), findsOneWidget);
+        expect(find.text(l10n.soundUploadFailed), findsNothing);
         expect(librarySounds(), isEmpty);
       });
 

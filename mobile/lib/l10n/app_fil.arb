@@ -3245,6 +3245,7 @@
   "soundsShareCoverSheetTitle": "Cover ng sound",
   "soundsImportUnsupportedFormat": "Hindi suportado ang file type na iyan. Pumili ng audio file.",
   "soundsImportUnreadable": "Hindi mabasa ang audio file na iyan.",
+  "soundsAddSilent": "Walang maririnig sa sound na ito, kaya hindi ito maidadagdag.",
   "soundsImportAccountChanged": "Nagpalit ka ng account, kaya hindi naidagdag ang sound na ito.",
   "soundsSavedLibraryTitle": "Mga Sound Ko",
   "soundsSavedEmptyTitle": "Wala pang naka-save na sound",

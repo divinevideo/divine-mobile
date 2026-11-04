@@ -4141,6 +4141,7 @@
   "soundsShareCoverSheetTitle": "Coperta sunetului",
   "soundsImportUnsupportedFormat": "Acest tip de fișier nu este acceptat. Alege un fișier audio.",
   "soundsImportUnreadable": "Fișierul audio nu a putut fi citit.",
+  "soundsAddSilent": "În acest sunet nu se aude nimic, așa că nu poate fi adăugat.",
   "soundsImportAccountChanged": "Ai schimbat contul, așa că sunetul nu a fost adăugat.",
   "soundsRemoveSavedSound": "Elimină sunetul",
   "savedSoundSaveAction": "Salvează",

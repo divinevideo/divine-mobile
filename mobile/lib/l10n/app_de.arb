@@ -4141,6 +4141,7 @@
   "soundsShareCoverSheetTitle": "Sound-Cover",
   "soundsImportUnsupportedFormat": "Dieser Dateityp wird nicht unterstützt. Wähle eine Audiodatei.",
   "soundsImportUnreadable": "Diese Audiodatei konnte nicht gelesen werden.",
+  "soundsAddSilent": "In diesem Sound ist nichts zu hören, deshalb kann er nicht hinzugefügt werden.",
   "soundsImportAccountChanged": "Du hast das Konto gewechselt, deshalb wurde der Sound nicht hinzugefügt.",
   "soundsRemoveSavedSound": "Sound entfernen",
   "savedSoundSaveAction": "Speichern",

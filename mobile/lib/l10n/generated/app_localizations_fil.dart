@@ -4585,6 +4585,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String get soundsImportUnreadable => 'Hindi mabasa ang audio file na iyan.';
 
   @override
+  String get soundsAddSilent =>
+      'Walang maririnig sa sound na ito, kaya hindi ito maidadagdag.';
+
+  @override
   String get soundsImportAccountChanged =>
       'Nagpalit ka ng account, kaya hindi naidagdag ang sound na ito.';
 

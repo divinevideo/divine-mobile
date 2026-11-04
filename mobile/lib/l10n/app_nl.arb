@@ -4141,6 +4141,7 @@
   "soundsShareCoverSheetTitle": "Geluidscover",
   "soundsImportUnsupportedFormat": "Dit bestandstype wordt niet ondersteund. Kies een audiobestand.",
   "soundsImportUnreadable": "Dit audiobestand kon niet worden gelezen.",
+  "soundsAddSilent": "In dit geluid is niets te horen, dus het kan niet worden toegevoegd.",
   "soundsImportAccountChanged": "Je bent van account gewisseld, dus deze sound is niet toegevoegd.",
   "soundsRemoveSavedSound": "Sound verwijderen",
   "savedSoundSaveAction": "Opslaan",

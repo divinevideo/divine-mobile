@@ -4141,6 +4141,7 @@
   "soundsShareCoverSheetTitle": "Portada del sonido",
   "soundsImportUnsupportedFormat": "Ese tipo de archivo no es compatible. Elegí un archivo de audio.",
   "soundsImportUnreadable": "No se pudo leer ese archivo de audio.",
+  "soundsAddSilent": "No se escucha nada en este sonido, así que no se puede agregar.",
   "soundsImportAccountChanged": "Cambiaste de cuenta, así que este sonido no se agregó.",
   "soundsRemoveSavedSound": "Eliminar sonido",
   "savedSoundSaveAction": "Guardar",

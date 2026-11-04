@@ -2186,6 +2186,7 @@
   "soundsShareCoverSheetTitle": "声音封面",
   "soundsImportUnsupportedFormat": "不支持该文件类型。请选择音频文件。",
   "soundsImportUnreadable": "无法读取该音频文件。",
+  "soundsAddSilent": "这个声音里听不到任何内容，因此无法添加。",
   "soundsImportAccountChanged": "你切换了账号，因此这个声音没有被添加。",
   "soundsSavedLibraryTitle": "我的声音",
   "soundsSavedEmptyTitle": "还没有保存的声音",

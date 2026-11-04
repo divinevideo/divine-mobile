@@ -2186,6 +2186,7 @@
   "soundsShareCoverSheetTitle": "Kulit bunyi",
   "soundsImportUnsupportedFormat": "Jenis fail itu tidak disokong. Pilih fail audio.",
   "soundsImportUnreadable": "Fail audio itu tidak dapat dibaca.",
+  "soundsAddSilent": "Tiada apa-apa yang kedengaran dalam bunyi ini, jadi ia tidak boleh ditambah.",
   "soundsImportAccountChanged": "Anda telah menukar akaun, jadi bunyi ini tidak ditambah.",
   "soundsSavedLibraryTitle": "Bunyi Saya",
   "soundsSavedEmptyTitle": "Belum ada bunyi disimpan",

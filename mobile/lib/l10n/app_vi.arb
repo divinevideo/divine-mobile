@@ -2186,6 +2186,7 @@
   "soundsShareCoverSheetTitle": "Ảnh bìa âm thanh",
   "soundsImportUnsupportedFormat": "Loại tệp đó không được hỗ trợ. Hãy chọn một tệp âm thanh.",
   "soundsImportUnreadable": "Không đọc được tệp âm thanh đó.",
+  "soundsAddSilent": "Âm thanh này không có tiếng gì để nghe, nên không thể thêm.",
   "soundsImportAccountChanged": "Bạn đã đổi tài khoản nên âm thanh này chưa được thêm.",
   "soundsSavedLibraryTitle": "Âm thanh của tôi",
   "soundsSavedEmptyTitle": "Chưa có âm thanh đã lưu",

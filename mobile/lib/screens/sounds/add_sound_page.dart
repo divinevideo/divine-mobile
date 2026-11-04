@@ -76,6 +76,7 @@ class AddSoundPage extends ConsumerWidget {
               ),
               saveSound: savedSoundsBloc.saveSound,
               reclaimAudio: ref.read(audioImportReclaimerProvider),
+              isSilent: ref.read(soundSilenceTrimmerProvider).isSilent,
               viewerAccountId: () => container.read(currentAccountIdProvider),
               publisher: () => container.read(localAudioEventPublisherProvider),
               publisherName:
@@ -397,6 +398,7 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
         AddSoundFailure.notSignedIn => l10n.soundUploadSignInFirst,
         AddSoundFailure.publishFailed => l10n.soundUploadFailed,
         AddSoundFailure.accountRestricted => l10n.soundUploadAccountRestricted,
+        AddSoundFailure.silentSound => l10n.soundsAddSilent,
       }, error: true),
     );
   }

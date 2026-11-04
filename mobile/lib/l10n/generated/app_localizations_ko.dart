@@ -4293,6 +4293,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get soundsImportUnreadable => '그 오디오 파일을 읽을 수 없어요.';
 
   @override
+  String get soundsAddSilent => '이 사운드에는 들리는 소리가 없어서 추가할 수 없어요.';
+
+  @override
   String get soundsImportAccountChanged => '계정을 바꿔서 이 사운드는 추가되지 않았어요.';
 
   @override
