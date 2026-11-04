@@ -438,6 +438,38 @@ void main() {
       expect(excerptSent(), isNull);
     });
 
+    test(
+      'a message report names the sender, since nothing else does',
+      () async {
+        final cubit = build(reportTarget: messageTarget);
+        addTearDown(cubit.close);
+
+        await submit(cubit);
+
+        final content =
+            verify(
+                  () => service.reportContent(
+                    eventId: messageTarget.eventId,
+                    authorPubkey: messageTarget.authorPubkey,
+                    reason: any(named: 'reason'),
+                    details: any(named: 'details'),
+                    sourceRelay: any(named: 'sourceRelay'),
+                    moderationContent: captureAny(named: 'moderationContent'),
+                    moderationTags: any(named: 'moderationTags'),
+                    publishToRelays: false,
+                    unverifiedMessageExcerpt: any(
+                      named: 'unverifiedMessageExcerpt',
+                    ),
+                  ),
+                ).captured.single
+                as String;
+        expect(
+          content.split('\n'),
+          contains('Sender Pubkey: ${messageTarget.authorPubkey}'),
+        );
+      },
+    );
+
     test('an included message is sent as the unverified excerpt', () async {
       final cubit = build(reportTarget: messageTarget);
       addTearDown(cubit.close);

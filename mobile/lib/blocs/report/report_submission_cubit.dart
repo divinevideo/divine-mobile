@@ -167,6 +167,12 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
         ..writeln(
           '${_target.moderationEventLabel}: ${_target.moderationSubject}',
         );
+      // A private message report has no public event or ticket to name the
+      // sender, and moderators can't resolve a message ID, so the DM says.
+      // A `p` tag would make the sender a member of the moderation room.
+      if (!_target.isUserReport && !_target.publishesPublicReport) {
+        content.writeln('Sender Pubkey: ${_target.authorPubkey}');
+      }
       if (details.isNotEmpty) content.writeln('Details: $details');
       final tags = ContentReportingService.moderationDmTags(
         reason: reason,
