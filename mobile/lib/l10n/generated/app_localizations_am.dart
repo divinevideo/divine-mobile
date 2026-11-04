@@ -1366,6 +1366,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get exploreTabClassics => 'ክላሲኮች';
 
   @override
+  String get exploreTabLatest => 'የቅርብ ጊዜ';
+
+  @override
   String get exploreTabNew => 'አዲስ';
 
   @override
@@ -7440,6 +7443,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => 'በአዲስ ቪዲዮዎች ውስጥ ምንም ቪዲዮ የለም';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'በየቅርብ ጊዜ ውስጥ ምንም ቪዲዮ የለም';
 
   @override
   String get popularVideosContextTitle => 'ታዋቂ ቪዲዮዎች';

@@ -118,6 +118,7 @@ void main() {
         PopularViewSource() => 'popular',
         ClassicVinesViewSource() => 'classics',
         NewVideosViewSource() => 'new',
+        NewCreatorsViewSource() => 'new-creators',
         ProfileViewSource() => 'profile',
         LikedViewSource() => 'liked',
         RepostsViewSource() => 'reposts',

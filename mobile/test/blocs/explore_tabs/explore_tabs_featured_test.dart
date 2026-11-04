@@ -17,13 +17,17 @@ FeaturedTabConfig _featured() {
   );
 }
 
-/// Asserts the featured tab sits in the slot between New and Popular.
-void _expectBetweenNewAndPopular(ExploreTabsState state) {
+/// Asserts the featured tab sits right after the publication feeds (Latest,
+/// then New when shown) and right before Popular.
+void _expectBeforePopular(ExploreTabsState state) {
   final names = state.tabNames;
+  final lastPublicationFeed = state.newCreatorsAvailable
+      ? exploreNewTabName
+      : exploreLatestTabName;
   expect(
     names.indexOf(exploreFeaturedTabName),
-    equals(names.indexOf(exploreDefaultTabName) + 1),
-    reason: 'featured must sit immediately after New',
+    equals(names.indexOf(lastPublicationFeed) + 1),
+    reason: 'featured must sit immediately after $lastPublicationFeed',
   );
   expect(
     names.indexOf(exploreFeaturedTabName) + 1,
@@ -40,26 +44,33 @@ void main() {
       expect(state.tabNames, isNot(contains(exploreFeaturedTabName)));
     });
 
-    test('sits between New and Popular', () {
-      _expectBetweenNewAndPopular(ExploreTabsState(featuredTab: _featured()));
+    test('sits between Latest and Popular', () {
+      _expectBeforePopular(ExploreTabsState(featuredTab: _featured()));
     });
 
-    test('sits between New and Popular when Classics is hidden', () {
+    test('sits between Latest and Popular when Classics is hidden', () {
       // Classics is optional, so the slot cannot be a literal index: without
       // it every tab shifts up one and a hard-coded 2 lands on Popular.
-      _expectBetweenNewAndPopular(
+      _expectBeforePopular(
         ExploreTabsState(featuredTab: _featured()),
       );
       expect(
         ExploreTabsState(featuredTab: _featured()).tabNames.first,
-        equals(exploreDefaultTabName),
+        equals(exploreLatestTabName),
+      );
+    });
+
+    test('sits between New and Popular when New is shown', () {
+      _expectBeforePopular(
+        ExploreTabsState(newCreatorsAvailable: true, featuredTab: _featured()),
       );
     });
 
     test('sits between New and Popular when every optional tab is on', () {
-      _expectBetweenNewAndPopular(
+      _expectBeforePopular(
         ExploreTabsState(
           classicsAvailable: true,
+          newCreatorsAvailable: true,
           forYouAvailable: true,
           appsAvailable: true,
           featuredTab: _featured(),
@@ -112,8 +123,8 @@ void main() {
       );
 
       expect(
-        state.tabNames[state.newVideosIndex],
-        equals(exploreDefaultTabName),
+        state.tabNames[state.latestIndex],
+        equals(exploreLatestTabName),
       );
       expect(
         state.tabNames[state.trendingIndex],

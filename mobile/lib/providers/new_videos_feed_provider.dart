@@ -1,5 +1,5 @@
-// ABOUTME: New Videos feed provider showing videos by original publication time
-// ABOUTME: Uses VideosRepository.getNewVideos so Explore New is distinct from Popular
+// ABOUTME: Explore Latest and New feeds, both ordered by original publication
+// ABOUTME: time; New keeps only videos from creators who debuted recently.
 
 import 'package:models/models.dart';
 import 'package:openvine/constants/app_constants.dart';
@@ -17,10 +17,23 @@ import 'package:videos_repository/videos_repository.dart';
 
 part 'new_videos_feed_provider.g.dart';
 
-/// New Videos feed provider - shows newest videos first.
+/// The two Explore feeds ordered by original publication time.
+enum PublicationFeed {
+  /// Every public video, newest first. The Explore Latest tab and the home
+  /// feed's latest mode.
+  latest,
+
+  /// Only videos from creators whose first video on Divine is at most 30
+  /// days old, three per creator. The Explore New tab. API only.
+  newCreators,
+}
+
+/// Publication-ordered feed provider - shows newest videos first.
 ///
-/// Delegates video fetching to [VideosRepository.getNewVideos] so the Explore
-/// New Videos tab does not share the popular/trending source.
+/// [PublicationFeed.latest] delegates to [VideosRepository.getNewVideos], so
+/// the Explore Latest tab does not share the popular/trending source.
+/// [PublicationFeed.newCreators] delegates to
+/// [VideosRepository.getNewCreatorVideos], which has no relay fallback.
 @Riverpod(keepAlive: true)
 class NewVideosFeed extends _$NewVideosFeed {
   int? _nextCursor;
@@ -29,7 +42,7 @@ class NewVideosFeed extends _$NewVideosFeed {
   final _enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
   @override
-  Future<VideoFeedState> build() async {
+  Future<VideoFeedState> build(PublicationFeed feed) async {
     _nextCursor = null;
     _paginationCursor = null;
 
@@ -40,7 +53,7 @@ class NewVideosFeed extends _$NewVideosFeed {
     final isAppReady = ref.watch(appReadyProvider);
 
     Log.info(
-      'NewVideosFeed: Building (appReady: $isAppReady)',
+      'NewVideosFeed(${feed.name}): Building (appReady: $isAppReady)',
       name: 'NewVideosFeedProvider',
       category: LogCategory.video,
     );
@@ -63,10 +76,16 @@ class NewVideosFeed extends _$NewVideosFeed {
   }) async {
     try {
       final videosRepository = ref.read(videosRepositoryProvider);
-      final page = await videosRepository.getNewVideos(
-        limit: AppConstants.paginationBatchSize,
-        skipCache: bypassRepositoryCache,
-      );
+      final page = switch (feed) {
+        PublicationFeed.latest => await videosRepository.getNewVideos(
+          limit: AppConstants.paginationBatchSize,
+          skipCache: bypassRepositoryCache,
+        ),
+        PublicationFeed.newCreators =>
+          await videosRepository.getNewCreatorVideos(
+            limit: AppConstants.paginationBatchSize,
+          ),
+      };
       final videos = page.videos;
 
       if (!ref.mounted) {
@@ -89,7 +108,7 @@ class NewVideosFeed extends _$NewVideosFeed {
         );
       }
 
-      final filteredVideos = filterNewFeedVideos(_filterVideos(videos));
+      final filteredVideos = _limitPerCreator(_filterVideos(videos));
       _scheduleEnrichment(filteredVideos);
 
       Log.info(
@@ -127,6 +146,14 @@ class NewVideosFeed extends _$NewVideosFeed {
     if (!ref.mounted || currentState.isLoadingMore) return;
     if (!currentState.hasMoreContent) return;
 
+    // New pages only by the server's cursor. Without one, asking again would
+    // return the first page.
+    final paginationCursor = _paginationCursor;
+    if (feed == PublicationFeed.newCreators && paginationCursor == null) {
+      state = AsyncData(currentState.copyWith(hasMoreContent: false));
+      return;
+    }
+
     final paginationGeneration = _paginationGeneration;
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
@@ -135,11 +162,18 @@ class NewVideosFeed extends _$NewVideosFeed {
       while (true) {
         final requestedUntil = _nextCursor;
         final requestedCursor = _paginationCursor;
-        final page = await videosRepository.getNewVideos(
-          limit: AppConstants.paginationBatchSize,
-          until: requestedCursor == null ? requestedUntil : null,
-          cursor: requestedCursor,
-        );
+        final page = switch (feed) {
+          PublicationFeed.latest => await videosRepository.getNewVideos(
+            limit: AppConstants.paginationBatchSize,
+            until: requestedCursor == null ? requestedUntil : null,
+            cursor: requestedCursor,
+          ),
+          PublicationFeed.newCreators =>
+            await videosRepository.getNewCreatorVideos(
+              limit: AppConstants.paginationBatchSize,
+              cursor: requestedCursor,
+            ),
+        };
 
         // Refresh owns the new window and its cursors once it commits.
         if (!ref.mounted || paginationGeneration != _paginationGeneration) {
@@ -147,16 +181,19 @@ class NewVideosFeed extends _$NewVideosFeed {
         }
         _nextCursor = getOldestTimestamp(page.videos);
         _paginationCursor = page.paginationCursor;
+        // New Diviners pages only by the server's cursor: without one, the
+        // next request would return its first page again.
         final progressed = _paginationCursor != null
             ? _paginationCursor != requestedCursor
-            : _nextCursor != null &&
+            : feed == PublicationFeed.latest &&
+                  _nextCursor != null &&
                   (requestedUntil == null || _nextCursor! < requestedUntil);
         final hasMore = page.hasMore ?? false;
         final dedupedNew = dedupeByFeedKey(
           page.videos,
           alreadySeen: currentState.videos.map((v) => v.feedDedupKey),
         );
-        final allVideos = filterNewFeedVideos([
+        final allVideos = _limitPerCreator([
           ...currentState.videos,
           ..._filterVideos(dedupedNew),
         ]);
@@ -217,6 +254,13 @@ class NewVideosFeed extends _$NewVideosFeed {
       videos.where((v) => v.isSupportedOnCurrentPlatform).toList(),
     );
   }
+
+  /// Latest keeps [newFeedVideosPerCreator] videos per creator. The server
+  /// already caps New Diviners at three per creator.
+  List<VideoEvent> _limitPerCreator(List<VideoEvent> videos) => switch (feed) {
+    PublicationFeed.latest => filterNewFeedVideos(videos),
+    PublicationFeed.newCreators => videos,
+  };
 
   void _scheduleEnrichment(List<VideoEvent> videos) {
     if (videos.isEmpty) return;

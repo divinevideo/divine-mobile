@@ -38,7 +38,8 @@ String labelForExploreTabName(
   exploreFeaturedTabName => l10n.exploreTabFeatured,
   exploreClassicsTabName =>
     shellTitle ? l10n.navExploreClassics : l10n.exploreTabClassics,
-  exploreDefaultTabName =>
+  exploreLatestTabName => l10n.exploreTabLatest,
+  exploreNewTabName =>
     shellTitle ? l10n.navExploreNewVideos : l10n.exploreTabNew,
   explorePopularTabName =>
     shellTitle ? l10n.navExploreTrending : l10n.exploreTabPopular,

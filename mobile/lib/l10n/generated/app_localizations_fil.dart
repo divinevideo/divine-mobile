@@ -1383,6 +1383,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get exploreTabClassics => 'Klasiko';
 
   @override
+  String get exploreTabLatest => 'Pinakabago';
+
+  @override
   String get exploreTabNew => 'Bago';
 
   @override
@@ -7670,6 +7673,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => 'Walang video sa New Videos';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'Walang video sa Pinakabago';
 
   @override
   String get popularVideosContextTitle => 'Mga sikat na video';

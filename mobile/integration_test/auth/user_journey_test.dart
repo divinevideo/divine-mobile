@@ -505,7 +505,7 @@ void main() {
 
           final hasExploreScreen =
               find.text('Popular').evaluate().isNotEmpty ||
-              find.text('New').evaluate().isNotEmpty;
+              find.text('Latest').evaluate().isNotEmpty;
           expect(
             hasExploreScreen,
             isTrue,

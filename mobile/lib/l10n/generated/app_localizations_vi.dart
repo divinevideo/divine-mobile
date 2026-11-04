@@ -1365,6 +1365,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get exploreTabClassics => 'Kinh điển';
 
   @override
+  String get exploreTabLatest => 'Mới nhất';
+
+  @override
   String get exploreTabNew => 'Mới';
 
   @override
@@ -7578,6 +7581,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => 'Chưa có video trong Video mới';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'Chưa có video trong Mới nhất';
 
   @override
   String get popularVideosContextTitle => 'Video phổ biến';

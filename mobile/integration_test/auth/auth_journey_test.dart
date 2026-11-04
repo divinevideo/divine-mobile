@@ -361,10 +361,18 @@ void main() {
           logPhase('── Phase 3c: Navigating to Explore tab ──');
           await tapBottomNavTab(tester, 'explore_tab');
 
-          // Wait for "New" tab to appear, then tap it
-          final foundNewTab = await waitForText(tester, 'New', maxSeconds: 10);
-          expect(foundNewTab, isTrue, reason: 'Explore should show New tab');
-          await tester.tap(find.text('New'));
+          // Wait for the Latest tab to appear, then tap it
+          final foundLatestTab = await waitForText(
+            tester,
+            'Latest',
+            maxSeconds: 10,
+          );
+          expect(
+            foundLatestTab,
+            isTrue,
+            reason: 'Explore should show the Latest tab',
+          );
+          await tester.tap(find.text('Latest'));
           await tester.pump(const Duration(seconds: 1));
 
           // Wait for video thumbnails to appear in the grid

@@ -48,7 +48,7 @@ void main() {
         size: const Size(390, 180),
         child: DefaultTabController(
           length: tabs.tabCount,
-          initialIndex: tabs.newVideosIndex,
+          initialIndex: tabs.latestIndex,
           child: Builder(
             builder: (context) => Column(
               children: [
