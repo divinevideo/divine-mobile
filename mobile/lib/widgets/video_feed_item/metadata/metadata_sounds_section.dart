@@ -71,12 +71,11 @@ class _SharedAudioSection extends ConsumerWidget {
               _SoundListItem(audio: audio, sourceVideo: video),
               // Further credited sounds, such as music added in the editor,
               // have no event of their own.
-              for (final credit in video.soundCredits)
-                if (!credit.credits(audio))
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: _ContentCreditRow(credit: credit),
-                  ),
+              for (final credit in _otherCredits(video.soundCredits, audio))
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: _ContentCreditRow(credit: credit),
+                ),
               if (video.addressableId != null &&
                   context.read<SoundRequestsCubit?>() != null)
                 SoundRequestButton(videoAddress: video.addressableId!),
@@ -91,6 +90,21 @@ class _SharedAudioSection extends ConsumerWidget {
       error: (error, stack) => _UnresolvedSharedAudioSection(video: video),
     );
   }
+}
+
+/// [credits] without the one line for [audio]: the exact line if the video
+/// carries it, else the first that matches its title. Two sounds can share a
+/// title, so only one line is left out.
+List<SoundCredit> _otherCredits(List<SoundCredit> credits, AudioEvent audio) {
+  final exact = soundCreditLine(audio);
+  var index = credits.indexWhere((credit) => credit.line == exact);
+  if (index == -1) {
+    index = credits.indexWhere((credit) => credit.credits(audio));
+  }
+  return [
+    for (var i = 0; i < credits.length; i++)
+      if (i != index) credits[i],
+  ];
 }
 
 /// Section for a video whose referenced sound event couldn't be resolved, for

@@ -449,6 +449,33 @@ void main() {
         expect(_divineIcon(DivineIconName.waveform), findsOneWidget);
       });
 
+      testWidgets('keeps a different sound that shares the title', (
+        tester,
+      ) async {
+        final licensed = testAudio.copyWith(
+          creatorName: 'Someone',
+          licenseName: 'CC BY 4.0',
+          licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+        );
+        final namesake = licensed.copyWith(
+          id: 'f' * 64,
+          creatorName: 'Someone Else',
+        );
+        final video = createVideoWithAudio(
+          content:
+              'Hi\n\n${soundCreditLine(licensed)}\n'
+              '${soundCreditLine(namesake)}',
+        );
+
+        await tester.pumpWidget(
+          buildTestWidget(video: video, audioOverride: licensed),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Cool Beat'), findsOneWidget);
+        expect(find.text('Cool Beat – Someone Else'), findsOneWidget);
+      });
+
       testWidgets(
         'does not repeat the referenced sound when its event names it '
         'differently',
