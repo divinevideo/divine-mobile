@@ -72,7 +72,7 @@ Widget _tile(
 }) => _app(
   SavedSoundTile(
     sound: sound,
-    cover: SoundCover.forSavedSound(sound),
+    cover: SoundCover.forSavedSound(sound, sourceCovers: null),
     isMissingFile: isMissingFile,
     cannotBeReused: cannotBeReused,
     isPreviewing: isPreviewing,

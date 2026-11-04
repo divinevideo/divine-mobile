@@ -135,7 +135,7 @@ void main() {
 
       test('keeps the frame stored with the sound until a lookup answers', () {
         expect(
-          SoundCover.forSavedSound(savedSound()),
+          SoundCover.forSavedSound(savedSound(), sourceCovers: null),
           const SoundCover(imageUrl: storedFrame),
         );
       });

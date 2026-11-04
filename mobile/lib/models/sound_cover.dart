@@ -40,7 +40,7 @@ class SoundCover {
   /// the frame stored with the sound stands in.
   static SoundCover? forSavedSound(
     SavedSound sound, {
-    Map<String, SoundCover?>? sourceCovers,
+    required Map<String, SoundCover?>? sourceCovers,
   }) {
     if (publishedWith(sound.audio) case final cover?) return cover;
     final reference = sound.audio.sourceVideoReference;
