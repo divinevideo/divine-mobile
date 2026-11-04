@@ -146,7 +146,11 @@ a failure.
 Android builds have no public beta stage in this design, and nothing outside
 Play's own review gates their production promotion. A four-hour minimum spacing
 gives Play internal testers several builds a day for about half the build-slot
-time of hourly builds. The interval is configuration. Scheduled Android builds skip
+time of hourly builds, but only while no production review is pending. During
+one, Play refuses internal-track commits as well (see Google Play), so internal
+testers get the deferred build only after the review ends.
+`mobile/docs/ANDROID_DEPLOYMENT.md` puts production review at one to seven
+days. The interval is configuration. Scheduled Android builds skip
 `build_apk`, because they never publish direct downloads.
 
 **App-affecting changes** means anything under `mobile/`, `codemagic.yaml`, or a
