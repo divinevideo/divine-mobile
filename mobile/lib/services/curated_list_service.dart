@@ -2,7 +2,6 @@
 // ABOUTME: Handles creation, updates, and management of user's video lists
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:clock/clock.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
@@ -10,7 +9,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/models/curated_list_callbacks.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -295,90 +293,6 @@ class CuratedListService extends ChangeNotifier {
       isCurrentOwner: () => isReadyForMutations && _isCurrent(owner),
       cancelled: cancelled,
     );
-  }
-
-  /// Reads inside the mutation queue, before the operation builds its delta.
-  /// Background sync alone cannot protect edits made from another device.
-  Future<bool> _reconcileListBeforeMutation(
-    String listId,
-    String? owner, {
-    required bool recovering,
-  }) async {
-    final list = getListById(listId);
-    // Creating a new coordinate has no cached replacement to reconcile.
-    // Signed-out drafts stay local and never publish over relay data.
-    if (list == null || owner == null) return true;
-    if (list.pubkey != null && list.pubkey != owner) return false;
-    if (!recovering && !_defaultAuthority.canMutate(list)) return false;
-
-    final cancel = Completer<void>();
-    _relaySyncCancels.add(cancel);
-    try {
-      final result = await Future.any([
-        _nostrService.queryEventsDetailed(
-          [
-            Filter(authors: [owner], kinds: const [30005], d: [list.id]),
-          ],
-          useCache: false,
-          requireAllRelaysSettled: true,
-          timeout: _relaySyncTimeout,
-        ),
-        cancel.future.then((_) => null),
-      ]);
-      if (result == null ||
-          result.timedOut ||
-          result.noRelays ||
-          cancel.isCompleted ||
-          !_isCurrent(owner)) {
-        return false;
-      }
-      final events = result.events
-          .where(
-            (event) =>
-                event.kind == 30005 &&
-                event.pubkey == owner &&
-                CuratedListConverter.extractDTag(event) == list.id,
-          )
-          .toList();
-      if (events.isNotEmpty &&
-          !await _processReceivedListEvents(
-            events,
-            isCurrentRead: () => !cancel.isCompleted && _isCurrent(owner),
-          )) {
-        return false;
-      }
-      final current = getListById(listId);
-      return !cancel.isCompleted &&
-          _isCurrent(owner) &&
-          current != null &&
-          _relayEvidence.allows(current);
-    } on Object catch (error) {
-      Log.warning(
-        'Not changing list $listId: relay read failed (${error.runtimeType})',
-        name: 'CuratedListService',
-        category: LogCategory.system,
-      );
-      return false;
-    } finally {
-      _relaySyncCancels.remove(cancel);
-    }
-  }
-
-  /// Compare the intended payload, independently of local/retry timestamps.
-  /// A relay echo can confirm an earlier send whose acknowledgement was lost.
-  bool _samePublicationValue(CuratedList left, CuratedList right) {
-    String value(CuratedList list) {
-      final target = list.publicationTarget;
-      final normalized = target.isPublic && target.description == null
-          ? target.copyWith(description: 'Curated video list: ${target.name}')
-          : target;
-      return jsonEncode([
-        normalized.isPublic,
-        CuratedListConverter.toEventTags(normalized),
-      ]);
-    }
-
-    return value(left) == value(right);
   }
 
   /// Stops saving and publishing while another account signs in.
@@ -1108,18 +1022,11 @@ class CuratedListService extends ChangeNotifier {
           ? list.allowedCollaborators
           : isPublic == false
           ? allowedCollaborators
-          : (<String>{...list.allowedCollaborators}
-                  ..addAll(
-                    allowedCollaborators.where(
-                      (key) => !previousAllowedCollaborators.contains(key),
-                    ),
-                  )
-                  ..removeAll(
-                    previousAllowedCollaborators.where(
-                      (key) => !allowedCollaborators.contains(key),
-                    ),
-                  ))
-                .toList();
+          : CuratedListRelayMerger.mergeCollaboratorEdit(
+              current: list.allowedCollaborators,
+              baseline: previousAllowedCollaborators,
+              desired: allowedCollaborators,
+            );
       final collaborative =
           allowedCollaborators != null &&
               isCollaborative != null &&
@@ -1833,23 +1740,13 @@ class CuratedListService extends ChangeNotifier {
           ? null
           : getListById(decoded.authorScopedId);
       if (existing != null &&
-          existing.nostrEventId != event.id &&
-          ((existing.pendingRepublish &&
-                  !_inFlightListPublications.contains(
-                    existing.authorScopedId,
-                  )) ||
-              (existing.nostrEventId != null &&
-                  (existing.updatedAt.millisecondsSinceEpoch ~/ 1000 >
-                          event.createdAt ||
-                      (existing.pendingRepublish &&
-                          existing.updatedAt.millisecondsSinceEpoch ~/ 1000 ==
-                              event.createdAt)))) &&
-          !_samePublicationValue(existing, decoded!)) {
-        // Local timestamps include edits and redaction attempts, so they
-        // cannot prove that an unseen relay payload is older than our source.
-        // Keep both copies; without the original mutation baseline, guessing
-        // a union could undo a deliberate removal. Leave the signed evidence
-        // unresolved so neither background backfill nor a retry replaces it.
+          CuratedListRelayMerger.hasConflictingPendingRevision(
+            existing,
+            decoded!,
+            publicationInFlight: _inFlightListPublications.contains(
+              existing.authorScopedId,
+            ),
+          )) {
         return;
       }
       _defaultAuthority.observe(event, unsealedItemTags);

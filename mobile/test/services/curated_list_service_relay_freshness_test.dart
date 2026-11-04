@@ -125,292 +125,82 @@ void main() {
 
   tearDown(() => service.dispose());
 
-  test('adding preserves a video added on another device', () async {
-    expect(await service.addVideoToList(cached.id, addedVideo), isTrue);
-    expect(publishedVideos(), [firstVideo, remoteVideo, addedVideo]);
-  });
-
-  test('removing preserves unrelated relay-only videos', () async {
-    expect(await service.removeVideoFromList(cached.id, firstVideo), isTrue);
-    expect(publishedVideos(), [remoteVideo]);
-  });
-
-  test('metadata edits preserve relay-only videos', () async {
-    expect(
-      await service.updateList(listId: cached.id, name: 'New name'),
-      isTrue,
-    );
-    expect(publishedVideos(), [firstVideo, remoteVideo]);
-  });
-
-  test('collaborator edits preserve people added on another device', () async {
-    cached = cached.copyWith(
-      isCollaborative: true,
-      allowedCollaborators: [firstVideo],
-    );
-    remote = await signedCuratedListFixture(
-      cached.copyWith(
-        allowedCollaborators: [firstVideo, remoteVideo],
-        updatedAt: cached.updatedAt.add(const Duration(seconds: 10)),
-      ),
-      LocalNostrSigner('1'.padLeft(64, '0')),
-    );
-    await reopen(cached);
-    expect(
-      await service.updateList(
-        listId: cached.id,
-        isCollaborative: true,
-        allowedCollaborators: [firstVideo, addedVideo],
-      ),
-      isTrue,
-    );
-    expect(
-      published.single.tags
-          .where((tag) => tag.first == 'collaborator')
-          .map((tag) => tag[1]),
-      [firstVideo, remoteVideo, addedVideo],
-    );
-  });
-
-  test(
-    'collaborator draft keeps its baseline across a background refresh',
-    () async {
-      cached = cached.copyWith(
-        isCollaborative: true,
-        allowedCollaborators: [firstVideo],
-      );
-      remote = await signedCuratedListFixture(
-        cached.copyWith(
-          allowedCollaborators: [firstVideo, remoteVideo],
-          updatedAt: cached.updatedAt.add(const Duration(seconds: 10)),
-        ),
-        LocalNostrSigner('1'.padLeft(64, '0')),
-      );
-      await reopen(cached);
-      final cubit = CuratedListInfoCubit(
-        resolveService: () => service,
-        currentOwnerPubkey: () => signedListFixtureOwner,
-        existingList: cached,
-      );
-      addTearDown(cubit.close);
-      cubit.collaboratorsPicked(
-        offered: {firstVideo, addedVideo},
-        picked: {firstVideo, addedVideo},
-      );
-      when(
-        () => client.subscribe(
-          any(),
-          closeOnEose: true,
-          onEose: any(named: 'onEose'),
-        ),
-      ).thenAnswer((i) => completedOwnedListSnapshot(i, [remote]));
-      await service.fetchUserListsFromRelays(force: true);
-      cubit.refreshRecoveryReadOnly();
-      await cubit.submitted();
-      expect(cubit.state.status, CuratedListInfoStatus.saved);
-      expect(
-        service.getListById(cached.id)!.allowedCollaborators,
-        [firstVideo, remoteVideo, addedVideo],
-      );
-    },
-  );
-
-  test(
-    'equal-second relay winner supplies the members before editing',
-    () async {
-      cached = cached.copyWith(
-        updatedAt: remote.createdAtDateTime,
-        nostrEventId: 'f' * 64,
-      );
-      service.dispose();
-      await prefs.setString(
-        CuratedListService.listsStorageKey,
-        jsonEncode([cached.toJson()]),
-      );
-      service = CuratedListService(
-        nostrService: client,
-        authService: auth,
-        prefs: prefs,
-      );
+  group('relay reconciliation before list mutations', () {
+    test('adding preserves a video added on another device', () async {
       expect(await service.addVideoToList(cached.id, addedVideo), isTrue);
       expect(publishedVideos(), [firstVideo, remoteVideo, addedVideo]);
-    },
-  );
-
-  test('a stale reorder cannot remove a relay-only video', () async {
-    expect(await service.reorderVideos(cached.id, [firstVideo]), isFalse);
-    expect(published, isEmpty);
-    expect(service.getListById(cached.id)!.videoEventIds, [
-      firstVideo,
-      remoteVideo,
-    ]);
-  });
-
-  for (final result in <_Read>[
-    (events: [], timedOut: true, noRelays: false),
-    (events: [], timedOut: false, noRelays: true),
-  ]) {
-    test('inconclusive relay read refuses the edit: $result', () async {
-      answer(() async => result);
-      expect(await service.addVideoToList(cached.id, addedVideo), isFalse);
-      expect(published, isEmpty);
-      expect(service.getListById(cached.id), cached);
     });
-  }
 
-  test('partial events do not authorize replacement', () async {
-    answer(() async => (events: [remote], timedOut: true, noRelays: false));
-    expect(
-      await service.updateList(listId: cached.id, name: 'New name'),
-      isFalse,
-    );
-    expect(published, isEmpty);
-    expect(service.getListById(cached.id), cached);
-  });
-
-  test(
-    'edit waits for the relay before changing local or remote state',
-    () async {
-      final readStarted = Completer<void>();
-      final read = Completer<_Read>();
-      answer(() {
-        readStarted.complete();
-        return read.future;
-      });
-      final saving = service.addVideoToList(cached.id, addedVideo);
-      await readStarted.future.timeout(const Duration(seconds: 2));
-      expect(published, isEmpty);
-      expect(service.getListById(cached.id), cached);
-      read.complete((events: [remote], timedOut: false, noRelays: false));
-      expect(await saving, isTrue);
-      expect(publishedVideos(), [firstVideo, remoteVideo, addedVideo]);
-    },
-  );
-
-  test('retiring the session during a relay read cancels the edit', () async {
-    final readStarted = Completer<void>();
-    final read = Completer<_Read>();
-    answer(() {
-      readStarted.complete();
-      return read.future;
+    test('removing preserves unrelated relay-only videos', () async {
+      expect(await service.removeVideoFromList(cached.id, firstVideo), isTrue);
+      expect(publishedVideos(), [remoteVideo]);
     });
-    final saving = service.addVideoToList(cached.id, addedVideo);
-    await readStarted.future.timeout(const Duration(seconds: 2));
-    service.dispose();
-    read.complete((events: [remote], timedOut: false, noRelays: false));
-    expect(await saving, isFalse);
-    expect(published, isEmpty);
-  });
 
-  for (final localVideos in <List<String>>[
-    [firstVideo, addedVideo],
-    [],
-  ]) {
+    test('metadata edits preserve relay-only videos', () async {
+      expect(
+        await service.updateList(listId: cached.id, name: 'New name'),
+        isTrue,
+      );
+      expect(publishedVideos(), [firstVideo, remoteVideo]);
+    });
+
     test(
-      'pending edit retains both copies on relay conflict: $localVideos',
+      'collaborator edits preserve people added on another device',
       () async {
-        final pending = cached.copyWith(
-          videoEventIds: localVideos,
-          pendingRepublish: true,
-          updatedAt: DateTime.now().toUtc(),
+        cached = cached.copyWith(
+          isCollaborative: true,
+          allowedCollaborators: [firstVideo],
         );
-        await reopen(pending);
-        expect(await service.retryListSync(cached.id), isFalse);
-        expect(published, isEmpty);
-        expect(service.getListById(cached.id), pending);
+        remote = await signedCuratedListFixture(
+          cached.copyWith(
+            allowedCollaborators: [firstVideo, remoteVideo],
+            updatedAt: cached.updatedAt.add(const Duration(seconds: 10)),
+          ),
+          LocalNostrSigner('1'.padLeft(64, '0')),
+        );
+        await reopen(cached);
+        expect(
+          await service.updateList(
+            listId: cached.id,
+            isCollaborative: true,
+            allowedCollaborators: [firstVideo, addedVideo],
+          ),
+          isTrue,
+        );
+        expect(
+          published.single.tags
+              .where((tag) => tag.first == 'collaborator')
+              .map((tag) => tag[1]),
+          [firstVideo, remoteVideo, addedVideo],
+        );
       },
     );
-  }
 
-  test(
-    'background refresh preserves a conflicting pending local edit',
-    () async {
-      final pending = cached.copyWith(
-        videoEventIds: [firstVideo, addedVideo],
-        pendingRepublish: true,
-        updatedAt: DateTime.now().toUtc(),
-      );
-      await reopen(pending);
-      when(
-        () => client.subscribe(
-          any(),
-          closeOnEose: true,
-          onEose: any(named: 'onEose'),
-        ),
-      ).thenAnswer((i) => completedOwnedListSnapshot(i, [remote]));
-      await service.fetchUserListsFromRelays(force: true);
-      expect(published, isEmpty);
-      expect(service.getListById(cached.id), pending);
-    },
-  );
-
-  test(
-    'a matching relay echo permits retry after acknowledgement was lost',
-    () async {
-      final pending = cached.copyWith(
-        videoEventIds: [firstVideo, remoteVideo],
-        pendingRepublish: true,
-        updatedAt: DateTime.now().toUtc(),
-      );
-      await reopen(pending);
-      expect(await service.retryListSync(cached.id), isTrue);
-      expect(publishedVideos(), [firstVideo, remoteVideo]);
-    },
-  );
-
-  test(
-    'a local clock ahead of an unseen relay revision cannot authorize a write',
-    () async {
-      await reopen(cached.copyWith(updatedAt: DateTime.now().toUtc()));
-      expect(await service.addVideoToList(cached.id, addedVideo), isFalse);
-      expect(published, isEmpty);
-    },
-  );
-
-  for (final remoteAheadOfDraft in [false, true]) {
     test(
-      'a relay change during signing prevents a stale send (ahead=$remoteAheadOfDraft)',
+      'collaborator draft keeps its baseline across a background refresh',
       () async {
-        final signer = LocalNostrSigner('1'.padLeft(64, '0'));
-        final base = await signedCuratedListFixture(cached, signer);
-        await reopen(cached.copyWith(nostrEventId: base.id));
-        answer(() async => (events: [base], timedOut: false, noRelays: false));
-        if (remoteAheadOfDraft) {
-          remote = await signedCuratedListFixture(
-            cached.copyWith(
-              videoEventIds: [firstVideo, remoteVideo],
-              updatedAt: DateTime.now().add(const Duration(seconds: 10)),
-            ),
-            signer,
-          );
-        }
-        final entered = Completer<void>();
-        final release = Completer<void>();
-        when(
-          () => auth.createAndSignEvent(
-            kind: any(named: 'kind'),
-            content: any(named: 'content'),
-            tags: any(named: 'tags'),
-            createdAt: any(named: 'createdAt'),
-          ),
-        ).thenAnswer((i) async {
-          entered.complete();
-          await release.future;
-          final event = Event(
-            signedListFixtureOwner,
-            i.namedArguments[#kind] as int,
-            i.namedArguments[#tags] as List<List<String>>,
-            i.namedArguments[#content] as String,
-            createdAt: i.namedArguments[#createdAt] as int?,
-          );
-          await signer.signEvent(event);
-          return event;
-        });
-        final saving = service.updateList(
-          listId: cached.id,
-          name: 'Draft name',
+        cached = cached.copyWith(
+          isCollaborative: true,
+          allowedCollaborators: [firstVideo],
         );
-        await entered.future;
+        remote = await signedCuratedListFixture(
+          cached.copyWith(
+            allowedCollaborators: [firstVideo, remoteVideo],
+            updatedAt: cached.updatedAt.add(const Duration(seconds: 10)),
+          ),
+          LocalNostrSigner('1'.padLeft(64, '0')),
+        );
+        await reopen(cached);
+        final cubit = CuratedListInfoCubit(
+          resolveService: () => service,
+          currentOwnerPubkey: () => signedListFixtureOwner,
+          existingList: cached,
+        );
+        addTearDown(cubit.close);
+        cubit.collaboratorsPicked(
+          offered: {firstVideo, addedVideo},
+          picked: {firstVideo, addedVideo},
+        );
         when(
           () => client.subscribe(
             any(),
@@ -419,10 +209,227 @@ void main() {
           ),
         ).thenAnswer((i) => completedOwnedListSnapshot(i, [remote]));
         await service.fetchUserListsFromRelays(force: true);
-        release.complete();
-        expect(await saving, isFalse);
+        cubit.refreshRecoveryReadOnly();
+        await cubit.submitted();
+        expect(cubit.state.status, CuratedListInfoStatus.saved);
+        expect(
+          service.getListById(cached.id)!.allowedCollaborators,
+          [firstVideo, remoteVideo, addedVideo],
+        );
+      },
+    );
+
+    test(
+      'equal-second relay winner supplies the members before editing',
+      () async {
+        cached = cached.copyWith(
+          updatedAt: remote.createdAtDateTime,
+          nostrEventId: 'f' * 64,
+        );
+        service.dispose();
+        await prefs.setString(
+          CuratedListService.listsStorageKey,
+          jsonEncode([cached.toJson()]),
+        );
+        service = CuratedListService(
+          nostrService: client,
+          authService: auth,
+          prefs: prefs,
+        );
+        expect(await service.addVideoToList(cached.id, addedVideo), isTrue);
+        expect(publishedVideos(), [firstVideo, remoteVideo, addedVideo]);
+      },
+    );
+
+    test('a stale reorder cannot remove a relay-only video', () async {
+      expect(await service.reorderVideos(cached.id, [firstVideo]), isFalse);
+      expect(published, isEmpty);
+      expect(service.getListById(cached.id)!.videoEventIds, [
+        firstVideo,
+        remoteVideo,
+      ]);
+    });
+
+    for (final result in <_Read>[
+      (events: [], timedOut: true, noRelays: false),
+      (events: [], timedOut: false, noRelays: true),
+    ]) {
+      test('inconclusive relay read refuses the edit: $result', () async {
+        answer(() async => result);
+        expect(await service.addVideoToList(cached.id, addedVideo), isFalse);
+        expect(published, isEmpty);
+        expect(service.getListById(cached.id), cached);
+      });
+    }
+
+    test('partial events do not authorize replacement', () async {
+      answer(() async => (events: [remote], timedOut: true, noRelays: false));
+      expect(
+        await service.updateList(listId: cached.id, name: 'New name'),
+        isFalse,
+      );
+      expect(published, isEmpty);
+      expect(service.getListById(cached.id), cached);
+    });
+
+    test(
+      'edit waits for the relay before changing local or remote state',
+      () async {
+        final readStarted = Completer<void>();
+        final read = Completer<_Read>();
+        answer(() {
+          readStarted.complete();
+          return read.future;
+        });
+        final saving = service.addVideoToList(cached.id, addedVideo);
+        await readStarted.future.timeout(const Duration(seconds: 2));
+        expect(published, isEmpty);
+        expect(service.getListById(cached.id), cached);
+        read.complete((events: [remote], timedOut: false, noRelays: false));
+        expect(await saving, isTrue);
+        expect(publishedVideos(), [firstVideo, remoteVideo, addedVideo]);
+      },
+    );
+
+    test('retiring the session during a relay read cancels the edit', () async {
+      final readStarted = Completer<void>();
+      final read = Completer<_Read>();
+      answer(() {
+        readStarted.complete();
+        return read.future;
+      });
+      final saving = service.addVideoToList(cached.id, addedVideo);
+      await readStarted.future.timeout(const Duration(seconds: 2));
+      service.dispose();
+      read.complete((events: [remote], timedOut: false, noRelays: false));
+      expect(await saving, isFalse);
+      expect(published, isEmpty);
+    });
+
+    for (final localVideos in <List<String>>[
+      [firstVideo, addedVideo],
+      [],
+    ]) {
+      test(
+        'pending edit retains both copies on relay conflict: $localVideos',
+        () async {
+          final pending = cached.copyWith(
+            videoEventIds: localVideos,
+            pendingRepublish: true,
+            updatedAt: DateTime.now().toUtc(),
+          );
+          await reopen(pending);
+          expect(await service.retryListSync(cached.id), isFalse);
+          expect(published, isEmpty);
+          expect(service.getListById(cached.id), pending);
+        },
+      );
+    }
+
+    test(
+      'background refresh preserves a conflicting pending local edit',
+      () async {
+        final pending = cached.copyWith(
+          videoEventIds: [firstVideo, addedVideo],
+          pendingRepublish: true,
+          updatedAt: DateTime.now().toUtc(),
+        );
+        await reopen(pending);
+        when(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((i) => completedOwnedListSnapshot(i, [remote]));
+        await service.fetchUserListsFromRelays(force: true);
+        expect(published, isEmpty);
+        expect(service.getListById(cached.id), pending);
+      },
+    );
+
+    test(
+      'a matching relay echo permits retry after acknowledgement was lost',
+      () async {
+        final pending = cached.copyWith(
+          videoEventIds: [firstVideo, remoteVideo],
+          pendingRepublish: true,
+          updatedAt: DateTime.now().toUtc(),
+        );
+        await reopen(pending);
+        expect(await service.retryListSync(cached.id), isTrue);
+        expect(publishedVideos(), [firstVideo, remoteVideo]);
+      },
+    );
+
+    test(
+      'a local clock ahead of an unseen relay revision cannot authorize a write',
+      () async {
+        await reopen(cached.copyWith(updatedAt: DateTime.now().toUtc()));
+        expect(await service.addVideoToList(cached.id, addedVideo), isFalse);
         expect(published, isEmpty);
       },
     );
-  }
+
+    for (final remoteAheadOfDraft in [false, true]) {
+      test(
+        'a relay change during signing prevents a stale send (ahead=$remoteAheadOfDraft)',
+        () async {
+          final signer = LocalNostrSigner('1'.padLeft(64, '0'));
+          final base = await signedCuratedListFixture(cached, signer);
+          await reopen(cached.copyWith(nostrEventId: base.id));
+          answer(
+            () async => (events: [base], timedOut: false, noRelays: false),
+          );
+          if (remoteAheadOfDraft) {
+            remote = await signedCuratedListFixture(
+              cached.copyWith(
+                videoEventIds: [firstVideo, remoteVideo],
+                updatedAt: DateTime.now().add(const Duration(seconds: 10)),
+              ),
+              signer,
+            );
+          }
+          final entered = Completer<void>();
+          final release = Completer<void>();
+          when(
+            () => auth.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          ).thenAnswer((i) async {
+            entered.complete();
+            await release.future;
+            final event = Event(
+              signedListFixtureOwner,
+              i.namedArguments[#kind] as int,
+              i.namedArguments[#tags] as List<List<String>>,
+              i.namedArguments[#content] as String,
+              createdAt: i.namedArguments[#createdAt] as int?,
+            );
+            await signer.signEvent(event);
+            return event;
+          });
+          final saving = service.updateList(
+            listId: cached.id,
+            name: 'Draft name',
+          );
+          await entered.future;
+          when(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((i) => completedOwnedListSnapshot(i, [remote]));
+          await service.fetchUserListsFromRelays(force: true);
+          release.complete();
+          expect(await saving, isFalse);
+          expect(published, isEmpty);
+        },
+      );
+    }
+  });
 }
