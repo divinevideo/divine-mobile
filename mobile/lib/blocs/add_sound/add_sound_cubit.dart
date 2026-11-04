@@ -353,7 +353,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
     if (sharePublicly) {
       published = state.publishedSound ?? await _publish(audio);
       if (published == null) {
-        if (isClosed) await _reclaim(audio);
+        if (isClosed || state.audio == null) await _reclaim(audio);
         return;
       }
       if (_accountChanged()) {
@@ -441,7 +441,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
         case LocalAudioPublished(audio: final published):
           return published;
         case LocalAudioPublishFailed(:final failure):
-          _failSave(switch (failure) {
+          final reason = switch (failure) {
             LocalAudioPublishFailure.notAuthenticated =>
               AddSoundFailure.notSignedIn,
             LocalAudioPublishFailure.silent => AddSoundFailure.silentSound,
@@ -451,7 +451,20 @@ class AddSoundCubit extends Cubit<AddSoundState>
             LocalAudioPublishFailure.signingFailed ||
             LocalAudioPublishFailure.relayRejected =>
               AddSoundFailure.publishFailed,
-          });
+          };
+          if (reason == AddSoundFailure.silentSound) {
+            // The share heard what the import check could not: nothing. Drop
+            // the sound as the import refusal does, so it cannot be saved
+            // privately either; [save] reclaims the copy.
+            emitIfOpen(
+              AddSoundState(
+                sharePublicly: state.sharePublicly,
+                failure: reason,
+              ),
+            );
+          } else {
+            _failSave(reason);
+          }
       }
     } on AccountRestrictedPublishException catch (error, stackTrace) {
       addError(error, stackTrace);
