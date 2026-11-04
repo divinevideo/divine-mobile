@@ -153,9 +153,11 @@ class ChatMessageTile extends ConsumerWidget {
                     ),
                   ),
                 if (onReport != null)
-                  TextButton(
+                  DivineButton(
                     onPressed: onReport,
-                    child: Text(context.l10n.reportSubmit),
+                    label: context.l10n.reportSubmit,
+                    type: DivineButtonType.link,
+                    size: DivineButtonSize.small,
                   ),
                 if (pending)
                   Wrap(

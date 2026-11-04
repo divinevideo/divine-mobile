@@ -2,6 +2,7 @@
 // ABOUTME: Keeps the Concord POC behind its existing internal access gate.
 
 import 'package:concord_repository/concord_repository.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -119,13 +120,14 @@ class _MessagesContent extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (catalogState.isLoading)
-                    const CircularProgressIndicator()
+                    const DivineCircularProgressIndicator()
                   else ...[
                     Text(context.l10n.dmConversationLoadError),
-                    TextButton(
+                    DivineButton(
                       onPressed: () =>
                           ref.invalidate(concordRoomCatalogProvider),
-                      child: Text(context.l10n.commonRetry),
+                      label: context.l10n.commonRetry,
+                      type: DivineButtonType.link,
                     ),
                   ],
                 ],

@@ -88,23 +88,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   Future<void> _report(ChatMessage message) async {
     final reports = ref.read(concordReportsProvider);
     if (reports == null) return;
-    final reason = await showDialog<String>(
+    final reason = await VineBottomSheetSelectionMenu.show(
       context: context,
-      builder: (context) => SimpleDialog(
-        title: Text(context.l10n.reportWhyReporting),
-        children: [
-          for (final reason in [
-            context.l10n.reportReasonSpam,
-            context.l10n.reportReasonHarassment,
-            context.l10n.reportReasonViolence,
-            context.l10n.reportReasonSexualContent,
-          ])
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, reason),
-              child: Text(reason),
-            ),
-        ],
-      ),
+      title: Text(context.l10n.reportWhyReporting),
+      options: [
+        for (final label in [
+          context.l10n.reportReasonSpam,
+          context.l10n.reportReasonHarassment,
+          context.l10n.reportReasonViolence,
+          context.l10n.reportReasonSexualContent,
+        ])
+          VineBottomSheetSelectionOptionData(label: label, value: label),
+      ],
     );
     if (reason == null || !mounted) return;
     try {

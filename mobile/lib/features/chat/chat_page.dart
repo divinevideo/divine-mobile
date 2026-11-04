@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -84,7 +85,7 @@ class ChatPage extends ConsumerWidget {
         (concordInviteUrl.isEmpty ? ConcordRoomCatalog.poc() : null);
     if (catalog == null || !catalog.ready) {
       if (catalogState.isLoading) {
-        return const Center(child: CircularProgressIndicator());
+        return const Center(child: DivineCircularProgressIndicator());
       }
       return RouteErrorScreen(message: context.l10n.dmConversationLoadError);
     }
