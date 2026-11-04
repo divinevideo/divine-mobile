@@ -19,14 +19,11 @@ class VideoEditorDrawItemIndicator extends StatelessWidget {
       (bloc) => bloc.state.selectedTool,
     );
 
-    final double itemFactor = switch (tool) {
-      .pencil => 0,
-      .marker => 1,
-      .arrow => 2,
-      .eraser => 3,
-      // The hide tools have their own bar without this indicator.
-      .blur || .pixelate => 0,
-    };
+    // The hide tools have their own bar without this indicator.
+    final double itemFactor = DrawToolType.drawingTools
+        .indexOf(tool)
+        .clamp(0, DrawToolType.drawingTools.length)
+        .toDouble();
 
     return Align(
       alignment: .topLeft,

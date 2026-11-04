@@ -12,7 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
-import 'package:openvine/widgets/video_editor/draw_editor/tools/video_editor_draw_tool_arrow.dart';
+import 'package:openvine/widgets/video_editor/draw_editor/tools/video_editor_draw_tool_brushes.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/tools/video_editor_draw_tool_eraser.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/tools/video_editor_draw_tool_marker.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/tools/video_editor_draw_tool_pencil.dart';
@@ -31,6 +31,16 @@ class MockPaintEditorState extends Mock implements PaintEditorState {
   String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
       'MockPaintEditorState';
 }
+
+/// The button widget of every drawing tool, in the order the bar shows them.
+const _toolWidgets = <DrawToolType, Type>{
+  .pencil: DrawToolPencil,
+  .marker: DrawToolMarker,
+  .neon: DrawToolNeon,
+  .calligraphy: DrawToolCalligraphy,
+  .rainbow: DrawToolRainbow,
+  .eraser: DrawToolEraser,
+};
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -67,7 +77,10 @@ void main() {
       when(() => mockPaintEditor.setColor(any())).thenReturn(null);
     });
 
-    Widget buildWidget({MockPaintEditorState? paintEditor}) {
+    Widget buildWidget({
+      MockPaintEditorState? paintEditor,
+      double width = 400,
+    }) {
       return ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(sharedPreferences),
@@ -95,10 +108,10 @@ void main() {
                 onOpenCaptions: () {},
                 onOpenEffects: () {},
                 onAddEditTextLayer: ([layer]) async => null,
-                child: const SizedBox(
-                  width: 400,
+                child: SizedBox(
+                  width: width,
                   height: 600,
-                  child: VideoEditorDrawBottomBar(),
+                  child: const VideoEditorDrawBottomBar(),
                 ),
               ),
             ),
@@ -108,14 +121,38 @@ void main() {
     }
 
     group('Tool buttons', () {
-      testWidgets('renders all four tool buttons', (tester) async {
+      testWidgets('renders a button for every drawing tool, in order', (
+        tester,
+      ) async {
         await tester.pumpWidget(buildWidget());
         await tester.pump();
 
-        expect(find.byType(DrawToolPencil), findsOneWidget);
-        expect(find.byType(DrawToolMarker), findsOneWidget);
-        expect(find.byType(DrawToolArrow), findsOneWidget);
-        expect(find.byType(DrawToolEraser), findsOneWidget);
+        expect(_toolWidgets.keys, DrawToolType.drawingTools);
+        final lefts = [
+          for (final type in _toolWidgets.values)
+            tester.getTopLeft(find.byType(type)).dx,
+        ];
+        expect(lefts, orderedEquals([...lefts]..sort()));
+      });
+
+      testWidgets('scrolls sideways to the tools past the edge', (
+        tester,
+      ) async {
+        // Narrower than a phone, so the tools do not fit.
+        await tester.pumpWidget(buildWidget(width: 300));
+        await tester.pump();
+
+        final eraser = find.byType(DrawToolEraser);
+        final barRight = tester.getTopRight(find.byType(SingleChildScrollView));
+        expect(tester.getTopRight(eraser).dx, greaterThan(barRight.dx));
+
+        await tester.drag(
+          find.byType(SingleChildScrollView),
+          const Offset(-1000, 0),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.getTopRight(eraser).dx, lessThanOrEqualTo(barRight.dx));
       });
 
       testWidgets('pencil is selected by default', (tester) async {
@@ -133,18 +170,16 @@ void main() {
         expect(marker.isSelected, isFalse);
       });
 
-      for (final (tool, widgetType) in [
-        (DrawToolType.pencil, DrawToolPencil),
-        (DrawToolType.marker, DrawToolMarker),
-        (DrawToolType.arrow, DrawToolArrow),
-        (DrawToolType.eraser, DrawToolEraser),
-      ]) {
+      for (final MapEntry(key: tool, value: widgetType)
+          in _toolWidgets.entries) {
         testWidgets('tapping ${tool.name} dispatches ToolSelected event', (
           tester,
         ) async {
           await tester.pumpWidget(buildWidget(paintEditor: mockPaintEditor));
           await tester.pump();
 
+          await tester.ensureVisible(find.byType(widgetType));
+          await tester.pumpAndSettle();
           await tester.tap(find.byType(widgetType));
           await tester.pump();
 
@@ -173,9 +208,6 @@ void main() {
           find.byType(DrawToolMarker),
         );
         expect(marker.isSelected, isTrue);
-
-        final arrow = tester.widget<DrawToolArrow>(find.byType(DrawToolArrow));
-        expect(arrow.isSelected, isFalse);
 
         final eraser = tester.widget<DrawToolEraser>(
           find.byType(DrawToolEraser),

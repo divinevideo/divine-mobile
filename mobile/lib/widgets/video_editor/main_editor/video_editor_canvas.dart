@@ -62,6 +62,7 @@ import 'package:openvine/services/video_editor/video_editor_audio_ducking.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_level_resolver.dart';
 import 'package:openvine/utils/await_push_transition.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/editor_draw_brushes.dart';
 import 'package:openvine/utils/editor_text_layer_bounds.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
@@ -3603,6 +3604,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   scope.fittedBoxScale /
                   2,
               censorConfigs: videoEditorCensorConfigs(),
+              customPathBuilders: EditorDrawBrushes.pathBuilders,
+              freeStyleCustomModes: EditorDrawBrushes.freeStyleModes,
               safeArea: const EditorSafeArea.none(),
               enableEdit: false,
               style: PaintEditorStyle(

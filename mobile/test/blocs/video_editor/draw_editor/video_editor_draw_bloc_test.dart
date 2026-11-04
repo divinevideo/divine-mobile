@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/utils/editor_draw_brushes.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 void main() {
@@ -23,7 +24,7 @@ void main() {
       expect(bloc.state.selectedTool, DrawToolType.pencil);
       expect(bloc.state.strokeWidth, DrawToolType.pencil.config.strokeWidth);
       expect(bloc.state.opacity, 1.0);
-      expect(bloc.state.selectedColor, VideoEditorConstants.primaryColor);
+      expect(bloc.state.selectedColor, VideoEditorConstants.drawDefaultColor);
       expect(bloc.state.mode, PaintMode.freeStyle);
       await bloc.close();
     });
@@ -383,15 +384,15 @@ void main() {
       final copy = original.copyWith(
         canUndo: true,
         canRedo: true,
-        selectedTool: DrawToolType.arrow,
-        strokeWidths: {DrawToolType.arrow: 10.0},
+        selectedTool: DrawToolType.neon,
+        strokeWidths: {DrawToolType.neon: 10.0},
         opacity: 0.8,
         selectedColor: Colors.green,
         mode: PaintMode.arrow,
       );
       expect(copy.canUndo, isTrue);
       expect(copy.canRedo, isTrue);
-      expect(copy.selectedTool, DrawToolType.arrow);
+      expect(copy.selectedTool, DrawToolType.neon);
       expect(copy.strokeWidth, 10.0);
       expect(copy.opacity, 0.8);
       expect(copy.selectedColor, Colors.green);
@@ -421,6 +422,34 @@ void main() {
         0.2, // blurIntensity
         0.9, // pixelateIntensity
       ]);
+    });
+  });
+
+  group('DrawToolType', () {
+    test(
+      'drawingTools lists every tool that draws, once, and no hide tool',
+      () {
+        expect(
+          DrawToolType.drawingTools,
+          hasLength(DrawToolType.values.length - 2),
+        );
+        expect(
+          DrawToolType.drawingTools.toSet(),
+          DrawToolType.values.where((tool) => !tool.isCensor).toSet(),
+        );
+      },
+    );
+
+    test('the brushes draw in the modes the editor has builders for', () {
+      for (final (tool, mode) in [
+        (DrawToolType.neon, EditorDrawBrushes.neon),
+        (DrawToolType.rainbow, EditorDrawBrushes.rainbow),
+        (DrawToolType.calligraphy, EditorDrawBrushes.calligraphy),
+      ]) {
+        expect(tool.config.mode, mode, reason: tool.name);
+        expect(EditorDrawBrushes.pathBuilders, contains(mode));
+        expect(EditorDrawBrushes.freeStyleModes, contains(mode));
+      }
     });
   });
 
@@ -495,8 +524,8 @@ void main() {
     });
 
     test('VideoEditorDrawToolSelected props contains tool', () {
-      const event = VideoEditorDrawToolSelected(DrawToolType.arrow);
-      expect(event.props, [DrawToolType.arrow]);
+      const event = VideoEditorDrawToolSelected(DrawToolType.neon);
+      expect(event.props, [DrawToolType.neon]);
     });
 
     test(

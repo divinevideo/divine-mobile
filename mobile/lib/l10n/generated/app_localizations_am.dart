@@ -10867,9 +10867,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'የእኔ ድምፆች';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'የቀስት መሣሪያ';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => 'መጥረጊያ መሳሪያ';
 
   @override
@@ -10877,6 +10874,15 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'የእርሳስ መሳሪያ';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'የኒዮን መሳሪያ';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'የቀስተ ደመና መሳሪያ';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'የካሊግራፊ መሳሪያ';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'የጊዜ መስመር አሳይ';

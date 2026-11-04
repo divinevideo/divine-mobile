@@ -11224,9 +11224,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'Моите звуци';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Инструмент със стрелка';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel =>
       'Инструмент за изтриване';
 
@@ -11235,6 +11232,16 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Инструмент молив';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Инструмент неон';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Инструмент дъга';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel =>
+      'Инструмент калиграфия';
 
   @override
   String get videoEditorShowTimelineSemanticLabel =>

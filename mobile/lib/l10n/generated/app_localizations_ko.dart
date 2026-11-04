@@ -10604,9 +10604,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => '내 사운드';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => '화살표 도구';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => '지우개 도구';
 
   @override
@@ -10614,6 +10611,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => '연필 도구';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => '네온 도구';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => '무지개 도구';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => '캘리그래피 도구';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => '타임라인 표시';

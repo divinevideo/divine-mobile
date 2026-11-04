@@ -11415,9 +11415,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'నా సౌండ్స్';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'బాణం సాధనం';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => 'ఎరేజర్ సాధనం';
 
   @override
@@ -11425,6 +11422,15 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'పెన్సిల్ సాధనం';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'నియాన్ సాధనం';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'ఇంద్రధనుస్సు సాధనం';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'కాలిగ్రఫీ సాధనం';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'కాలక్రమాన్ని చూపు';

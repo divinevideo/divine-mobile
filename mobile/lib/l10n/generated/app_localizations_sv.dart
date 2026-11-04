@@ -11128,9 +11128,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'Mina ljud';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Pilverktyg';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Suddverktyg';
 
   @override
@@ -11138,6 +11135,15 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Pennverktyg';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Neonverktyg';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Regnbågsverktyg';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'Kalligrafiverktyg';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Visa tidslinje';

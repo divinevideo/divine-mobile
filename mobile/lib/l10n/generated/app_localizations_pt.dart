@@ -11219,9 +11219,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'Meus sons';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Ferramenta seta';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Ferramenta borracha';
 
   @override
@@ -11229,6 +11226,16 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Ferramenta lápis';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Ferramenta neon';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Ferramenta arco-íris';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel =>
+      'Ferramenta caligrafia';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Mostrar linha do tempo';

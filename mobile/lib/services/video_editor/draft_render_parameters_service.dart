@@ -26,6 +26,7 @@ import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/layer_capture_resolution.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/utils/editor_draw_brushes.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:openvine/utils/editor_text_layer_bounds.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
@@ -332,12 +333,13 @@ class DraftRenderParametersService {
       // layer *renders* rather than how it is edited — `textEditor.initFontSize`
       // (which scales text and emoji layers), `textEditor.layerBounds`
       // (where text lines wrap), `textEditor.style.leadingDistribution`,
-      // `emojiEditor.style.textStyle`, `stickerEditor.initWidth` and
-      // `paintEditor.censorConfigs` — and of those the editor canvas
-      // overrides `layerBounds`, which is mirrored here, and `censorConfigs`,
-      // whose layers are never mounted here. Both sides reading the same
-      // values is what keeps a re-render identical to what the user saw; if
-      // the canvas ever overrides another, mirror it too.
+      // `emojiEditor.style.textStyle`, `stickerEditor.initWidth`,
+      // `paintEditor.censorConfigs` and `paintEditor.customPathBuilders` —
+      // and of those the editor canvas overrides `layerBounds` and the
+      // builders of its own brushes, which are mirrored here, and
+      // `censorConfigs`, whose layers are never mounted here. Both sides
+      // reading the same values is what keeps a re-render identical to what
+      // the user saw; if the canvas ever overrides another, mirror it too.
       //
       // `configs.theme` is the one exception, and it is deliberate. The canvas
       // does override it (so its subtree can resolve `context.vineColors`
@@ -387,6 +389,7 @@ class DraftRenderParametersService {
             imageGeneration: const ImageGenerationConfigs(
               layerCapturePixelRatio: capturePixelRatioForLayer,
             ),
+            paintEditor: EditorDrawBrushes.paintEditorConfigs,
           ),
           basePixelRatio: basePixelRatio,
           awaitContentReady: () => _prepareLayerContent(drawn, stickers),

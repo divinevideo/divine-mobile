@@ -11203,9 +11203,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'Mga Sound Ko';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Tool na arrow';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Tool na pambura';
 
   @override
@@ -11213,6 +11210,16 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Tool na lapis';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Tool na neon';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Tool na bahaghari';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel =>
+      'Tool na kaligrapiya';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Ipakita ang timeline';

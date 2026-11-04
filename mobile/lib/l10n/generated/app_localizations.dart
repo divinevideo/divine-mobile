@@ -18851,12 +18851,6 @@ abstract class AppLocalizations {
   /// **'My Sounds'**
   String get videoEditorAudioCategoryMySounds;
 
-  /// No description provided for @videoEditorDrawToolArrowSemanticLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Arrow tool'**
-  String get videoEditorDrawToolArrowSemanticLabel;
-
   /// No description provided for @videoEditorDrawToolEraserSemanticLabel.
   ///
   /// In en, this message translates to:
@@ -18874,6 +18868,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pencil tool'**
   String get videoEditorDrawToolPencilSemanticLabel;
+
+  /// No description provided for @videoEditorDrawToolNeonSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Neon tool'**
+  String get videoEditorDrawToolNeonSemanticLabel;
+
+  /// No description provided for @videoEditorDrawToolRainbowSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rainbow tool'**
+  String get videoEditorDrawToolRainbowSemanticLabel;
+
+  /// No description provided for @videoEditorDrawToolCalligraphySemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Calligraphy tool'**
+  String get videoEditorDrawToolCalligraphySemanticLabel;
 
   /// No description provided for @videoEditorShowTimelineSemanticLabel.
   ///

@@ -11359,9 +11359,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorAudioCategoryMySounds => 'Sunetele mele';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Instrument săgeată';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Instrument radieră';
 
   @override
@@ -11369,6 +11366,16 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Instrument creion';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Instrument neon';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Instrument curcubeu';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel =>
+      'Instrument caligrafie';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Afișează cronologia';
