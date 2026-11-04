@@ -455,6 +455,17 @@ class SoundsRepository {
       );
       return null;
     }
+    // The limit covers the whole batch and relays send the newest videos
+    // first, so a full answer may stop before the one that reuses a sound.
+    if (read.events.length >= maxBatchedUsageCountScan) {
+      Log.warning(
+        'Reuse lookup for ${originals.length} unnamed sounds filled its '
+        '$maxBatchedUsageCountScan-video limit, so it may have missed some',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+      return null;
+    }
 
     return {
       for (final video in read.events)

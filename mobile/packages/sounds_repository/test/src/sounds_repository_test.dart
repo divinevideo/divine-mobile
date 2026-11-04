@@ -1008,6 +1008,28 @@ void main() {
           expect(await repository.withoutUnusedOriginals(sounds), sounds);
         });
 
+        test('keeps every sound when the lookup fills its limit', () async {
+          // A full answer may have stopped before the video reusing it.
+          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+            (_) async => answered([
+              for (
+                var i = 0;
+                i < SoundsRepository.maxBatchedUsageCountScan;
+                i++
+              )
+                video(
+                  id: i.toRadixString(16).padLeft(64, '0'),
+                  pubkey: testPubkey1,
+                  dTag: 'own-video-$i',
+                  usesSoundId: testEventId1,
+                ),
+            ]),
+          );
+          final sounds = [sound(testEventId1)];
+
+          expect(await repository.withoutUnusedOriginals(sounds), sounds);
+        });
+
         test('drops an unnamed sound only its creator uses', () async {
           when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
             (_) async => answered([
