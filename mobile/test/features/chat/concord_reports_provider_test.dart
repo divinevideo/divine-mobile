@@ -36,98 +36,100 @@ class _Auth extends Fake implements AuthService {
 class _Session extends Mock implements ConcordCommunitySession {}
 
 void main() {
-  for (final change in ['switch', 'logout', 'dispose', 'catalog']) {
-    test('pending report does not post after $change', () async {
-      final identity = _Identity();
-      final auth = _Auth(identity);
-      final session = _Session();
-      var ready = true;
-      when(() => session.ready).thenAnswer((_) => ready);
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(auth),
-          concordRoomCatalogProvider.overrideWith(
-            (ref) => Stream.value(ConcordRoomCatalog.real(session)),
-          ),
-        ],
-      );
-      var disposed = false;
-      addTearDown(() {
-        if (!disposed) container.dispose();
-      });
-      container.listen(concordRoomCatalogProvider, (_, _) {});
-      await container.read(concordRoomCatalogProvider.future);
-      final reports = container.read(concordReportsProvider)!;
-      var requests = 0;
-      await http.runWithClient(
-        () async {
-          final pending = reports.submit(
-            communityId: '22' * 32,
-            channelId: '33' * 32,
-            rumorId: '44' * 32,
-            reason: 'Spam',
-          );
-          final event = await identity.started.future;
-          if (change == 'switch') auth.currentPublicKeyHex = '55' * 32;
-          if (change == 'logout') auth.isAuthenticated = false;
-          if (change == 'catalog') ready = false;
-          if (change == 'dispose') {
-            container.dispose();
-            disposed = true;
-          }
-          identity.signing.complete(event);
-          await expectLater(pending, throwsStateError);
-        },
-        () => MockClient((_) async {
-          requests++;
-          return http.Response('{"caseId":"must-not-submit"}', 202);
-        }),
-      );
-      expect(requests, 0);
-    });
-  }
-
-  test(
-    'rechecks the account immediately before the HTTP client sends',
-    () async {
-      final identity = _Identity();
-      final auth = _Auth(identity);
-      final session = _Session();
-      when(() => session.ready).thenReturn(true);
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWithValue(auth),
-          concordRoomCatalogProvider.overrideWith(
-            (ref) => Stream.value(ConcordRoomCatalog.real(session)),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      container.listen(concordRoomCatalogProvider, (_, _) {});
-      await container.read(concordRoomCatalogProvider.future);
-      final reports = container.read(concordReportsProvider)!;
-      var requests = 0;
-      await http.runWithClient(
-        () async {
-          final pending = reports.submit(
-            communityId: '22' * 32,
-            channelId: '33' * 32,
-            rumorId: '44' * 32,
-            reason: 'Spam',
-          );
-          identity.signing.complete(await identity.started.future);
-          await expectLater(pending, throwsStateError);
-        },
-        () {
-          // The client factory runs after the repository's pre-POST check.
-          auth.currentPublicKeyHex = '55' * 32;
-          return MockClient((_) async {
+  group('concordReportsProvider submit', () {
+    for (final change in ['switch', 'logout', 'dispose', 'catalog']) {
+      test('pending report does not post after $change', () async {
+        final identity = _Identity();
+        final auth = _Auth(identity);
+        final session = _Session();
+        var ready = true;
+        when(() => session.ready).thenAnswer((_) => ready);
+        final container = ProviderContainer(
+          overrides: [
+            authServiceProvider.overrideWithValue(auth),
+            concordRoomCatalogProvider.overrideWith(
+              (ref) => Stream.value(ConcordRoomCatalog.real(session)),
+            ),
+          ],
+        );
+        var disposed = false;
+        addTearDown(() {
+          if (!disposed) container.dispose();
+        });
+        container.listen(concordRoomCatalogProvider, (_, _) {});
+        await container.read(concordRoomCatalogProvider.future);
+        final reports = container.read(concordReportsProvider)!;
+        var requests = 0;
+        await http.runWithClient(
+          () async {
+            final pending = reports.submit(
+              communityId: '22' * 32,
+              channelId: '33' * 32,
+              rumorId: '44' * 32,
+              reason: 'Spam',
+            );
+            final event = await identity.started.future;
+            if (change == 'switch') auth.currentPublicKeyHex = '55' * 32;
+            if (change == 'logout') auth.isAuthenticated = false;
+            if (change == 'catalog') ready = false;
+            if (change == 'dispose') {
+              container.dispose();
+              disposed = true;
+            }
+            identity.signing.complete(event);
+            await expectLater(pending, throwsStateError);
+          },
+          () => MockClient((_) async {
             requests++;
             return http.Response('{"caseId":"must-not-submit"}', 202);
-          });
-        },
-      );
-      expect(requests, 0);
-    },
-  );
+          }),
+        );
+        expect(requests, 0);
+      });
+    }
+
+    test(
+      'rechecks the account immediately before the HTTP client sends',
+      () async {
+        final identity = _Identity();
+        final auth = _Auth(identity);
+        final session = _Session();
+        when(() => session.ready).thenReturn(true);
+        final container = ProviderContainer(
+          overrides: [
+            authServiceProvider.overrideWithValue(auth),
+            concordRoomCatalogProvider.overrideWith(
+              (ref) => Stream.value(ConcordRoomCatalog.real(session)),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        container.listen(concordRoomCatalogProvider, (_, _) {});
+        await container.read(concordRoomCatalogProvider.future);
+        final reports = container.read(concordReportsProvider)!;
+        var requests = 0;
+        await http.runWithClient(
+          () async {
+            final pending = reports.submit(
+              communityId: '22' * 32,
+              channelId: '33' * 32,
+              rumorId: '44' * 32,
+              reason: 'Spam',
+            );
+            identity.signing.complete(await identity.started.future);
+            await expectLater(pending, throwsStateError);
+          },
+          () {
+            // The client factory runs after the repository's pre-POST check.
+            auth.currentPublicKeyHex = '55' * 32;
+            return MockClient((_) async {
+              requests++;
+              return http.Response('{"caseId":"must-not-submit"}', 202);
+            });
+          },
+        );
+        expect(requests, 0);
+      },
+    );
+  });
 }
