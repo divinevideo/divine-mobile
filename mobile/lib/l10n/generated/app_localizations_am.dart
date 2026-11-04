@@ -4992,7 +4992,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get reportPrivateNotice =>
-      'This report goes privately to Divine’s moderation team. It isn’t posted publicly.';
+      'ይህ ሪፖርት በግል ወደ Divine ቁጥጥር ቡድን ይላካል። በይፋ አይለጠፍም።';
 
   @override
   String get reportIncludeMessageTitle => 'ይህን መልእክት ያካትቱ';
@@ -5002,8 +5002,9 @@ class AppLocalizationsAm extends AppLocalizations {
       'የDivine ቁጥጥር ቡድን ያየዋል። በግል ይቆያል፣ በይፋም አይለጠፍም።';
 
   @override
-  String get reportMessageTooLong =>
-      'This message is too long to include. Turn off “Include this message” and try again.';
+  String reportMessageTooLong(String optionTitle) {
+    return 'ይህ መልእክት ለማካተት በጣም ረጅም ነው። «$optionTitle»ን ያጥፉና እንደገና ይሞክሩ።';
+  }
 
   @override
   String get reportBlockUser => 'ይህን ተጠቃሚ አግድ';

@@ -4829,7 +4829,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reportPrivateNotice =>
-      'This report goes privately to Divine’s moderation team. It isn’t posted publicly.';
+      '이 신고는 비공개로 Divine 검수팀에 전달돼요. 공개적으로 게시되지 않아요.';
 
   @override
   String get reportIncludeMessageTitle => '이 메시지 포함하기';
@@ -4839,8 +4839,9 @@ class AppLocalizationsKo extends AppLocalizations {
       'Divine 검수팀이 이 메시지를 보게 돼요. 비공개로 유지되고, 공개적으로 게시되지 않아요.';
 
   @override
-  String get reportMessageTooLong =>
-      'This message is too long to include. Turn off “Include this message” and try again.';
+  String reportMessageTooLong(String optionTitle) {
+    return '이 메시지는 너무 길어서 포함할 수 없어요. ‘$optionTitle’ 체크를 해제하고 다시 시도해 주세요.';
+  }
 
   @override
   String get reportBlockUser => '이 사용자 차단';

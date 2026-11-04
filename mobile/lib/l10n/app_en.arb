@@ -3519,9 +3519,15 @@
   "@reportIncludeMessageDescription": {
     "description": "Consent line under the reportIncludeMessageTitle checkbox. 'it' is the reported message."
   },
-  "reportMessageTooLong": "This message is too long to include. Turn off “Include this message” and try again.",
+  "reportMessageTooLong": "This message is too long to include. Uncheck “{optionTitle}” and try again.",
   "@reportMessageTooLong": {
-    "description": "Error on the direct-message report sheet when the included message is too large to send to moderators. Names the reportIncludeMessageTitle checkbox."
+    "description": "Error on the direct-message report sheet when the included message is too large to send to moderators.",
+    "placeholders": {
+      "optionTitle": {
+        "type": "String",
+        "description": "The checkbox's title, reportIncludeMessageTitle."
+      }
+    }
   },
   "reportBlockUser": "Block this user",
   "reportCancel": "Cancel",

@@ -5108,7 +5108,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get reportPrivateNotice =>
-      'This report goes privately to Divine’s moderation team. It isn’t posted publicly.';
+      'Laporan ini dihantar secara peribadi kepada pasukan pemantauan Divine. Laporan ini tidak disiarkan kepada umum.';
 
   @override
   String get reportIncludeMessageTitle => 'Sertakan mesej ini';
@@ -5118,8 +5118,9 @@ class AppLocalizationsMs extends AppLocalizations {
       'Pasukan pemantauan Divine akan melihatnya. Mesej ini kekal peribadi dan tidak disiarkan kepada umum.';
 
   @override
-  String get reportMessageTooLong =>
-      'This message is too long to include. Turn off “Include this message” and try again.';
+  String reportMessageTooLong(String optionTitle) {
+    return 'Mesej ini terlalu panjang untuk disertakan. Nyahtanda “$optionTitle” dan cuba lagi.';
+  }
 
   @override
   String get reportBlockUser => 'Sekat pengguna ini';

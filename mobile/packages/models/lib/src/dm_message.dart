@@ -104,6 +104,10 @@ class DmMessage extends Equatable {
   /// Whether this is a file message (kind 15).
   bool get isFileMessage => messageKind == 15;
 
+  /// The message's text as a reader sees it, or null for a file message,
+  /// whose [content] is its encrypted URL rather than anything readable.
+  String? get readableText => isFileMessage ? null : content;
+
   /// Whether this message carries a structured shared-video reference.
   bool get hasSharedVideo => sharedVideoRef != null;
 

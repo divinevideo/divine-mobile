@@ -688,11 +688,6 @@ const _knownUntranslatedDebt = <String>{
   'reportDetailsOptional',
   'reportWhyReportingComment',
 
-  // Reports made from direct messages stay private (#7340). The consent
-  // copy for including the message is translated; these two are not yet.
-  'reportPrivateNotice',
-  'reportMessageTooLong',
-
   // Reporting a list (#9896).
   'listReportAction',
 

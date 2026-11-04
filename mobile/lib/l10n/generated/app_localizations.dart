@@ -8623,11 +8623,11 @@ abstract class AppLocalizations {
   /// **'Divine’s moderation team will see it. It stays private and isn’t posted publicly.'**
   String get reportIncludeMessageDescription;
 
-  /// Error on the direct-message report sheet when the included message is too large to send to moderators. Names the reportIncludeMessageTitle checkbox.
+  /// Error on the direct-message report sheet when the included message is too large to send to moderators.
   ///
   /// In en, this message translates to:
-  /// **'This message is too long to include. Turn off “Include this message” and try again.'**
-  String get reportMessageTooLong;
+  /// **'This message is too long to include. Uncheck “{optionTitle}” and try again.'**
+  String reportMessageTooLong(String optionTitle);
 
   /// No description provided for @reportBlockUser.
   ///

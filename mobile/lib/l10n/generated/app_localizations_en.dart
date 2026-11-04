@@ -5200,8 +5200,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Divine’s moderation team will see it. It stays private and isn’t posted publicly.';
 
   @override
-  String get reportMessageTooLong =>
-      'This message is too long to include. Turn off “Include this message” and try again.';
+  String reportMessageTooLong(String optionTitle) {
+    return 'This message is too long to include. Uncheck “$optionTitle” and try again.';
+  }
 
   @override
   String get reportBlockUser => 'Block this user';

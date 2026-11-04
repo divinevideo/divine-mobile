@@ -5074,7 +5074,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get reportPrivateNotice =>
-      'This report goes privately to Divine’s moderation team. It isn’t posted publicly.';
+      'Báo cáo này được gửi riêng tư đến đội kiểm duyệt của Divine. Báo cáo không được đăng công khai.';
 
   @override
   String get reportIncludeMessageTitle => 'Gửi kèm tin nhắn này';
@@ -5084,8 +5084,9 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đội kiểm duyệt của Divine sẽ xem tin nhắn này. Tin nhắn vẫn được giữ riêng tư và không được đăng công khai.';
 
   @override
-  String get reportMessageTooLong =>
-      'This message is too long to include. Turn off “Include this message” and try again.';
+  String reportMessageTooLong(String optionTitle) {
+    return 'Tin nhắn này quá dài để gửi kèm. Bỏ chọn “$optionTitle” rồi thử lại.';
+  }
 
   @override
   String get reportBlockUser => 'Chặn người dùng này';

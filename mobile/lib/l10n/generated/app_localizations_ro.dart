@@ -5262,7 +5262,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get reportPrivateNotice =>
-      'This report goes privately to Divine’s moderation team. It isn’t posted publicly.';
+      'Acest raport ajunge în mod privat la echipa de moderare Divine. Nu este publicat.';
 
   @override
   String get reportIncludeMessageTitle => 'Include acest mesaj';
@@ -5272,8 +5272,9 @@ class AppLocalizationsRo extends AppLocalizations {
       'Echipa de moderare Divine îl va vedea. Rămâne privat și nu este publicat.';
 
   @override
-  String get reportMessageTooLong =>
-      'This message is too long to include. Turn off “Include this message” and try again.';
+  String reportMessageTooLong(String optionTitle) {
+    return 'Mesajul e prea lung ca să fie inclus. Debifează „$optionTitle” și încearcă din nou.';
+  }
 
   @override
   String get reportBlockUser => 'Blochează acest utilizator';

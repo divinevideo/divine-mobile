@@ -1973,7 +1973,7 @@ class _MessageList extends StatelessWidget {
           context,
           messageId: message.id,
           senderPubkey: message.senderPubkey,
-          messageText: message.content,
+          messageText: message.readableText,
         );
       case MessageAction.blockSender:
       case MessageAction.unblockSender:

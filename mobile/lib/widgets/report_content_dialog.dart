@@ -184,12 +184,13 @@ class ReportContentDialog extends ConsumerWidget {
   /// The report stays private: it goes to Divine's moderation team and is
   /// never published, since a public report would tie the reporter to the
   /// person they message (#7340). The reporter may include [messageText],
-  /// which is offered only when it is not blank.
+  /// which is offered only when there is readable text: null for a file
+  /// message, whose content is an encrypted URL.
   static Future<void> showForMessage(
     BuildContext context, {
     required String messageId,
     required String senderPubkey,
-    required String messageText,
+    required String? messageText,
   }) {
     final controller = DraggableScrollableController();
     return context
@@ -204,7 +205,9 @@ class ReportContentDialog extends ConsumerWidget {
             moderationKindLabel: 'DM Message Report',
             moderationEventLabel: 'Message ID',
             publishesPublicReport: false,
-            messageExcerpt: messageText.trim().isEmpty ? null : messageText,
+            messageExcerpt: (messageText?.trim().isEmpty ?? true)
+                ? null
+                : messageText,
             draggableController: controller,
             scrollController: scrollController,
           ),
@@ -647,7 +650,8 @@ class _ReportContentViewState extends State<_ReportContentView> {
 
   void _onIncludeMessageChanged(bool include) => setState(() {
     _includeMessage = include;
-    // A too-large error is about the message, so changing that answers it.
+    // What will be sent changed, so a previous submit's error no longer
+    // describes it.
     _errorMessage = null;
   });
 
@@ -722,7 +726,9 @@ class _ReportContentViewState extends State<_ReportContentView> {
     setState(() {
       _errorMessage = switch (status) {
         ReportSubmissionStatus.failure => l10n.reportFailed,
-        ReportSubmissionStatus.tooLong => l10n.reportMessageTooLong,
+        ReportSubmissionStatus.tooLong => l10n.reportMessageTooLong(
+          l10n.reportIncludeMessageTitle,
+        ),
         _ => null,
       };
     });

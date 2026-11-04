@@ -502,9 +502,6 @@ void main() {
       });
     });
 
-    // The sheet and a group message's long-press share one block path, so the
-    // one-to-one behavior is pinned here: a block closes the thread, an
-    // unblock leaves it.
     // Both ways of reporting from a conversation open a private report: one
     // that never becomes a public kind-1984 naming the counterparty (#7340).
     group('reporting from a conversation', () {
@@ -574,6 +571,9 @@ void main() {
       });
     });
 
+    // The sheet and a group message's long-press share one block path, so the
+    // one-to-one behavior is pinned here: a block closes the thread, an
+    // unblock leaves it.
     group('options sheet block', () {
       const counterpartyName = 'Alice';
       late MockGoRouter goRouter;

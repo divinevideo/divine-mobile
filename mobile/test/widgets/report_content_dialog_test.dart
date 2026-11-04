@@ -2679,7 +2679,10 @@ void main() {
 
       await pickSpamAndSubmit(tester);
 
-      expect(find.text(l10n.reportMessageTooLong), findsOneWidget);
+      expect(
+        find.text(l10n.reportMessageTooLong(l10n.reportIncludeMessageTitle)),
+        findsOneWidget,
+      );
       expect(find.text(l10n.reportFailed), findsNothing);
       expect(
         find.widgetWithText(DivineButton, l10n.reportSubmit),
