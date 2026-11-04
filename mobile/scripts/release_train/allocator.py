@@ -32,7 +32,7 @@ def map_play_version_codes(
     for path in paths:
         match = _PROVENANCE_RE.match(path)
         if match:
-            provenance.setdefault(int(match.group(2)), match.group(1))
+            provenance.setdefault(int(match.group(2)), set()).add(match.group(1))
     mapped = {}
     unmappable = []
     for code in codes:
@@ -41,16 +41,26 @@ def map_play_version_codes(
         if allocation in paths:
             try:
                 text = ledger.read_json(allocation).get("version")
-            except LedgerError:
-                text = None
-        if not text:
-            text = provenance.get(code)
-        if not text:
-            unmappable.append(code)
+            except LedgerError as error:
+                raise AllocationError(
+                    f"cannot read allocation for Play version code {code} "
+                    f"at {allocation}: {error}"
+                ) from error
+        if text:
+            mapped[code] = parse_version(text)
             continue
-        mapped[code] = parse_version(text)
+        candidates = provenance.get(code, set())
+        if len(candidates) == 1:
+            mapped[code] = parse_version(next(iter(candidates)))
+        elif candidates:
+            names = ", ".join(
+                str(version) for version in sorted(map(parse_version, candidates))
+            )
+            unmappable.append(f"{code} (ambiguous provenance: {names})")
+        else:
+            unmappable.append(str(code))
     if unmappable:
-        listed = ", ".join(str(code) for code in sorted(set(unmappable)))
+        listed = ", ".join(sorted(set(unmappable)))
         raise AllocationError(
             f"cannot map Play version codes to a version: {listed}"
         )

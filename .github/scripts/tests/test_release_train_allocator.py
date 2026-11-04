@@ -15,6 +15,7 @@ from release_train.allocator import (  # noqa: E402
     map_play_version_codes,
     reconcile,
 )
+from release_train.ledger import LedgerError  # noqa: E402
 from release_train.versions import Version  # noqa: E402
 
 NOW = datetime(2026, 11, 5, 12, 0, tzinfo=timezone.utc)
@@ -151,6 +152,71 @@ class MapPlayVersionCodesTest(unittest.TestCase):
         self.assertNotIn("200", message)
 
 
+class _UnreadableStore(MemoryLedgerStore):
+    def __init__(self, files, unreadable):
+        super().__init__(files)
+        self._unreadable = unreadable
+
+    def read_json(self, path):
+        if path == self._unreadable:
+            raise LedgerError(f"HTTP 502 reading {path}")
+        return super().read_json(path)
+
+
+class FailClosedMappingTest(unittest.TestCase):
+    def test_unreadable_allocation_does_not_fall_back_to_provenance(self) -> None:
+        path = "allocations/builds/android/200.json"
+        ledger = _UnreadableStore(
+            {path: {"version": "1.0.29"}, "releases/android/1.0.28+200.json": {}},
+            path,
+        )
+        with self.assertRaises((LedgerError, AllocationError)) as caught:
+            map_play_version_codes(ledger, [200])
+        self.assertIn("200", str(caught.exception))
+        self.assertIn(path, str(caught.exception))
+
+    def test_unreadable_allocation_without_provenance_is_not_unmappable(self) -> None:
+        path = "allocations/builds/android/201.json"
+        ledger = _UnreadableStore({path: {"version": "1.0.29"}}, path)
+        with self.assertRaises((LedgerError, AllocationError)) as caught:
+            reconcile("android", ledger=ledger, store_version_codes=[201], now=NOW)
+        self.assertNotIn("cannot map", str(caught.exception))
+        self.assertEqual(ledger.creates, [])
+
+    def test_ambiguous_provenance_is_unmappable_naming_versions(self) -> None:
+        ledger = MemoryLedgerStore(
+            {
+                "releases/android/1.0.28+190.json": {},
+                "releases/android/1.0.29+190.json": {},
+                "releases/android/1.0.30+190.json": {},
+                "releases/android/1.0.27+180.json": {},
+            }
+        )
+        with self.assertRaises(AllocationError) as caught:
+            map_play_version_codes(ledger, [180, 190, 999])
+        message = str(caught.exception)
+        self.assertIn("ambiguous", message)
+        for text in ("190", "1.0.28", "1.0.29", "1.0.30", "999"):
+            self.assertIn(text, message)
+        self.assertNotIn("180", message)
+
+    def test_allocation_wins_over_provenance(self) -> None:
+        ledger = MemoryLedgerStore(
+            {
+                "allocations/builds/android/200.json": {"version": "1.0.29"},
+                "releases/android/1.0.28+200.json": {},
+            }
+        )
+        self.assertEqual(map_play_version_codes(ledger, [200]), {200: v("1.0.29")})
+        created = reconcile(
+            "android", ledger=ledger, store_version_codes=[200], now=NOW
+        )
+        self.assertEqual(
+            created, ["allocations/claims/1.0.29/play-production.json"]
+        )
+        self.assertEqual(ledger.creates, created)
+
+
 class ClaimedVersionsTest(unittest.TestCase):
     def test_parses_versions_from_claim_paths_only(self) -> None:
         paths = frozenset(
@@ -176,6 +242,14 @@ class DeriveVersionTest(unittest.TestCase):
 
     def test_derive_version_without_claims_is_the_floor(self) -> None:
         self.assertEqual(derive_version(v("1.0.28"), []), v("1.0.28"))
+
+    def test_derive_version_floor_equal_to_claim_bumps(self) -> None:
+        self.assertEqual(derive_version(v("1.1.0"), [v("1.1.0")]), v("1.1.1"))
+
+    def test_derive_version_uses_max_not_last_claim(self) -> None:
+        self.assertEqual(
+            derive_version(v("1.0.28"), [v("1.0.29"), v("1.0.27")]), v("1.0.30")
+        )
 
 
 if __name__ == "__main__":
