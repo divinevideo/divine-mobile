@@ -359,8 +359,8 @@ typedef _RecoveryPageAnswer = ({
 /// whether every relay asked answered, whether the one relay asked refused it
 /// for good, whether a relay may have stopped at its result cap, the oldest
 /// stamp it held (where the next page starts, inclusive), and how many new
-/// gift wraps it decrypted in a batch (a remote signer decrypts each one on
-/// its own, outside this count).
+/// gift wraps it decrypted before storing the page (a wrap that decrypts only
+/// on the per-event retry is not counted).
 typedef _HistoryPage = ({
   List<Event> events,
   bool authoritative,
@@ -372,7 +372,7 @@ typedef _HistoryPage = ({
 
 /// What one relay's walk of the band below the live window found: whether
 /// the relay answered every page or refused for good, the pages and events
-/// read, how many new gift wraps were decrypted in a batch, and the stamp
+/// read, how many new gift wraps were decrypted before storing, and the stamp
 /// reached if the page budget ran out before the floor.
 typedef _BandWalk = ({
   bool answered,
@@ -2183,7 +2183,8 @@ class DmRepository {
     );
   }
 
-  /// One read of [kinds] addressed to [pubkey] for [_fetchHistoryPage].
+  /// One read of [kinds] addressed to [pubkey] for [_fetchHistoryPage] and
+  /// [_handleDeletionPage].
   ///
   /// Targets the user's OWN kind-10050 inbox relays (in addition to the
   /// default pool) so the #4953/#4973 history drain reads gift wraps a sender
@@ -2242,8 +2243,9 @@ class DmRepository {
         possiblyCapped: true,
       );
     }
-    // The debt walk keeps the pool's judgement of whether the relay may have
-    // stopped at its limit: a settled page can still be incomplete.
+    // The debt walk and the re-query below the window keep the pool's
+    // judgement of whether the relay may have stopped at its limit: a settled
+    // page can still be incomplete.
     final result = await _nostrClient.readEvents(
       [filter],
       subscriptionId: subscriptionId,
