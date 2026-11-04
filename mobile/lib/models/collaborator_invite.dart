@@ -28,10 +28,12 @@ class CollaboratorInvite extends Equatable {
   final String? thumbnailUrl;
 
   /// Whether [video] is the video this invite names: its creator's event with
-  /// the invite's d-tag. A d-tag alone can match another author's video.
+  /// the invite's d-tag and kind. Old cached videos lack a kind, so only a
+  /// known mismatch is rejected rather than guessing their kind.
   bool isForVideo(VideoEvent video) =>
       video.pubkey.toLowerCase() == creatorPubkey.toLowerCase() &&
-      video.addressableDTag == videoDTag;
+      video.addressableDTag == videoDTag &&
+      (video.eventKind == null || video.eventKind == videoKind);
 
   /// The pubkey whose kind-34238 response settles the invite on this card.
   ///

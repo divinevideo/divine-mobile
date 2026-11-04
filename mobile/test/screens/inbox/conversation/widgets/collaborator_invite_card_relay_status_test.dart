@@ -379,6 +379,33 @@ void main() {
         );
 
         testWidgets(
+          'Invitation sent without watching when the found video has another '
+          'event kind with the same author and d-tag',
+          (tester) async {
+            final l10n = lookupAppLocalizations(const Locale('en'));
+            stubVideo(_video().copyWith(eventKind: 34235));
+
+            await pumpCard(
+              tester,
+              isSent: true,
+              repo: repo,
+              cubit: actionsCubit,
+            );
+            await deliver(tester, [_acceptance()]);
+
+            expect(subscribeCalls, 0);
+            expect(
+              find.text(l10n.inboxCollabInviteSentStatus),
+              findsOneWidget,
+            );
+            expect(
+              find.text(l10n.inboxCollabInviteAcceptedStatus),
+              findsNothing,
+            );
+          },
+        );
+
+        testWidgets(
           'Invitation sent without watching when the invitee is unknown',
           (tester) async {
             final l10n = lookupAppLocalizations(const Locale('en'));

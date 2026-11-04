@@ -28,6 +28,7 @@ void main() {
       VideoEvent video({
         required String pubkey,
         required String dTag,
+        int? eventKind,
       }) => VideoEvent(
         id: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
         pubkey: pubkey,
@@ -35,6 +36,7 @@ void main() {
         content: '',
         timestamp: DateTime.utc(2024, 10, 27),
         addressableDTag: dTag,
+        eventKind: eventKind,
       );
 
       test("matches the creator's video with the invite's d-tag", () {
@@ -56,6 +58,24 @@ void main() {
           isFalse,
         );
       });
+
+      test(
+        'rejects another known event kind with the same author and d-tag',
+        () {
+          expect(
+            invite.isForVideo(
+              video(pubkey: viewer, dTag: 'skate-loop', eventKind: 34235),
+            ),
+            isFalse,
+          );
+          expect(
+            invite.isForVideo(
+              video(pubkey: viewer, dTag: 'skate-loop', eventKind: 34236),
+            ),
+            isTrue,
+          );
+        },
+      );
     });
 
     group('collaboratorPubkeyFor', () {
