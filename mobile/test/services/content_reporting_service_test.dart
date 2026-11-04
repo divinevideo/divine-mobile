@@ -5,7 +5,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
-import 'package:dm_repository/dm_repository.dart' show maxDmRumorBytes;
+import 'package:dm_repository/dm_repository.dart'
+    show NIP17MessageService, dmRumorBytes, dmSendBatchTagKey, maxDmRumorBytes;
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +15,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_moderation_types.dart';
 import 'package:openvine/services/content_reporting_service.dart';
@@ -27,6 +29,8 @@ class _MockNostrClient extends Mock implements NostrClient {}
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockPendingReportsDao extends Mock implements PendingReportsDao {}
+
+class _MockNostrSigner extends Mock implements NostrSigner {}
 
 class _FakeEvent extends Fake implements Event {}
 
@@ -2727,6 +2731,56 @@ void main() {
         );
 
         expect(result.delivery, ReportDelivery.queued);
+      });
+
+      test('sizes the DM as the DM layer builds it, recipient and batch '
+          'tags included', () async {
+        // The rumor `DmRepository.enqueueSend` wraps for this report:
+        // `buildRumor` adds the recipient's `p` tag, `enqueueSend` the batch
+        // tag keyed by the report.
+        final messages = NIP17MessageService(
+          signer: _MockNostrSigner(),
+          senderPublicKey: testPublicKey,
+          nostrService: mockNostrService,
+        );
+        Future<(ReportResult, int?)> fileWithExcerptOf(int length) async {
+          final result = await private.reportContent(
+            eventId: rumorId,
+            authorPubkey: sender,
+            reason: ContentFilterReason.harassment,
+            details: '',
+            publishToRelays: false,
+            unverifiedMessageExcerpt: 'x' * length,
+          );
+          final row = result.reportId == null
+              ? null
+              : await dao.getById(result.reportId!);
+          if (row == null) return (result, null);
+          final payload = moderationPayload(row);
+          final rumor = messages.buildRumor(
+            recipientPubkey: payload['recipientPubkey'] as String,
+            content: payload['content'] as String,
+            createdAt: row.createdAt.millisecondsSinceEpoch ~/ 1000,
+            additionalTags: [
+              ...(payload['tags'] as List).map(
+                (tag) => (tag as List).cast<String>(),
+              ),
+              [dmSendBatchTagKey, row.reportId],
+            ],
+          );
+          return (result, dmRumorBytes(rumor));
+        }
+
+        // An ASCII excerpt grows the rumor byte for byte.
+        final (_, oneByteRumor) = await fileWithExcerptOf(1);
+        final atLimit = 1 + maxDmRumorBytes - oneByteRumor!;
+
+        final (fits, fitsBytes) = await fileWithExcerptOf(atLimit);
+        expect(fits.delivery, ReportDelivery.queued);
+        expect(fitsBytes, maxDmRumorBytes);
+
+        final (over, _) = await fileWithExcerptOf(atLimit + 1);
+        expect(over.delivery, ReportDelivery.tooLong);
       });
     });
   });
