@@ -581,10 +581,11 @@ class SoundsRepository {
   /// Best-effort on the relay half: a query that throws an [Exception] is
   /// logged and the cached matches are returned anyway, since a search over a
   /// partial index is already partial and fewer results read better than an
-  /// error over a list the user can see is there. Then the second query is
-  /// skipped and every unnamed match follows the rest, as it does when that
-  /// query cannot tell. Anything that is not an [Exception] still propagates,
-  /// from either query. Results are cached like any other fetch.
+  /// error over a list the user can see is there. When the tag query throws,
+  /// times out or reaches no relay, the second query is skipped and every
+  /// unnamed match follows the rest, as it does when that query cannot tell.
+  /// Anything that is not an [Exception] still propagates, from either
+  /// query. Results are cached like any other fetch.
   Future<List<AudioEvent>> searchSounds(
     String query, {
     int limit = maxSearchResults,
@@ -606,7 +607,9 @@ class SoundsRepository {
 
     var relayAnswered = true;
     try {
-      final events = await _nostrClient.queryEvents([
+      // The same read as queryEvents, which reports a timeout or an empty
+      // relay set only through these flags rather than by throwing.
+      final read = await _nostrClient.queryEventsDetailed([
         Filter(
           kinds: const [audioEventKind],
           m: audioMimeTypes,
@@ -614,7 +617,8 @@ class SoundsRepository {
           limit: limit,
         ),
       ]);
-      for (final sound in _processAndCacheEvents(events)) {
+      relayAnswered = !read.timedOut && !read.noRelays;
+      for (final sound in _processAndCacheEvents(read.events)) {
         if (sound.matchesSearch(query)) matches[sound.id] = sound;
       }
     } on Exception catch (e) {
@@ -628,8 +632,8 @@ class SoundsRepository {
 
     final newestFirst = withoutBlockedAuthors(matches.values.toList())
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    // Relays that just failed the search would most likely fail the reuse
-    // lookup too, so the unnamed sounds go last without asking them.
+    // Relays that just failed or ran out the search would most likely do the
+    // same to the reuse lookup, so the unnamed sounds go last without it.
     final results = relayAnswered
         ? await withUnusedOriginalsLast(newestFirst)
         : _originalsLast(newestFirst, _autoSharedOriginalsIn(newestFirst));
