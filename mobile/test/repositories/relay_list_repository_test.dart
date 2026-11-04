@@ -360,7 +360,7 @@ void main() {
         final settings = buildRepository().publishConfiguredRelayList(
           addedRelay: 'wss://added.example',
         );
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         verifyNever(
           () => nostrClient.queryEventsDetailed(
             any(),
@@ -380,6 +380,7 @@ void main() {
       () async {
         final firstRead =
             Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+        final readStarted = Completer<void>();
         var reads = 0;
         when(
           () => nostrClient.queryEventsDetailed(
@@ -390,6 +391,7 @@ void main() {
           ),
         ).thenAnswer((_) {
           reads++;
+          if (reads == 1) readStarted.complete();
           return reads == 1
               ? firstRead.future
               : Future.value((
@@ -405,7 +407,7 @@ void main() {
         final second = repository.publishConfiguredRelayList(
           addedRelay: 'wss://two.example',
         );
-        await Future<void>.delayed(Duration.zero);
+        await readStarted.future;
         expect(reads, 1);
         firstRead.complete((
           events: <Event>[],
