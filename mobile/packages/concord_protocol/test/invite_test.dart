@@ -61,4 +61,38 @@ void main() {
       );
     },
   );
+  test(
+    'bundle normalizes bounded relay and description previews like CORD-05',
+    () {
+      final owner = '11' * 32, salt = '22' * 32;
+      final bundle = ConcordInviteBundle.fromJson({
+        'community_id': deriveCommunityId(owner, salt),
+        'owner': owner,
+        'owner_salt': salt,
+        'community_root': '33' * 32,
+        'root_epoch': 0,
+        'channels': <dynamic>[],
+        'relays': [
+          '',
+          'wss://a',
+          'wss://a',
+          1,
+          'wss://b',
+          'wss://c',
+          'wss://d',
+          'wss://e',
+          'wss://f',
+        ],
+        'description': 'é' * 251,
+      }, nowMs: 0);
+      expect(bundle.raw['relays'], [
+        'wss://a',
+        'wss://b',
+        'wss://c',
+        'wss://d',
+        'wss://e',
+      ]);
+      expect(bundle.raw['description'], 'é' * 250);
+    },
+  );
 }

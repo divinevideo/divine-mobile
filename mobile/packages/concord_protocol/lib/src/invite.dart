@@ -102,7 +102,29 @@ class ConcordInviteBundle {
     if (expires is num && nowMs > expires) {
       throw const FormatException('Concord invite has expired');
     }
-    return ConcordInviteBundle._(Map.unmodifiable(json));
+    final normalized = Map<String, dynamic>.from(json);
+    final relays = json['relays'];
+    normalized['relays'] = relays is List
+        ? relays
+              .whereType<String>()
+              .where((r) => r.isNotEmpty)
+              .toSet()
+              .take(5)
+              .toList()
+        : <String>[];
+    normalized['channels'] = channels is List ? channels : <dynamic>[];
+    final description = json['description'];
+    if (description is String) {
+      final bytes = utf8.encode(description);
+      var end = bytes.length < 500 ? bytes.length : 500;
+      while (end < bytes.length && end > 0 && bytes[end] & 0xc0 == 0x80) {
+        end--;
+      }
+      normalized['description'] = utf8.decode(bytes.sublist(0, end));
+    } else {
+      normalized.remove('description');
+    }
+    return ConcordInviteBundle._(Map.unmodifiable(normalized));
   }
 
   final Map<String, dynamic> raw;

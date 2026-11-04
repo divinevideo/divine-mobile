@@ -488,6 +488,13 @@ Future<Map<String, dynamic>> openControlWrap({
           )) {
     throw const FormatException('Invalid Concord control rumor');
   }
+  final ms = rumorTags.where((tag) => tag.first == 'ms').firstOrNull;
+  if (ms != null &&
+      (ms.length < 2 || !RegExp(r'^(0|[1-9][0-9]{0,2})$').hasMatch(ms[1]))) {
+    throw const FormatException(
+      'Concord control has malformed millisecond tag',
+    );
+  }
   return {
     'rumorId': rumor['id'],
     'author': seal['pubkey'],

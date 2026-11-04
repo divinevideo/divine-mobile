@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:bip340/bip340.dart' as schnorr;
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:test/test.dart';
@@ -124,4 +125,43 @@ void main() {
       });
     },
   );
+  test('control streams reject noncanonical millisecond tags', () async {
+    final read = controlReadKey('11' * 32, '22' * 32, 0);
+    final author = schnorr.getPublicKey('33' * 32);
+    for (final value in ['1000', '1e2', '01', '-1', '']) {
+      final tags = <List<String>>[
+        ['ms', value],
+      ];
+      final rumor = <String, dynamic>{
+        'kind': 3308,
+        'content': '{}',
+        'pubkey': author,
+        'created_at': 1,
+        'tags': tags,
+        'id': computeEventId(
+          pubkey: author,
+          createdAt: 1,
+          kind: 3308,
+          tags: tags,
+          content: '{}',
+        ),
+      };
+      final seal = await sealRumor(
+        rumor: rumor,
+        sealKind: 20014,
+        streamSeedHex: read.seedHex,
+        streamPubkey: read.pubkey,
+        authorSecretHex: '33' * 32,
+      );
+      final wrap = await wrapSeal(
+        seal: seal,
+        streamSeedHex: read.seedHex,
+        streamPubkey: read.pubkey,
+      );
+      await expectLater(
+        openControlWrap(wrap: wrap, readKey: read, streamPubkey: read.pubkey),
+        throwsFormatException,
+      );
+    }
+  });
 }
