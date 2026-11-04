@@ -134,6 +134,7 @@ void main() {
     registerFallbackValue(_createPendingUpload(status: UploadStatus.pending));
     registerFallbackValue(_FakeEvent());
     registerFallbackValue(<VideoStickerRegion>[]);
+    registerFallbackValue(<AudioEvent>[]);
   });
 
   setUp(() {
@@ -1546,6 +1547,49 @@ void main() {
           ),
         ).captured;
         expect(captured.single, ContentLabel.flashingLights.value);
+      });
+
+      test('hands the music added in the editor to the credit', () async {
+        // A shipped sound added through the editor's music picker never
+        // becomes the selected sound, so its credit comes from the tracks.
+        _setupSuccessfulPublish(
+          mockAuthService: mockAuthService,
+          mockUploadManager: mockUploadManager,
+          mockDraftService: mockDraftService,
+          mockVideoEventPublisher: mockVideoEventPublisher,
+        );
+        final track = AudioEvent(
+          id: 'bundled_freesound_elevator_music',
+          pubkey: AudioEvent.bundledMarker,
+          createdAt: 0,
+          title: 'Elevator Music',
+          licenseName: 'CC BY 4.0',
+          licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+        );
+
+        final result = await service.publishVideo(
+          draft: _createTestDraft(
+            editorEditingParameters: {
+              'meta': {
+                VideoEditorConstants.audioStateHistoryKey: [track.toJson()],
+              },
+            },
+          ),
+        );
+
+        expect(result, isA<PublishSuccess>());
+        final captured = verify(
+          () => _verifyPublishVideoEvent(
+            mockVideoEventPublisher,
+            textTrackRefs: any(named: 'textTrackRefs'),
+            textTrackLang: any(named: 'textTrackLang'),
+            creditedSounds: captureAny(named: 'creditedSounds'),
+          ),
+        ).captured;
+        expect(
+          (captured.single as List<AudioEvent>).map((sound) => sound.id),
+          equals(['bundled_freesound_elevator_music']),
+        );
       });
 
       test('publishes without mention tags when resolution fails', () async {
@@ -4118,6 +4162,7 @@ Future<bool> _verifyPublishVideoEvent(
   required String textTrackLang,
   dynamic language = _anyLanguageMatcher,
   dynamic contentWarning = _anyContentWarningMatcher,
+  List<AudioEvent> creditedSounds = const [],
 }) => publisher.publishVideoEvent(
   upload: any(named: 'upload'),
   title: any(named: 'title'),
@@ -4132,6 +4177,7 @@ Future<bool> _verifyPublishVideoEvent(
   inspiredByNpubs: any(named: 'inspiredByNpubs'),
   clipSourceCredits: any(named: 'clipSourceCredits'),
   selectedAudio: any(named: 'selectedAudio'),
+  creditedSounds: creditedSounds,
   audioShareAttribution: any(named: 'audioShareAttribution'),
   selectedAudioEventId: any(named: 'selectedAudioEventId'),
   selectedAudioRelay: any(named: 'selectedAudioRelay'),
@@ -4245,6 +4291,7 @@ void _setupSuccessfulPublish({
       inspiredByNpubs: any(named: 'inspiredByNpubs'),
       clipSourceCredits: any(named: 'clipSourceCredits'),
       selectedAudio: any(named: 'selectedAudio'),
+      creditedSounds: any(named: 'creditedSounds'),
       audioShareAttribution: any(named: 'audioShareAttribution'),
       selectedAudioEventId: any(named: 'selectedAudioEventId'),
       selectedAudioRelay: any(named: 'selectedAudioRelay'),

@@ -146,6 +146,24 @@ void main() {
         );
       });
 
+      testWidgets('shows the first of several content lines', (tester) async {
+        const second =
+            '♪ Elevator Music – YellowTree via Freesound, CC BY 4.0 '
+            'https://creativecommons.org/licenses/by/4.0/ (edited)';
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            video: createVideoWithoutAudio(
+              content: 'Hi\n\n$creditLine\n$second',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('YAY!'), findsOneWidget);
+        expect(find.textContaining('Elevator Music'), findsNothing);
+      });
+
       testWidgets('prefers the content line to an unavailable sound', (
         tester,
       ) async {

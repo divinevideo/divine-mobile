@@ -778,11 +778,13 @@ void main() {
     });
 
     group('edited field replacement', () {
-      test('keeps the sound credit line under the edited caption', () async {
-        // The editor never shows the line, and an edit cannot change the
-        // sound, so the published credit must survive the edit.
+      test('keeps every sound credit line under the edited caption', () async {
+        // The editor never shows the lines, and an edit cannot change the
+        // sounds, so the published credits must survive the edit.
         const credit =
             '♪ Monkeys Spinning Monkeys – Kevin MacLeod (incompetech.com), '
+            'CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ (edited)\n'
+            '♪ Elevator Music – YellowTree via Freesound, '
             'CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ (edited)';
         String? capturedContent;
         when(

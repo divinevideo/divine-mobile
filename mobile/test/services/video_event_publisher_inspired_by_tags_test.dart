@@ -9,7 +9,7 @@ import 'package:models/models.dart'
         AudioEvent,
         ClipSourceCredit,
         clipSourceCreditTagMarker,
-        soundCreditFromContent,
+        soundCreditsFromContent,
         stripInspiredByAttribution;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
@@ -363,7 +363,66 @@ void main() {
 
           expect(result, isTrue);
           expect(capturedContent, equals('my caption'));
-          expect(soundCreditFromContent(capturedContent), isNull);
+          expect(soundCreditsFromContent(capturedContent), isEmpty);
+        });
+
+        test('credits a sound added only in the editor', () async {
+          // A shipped sound has no Nostr event, so it never becomes the
+          // selected sound; its credit comes from the editor's tracks.
+          stubSignAndPublish();
+
+          final result = await publisher.publishDirectUpload(
+            createUpload().copyWith(description: 'my caption'),
+            creditedSounds: [
+              AudioEvent(
+                id: 'bundled_freesound_radio_announcement',
+                pubkey: AudioEvent.bundledMarker,
+                createdAt: 0,
+                title: 'Radio Announcement',
+                source: 'TheScarlettWitch89 via Freesound',
+                licenseName: 'CC BY 3.0',
+                licenseUrl: 'https://creativecommons.org/licenses/by/3.0/',
+              ),
+            ],
+          );
+
+          expect(result, isTrue);
+          expect(
+            capturedContent,
+            equals(
+              'my caption\n\n♪ Radio Announcement – TheScarlettWitch89 via '
+              'Freesound, CC BY 3.0 '
+              'https://creativecommons.org/licenses/by/3.0/ (edited)',
+            ),
+          );
+        });
+
+        test('credits each sound once, the selected sound first', () async {
+          stubSignAndPublish();
+          final selected = sound(
+            licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+          );
+          final track = selected.copyWith(
+            id: 'e' * 64,
+            title: 'Elevator Music',
+            creatorName: 'YellowTree',
+          );
+
+          final result = await publisher.publishDirectUpload(
+            createUpload().copyWith(description: 'my caption'),
+            selectedAudio: selected,
+            // The selected sound is also a track on the editor's timeline.
+            creditedSounds: [selected, track],
+          );
+
+          expect(result, isTrue);
+          expect(
+            soundCreditsFromContent(capturedContent).map((c) => c.work),
+            equals([
+              'Monkeys Spinning Monkeys – Kevin MacLeod (incompetech.com)',
+              'Elevator Music – YellowTree',
+            ]),
+          );
         });
       });
 

@@ -40,8 +40,8 @@ class MetadataSoundsSection extends ConsumerWidget {
 
     // A credited sound with no event of its own, such as one the app ships,
     // is not the video's original sound.
-    if (video.soundCredit case final credit?) {
-      return _ContentCreditSection(credit: credit);
+    if (video.soundCredits.isNotEmpty) {
+      return _ContentCreditSection(credits: video.soundCredits);
     }
 
     // Otherwise show "Original sound - @creator"
@@ -62,8 +62,8 @@ class _SharedAudioSection extends ConsumerWidget {
     return audioAsync.when(
       data: (audio) {
         if (audio == null) {
-          if (video.soundCredit case final credit?) {
-            return _ContentCreditSection(credit: credit);
+          if (video.soundCredits.isNotEmpty) {
+            return _ContentCreditSection(credits: video.soundCredits);
           }
           // The shared audio event couldn't be resolved (e.g. the source
           // video isn't reachable by id). This video still reused a sound, so
@@ -83,6 +83,14 @@ class _SharedAudioSection extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _SoundListItem(audio: audio, sourceVideo: video),
+              // Further credited sounds, such as music added in the editor,
+              // have no event of their own.
+              for (final credit in video.soundCredits)
+                if (credit.line != soundCreditLine(audio))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: _ContentCreditRow(credit: credit),
+                  ),
               if (video.addressableId != null &&
                   context.read<SoundRequestsCubit?>() != null)
                 SoundRequestButton(videoAddress: video.addressableId!),
@@ -94,68 +102,85 @@ class _SharedAudioSection extends ConsumerWidget {
         label: context.l10n.metadataSoundsLabel,
         child: const _SoundSkeleton(),
       ),
-      error: (error, stack) => switch (video.soundCredit) {
-        final credit? => _ContentCreditSection(credit: credit),
-        null => _OriginalSoundSection(
-          video: video,
-          reusedCreatorPubkey: AudioAttributionCredit.reusedCreatorPubkeyFor(
-            video,
-          ),
-        ),
-      },
+      error: (error, stack) => video.soundCredits.isNotEmpty
+          ? _ContentCreditSection(credits: video.soundCredits)
+          : _OriginalSoundSection(
+              video: video,
+              reusedCreatorPubkey:
+                  AudioAttributionCredit.reusedCreatorPubkeyFor(video),
+            ),
     );
   }
 }
 
-/// Display-only credit read from the line at the end of the video's content
-/// ([VideoEvent.soundCredit]), for a sound whose own event is not at hand.
-///
-/// The line exists only for a sound whose licence asks for credit, so it
-/// always says the excerpt was edited.
+/// Display-only credits read from the lines at the end of the video's content
+/// ([VideoEvent.soundCredits]), for sounds whose own events are not at hand.
 class _ContentCreditSection extends StatelessWidget {
-  const _ContentCreditSection({required this.credit});
+  const _ContentCreditSection({required this.credits});
 
-  final SoundCredit credit;
+  final List<SoundCredit> credits;
 
   @override
   Widget build(BuildContext context) {
     return MetadataSection(
       label: context.l10n.metadataSoundsLabel,
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 16,
         children: [
-          DivineIcon(
-            icon: DivineIconName.waveform,
-            color: context.vineColors.onSurfaceVariant,
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  credit.work,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: VineTheme.titleMediumFont(
-                    color: context.vineColors.primaryText,
-                  ),
-                ),
-                Text(
-                  [
-                    ?credit.license,
-                    context.l10n.soundCreditEdited,
-                  ].join(' · '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: VineTheme.bodyMediumFont(
-                    color: context.vineColors.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          for (final credit in credits) _ContentCreditRow(credit: credit),
         ],
       ),
+    );
+  }
+}
+
+/// One credited sound read from a line of the video's content.
+///
+/// The line exists only for a sound whose licence asks for credit, so it
+/// always says the excerpt was edited.
+class _ContentCreditRow extends StatelessWidget {
+  const _ContentCreditRow({required this.credit});
+
+  final SoundCredit credit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      spacing: 16,
+      children: [
+        DivineIcon(
+          icon: DivineIconName.waveform,
+          color: context.vineColors.onSurfaceVariant,
+        ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                credit.work,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: VineTheme.titleMediumFont(
+                  color: context.vineColors.primaryText,
+                ),
+              ),
+              Text(
+                [
+                  ?credit.license,
+                  context.l10n.soundCreditEdited,
+                ].join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -83,63 +83,138 @@ void main() {
     });
   });
 
-  group('withSoundCreditLine', () {
-    test('puts the line after the caption, separated by a blank line', () {
+  group('soundCreditLines', () {
+    test('credits each sound once, in order, and skips the uncredited', () {
+      const second = '♪ Elevator Music – YellowTree, CC BY 4.0 $_ccBy (edited)';
+
       expect(
-        withSoundCreditLine('my caption', line),
-        equals('my caption\n\n$line'),
+        soundCreditLines([
+          _sound(),
+          _sound(licenseName: 'CC0 1.0', licenseUrl: null),
+          _sound(title: 'Elevator Music', creatorName: 'YellowTree'),
+          _sound(),
+        ]),
+        equals([line, second]),
       );
-    });
-
-    test('is the line alone for a video without a caption', () {
-      expect(withSoundCreditLine('', line), equals(line));
-    });
-
-    test('leaves the caption alone without a line', () {
-      expect(withSoundCreditLine('my caption', null), equals('my caption'));
     });
   });
 
-  group('soundCreditFromContent', () {
+  group('withSoundCreditLines', () {
+    const second = '♪ Elevator Music – YellowTree, CC BY 4.0 $_ccBy (edited)';
+
+    test('puts the lines after the caption, separated by a blank line', () {
+      expect(
+        withSoundCreditLines('my caption', [line, second]),
+        equals('my caption\n\n$line\n$second'),
+      );
+    });
+
+    test('is the lines alone for a video without a caption', () {
+      expect(withSoundCreditLines('', [line]), equals(line));
+    });
+
+    test('leaves the caption alone without lines', () {
+      expect(withSoundCreditLines('my caption', []), equals('my caption'));
+    });
+
+    test('writes a repeated line once', () {
+      expect(
+        withSoundCreditLines('my caption', [line, line]),
+        equals('my caption\n\n$line'),
+      );
+    });
+  });
+
+  group('soundCreditsFromContent', () {
     test('reads the work and licence back', () {
       expect(
-        soundCreditFromContent('my caption\n\n$line'),
-        equals(
+        soundCreditsFromContent('my caption\n\n$line'),
+        equals([
           const SoundCredit(
             line: line,
             work: 'Monkeys Spinning Monkeys – Kevin MacLeod (incompetech.com)',
             license: 'CC BY 4.0',
           ),
-        ),
+        ]),
       );
     });
 
-    test('finds it before an Inspired By line', () {
+    test('reads every line of the block, in order', () {
+      const second = '♪ Radio Announcement – Someone, CC BY 3.0 (edited)';
+
+      expect(
+        soundCreditsFromContent('my caption\n\n$line\n$second'),
+        equals([
+          const SoundCredit(
+            line: line,
+            work: 'Monkeys Spinning Monkeys – Kevin MacLeod (incompetech.com)',
+            license: 'CC BY 4.0',
+          ),
+          const SoundCredit(
+            line: second,
+            work: 'Radio Announcement – Someone',
+            license: 'CC BY 3.0',
+          ),
+        ]),
+      );
+    });
+
+    test('finds them before an Inspired By line', () {
       final npub = Nip19.encodePubKey('e' * 64);
       final content =
           'my caption\n\n$line\n\n${inspiredByAttributionLine(npub)}';
 
-      expect(soundCreditFromContent(content)?.line, equals(line));
+      expect(
+        soundCreditsFromContent(content).map((credit) => credit.line),
+        equals([line]),
+      );
     });
 
     test('keeps a comma in the work', () {
       expect(
-        soundCreditFromContent(
+        soundCreditsFromContent(
           '♪ Hello, World – Someone, CC BY 4.0 $_ccBy (edited)',
-        )?.work,
+        ).single.work,
         equals('Hello, World – Someone'),
       );
     });
 
+    test('reads a line without terms as the work alone', () {
+      expect(
+        soundCreditsFromContent('♪ Hello World (edited)'),
+        equals([
+          const SoundCredit(
+            line: '♪ Hello World (edited)',
+            work: 'Hello World',
+          ),
+        ]),
+      );
+    });
+
     test('ignores a caption that only mentions a song', () {
-      expect(soundCreditFromContent('♪ singing along (edited) today'), isNull);
-      expect(soundCreditFromContent('loving this ♪ x (edited)'), isNull);
+      expect(
+        soundCreditsFromContent('♪ singing along (edited) today'),
+        isEmpty,
+      );
+      expect(soundCreditsFromContent('loving this ♪ x (edited)'), isEmpty);
+    });
+
+    test('ignores a credit-shaped caption line not set apart by a blank '
+        'line', () {
+      expect(soundCreditsFromContent('my caption\n$line'), isEmpty);
     });
   });
 
   group('stripSoundCredit', () {
     test('removes the line and the blank line before it', () {
       expect(stripSoundCredit('my caption\n\n$line'), equals('my caption'));
+    });
+
+    test('removes every line of the block', () {
+      expect(
+        stripSoundCredit('my caption\n\n$line\n$line'),
+        equals('my caption'),
+      );
     });
 
     test('leaves content without a credit alone', () {
@@ -155,11 +230,14 @@ void main() {
       );
 
       expect(video.displayContent, equals('my caption'));
-      expect(video.soundCredit?.license, equals('CC BY 4.0'));
+      expect(
+        video.soundCredits.map((credit) => credit.license),
+        equals(['CC BY 4.0']),
+      );
     });
 
-    test('has no sound credit without the line', () {
-      expect(_video('my caption').soundCredit, isNull);
+    test('has no sound credits without the line', () {
+      expect(_video('my caption').soundCredits, isEmpty);
     });
   });
 }

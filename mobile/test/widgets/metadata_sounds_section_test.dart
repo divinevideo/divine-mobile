@@ -57,12 +57,14 @@ void main() {
       );
     });
 
-    VideoEvent createVideoWithAudio() {
+    VideoEvent createVideoWithAudio({
+      String content = 'Test video with audio',
+    }) {
       final now = DateTime.now();
       return VideoEvent(
         id: testVideoId,
         pubkey: testPubkey,
-        content: 'Test video with audio',
+        content: content,
         videoUrl: 'https://example.com/video.mp4',
         createdAt: now.millisecondsSinceEpoch ~/ 1000,
         timestamp: now,
@@ -348,6 +350,68 @@ void main() {
           findsOneWidget,
         );
         expect(find.text(l10n.metadataOriginalSound), findsNothing);
+      });
+
+      testWidgets('lists every credited sound', (tester) async {
+        final video = createVideoWithoutAudio(
+          content:
+              'Hi\n\n♪ Elevator Music – YellowTree via Freesound, CC BY 4.0 '
+              'https://creativecommons.org/licenses/by/4.0/ (edited)\n'
+              '♪ Radio Announcement – TheScarlettWitch89 via Freesound, '
+              'CC BY 3.0 https://creativecommons.org/licenses/by/3.0/ (edited)',
+        );
+
+        await tester.pumpWidget(buildTestWidget(video: video));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Elevator Music – YellowTree via Freesound'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Radio Announcement – TheScarlettWitch89 via Freesound'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('lists a further credited sound under the referenced one', (
+        tester,
+      ) async {
+        final video = createVideoWithAudio(
+          content:
+              'Hi\n\n♪ Elevator Music – YellowTree via Freesound, CC BY 4.0 '
+              'https://creativecommons.org/licenses/by/4.0/ (edited)',
+        );
+
+        await tester.pumpWidget(buildTestWidget(video: video));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Cool Beat'), findsOneWidget);
+        expect(
+          find.text('Elevator Music – YellowTree via Freesound'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets("does not repeat the referenced sound's own credit", (
+        tester,
+      ) async {
+        final licensed = testAudio.copyWith(
+          creatorName: 'Someone',
+          licenseName: 'CC BY 4.0',
+          licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+        );
+        final video = createVideoWithAudio(
+          content: 'Hi\n\n${soundCreditLine(licensed)}',
+        );
+
+        await tester.pumpWidget(
+          buildTestWidget(video: video, audioOverride: licensed),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Cool Beat'), findsOneWidget);
+        expect(_divineIcon(DivineIconName.waveform), findsOneWidget);
       });
     });
 

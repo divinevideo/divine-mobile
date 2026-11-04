@@ -25,7 +25,7 @@ import 'package:unified_logger/unified_logger.dart';
 ///   the video reuses a sound whose event can't be fetched (#6185)
 /// - **Content credit**: `♪ Title – Creator · CC BY 4.0 · edited`,
 ///   display-only — read from the credit line the publisher put at the end of
-///   the video's content ([VideoEvent.soundCredit]) when the sound's event is
+///   the video's content ([VideoEvent.soundCredits]) when the sound's event is
 ///   not at hand, as for a sound the app ships
 class AudioAttributionRow extends ConsumerWidget {
   /// Creates an AudioAttributionRow.
@@ -38,7 +38,9 @@ class AudioAttributionRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // The display hides the credit line from the caption, so the pill shows
     // it wherever the sound's own event cannot.
-    final contentCredit = video.soundCredit;
+    // A video crediting several sounds shows the first; the About sheet
+    // lists them all.
+    final contentCredit = video.soundCredits.firstOrNull;
 
     // Only show for videos with shared/bundled audio, not original sounds.
     // Original sound info is available in the metadata "more info" sheet.

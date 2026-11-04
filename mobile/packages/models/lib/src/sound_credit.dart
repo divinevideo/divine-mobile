@@ -1,27 +1,31 @@
-// ABOUTME: The credit line a video carries in its content when its sound's
-// ABOUTME: licence asks for attribution; shared by the publisher and readers.
+// ABOUTME: The credit lines a video carries in its content for the sounds
+// ABOUTME: whose licences ask for attribution; shared by publisher and readers.
 
 import 'package:meta/meta.dart';
 import 'package:models/src/audio_event.dart';
 import 'package:models/src/video_attribution.dart';
 
-/// Opens the line, so a reader sees at a glance what it credits.
+/// Opens a credit line, so a reader sees at a glance what it credits.
 const soundCreditPrefix = '♪ ';
 
-/// Closes the line. A video uses an excerpt of its sound, mixed into its own
-/// audio, which an Attribution licence asks to say (CC BY 4.0
+/// Closes a credit line. A video uses an excerpt of its sound, mixed into its
+/// own audio, which an Attribution licence asks to say (CC BY 4.0
 /// §3(a)(1)(B)). English like every published credit: the event must not
 /// depend on the poster's language.
 const soundCreditEditedMark = '(edited)';
 
-/// Matches the credit line at the end of a video's content, separated from
-/// the caption by a blank line or standing alone.
+final _creditLine =
+    '${RegExp.escape(soundCreditPrefix)}[^\\n]*'
+    '${RegExp.escape(soundCreditEditedMark)}';
+
+/// Matches the credit lines at the end of a video's content: one line per
+/// credited sound, separated from the caption by a blank line or standing
+/// alone.
 ///
 /// Anchored and bounded by the prefix and the mark, so a caption that merely
-/// mentions a song is not mistaken for the credit.
+/// mentions a song is not mistaken for a credit.
 final soundCreditPattern = RegExp(
-  '(?:^|\\n\\n)(${RegExp.escape(soundCreditPrefix)}[^\\n]*'
-  '${RegExp.escape(soundCreditEditedMark)})\\s*\$',
+  '(?:^|\\n\\n)((?:$_creditLine\\n)*$_creditLine)\\s*\$',
 );
 
 /// A sound credit read back from a video's content.
@@ -72,22 +76,41 @@ String? soundCreditLine(AudioEvent sound) {
   return '$soundCreditPrefix$credit $soundCreditEditedMark';
 }
 
-/// [content] with the credit [line] after it, separated by a blank line.
+/// The lines crediting [sounds], in order, once each: a sound used twice in
+/// one video is credited once.
+List<String> soundCreditLines(Iterable<AudioEvent> sounds) => {
+  for (final sound in sounds) ?soundCreditLine(sound),
+}.toList();
+
+/// [content] with the credit [lines] after it, one per line, separated from
+/// it by a blank line.
 ///
 /// Goes before the Inspired By reference, which readers expect last.
-String withSoundCreditLine(String content, String? line) {
-  if (line == null || line.isEmpty) return content;
-  return content.isEmpty ? line : '$content\n\n$line';
+String withSoundCreditLines(String content, Iterable<String> lines) {
+  final block = {...lines.where((line) => line.isNotEmpty)}.join('\n');
+  if (block.isEmpty) return content;
+  return content.isEmpty ? block : '$content\n\n$block';
 }
 
-/// The sound credit at the end of [content], before any Inspired By line,
-/// or `null` when there is none.
-SoundCredit? soundCreditFromContent(String content) {
-  final line = soundCreditPattern
+/// The sound credits at the end of [content], before any Inspired By line,
+/// in the order they were published. Empty when there are none.
+List<SoundCredit> soundCreditsFromContent(String content) {
+  final block = soundCreditPattern
       .firstMatch(stripInspiredByAttribution(content))
       ?.group(1);
-  if (line == null) return null;
+  if (block == null) return const [];
+  return [for (final line in block.split('\n')) _parseCredit(line)];
+}
 
+/// [content] without the sound credits at its end. Run it after
+/// `stripInspiredByAttribution`, which removes the line that follows them.
+String stripSoundCredit(String content) {
+  final match = soundCreditPattern.firstMatch(content);
+  if (match == null) return content;
+  return content.substring(0, match.start).trimRight();
+}
+
+SoundCredit _parseCredit(String line) {
   final credit = line
       .substring(
         soundCreditPrefix.length,
@@ -109,14 +132,6 @@ SoundCredit? soundCreditFromContent(String content) {
     work: credit.substring(0, split),
     license: license.isEmpty ? null : license,
   );
-}
-
-/// [content] without the sound credit at its end. Run it after
-/// `stripInspiredByAttribution`, which removes the line that follows it.
-String stripSoundCredit(String content) {
-  final match = soundCreditPattern.firstMatch(content);
-  if (match == null) return content;
-  return content.substring(0, match.start).trimRight();
 }
 
 String? _oneLine(String? value) {

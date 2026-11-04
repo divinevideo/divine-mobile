@@ -1231,15 +1231,17 @@ class VideoEvent {
   /// Computed once per instance: [content] is final, and the feed grid and
   /// player overlay read this on every rebuild.
   ///
-  /// The sound credit line goes too: the sound pill shows it, from
-  /// [soundCredit] when the sound's own event cannot be read.
+  /// The sound credit lines go too: the sound pill and the About sheet show
+  /// them, from [soundCredits].
   late final String displayContent = sanitizeForDisplay(
     stripSoundCredit(stripInspiredByAttribution(content)),
   );
 
-  /// The credit for an Attribution-licensed sound the publisher put at the
-  /// end of [content], or `null` when there is none.
-  late final SoundCredit? soundCredit = soundCreditFromContent(content);
+  /// The credits for the Attribution-licensed sounds the publisher put at the
+  /// end of [content], one per sound. Empty when there are none.
+  late final List<SoundCredit> soundCredits = soundCreditsFromContent(
+    content,
+  );
 
   /// Display-sanitized video title. Returns `null` when no title is set.
   String? get displayTitle => title != null ? sanitizeForDisplay(title!) : null;

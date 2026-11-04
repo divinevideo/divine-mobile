@@ -216,6 +216,7 @@ class VideoEventPublisher {
     List<String> inspiredByNpubs = const [],
     List<ClipSourceCredit> clipSourceCredits = const [],
     AudioEvent? selectedAudio,
+    List<AudioEvent> creditedSounds = const [],
     AudioShareAttribution? audioShareAttribution,
     String? selectedAudioEventId,
     String? selectedAudioRelay,
@@ -253,6 +254,7 @@ class VideoEventPublisher {
       inspiredByNpubs: inspiredByNpubs,
       clipSourceCredits: clipSourceCredits,
       selectedAudio: selectedAudio,
+      creditedSounds: creditedSounds,
       audioShareAttribution: audioShareAttribution,
       selectedAudioEventId: selectedAudioEventId,
       selectedAudioRelay: selectedAudioRelay,
@@ -323,6 +325,7 @@ class VideoEventPublisher {
     List<String> inspiredByNpubs = const [],
     List<ClipSourceCredit> clipSourceCredits = const [],
     AudioEvent? selectedAudio,
+    List<AudioEvent> creditedSounds = const [],
     AudioShareAttribution? audioShareAttribution,
     String? selectedAudioEventId,
     String? selectedAudioRelay,
@@ -378,6 +381,7 @@ class VideoEventPublisher {
       inspiredByNpubs: inspiredByNpubs,
       clipSourceCredits: clipSourceCredits,
       selectedAudio: selectedAudio,
+      creditedSounds: creditedSounds,
       audioShareAttribution: audioShareAttribution,
       selectedAudioEventId: selectedAudioEventId,
       selectedAudioRelay: selectedAudioRelay,
@@ -425,6 +429,7 @@ class VideoEventPublisher {
     required List<String> inspiredByNpubs,
     required List<ClipSourceCredit> clipSourceCredits,
     required AudioEvent? selectedAudio,
+    required List<AudioEvent> creditedSounds,
     required AudioShareAttribution? audioShareAttribution,
     required String? selectedAudioEventId,
     required String? selectedAudioRelay,
@@ -547,14 +552,14 @@ class VideoEventPublisher {
         );
       }
 
-      // A sound whose licence asks for credit is credited in the content
-      // too: other clients rarely follow the `e … audio` reference. The
-      // NIP-27 Inspired By person reference goes last, where readers expect
-      // it.
+      // Each sound whose licence asks for credit is credited in the content
+      // too: other clients rarely follow the `e … audio` reference, and a
+      // sound added only in the editor has none. The NIP-27 Inspired By
+      // person reference goes last, where readers expect it.
       final content = withInspiredByContentReference(
-        withSoundCreditLine(
+        withSoundCreditLines(
           upload.description ?? upload.title ?? '',
-          selectedAudio == null ? null : soundCreditLine(selectedAudio),
+          soundCreditLines([?selectedAudio, ...creditedSounds]),
         ),
         inspiredByNpubs,
       );

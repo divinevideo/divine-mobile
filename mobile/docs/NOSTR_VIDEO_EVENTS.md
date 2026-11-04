@@ -104,17 +104,18 @@ provenance. Publishing lives in
 
 ### Sound Credit Line
 
-When a video's selected sound is under a licence that asks for attribution (any Creative Commons Attribution licence, `AudioEvent.requiresAttribution`), the app ends the video's `content` with a credit line, after the caption and a blank line:
+When a video uses a sound under a licence that asks for attribution (any Creative Commons Attribution licence, `AudioEvent.requiresAttribution`), the app ends the video's `content` with a credit line, after the caption and a blank line. Each such sound gets its own line, the selected sound first and then the editor's audio tracks in timeline order, each sound once:
 
 ```
 My caption #fun
 
 ♪ Monkeys Spinning Monkeys – Kevin MacLeod (incompetech.com), CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ (edited)
+♪ Elevator Music – YellowTree via Freesound, CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ (edited)
 ```
 
-It names the title, the creator, the licence and its link, and says the sound was changed: the video uses an excerpt mixed into its own audio, which CC BY 4.0 §3(a)(1)(B) asks to indicate. Other clients rarely follow the `["e", <sound event id>, <relay>, "audio"]` reference, so the credit travels in the text every client shows; a sound the app ships has no event at all. The line is English whatever the poster's language, and comes before an Inspired By line, which readers expect last.
+A line names the title, the creator, the licence and its link, and says the sound was changed: the video uses an excerpt mixed into its own audio, which CC BY 4.0 §3(a)(1)(B) asks to indicate. Other clients rarely follow the `["e", <sound event id>, <relay>, "audio"]` reference, so the credit travels in the text every client shows; a sound the app ships, or one added only as an editor track, has no reference at all. The lines are English whatever the poster's language, and come before an Inspired By line, which readers expect last.
 
-This is a Divine convention. The app hides the line from the caption it shows (`VideoEvent.displayContent`) and shows the credit in the sound pill instead, from the sound's event or, when that is not at hand, from the line (`VideoEvent.soundCredit`). The metadata edit flow keeps it: the editor never shows it, and an edit cannot change the sound. Writer and parser share `mobile/packages/models/lib/src/sound_credit.dart`.
+This is a Divine convention. The app hides the lines from the caption it shows (`VideoEvent.displayContent`) and shows the credits instead: the sound pill shows the referenced sound or, when that is not at hand, the first line, and the About sheet lists every line (`VideoEvent.soundCredits`). The metadata edit flow keeps them: the editor never shows them, and an edit cannot change the sounds. Writer and parser share `mobile/packages/models/lib/src/sound_credit.dart`.
 
 ### Divine Reuse Markers
 
