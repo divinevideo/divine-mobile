@@ -225,10 +225,12 @@ class RiverpodFeedRepository implements FeedRepository {
     _GlobalFeed.classicVines =>
       _ref.read(classicVinesFeedProvider.notifier).loadMore(),
     _GlobalFeed.newVideos =>
-      _ref.read(newVideosFeedProvider(PublicationFeed.latest).notifier)
+      _ref
+          .read(newVideosFeedProvider(PublicationFeed.latest).notifier)
           .loadMore(),
     _GlobalFeed.newCreators =>
-      _ref.read(newVideosFeedProvider(PublicationFeed.newCreators).notifier)
+      _ref
+          .read(newVideosFeedProvider(PublicationFeed.newCreators).notifier)
           .loadMore(),
   };
 
