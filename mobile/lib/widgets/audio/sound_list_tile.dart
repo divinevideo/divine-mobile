@@ -202,15 +202,17 @@ class _Details extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final style = VineTheme.bodyMediumFont(
+      color: context.vineColors.onSurfaceVariant,
+    );
     return Text.rich(
       TextSpan(
-        // Tabular, so the durations of a list line up.
-        style: VineTheme.bodyMediumFont(
-          color: context.vineColors.onSurfaceVariant,
-        ).copyWith(fontFeatures: const [.tabularFigures()]),
+        style: style,
         children: [
           TextSpan(
             text: Duration(seconds: max((duration ?? 0).toInt(), 1)).toMmSs(),
+            // Tabular, so the durations of a list line up.
+            style: style.copyWith(fontFeatures: const [.tabularFigures()]),
           ),
           for (final detail in details) ...[
             const TextSpan(text: ' ∙ '),
