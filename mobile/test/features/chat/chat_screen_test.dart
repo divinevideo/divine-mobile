@@ -30,7 +30,9 @@ void main() {
       'reports the selected real room message with signed HTTP authentication',
       (tester) async {
         final cubit = _ChatCubit();
-        final community = '11' * 32, channel = '22' * 32, author = '33' * 32;
+        final community = '11' * 32;
+        final channel = '22' * 32;
+        final author = '33' * 32;
         final message = ChatMessage(
           id: '44' * 32,
           channelId: channel,
