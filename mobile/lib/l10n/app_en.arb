@@ -11019,7 +11019,7 @@
   "@verifyOneTapBadge": {
     "description": "Small marker on platforms that can be linked by signing in, without posting a proof."
   },
-  "verifyConnectSignInLifetime": "Sign-in links last {days, plural, =1{1 day} other{{days} days}}. After that, sign in again to keep the link.",
+  "verifyConnectSignInLifetime": "Sign-in links last {days, plural, =1{{days} day} other{{days} days}}. After that, sign in again to keep the link.",
   "@verifyConnectSignInLifetime": {
     "description": "Notice under the sign-in explainer on the connect screen, saying how long a sign-in link lasts. Shown only when the verifier reports a lifetime for that platform; platforms whose links last until unlinked omit it, so the notice is not shown there.",
     "placeholders": {

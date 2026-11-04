@@ -23622,7 +23622,7 @@ abstract class AppLocalizations {
   /// Notice under the sign-in explainer on the connect screen, saying how long a sign-in link lasts. Shown only when the verifier reports a lifetime for that platform; platforms whose links last until unlinked omit it, so the notice is not shown there.
   ///
   /// In en, this message translates to:
-  /// **'Sign-in links last {days, plural, =1{1 day} other{{days} days}}. After that, sign in again to keep the link.'**
+  /// **'Sign-in links last {days, plural, =1{{days} day} other{{days} days}}. After that, sign in again to keep the link.'**
   String verifyConnectSignInLifetime(int days);
 
   /// Explains the sign-in route for linking a platform. Reassures that nothing is posted to the account.

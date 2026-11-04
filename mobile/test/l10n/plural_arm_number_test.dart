@@ -137,6 +137,14 @@ void main() {
                   '${entry.key}: notificationsBadgeUnread($count) must show '
                   '$count — got "${l10n.notificationsBadgeUnread(count)}"',
             );
+            // Untranslated: the English arms under this locale's rule.
+            expect(
+              l10n.verifyConnectSignInLifetime(count),
+              contains('$count'),
+              reason:
+                  '${entry.key}: verifyConnectSignInLifetime($count) must show '
+                  '$count — got "${l10n.verifyConnectSignInLifetime(count)}"',
+            );
           }
         }
       },

@@ -14111,7 +14111,7 @@ class AppLocalizationsAr extends AppLocalizations {
       days,
       locale: localeName,
       other: '$days days',
-      one: '1 day',
+      one: '$days day',
     );
     return 'Sign-in links last $_temp0. After that, sign in again to keep the link.';
   }
