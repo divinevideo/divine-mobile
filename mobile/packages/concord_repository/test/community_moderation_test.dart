@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:bip340/bip340.dart' as schnorr;
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:test/test.dart';
@@ -88,11 +89,48 @@ void main() {
       );
       for (final name in ['chatEvent', 'bannedChatEvent'])
         await first.ingestSealedWrap(fixture[name] as Map<String, dynamic>);
-      expect(first.timeline(now: 1793761700).messages.length, 1);
+      final unaffectedAuthor = schnorr.getPublicKey('33' * 32);
+      final tags = <List<String>>[
+        ['channel', channel],
+        ['epoch', '0'],
+        ['ms', '0'],
+      ];
+      final unaffected = <String, dynamic>{
+        'kind': 9,
+        'pubkey': unaffectedAuthor,
+        'created_at': 1793761619,
+        'tags': tags,
+        'content': 'Unaffected message',
+      };
+      unaffected['id'] = computeEventId(
+        pubkey: unaffectedAuthor,
+        createdAt: 1793761619,
+        kind: 9,
+        tags: tags,
+        content: 'Unaffected message',
+      );
+      final seal = await sealRumor(
+        rumor: unaffected,
+        sealKind: 20013,
+        streamSeedHex: stream.seedHex,
+        streamPubkey: stream.pubkey,
+        authorSecretHex: '33' * 32,
+      );
+      await first.ingestSealedWrap(
+        await wrapSeal(
+          seal: seal,
+          streamSeedHex: stream.seedHex,
+          streamPubkey: stream.pubkey,
+        ),
+      );
+      expect(first.timeline(now: 1793761700).messages.length, 2);
       await first.ingestSealedWrap(
         fixture['moderatorDeleteEvent'] as Map<String, dynamic>,
       );
-      expect(first.timeline(now: 1793761700).messages, isEmpty);
+      expect(
+        first.timeline(now: 1793761700).messages.single.body,
+        'Unaffected message',
+      );
       await first.close();
       final restored = repo();
       await restored.startChannel(
@@ -101,7 +139,10 @@ void main() {
         streamSeedHex: stream.seedHex,
         streamPubkey: stream.pubkey,
       );
-      expect(restored.timeline(now: 1793761700).messages, isEmpty);
+      expect(
+        restored.timeline(now: 1793761700).messages.single.body,
+        'Unaffected message',
+      );
       await restored.close();
     },
   );
