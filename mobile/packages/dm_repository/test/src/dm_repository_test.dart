@@ -7992,7 +7992,7 @@ void main() {
           ).captured;
           // tempRelays dials the advertised inbox in ADDITION to the pool.
           // targetRelays must stay null: it is a filter over the pool, so a
-          // non-null value there drops divine's own relay and the four
+          // non-null value there drops divine's own relay and the
           // safeFallbackRelays #2931 added for exactly this read. See #7320.
           expect(captured, [
             ['wss://own.example'],

@@ -128,6 +128,17 @@ void main() {
       );
     });
 
+    test('returns null for a fallback relay a device saved before it was '
+        'retired', () {
+      final container = createContainer(EnvironmentConfig.production);
+      container.read(configuredRelayUrlsProvider.notifier).setUrls([
+        ...divineRelays,
+        'wss://relay.damus.io',
+      ]);
+
+      expect(container.read(environmentIndicatorColorProvider), isNull);
+    });
+
     test('clears purple after the user-chosen relay is removed', () {
       final container = createContainer(EnvironmentConfig.production);
       final relayState = container.read(configuredRelayUrlsProvider.notifier);

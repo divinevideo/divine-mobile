@@ -1692,7 +1692,7 @@ class DmRepository {
       // Deliberately NOT `targetRelays`: that parameter is a filter over the
       // pool, not an addition — `RelayPool.subscribe` skips every pooled relay
       // the list does not name. Passing the own-inbox list there subtracted
-      // divine's own relay and the four `safeFallbackRelays` that #2931 added
+      // divine's own relay and the `safeFallbackRelays` that #2931 added
       // precisely so DMs written to other relays stay visible, which is the
       // opposite of the intent above. See #7320.
       //
