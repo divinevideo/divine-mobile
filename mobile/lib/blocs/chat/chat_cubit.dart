@@ -202,7 +202,8 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
   /// Signed-in pubkey used as sealed rumor author (session identity).
   final String sealedAuthor;
 
-  /// Resolves only the public POC stream key. Real membership is not supported.
+  /// Resolves a channel's stream key: the deterministic POC key, or the
+  /// current-epoch key from verified community membership.
   final GroupKey Function(String channelId)? pocStreamForChannel;
   void refresh({required int now}) {
     final t = _repo.timeline(now: now);

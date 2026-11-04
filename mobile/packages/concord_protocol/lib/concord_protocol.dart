@@ -1,6 +1,6 @@
 // MPL-2.0
 /// Pure Concord protocol logic: no Flutter, relay, or IO dependencies.
-/// POC wire shapes are provisional pending the Concord spec (see README).
+/// CORD community control, invites and chat folding (see README).
 library;
 
 export 'src/community_control.dart';

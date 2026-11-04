@@ -1,4 +1,4 @@
-// ABOUTME: Account-scoped dependency wiring for native Concord POC screens.
+// ABOUTME: Account-scoped dependency wiring for native Concord room screens.
 // ABOUTME: Reuses the active signer and disposes UI state on account changes.
 
 import 'dart:async';
@@ -23,7 +23,7 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
 
-/// Selects only channels present in the current POC catalog.
+/// Selects only channels present in the current room catalog.
 /// A missing pair opens the default; an incomplete or unknown pair is rejected.
 bool selectChatRoom(ChatCubit cubit, {String? communityId, String? channelId}) {
   if (communityId == null && channelId == null) return true;

@@ -34,7 +34,7 @@ const List<ContentFilterReason> _roomReportReasons = [
   ContentFilterReason.sexualContent,
 ];
 
-/// Native conversation for the Concord POC selected from Messages.
+/// Native conversation for a Concord room selected from Messages.
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
   static const String path = RoutePaths.chat;

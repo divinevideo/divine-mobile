@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:concord_repository/src/concord_repository.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-/// Web and native Nostr transport for the explicitly configured POC relay.
+/// Web and native Nostr transport for the explicitly configured Concord relay.
 /// A publication succeeds only after the relay accepts its event ID.
 class WebSocketRelayGateway
     implements RelayGateway, RelayHistoryStatus, RelaySynchronizationStatus {
