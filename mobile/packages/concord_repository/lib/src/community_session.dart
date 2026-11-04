@@ -49,6 +49,7 @@ class ConcordCommunitySession {
       failure == null &&
       control != null &&
       control!.name != null &&
+      control!.publicChannels.isNotEmpty &&
       control!.incomplete.isEmpty &&
       !control!.banned.contains(account);
 
@@ -138,10 +139,11 @@ class ConcordCommunitySession {
             nowMs: 0,
           );
           if (held.communityId != bundle!.communityId ||
-              held.owner != bundle!.owner)
+              held.owner != bundle!.owner) {
             throw StateError(
               'Saved community identity does not match invitation',
             );
+          }
           if (held.rootEpoch > bundle!.rootEpoch ||
               held.rootEpoch == bundle!.rootEpoch &&
                   (held.communityRoot != bundle!.communityRoot ||
@@ -182,8 +184,9 @@ class ConcordCommunitySession {
         if (savedHeads != null) {
           for (final entry in (jsonDecode(savedHeads) as Map).entries) {
             final edition = _editions[entry.value];
-            if (edition == null || edition.entityId != entry.key)
+            if (edition == null || edition.entityId != entry.key) {
               throw StateError('Saved community authority is incomplete');
+            }
             _acceptedHeads[entry.key as String] = edition;
           }
         }
