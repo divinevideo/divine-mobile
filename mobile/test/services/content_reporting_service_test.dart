@@ -2845,11 +2845,17 @@ void main() {
       });
 
       test("a public report's moderation DM stays fully redacted", () async {
+        // The cubit hands over the body it built, with the details as typed,
+        // so the redaction has to happen on that body.
+        const details = 'they also write from someone@example.com';
         final result = await private.reportContent(
           eventId: _validEventId('b'),
           authorPubkey: sender,
           reason: ContentFilterReason.harassment,
-          details: 'they also write from someone@example.com',
+          details: details,
+          moderationContent:
+              'Content Report\nReason: Harassment\n'
+              'Event: ${_validEventId('b')}\nDetails: $details',
         );
 
         final content =
