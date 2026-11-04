@@ -343,6 +343,59 @@ void main() {
       expect(audio.loadedUrls, isEmpty);
     });
 
+    testWidgets('keeps the last lookup answer while the next one runs', (
+      tester,
+    ) async {
+      const goneVideo = '34236:creator:gone';
+      const otherVideo = '34236:creator:other';
+      final service = SavedSoundsService(sharedPreferences);
+      await service.saveSound(
+        _sound(
+          id: 'gone',
+          title: 'Gone Sound',
+        ).copyWith(sourceVideoReference: goneVideo),
+      );
+      await service.saveSound(
+        _sound(
+          id: 'other',
+          title: 'Other Sound',
+        ).copyWith(sourceVideoReference: otherVideo),
+      );
+      final audio = _FakeAudioPlaybackService();
+      addTearDown(audio.positions.close);
+      // Removing a sound changes the lookup's key, and this second lookup
+      // never answers.
+      final secondLookup = Completer<Map<String, SoundCover?>>();
+      addTearDown(() => secondLookup.complete(const {}));
+
+      await pumpSoundsTab(
+        tester,
+        audioService: audio,
+        overrides: [
+          savedSoundSourcesProvider.overrideWith(
+            (ref, sources) => sources.references.length == 2
+                ? Future.value({goneVideo: null, otherVideo: null})
+                : secondLookup.future,
+          ),
+        ],
+      );
+      expect(_tile(tester, 'Gone Sound').cannotBeReused, isTrue);
+
+      await _chooseAction(
+        tester,
+        _l10n.savedSoundRemoveAction,
+        title: 'Other Sound',
+      );
+      await tester.tap(find.text(_l10n.soundsRemoveSavedSound));
+      await tester.pumpAndSettle();
+      expect(find.text('Other Sound'), findsNothing);
+
+      expect(_tile(tester, 'Gone Sound').cannotBeReused, isTrue);
+      await tester.tap(find.text('Gone Sound'));
+      await tester.pumpAndSettle();
+      expect(audio.loadedUrls, isEmpty);
+    });
+
     testWidgets('stops a preview the lookup then finds can no longer be used', (
       tester,
     ) async {
