@@ -21,6 +21,12 @@ abstract interface class RelayHistoryStatus {
   bool get historyLimited;
 }
 
+/// Current transport catch-up state; a previous EOSE does not authorize
+/// writes while a reconnect is still fetching fresh authority.
+abstract interface class RelaySynchronizationStatus {
+  bool get synchronized;
+}
+
 abstract interface class AccountScopedStore {
   Future<void> put(String key, String value);
   Future<String?> get(String key);
@@ -76,11 +82,15 @@ class ConcordRepository {
     required this.cipher,
     this.sealedTransport,
     this.historyLimit = 200,
+    this.controlState,
+    this.canPublish,
   }) : assert(historyLimit > 0, 'historyLimit must be positive');
 
   /// Recent delivered wraps retained per room. Unsent records are kept.
   final int historyLimit;
   final RelayGateway relay;
+  ConcordControlState? Function()? controlState;
+  bool Function()? canPublish;
   final AccountScopedStore store;
   final StreamCipher cipher;
 
@@ -369,6 +379,33 @@ class ConcordRepository {
     });
   }
 
+  ConcordCitation? _citation(Map<String, dynamic> rumor) {
+    final tag = (rumor['tags'] as List)
+        .whereType<List<dynamic>>()
+        .where((t) => t.length >= 4 && t[0] == 'vac')
+        .firstOrNull;
+    if (tag == null ||
+        tag[1] is! String ||
+        tag[2] is! String ||
+        tag[3] is! String ||
+        !RegExp(
+          r'^[0-9a-f]{64}$',
+          caseSensitive: false,
+        ).hasMatch(tag[1] as String) ||
+        !RegExp(r'^(0|[1-9][0-9]*)$').hasMatch(tag[2] as String) ||
+        !RegExp(
+          r'^[0-9a-f]{64}$',
+          caseSensitive: false,
+        ).hasMatch(tag[3] as String)) {
+      return null;
+    }
+    return ConcordCitation(
+      (tag[1] as String).toLowerCase(),
+      int.parse(tag[2] as String),
+      (tag[3] as String).toLowerCase(),
+    );
+  }
+
   void _applyRumor(Map<String, dynamic> rumor) {
     final id = rumor['id'] as String;
     final kind = rumor['kind'] as int;
@@ -406,6 +443,7 @@ class ConcordRepository {
       _controls.add(
         ControlEvent(
           type: type,
+          citation: _citation(rumor),
           id: id,
           targetId: tag[1] as String,
           createdAt: rumor['created_at'] as int,
@@ -462,6 +500,9 @@ class ConcordRepository {
 
   /// Republishes messages whose publish was interrupted before restart.
   Future<void> retryPending({String? messageId}) async {
+    if (canPublish?.call() == false) {
+      throw StateError('Community authority is unavailable');
+    }
     await purgeExpired(now: _now());
     for (final id in [
       ..._pendingIds,
@@ -469,6 +510,8 @@ class ConcordRepository {
       final sealed = _sealed[id];
       if (sealed != null) {
         try {
+          if (canPublish?.call() == false)
+            throw StateError('Community authority is unavailable');
           await relay.publish(Map<String, dynamic>.from(sealed['wrap'] as Map));
         } on Object {
           if (_sealed[id]?['pending'] != false) rethrow;
@@ -591,7 +634,9 @@ class ConcordRepository {
     int epoch = 0,
     int? expiresAt,
   }) async {
-    if (_closed || (_requiresRestore && !_ready)) {
+    if (_closed ||
+        (_requiresRestore && !_ready) ||
+        canPublish?.call() == false) {
       throw StateError('chat history has not loaded');
     }
     final transport = sealedTransport;
@@ -625,6 +670,8 @@ class ConcordRepository {
       streamSeedHex: streamSeedHex,
       streamPubkey: streamPubkey,
     );
+    if (canPublish?.call() == false)
+      throw StateError('Community authority changed while signing');
     await _record(id, {'wrap': wrap, 'pending': true, 'expiresAt': expiresAt});
     _messages.add(
       ChatMessage(
@@ -640,6 +687,8 @@ class ConcordRepository {
     );
     _notify();
     try {
+      if (canPublish?.call() == false)
+        throw StateError('Community authority is unavailable');
       await relay.publish(wrap);
     } on Object {
       if (_sealed[id]?['pending'] != false) rethrow;
@@ -669,9 +718,14 @@ class ConcordRepository {
     );
   }
 
+  void refreshModeration() => _notify();
   void ingestControl(ControlEvent c) => _controls.add(c);
-  FoldedThread timeline({required int now}) =>
-      foldControls(_messages, _controls, now: now);
+  FoldedThread timeline({required int now}) => foldControls(
+    _messages,
+    _controls,
+    now: now,
+    moderation: controlState?.call(),
+  );
   Future<void> acceptInvite(String communityId) =>
       store.put('invite:$communityId', 'accepted');
   Future<bool> hasAcceptedInvite(String communityId) async =>

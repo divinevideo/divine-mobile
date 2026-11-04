@@ -1,5 +1,6 @@
 // MPL-2.0
 import 'dart:convert';
+import 'package:concord_protocol/src/community_control.dart';
 
 /// Kind for Community List fragments (per delegated task scope).
 const int communityListKind = 33302;
@@ -59,7 +60,9 @@ class ControlEvent {
     this.actor = '',
     this.id = '',
     this.ms = 0,
+    this.citation,
   });
+  final ConcordCitation? citation;
   final ControlType type;
   final String targetId;
   final int createdAt;

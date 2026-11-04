@@ -1,5 +1,6 @@
 // MPL-2.0
 import 'package:concord_protocol/src/models.dart';
+import 'package:concord_protocol/src/community_control.dart';
 
 class FoldedThread {
   FoldedThread(this.messages, this.reactions);
@@ -14,13 +15,18 @@ FoldedThread foldControls(
   List<ChatMessage> base,
   List<ControlEvent> controls, {
   required int now,
+  ConcordControlState? moderation,
 }) {
-  final byId = <String, ChatMessage>{for (final m in base) m.id: m};
+  final byId = <String, ChatMessage>{
+    for (final m in base)
+      if (!(moderation?.banned.contains(m.author) ?? false)) m.id: m,
+  };
   final reactions = <String, Map<String, int>>{};
   final reacted = <(String, String, String)>{};
   final sorted = [...controls]
     ..sort((a, b) => _order(a.createdAt, a.ms, a.id, b.createdAt, b.ms, b.id));
   for (final c in sorted) {
+    if (moderation?.banned.contains(c.actor) ?? false) continue;
     switch (c.type) {
       case ControlType.edit:
         final m = byId[c.targetId];
@@ -39,7 +45,16 @@ FoldedThread foldControls(
           );
         }
       case ControlType.delete:
-        if (byId[c.targetId]?.author == c.actor) {
+        final target = byId[c.targetId];
+        if (target != null &&
+            (target.author == c.actor ||
+                moderation != null &&
+                    moderation.citationSatisfied(c.actor, c.citation) &&
+                    moderation.canActOnMember(
+                      c.actor,
+                      target.author,
+                      1 << 5,
+                    ))) {
           byId.remove(c.targetId);
         }
       case ControlType.reaction:

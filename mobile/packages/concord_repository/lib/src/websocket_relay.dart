@@ -7,7 +7,8 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Web and native Nostr transport for the explicitly configured POC relay.
 /// A publication succeeds only after the relay accepts its event ID.
-class WebSocketRelayGateway implements RelayGateway, RelayHistoryStatus {
+class WebSocketRelayGateway
+    implements RelayGateway, RelayHistoryStatus, RelaySynchronizationStatus {
   WebSocketRelayGateway(
     this.url, {
     this.connectionTimeout = const Duration(seconds: 10),
@@ -36,6 +37,13 @@ class WebSocketRelayGateway implements RelayGateway, RelayHistoryStatus {
   var _reconnectAttempts = 0;
   var _connected = false;
   var _closed = false;
+
+  @override
+  bool get synchronized =>
+      _connected &&
+      !_closed &&
+      _subs.values.every((s) => s._historyEnded) &&
+      !historyLimited;
 
   @override
   Future<void> get historyReady {
