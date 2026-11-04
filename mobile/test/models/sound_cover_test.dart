@@ -175,7 +175,7 @@ void main() {
       });
     });
 
-    group('isSourceGone', () {
+    group('cannotBeReused', () {
       const video = '34236:creator:clip';
       final sound = AudioEvent(
         id: 'sound',
@@ -185,22 +185,50 @@ void main() {
       );
 
       test('is true for a video the lookup found gone', () {
-        expect(SoundCover.isSourceGone(sound, const {video: null}), isTrue);
+        expect(
+          SoundCover.cannotBeReused(sound, const {video: null}, viewer: 'me'),
+          isTrue,
+        );
       });
 
       test('is false for a video found, or not looked up yet', () {
         expect(
-          SoundCover.isSourceGone(sound, const {video: SoundCover()}),
+          SoundCover.cannotBeReused(
+            sound,
+            const {video: SoundCover()},
+            viewer: 'me',
+          ),
           isFalse,
         );
-        expect(SoundCover.isSourceGone(sound, const {}), isFalse);
-        expect(SoundCover.isSourceGone(sound, null), isFalse);
+        expect(
+          SoundCover.cannotBeReused(sound, const {}, viewer: 'me'),
+          isFalse,
+        );
+        expect(SoundCover.cannotBeReused(sound, null, viewer: 'me'), isFalse);
       });
 
       test('is false for a sound taken from no video', () {
         final imported = AudioEvent(id: 'file', pubkey: 'me', createdAt: 1);
 
-        expect(SoundCover.isSourceGone(imported, const {video: null}), isFalse);
+        expect(
+          SoundCover.cannotBeReused(
+            imported,
+            const {video: null},
+            viewer: 'someone',
+          ),
+          isFalse,
+        );
+      });
+
+      test('is false for a sound the viewer published', () {
+        expect(
+          SoundCover.cannotBeReused(
+            sound,
+            const {video: null},
+            viewer: 'creator',
+          ),
+          isFalse,
+        );
       });
     });
   });

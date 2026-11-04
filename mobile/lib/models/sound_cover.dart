@@ -51,16 +51,24 @@ class SoundCover {
     return thumbnailUrl == null ? null : SoundCover(imageUrl: thumbnailUrl);
   }
 
-  /// Whether [audio] was taken from a video [sourceCovers] looked for and
-  /// found gone: deleted, hidden from this viewer, or from a creator who lets
-  /// no one else reuse its sound. A video the lookup has not reached is not.
+  /// Whether [audio] can no longer be used in a new video because it was
+  /// taken from a video [sourceCovers] looked for and found gone: deleted,
+  /// hidden from this viewer, or from a creator who lets no one else reuse
+  /// its sound. A video the lookup has not reached is not.
+  ///
+  /// A sound [viewer] published is never, as its creator may always reuse
+  /// it, which the reuse check allows too.
   ///
   /// [sourceCovers] is keyed by [AudioEvent.sourceVideoReference], `null` for
   /// a video found gone, as the sound providers' cover lookups return it.
-  static bool isSourceGone(
+  static bool cannotBeReused(
     AudioEvent audio,
-    Map<String, SoundCover?>? sourceCovers,
-  ) {
+    Map<String, SoundCover?>? sourceCovers, {
+    required String? viewer,
+  }) {
+    if (viewer != null && viewer.isNotEmpty && viewer == audio.pubkey) {
+      return false;
+    }
     final reference = audio.sourceVideoReference;
     return reference != null &&
         sourceCovers != null &&

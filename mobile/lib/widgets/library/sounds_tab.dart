@@ -18,6 +18,7 @@ import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
+import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/router/routes/library_routes.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
@@ -415,7 +416,7 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
         sound: sound,
         cover: view.cover,
         isMissingFile: view.isMissingFile,
-        isSourceGone: view.isSourceGone,
+        cannotBeReused: view.cannotBeReused,
       ),
       options: [
         VineBottomSheetActionData(
@@ -772,7 +773,7 @@ class _SearchInput extends StatelessWidget {
 typedef _SavedSoundView = ({
   SoundCover? cover,
   bool isMissingFile,
-  bool isSourceGone,
+  bool cannotBeReused,
 });
 
 typedef _OpenMore = Future<void> Function(
@@ -818,6 +819,8 @@ class _SavedSoundsSection extends ConsumerWidget {
     // Nothing to go on while the lookup runs or when it failed: rows then
     // keep the frame stored with them, and none is marked gone.
     final sourceCovers = sourcesLookup.hasError ? null : sourcesLookup.value;
+    // Whose own sounds stay usable follows account changes, as in the picker.
+    final viewer = ref.watch(currentAccountIdProvider);
     return SliverMainAxisGroup(
       slivers: [
         if (hashtags.isNotEmpty)
@@ -840,7 +843,11 @@ class _SavedSoundsSection extends ConsumerWidget {
             final view = (
               cover: cover,
               isMissingFile: state.isMissingFile(sound),
-              isSourceGone: SoundCover.isSourceGone(sound.audio, sourceCovers),
+              cannotBeReused: SoundCover.cannotBeReused(
+                sound.audio,
+                sourceCovers,
+                viewer: viewer,
+              ),
             );
             return SavedSoundTile(
               sound: sound,
@@ -853,7 +860,7 @@ class _SavedSoundsSection extends ConsumerWidget {
                   sourcesLookup.isLoading &&
                   !(sourceCovers?.containsKey(reference) ?? false),
               isMissingFile: view.isMissingFile,
-              isSourceGone: view.isSourceGone,
+              cannotBeReused: view.cannotBeReused,
               isPreviewing: isPreviewing,
               isPlaying: isPreviewing && !playingPaused,
               progress: isPreviewing ? playingProgress : null,

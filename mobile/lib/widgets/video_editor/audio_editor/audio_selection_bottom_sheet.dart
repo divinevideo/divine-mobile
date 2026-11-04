@@ -319,18 +319,11 @@ class _AudioSelectionBottomSheetState
   bool _cannotBeReused(
     AudioEvent sound,
     AsyncValue<Map<String, SoundCover?>>? lookup,
-  ) {
-    final viewer = ref.read(authServiceProvider).currentPublicKeyHex;
-    if (viewer != null && viewer.isNotEmpty && viewer == sound.pubkey) {
-      return false;
-    }
-    final reference = sound.sourceVideoReference;
-    final looked = lookup == null || lookup.hasError ? null : lookup.value;
-    return reference != null &&
-        looked != null &&
-        looked.containsKey(reference) &&
-        looked[reference] == null;
-  }
+  ) => SoundCover.cannotBeReused(
+    sound,
+    lookup == null || lookup.hasError ? null : lookup.value,
+    viewer: ref.read(authServiceProvider).currentPublicKeyHex,
+  );
 
   /// Loads [sound] into the preview player, stopping whatever played, and
   /// returns it with the duration the file reports when the event carried

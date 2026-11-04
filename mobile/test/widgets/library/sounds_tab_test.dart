@@ -198,6 +198,10 @@ void main() {
     setUp(() {
       authService = _MockAuthService();
       when(() => authService.currentPublicKeyHex).thenReturn(_viewerPubkey);
+      when(() => authService.authState).thenReturn(AuthState.authenticated);
+      when(
+        () => authService.authStateStream,
+      ).thenAnswer((_) => const Stream.empty());
       deletionService = _MockContentDeletionService();
       evictedSoundIds = [];
     });
@@ -330,13 +334,37 @@ void main() {
       );
 
       expect(find.text(_l10n.savedSoundReuseUnavailable), findsOneWidget);
-      expect(_tile(tester, 'Gone Sound').isSourceGone, isTrue);
-      expect(_tile(tester, 'Here Sound').isSourceGone, isFalse);
+      expect(_tile(tester, 'Gone Sound').cannotBeReused, isTrue);
+      expect(_tile(tester, 'Here Sound').cannotBeReused, isFalse);
 
       // Listed, so it can be removed, but not played.
       await tester.tap(find.text('Gone Sound'));
       await tester.pumpAndSettle();
       expect(audio.loadedUrls, isEmpty);
+    });
+
+    testWidgets('keeps a sound the viewer published usable', (tester) async {
+      const goneVideo = '34236:creator:gone';
+      await SavedSoundsService(sharedPreferences).saveSound(
+        _sound(
+          id: 'own',
+          title: 'My Beat',
+          pubkey: _viewerPubkey,
+        ).copyWith(sourceVideoReference: goneVideo),
+      );
+
+      await pumpSoundsTab(
+        tester,
+        overrides: [
+          savedSoundSourcesProvider.overrideWith(
+            (ref, sources) async => {goneVideo: null},
+          ),
+        ],
+      );
+
+      // Its creator may always reuse it, so the picker offers it too.
+      expect(find.text(_l10n.savedSoundReuseUnavailable), findsNothing);
+      expect(_tile(tester, 'My Beat').cannotBeReused, isFalse);
     });
 
     testWidgets('opens saved sound details from its menu', (tester) async {

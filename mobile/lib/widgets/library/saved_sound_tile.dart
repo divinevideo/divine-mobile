@@ -31,7 +31,7 @@ class SavedSoundTile extends StatelessWidget {
     this.cover,
     this.isCoverPending = false,
     this.isMissingFile = false,
-    this.isSourceGone = false,
+    this.cannotBeReused = false,
     this.isPreviewing = false,
     this.isPlaying = false,
     this.progress,
@@ -60,12 +60,12 @@ class SavedSoundTile extends StatelessWidget {
   /// takes no tap instead of starting a silent preview (#8023).
   final bool isMissingFile;
 
-  /// Whether the video the sound was taken from is gone or no longer lets
-  /// others reuse its sound.
+  /// Whether the sound can no longer be used in a new video, its source
+  /// video being gone or no longer letting others reuse its sound.
   ///
   /// The sound picker leaves such a sound out. Here it stays, saying why, so
   /// the user can still find and remove it.
-  final bool isSourceGone;
+  final bool cannotBeReused;
 
   /// Whether this sound is the one previewing, playing or paused.
   final bool isPreviewing;
@@ -92,7 +92,7 @@ class SavedSoundTile extends StatelessWidget {
     final unavailableReason = savedSoundUnavailableReason(
       context,
       isMissingFile: isMissingFile,
-      isSourceGone: isSourceGone,
+      cannotBeReused: cannotBeReused,
     );
     final title = savedSoundTitle(context, sound);
     final showsProgress = isPreviewing && unavailableReason == null;
@@ -149,7 +149,7 @@ class SavedSoundMenuHeader extends StatelessWidget {
     required this.sound,
     this.cover,
     this.isMissingFile = false,
-    this.isSourceGone = false,
+    this.cannotBeReused = false,
     super.key,
   });
 
@@ -159,8 +159,8 @@ class SavedSoundMenuHeader extends StatelessWidget {
   /// See [SavedSoundTile.isMissingFile].
   final bool isMissingFile;
 
-  /// See [SavedSoundTile.isSourceGone].
-  final bool isSourceGone;
+  /// See [SavedSoundTile.cannotBeReused].
+  final bool cannotBeReused;
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +189,7 @@ class SavedSoundMenuHeader extends StatelessWidget {
             unavailableReason: savedSoundUnavailableReason(
               context,
               isMissingFile: isMissingFile,
-              isSourceGone: isSourceGone,
+              cannotBeReused: cannotBeReused,
             ),
             contentPadding: .zero,
           ),
@@ -237,11 +237,11 @@ String savedSoundTitle(BuildContext context, SavedSound sound) =>
 String? savedSoundUnavailableReason(
   BuildContext context, {
   required bool isMissingFile,
-  required bool isSourceGone,
+  required bool cannotBeReused,
 }) {
   // Worded as the sound picker words the same condition.
   if (isMissingFile) return context.l10n.videoEditorAudioFileMissing;
-  if (isSourceGone) return context.l10n.savedSoundReuseUnavailable;
+  if (cannotBeReused) return context.l10n.savedSoundReuseUnavailable;
   return null;
 }
 

@@ -64,7 +64,7 @@ Widget _tile(
   VoidCallback? onOpenMore,
   ThemeData? theme,
   bool isMissingFile = false,
-  bool isSourceGone = false,
+  bool cannotBeReused = false,
   bool isPreviewing = false,
   bool isPlaying = false,
   Stream<double>? progress,
@@ -74,7 +74,7 @@ Widget _tile(
     sound: sound,
     cover: SoundCover.forSavedSound(sound),
     isMissingFile: isMissingFile,
-    isSourceGone: isSourceGone,
+    cannotBeReused: cannotBeReused,
     isPreviewing: isPreviewing,
     isPlaying: isPlaying,
     progress: progress,
@@ -202,7 +202,7 @@ void main() {
     });
 
     group('unavailable', () {
-      for (final (name, isMissingFile, isSourceGone, reason) in [
+      for (final (name, isMissingFile, cannotBeReused, reason) in [
         ('whose file is gone', true, false, _l10n.videoEditorAudioFileMissing),
         (
           'whose source video is gone',
@@ -220,7 +220,7 @@ void main() {
             _tile(
               _richSound(),
               isMissingFile: isMissingFile,
-              isSourceGone: isSourceGone,
+              cannotBeReused: cannotBeReused,
               onPreview: () => previews++,
               onOpenMore: () => menus++,
             ),
@@ -241,7 +241,7 @@ void main() {
         tester,
       ) async {
         await tester.pumpWidget(
-          _tile(_richSound(), isMissingFile: true, isSourceGone: true),
+          _tile(_richSound(), isMissingFile: true, cannotBeReused: true),
         );
 
         expect(find.text(_l10n.videoEditorAudioFileMissing), findsOneWidget);
@@ -398,7 +398,7 @@ void main() {
 
     testWidgets('says why the sound is unavailable', (tester) async {
       await tester.pumpWidget(
-        _app(SavedSoundMenuHeader(sound: _richSound(), isSourceGone: true)),
+        _app(SavedSoundMenuHeader(sound: _richSound(), cannotBeReused: true)),
       );
 
       expect(find.text(_l10n.savedSoundReuseUnavailable), findsOneWidget);
