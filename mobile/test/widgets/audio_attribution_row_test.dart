@@ -184,6 +184,26 @@ void main() {
         );
       });
 
+      testWidgets('prefers the content line to a sound that fails to load', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            video: createVideoWithAudio(content: creditLine),
+            audioError: StateError('relay unavailable'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('YAY!'), findsOneWidget);
+        expect(
+          find.textContaining(l10n.audioAttributionUnavailableSound),
+          findsNothing,
+        );
+      });
+
       testWidgets("shows the sound's own credit once its event loads", (
         tester,
       ) async {
