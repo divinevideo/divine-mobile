@@ -359,6 +359,18 @@ typedef _RecoveryPageAnswer = ({
 /// whether every relay asked answered, whether a relay may have stopped at
 /// its result cap, the stamp to resume below, and how many of its gift wraps
 /// had not been handled before.
+/// What one relay's walk of the band below the live window found:
+/// whether the relay answered every page, the pages and events read, how many
+/// new gift wraps were decrypted, and the stamp reached if the page budget ran
+/// out before the floor.
+typedef _BandWalk = ({
+  bool answered,
+  int pages,
+  int events,
+  int newGiftWraps,
+  int? budgetStoppedAt,
+});
+
 typedef _HistoryPage = ({
   List<Event> events,
   bool authoritative,
@@ -2347,50 +2359,83 @@ class DmRepository {
     try {
       final inbox = await _drainOwnInboxRelays(pubkey, generation);
       if (_ingestSessionEnded(pubkey, generation)) return;
-      final messages = await _pageBelowWindow(
-        pubkey,
-        generation,
-        floor: floor,
-        top: top,
-        readPage: (page, until) => _fetchHistoryPage(
-          until: until,
-          since: floor,
-          limit: DmHistoryDrainConfig.pageSize,
-          subscriptionId: dmBelowWindowRequerySubscriptionId(pubkey, page),
-          pubkey: pubkey,
-          generation: generation,
-          tempRelays: inbox.relays,
-        ),
-      );
-      if (messages == null) return;
-      final deletions = await _pageBelowWindow(
-        pubkey,
-        generation,
-        floor: floor,
-        top: top,
-        readPage: (page, until) => _handleDeletionPage(
+      // Each relay is walked on its own: a merged answer resumes below its
+      // oldest event, which skips a relay that stopped at its cap above it.
+      final relays = <String>{
+        for (final url in [..._nostrClient.configuredRelays, ...?inbox.relays])
+          normalizeRelayUrl(url) ?? url,
+      };
+      final messages = <_BandWalk>[];
+      for (final url in relays) {
+        final walk = await _pageBelowWindow(
           pubkey,
           generation,
-          page: page,
-          until: until,
-          since: floor,
-          tempRelays: inbox.relays,
-        ),
-      );
-      if (deletions == null) return;
+          floor: floor,
+          from: top,
+          readPage: (page, until) => _fetchHistoryPage(
+            until: until,
+            since: floor,
+            limit: DmHistoryDrainConfig.pageSize,
+            subscriptionId: dmBelowWindowRequerySubscriptionId(pubkey, page),
+            pubkey: pubkey,
+            generation: generation,
+            onlyRelay: url,
+          ),
+        );
+        if (walk == null) return;
+        messages.add(walk);
+      }
+      // A deletion can be stamped anywhere above the message it names, and
+      // one that arrived before its message was dropped, so deletions are
+      // read from now down.
+      final deletions = <_BandWalk>[];
+      for (final url in relays) {
+        final walk = await _pageBelowWindow(
+          pubkey,
+          generation,
+          floor: floor,
+          from: startedAt,
+          readPage: (page, until) => _handleDeletionPage(
+            pubkey,
+            generation,
+            page: page,
+            until: until,
+            since: floor,
+            onlyRelay: url,
+          ),
+        );
+        if (walk == null) return;
+        deletions.add(walk);
+      }
+      final messagesAnswered = messages.every((walk) => walk.answered);
+      final deletionsAnswered = deletions.every((walk) => walk.answered);
       final answered =
-          inbox.conclusive && messages.answered && deletions.answered;
-      if (answered) {
+          inbox.conclusive && messagesAnswered && deletionsAnswered;
+      if (answered && !_ingestSessionEnded(pubkey, generation)) {
         await syncState.setBelowWindowRequeryAt(pubkey, startedAt);
       }
+      final walks = [...messages, ...deletions];
+      for (final walk in walks) {
+        final stoppedAt = walk.budgetStoppedAt;
+        if (stoppedAt == null) continue;
+        Log.warning(
+          'DM re-query below the window for ${pubkeyForLogs(pubkey)} stopped '
+          'at the page budget at stamp $stoppedAt, above the floor $floor',
+          category: LogCategory.system,
+        );
+      }
+      final outcome = answered
+          ? 'every relay answered'
+          : 'not answered (inbox list read: ${inbox.conclusive}, messages: '
+                '$messagesAnswered, deletions: $deletionsAnswered), so the '
+                'next inbox open asks again';
       Log.info(
         'DM re-query below the window for ${pubkeyForLogs(pubkey)}: stamps '
-        '$floor..$top, inbox relays ${inbox.relays?.length ?? 0}, pages '
-        '${messages.pages + deletions.pages}, events '
-        '${messages.events + deletions.events}, new gift wraps '
-        '${messages.newGiftWraps}, '
-        '${answered ? 'every relay answered' : 'not every relay answered, so '
-                  'the next inbox open asks again'}',
+        '$floor..$top, relays ${relays.length}, pages '
+        '${walks.fold(0, (n, walk) => n + walk.pages)}, events '
+        '${walks.fold(0, (n, walk) => n + walk.events)}, new gift wraps '
+        'decrypted ${messages.fold(0, (n, walk) => n + walk.newGiftWraps)}, '
+        '$outcome',
         category: LogCategory.system,
       );
     } on Object catch (e, stackTrace) {
@@ -2413,24 +2458,30 @@ class DmRepository {
     }
   }
 
-  /// Reads pages from [top] down to [floor] with [readPage], each starting
-  /// at or below the oldest stamp of the page before, until a page comes back
-  /// empty, the next would start below [floor], or
+  /// Walks one relay with [readPage] from [from] down to [floor], each page
+  /// starting at or below the oldest stamp of the page before. Stops when the
+  /// relay sends nothing more, sends fewer than its cap, leaves a page
+  /// unanswered, the next page would start below [floor], or
   /// [DmHistoryDrainConfig.maxPages] is reached. Returns null when the ingest
   /// session ended.
-  Future<({bool answered, int pages, int events, int newGiftWraps})?>
-  _pageBelowWindow(
+  Future<_BandWalk?> _pageBelowWindow(
     String pubkey,
     int generation, {
     required int floor,
-    required int top,
+    required int from,
     required Future<_HistoryPage?> Function(int page, int until) readPage,
   }) async {
-    var cursor = top;
-    var answered = true;
+    var cursor = from;
     var pages = 0;
     var events = 0;
     var newGiftWraps = 0;
+    _BandWalk walked({bool answered = true, int? budgetStoppedAt}) => (
+      answered: answered,
+      pages: pages,
+      events: events,
+      newGiftWraps: newGiftWraps,
+      budgetStoppedAt: budgetStoppedAt,
+    );
     for (var page = 0; page < DmHistoryDrainConfig.maxPages; page++) {
       if (_ingestSessionEnded(pubkey, generation)) return null;
       final result = await readPage(page, cursor);
@@ -2438,35 +2489,29 @@ class DmRepository {
       pages++;
       events += result.events.length;
       newGiftWraps += result.newGiftWraps;
-      // Keep paging past a page not every relay answered: what the relays
-      // that did answer hold is still stored. The run is left unrecorded.
-      if (!result.authoritative) answered = false;
+      // What an unanswered page carried is stored; the run is not recorded.
+      if (!result.authoritative) return walked(answered: false);
       final resumeAt = result.resumeAt;
-      if (result.events.isEmpty || resumeAt == null) break;
+      if (resumeAt == null || !result.possiblyCapped) return walked();
       // `until` is inclusive, so the oldest second is read again; dedup
       // absorbs it.
       final next = resumeAt < cursor ? resumeAt : cursor - 1;
-      if (next < floor) break;
+      if (next < floor) return walked();
       cursor = next;
     }
-    return (
-      answered: answered,
-      pages: pages,
-      events: events,
-      newGiftWraps: newGiftWraps,
-    );
+    return walked(budgetStoppedAt: cursor);
   }
 
   /// Reads one page of the kind-5 deletions addressed to [pubkey] between
-  /// [since] and [until], handling each as it arrives. Returns null when the
-  /// ingest session ended.
+  /// [since] and [until] from [onlyRelay], handling each as it arrives.
+  /// Returns null when the ingest session ended.
   Future<_HistoryPage?> _handleDeletionPage(
     String pubkey,
     int generation, {
     required int page,
     required int until,
     required int since,
-    required List<String>? tempRelays,
+    required String onlyRelay,
   }) async {
     final read = await _readHistoryKinds(
       const [EventKind.eventDeletion],
@@ -2477,7 +2522,7 @@ class DmRepository {
         dmBelowWindowRequerySubscriptionId(pubkey, page),
       ),
       since: since,
-      tempRelays: tempRelays,
+      onlyRelay: onlyRelay,
     );
     for (var i = 0; i < read.events.length; i++) {
       if (_ingestSessionEnded(pubkey, generation)) return null;

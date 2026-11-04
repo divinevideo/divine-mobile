@@ -17,6 +17,7 @@ import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/nip04/nip04.dart';
 import 'package:nostr_sdk/nip44/nip44_v2.dart';
+import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:nostr_sdk/subscription.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -72,7 +73,19 @@ bool _admits(nostr_filter.Filter filter, Event event) {
 class _Relay {
   _Relay(this.stored);
 
+  /// What the pool relay [poolUrl] holds.
   final List<Event> stored;
+
+  /// What other relays hold, by URL. They are pool relays too.
+  final Map<String, List<Event>> others = {};
+
+  /// The most events one answer from a relay carries, by URL.
+  final Map<String, int> capFor = {};
+
+  static const poolUrl = 'wss://r';
+
+  List<String> get relayUrls => [poolUrl, ...others.keys];
+
   final List<nostr_filter.Filter> reqFilters = [];
   final List<({List<nostr_filter.Filter> filters, List<String>? tempRelays})>
   queries = [];
@@ -88,25 +101,56 @@ class _Relay {
   /// Whether a query asking a filter goes unanswered: no events, timed out.
   bool Function(nostr_filter.Filter filter)? timesOut;
 
+  /// What an unanswered single-relay read still returned before its
+  /// deadline; `null` for nothing.
+  List<Event> Function(nostr_filter.Filter filter)? timedOutWith;
+
   /// What a query asking a filter throws instead of answering, as a dropped
   /// connection does; `null` to answer.
   Object? Function(nostr_filter.Filter filter)? failsWith;
 
-  List<Event> admitted(List<nostr_filter.Filter> filters) =>
-      stored.where((e) => filters.any((f) => _admits(f, e))).toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  /// Everything every relay holds, each event once.
+  List<Event> get everything => {
+    for (final event in [stored, ...others.values].expand((e) => e))
+      event.id: event,
+  }.values.toList();
 
-  /// What a query for [filters] returns: the newest admitted events, up to
-  /// the filter's `limit` and this relay's [cap].
-  List<Event> answer(List<nostr_filter.Filter> filters) {
-    var events = admitted(filters);
-    for (final bound in [cap, ...filters.map((f) => f.limit)]) {
-      if (bound != null && events.length > bound) {
-        events = events.take(bound).toList();
-      }
+  /// What [filters] admit across every relay, newest first.
+  List<Event> admitted(List<nostr_filter.Filter> filters) => _newestFirst(
+    everything.where((e) => filters.any((f) => _admits(f, e))),
+  );
+
+  static List<Event> _newestFirst(Iterable<Event> events) =>
+      events.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+  /// One relay's answer to [filter]: its newest admitted events, up to the
+  /// filter's `limit` and that relay's cap.
+  QueryResult relayAnswer(String url, nostr_filter.Filter filter) {
+    final held = url == poolUrl ? stored : others[url] ?? const <Event>[];
+    var events = _newestFirst(held.where((e) => _admits(filter, e)));
+    final bound = [
+      capFor[url] ?? cap,
+      filter.limit,
+    ].whereType<int>().fold<int?>(null, (a, b) => a == null || b < a ? b : a);
+    if (bound != null && events.length > bound) {
+      events = events.take(bound).toList();
     }
-    return events;
+    return QueryResult(
+      events: events,
+      endedBy: QueryEnd.complete,
+      possiblyCapped: bound != null && events.length >= bound,
+    );
   }
+
+  /// What a pool query for [filters] returns: every relay's own answer, each
+  /// capped by that relay, merged. The pool does not trim the merged list.
+  List<Event> answer(List<nostr_filter.Filter> filters) => _newestFirst(
+    {
+      for (final url in relayUrls)
+        for (final filter in filters)
+          for (final event in relayAnswer(url, filter).events) event.id: event,
+    }.values,
+  );
 
   List<nostr_filter.Filter> get queryFilters => [
     for (final query in queries) ...query.filters,
@@ -115,7 +159,8 @@ class _Relay {
   /// Every filter this relay was asked, live or as a query.
   List<nostr_filter.Filter> get everyFilter => [...reqFilters, ...queryFilters];
 
-  /// Hands over the stored events the last REQ admits, then ends the batch.
+  /// Hands over the stored events every REQ so far admits, then ends the
+  /// batch.
   void sendStored() {
     for (final event in admitted(reqFilters)) {
       handedOver++;
@@ -147,7 +192,7 @@ void main() {
     final client = _MockNostrClient();
     when(() => client.connectedRelayCount).thenReturn(1);
     when(() => client.configuredRelayCount).thenReturn(1);
-    when(() => client.configuredRelays).thenReturn(const ['wss://r']);
+    when(() => client.configuredRelays).thenAnswer((_) => relay.relayUrls);
     when(() => client.relayStatuses).thenReturn(const {});
     when(() => client.isRelayAllowed(any())).thenReturn(true);
     when(
@@ -200,6 +245,38 @@ void main() {
         noRelays: false,
       );
     });
+    when(
+      () => client.readEvents(
+        any(),
+        subscriptionId: any(named: 'subscriptionId'),
+        useCache: any(named: 'useCache'),
+        tempRelays: any(named: 'tempRelays'),
+        relayTypes: any(named: 'relayTypes'),
+        requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+      ),
+    ).thenAnswer((invocation) async {
+      final filters =
+          invocation.positionalArguments.first as List<nostr_filter.Filter>;
+      final tempRelays =
+          invocation.namedArguments[#tempRelays] as List<String>?;
+      relay.queries.add((filters: filters, tempRelays: tempRelays));
+      for (final filter in filters) {
+        final failure = relay.failsWith?.call(filter);
+        if (failure != null) {
+          Error.throwWithStackTrace(failure, StackTrace.current);
+        }
+      }
+      if (filters.any((f) => relay.timesOut?.call(f) ?? false)) {
+        return relay.timedOutWith == null
+            ? const QueryResult(events: [], endedBy: QueryEnd.deadline)
+            : QueryResult(
+                events: relay.timedOutWith!(filters.single),
+                endedBy: QueryEnd.deadline,
+              );
+      }
+      final url = tempRelays!.single.replaceFirst(RegExp(r'/$'), '');
+      return relay.relayAnswer(url, filters.single);
+    });
     when(() => client.unsubscribe(any())).thenAnswer((_) async {});
     when(
       () => client.subscribe(
@@ -212,6 +289,7 @@ void main() {
       ),
     ).thenAnswer((invocation) {
       relay
+        ..handedOver = 0
         ..reqFilters.addAll(
           invocation.positionalArguments.first as List<nostr_filter.Filter>,
         )
@@ -462,13 +540,12 @@ void main() {
 
       await openInbox(relay);
 
-      final belowWindowReads = relay.queries.where(
-        (query) => query.filters.any(belowWindow),
-      );
-      expect(belowWindowReads, isNotEmpty);
-      for (final read in belowWindowReads) {
-        expect(read.tempRelays, anyElement(startsWith(_inboxUrl)));
-      }
+      final relaysReadBelowWindow = {
+        for (final query in relay.queries)
+          if (query.filters.any(belowWindow)) ...?query.tempRelays,
+      };
+      expect(relaysReadBelowWindow, anyElement(startsWith(_inboxUrl)));
+      expect(relaysReadBelowWindow, anyElement(startsWith(_Relay.poolUrl)));
       expect(
         DmSyncState(prefs).belowWindowRequeryAt(_owner),
         isNotNull,
@@ -489,6 +566,30 @@ void main() {
         expect(await isStored(wrap), isTrue, reason: wrap.content);
       }
     });
+
+    test(
+      'reads every relay to the floor when one relay caps its answers',
+      () async {
+        final dense = [
+          for (var i = 1; i <= 5; i++)
+            await wrapAt(wire: windowStart - 10 * i, content: 'dense $i'),
+        ];
+        final sparse = await wrapAt(
+          wire: windowStart - 6 * _day,
+          content: 'sparse',
+        );
+        final relay = _Relay([inWindow])
+          ..others['wss://dense.example.com'] = dense
+          ..others['wss://sparse.example.com'] = [sparse]
+          ..capFor['wss://dense.example.com'] = 2;
+
+        await openInbox(relay);
+
+        for (final wrap in [...dense, sparse]) {
+          expect(await isStored(wrap), isTrue, reason: wrap.content);
+        }
+      },
+    );
 
     test('asks at most once a day', () async {
       final late = await wrapAt(wire: windowStart - 1, content: 'late');
@@ -595,6 +696,28 @@ void main() {
       );
       final deletion = nip04DeletionAt(
         createdAt: windowStart - 3600,
+        target: message.id,
+      );
+      final relay = _Relay([inWindow, message, deletion]);
+
+      await openInbox(relay);
+
+      final row = await DirectMessagesDao(
+        db,
+      ).getMessageById(message.id, ownerPubkey: _owner);
+      expect(row, isNotNull);
+      expect(row!.isDeleted, isTrue);
+    });
+
+    test('applies a deletion stamped above the window to a late message it '
+        'names', () async {
+      final message = nip04At(
+        createdAt: windowStart - 7200,
+        content: 'retract me',
+      );
+      // Handled live before the message existed, so the live path dropped it.
+      final deletion = nip04DeletionAt(
+        createdAt: windowStart + 3600,
         target: message.id,
       );
       final relay = _Relay([inWindow, message, deletion]);
