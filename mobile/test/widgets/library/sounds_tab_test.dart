@@ -790,6 +790,70 @@ void main() {
 
       expect(find.text('Loop One'), findsOneWidget);
       expect(find.byKey(const Key('sounds_add_sound')), findsOneWidget);
+      // Like the picker's import row, it says what it does under its title.
+      expect(find.text(_l10n.soundsAddSoundHint), findsOneWidget);
+    });
+
+    testWidgets('waits on a plain cover only for a sound the lookup decides', (
+      tester,
+    ) async {
+      const video = '34236:creator:clip';
+      final service = SavedSoundsService(sharedPreferences);
+      await service.saveSound(
+        _sound(
+          id: 'clip',
+          title: 'Clip Sound',
+        ).copyWith(sourceVideoReference: video),
+      );
+      await service.saveSound(_sound(id: 'file', title: 'File Sound'));
+      final lookup = Completer<Map<String, SoundCover?>>();
+      addTearDown(() => lookup.complete(const {}));
+
+      await pumpSoundsTab(
+        tester,
+        overrides: [
+          savedSoundSourcesProvider.overrideWith(
+            (ref, sources) => lookup.future,
+          ),
+        ],
+      );
+
+      expect(_tile(tester, 'Clip Sound').isCoverPending, isTrue);
+      expect(_tile(tester, 'File Sound').isCoverPending, isFalse);
+    });
+
+    testWidgets('repeats why a sound cannot be used above its actions', (
+      tester,
+    ) async {
+      const goneVideo = '34236:creator:gone';
+      await SavedSoundsService(sharedPreferences).saveSound(
+        _sound(
+          id: 'gone',
+          title: 'Gone Sound',
+        ).copyWith(sourceVideoReference: goneVideo),
+      );
+
+      await pumpSoundsTab(
+        tester,
+        overrides: [
+          savedSoundSourcesProvider.overrideWith(
+            (ref, sources) async => {goneVideo: null},
+          ),
+        ],
+      );
+      expect(find.text(_l10n.savedSoundReuseUnavailable), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('saved_sound_more')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SavedSoundMenuHeader), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SavedSoundMenuHeader),
+          matching: find.text(_l10n.savedSoundReuseUnavailable),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Add sound opens the add flow, not the editor picker', (

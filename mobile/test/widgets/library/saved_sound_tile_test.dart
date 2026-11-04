@@ -248,6 +248,15 @@ void main() {
     });
 
     group('unavailable', () {
+      testWidgets('offers a screen reader no preview', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(_tile(_richSound(), cannotBeReused: true));
+
+        final node = tester.getSemantics(find.byType(ListTile));
+        expect(node.hintOverrides?.onTapHint, isNull);
+        semantics.dispose();
+      });
+
       for (final (name, isMissingFile, cannotBeReused, reason) in [
         ('whose file is gone', true, false, _l10n.videoEditorAudioFileMissing),
         (
