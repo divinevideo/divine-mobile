@@ -152,6 +152,32 @@ void main() {
         );
       },
     );
+    test('numeric permissions are read the way concord-core reads them', () {
+      bool canRename(Object permissions) {
+        final role = edition(owner, '1', roleId, {
+          'role_id': roleId,
+          'position': 1,
+          'permissions': permissions,
+        });
+        final grant = edition(owner, '3', grantLocator(cid, admin), {
+          'member': admin,
+          'role_ids': [roleId],
+        });
+        final state = foldCommunityControl(
+          [role, grant],
+          communityId: cid,
+          owner: owner,
+        );
+        expect(state.roles[roleId], isNotNull, reason: '$permissions');
+        return state.permits(admin, 2);
+      }
+
+      expect(canRename(2), isTrue);
+      // Both values are powers of two (or above) once read as doubles, so
+      // no low permission bit survives.
+      expect(canRename(9223372036854775807), isFalse);
+      expect(canRename(1e19), isFalse);
+    });
     test('owner wins same-version fork regardless of grindable rumor id', () {
       final role = edition(owner, '1', roleId, {
         'role_id': roleId,

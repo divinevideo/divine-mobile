@@ -380,7 +380,9 @@ ConcordControlState _foldOnce(
     if (p is String && RegExp(r'^\d+$').hasMatch(p)) {
       permissions = BigInt.parse(p);
     }
-    if (p is num && p.isFinite) permissions = BigInt.from(p.truncate());
+    // concord-core reads a JSON number as a double before truncating; an
+    // int-saturating truncate would grant every bit to an oversized value.
+    if (p is num && p.isFinite) permissions = BigInt.from(p.toDouble());
     if (permissions == null) return null;
     return ConcordRole(e.entityId, j['position'] as int, permissions);
   }
