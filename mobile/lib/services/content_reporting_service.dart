@@ -282,7 +282,8 @@ class ContentReportingService implements ReportChannelDriver {
   /// device shows it, sent only in the moderation DM and only for a private
   /// report. When the included message makes the moderation DM larger than a
   /// NIP-17 gift wrap can carry, the report is refused before anything is
-  /// saved, with [ReportDelivery.tooLong].
+  /// saved, with [ReportDelivery.tooLong]. A private report's DM keeps the
+  /// details as typed apart from private keys.
   ///
   /// Throws an [ArgumentError] when [unverifiedMessageExcerpt] is given while
   /// [publishToRelays] is true.
@@ -349,10 +350,11 @@ class ContentReportingService implements ReportChannelDriver {
         );
       }
 
-      // Redact once, here, so every projection of this report inherits it.
-      // The kind-1984 event is published to relays in plaintext and the
+      // Redact once, here, so every public projection of this report inherits
+      // it. The kind-1984 event is published to relays in plaintext and the
       // Zendesk ticket can be mirrored publicly, so a credential pasted into
-      // the details field must not survive into either.
+      // the details field must not survive into either. A private report's
+      // DM reaches only moderators and is redacted below.
       final safeDetails = sanitizeDiagnosticText(details);
       final safeAdditionalContext = additionalContext == null
           ? null
@@ -387,16 +389,22 @@ class ContentReportingService implements ReportChannelDriver {
           // The moderation DM is a private report's only channel.
           return ReportResult.failure('No moderation account to report to');
         }
+        // Only moderators read a private report's DM, so its details are
+        // evidence, as the excerpt is, and lose nothing but private keys. A
+        // public report's DM is redacted like the projections beside it.
+        final dmDetails = publishToRelays ? safeDetails : details;
+        final dmBody =
+            (publishToRelays ? sanitizeDiagnosticText : redactNostrPrivateKeys)(
+              moderationContent ??
+                  [
+                    'Content Report',
+                    'Reason: ${reason.name}',
+                    'Event: $eventId',
+                    if (_hasNote(dmDetails)) 'Details: $dmDetails',
+                  ].join('\n'),
+            );
         final dmContent = _moderationDmContent(
-          sanitizeDiagnosticText(
-            moderationContent ??
-                [
-                  'Content Report',
-                  'Reason: ${reason.name}',
-                  'Event: $eventId',
-                  if (_hasNote(safeDetails)) 'Details: $safeDetails',
-                ].join('\n'),
-          ),
+          dmBody,
           unverifiedMessageExcerpt: unverifiedMessageExcerpt,
         );
         final dmTags = [

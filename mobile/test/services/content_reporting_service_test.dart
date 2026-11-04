@@ -2782,6 +2782,47 @@ void main() {
         final (over, _) = await fileWithExcerptOf(atLimit + 1);
         expect(over.delivery, ReportDelivery.tooLong);
       });
+
+      // Only moderators read a private report, so the reporter's details are
+      // evidence, as the excerpt is: an email naming the account behind the
+      // abuse reaches them. A private key is still never forwarded.
+      test("a private report's details reach moderators as typed, except "
+          'for private keys', () async {
+        final nsec = 'nsec1${'q' * 58}';
+        final result = await private.reportContent(
+          eventId: rumorId,
+          authorPubkey: sender,
+          reason: ContentFilterReason.harassment,
+          details: 'they also write from someone@example.com $nsec',
+          publishToRelays: false,
+        );
+
+        final content =
+            moderationPayload((await dao.getById(result.reportId!))!)['content']
+                as String;
+        expect(
+          content,
+          contains(
+            'Details: they also write from someone@example.com [REDACTED]',
+          ),
+        );
+        expect(content, isNot(contains(nsec)));
+      });
+
+      test("a public report's moderation DM stays fully redacted", () async {
+        final result = await private.reportContent(
+          eventId: _validEventId('b'),
+          authorPubkey: sender,
+          reason: ContentFilterReason.harassment,
+          details: 'they also write from someone@example.com',
+        );
+
+        final content =
+            moderationPayload((await dao.getById(result.reportId!))!)['content']
+                as String;
+        expect(content, contains('Details: '));
+        expect(content, isNot(contains('someone@example.com')));
+      });
     });
   });
 }

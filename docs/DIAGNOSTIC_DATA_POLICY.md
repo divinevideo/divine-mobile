@@ -58,16 +58,17 @@ kind-1984 Nostr event published to relays, and the moderation DM. The
 kind-1984 event is the most exposed of the three - world-readable, permanent
 and unretractable - so `ContentReportingService.reportContent` redacts the
 reporter's details and additional context once at the entry point, before any
-of the three projections is built, and the moderation DM redacts the same
-details before sending.
+of the three projections is built, and the moderation DM of such a public
+report redacts the same details before sending.
 
 A report made from a direct message — reporting a received message, or the
 account from a conversation or the inbox — has only the moderation DM (#7340).
 A kind-1984 would be signed by the reporter and name the person they message,
 and a ticket can be mirrored into a public issue, so neither is created. The
 reporter may also include the reported message. It travels only in that DM,
-under an "unverified excerpt" heading, and only private keys are redacted from
-it: moderators read it as evidence, so an email or a handle in it stays.
+under an "unverified excerpt" heading. Only moderators read that DM, so the
+reporter's details and the included message lose nothing but private keys:
+both are evidence, so an email or a handle in either stays.
 
 The email redaction rule also redacts NIP-05 identifiers such as
 `name@divine.video`. That is intentional for public support payloads: NIP-05s
