@@ -13,6 +13,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/features/chat/chat_message_tile.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/features/chat/concord_reports_provider.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -187,6 +188,85 @@ void main() {
         );
       },
     );
+    testWidgets('offers Report only on other members’ messages', (
+      tester,
+    ) async {
+      final cubit = _ChatCubit();
+      final self = '55' * 32;
+      final other = '33' * 32;
+      final own = ChatMessage(
+        id: '44' * 32,
+        channelId: '22' * 32,
+        author: self,
+        body: 'My message',
+        createdAt: 1,
+      );
+      final theirs = ChatMessage(
+        id: '66' * 32,
+        channelId: '22' * 32,
+        author: other,
+        body: 'Their message',
+        createdAt: 2,
+      );
+      final state = ChatState(
+        account: self,
+        isTestCommunity: false,
+        pendingIds: [own.id],
+      );
+      when(() => cubit.state).thenReturn(state);
+      whenListen(cubit, const Stream<ChatState>.empty(), initialState: state);
+      when(cubit.visibleMessages).thenReturn([own, theirs]);
+      final reports = ConcordReports(
+        url: Uri.parse('https://reports.example/v1/reports'),
+        signer: (template) async => template,
+        post: (url, body, headers) async => {'caseId': 'synthetic-case'},
+      );
+      await _pumpChatWidget(
+        tester,
+        ProviderScope(
+          overrides: [
+            concordReportsProvider.overrideWithValue(reports),
+            for (final author in [self, other]) ...[
+              fetchUserProfileProvider(author).overrideWith(
+                (ref) async => UserProfile(
+                  pubkey: author,
+                  displayName: 'Synthetic member',
+                  rawData: const {},
+                  createdAt: DateTime(2026),
+                  eventId: '88' * 32,
+                ),
+              ),
+              profileIdentityResolvingProvider(
+                author,
+              ).overrideWithValue(false),
+              profileVanishedProvider(author).overrideWith((ref) => false),
+            ],
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<ChatCubit>.value(
+              value: cubit,
+              child: const ChatScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      ChatMessageTile tileOf(ChatMessage message) =>
+          tester.widget<ChatMessageTile>(
+            find.ancestor(
+              of: find.text(message.body),
+              matching: find.byType(ChatMessageTile),
+            ),
+          );
+      expect(
+        find.text(lookupAppLocalizations(const Locale('en')).reportSubmit),
+        findsOneWidget,
+      );
+      expect(tileOf(theirs).onReport, isNotNull);
+      expect(tileOf(own).onReport, isNull);
+    });
     testWidgets('keeps focus and a new draft while a send finishes', (
       tester,
     ) async {

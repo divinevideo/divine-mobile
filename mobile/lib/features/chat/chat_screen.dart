@@ -353,8 +353,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                                       cubit.discardPendingDraft(message.id),
                                     )
                                   : null,
+                              // Your own messages, sent or not, are not
+                              // something to report.
                               onReport:
-                                  ref.watch(concordReportsProvider) == null
+                                  ref.watch(concordReportsProvider) == null ||
+                                      message.author == state.account
                                   ? null
                                   : () => unawaited(_report(message)),
                               onRetry: () => runDetached(
