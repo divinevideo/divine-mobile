@@ -4471,6 +4471,25 @@ class AppLocalizationsTr extends AppLocalizations {
       'Paylaşmak için sesine bir başlık ver.';
 
   @override
+  String get soundsShareCoverLabel => 'Kapak';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'İsteğe bağlı. İnsanlar ses seçerken senin sesinin yanında görür.';
+
+  @override
+  String get soundsShareCoverAdd => 'Kapak ekle';
+
+  @override
+  String get soundsShareCoverReplace => 'Değiştir';
+
+  @override
+  String get soundsShareCoverRemove => 'Kapağı kaldır';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Ses kapağı';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Bu dosya türü desteklenmiyor. Bir ses dosyası seç.';
 
@@ -11004,6 +11023,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Başlıksız ses';
 
   @override
+  String get videoEditorAudioUseSound => 'Kullan';
+
+  @override
   String get videoEditorAudioFileMissing => 'Ses dosyası artık cihazda yok';
 
   @override
@@ -11027,16 +11049,13 @@ class AppLocalizationsTr extends AppLocalizations {
       'Videon için ses bölümünü seç';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Topluluk';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'Öne çıkanlar';
+  String get videoEditorAudioCategoryMySounds => 'Seslerim';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'Seslerim';
+  String get videoEditorAudioFilterEffects => 'Efektler';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => 'Ok aracı';
@@ -11776,9 +11795,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Ton';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Bitti';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Seviye';

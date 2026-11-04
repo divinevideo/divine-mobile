@@ -100,6 +100,11 @@ abstract class DmRepositoryReportableSites {
   static const String catchUpDebtUnexpectedFailure =
       'catchUpDebt.unexpectedFailure';
 
+  /// The daily re-query below the live DM window hit a programming invariant
+  /// failure while reading or handling what it found (#8439).
+  static const String belowWindowRequeryUnexpectedFailure =
+      'belowWindowRequery.unexpectedFailure';
+
   /// `retryPendingDecryptions`: a queued gift wrap's stored JSON failed to
   /// parse. We wrote that JSON ourselves, so this is an invariant violation,
   /// and it costs the user an inbound message.

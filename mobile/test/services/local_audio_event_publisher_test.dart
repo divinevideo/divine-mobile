@@ -1,7 +1,9 @@
 // ABOUTME: Tests for LocalAudioEventPublisher: the Kind 1063 a device-local
 // ABOUTME: file becomes, with and without a source video, and each failed step.
 
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,6 +44,11 @@ Event _signedAudioEvent(List<List<String>> tags) => Event.fromJson({
   'sig': 'sig',
 });
 
+/// A 4x4 red PNG: small, but a real image, so a blurhash can be computed.
+final Uint8List _cover = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGP4z8AARwzEcQCukw/x0F8jngAAAABJRU5ErkJggg==',
+);
+
 const _ownWork = AudioShareAttribution(
   title: 'Kitchen beat',
   creatorName: 'Alice',
@@ -62,6 +69,7 @@ void main() {
     registerFallbackValue(_FakeEvent());
     registerFallbackValue(File('unused'));
     registerFallbackValue(const AudibleSound(path: '', mimeType: ''));
+    registerFallbackValue(Uint8List(0));
   });
 
   setUp(() {
@@ -560,6 +568,124 @@ void main() {
             allowAudioReuse: true,
           ),
           throwsA(isA<AccountRestrictedPublishException>()),
+        );
+      });
+    });
+
+    group('cover', () {
+      void stubCoverUpload(BlossomUploadResult result) {
+        when(
+          () => blossom.uploadImageBytes(
+            bytes: any(named: 'bytes'),
+            nostrPubkey: any(named: 'nostrPubkey'),
+            filename: any(named: 'filename'),
+          ),
+        ).thenAnswer((_) async => result);
+      }
+
+      test('publishes the cover as the image and blurhash tags', () async {
+        stubCoverUpload(
+          const BlossomUploadResult(
+            success: true,
+            url: 'https://cdn.example/cover.jpg',
+          ),
+        );
+
+        final result = await publisher().publish(
+          audio: importedSound(),
+          attribution: _ownWork,
+          allowAudioReuse: true,
+          coverImage: _cover,
+        );
+
+        expect(result, isA<LocalAudioPublished>());
+        final tags = signedTags();
+        expect(
+          tags,
+          anyElement(equals(['image', 'https://cdn.example/cover.jpg'])),
+        );
+        final blurhash = tags.where((tag) => tag.first == 'blurhash');
+        expect(blurhash, hasLength(1));
+        expect(blurhash.single[1], isNotEmpty);
+        verify(
+          () => blossom.uploadImageBytes(
+            bytes: _cover,
+            nostrPubkey: _self,
+            filename: any(named: 'filename'),
+          ),
+        ).called(1);
+      });
+
+      test('publishes nothing when the cover upload fails', () async {
+        stubCoverUpload(
+          const BlossomUploadResult(success: false, errorMessage: 'nope'),
+        );
+
+        final result = await publisher().publish(
+          audio: importedSound(),
+          attribution: _ownWork,
+          allowAudioReuse: true,
+          coverImage: _cover,
+        );
+
+        expect(
+          result,
+          isA<LocalAudioPublishFailed>().having(
+            (failed) => failed.failure,
+            'failure',
+            LocalAudioPublishFailure.uploadFailed,
+          ),
+        );
+        verifyNever(
+          () => blossom.uploadAudio(
+            audioFile: any(named: 'audioFile'),
+            mimeType: any(named: 'mimeType'),
+          ),
+        );
+        verifyNever(
+          () => authService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        );
+      });
+
+      test('uploads no cover for a sound with nothing to hear', () async {
+        stubCoverUpload(
+          const BlossomUploadResult(
+            success: true,
+            url: 'https://cdn.example/cover.jpg',
+          ),
+        );
+        when(
+          () => trimmer.trim(
+            path: any(named: 'path'),
+            mimeType: any(named: 'mimeType'),
+          ),
+        ).thenAnswer((_) async => const SilentSound());
+
+        final result = await publisher().publish(
+          audio: importedSound(),
+          attribution: _ownWork,
+          allowAudioReuse: true,
+          coverImage: _cover,
+        );
+
+        expect(
+          result,
+          isA<LocalAudioPublishFailed>().having(
+            (failed) => failed.failure,
+            'failure',
+            LocalAudioPublishFailure.silent,
+          ),
+        );
+        verifyNever(
+          () => blossom.uploadImageBytes(
+            bytes: any(named: 'bytes'),
+            nostrPubkey: any(named: 'nostrPubkey'),
+            filename: any(named: 'filename'),
+          ),
         );
       });
     });

@@ -1,6 +1,8 @@
 // ABOUTME: Cubit for the library's Add sound flow: imports a picked file or a
 // ABOUTME: recording and saves it to My Sounds, optionally sharing it first.
 
+import 'dart:typed_data';
+
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
 import 'package:models/models.dart' show AudioEvent;
@@ -305,6 +307,12 @@ class AddSoundCubit extends Cubit<AddSoundState>
     emitIfOpen(state.copyWith(sharePublicly: value));
   }
 
+  /// Sets the cover the sound is shared with, or removes it with `null`.
+  void setCoverImage(Uint8List? bytes) {
+    if (!state.canEdit) return;
+    emitIfOpen(state.copyWith(coverImage: bytes));
+  }
+
   /// Applies an edit from the credit editor.
   ///
   /// The `p` tag follows ownership: confirmed own work credits the publisher's
@@ -435,6 +443,7 @@ class AddSoundCubit extends Cubit<AddSoundState>
         audio: audio,
         attribution: attribution,
         allowAudioReuse: true,
+        coverImage: state.coverImage,
       );
       switch (result) {
         case LocalAudioPublished(audio: final published):

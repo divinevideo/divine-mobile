@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -12,6 +13,8 @@ import 'package:test/test.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
 void main() {
   group('SoundsRepository', () {
@@ -164,6 +167,23 @@ void main() {
         final sounds = await repository.fetchTrendingSounds();
 
         expect(sounds, isEmpty);
+      });
+
+      test('asks only for sounds up to until', () async {
+        when(
+          () => mockNostrClient.queryEvents(any()),
+        ).thenAnswer((_) async => []);
+
+        await repository.fetchTrendingSounds(limit: 100, until: 1500);
+
+        final filter =
+            (verify(
+                      () => mockNostrClient.queryEvents(captureAny()),
+                    ).captured.single
+                    as List<Filter>)
+                .single;
+        expect(filter.until, 1500);
+        expect(filter.limit, 100);
       });
 
       test('fetches and caches audio events', () async {
@@ -468,6 +488,486 @@ void main() {
                 ).captured.single
                 as List<Filter>;
         expect(filters.single.limit, 7);
+      });
+    });
+
+    group('fetchPopularSounds', () {
+      late _MockFunnelcakeApiClient funnelcake;
+
+      setUp(() {
+        funnelcake = _MockFunnelcakeApiClient();
+        when(() => funnelcake.isAvailable).thenReturn(true);
+      });
+
+      SoundStats ranked(String id, int usageCount) => SoundStats(
+        id: id,
+        pubkey: testPubkey1,
+        title: 'Sound',
+        createdAt: DateTime.utc(2026),
+        usageCount: usageCount,
+      );
+
+      test('returns nothing without a Funnelcake client', () async {
+        final popular = await repository.fetchPopularSounds();
+
+        expect(popular.sounds, isEmpty);
+        expect(popular.usageCounts, isEmpty);
+        verifyNever(() => mockNostrClient.queryEvents(any()));
+      });
+
+      test('returns nothing while Funnelcake is unavailable', () async {
+        when(() => funnelcake.isAvailable).thenReturn(false);
+        final popularRepository = SoundsRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: funnelcake,
+        );
+        addTearDown(popularRepository.dispose);
+
+        final popular = await popularRepository.fetchPopularSounds();
+
+        expect(popular.sounds, isEmpty);
+        verifyNever(
+          () => funnelcake.getTrendingSounds(
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        );
+      });
+
+      test(
+        'keeps the Funnelcake ranking and loads the events from relays',
+        () async {
+          when(
+            () => funnelcake.getTrendingSounds(
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              ranked(testEventId2, 28),
+              ranked(testEventId1, 60),
+              ranked(testVideoEventId, 5),
+            ],
+          );
+          // Returned newest first and missing the third ranked sound.
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              createAudioEvent(
+                id: testEventId1,
+                pubkey: testPubkey1,
+                title: 'Older but second',
+                createdAt: 100,
+              ),
+              createAudioEvent(
+                id: testEventId2,
+                pubkey: testPubkey2,
+                title: 'Newer but first',
+                createdAt: 200,
+              ),
+            ],
+          );
+          final popularRepository = SoundsRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: funnelcake,
+          );
+          addTearDown(popularRepository.dispose);
+
+          final popular = await popularRepository.fetchPopularSounds(
+            limit: 20,
+          );
+
+          expect(popular.sounds.map((sound) => sound.id), [
+            testEventId2,
+            testEventId1,
+          ]);
+          expect(popular.usageCounts, {
+            testEventId2: 28,
+            testEventId1: 60,
+            testVideoEventId: 5,
+          });
+          verify(
+            () => funnelcake.getTrendingSounds(
+              limit: 20,
+              offset: any(named: 'offset'),
+            ),
+          ).called(1);
+          final filter =
+              (verify(
+                        () => mockNostrClient.queryEvents(captureAny()),
+                      ).captured.single
+                      as List<Filter>)
+                  .single;
+          expect(filter.ids, [testEventId2, testEventId1, testVideoEventId]);
+          expect(filter.kinds, [audioEventKind]);
+        },
+      );
+
+      test('asks Funnelcake for the ranking past offset', () async {
+        when(
+          () => funnelcake.getTrendingSounds(
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer((_) async => const []);
+        final popularRepository = SoundsRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: funnelcake,
+        );
+        addTearDown(popularRepository.dispose);
+
+        await popularRepository.fetchPopularSounds(offset: 100);
+
+        verify(
+          () => funnelcake.getTrendingSounds(
+            limit: any(named: 'limit'),
+            offset: 100,
+          ),
+        ).called(1);
+      });
+
+      test('skips the relay when Funnelcake ranks nothing', () async {
+        when(
+          () => funnelcake.getTrendingSounds(
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer((_) async => [ranked('', 3)]);
+        final popularRepository = SoundsRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: funnelcake,
+        );
+        addTearDown(popularRepository.dispose);
+
+        final popular = await popularRepository.fetchPopularSounds();
+
+        expect(popular.sounds, isEmpty);
+        expect(popular.usageCounts, isEmpty);
+        verifyNever(() => mockNostrClient.queryEvents(any()));
+      });
+    });
+
+    group('fetchSoundsByCreators', () {
+      test('returns nothing without querying for no pubkeys', () async {
+        final sounds = await repository.fetchSoundsByCreators(const ['']);
+
+        expect(sounds, isEmpty);
+        verifyNever(() => mockNostrClient.queryEvents(any()));
+      });
+
+      test('asks for the audio of every creator at once', () async {
+        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+          (_) async => [
+            createAudioEvent(
+              id: testEventId1,
+              pubkey: testPubkey1,
+              title: 'Followed sound',
+            ),
+          ],
+        );
+
+        final sounds = await repository.fetchSoundsByCreators(
+          const [testPubkey1, testPubkey2, testPubkey1],
+          limit: 30,
+          until: 1500,
+        );
+
+        expect(sounds.single.id, testEventId1);
+        final filter =
+            (verify(
+                      () => mockNostrClient.queryEvents(captureAny()),
+                    ).captured.single
+                    as List<Filter>)
+                .single;
+        expect(filter.authors, [testPubkey1, testPubkey2]);
+        expect(filter.kinds, [audioEventKind]);
+        expect(filter.m, SoundsRepository.audioMimeTypes);
+        expect(filter.limit, 30);
+        expect(filter.until, 1500);
+      });
+    });
+
+    group('fetchDivineSounds', () {
+      test('asks nothing when no sound account is set', () async {
+        expect(await repository.fetchDivineSounds(), isEmpty);
+        verifyNever(() => mockNostrClient.queryEvents(any()));
+      });
+
+      test(
+        "asks for the sound accounts' audio, without their videos'",
+        () async {
+          final divine = SoundsRepository(
+            nostrClient: mockNostrClient,
+            divineSoundPublishers: const {testPubkey1},
+          );
+          addTearDown(divine.dispose);
+          final library = createAudioEvent(
+            id: testEventId1,
+            pubkey: testPubkey1,
+            title: 'Wednesday My Dudes',
+          );
+          final fromVideo = Event.fromJson({
+            ...createAudioEvent(
+              id: testEventId2,
+              pubkey: testPubkey1,
+              title: 'Original sound',
+            ).toJson(),
+          })..tags.add(['a', '34236:$testPubkey1:clip']);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => [library, fromVideo]);
+
+          final sounds = await divine.fetchDivineSounds(limit: 40);
+
+          expect(sounds.map((sound) => sound.id), [testEventId1]);
+          final filter =
+              (verify(
+                        () => mockNostrClient.queryEvents(captureAny()),
+                      ).captured.single
+                      as List<Filter>)
+                  .single;
+          expect(filter.authors, [testPubkey1]);
+          expect(filter.kinds, [audioEventKind]);
+          expect(filter.m, SoundsRepository.audioMimeTypes);
+          expect(filter.limit, 40);
+        },
+      );
+    });
+
+    group('blocked authors', () {
+      late _MockFunnelcakeApiClient funnelcake;
+      late SoundsRepository blocking;
+
+      setUp(() {
+        funnelcake = _MockFunnelcakeApiClient();
+        when(() => funnelcake.isAvailable).thenReturn(true);
+        blocking = SoundsRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: funnelcake,
+          divineSoundPublishers: const {testPubkey1, testPubkey2},
+          blockFilter: (pubkey) => pubkey == testPubkey2,
+        );
+        addTearDown(blocking.dispose);
+        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+          (_) async => [
+            createAudioEvent(
+              id: testEventId1,
+              pubkey: testPubkey1,
+              title: 'Kept beat',
+              publicTags: const ['beat'],
+            ),
+            createAudioEvent(
+              id: testEventId2,
+              pubkey: testPubkey2,
+              title: 'Blocked beat',
+              publicTags: const ['beat'],
+            ),
+          ],
+        );
+      });
+
+      List<String> ids(List<AudioEvent> sounds) => [
+        for (final sound in sounds) sound.id,
+      ];
+
+      test('withoutBlockedAuthors drops the sounds of blocked authors', () {
+        final kept = AudioEvent(
+          id: testEventId1,
+          pubkey: testPubkey1,
+          createdAt: 1,
+        );
+        final blocked = AudioEvent(
+          id: testEventId2,
+          pubkey: testPubkey2,
+          createdAt: 1,
+        );
+
+        expect(blocking.withoutBlockedAuthors([kept, blocked]), [kept]);
+        expect(repository.withoutBlockedAuthors([kept, blocked]), [
+          kept,
+          blocked,
+        ]);
+      });
+
+      test('leaves them out of Popular, keeping their counts', () async {
+        when(
+          () => funnelcake.getTrendingSounds(
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            for (final id in [testEventId1, testEventId2])
+              SoundStats(
+                id: id,
+                pubkey: testPubkey1,
+                title: 'Sound',
+                createdAt: DateTime.utc(2026),
+                usageCount: 3,
+              ),
+          ],
+        );
+
+        final popular = await blocking.fetchPopularSounds();
+
+        expect(ids(popular.sounds), [testEventId1]);
+        expect(popular.usageCounts.keys, [testEventId1, testEventId2]);
+      });
+
+      test("leaves them out of Divine's sounds", () async {
+        expect(ids(await blocking.fetchDivineSounds()), [testEventId1]);
+      });
+
+      test("leaves them out of a creator's sounds", () async {
+        expect(
+          ids(await blocking.fetchSoundsByCreator(testPubkey2)),
+          [testEventId1],
+        );
+      });
+
+      test('leaves them out of searches', () async {
+        expect(ids(await blocking.searchSounds('beat')), [testEventId1]);
+      });
+
+      test('keeps them in the pages callers narrow themselves', () async {
+        expect(ids(await blocking.fetchTrendingSounds()), hasLength(2));
+        expect(
+          ids(await blocking.fetchSoundsByCreators(const [testPubkey1])),
+          hasLength(2),
+        );
+      });
+    });
+
+    group('withoutUnusedOriginals', () {
+      const sourceDTag = 'source-video';
+      const sourceAddress = '34236:$testPubkey1:$sourceDTag';
+
+      AudioEvent sound(String id, {String? title}) => AudioEvent(
+        id: id,
+        pubkey: testPubkey1,
+        createdAt: 1700000000,
+        title: title ?? AudioEvent.originalSoundTitle,
+        sourceVideoReference: sourceAddress,
+      );
+
+      ({List<Event> events, bool timedOut, bool noRelays}) answered(
+        List<Event> events,
+      ) => (events: events, timedOut: false, noRelays: false);
+
+      Event video({
+        required String id,
+        required String pubkey,
+        required String dTag,
+        required String usesSoundId,
+      }) => Event.fromJson({
+        'id': id,
+        'pubkey': pubkey,
+        'kind': 34236,
+        'tags': [
+          ['d', dTag],
+          ['e', usesSoundId, '', 'audio'],
+        ],
+        'content': '',
+        'created_at': 1700000000,
+        'sig': '',
+      });
+
+      test('keeps an unnamed sound another video uses', () async {
+        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          (_) async => answered([
+            video(
+              id: testVideoEventId,
+              pubkey: testPubkey1,
+              dTag: sourceDTag,
+              usesSoundId: testEventId1,
+            ),
+            video(
+              id: testEventId2,
+              pubkey: testPubkey2,
+              dTag: 'reuse',
+              usesSoundId: testEventId1,
+            ),
+          ]),
+        );
+
+        final kept = await repository.withoutUnusedOriginals([
+          sound(testEventId1),
+        ]);
+
+        expect(kept.map((s) => s.id), [testEventId1]);
+      });
+
+      test('drops an unnamed sound only its source video uses', () async {
+        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          (_) async => answered([
+            video(
+              id: testVideoEventId,
+              pubkey: testPubkey1,
+              dTag: sourceDTag,
+              usesSoundId: testEventId1,
+            ),
+          ]),
+        );
+
+        final kept = await repository.withoutUnusedOriginals([
+          sound(testEventId1),
+          sound(testEventId2, title: 'Named beat'),
+        ]);
+
+        expect(kept.map((s) => s.id), [testEventId2]);
+      });
+
+      test('asks only about the unnamed sounds, in one query', () async {
+        when(
+          () => mockNostrClient.queryEventsDetailed(any()),
+        ).thenAnswer((_) async => answered([]));
+
+        await repository.withoutUnusedOriginals([
+          sound(testEventId1),
+          sound(testEventId2, title: 'Named beat'),
+        ]);
+
+        final filters =
+            verify(
+                  () => mockNostrClient.queryEventsDetailed(captureAny()),
+                ).captured.single
+                as List<Filter>;
+        expect(filters.single.kinds, [34236]);
+        expect(filters.single.e, [testEventId1]);
+      });
+
+      test('returns named sounds without querying', () async {
+        final named = [sound(testEventId1, title: 'Named beat')];
+
+        expect(await repository.withoutUnusedOriginals(named), named);
+        verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
+      });
+
+      test('keeps every sound when the lookup fails', () async {
+        when(
+          () => mockNostrClient.queryEventsDetailed(any()),
+        ).thenThrow(Exception('relay down'));
+        final sounds = [sound(testEventId1)];
+
+        expect(await repository.withoutUnusedOriginals(sounds), sounds);
+      });
+
+      test('keeps every sound when the lookup runs out of time', () async {
+        // The video reusing the sound had not arrived yet.
+        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+        );
+        final sounds = [sound(testEventId1)];
+
+        expect(await repository.withoutUnusedOriginals(sounds), sounds);
+      });
+
+      test('keeps every sound when no relay was asked', () async {
+        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: false, noRelays: true),
+        );
+        final sounds = [sound(testEventId1)];
+
+        expect(await repository.withoutUnusedOriginals(sounds), sounds);
       });
     });
 

@@ -1,89 +1,51 @@
-import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/video_editor/video_editor_category_tabs.dart';
 
+/// The sound picker's list tabs, moving like the editor's other category
+/// rows: the highlight slides along with [controller] as the lists swipe.
 class AudioCategoryBar extends StatelessWidget {
   const AudioCategoryBar({
+    required this.controller,
     required this.onSelect,
-    required this.category,
     super.key,
   });
 
+  /// Drives the lists below; one tab per [AudioCategory], in order.
+  final TabController controller;
+
   final ValueChanged<AudioCategory> onSelect;
-  final AudioCategory category;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: .horizontal,
-      padding: const .all(16),
-      child: Row(
-        spacing: 8,
-        children: [
-          _Chip(
-            onTap: () => onSelect(.divine),
-            isSelected: category == .divine,
-            label: context.l10n.videoEditorAudioCategoryDivine,
-          ),
-          _Chip(
-            onTap: () => onSelect(.community),
-            isSelected: category == .community,
-            label: context.l10n.videoEditorAudioCategoryCommunity,
-          ),
-          _Chip(
-            onTap: () => onSelect(.featured),
-            isSelected: category == .featured,
-            label: context.l10n.videoEditorAudioCategoryFeatured,
-          ),
-          _Chip(
-            onTap: () => onSelect(.mySounds),
-            isSelected: category == .mySounds,
-            label: context.l10n.videoEditorAudioCategoryMySounds,
-          ),
-        ],
-      ),
+    final l10n = context.l10n;
+    return VideoEditorCategoryTabs(
+      controller: controller,
+      labels: [
+        for (final category in AudioCategory.values)
+          switch (category) {
+            AudioCategory.forYou => l10n.exploreTabForYou,
+            AudioCategory.popular => l10n.exploreTabPopular,
+            AudioCategory.newest => l10n.exploreTabNew,
+            AudioCategory.mySounds => l10n.videoEditorAudioCategoryMySounds,
+          },
+      ],
+      onTap: (index) => onSelect(AudioCategory.values[index]),
     );
   }
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.isSelected,
-    required this.onTap,
-    required this.label,
-  });
+/// The picker's sound lists, in tab order.
+enum AudioCategory {
+  /// Sounds from people the viewer follows, then Divine's own.
+  forYou,
 
-  final VoidCallback onTap;
-  final bool isSelected;
-  final String label;
+  /// The sounds being picked up right now.
+  popular,
 
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: isSelected,
-      label: label,
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const .symmetric(horizontal: 16, vertical: 8),
-          decoration: ShapeDecoration(
-            color: isSelected ? context.vineColors.containerLow : null,
-            shape: RoundedRectangleBorder(borderRadius: .circular(16)),
-          ),
-          child: Text(
-            label,
-            style: VineTheme.titleSmallFont(
-              color: isSelected
-                  ? context.vineColors.accentPositive
-                  : context.vineColors.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  /// The newest community sounds.
+  newest,
+
+  /// The viewer's saved sounds.
+  mySounds,
 }
-
-enum AudioCategory { divine, community, featured, mySounds }

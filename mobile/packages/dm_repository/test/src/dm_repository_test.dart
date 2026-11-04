@@ -551,6 +551,9 @@ class _FakeDmSyncState implements DmSyncState {
   final List<({String pubkey, int createdAt})> recordedWire =
       <({String pubkey, int createdAt})>[];
   bool drainCoveredOwnInboxOverride = false;
+  int? belowWindowRequeryAtOverride;
+  int? belowWindowRequeryTopOverride;
+  int? belowWindowRequeryAttemptAtOverride;
   bool completedBeforeOverride = false;
   final List<String> inboxCoveredPubkeys = <String>[];
   final List<String> rearmedForInboxPubkeys = <String>[];
@@ -591,6 +594,31 @@ class _FakeDmSyncState implements DmSyncState {
   Future<void> setDrainCoveredOwnInbox(String pubkey) async {
     inboxCoveredPubkeys.add(pubkey);
     drainCoveredOwnInboxOverride = true;
+  }
+
+  @override
+  int? belowWindowRequeryAt(String pubkey) => belowWindowRequeryAtOverride;
+
+  @override
+  int? belowWindowRequeryTop(String pubkey) => belowWindowRequeryTopOverride;
+
+  @override
+  Future<void> recordBelowWindowRequery(
+    String pubkey, {
+    required int at,
+    required int top,
+  }) async {
+    belowWindowRequeryTopOverride = top;
+    belowWindowRequeryAtOverride = at;
+  }
+
+  @override
+  int? belowWindowRequeryAttemptAt(String pubkey) =>
+      belowWindowRequeryAttemptAtOverride;
+
+  @override
+  Future<void> setBelowWindowRequeryAttemptAt(String pubkey, int at) async {
+    belowWindowRequeryAttemptAtOverride = at;
   }
 
   @override
@@ -6779,9 +6807,9 @@ void main() {
           //
           // Scope: this pins the window and what the relay does with it. The
           // receive pipeline downstream has its own tests, and
-          // `recordWireSeen`'s monotonicity is pinned in dm_sync_state_test —
-          // together they are what make the loss permanent rather than merely
-          // late.
+          // `recordWireSeen`'s monotonicity is pinned in dm_sync_state_test.
+          // The live window never asks for the victim again; the re-query
+          // below the window does, in dm_below_window_requery_test (#8439).
           const wireNewest = 1700000000;
           const since = wireNewest - 2 * 86400;
           // Published earlier than our newest processed wrap and delivered

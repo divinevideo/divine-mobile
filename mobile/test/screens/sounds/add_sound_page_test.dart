@@ -2,6 +2,7 @@
 // ABOUTME: privately under a name, or share publicly and land in My Sounds.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
@@ -29,6 +30,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sound_upload_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/screens/sounds/add_sound_page.dart';
+import 'package:openvine/screens/sounds/widgets/share_cover_section.dart';
 import 'package:openvine/services/local_audio_event_publisher.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
@@ -38,6 +40,8 @@ import 'package:openvine/widgets/audio/public_audio_credit_editor.dart';
 import 'package:permissions_service/permissions_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sound_service/sound_service.dart';
+
+import '../../helpers/scroll.dart';
 
 class _MockPublisher extends Mock implements LocalAudioEventPublisher {}
 
@@ -482,6 +486,22 @@ void main() {
         expect(saveButton(tester).onPressed, isNotNull);
       });
 
+      testWidgets('offers an optional cover only when sharing', (tester) async {
+        await pumpView(tester);
+        await pickFile(tester);
+
+        expect(find.text(l10n.soundsShareCoverAdd), findsNothing);
+
+        await sharePublicly(tester);
+
+        expect(find.text(l10n.soundsShareCoverAdd), findsOneWidget);
+        expect(
+          find.byKey(const Key('add_sound_cover_placeholder')),
+          findsOneWidget,
+        );
+        expect(saveButton(tester).onPressed, isNotNull);
+      });
+
       testWidgets('sharing swaps the name for a prefilled public credit', (
         tester,
       ) async {
@@ -791,8 +811,28 @@ void main() {
         await pickFile(tester);
         await sharePublicly(tester);
 
+        // The cover section above the credit pushes it below the fold of the
+        // test surface, under the save bar.
+        final page = find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first;
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.soundOwnWork),
+          100,
+          scrollable: page,
+        );
         await tester.tap(find.text(l10n.soundOwnWork));
         await tester.pumpAndSettle();
+        await scrollUntilTappable(
+          tester,
+          find.byKey(const Key('audio_credit_source')),
+          100,
+          scrollable: page,
+        );
 
         expect(find.byKey(const Key('audio_credit_source')), findsOneWidget);
         expect(saveButton(tester).onPressed, isNull);
@@ -837,6 +877,37 @@ void main() {
                 as AudioShareAttribution;
         expect(captured.publicTags, ['beat', 'kitchen']);
         expect(captured.creatorPubkey, _self);
+      });
+
+      testWidgets('shows a chosen cover and can remove it again', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await pickFile(tester);
+        await sharePublicly(tester);
+
+        // The picker and the crop editor are platform UI; the cubit receives
+        // what they would hand back.
+        tester
+            .element(find.byType(ShareCoverSection))
+            .read<AddSoundCubit>()
+            .setCoverImage(
+              base64Decode(
+                'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGP4z8AARwzEcQCukw/x0F8jngAAAABJRU5ErkJggg==',
+              ),
+            );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('add_sound_cover_image')), findsOneWidget);
+        expect(find.text(l10n.soundsShareCoverReplace), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('add_sound_cover_button')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.soundsShareCoverRemove));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('add_sound_cover_image')), findsNothing);
+        expect(find.text(l10n.soundsShareCoverAdd), findsOneWidget);
       });
 
       testWidgets('stays put and says so when sharing fails', (tester) async {

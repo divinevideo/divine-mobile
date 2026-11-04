@@ -7,8 +7,9 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/saved_sound.dart';
+import 'package:openvine/models/sound_cover.dart';
+import 'package:openvine/widgets/audio/sound_cover_image.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
-import 'package:openvine/widgets/vine_cached_image.dart';
 
 /// Edge length of the source thumbnail leading each card.
 const _thumbnailSize = 64.0;
@@ -101,7 +102,12 @@ class SavedSoundCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     spacing: 10,
                     children: [
-                      _SavedSoundThumbnail(url: source?.thumbnailUrl),
+                      SoundCoverImage(
+                        cover: SoundCover(imageUrl: source?.thumbnailUrl),
+                        size: _thumbnailSize,
+                        borderRadius: 10,
+                        colorSeed: sound.id,
+                      ),
                       Expanded(
                         child: _SavedSoundText(
                           displayTitle: displayTitle,
@@ -179,54 +185,6 @@ class SavedSoundCard extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SavedSoundThumbnail extends StatelessWidget {
-  const _SavedSoundThumbnail({required this.url});
-
-  final String? url;
-
-  @override
-  Widget build(BuildContext context) {
-    final imageUrl = url;
-    if (imageUrl == null || imageUrl.isEmpty) {
-      return const _SavedSoundThumbnailFallback();
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: VineCachedImage(
-        key: const Key('saved_sound_thumbnail'),
-        imageUrl: imageUrl,
-        width: _thumbnailSize,
-        height: _thumbnailSize,
-        memCacheWidth: (_thumbnailSize * 2).round(),
-        memCacheHeight: (_thumbnailSize * 2).round(),
-        placeholder: (_, _) => const _SavedSoundThumbnailFallback(),
-        errorWidget: (_, _, _) => const _SavedSoundThumbnailFallback(),
-      ),
-    );
-  }
-}
-
-class _SavedSoundThumbnailFallback extends StatelessWidget {
-  const _SavedSoundThumbnailFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox.square(
-      key: const Key('saved_sound_thumbnail_fallback'),
-      dimension: _thumbnailSize,
-      child: ColoredBox(
-        color: context.vineColors.surfaceContainer,
-        child: Center(
-          child: DivineIcon(
-            icon: DivineIconName.waveform,
-            color: context.vineColors.onSurfaceVariant,
           ),
         ),
       ),

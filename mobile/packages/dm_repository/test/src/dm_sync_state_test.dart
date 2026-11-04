@@ -638,6 +638,67 @@ void main() {
       });
     });
 
+    group('belowWindowRequeryAt (#8439)', () {
+      test('is null until a re-query below the window has finished', () {
+        expect(state.belowWindowRequeryAt(pkA), isNull);
+        expect(state.belowWindowRequeryTop(pkA), isNull);
+      });
+
+      test('returns the time and window start it was recorded with', () async {
+        await state.recordBelowWindowRequery(pkA, at: tsMid, top: tsOldest);
+
+        expect(state.belowWindowRequeryAt(pkA), equals(tsMid));
+        expect(state.belowWindowRequeryTop(pkA), equals(tsOldest));
+      });
+
+      test('is per pubkey', () async {
+        await state.recordBelowWindowRequery(pkA, at: tsMid, top: tsOldest);
+
+        expect(state.belowWindowRequeryAt(pkB), isNull);
+        expect(state.belowWindowRequeryTop(pkB), isNull);
+      });
+
+      test('clear and clearAll reset it', () async {
+        await state.recordBelowWindowRequery(pkA, at: tsMid, top: tsOldest);
+        await state.recordBelowWindowRequery(pkB, at: tsNewer, top: tsMid);
+
+        await state.clear(pkA);
+        expect(state.belowWindowRequeryAt(pkA), isNull);
+        expect(state.belowWindowRequeryTop(pkA), isNull);
+        expect(state.belowWindowRequeryAt(pkB), equals(tsNewer));
+        expect(state.belowWindowRequeryTop(pkB), equals(tsMid));
+
+        await state.clearAll();
+        expect(state.belowWindowRequeryAt(pkB), isNull);
+        expect(state.belowWindowRequeryTop(pkB), isNull);
+      });
+    });
+
+    group('belowWindowRequeryAttemptAt (#8439)', () {
+      test('is null until a re-query below the window has started', () {
+        expect(state.belowWindowRequeryAttemptAt(pkA), isNull);
+      });
+
+      test('returns the time it was recorded at, per pubkey', () async {
+        await state.setBelowWindowRequeryAttemptAt(pkA, tsMid);
+
+        expect(state.belowWindowRequeryAttemptAt(pkA), equals(tsMid));
+        expect(state.belowWindowRequeryAttemptAt(pkB), isNull);
+      });
+
+      test('clear and clearAll reset it', () async {
+        await state.setBelowWindowRequeryAttemptAt(pkA, tsMid);
+        await state.setBelowWindowRequeryAttemptAt(pkB, tsNewer);
+
+        await state.clear(pkA);
+        expect(state.belowWindowRequeryAttemptAt(pkA), isNull);
+        expect(state.belowWindowRequeryAttemptAt(pkB), equals(tsNewer));
+
+        await state.clearAll();
+        expect(state.belowWindowRequeryAttemptAt(pkB), isNull);
+      });
+    });
+
     group('dmRelayListPublished (#4974)', () {
       test('defaults to false and flips to true after marking', () async {
         expect(state.dmRelayListPublished(pkA), isFalse);

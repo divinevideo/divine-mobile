@@ -2,8 +2,10 @@
 // ABOUTME: credited Kind 1063, with or without a source-video coordinate.
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:blurhash_service/blurhash_service.dart';
 import 'package:models/models.dart' show AudioEvent, audioEventKind;
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
@@ -29,7 +31,7 @@ enum LocalAudioPublishFailure {
   /// silence. Retrying cannot help.
   silent,
 
-  /// Blossom rejected or dropped the upload.
+  /// Blossom rejected or dropped the upload of the sound or its cover.
   uploadFailed,
 
   /// Signing produced no event.
@@ -101,6 +103,10 @@ class LocalAudioEventPublisher {
   /// the sound is published beside, with [sourceVideoRelay] as its relay hint;
   /// both are omitted for a standalone sound.
   ///
+  /// [coverImage] is a JPEG published as the sound's NIP-94 `image`, with its
+  /// `blurhash`. A cover that fails to upload fails the publish rather than
+  /// shipping the sound without the cover the user chose.
+  ///
   /// Throws:
   ///
   /// * [AccountRestrictedPublishException] when the authoritative relay
@@ -111,6 +117,7 @@ class LocalAudioEventPublisher {
     required bool allowAudioReuse,
     String? sourceVideoReference,
     String? sourceVideoRelay,
+    Uint8List? coverImage,
   }) async {
     if (!attribution.isValid) {
       Log.error(
@@ -183,6 +190,7 @@ class LocalAudioEventPublisher {
         allowAudioReuse: allowAudioReuse,
         sourceVideoReference: sourceVideoReference,
         sourceVideoRelay: sourceVideoRelay,
+        coverImage: coverImage,
       );
     } finally {
       await _soundSilenceTrimmer.deleteTrimmedCopy(sound);
@@ -199,7 +207,32 @@ class LocalAudioEventPublisher {
     required bool allowAudioReuse,
     required String? sourceVideoReference,
     required String? sourceVideoRelay,
+    required Uint8List? coverImage,
   }) async {
+    // The cover goes first: it is the smaller upload, so a failure there
+    // costs no audio round trip.
+    String? imageUrl;
+    String? blurhash;
+    if (coverImage != null) {
+      final coverUpload = await blossomService.uploadImageBytes(
+        bytes: coverImage,
+        nostrPubkey: pubkey,
+        filename: 'sound_cover.jpg',
+      );
+      imageUrl = coverUpload.url;
+      if (!coverUpload.success || imageUrl == null) {
+        Log.error(
+          'Sound cover upload failed: ${coverUpload.errorMessage}',
+          name: _logName,
+          category: LogCategory.video,
+        );
+        return const LocalAudioPublishFailed(
+          LocalAudioPublishFailure.uploadFailed,
+        );
+      }
+      blurhash = await BlurhashService.generateBlurhash(coverImage);
+    }
+
     final audioFile = File(sound.path);
     final uploadResult = await blossomService.uploadAudio(
       audioFile: audioFile,
@@ -236,6 +269,8 @@ class LocalAudioEventPublisher {
       source: attribution.sourceUrl?.trim(),
       sourceVideoReference: sourceVideoReference,
       sourceVideoRelay: sourceVideoRelay,
+      imageUrl: imageUrl,
+      blurhash: blurhash,
       creatorName: attribution.creatorName.trim(),
       creatorPubkey: attribution.creatorPubkey,
       creatorUrl: attribution.creatorUrl,

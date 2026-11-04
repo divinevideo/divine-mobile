@@ -336,6 +336,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
 
     addPostFrameCallbackIfMounted(() {
       _runDetached(_initializeEditor(), 'initialize video editor');
+      AudioSelectionBottomSheet.preload(ref);
     });
   }
 

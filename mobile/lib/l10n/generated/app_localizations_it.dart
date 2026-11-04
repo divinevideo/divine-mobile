@@ -4593,6 +4593,25 @@ class AppLocalizationsIt extends AppLocalizations {
       'Dai un titolo al tuo suono per condividerlo.';
 
   @override
+  String get soundsShareCoverLabel => 'Copertina';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Facoltativa. Le persone la vedono accanto al tuo suono quando ne scelgono uno.';
+
+  @override
+  String get soundsShareCoverAdd => 'Aggiungi copertina';
+
+  @override
+  String get soundsShareCoverReplace => 'Sostituisci';
+
+  @override
+  String get soundsShareCoverRemove => 'Rimuovi la copertina';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Copertina del suono';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Questo tipo di file non è supportato. Scegli un file audio.';
 
@@ -11227,6 +11246,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Suono senza titolo';
 
   @override
+  String get videoEditorAudioUseSound => 'Usa';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'File audio non più su questo dispositivo';
 
@@ -11253,16 +11275,13 @@ class AppLocalizationsIt extends AppLocalizations {
       'Seleziona il segmento audio per il tuo video';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Comunità';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'In primo piano';
+  String get videoEditorAudioCategoryMySounds => 'I miei suoni';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'I miei suoni';
+  String get videoEditorAudioFilterEffects => 'Effetti';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => 'Strumento freccia';
@@ -12013,9 +12032,6 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Tonalità';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Fatto';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Livello';

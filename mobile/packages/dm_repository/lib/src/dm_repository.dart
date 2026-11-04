@@ -355,6 +355,34 @@ typedef _RecoveryPageAnswer = ({
   Set<String> closedRelays,
 });
 
+/// One page of history read from relays and handled: what the relays sent,
+/// whether every relay asked answered, whether the one relay asked refused it
+/// for good, whether a relay may have stopped at its result cap, the oldest
+/// stamp it held (where the next page starts, inclusive), and how many new
+/// gift wraps it decrypted before storing the page (a wrap that decrypts only
+/// on the per-event retry is not counted).
+typedef _HistoryPage = ({
+  List<Event> events,
+  bool authoritative,
+  bool refusedForGood,
+  bool possiblyCapped,
+  int? resumeAt,
+  int newGiftWraps,
+});
+
+/// What one relay's walk of the band below the live window found: whether
+/// the relay answered every page or refused for good, the pages and events
+/// read, how many new gift wraps were decrypted before storing, and the stamp
+/// reached if the page budget ran out before the floor.
+typedef _BandWalk = ({
+  bool answered,
+  bool refused,
+  int pages,
+  int events,
+  int newGiftWraps,
+  int? budgetStoppedAt,
+});
+
 /// A signed legacy kind-4 copy, and what a retry re-checks before
 /// republishing it (#8506).
 typedef _Nip04Copy = ({
@@ -934,6 +962,20 @@ class DmRepository {
   /// `since:` starts, so a gift wrap backdated by up to NIP-17's two days is
   /// still asked for.
   static const int _sinceOverlapSeconds = 2 * 86400;
+
+  /// How far below the live window's start [_requeryBelowWindowIfDue] asks.
+  static const int _belowWindowRequeryDepthSeconds = 7 * 86400;
+
+  /// How long a finished [_requeryBelowWindowIfDue] waits before the next.
+  static const int _belowWindowRequeryIntervalSeconds = 86400;
+
+  /// The deepest [_requeryBelowWindowIfDue] reads below the live window's
+  /// start, however far below it the last finished run read.
+  static const int _belowWindowRequeryMaxDepthSeconds = 30 * 86400;
+
+  /// How long [_requeryBelowWindowIfDue] waits after starting a run, finished
+  /// or not, before it starts another.
+  static const int _belowWindowRequeryRetrySeconds = 3600;
 
   /// How long a catch-up may hold wire stamps back before the newest one
   /// handled is saved anyway.
@@ -1535,6 +1577,17 @@ class DmRepository {
   // Subscription lifecycle
   // -------------------------------------------------------------------------
 
+  /// Where the live subscription's `since:` starts for [pubkey]: the newest
+  /// processed wire stamp (the rumor stamp before one is known) minus
+  /// [_sinceOverlapSeconds]. `null` before anything was processed, when the
+  /// first open asks for a bounded backlog instead.
+  int? _liveWindowStart(String pubkey) {
+    final newest = _syncState?.newestSyncedAt(pubkey);
+    if (newest == null) return null;
+    final newestWire = _syncState?.newestWireSyncedAt(pubkey);
+    return (newestWire ?? newest) - _sinceOverlapSeconds;
+  }
+
   /// Start listening for incoming gift-wrapped DMs.
   ///
   /// Subscribes to kind 1059 events p-tagged to the current user.
@@ -1588,9 +1641,10 @@ class DmRepository {
       // that outer stamp to be backdated by a random 0..2 days. Deriving the
       // boundary from the rumor clock therefore consumes part of the 2-day
       // overlap before the window opens, and a wrap whose backdate exceeds
-      // the remainder is dropped by the relay. Nothing asks for it again:
-      // `newestWireSyncedAt` only advances, so `since:` only rises, and the
-      // history drain that would otherwise repair the gap latches complete.
+      // the remainder is dropped by the relay. Only the daily re-query below
+      // the window asks for it again (#8439): `newestWireSyncedAt` only
+      // advances, so `since:` only rises, and the history drain that would
+      // otherwise repair the gap latches complete.
       // The measured erosion equals the newest wrap's own backdate, which is
       // uniform on [0, 2d) — half the intended margin, on average. See #8209.
       //
@@ -1601,16 +1655,12 @@ class DmRepository {
       // the full required overlap in the relay's clock: a compliant wrap's
       // wire stamp is at most its publication time, and every later compliant
       // wrap is stamped no earlier than its publication time minus two days.
-      final newest = _syncState?.newestSyncedAt(_userPubkey);
-      final newestWire = _syncState?.newestWireSyncedAt(_userPubkey);
-      final isFirstOpen = newest == null;
+      final since = _liveWindowStart(_userPubkey);
       final filter = nostr_filter.Filter(
         kinds: _protectedDmKinds,
         p: [_userPubkey],
-        limit: isFirstOpen ? 50 : null,
-        since: newest == null
-            ? null
-            : (newestWire ?? newest) - _sinceOverlapSeconds,
+        limit: since == null ? 50 : null,
+        since: since,
       );
       // Deletions in a REQ of their own, over the same window: a relay that
       // gates DMs behind NIP-42 serves a REQ mixing them with kinds 1059 and
@@ -2010,15 +2060,7 @@ class DmRepository {
   /// [since] bounds the page from below. [onlyRelay] asks that one relay
   /// alone, on its pooled connection when the pool has one, instead of the
   /// pool and [tempRelays].
-  Future<
-    ({
-      List<Event> events,
-      bool authoritative,
-      bool possiblyCapped,
-      int? resumeAt,
-    })?
-  >
-  _fetchHistoryPage({
+  Future<_HistoryPage?> _fetchHistoryPage({
     required int until,
     required int limit,
     required String subscriptionId,
@@ -2056,6 +2098,9 @@ class DmRepository {
     if (_ingestSessionEnded(pubkey, generation)) return null;
     final events = [for (final read in reads) ...read.events];
     final authoritative = reads.every((read) => read.authoritative);
+    final refusedForGood =
+        reads.any((read) => read.refusedForGood) &&
+        reads.every((read) => read.authoritative || read.refusedForGood);
     final ends = [
       for (final read in reads)
         (
@@ -2131,12 +2176,15 @@ class DmRepository {
     return (
       events: events,
       authoritative: authoritative,
+      refusedForGood: refusedForGood,
       possiblyCapped: possiblyCapped,
       resumeAt: resumeAt,
+      newGiftWraps: preDecrypted.length,
     );
   }
 
-  /// One read of [kinds] addressed to [pubkey] for [_fetchHistoryPage].
+  /// One read of [kinds] addressed to [pubkey] for [_fetchHistoryPage] and
+  /// [_handleDeletionPage].
   ///
   /// Targets the user's OWN kind-10050 inbox relays (in addition to the
   /// default pool) so the #4953/#4973 history drain reads gift wraps a sender
@@ -2148,7 +2196,14 @@ class DmRepository {
   /// and the drain reads it as exhaustion. `requireAllRelaysSettled` is what
   /// makes a relay's `CLOSED` refusal and a partial fan-out surface as
   /// `timedOut` rather than completing on whichever relays did answer. #8209.
-  Future<({List<Event> events, bool authoritative, bool possiblyCapped})>
+  Future<
+    ({
+      List<Event> events,
+      bool authoritative,
+      bool refusedForGood,
+      bool possiblyCapped,
+    })
+  >
   _readHistoryKinds(
     List<int> kinds, {
     required String pubkey,
@@ -2182,13 +2237,15 @@ class DmRepository {
       return (
         events: result.events,
         authoritative: !result.noRelays && !result.timedOut,
+        refusedForGood: false,
         // The drain judges its pages by their size; this read keeps no cap
         // evidence, so a cap is never ruled out.
         possiblyCapped: true,
       );
     }
-    // The debt walk keeps the pool's judgement of whether the relay may have
-    // stopped at its limit: a settled page can still be incomplete.
+    // The debt walk and the re-query below the window keep the pool's
+    // judgement of whether the relay may have stopped at its limit: a settled
+    // page can still be incomplete.
     final result = await _nostrClient.readEvents(
       [filter],
       subscriptionId: subscriptionId,
@@ -2200,6 +2257,16 @@ class DmRepository {
     return (
       events: result.events,
       authoritative: result.isComplete,
+      // As a pool read settles on it beside a relay that answered (#9468).
+      // A refusal that may be transient or asks for AUTH, and a rate limit,
+      // say nothing about what the relay holds.
+      refusedForGood:
+          result.endedBy == QueryEnd.relayClosed &&
+          result.rateLimitedRelayCount == 0 &&
+          result.closedRelayReasons.isNotEmpty &&
+          !result.closedRelayReasons.values.any(
+            _unconfirmedRefusalCategories.contains,
+          ),
       possiblyCapped: result.possiblyCapped,
     );
   }
@@ -2295,6 +2362,270 @@ class DmRepository {
     tempRelays: tempRelays,
     allowRefusalConfirmation: allowRefusalConfirmation,
   );
+
+  /// Asks again for the week below the live window, at most once a day, on
+  /// an install whose history drain has completed. The band starts a week
+  /// below the earlier of this window start and the one the last finished run
+  /// read below, so a run after a long gap covers the stamps between the two,
+  /// but never more than thirty days below the window.
+  ///
+  /// The live subscription asks from [_liveWindowStart] up and a completed
+  /// drain never asks again, so a gift wrap that reaches a relay after a newer
+  /// one was handled, stamped below that start, was never requested: a relay
+  /// that was down, an inbox relay first read later, a sender that backdates
+  /// past NIP-17's two days. NIP-59 bounds no backdate, so no overlap is wide
+  /// enough; this re-reads a bounded band and dedup absorbs what was already
+  /// handled. See #8439.
+  ///
+  /// Silent: it starts no recovery, so the inbox shows no restore progress.
+  /// What it finds is stored as it arrives, but the run is recorded only when
+  /// the inbox-relay list was read and every relay it asked answered every
+  /// page or refused for good; a run that was not is tried again an hour
+  /// later at the soonest. A gift wrap that never decrypts is queued for
+  /// retry again by each run whose band still holds it.
+  ///
+  /// Every relay's messages are read before any deletions, which are read
+  /// from now down, so a kind-5 deletion is handled after the message it
+  /// names. A gift-wrapped deletion comes with the messages and, read before
+  /// its target, waits for its next delivery, as in the drain.
+  Future<void> _requeryBelowWindowIfDue(
+    DmSyncState syncState,
+    String pubkey,
+    int generation,
+  ) async {
+    try {
+      final top = _liveWindowStart(pubkey);
+      if (top == null) return;
+      final startedAt = DmClock.now().nowSeconds;
+      if (_isRecent(
+            syncState.belowWindowRequeryAt(pubkey),
+            startedAt,
+            _belowWindowRequeryIntervalSeconds,
+          ) ||
+          _isRecent(
+            syncState.belowWindowRequeryAttemptAt(pubkey),
+            startedAt,
+            _belowWindowRequeryRetrySeconds,
+          )) {
+        return;
+      }
+      await syncState.setBelowWindowRequeryAttemptAt(pubkey, startedAt);
+      // From a week below the window start the last finished run read below,
+      // when that is lower, so no stamp falls between two runs.
+      final lastTop = syncState.belowWindowRequeryTop(pubkey);
+      final readsBelow = lastTop != null && lastTop < top ? lastTop : top;
+      final floor = max(
+        readsBelow - _belowWindowRequeryDepthSeconds,
+        top - _belowWindowRequeryMaxDepthSeconds,
+      );
+      final inbox = await _drainOwnInboxRelays(pubkey, generation);
+      if (_ingestSessionEnded(pubkey, generation)) return;
+      // Each relay is walked on its own: a merged answer resumes below its
+      // oldest event, which skips a relay that stopped at its cap above it.
+      final relays = <String>{
+        for (final url in [..._nostrClient.configuredRelays, ...?inbox.relays])
+          normalizeRelayUrl(url) ?? url,
+      };
+      final messages = <_BandWalk>[];
+      for (final url in relays) {
+        final walk = await _pageBelowWindow(
+          pubkey,
+          generation,
+          floor: floor,
+          from: top,
+          readPage: (page, until) => _fetchHistoryPage(
+            until: until,
+            since: floor,
+            limit: DmHistoryDrainConfig.pageSize,
+            subscriptionId: dmBelowWindowRequerySubscriptionId(pubkey, page),
+            pubkey: pubkey,
+            generation: generation,
+            onlyRelay: url,
+          ),
+        );
+        if (walk == null) return;
+        messages.add(walk);
+      }
+      // A deletion can be stamped anywhere above the message it names, and
+      // one that arrived before its message was dropped, so deletions are
+      // read from now down.
+      final deletions = <_BandWalk>[];
+      for (final url in relays) {
+        final walk = await _pageBelowWindow(
+          pubkey,
+          generation,
+          floor: floor,
+          from: startedAt,
+          readPage: (page, until) => _handleDeletionPage(
+            pubkey,
+            generation,
+            page: page,
+            until: until,
+            since: floor,
+            onlyRelay: url,
+          ),
+        );
+        if (walk == null) return;
+        deletions.add(walk);
+      }
+      final messagesAnswered = _bandAnswered(messages);
+      final deletionsAnswered = _bandAnswered(deletions);
+      final answered =
+          inbox.conclusive && messagesAnswered && deletionsAnswered;
+      if (answered && !_ingestSessionEnded(pubkey, generation)) {
+        await syncState.recordBelowWindowRequery(
+          pubkey,
+          at: startedAt,
+          top: top,
+        );
+      }
+      final walks = [...messages, ...deletions];
+      for (final walk in walks) {
+        final stoppedAt = walk.budgetStoppedAt;
+        if (stoppedAt == null) continue;
+        Log.warning(
+          'DM re-query below the window for ${pubkeyForLogs(pubkey)} stopped '
+          'at the page budget at stamp $stoppedAt, above the floor $floor',
+          category: LogCategory.system,
+        );
+      }
+      final outcome = answered
+          ? 'every relay answered or refused for good'
+          : 'not answered (inbox list read: ${inbox.conclusive}, messages: '
+                '$messagesAnswered, deletions: $deletionsAnswered), so an '
+                'inbox open an hour or more later asks again';
+      Log.info(
+        'DM re-query below the window for ${pubkeyForLogs(pubkey)}: stamps '
+        '$floor..$top, relays ${relays.length}, pages '
+        '${walks.fold(0, (n, walk) => n + walk.pages)}, events '
+        '${walks.fold(0, (n, walk) => n + walk.events)}, new gift wraps '
+        'decrypted ${messages.fold(0, (n, walk) => n + walk.newGiftWraps)}, '
+        '$outcome',
+        category: LogCategory.system,
+      );
+    } on Object catch (e, stackTrace) {
+      // Relay and IO failures are expected on flaky networks; the run is left
+      // unrecorded, so an inbox open an hour or more later asks again.
+      Log.warning(
+        'DM re-query below the window did not finish for '
+        '${pubkeyForLogs(pubkey)}: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      if (e is StateError || e is TypeError || e is RangeError) {
+        _errorReporter?.call(
+          e,
+          stackTrace,
+          site: DmRepositoryReportableSites.belowWindowRequeryUnexpectedFailure,
+        );
+      }
+    }
+  }
+
+  /// Whether a pass of [walks] read the whole band: every relay answered or
+  /// refused for good, and at least one answered, as a pool read settles on
+  /// refusals only beside a relay that answered.
+  static bool _bandAnswered(List<_BandWalk> walks) =>
+      walks.every((walk) => walk.answered || walk.refused) &&
+      walks.any((walk) => walk.answered);
+
+  /// Whether [stamp] lies less than [interval] seconds before [now]. A stamp
+  /// from the future, written while the device clock ran fast, is not recent:
+  /// trusting it would switch the re-query off until the clock caught up.
+  static bool _isRecent(int? stamp, int now, int interval) =>
+      stamp != null && stamp <= now && now - stamp < interval;
+
+  /// Walks one relay with [readPage] from [from] down to [floor], each page
+  /// starting at or below the oldest stamp of the page before. Stops when the
+  /// relay sends nothing more, sends fewer than its cap, leaves a page
+  /// unanswered or refuses it, the next page would start below [floor], or
+  /// [DmHistoryDrainConfig.maxPages] is reached. Returns null when the ingest
+  /// session ended.
+  Future<_BandWalk?> _pageBelowWindow(
+    String pubkey,
+    int generation, {
+    required int floor,
+    required int from,
+    required Future<_HistoryPage?> Function(int page, int until) readPage,
+  }) async {
+    var cursor = from;
+    var pages = 0;
+    var events = 0;
+    var newGiftWraps = 0;
+    _BandWalk walked({
+      bool answered = true,
+      bool refused = false,
+      int? budgetStoppedAt,
+    }) => (
+      answered: answered,
+      refused: refused,
+      pages: pages,
+      events: events,
+      newGiftWraps: newGiftWraps,
+      budgetStoppedAt: budgetStoppedAt,
+    );
+    for (var page = 0; page < DmHistoryDrainConfig.maxPages; page++) {
+      if (_ingestSessionEnded(pubkey, generation)) return null;
+      final result = await readPage(page, cursor);
+      if (result == null) return null;
+      pages++;
+      events += result.events.length;
+      newGiftWraps += result.newGiftWraps;
+      // What an unanswered page carried is stored; the run is not recorded.
+      if (!result.authoritative) {
+        return walked(answered: false, refused: result.refusedForGood);
+      }
+      final resumeAt = result.resumeAt;
+      if (resumeAt == null || !result.possiblyCapped) return walked();
+      // `until` is inclusive, so the oldest second is read again; dedup
+      // absorbs it.
+      final next = resumeAt < cursor ? resumeAt : cursor - 1;
+      if (next < floor) return walked();
+      cursor = next;
+    }
+    return walked(budgetStoppedAt: cursor);
+  }
+
+  /// Reads one page of the kind-5 deletions addressed to [pubkey] between
+  /// [since] and [until] from [onlyRelay], handling each as it arrives.
+  /// Returns null when the ingest session ended.
+  Future<_HistoryPage?> _handleDeletionPage(
+    String pubkey,
+    int generation, {
+    required int page,
+    required int until,
+    required int since,
+    required String onlyRelay,
+  }) async {
+    final read = await _readHistoryKinds(
+      const [EventKind.eventDeletion],
+      pubkey: pubkey,
+      until: until,
+      limit: DmHistoryDrainConfig.pageSize,
+      subscriptionId: dmDeletionsSubscriptionId(
+        dmBelowWindowRequerySubscriptionId(pubkey, page),
+      ),
+      since: since,
+      onlyRelay: onlyRelay,
+    );
+    for (var i = 0; i < read.events.length; i++) {
+      if (_ingestSessionEnded(pubkey, generation)) return null;
+      await _handleIncomingEvent(read.events[i]);
+      await _maybeYieldDuringDrain(i);
+    }
+    if (_ingestSessionEnded(pubkey, generation)) return null;
+    return (
+      events: read.events,
+      authoritative: read.authoritative,
+      refusedForGood: read.refusedForGood,
+      possiblyCapped: read.possiblyCapped,
+      resumeAt: read.events.isEmpty
+          ? null
+          : read.events.map((event) => event.createdAt).reduce(min),
+      newGiftWraps: 0,
+    );
+  }
 
   /// Pages [filterFor]'s events newest→oldest after the gift-wrap drain
   /// reached the end, routing each through [_handleIncomingEvent]. Bounded by
@@ -2544,13 +2875,13 @@ class DmRepository {
   /// backfilling every conversation that still has events on a relay.
   /// See #4953.
   ///
-  /// Idempotent and resumable: returns immediately once a clean drain has
-  /// completed for the user ([DmSyncState.historyDrainComplete]); an
-  /// interrupted drain resumes from the persisted boundary on the next
-  /// call. Concurrent callers share one in-flight run. Runs in the
-  /// background — per-event decryption already offloads to a [compute]
-  /// isolate — so it is safe to fire-and-forget from the inbox BLoC on
-  /// every open.
+  /// Idempotent and resumable: once a clean drain has completed for the user
+  /// ([DmSyncState.historyDrainComplete]) a call only re-reads the stamps
+  /// below the live window, at most once a day (#8439); an interrupted drain
+  /// resumes from the persisted boundary on the next call. Concurrent
+  /// callers share one in-flight run. Runs in the background — per-event
+  /// decryption already offloads to a [compute] isolate — so it is safe to
+  /// fire-and-forget from the inbox BLoC on every open.
   Future<void> backfillHistoryIfNeeded() {
     return _backfillHistoryIfNeeded();
   }
@@ -2836,6 +3167,7 @@ class DmRepository {
         'complete',
         category: LogCategory.system,
       );
+      await _requeryBelowWindowIfDue(syncState, pubkey, gen);
       return;
     }
 
