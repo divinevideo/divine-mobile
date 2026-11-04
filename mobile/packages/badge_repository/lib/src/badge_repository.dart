@@ -390,6 +390,7 @@ class BadgeRepository {
   final BadgeCurrentPubkeyReader _currentPubkey;
   final BadgeEventSigner _signEvent;
   final BadgeDismissalSync _dismissalSync;
+  Future<void>? _profileBadgeWriteTail;
 
   /// Null leaves awards unfiltered, which is what an anonymous or test
   /// repository wants — there is no blocklist to consult.
@@ -1874,47 +1875,53 @@ class BadgeRepository {
   ///
   /// Throws:
   ///
-  /// * [StateError] if there is no current pubkey.
+  /// * [StateError] if there is no current pubkey, the relay read is
+  ///   incomplete, or the account changes.
   /// * [BadgeSigningException] if signing is declined or times out.
   /// * [BadgePublishException] when no relay confirms the published list.
-  Future<void> acceptAward(BadgeAwardViewData award) async {
-    final pubkey = _requireCurrentPubkey();
-    final currentProfileBadges = await _latestProfileBadges(pubkey);
-    final coordinate = award.definitionCoordinate;
-    final awardEventId = award.awardEventId;
-    final current =
-        currentProfileBadges?.badges ?? const <Nip58ProfileBadgeRef>[];
+  Future<void> acceptAward(BadgeAwardViewData award) =>
+      _withProfileBadgeWrite((pubkey) async {
+        final currentProfileBadges = await _readProfileBadgesForWrite(pubkey);
+        final coordinate = award.definitionCoordinate;
+        final awardEventId = award.awardEventId;
+        final current =
+            currentProfileBadges?.badges ?? const <Nip58ProfileBadgeRef>[];
 
-    // Accepting the award that is already pinned changes nothing, and
-    // rebuilding the ref would throw away its relay hint.
-    final alreadyAccepted = current.any(
-      (ref) =>
-          ref.definitionCoordinate == coordinate &&
-          ref.awardEventId == awardEventId,
-    );
+        // Accepting the award that is already pinned changes nothing, and
+        // rebuilding the ref would throw away its relay hint.
+        final alreadyAccepted = current.any(
+          (ref) =>
+              ref.definitionCoordinate == coordinate &&
+              ref.awardEventId == awardEventId,
+        );
 
-    // Otherwise one entry per badge, not per award: being awarded the same
-    // badge twice is normal, and appending a second a/e pair for the same
-    // coordinate renders the badge twice on the profile.
-    final refs = alreadyAccepted
-        ? current.toList(growable: false)
-        : [
-            for (final ref in current)
-              if (ref.definitionCoordinate != coordinate) ref,
-            Nip58ProfileBadgeRef(
-              definitionCoordinate: coordinate,
-              awardEventId: awardEventId,
-            ),
-          ];
+        // Otherwise one entry per badge, not per award: being awarded the same
+        // badge twice is normal, and appending a second a/e pair for the same
+        // coordinate renders the badge twice on the profile.
+        final refs = alreadyAccepted
+            ? current.toList(growable: false)
+            : [
+                for (final ref in current)
+                  if (ref.definitionCoordinate != coordinate) ref,
+                Nip58ProfileBadgeRef(
+                  definitionCoordinate: coordinate,
+                  awardEventId: awardEventId,
+                ),
+              ];
 
-    await _publishProfileBadges(refs);
-  }
+        await _publishProfileBadges(
+          refs,
+          source: currentProfileBadges,
+          owner: pubkey,
+        );
+      });
 
   /// Removes [award] from the current user's profile badge list.
   ///
   /// Throws:
   ///
-  /// * [StateError] if there is no current pubkey.
+  /// * [StateError] if there is no current pubkey, the relay read is
+  ///   incomplete, or the account changes.
   /// * [BadgeSigningException] if signing is declined or times out.
   /// * [BadgePublishException] when no relay confirms the published list.
   Future<void> removeAward(BadgeAwardViewData award) =>
@@ -1922,9 +1929,10 @@ class BadgeRepository {
 
   /// Drops the badge at [coordinate] from the current user's profile badge
   /// list, publishing nothing when it was not pinned in the first place.
-  Future<void> _unpinCoordinate(String coordinate) async {
-    final pubkey = _requireCurrentPubkey();
-    final currentProfileBadges = await _latestProfileBadges(pubkey);
+  Future<void> _unpinCoordinate(String coordinate) => _withProfileBadgeWrite((
+    pubkey,
+  ) async {
+    final currentProfileBadges = await _readProfileBadgesForWrite(pubkey);
     final refs = currentProfileBadges?.badges ?? const <Nip58ProfileBadgeRef>[];
     final remaining = [
       for (final ref in refs)
@@ -1932,8 +1940,12 @@ class BadgeRepository {
     ];
     if (remaining.length == refs.length) return;
 
-    await _publishProfileBadges(remaining);
-  }
+    await _publishProfileBadges(
+      remaining,
+      source: currentProfileBadges,
+      owner: pubkey,
+    );
+  });
 
   /// Flushes durable account-owned badge choices after startup or reconnect.
   Future<void> synchronizeAccountState() =>
@@ -2001,6 +2013,60 @@ class BadgeRepository {
   static bool _isIssuedByBadgeOwner(Nip58BadgeAward award) {
     final coordinate = BadgeCoordinate.parse(award.definitionCoordinate);
     return coordinate != null && coordinate.pubkey == award.event.pubkey;
+  }
+
+  /// Reserve the whole read/delta/publish sequence before its first await.
+  /// A second edit must not replace a list built before the first relay ACK.
+  Future<void> _withProfileBadgeWrite(
+    Future<void> Function(String owner) operation,
+  ) async {
+    final owner = _requireCurrentPubkey();
+    final previous = _profileBadgeWriteTail;
+    final finished = Completer<void>();
+    _profileBadgeWriteTail = finished.future;
+    try {
+      if (previous != null) await previous;
+      _ensureCurrentPubkey(owner);
+      await operation(owner);
+    } finally {
+      finished.complete();
+      if (identical(_profileBadgeWriteTail, finished.future)) {
+        _profileBadgeWriteTail = null;
+      }
+    }
+  }
+
+  void _ensureCurrentPubkey(String owner) {
+    if (_currentPubkey() != owner) {
+      throw StateError('Account changed while updating profile badges');
+    }
+  }
+
+  Future<Nip58ProfileBadges?> _readProfileBadgesForWrite(String owner) async {
+    final result = await _nostrClient.queryEventsDetailed(
+      [
+        Filter(authors: [owner], kinds: [EventKind.profileBadges]),
+        Filter(
+          authors: [owner],
+          kinds: [EventKind.badgeSet],
+          d: ['profile_badges'],
+        ),
+      ],
+      useCache: false,
+      requireAllRelaysSettled: true,
+    );
+    _ensureCurrentPubkey(owner);
+    if (result.timedOut || result.noRelays) {
+      throw StateError(
+        'Could not confirm the latest profile badges from relays',
+      );
+    }
+    return _preferPublishedProfileBadges(
+      owner,
+      _newestParsedProfileBadges(
+        result.events.where((event) => event.pubkey == owner).toList(),
+      ),
+    );
   }
 
   Future<Nip58ProfileBadges?> _latestProfileBadges(String pubkey) async {
@@ -2156,23 +2222,57 @@ class BadgeRepository {
     return Nip58BadgeParser.parseAward(sorted.first);
   }
 
-  Future<void> _publishProfileBadges(List<Nip58ProfileBadgeRef> refs) async {
+  Future<void> _publishProfileBadges(
+    List<Nip58ProfileBadgeRef> refs, {
+    required Nip58ProfileBadges? source,
+    required String owner,
+  }) async {
     final tags = <List<String>>[];
+    final retained = <(String, String)>{};
+    final sourceTags = source?.event.tags ?? const <List<String>>[];
+    for (var index = 0; index < sourceTags.length; index++) {
+      final tag = sourceTags[index];
+      final next = index + 1 < sourceTags.length ? sourceTags[index + 1] : null;
+      if (tag.length >= 2 &&
+          tag[0] == 'a' &&
+          next != null &&
+          next.length >= 2 &&
+          next[0] == 'e') {
+        // Keep the original pair verbatim, including relay hints and fields
+        // this client does not understand. Only the changed badge is replaced.
+        for (final ref in refs) {
+          if (ref.definitionCoordinate == tag[1] &&
+              ref.awardEventId == next[1]) {
+            tags
+              ..add(List<String>.of(tag))
+              ..add(List<String>.of(next));
+            retained.add((ref.definitionCoordinate, ref.awardEventId));
+            break;
+          }
+        }
+        index++;
+      } else if (!(source?.isLegacyProfileBadges == true &&
+          tag.length >= 2 &&
+          tag[0] == 'd' &&
+          tag[1] == 'profile_badges')) {
+        tags.add(List<String>.of(tag));
+      }
+    }
     for (final ref in refs) {
+      if (!retained.add((ref.definitionCoordinate, ref.awardEventId))) {
+        continue;
+      }
       tags
         ..add(['a', ref.definitionCoordinate])
-        ..add([
-          'e',
-          ref.awardEventId,
-          if (ref.awardRelay != null && ref.awardRelay!.isNotEmpty)
-            ref.awardRelay!,
-        ]);
+        ..add(['e', ref.awardEventId]);
     }
 
     final event = await _signAndPublish(
       kind: EventKind.profileBadges,
       label: 'profile badges',
       tags: tags,
+      content: source?.event.content ?? '',
+      expectedPubkey: owner,
     );
 
     final published = Nip58BadgeParser.parseProfileBadges(event);
@@ -2181,7 +2281,7 @@ class BadgeRepository {
     }
   }
 
-  /// Signs and publishes an empty-content event, returning the signed event.
+  /// Signs and publishes an event, returning the signed event.
   ///
   /// Throws [BadgeSigningException] when signing fails and
   /// [BadgePublishException] when no relay confirms the publish.
@@ -2193,10 +2293,13 @@ class BadgeRepository {
     required List<List<String>> tags,
     bool Function(Event event)? canPublish,
     int? createdAt,
+    String content = '',
+    String? expectedPubkey,
   }) async {
+    if (expectedPubkey != null) _ensureCurrentPubkey(expectedPubkey);
     final event = await _signEvent(
       kind: kind,
-      content: '',
+      content: content,
       tags: tags,
       createdAt: createdAt,
     );
@@ -2210,6 +2313,12 @@ class BadgeRepository {
       );
     }
 
+    if (expectedPubkey != null) {
+      _ensureCurrentPubkey(expectedPubkey);
+      if (event.pubkey != expectedPubkey) {
+        throw StateError('Profile badges were signed by a different account');
+      }
+    }
     final outcome = await _nostrClient.publishEventAwaitOk(event);
     if (outcome.failed) {
       throw BadgePublishException(

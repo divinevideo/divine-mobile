@@ -95,7 +95,13 @@ void main() {
           requireAllRelaysSettled: true,
         ),
       ).thenAnswer(
-        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+        (call) async => (
+          events: await nostrClient.queryEvents(
+            call.positionalArguments.single as List<Filter>,
+          ),
+          timedOut: false,
+          noRelays: false,
+        ),
       );
 
       repository = BadgeRepository(
@@ -3303,6 +3309,305 @@ void main() {
         expect(badges.single.award, isNull);
       },
     );
+
+    group('profile badge replacement reads', () {
+      final coordinate = '30009:${_pubkey(2)}:new-badge';
+      final retainedCoordinate = '30009:${_pubkey(3)}:retained-badge';
+
+      BadgeAwardViewData award(String value, int id) => BadgeAwardViewData(
+        award: Nip58BadgeParser.parseAward(
+          _awardEvent(
+            id: _eventId(id),
+            issuerPubkey: _pubkey(2),
+            definitionCoordinate: value,
+            recipients: [_pubkey(1)],
+          ),
+        )!,
+      );
+
+      void stubRead({
+        List<Event> events = const [],
+        bool timedOut = false,
+        bool noRelays = false,
+      }) {
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: events,
+            timedOut: timedOut,
+            noRelays: noRelays,
+          ),
+        );
+      }
+
+      for (final remove in [false, true]) {
+        test('${remove ? 'removing' : 'accepting'} keeps the fresh relay list '
+            'and unknown data', () async {
+          // Ordinary display reads still return an empty stale snapshot.
+          final source = _event(
+            id: _eventId(120),
+            pubkey: _pubkey(1),
+            kind: EventKind.profileBadges,
+            content: 'opaque profile badge data',
+            tags: [
+              ['custom', 'keep me'],
+              ['a', retainedCoordinate, 'wss://definition.example'],
+              ['e', _eventId(121), 'wss://award.example', 'extra'],
+              if (remove) ...[
+                ['a', coordinate],
+                ['e', _eventId(122)],
+              ],
+            ],
+          );
+          stubRead(events: [source]);
+
+          if (remove) {
+            await repository.removeAward(award(coordinate, 122));
+          } else {
+            await repository.acceptAward(award(coordinate, 122));
+          }
+
+          expect(lastSignedEvent(), isNotNull);
+          final published = lastSignedEvent()!;
+          expect(published.content, 'opaque profile badge data');
+          expect(published.tags, [
+            ['custom', 'keep me'],
+            ['a', retainedCoordinate, 'wss://definition.example'],
+            ['e', _eventId(121), 'wss://award.example', 'extra'],
+            if (!remove) ...[
+              ['a', coordinate],
+              ['e', _eventId(122)],
+            ],
+          ]);
+        });
+
+        for (final noRelays in [false, true]) {
+          test('${remove ? 'remove' : 'accept'} refuses '
+              '${noRelays ? 'a relayless' : 'a timed out'} read', () async {
+            stubRead(timedOut: !noRelays, noRelays: noRelays);
+            final target = award(coordinate, 122);
+
+            await expectLater(
+              remove
+                  ? repository.removeAward(target)
+                  : repository.acceptAward(target),
+              throwsStateError,
+            );
+
+            expect(lastSignedEvent(), isNull);
+            verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+          });
+        }
+      }
+
+      test(
+        'migrates the newest legacy list while preserving its data',
+        () async {
+          final legacy = _event(
+            id: _eventId(125),
+            pubkey: _pubkey(1),
+            kind: EventKind.badgeSet,
+            createdAt: 2000,
+            content: 'legacy opaque data',
+            tags: [
+              ['d', 'profile_badges'],
+              ['custom', 'legacy metadata'],
+              ['a', retainedCoordinate, 'wss://definition.example'],
+              ['e', _eventId(121), 'wss://award.example'],
+            ],
+          );
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((call) async {
+            final filters = call.positionalArguments.single as List<Filter>;
+            return (
+              events: [
+                for (final filter in filters)
+                  if (filter.kinds!.contains(EventKind.profileBadges))
+                    _profileBadgesEvent(
+                      id: _eventId(126),
+                      pubkey: _pubkey(1),
+                      tags: [],
+                    )
+                  else if (filter.kinds!.contains(EventKind.badgeSet) &&
+                      filter.d!.contains('profile_badges'))
+                    legacy,
+              ],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          await repository.acceptAward(award(coordinate, 122));
+
+          expect(lastSignedEvent()!.kind, EventKind.profileBadges);
+          expect(lastSignedEvent()!.content, 'legacy opaque data');
+          expect(lastSignedEvent()!.tags, [
+            ['custom', 'legacy metadata'],
+            ['a', retainedCoordinate, 'wss://definition.example'],
+            ['e', _eventId(121), 'wss://award.example'],
+            ['a', coordinate],
+            ['e', _eventId(122)],
+          ]);
+        },
+      );
+
+      test('refuses publication when the signer changes accounts', () async {
+        repository = BadgeRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: preferences,
+          currentPubkey: () => _pubkey(1),
+          signer: () => dismissalSigner,
+          signEvent: ({required kind, required content, required tags}) async =>
+              _event(
+                id: _eventId(127),
+                pubkey: _pubkey(4),
+                kind: kind,
+                content: content,
+                tags: tags,
+              ),
+        );
+        stubRead();
+
+        await expectLater(
+          repository.acceptAward(award(coordinate, 122)),
+          throwsStateError,
+        );
+
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test('serializes the read through relay acknowledgement', () async {
+        final firstPublishStarted = Completer<void>();
+        final firstPublishFinished = Completer<void>();
+        var readCount = 0;
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer((_) async {
+          readCount++;
+          return (events: <Event>[], timedOut: false, noRelays: false);
+        });
+        when(() => nostrClient.queryEvents(any())).thenAnswer((call) async {
+          final filters = call.positionalArguments.single as List<Filter>;
+          if (filters.first.kinds!.contains(EventKind.profileBadges)) {
+            readCount++;
+          }
+          return <Event>[];
+        });
+        final published = <Event>[];
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
+          invocation,
+        ) async {
+          final event = invocation.positionalArguments.single as Event;
+          published.add(event);
+          if (published.length == 1) {
+            firstPublishStarted.complete();
+            await firstPublishFinished.future;
+          }
+          return _acceptedPublishOutcome(event);
+        });
+
+        final first = repository.acceptAward(award(coordinate, 122));
+        await firstPublishStarted.future;
+        final second = repository.acceptAward(award(retainedCoordinate, 123));
+        // Drain microtasks so an incorrectly concurrent read can start.
+        await Future<void>.delayed(Duration.zero);
+        expect(readCount, 1);
+        firstPublishFinished.complete();
+        await Future.wait([first, second]);
+
+        expect(readCount, 2);
+        expect(published.last.tags, [
+          ['a', coordinate],
+          ['e', _eventId(122)],
+          ['a', retainedCoordinate],
+          ['e', _eventId(123)],
+        ]);
+      });
+
+      test('a failed read does not strand the next change', () async {
+        stubRead(timedOut: true);
+        await expectLater(
+          repository.acceptAward(award(coordinate, 122)),
+          throwsStateError,
+        );
+        stubRead();
+
+        await repository.acceptAward(award(retainedCoordinate, 123));
+
+        expect(lastSignedEvent()!.tags, [
+          ['a', retainedCoordinate],
+          ['e', _eventId(123)],
+        ]);
+      });
+
+      test(
+        'an account switch during the read cannot publish its result',
+        () async {
+          var owner = _pubkey(1);
+          repository = BadgeRepository(
+            nostrClient: nostrClient,
+            sharedPreferences: preferences,
+            currentPubkey: () => owner,
+            signer: () => dismissalSigner,
+            signEvent:
+                ({required kind, required content, required tags}) async {
+                  return signedEvent = _event(
+                    id: _eventId(124),
+                    pubkey: owner,
+                    kind: kind,
+                    tags: tags,
+                    content: content,
+                  );
+                },
+          );
+          final readStarted = Completer<void>();
+          final readFinished = Completer<List<Event>>();
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((_) async {
+            readStarted.complete();
+            return (
+              events: await readFinished.future,
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+          // Also hold the old read so this detects the account race before the fix.
+          when(() => nostrClient.queryEvents(any())).thenAnswer((_) async {
+            if (!readStarted.isCompleted) readStarted.complete();
+            return readFinished.future;
+          });
+          final mutation = expectLater(
+            repository.acceptAward(award(coordinate, 122)),
+            throwsStateError,
+          );
+          await readStarted.future;
+          owner = _pubkey(4);
+          readFinished.complete([]);
+          await mutation;
+
+          verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        },
+      );
+    });
 
     test('acceptAward publishes a kind 10008 profile badges event', () async {
       final award = _awardEvent(
