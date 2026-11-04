@@ -2,6 +2,7 @@
 // ABOUTME: sound with nothing to hear and cuts the silence off its edges.
 
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:openvine/utils/audible_range.dart';
 import 'package:openvine/utils/audio_mime_type.dart';
@@ -150,8 +151,30 @@ class SoundSilenceTrimmer {
       return null;
     }
 
+    final channels = [waveform.leftChannel, ?waveform.rightChannel];
+    final blocks = channels.fold(
+      0,
+      (most, peaks) => math.max(most, peaks.length),
+    );
+    final measured = Duration(
+      microseconds:
+          blocks * Duration.microsecondsPerSecond ~/ waveform.samplesPerSecond,
+    );
+    // The plugin keeps the peaks it decoded when a read fails partway and
+    // still reports the whole length, so a short read looks complete. Within
+    // the edge margin the cut keeps the unread tail anyway.
+    if (waveform.duration - measured > soundEdgeMargin) {
+      Log.warning(
+        'The sound measured ${measured.inMilliseconds} of '
+        '${waveform.duration.inMilliseconds} ms, treating it as audible',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return null;
+    }
+
     final range = audibleRange(
-      channels: [waveform.leftChannel, ?waveform.rightChannel],
+      channels: channels,
       blocksPerSecond: waveform.samplesPerSecond,
       duration: waveform.duration,
     );

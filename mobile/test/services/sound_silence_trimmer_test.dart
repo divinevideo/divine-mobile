@@ -14,10 +14,12 @@ import 'package:pro_video_editor/pro_video_editor.dart';
 const _blocksPerSecond = 200;
 
 /// A stereo waveform of [seconds] seconds, digital silence except for the
-/// stretches in [loud], given in seconds.
+/// stretches in [loud], given in seconds. [reported] stands in for the length
+/// the plugin reports when it differs from what was read.
 WaveformData _waveform(
   double seconds, {
   List<(double, double)> loud = const [],
+  double? reported,
 }) {
   final peaks = Float32List((seconds * _blocksPerSecond).round());
   for (var block = 0; block < peaks.length; block++) {
@@ -30,7 +32,7 @@ WaveformData _waveform(
     leftChannel: peaks,
     rightChannel: Float32List.fromList(peaks),
     sampleRate: 48000,
-    duration: _seconds(seconds),
+    duration: _seconds(reported ?? seconds),
     samplesPerSecond: _blocksPerSecond,
   );
 }
@@ -268,6 +270,25 @@ void main() {
         expect((result as AudibleSound).path, source.path);
       });
 
+      test('publishes uncut when the read stops short of the sound', () async {
+        editor.waveform = _waveform(4, loud: [(1, 2)], reported: 6);
+
+        final result = await trim() as AudibleSound;
+
+        expect(result.path, source.path);
+        expect(result.isTrimmed, isFalse);
+        expect(editor.extractions, isEmpty);
+      });
+
+      test(
+        'still measures a read short by less than the edge margin',
+        () async {
+          editor.waveform = _waveform(6, reported: 6.1);
+
+          expect(await trim(), isA<SilentSound>());
+        },
+      );
+
       test('publishes uncut when the measurement comes back empty', () async {
         editor.waveform = WaveformData(
           leftChannel: Float32List(0),
@@ -317,6 +338,12 @@ void main() {
 
       test('is false when the sound cannot be measured', () async {
         editor.waveformError = PlatformException(code: 'decode');
+
+        expect(await trimmer.isSilent(source.path), isFalse);
+      });
+
+      test('is false when the read stops short of the sound', () async {
+        editor.waveform = _waveform(4, reported: 6);
 
         expect(await trimmer.isSilent(source.path), isFalse);
       });
