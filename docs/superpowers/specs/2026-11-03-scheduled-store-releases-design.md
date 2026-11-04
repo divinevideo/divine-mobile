@@ -389,9 +389,11 @@ where a review starts between the status read and commit.
   same AAB. It is never rebuilt: the build has already created the Shorebird
   release and provenance record for its `versionCode`.
   The coordinator owns this retry. The build retains the signed AAB as a
-  Codemagic artifact, and the coordinator records its build ID, artifact identity,
-  digest and versionCode in the private ledger when it observes the publishing
-  deferral, before attempting a retry.
+  Codemagic artifact and records its SHA-256 digest and release identity in the
+  private ledger after signing, before the first publishing attempt. The
+  coordinator records the build ID, artifact identity and versionCode when it
+  observes the publishing deferral, before attempting a retry. It uses the
+  build-recorded digest, never one derived solely from its first download.
   On a later tick it retrieves those bytes through Codemagic's authenticated
   artifacts API, verifies their digest and release identity, and uploads them
   with its Play service account through a fresh guarded edit. An expired or
@@ -498,10 +500,12 @@ Third-party actions are pinned by SHA. The environment holds:
   Codemagic's, so that either can be revoked alone.
 - A Play service account with release permissions on `co.openvine.app` only,
   separate from Codemagic's.
-- A Codemagic API token that can list and start builds. Check what else it can
+- A Codemagic API token that can list and start builds and read their retained
+  artifacts for deferred-upload retries. Check what else it can
   reach. If it can't be narrowed, it is the broadest secret here.
 - A GitHub App installation token with `contents: write` on
-  `divine-release-provenance` only, used for claims and reads of the ledger.
+  `divine-release-provenance` only, used for claims, deferred-upload records and
+  reads of the ledger.
 
 The workflow's own `GITHUB_TOKEN` gets `contents: write` for candidate tags,
 plus `deployments: write`, `actions: read`, and `checks: read`.
