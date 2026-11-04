@@ -494,6 +494,24 @@ void main() {
         },
       );
 
+      test('lets an error from the reuse lookup propagate', () async {
+        when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+          (_) async => [
+            createAudioEvent(
+              id: testEventId3,
+              pubkey: testPubkey2,
+              title: AudioEvent.originalSoundTitle,
+              publicTags: const ['crowd'],
+            ),
+          ],
+        );
+        when(
+          () => mockNostrClient.queryEventsDetailed(any()),
+        ).thenThrow(StateError('client disposed'));
+
+        await expectLater(repository.searchSounds('crowd'), throwsStateError);
+      });
+
       test('falls back to cached matches when the relay fails', () async {
         await primeCache([
           createAudioEvent(

@@ -439,11 +439,13 @@ class SoundsRepository {
           limit: maxBatchedUsageCountScan,
         ),
       ]);
-    } on Object catch (e) {
+    } on Exception catch (e, stackTrace) {
       Log.warning(
         'Could not tell which unnamed sounds are reused: $e',
         name: 'SoundsRepository',
         category: LogCategory.api,
+        error: e,
+        stackTrace: stackTrace,
       );
       return null;
     }
