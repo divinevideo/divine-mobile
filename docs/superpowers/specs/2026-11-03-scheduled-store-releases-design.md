@@ -145,8 +145,8 @@ a failure.
 
 Android builds have no public beta stage in this design, and nothing outside
 Play's own review gates their production promotion. A four-hour minimum spacing
-gives Play internal testers several builds a day at about half the cost of
-hourly builds. The interval is configuration. Scheduled Android builds skip
+gives Play internal testers several builds a day for about half the build-slot
+time of hourly builds. The interval is configuration. Scheduled Android builds skip
 `build_apk`, because they never publish direct downloads.
 
 **App-affecting changes** means anything under `mobile/`, `codemagic.yaml`, or a
@@ -465,19 +465,27 @@ never receives publishing credentials.
 
 ## Cost
 
+Divine is on Codemagic's fixed-price plan (Rabble, 2026-11-04). Scheduled
+builds add no per-minute charge. The constraint is concurrency: the plan
+includes three concurrent builds ([pricing](https://codemagic.io/pricing/)).
+
 - One `ios-build` takes roughly half an hour on `mac_mini_m2`, capped at 60
   minutes. At the observed merge rate that is about 10 builds per weekday and 3
-  per weekend day, roughly 250 builds a month. Pay-as-you-go `mac_mini_m2`
-  costs $0.095 a minute ([pricing](https://codemagic.io/pricing/)), so iOS
-  costs about $700 to $1,000 a month.
-- `android-build` runs on `mac_mini_m4` at $0.114 a minute. At no more than
-  one build every four hours, and without `build_apk`, that is about 150 builds
-  and $400 a month.
-- About $1,100 to $1,400 a month in total on pay-as-you-go. The fixed-price M2
-  plan has unlimited M2 minutes and three concurrent builds, so iOS minutes cost
-  nothing extra but occupy one of the three slots for a large share of each
-  weekday. M4 minutes are "available on request". Measure real durations from
-  recent Codemagic builds before enabling.
+  per weekend day.
+- `android-build` runs on `mac_mini_m4`, at most once every four hours and
+  without `build_apk`. That is about 5 builds per weekday.
+- Together they hold about one of the three slots through a busy workday.
+  Manual builds, the `e2e-smoke-*` lanes, and the perf lanes wait in the queue
+  when all three slots are busy; Codemagic queues them rather than failing
+  them. The coordinator never starts a workflow that is already queued or
+  running, so scheduled builds can't pile up.
+- Codemagic lists M4 machines on the fixed plan as "available on request".
+  Confirm the plan covers the `mac_mini_m4` that `android-build` uses. If it
+  doesn't, Android minutes bill at $0.114 a minute, about $400 a month at this
+  cadence.
+- Before activation, measure real build durations and queue waits. If manual
+  builds start waiting, add concurrency or lower the iOS build cadence. The
+  four-hour public TestFlight rhythm doesn't depend on hourly builds.
 - The coordinator itself runs on GitHub-hosted runners, which are free for this
   public repository.
 
@@ -594,9 +602,9 @@ Cases to test with fakes:
    do not ask for approval again.
 3. **Google Play is in the first version.** Both platforms' complete paths
    merge before anything is enabled.
-4. **Spend.** Rabble chose the cadence knowing iOS costs about $700 to $1,000 a
-   month. Play adds about $400. Confirm against measured build durations
-   before activation.
+4. **Spend.** Divine is on the fixed-price Codemagic plan, so the cost is
+   build concurrency, not minutes: scheduled builds hold about one of three
+   concurrent slots on a busy day. Measure queue waits before activation.
 
 These defaults stand unless Rabble changes them:
 
@@ -613,6 +621,8 @@ These need a person with access:
 - Create the App Store Connect API key, the Play service account, the Codemagic
   API token, and the provenance GitHub App installation, and add them to the
   `store-release` environment.
+- Confirm the fixed-price Codemagic plan covers the `mac_mini_m4` machines that
+  `android-build` uses.
 - Name the public TestFlight group if there is more than one external group.
 - Confirm that Play managed publishing is off, or say how it should be handled.
 
