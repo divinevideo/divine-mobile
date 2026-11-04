@@ -4609,6 +4609,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Give your sound a title to share it.';
 
   @override
+  String get soundsShareCoverLabel => 'Cover';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Optional. People see it next to your sound when they pick one.';
+
+  @override
+  String get soundsShareCoverAdd => 'Add cover';
+
+  @override
+  String get soundsShareCoverReplace => 'Replace';
+
+  @override
+  String get soundsShareCoverRemove => 'Remove cover';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Sound cover';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'That file type isn\'t supported. Pick an audio file.';
 
@@ -11184,6 +11203,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Untitled sound';
 
   @override
+  String get videoEditorAudioUseSound => 'Use';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Audio file is gone from this device';
 
@@ -11208,16 +11230,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Select the audio segment for your video';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Community';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'Featured';
+  String get videoEditorAudioCategoryMySounds => 'My Sounds';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'My Sounds';
+  String get videoEditorAudioFilterEffects => 'Effects';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => 'Arrow tool';
@@ -11954,9 +11973,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Hue';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Done';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Level';

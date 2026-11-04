@@ -4528,6 +4528,25 @@ class AppLocalizationsSv extends AppLocalizations {
       'Ge ditt ljud en titel för att dela det.';
 
   @override
+  String get soundsShareCoverLabel => 'Omslag';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Valfritt. Andra ser det bredvid ditt ljud när de väljer ett.';
+
+  @override
+  String get soundsShareCoverAdd => 'Lägg till omslag';
+
+  @override
+  String get soundsShareCoverReplace => 'Byt ut';
+
+  @override
+  String get soundsShareCoverRemove => 'Ta bort omslaget';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Ljudets omslag';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Den filtypen stöds inte. Välj en ljudfil.';
 
@@ -11094,6 +11113,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Namnlöst ljud';
 
   @override
+  String get videoEditorAudioUseSound => 'Använd';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Ljudfilen finns inte kvar på enheten';
 
@@ -11119,16 +11141,13 @@ class AppLocalizationsSv extends AppLocalizations {
       'Välj ljudsegmentet för din video';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Gemenskap';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'Utvalda';
+  String get videoEditorAudioCategoryMySounds => 'Mina ljud';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'Mina ljud';
+  String get videoEditorAudioFilterEffects => 'Ljudeffekter';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => 'Pilverktyg';
@@ -11867,9 +11886,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Nyans';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Klar';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Nivå';

@@ -4494,6 +4494,25 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đặt tiêu đề cho âm thanh để chia sẻ.';
 
   @override
+  String get soundsShareCoverLabel => 'Ảnh bìa';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Không bắt buộc. Mọi người thấy ảnh này cạnh âm thanh của bạn khi chọn âm thanh.';
+
+  @override
+  String get soundsShareCoverAdd => 'Thêm ảnh bìa';
+
+  @override
+  String get soundsShareCoverReplace => 'Thay ảnh';
+
+  @override
+  String get soundsShareCoverRemove => 'Gỡ ảnh bìa';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Ảnh bìa âm thanh';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Loại tệp đó không được hỗ trợ. Hãy chọn một tệp âm thanh.';
 
@@ -11040,6 +11059,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Âm thanh chưa đặt tên';
 
   @override
+  String get videoEditorAudioUseSound => 'Dùng';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Tệp âm thanh không còn trên thiết bị';
 
@@ -11064,16 +11086,13 @@ class AppLocalizationsVi extends AppLocalizations {
       'Chọn đoạn âm thanh cho video của bạn';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Cộng đồng';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'Nổi bật';
+  String get videoEditorAudioCategoryMySounds => 'Âm thanh của tôi';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'Âm thanh của tôi';
+  String get videoEditorAudioFilterEffects => 'Hiệu ứng âm thanh';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => 'Công cụ mũi tên';
@@ -11814,9 +11833,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Tông màu';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Xong';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Mức';

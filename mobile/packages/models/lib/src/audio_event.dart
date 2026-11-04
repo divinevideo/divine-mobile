@@ -73,6 +73,10 @@ class AudioEvent {
     this.sourceVideoReference,
     this.sourceVideoRelay,
     this.externalSource,
+    this.imageUrl,
+    this.blurhash,
+    this.divineSoundId,
+    this.linkedEventId,
     String? creatorName,
     this.creatorPubkey,
     this.creatorUrl,
@@ -139,6 +143,10 @@ class AudioEvent {
     String? source;
     String? sourceVideoReference;
     String? sourceVideoRelay;
+    String? imageUrl;
+    String? thumbUrl;
+    String? blurhash;
+    String? divineSoundId;
     String? creatorName;
     String? creatorPubkey;
     String? creatorUrl;
@@ -173,6 +181,14 @@ class AudioEvent {
           title = tagValue.isNotEmpty ? tagValue : null;
         case 'source':
           source = tagValue.isNotEmpty ? tagValue : null;
+        case 'image':
+          imageUrl = tagValue.isNotEmpty ? tagValue : null;
+        case 'thumb':
+          thumbUrl = tagValue.isNotEmpty ? tagValue : null;
+        case 'blurhash':
+          blurhash = tagValue.isNotEmpty ? tagValue : null;
+        case divineSoundTag:
+          divineSoundId = tagValue.isNotEmpty ? tagValue : null;
         case 'allow_audio_reuse':
           hasExplicitReuseConsent = true;
           allowsReuse = tagValue == 'true';
@@ -218,6 +234,9 @@ class AudioEvent {
       source: source,
       sourceVideoReference: sourceVideoReference,
       sourceVideoRelay: sourceVideoRelay,
+      imageUrl: imageUrl ?? thumbUrl,
+      blurhash: blurhash,
+      divineSoundId: divineSoundId,
       creatorName: creatorName,
       creatorPubkey: creatorPubkey,
       creatorUrl: creatorUrl,
@@ -342,6 +361,10 @@ class AudioEvent {
       sourceVideoReference: json['sourceVideoReference'] as String?,
       sourceVideoRelay: json['sourceVideoRelay'] as String?,
       externalSource: _parseExternalSource(json['externalSource']),
+      imageUrl: json['imageUrl'] as String?,
+      blurhash: json['blurhash'] as String?,
+      divineSoundId: json['divineSoundId'] as String?,
+      linkedEventId: json['linkedEventId'] as String?,
       creatorName: json['creatorName'] as String?,
       creatorPubkey: json['creatorPubkey'] as String?,
       creatorUrl: json['creatorUrl'] as String?,
@@ -413,6 +436,17 @@ class AudioEvent {
   /// Used as ID prefix (with underscore) and as pubkey value.
   static const bundledMarker = 'bundled';
 
+  /// The title a video's sound is published under when its creator shares it
+  /// without naming it.
+  ///
+  /// Deliberately not localized: it is event data, read by every viewer
+  /// whatever their own locale.
+  static const originalSoundTitle = 'Original sound';
+
+  /// The tag naming, on an event Divine publishes for one of the sounds the
+  /// app ships, that sound's manifest id: `['divine_sound', 'wednesday']`.
+  static const divineSoundTag = 'divine_sound';
+
   /// Marker for draft-local imported audio.
   static const localImportMarker = 'local_import';
 
@@ -457,7 +491,8 @@ class AudioEvent {
   /// The Nostr event id a reusing video should reference in its
   /// `["e", <id>, <relay>, "audio"]` attribution tag, or `null` when this
   /// audio has no referenceable Nostr event (bundled sounds, or imported
-  /// audio that hasn't been published yet).
+  /// audio that hasn't been published yet). A bundled sound Divine also
+  /// published answers with its [linkedEventId].
   ///
   /// Resolves two id shapes on top of a plain Kind 1063 event id:
   /// * a reused *original sound*, whose [id] is `video_<eventId>` — the source
@@ -480,7 +515,11 @@ class AudioEvent {
       r'^([0-9a-fA-F]{64})(?:[-_].*)?$',
     ).firstMatch(candidate);
     if (base != null) candidate = base.group(1)!;
-    return NostrHexUtils.isValidEventId(candidate) ? candidate : null;
+    if (NostrHexUtils.isValidEventId(candidate)) return candidate;
+    final linked = linkedEventId;
+    return linked != null && NostrHexUtils.isValidEventId(linked)
+        ? linked
+        : null;
   }
 
   /// Whether this track is a video's original sound that is still anchored to
@@ -521,6 +560,14 @@ class AudioEvent {
 
   /// Whether this audio is a bundled sound (from app assets).
   bool get isBundled => id.startsWith('${bundledMarker}_');
+
+  /// Whether its publisher gave it no title of its own: none at all, or the
+  /// [originalSoundTitle] a shared video sound gets by default.
+  bool get hasDefaultTitle {
+    final title = this.title?.trim() ?? '';
+    return title.isEmpty ||
+        title.toLowerCase() == originalSoundTitle.toLowerCase();
+  }
 
   /// Whether this audio is a draft-local imported file.
   bool get isLocalImport => id.startsWith('${localImportMarker}_');
@@ -723,6 +770,24 @@ class AudioEvent {
   /// Normalized source, attribution, and license metadata for proxy-backed
   /// sounds from Freesound, Openverse, or future providers.
   final AudioExternalSource? externalSource;
+
+  /// Cover art the sound was published with: NIP-94's `image` tag, or its
+  /// `thumb` tag when there is no `image`.
+  final String? imageUrl;
+
+  /// NIP-94 `blurhash` of [imageUrl], shown while it loads.
+  final String? blurhash;
+
+  /// The id, in the app's bundled sound manifest, of the Divine sound this
+  /// event publishes: its [divineSoundTag]. Lets the app tie a sound it ships
+  /// to the event that stands for it on the network.
+  final String? divineSoundId;
+
+  /// The published Kind 1063 that stands for this sound on the network, for
+  /// a sound whose own [id] is not an event id: one the app ships that Divine
+  /// also published. [attributionEventId] falls back to it, so a video made
+  /// with the shipped file still references the event.
+  final String? linkedEventId;
 
   /// Public creator name included when this sound is shared.
   final String? creatorName;
@@ -975,6 +1040,16 @@ class AudioEvent {
       tags.add(['source', source!]);
     }
 
+    if (imageUrl?.trim().isNotEmpty ?? false) {
+      tags.add(['image', imageUrl!.trim()]);
+    }
+    if (blurhash?.trim().isNotEmpty ?? false) {
+      tags.add(['blurhash', blurhash!.trim()]);
+    }
+    if (divineSoundId?.trim().isNotEmpty ?? false) {
+      tags.add([divineSoundTag, divineSoundId!.trim()]);
+    }
+
     tags.add(['allow_audio_reuse', allowsReuse.toString()]);
 
     if (creatorName?.trim().isNotEmpty ?? false) {
@@ -1027,6 +1102,10 @@ class AudioEvent {
     String? sourceVideoReference,
     String? sourceVideoRelay,
     AudioExternalSource? externalSource,
+    String? imageUrl,
+    String? blurhash,
+    String? divineSoundId,
+    String? linkedEventId,
     String? creatorName,
     String? creatorPubkey,
     String? creatorUrl,
@@ -1072,6 +1151,10 @@ class AudioEvent {
       sourceVideoReference: sourceVideoReference ?? this.sourceVideoReference,
       sourceVideoRelay: sourceVideoRelay ?? this.sourceVideoRelay,
       externalSource: externalSource ?? this.externalSource,
+      imageUrl: imageUrl ?? this.imageUrl,
+      blurhash: blurhash ?? this.blurhash,
+      divineSoundId: divineSoundId ?? this.divineSoundId,
+      linkedEventId: linkedEventId ?? this.linkedEventId,
       creatorName: creatorName ?? this.creatorName,
       creatorPubkey: creatorPubkey ?? this.creatorPubkey,
       creatorUrl: creatorUrl ?? this.creatorUrl,
@@ -1174,6 +1257,10 @@ class AudioEvent {
     'source': ?source,
     'sourceVideoReference': ?sourceVideoReference,
     'sourceVideoRelay': ?sourceVideoRelay,
+    'imageUrl': ?imageUrl,
+    'blurhash': ?blurhash,
+    'divineSoundId': ?divineSoundId,
+    'linkedEventId': ?linkedEventId,
     'creatorName': ?creatorName,
     'creatorPubkey': ?creatorPubkey,
     'creatorUrl': ?creatorUrl,

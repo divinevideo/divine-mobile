@@ -44,6 +44,7 @@ export 'src/ready_event_data.dart';
 export 'src/recommendations_response.dart';
 export 'src/social_counts.dart';
 export 'src/sound_credit.dart';
+export 'src/sound_kind.dart';
 export 'src/sound_search_terms.dart';
 export 'src/supporter_entitlement.dart';
 export 'src/supporter_tier.dart';

@@ -12,7 +12,11 @@ class AudioReuseConsentResolver {
 
   final VideosRepository _videosRepository;
 
-  Future<bool> verify(AudioEvent sound) async {
+  /// Whether [sound] may be reused now.
+  ///
+  /// [knownSource] is its source video when the caller has read it already,
+  /// which spares the lookup. The reuse policy is still asked fresh.
+  Future<bool> verify(AudioEvent sound, {VideoEvent? knownSource}) async {
     if (sound.isBundled || sound.isLocalImport) return true;
     if (sound.externalSource case final external?) {
       return external.license.allowsDerivatives;
@@ -36,9 +40,11 @@ class AudioReuseConsentResolver {
       // `['e', <audioEventId>, <relay>, 'audio']` tag, which legacy videos
       // predate. That is the same population this resolver exists to rescue,
       // so the reverse lookup returned nothing for every one of them (#6769).
-      final candidates = await _videosRepository.getVideosByAddressableIds([
-        sourceAddress,
-      ]);
+      final candidates = knownSource?.addressableId == sourceAddress
+          ? [knownSource!]
+          : await _videosRepository.getVideosByAddressableIds([
+              sourceAddress,
+            ]);
       final matching = candidates
           .where((video) => video.addressableId == sourceAddress)
           .toList();
@@ -47,9 +53,11 @@ class AudioReuseConsentResolver {
       // out the legacy population:
       // `VideoEventPublisher` publishes the Kind 1063 before the video event
       // because the video needs the audio id for its `e` tag, so an unedited
-      // source is never older than its own sound.
+      // source is never older than its own sound. Measured by the revision's
+      // own time: `createdAt` keeps the first publication's, so an edit, which
+      // publishes a new sound, would read as older than it.
       source = matching.first;
-      if (source.createdAt < sound.createdAt) return false;
+      if (source.nostrCreatedAt < sound.createdAt) return false;
     } catch (error) {
       Log.warning(
         'Reuse consent lookup failed for source $sourceAddress: $error',

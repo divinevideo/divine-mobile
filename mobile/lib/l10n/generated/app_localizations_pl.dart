@@ -4668,6 +4668,25 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nadaj dźwiękowi tytuł, żeby go udostępnić.';
 
   @override
+  String get soundsShareCoverLabel => 'Okładka';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Opcjonalnie. Inni widzą ją obok twojego dźwięku, gdy wybierają dźwięk.';
+
+  @override
+  String get soundsShareCoverAdd => 'Dodaj okładkę';
+
+  @override
+  String get soundsShareCoverReplace => 'Zamień';
+
+  @override
+  String get soundsShareCoverRemove => 'Usuń okładkę';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Okładka dźwięku';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Ten typ pliku nie jest obsługiwany. Wybierz plik audio.';
 
@@ -11318,6 +11337,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Nienazwany dźwięk';
 
   @override
+  String get videoEditorAudioUseSound => 'Użyj';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Pliku audio już nie ma na tym urządzeniu';
 
@@ -11344,16 +11366,13 @@ class AppLocalizationsPl extends AppLocalizations {
       'Wybierz fragment audio dla swojego filmu';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Społeczność';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'Wyróżnione';
+  String get videoEditorAudioCategoryMySounds => 'Moje dźwięki';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'Moje dźwięki';
+  String get videoEditorAudioFilterEffects => 'Efekty';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => 'Narzędzie strzałki';
@@ -12106,9 +12125,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Odcień';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Gotowe';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Poziom';

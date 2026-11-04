@@ -3,8 +3,14 @@ import 'dart:math';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/extensions/divine_sound_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/utils/video_editor_utils.dart';
+import 'package:openvine/widgets/audio/sound_cover_image.dart';
+
+/// Edge length of the cover leading each row.
+const _coverSize = 48.0;
 
 class AudioListTile extends StatelessWidget {
   const AudioListTile({
@@ -12,6 +18,8 @@ class AudioListTile extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
     this.displayTitle,
+    this.cover,
+    this.isCoverPending = false,
     this.isPlaying = false,
     this.isUnavailable = false,
     this.videoCount,
@@ -32,6 +40,13 @@ class AudioListTile extends StatelessWidget {
   /// [audio] handed to the editor keeps its published title, which is what
   /// gets credited.
   final String? displayTitle;
+
+  /// Artwork leading the row, or `null` for the waveform placeholder.
+  final SoundCover? cover;
+
+  /// Whether [cover] is still being looked up; the row then waits on a plain
+  /// tile instead of a waveform.
+  final bool isCoverPending;
 
   /// Whether this sound cannot be attached because its device-local audio
   /// file is gone.
@@ -58,6 +73,8 @@ class AudioListTile extends StatelessWidget {
       child: _Tile(
         audio: audio,
         displayTitle: displayTitle,
+        cover: cover,
+        isCoverPending: isCoverPending,
         isSelected: isSelected,
         isPlaying: isPlaying,
         isUnavailable: isUnavailable,
@@ -72,6 +89,8 @@ class _Tile extends StatelessWidget {
   const _Tile({
     required this.audio,
     required this.displayTitle,
+    required this.cover,
+    required this.isCoverPending,
     required this.isSelected,
     required this.isPlaying,
     required this.isUnavailable,
@@ -81,6 +100,8 @@ class _Tile extends StatelessWidget {
 
   final AudioEvent audio;
   final String? displayTitle;
+  final SoundCover? cover;
+  final bool isCoverPending;
   final bool isSelected;
   final bool isPlaying;
   final bool isUnavailable;
@@ -90,15 +111,21 @@ class _Tile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const .symmetric(vertical: 20.0),
+      padding: const .symmetric(vertical: 4),
       child: ListTile(
         onTap: onTap,
         enabled: !isUnavailable,
         minTileHeight: 48,
+        leading: _Cover(
+          cover: cover,
+          isPending: isCoverPending,
+          colorSeed: audio.id,
+          // Divine's own and private sounds sit in the same lists as ones
+          // anybody published, so those say where they come from.
+          isCommunitySound: !audio.isDivine && audio.attributionEventId != null,
+        ),
         title: Text(
-          displayTitle ??
-              audio.title ??
-              context.l10n.videoEditorAudioUntitledSound,
+          displayTitle ?? _titleOf(context, audio),
           style: VineTheme.titleMediumFont(
             color: isUnavailable
                 ? context.vineColors.onSurfaceVariant
@@ -123,20 +150,103 @@ class _Tile extends StatelessWidget {
                       ).toMmSs(),
                       style: const TextStyle(fontFeatures: [.tabularFigures()]),
                     ),
-                    if (audio.source != null) ...[
-                      const TextSpan(text: ' ∙ '),
-                      TextSpan(text: audio.source),
-                    ],
                     if (videoCount case final count? when count > 0) ...[
                       const TextSpan(text: ' ∙ '),
                       TextSpan(text: context.l10n.soundVideoCount(count)),
                     ],
+                    // Last, so a long source such as a URL is what the single
+                    // line cuts short, not the count.
+                    if (audio.source != null) ...[
+                      const TextSpan(text: ' ∙ '),
+                      TextSpan(text: audio.source),
+                    ],
                   ],
                 ),
+                maxLines: 1,
+                overflow: .ellipsis,
               ),
         trailing: isSelected && !isUnavailable
             ? _AudioPlayingIndicator(isPlaying: isPlaying)
             : null,
+      ),
+    );
+  }
+}
+
+/// [audio]'s title, naming the creator of an unnamed video sound so a list
+/// of them does not read "Original sound" row after row.
+String _titleOf(BuildContext context, AudioEvent audio) {
+  final creator = audio.creatorName?.trim() ?? '';
+  if (audio.hasDefaultTitle && creator.isNotEmpty) {
+    return context.l10n.originalSoundByCreator(creator);
+  }
+  return audio.title ?? context.l10n.videoEditorAudioUntitledSound;
+}
+
+/// The row's cover, with a people mark on its corner for a sound someone on
+/// Divine published.
+class _Cover extends StatelessWidget {
+  const _Cover({
+    required this.cover,
+    required this.isPending,
+    required this.isCommunitySound,
+    required this.colorSeed,
+  });
+
+  final SoundCover? cover;
+  final bool isPending;
+  final bool isCommunitySound;
+  final String colorSeed;
+
+  @override
+  Widget build(BuildContext context) {
+    final image = SoundCoverImage(
+      cover: cover,
+      isPending: isPending,
+      size: _coverSize,
+      colorSeed: colorSeed,
+    );
+    if (!isCommunitySound) return image;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        image,
+        const Positioned(right: -4, bottom: -4, child: _CommunityMark()),
+      ],
+    );
+  }
+}
+
+class _CommunityMark extends StatelessWidget {
+  const _CommunityMark();
+
+  /// Diameter of the mark, its ring included.
+  static const _size = 20.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vineColors;
+    return Semantics(
+      label: context.l10n.videoEditorAudioCategoryCommunity,
+      child: SizedBox.square(
+        key: const Key('audio_community_badge'),
+        dimension: _size,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerHigh,
+            shape: BoxShape.circle,
+            // The sheet's own colour, so the mark reads as cut out of the
+            // cover rather than stuck on top of it.
+            border: Border.all(color: colors.surface, width: 2),
+          ),
+          child: Center(
+            child: DivineIcon(
+              icon: DivineIconName.users,
+              size: 11,
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+        ),
       ),
     );
   }
