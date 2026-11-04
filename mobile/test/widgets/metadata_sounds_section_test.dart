@@ -76,12 +76,13 @@ void main() {
       bool? allowAudioReuse,
       bool isVerifiedArchive = false,
       InspiredByInfo? inspiredBy,
+      String content = 'Test video without audio',
     }) {
       final now = DateTime.now();
       return VideoEvent(
         id: testVideoId,
         pubkey: testPubkey,
-        content: 'Test video without audio',
+        content: content,
         videoUrl: 'https://example.com/video.mp4',
         createdAt: now.millisecondsSinceEpoch ~/ 1000,
         timestamp: now,
@@ -248,7 +249,14 @@ void main() {
         expect(find.textContaining('By Original Artist'), findsOneWidget);
         expect(find.textContaining('Shared by'), findsOneWidget);
         expect(find.text('Credit only'), findsOneWidget);
-        expect(find.text('CC BY 4.0'), findsOneWidget);
+        // An Attribution licence asks to say the excerpt was changed.
+        expect(
+          find.text(
+            'CC BY 4.0 · '
+            '${lookupAppLocalizations(const Locale('en')).soundCreditEdited}',
+          ),
+          findsOneWidget,
+        );
         expect(find.text('https://example.com/original'), findsOneWidget);
         expect(find.text('#loops'), findsOneWidget);
       });
@@ -315,6 +323,31 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(_divineIcon(DivineIconName.caretRight), findsOneWidget);
+      });
+    });
+
+    group('Content credit', () {
+      testWidgets('credits a sound without an event instead of calling it '
+          'the original sound', (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final video = createVideoWithoutAudio(
+          content:
+              'Hi\n\n♪ Elevator Music – YellowTree via Freesound, CC BY 4.0 '
+              'https://creativecommons.org/licenses/by/4.0/ (edited)',
+        );
+
+        await tester.pumpWidget(buildTestWidget(video: video));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Elevator Music – YellowTree via Freesound'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('CC BY 4.0 · ${l10n.soundCreditEdited}'),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.metadataOriginalSound), findsNothing);
       });
     });
 

@@ -1902,6 +1902,7 @@
   "soundUnableToPreview": "Kan inte förhandsvisa ljud – inget ljud tillgängligt",
   "soundPreviewFailed": "Kunde inte spela förhandsvisning. Försök igen.",
   "soundViewSource": "Visa källa",
+  "soundCreditEdited": "redigerad",
   "soundCloseTooltip": "Stäng",
   "exploreNotExploreRoute": "Inte en upptäcktsrutt",
   "legalTitle": "Juridik",

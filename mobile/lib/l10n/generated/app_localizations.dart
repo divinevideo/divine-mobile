@@ -9445,6 +9445,12 @@ abstract class AppLocalizations {
   /// **'View source'**
   String get soundViewSource;
 
+  /// Shown after the licence in a sound's credit on a video when the licence (such as CC BY) asks to say that the sound was changed: the video uses an excerpt, mixed into its own audio. Lowercase, a past participle describing the sound.
+  ///
+  /// In en, this message translates to:
+  /// **'edited'**
+  String get soundCreditEdited;
+
   /// No description provided for @soundCloseTooltip.
   ///
   /// In en, this message translates to:

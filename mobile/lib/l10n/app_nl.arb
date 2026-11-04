@@ -1902,6 +1902,7 @@
   "soundUnableToPreview": "Geluid voorbeluisteren lukt niet — geen audio beschikbaar",
   "soundPreviewFailed": "Voorbeluistering afspelen mislukt. Probeer het opnieuw.",
   "soundViewSource": "Bron bekijken",
+  "soundCreditEdited": "bewerkt",
   "soundCloseTooltip": "Sluiten",
   "exploreNotExploreRoute": "Geen explore-route",
   "legalTitle": "Juridisch",

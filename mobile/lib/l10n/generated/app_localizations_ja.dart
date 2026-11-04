@@ -5285,6 +5285,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundViewSource => '元動画を見る';
 
   @override
+  String get soundCreditEdited => '編集済み';
+
+  @override
   String get soundCloseTooltip => '閉じる';
 
   @override

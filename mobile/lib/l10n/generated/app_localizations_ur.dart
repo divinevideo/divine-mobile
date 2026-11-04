@@ -5623,6 +5623,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get soundViewSource => 'ماخذ دیکھیں';
 
   @override
+  String get soundCreditEdited => 'ترمیم شدہ';
+
+  @override
   String get soundCloseTooltip => 'بند کریں';
 
   @override

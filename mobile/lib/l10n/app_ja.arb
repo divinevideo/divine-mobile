@@ -1892,6 +1892,7 @@
   "soundUnableToPreview": "サウンドをプレビューできない - 音声がないよ",
   "soundPreviewFailed": "プレビューの再生がうまくいかなかった。もう一回試してみて。",
   "soundViewSource": "元動画を見る",
+  "soundCreditEdited": "編集済み",
   "soundCloseTooltip": "閉じる",
   "exploreNotExploreRoute": "探索ルートじゃないよ",
   "legalTitle": "法的情報",

@@ -5,7 +5,12 @@ import 'package:collection/collection.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart'
-    show ClipSourceCredit, clipSourceCreditTagMarker;
+    show
+        AudioEvent,
+        ClipSourceCredit,
+        clipSourceCreditTagMarker,
+        soundCreditFromContent,
+        stripInspiredByAttribution;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
@@ -303,6 +308,64 @@ void main() {
           expect(capturedContent, isNot(contains(second)));
         },
       );
+
+      group('sound credit', () {
+        // The publisher's own sound, so the publish needs no reuse check.
+        AudioEvent sound({required String licenseUrl}) => AudioEvent(
+          id: 'f' * 64,
+          pubkey: testPubkey,
+          createdAt: 1,
+          title: 'Monkeys Spinning Monkeys',
+          creatorName: 'Kevin MacLeod (incompetech.com)',
+          licenseName: 'CC BY 4.0',
+          licenseUrl: licenseUrl,
+        );
+
+        test(
+          'credits an Attribution-licensed sound before the Inspired By line',
+          () async {
+            // Other clients rarely follow the `e … audio` reference, so the
+            // credit travels in the content; the Inspired By parser is
+            // anchored to the end and must still find its line.
+            stubSignAndPublish();
+            final npub = NostrKeyUtils.encodePubKey(inspiredPersonPubkey);
+
+            final result = await publisher.publishDirectUpload(
+              createUpload().copyWith(description: 'my caption'),
+              inspiredByNpubs: [npub],
+              selectedAudio: sound(
+                licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+              ),
+            );
+
+            expect(result, isTrue);
+            expect(
+              stripInspiredByAttribution(capturedContent),
+              equals(
+                'my caption\n\n♪ Monkeys Spinning Monkeys – Kevin MacLeod '
+                '(incompetech.com), CC BY 4.0 '
+                'https://creativecommons.org/licenses/by/4.0/ (edited)',
+              ),
+            );
+            expect(capturedContent, endsWith('Inspired by nostr:$npub'));
+          },
+        );
+
+        test('adds no credit for a sound whose licence asks none', () async {
+          stubSignAndPublish();
+
+          final result = await publisher.publishDirectUpload(
+            createUpload().copyWith(description: 'my caption'),
+            selectedAudio: sound(
+              licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+            ).copyWith(licenseName: 'CC0 1.0'),
+          );
+
+          expect(result, isTrue);
+          expect(capturedContent, equals('my caption'));
+          expect(soundCreditFromContent(capturedContent), isNull);
+        });
+      });
 
       test(
         'credits every picked creator alongside an inspiring video',

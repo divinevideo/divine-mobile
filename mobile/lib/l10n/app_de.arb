@@ -1902,6 +1902,7 @@
   "soundUnableToPreview": "Vorschau nicht möglich — kein Audio verfügbar",
   "soundPreviewFailed": "Vorschau-Wiedergabe fehlgeschlagen. Bitte versuch es nochmal.",
   "soundViewSource": "Quelle ansehen",
+  "soundCreditEdited": "bearbeitet",
   "soundCloseTooltip": "Schließen",
   "exploreNotExploreRoute": "Keine Entdecken-Route",
   "legalTitle": "Rechtliches",

@@ -50,12 +50,13 @@ VideoEvent _testVideo({
   List<List<String>> extraTags = const [],
   int? eventCreatedAt,
   String? title = 'Test Video Title',
+  String content = 'Test video content',
 }) {
   return VideoEvent(
     id: 'event-id',
     pubkey: _ownerPubkey,
     createdAt: 1757385263,
-    content: 'Test video content',
+    content: content,
     timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
     videoUrl: 'https://cdn.example.com/video.mp4',
     title: title,
@@ -777,6 +778,40 @@ void main() {
     });
 
     group('edited field replacement', () {
+      test('keeps the sound credit line under the edited caption', () async {
+        // The editor never shows the line, and an edit cannot change the
+        // sound, so the published credit must survive the edit.
+        const credit =
+            '♪ Monkeys Spinning Monkeys – Kevin MacLeod (incompetech.com), '
+            'CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ (edited)';
+        String? capturedContent;
+        when(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenAnswer((invocation) async {
+          capturedContent = invocation.namedArguments[#content] as String;
+          return Event(
+            _ownerPubkey,
+            NIP71VideoKinds.addressableShortVideo,
+            invocation.namedArguments[#tags] as List<List<String>>,
+            capturedContent!,
+          );
+        });
+
+        final result = await service.updateVideo(
+          originalVideo: _testVideo(content: 'Old caption\n\n$credit'),
+          editorState: VideoEditorProviderState(description: 'New caption'),
+          initialCollaboratorPubkeys: const {},
+        );
+
+        expect(result, isA<VideoUpdateSuccess>());
+        expect(capturedContent, equals('New caption\n\n$credit'));
+      });
+
       test(
         'replaces title, summary, and hashtags without duplicates',
         () async {

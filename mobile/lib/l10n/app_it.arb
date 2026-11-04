@@ -1902,6 +1902,7 @@
   "soundUnableToPreview": "Impossibile ascoltare l'anteprima - nessun audio disponibile",
   "soundPreviewFailed": "Impossibile riprodurre l'anteprima. Riprova.",
   "soundViewSource": "Vedi sorgente",
+  "soundCreditEdited": "modificato",
   "soundCloseTooltip": "Chiudi",
   "exploreNotExploreRoute": "Non è un percorso di esplorazione",
   "legalTitle": "Legale",

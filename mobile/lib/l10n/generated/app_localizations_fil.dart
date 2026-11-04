@@ -5651,6 +5651,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get soundViewSource => 'Tingnan ang source';
 
   @override
+  String get soundCreditEdited => 'in-edit';
+
+  @override
   String get soundCloseTooltip => 'Isara';
 
   @override

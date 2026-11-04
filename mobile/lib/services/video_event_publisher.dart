@@ -547,9 +547,15 @@ class VideoEventPublisher {
         );
       }
 
-      // Append NIP-27 Inspired By person reference to content
+      // A sound whose licence asks for credit is credited in the content
+      // too: other clients rarely follow the `e … audio` reference. The
+      // NIP-27 Inspired By person reference goes last, where readers expect
+      // it.
       final content = withInspiredByContentReference(
-        upload.description ?? upload.title ?? '',
+        withSoundCreditLine(
+          upload.description ?? upload.title ?? '',
+          selectedAudio == null ? null : soundCreditLine(selectedAudio),
+        ),
         inspiredByNpubs,
       );
 

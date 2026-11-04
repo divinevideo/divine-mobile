@@ -3122,6 +3122,7 @@
   "soundUnableToPreview": "ధ్వనిని ప్రివ్యూ చేయడం సాధ్యపడలేదు - ఆడియో అందుబాటులో లేదు",
   "soundPreviewFailed": "ప్రివ్యూని ప్లే చేయడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "soundViewSource": "మూలాన్ని వీక్షించండి",
+  "soundCreditEdited": "సవరించబడింది",
   "soundCloseTooltip": "మూసివేయండి",
   "exploreNotExploreRoute": "అన్వేషణ మార్గం కాదు",
   "legalTitle": "చట్టపరమైన",

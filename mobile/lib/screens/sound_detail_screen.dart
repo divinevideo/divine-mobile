@@ -490,6 +490,7 @@ class _SoundHeader extends ConsumerStatefulWidget {
 class _SoundHeaderState extends ConsumerState<_SoundHeader> {
   String? _artistName;
   String? _license;
+  String? _licenseUrl;
   String? _sourceUrl;
 
   @override
@@ -502,10 +503,12 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
     final sound = widget.sound;
     _artistName = sound.creatorName;
     _license = sound.licenseName;
+    _licenseUrl = _launchableUrl(sound.licenseUrl);
     _sourceUrl = _launchableUrl(sound.source);
     if (sound.externalSource case final external?) {
       _artistName ??= external.creatorName;
       _license ??= external.license.name;
+      _licenseUrl ??= _launchableUrl(external.license.url);
       _sourceUrl ??= _launchableUrl(external.sourceUrl);
     }
     if (!sound.isBundled) return;
@@ -516,6 +519,7 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
     if (vineSound != null) {
       _artistName = vineSound.artist;
       _license = vineSound.license;
+      _licenseUrl = _launchableUrl(vineSound.licenseUrl);
       _sourceUrl = _launchableUrl(vineSound.sourceUrl);
     }
   }
@@ -628,12 +632,14 @@ class _SoundHeaderState extends ConsumerState<_SoundHeader> {
                         semanticsIdentifier:
                             _soundDetailCreatorAttributionIdentifier,
                         license: _license,
+                        licenseUrl: _licenseUrl,
                         sourceUrl: _sourceUrl,
                       )
                     else if (_artistName != null)
                       _AttributionInfo(
                         artistName: _artistName!,
                         license: _license,
+                        licenseUrl: _licenseUrl,
                         sourceUrl: _sourceUrl,
                       ),
                     if (showsSeparatePublisher && publisherName != null)
@@ -802,6 +808,7 @@ class _ProfileAttributionInfo extends StatelessWidget {
     required this.pubkey,
     required this.semanticsIdentifier,
     this.license,
+    this.licenseUrl,
     this.sourceUrl,
   });
 
@@ -809,6 +816,10 @@ class _ProfileAttributionInfo extends StatelessWidget {
   final String pubkey;
   final String semanticsIdentifier;
   final String? license;
+
+  /// Makes [license] a link to the licence text, as CC BY 4.0
+  /// §3(a)(1)(C) asks where it is reasonably practicable.
+  final String? licenseUrl;
   final String? sourceUrl;
 
   @override
@@ -826,13 +837,25 @@ class _ProfileAttributionInfo extends StatelessWidget {
               semanticsIdentifier: semanticsIdentifier,
             ),
           ),
-          if (license != null) TextSpan(text: ' · $license'),
+          if (license case final license?)
+            if (licenseUrl case final licenseUrl?) ...[
+              const TextSpan(text: ' · '),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.baseline,
+                baseline: TextBaseline.alphabetic,
+                child: _ExternalLink(text: license, url: licenseUrl),
+              ),
+            ] else
+              TextSpan(text: ' · $license'),
           if (sourceUrl != null) ...[
             const TextSpan(text: ' · '),
             WidgetSpan(
               alignment: PlaceholderAlignment.baseline,
               baseline: TextBaseline.alphabetic,
-              child: _SourceLink(sourceUrl: sourceUrl!),
+              child: _ExternalLink(
+                text: context.l10n.soundViewSource,
+                url: sourceUrl!,
+              ),
             ),
           ],
         ],
@@ -879,31 +902,44 @@ class _AttributionInfo extends StatelessWidget {
   const _AttributionInfo({
     required this.artistName,
     this.license,
+    this.licenseUrl,
     this.sourceUrl,
   });
 
   final String artistName;
   final String? license;
+
+  /// Makes [license] a link to the licence text, as CC BY 4.0
+  /// §3(a)(1)(C) asks where it is reasonably practicable.
+  final String? licenseUrl;
   final String? sourceUrl;
 
   @override
   Widget build(BuildContext context) {
-    final attributionText = [
-      context.l10n.soundCreatorBy(artistName),
-      if (license != null) license,
-    ].join(' · ');
-
     return Text.rich(
       TextSpan(
         style: VineTheme.bodySmallFont(color: context.vineColors.secondaryText),
         children: [
-          TextSpan(text: attributionText),
+          TextSpan(text: context.l10n.soundCreatorBy(artistName)),
+          if (license case final license?)
+            if (licenseUrl case final licenseUrl?) ...[
+              const TextSpan(text: ' · '),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.baseline,
+                baseline: TextBaseline.alphabetic,
+                child: _ExternalLink(text: license, url: licenseUrl),
+              ),
+            ] else
+              TextSpan(text: ' · $license'),
           if (sourceUrl != null) ...[
             const TextSpan(text: ' · '),
             WidgetSpan(
               alignment: PlaceholderAlignment.baseline,
               baseline: TextBaseline.alphabetic,
-              child: _SourceLink(sourceUrl: sourceUrl!),
+              child: _ExternalLink(
+                text: context.l10n.soundViewSource,
+                url: sourceUrl!,
+              ),
             ),
           ],
         ],
@@ -912,24 +948,26 @@ class _AttributionInfo extends StatelessWidget {
   }
 }
 
-class _SourceLink extends StatelessWidget {
-  const _SourceLink({required this.sourceUrl});
+/// [text] as a link that opens [url] outside the app: the sound's source or
+/// its licence.
+class _ExternalLink extends StatelessWidget {
+  const _ExternalLink({required this.text, required this.url});
 
-  final String sourceUrl;
+  final String text;
+  final String url;
 
   @override
   Widget build(BuildContext context) {
-    final label = context.l10n.soundViewSource;
     return Semantics(
       button: true,
       child: DivineTextLink(
-        text: label,
+        text: text,
         style: VineTheme.bodySmallFont(color: context.vineColors.link).copyWith(
           decoration: TextDecoration.underline,
           decorationColor: context.vineColors.link,
         ),
         onTap: () async {
-          final uri = Uri.parse(sourceUrl);
+          final uri = Uri.parse(url);
           if (await canLaunchUrl(uri)) {
             await launchUrl(uri, mode: LaunchMode.externalApplication);
           }

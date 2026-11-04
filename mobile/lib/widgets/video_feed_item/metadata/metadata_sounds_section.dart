@@ -38,6 +38,12 @@ class MetadataSoundsSection extends ConsumerWidget {
       return _SharedAudioSection(video: video);
     }
 
+    // A credited sound with no event of its own, such as one the app ships,
+    // is not the video's original sound.
+    if (video.soundCredit case final credit?) {
+      return _ContentCreditSection(credit: credit);
+    }
+
     // Otherwise show "Original sound - @creator"
     return _OriginalSoundSection(video: video);
   }
@@ -56,6 +62,9 @@ class _SharedAudioSection extends ConsumerWidget {
     return audioAsync.when(
       data: (audio) {
         if (audio == null) {
+          if (video.soundCredit case final credit?) {
+            return _ContentCreditSection(credit: credit);
+          }
           // The shared audio event couldn't be resolved (e.g. the source
           // video isn't reachable by id). This video still reused a sound, so
           // credit the reused sound's original creator rather than the
@@ -85,11 +94,67 @@ class _SharedAudioSection extends ConsumerWidget {
         label: context.l10n.metadataSoundsLabel,
         child: const _SoundSkeleton(),
       ),
-      error: (error, stack) => _OriginalSoundSection(
-        video: video,
-        reusedCreatorPubkey: AudioAttributionCredit.reusedCreatorPubkeyFor(
-          video,
+      error: (error, stack) => switch (video.soundCredit) {
+        final credit? => _ContentCreditSection(credit: credit),
+        null => _OriginalSoundSection(
+          video: video,
+          reusedCreatorPubkey: AudioAttributionCredit.reusedCreatorPubkeyFor(
+            video,
+          ),
         ),
+      },
+    );
+  }
+}
+
+/// Display-only credit read from the line at the end of the video's content
+/// ([VideoEvent.soundCredit]), for a sound whose own event is not at hand.
+///
+/// The line exists only for a sound whose licence asks for credit, so it
+/// always says the excerpt was edited.
+class _ContentCreditSection extends StatelessWidget {
+  const _ContentCreditSection({required this.credit});
+
+  final SoundCredit credit;
+
+  @override
+  Widget build(BuildContext context) {
+    return MetadataSection(
+      label: context.l10n.metadataSoundsLabel,
+      child: Row(
+        spacing: 16,
+        children: [
+          DivineIcon(
+            icon: DivineIconName.waveform,
+            color: context.vineColors.onSurfaceVariant,
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  credit.work,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: VineTheme.titleMediumFont(
+                    color: context.vineColors.primaryText,
+                  ),
+                ),
+                Text(
+                  [
+                    ?credit.license,
+                    context.l10n.soundCreditEdited,
+                  ].join(' · '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -371,7 +436,13 @@ class _SoundListItem extends ConsumerWidget {
                     ),
                   if (audio.licenseName case final license?)
                     Text(
-                      license,
+                      [
+                        license,
+                        // As on the video's sound pill: an Attribution
+                        // licence asks to say the excerpt was changed.
+                        if (audio.requiresAttribution)
+                          context.l10n.soundCreditEdited,
+                      ].join(' · '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: VineTheme.labelSmallFont(

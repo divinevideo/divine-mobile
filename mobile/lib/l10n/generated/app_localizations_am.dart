@@ -5475,6 +5475,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get soundViewSource => 'ምንጭ ይመልከቱ';
 
   @override
+  String get soundCreditEdited => 'የተስተካከለ';
+
+  @override
   String get soundCloseTooltip => 'ገጠመ';
 
   @override

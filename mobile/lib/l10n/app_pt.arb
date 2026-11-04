@@ -1902,6 +1902,7 @@
   "soundUnableToPreview": "Não é possível pré-visualizar o som - sem áudio disponível",
   "soundPreviewFailed": "Falha ao reproduzir pré-visualização. Tente novamente.",
   "soundViewSource": "Ver origem",
+  "soundCreditEdited": "editado",
   "soundCloseTooltip": "Fechar",
   "exploreNotExploreRoute": "Não é uma rota de explorar",
   "legalTitle": "Legal",

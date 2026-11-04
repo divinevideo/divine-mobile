@@ -5674,6 +5674,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get soundViewSource => 'Виж източника';
 
   @override
+  String get soundCreditEdited => 'редактиран';
+
+  @override
   String get soundCloseTooltip => 'Затвори';
 
   @override

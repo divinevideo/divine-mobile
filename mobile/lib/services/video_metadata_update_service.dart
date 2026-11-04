@@ -6,7 +6,11 @@ import 'dart:io';
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart'
-    show ClipSourceCredit, VideoEvent, clipSourceCreditTagMarker;
+    show
+        ClipSourceCredit,
+        VideoEvent,
+        clipSourceCreditTagMarker,
+        withSoundCreditLine;
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_metadata_update_error.dart';
@@ -462,8 +466,13 @@ class VideoMetadataUpdateService {
         );
       }
 
+      // An edit cannot change the sound, so its credit line stays as
+      // published; the editor never showed it.
       final content = withInspiredByContentReference(
-        editorState.description.trim(),
+        withSoundCreditLine(
+          editorState.description.trim(),
+          originalVideo.soundCredit?.line,
+        ),
         editorState.inspiredByNpubs,
       );
 

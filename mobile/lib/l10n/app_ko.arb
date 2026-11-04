@@ -1438,6 +1438,7 @@
   "soundUnableToPreview": "사운드를 미리 들을 수 없어요 - 오디오가 없어요",
   "soundPreviewFailed": "미리 듣기를 재생하지 못했어요. 다시 시도해보세요.",
   "soundViewSource": "원본 보기",
+  "soundCreditEdited": "편집됨",
   "soundCloseTooltip": "닫기",
   "exploreNotExploreRoute": "둘러보기 경로가 아니에요",
   "legalTitle": "법적 고지",

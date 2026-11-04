@@ -1902,6 +1902,7 @@
   "soundUnableToPreview": "Nie można odtworzyć podglądu dźwięku - brak dostępnego audio",
   "soundPreviewFailed": "Nie udało się odtworzyć podglądu. Spróbuj ponownie.",
   "soundViewSource": "Zobacz źródło",
+  "soundCreditEdited": "edytowano",
   "soundCloseTooltip": "Zamknij",
   "exploreNotExploreRoute": "Nie jest trasa eksploracji",
   "legalTitle": "Informacje prawne",

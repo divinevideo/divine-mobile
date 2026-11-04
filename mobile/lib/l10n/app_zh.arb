@@ -2658,6 +2658,7 @@
   "soundUnableToPreview": "无法预览声音——没有可用音频",
   "soundPreviewFailed": "预览播放失败，请重试。",
   "soundViewSource": "查看来源",
+  "soundCreditEdited": "已编辑",
   "soundCloseTooltip": "关闭",
   "exploreNotExploreRoute": "不是探索路由",
   "legalTitle": "法律信息",

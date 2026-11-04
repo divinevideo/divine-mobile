@@ -5538,6 +5538,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get soundViewSource => 'Lihat sumber';
 
   @override
+  String get soundCreditEdited => 'diedit';
+
+  @override
   String get soundCloseTooltip => 'Tutup';
 
   @override

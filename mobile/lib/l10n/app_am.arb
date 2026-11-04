@@ -2337,6 +2337,7 @@
   "soundUnableToPreview": "ድምጽን አስቀድሞ ማየት አልተቻለም - ምንም ኦዲዮ የለም።",
   "soundPreviewFailed": "ቅድመ እይታን ማጫወት አልተሳካም። እባክህ እንደገና ሞክር።",
   "soundViewSource": "ምንጭ ይመልከቱ",
+  "soundCreditEdited": "የተስተካከለ",
   "soundCloseTooltip": "ገጠመ",
   "exploreNotExploreRoute": "የአሰሳ መንገድ አይደለም።",
   "legalTitle": "ህጋዊ",

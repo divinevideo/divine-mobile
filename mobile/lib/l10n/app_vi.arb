@@ -2658,6 +2658,7 @@
   "soundUnableToPreview": "Không nghe thử được - không có audio",
   "soundPreviewFailed": "Không phát được bản nghe thử. Vui lòng thử lại.",
   "soundViewSource": "Xem nguồn",
+  "soundCreditEdited": "đã chỉnh sửa",
   "soundCloseTooltip": "Đóng",
   "exploreNotExploreRoute": "Không phải tuyến khám phá",
   "legalTitle": "Pháp lý",

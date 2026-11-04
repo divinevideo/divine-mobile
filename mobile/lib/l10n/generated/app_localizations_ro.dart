@@ -5779,6 +5779,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get soundViewSource => 'Vezi sursa';
 
   @override
+  String get soundCreditEdited => 'editat';
+
+  @override
   String get soundCloseTooltip => 'Închide';
 
   @override

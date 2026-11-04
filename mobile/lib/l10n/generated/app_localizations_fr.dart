@@ -5699,6 +5699,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get soundViewSource => 'Voir la source';
 
   @override
+  String get soundCreditEdited => 'modifié';
+
+  @override
   String get soundCloseTooltip => 'Fermer';
 
   @override

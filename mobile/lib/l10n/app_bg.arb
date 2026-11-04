@@ -2094,6 +2094,7 @@
   "soundUnableToPreview": "Не може да се визуализира звук - няма наличен звук",
   "soundPreviewFailed": "Неуспешно пускане на визуализация. Опитай пак.",
   "soundViewSource": "Виж източника",
+  "soundCreditEdited": "редактиран",
   "soundCloseTooltip": "Затвори",
   "exploreNotExploreRoute": "Не е маршрут за изследване",
   "legalTitle": "Законни",
