@@ -968,7 +968,13 @@ class DmRepository {
 
   /// How long a finished [_requeryBelowWindowIfDue] waits before the next.
   static const int _belowWindowRequeryIntervalSeconds = 86400;
+
+  /// The deepest [_requeryBelowWindowIfDue] reads below the live window's
+  /// start, however far below it the last finished run read.
   static const int _belowWindowRequeryMaxDepthSeconds = 30 * 86400;
+
+  /// How long [_requeryBelowWindowIfDue] waits after starting a run, finished
+  /// or not, before it starts another.
   static const int _belowWindowRequeryRetrySeconds = 3600;
 
   /// How long a catch-up may hold wire stamps back before the newest one
@@ -2053,8 +2059,7 @@ class DmRepository {
   ///
   /// [since] bounds the page from below. [onlyRelay] asks that one relay
   /// alone, on its pooled connection when the pool has one, instead of the
-  /// pool and [tempRelays]. `newGiftWraps` counts the gift wraps on the page
-  /// that had not been handled before and decrypted.
+  /// pool and [tempRelays].
   Future<_HistoryPage?> _fetchHistoryPage({
     required int until,
     required int limit,
@@ -2483,10 +2488,10 @@ class DmRepository {
         );
       }
       final outcome = answered
-          ? 'every relay answered'
+          ? 'every relay answered or refused for good'
           : 'not answered (inbox list read: ${inbox.conclusive}, messages: '
-                '$messagesAnswered, deletions: $deletionsAnswered), so the '
-                'next inbox open asks again';
+                '$messagesAnswered, deletions: $deletionsAnswered), so an '
+                'inbox open an hour or more later asks again';
       Log.info(
         'DM re-query below the window for ${pubkeyForLogs(pubkey)}: stamps '
         '$floor..$top, relays ${relays.length}, pages '
@@ -2498,7 +2503,7 @@ class DmRepository {
       );
     } on Object catch (e, stackTrace) {
       // Relay and IO failures are expected on flaky networks; the run is left
-      // unrecorded, so the next inbox open asks again.
+      // unrecorded, so an inbox open an hour or more later asks again.
       Log.warning(
         'DM re-query below the window did not finish for '
         '${pubkeyForLogs(pubkey)}: $e',

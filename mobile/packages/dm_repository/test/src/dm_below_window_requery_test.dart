@@ -69,9 +69,10 @@ bool _admits(nostr_filter.Filter filter, Event event) {
   return true;
 }
 
-/// A relay holding [stored] that answers REQs and queries the way NIP-01
-/// says, so a wrap outside a filter's window is simply never sent: no error,
-/// no `CLOSED`, no short page.
+/// The pool's relays, [stored] on [poolUrl] and [others] beside it, answering
+/// REQs and queries the way NIP-01 says, so a wrap outside a filter's window
+/// is simply never sent. Each test sets the caps, timeouts, failures and
+/// refusals it needs.
 class _Relay {
   _Relay(this.stored);
 
@@ -100,8 +101,8 @@ class _Relay {
   void Function(StoredEventsEnd)? onEnd;
   int handedOver = 0;
 
-  /// The most events one query answer carries, newest first: a relay's
-  /// result cap. `null` for no cap.
+  /// The most events one answer carries from a relay with no entry in
+  /// [capFor]: its result cap, newest first. `null` for no cap.
   int? cap;
 
   /// Whether a query asking a filter goes unanswered: no events, timed out.
@@ -165,8 +166,8 @@ class _Relay {
   /// Every filter this relay was asked, live or as a query.
   List<nostr_filter.Filter> get everyFilter => [...reqFilters, ...queryFilters];
 
-  /// Hands over the stored events every REQ so far admits, then ends the
-  /// batch.
+  /// Hands over what every REQ so far admits, from every relay, then ends
+  /// the batch.
   void sendStored() {
     for (final event in admitted(reqFilters)) {
       handedOver++;

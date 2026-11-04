@@ -64,12 +64,13 @@ Every DM table on the device, and what bounds it. Only one is bounded by code.
 | `removed_message_ids` | no | deliberately. A rumor id is exact evidence that a message is gone for good, so a later NIP-09 retraction naming it can be settled and a replay of it is not stored again. Kept for the account's lifetime and cleared only when the user deletes their data. Ids and a timestamp only, no content |
 | `outgoing_dms` | partly | deleted on successful send or user cancel; a permanently failed row is marked `failed` and kept for manual retry; a delivery the sender stopped for a member of a stored group message is kept as `cancelled` (the record behind "Not sent to everyone") until that member's wrap lands after all, the message's retraction is confirmed, the conversation is removed or the account is cleared. The exception is a one-to-one row addressed to its own sender, which is deleted when a retry reaches it and at the next sign-in (#8363) |
 | `dm_message_reactions` | no | removed with their conversation; NIP-09 and own-supersede are soft deletes |
-| `pending_gift_wraps` | **yes** | attempts cap plus `deleteExhausted`, run at the top of every retry pass |
-| `processed_gift_wraps` | no | history drains, and the daily re-query of the week below the live window (#8439), read the ledger to avoid re-decrypting terminal outcomes; pruning entries makes old reactions, deletions, unsupported kinds, and tombstone-suppressed wraps eligible for decryption again |
+| `pending_gift_wraps` | **yes** | attempts cap plus `deleteExhausted`, run at the top of every retry pass. A dropped wrap leaves no ledger row, so one that never decrypts is queued again whenever a relay read delivers it again: the live window's two-day overlap, or the re-query below it (#8439) |
+| `processed_gift_wraps` | no | history drains, and the re-query below the live window (at most daily, a week deep and up to thirty days after a long gap; #8439), read the ledger to avoid re-decrypting terminal outcomes; pruning entries makes old reactions, deletions, unsupported kinds, and tombstone-suppressed wraps eligible for decryption again |
 
 `processed_gift_wraps` is the odd one out: its sibling `pending_gift_wraps` is
 bounded, while the history drain continues to consult processed rows on later
-passes, and the re-query below the live window consults them once a day. The table stores outcomes that may have no message row (reactions,
+passes, and the re-query below the live window consults them up to once a day.
+The table stores outcomes that may have no message row (reactions,
 deletions, unsupported kinds, and messages suppressed by a removal tombstone),
 so those rows remain part of the dedup ledger while history can be replayed.
 Its long-term growth should be measured before changing that policy.

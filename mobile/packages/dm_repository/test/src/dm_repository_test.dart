@@ -6807,9 +6807,9 @@ void main() {
           //
           // Scope: this pins the window and what the relay does with it. The
           // receive pipeline downstream has its own tests, and
-          // `recordWireSeen`'s monotonicity is pinned in dm_sync_state_test —
-          // together they are what make the loss permanent rather than merely
-          // late.
+          // `recordWireSeen`'s monotonicity is pinned in dm_sync_state_test.
+          // The live window never asks for the victim again; the re-query
+          // below the window does, in dm_below_window_requery_test (#8439).
           const wireNewest = 1700000000;
           const since = wireNewest - 2 * 86400;
           // Published earlier than our newest processed wrap and delivered
