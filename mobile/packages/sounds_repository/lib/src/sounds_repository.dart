@@ -443,8 +443,8 @@ class SoundsRepository {
   };
 
   /// The ids of [originals] that a video by an account other than the
-  /// sound's own uses, or `null` when the lookup threw, timed out, reached no
-  /// relay or filled its limit, and so may have missed some.
+  /// sound's own uses, or `null` when the lookup threw an [Exception], timed
+  /// out, reached no relay or filled its limit, and so may have missed some.
   Future<Set<String>?> _usedByOtherAccounts(
     Map<String, AudioEvent> originals,
   ) async {
