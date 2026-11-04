@@ -6,6 +6,7 @@
 import 'dart:async';
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:meta/meta.dart';
 import 'package:models/models.dart'
     show AudioEvent, NIP71VideoKinds, VideoEvent, audioEventKind, searchTermsOf;
 import 'package:nostr_client/nostr_client.dart';
@@ -405,6 +406,7 @@ class SoundsRepository {
   /// come first. Costs one relay query when [sounds] holds any. When it
   /// fails, every one of them follows the rest: they are ranked down, not
   /// hidden.
+  @visibleForTesting
   Future<List<AudioEvent>> withUnusedOriginalsLast(
     List<AudioEvent> sounds,
   ) async {
