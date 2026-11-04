@@ -438,6 +438,24 @@ void main() {
 
       expect(reclaimed, hasLength(1));
     });
+
+    testWidgets('refuses a silent pick through the app silence check', (
+      tester,
+    ) async {
+      trimmer.silent = true;
+      await pump(
+        tester,
+        page: const AddSoundPage(),
+        overrides: pageOverrides(),
+      );
+
+      await pickFile(tester);
+
+      expect(find.text(l10n.soundsAddSilent), findsOneWidget);
+      expect(find.byKey(const Key('add_sound_save')), findsNothing);
+      expect(reclaimed, hasLength(1));
+      expect(librarySounds(), isEmpty);
+    });
   });
 
   group(AddSoundView, () {

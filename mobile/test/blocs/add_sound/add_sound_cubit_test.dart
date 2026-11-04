@@ -261,6 +261,24 @@ void main() {
         expect(reclaimed, isNot(contains(first.localFilePath)));
       });
 
+      test(
+        'abandons the copy when the account changes during the silence check',
+        () async {
+          isSilent = (_) async {
+            accountId = 'account-b';
+            return false;
+          };
+          final cubit = build();
+          addTearDown(cubit.close);
+
+          await cubit.pickFileAndImport();
+
+          expect(cubit.state.failure, AddSoundFailure.accountChanged);
+          expect(cubit.state.audio, isNull);
+          expect(reclaimed, equals([silenceChecked.single]));
+        },
+      );
+
       test('keeps the file when the silence check fails', () async {
         isSilent = (_) async => throw StateError('decoder gone');
         final cubit = build();
@@ -724,6 +742,22 @@ void main() {
     });
 
     group('close', () {
+      test('reclaims a copy whose silence check outlives the cubit', () async {
+        final checked = Completer<bool>();
+        isSilent = (_) => checked.future;
+        final cubit = build();
+
+        final importing = cubit.pickFileAndImport();
+        while (silenceChecked.isEmpty) {
+          await pumpEventQueue();
+        }
+        await cubit.close();
+        checked.complete(false);
+        await importing;
+
+        expect(reclaimed, equals([silenceChecked.single]));
+      });
+
       test('reclaims an unsaved copy', () async {
         final cubit = build();
         await cubit.pickFileAndImport();
