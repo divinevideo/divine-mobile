@@ -381,45 +381,46 @@ class VideoAudioPublisher {
           attribution: audioShareAttribution,
         );
 
-        if (extracted case _SoundPublished(eventId: final audioEventId)) {
-          // Format: ["e", <audio-event-id>, <relay-hint>, "audio"]
-          tags.add(['e', audioEventId, relayHint, 'audio']);
-          Log.info(
-            'Added audio reference e tag: $audioEventId',
-            name: _logName,
-            category: LogCategory.video,
-          );
-        } else if (extracted is _SoundSilent) {
-          // Not a degrade: the video plays nothing to share, so there is no
-          // sound for a retry to recover, and the creator lost nothing.
-          Log.info(
-            'Video audio is silent; publishing without a reusable sound',
-            name: _logName,
-            category: LogCategory.video,
-          );
-        } else {
-          // A transient extraction/upload failure degrades to a video-only
-          // publish rather than discarding an already-uploaded video over a
-          // glitch. The tag is not cosmetic — `allow_audio_reuse` is the
-          // standalone consent marker that `_canReuseSound` reads to offer
-          // in-app remixing off the video's own audio, with no Kind 1063
-          // involved — so the creator loses a feature they asked for, which
-          // is why this is reported rather than swallowed.
-          //
-          // Deliberately NOT the provider-credit bridge's rule: that block
-          // blocks when `allowAudioReuse` is true and degrades only when it
-          // is false, and this block is unreachable unless it is true. The
-          // two are disjoint. Rendered-audio extraction is treated
-          // differently on purpose — the audio it would publish is the
-          // video's own, so a retry can always reconstruct it, whereas a
-          // provider credit cannot be reconstructed after the fact.
-          reuseDegraded = true;
-          Log.warning(
-            'Reusable audio failed to publish; publishing the video without '
-            'it',
-            name: _logName,
-            category: LogCategory.video,
-          );
+        switch (extracted) {
+          case _SoundPublished(eventId: final audioEventId):
+            // Format: ["e", <audio-event-id>, <relay-hint>, "audio"]
+            tags.add(['e', audioEventId, relayHint, 'audio']);
+            Log.info(
+              'Added audio reference e tag: $audioEventId',
+              name: _logName,
+              category: LogCategory.video,
+            );
+          case _SoundSilent():
+            // Not a degrade: the video plays nothing to share, so there is no
+            // sound for a retry to recover, and the creator lost nothing.
+            Log.info(
+              'Video audio is silent; publishing without a reusable sound',
+              name: _logName,
+              category: LogCategory.video,
+            );
+          case _SoundFailed():
+            // A transient extraction/upload failure degrades to a video-only
+            // publish rather than discarding an already-uploaded video over a
+            // glitch. The tag is not cosmetic — `allow_audio_reuse` is the
+            // standalone consent marker that `_canReuseSound` reads to offer
+            // in-app remixing off the video's own audio, with no Kind 1063
+            // involved — so the creator loses a feature they asked for, which
+            // is why this is reported rather than swallowed.
+            //
+            // Deliberately NOT the provider-credit bridge's rule: that block
+            // blocks when `allowAudioReuse` is true and degrades only when it
+            // is false, and this block is unreachable unless it is true. The
+            // two are disjoint. Rendered-audio extraction is treated
+            // differently on purpose — the audio it would publish is the
+            // video's own, so a retry can always reconstruct it, whereas a
+            // provider credit cannot be reconstructed after the fact.
+            reuseDegraded = true;
+            Log.warning(
+              'Reusable audio failed to publish; publishing the video without '
+              'it',
+              name: _logName,
+              category: LogCategory.video,
+            );
         }
       } else {
         reuseDegraded = true;
@@ -500,10 +501,16 @@ class VideoAudioPublisher {
     switch (result) {
       case LocalAudioPublished():
         published = result;
-      case LocalAudioPublishFailed(failure: LocalAudioPublishFailure.silent):
-        return const _SoundSilent();
-      case LocalAudioPublishFailed():
-        return const _SoundFailed();
+      case LocalAudioPublishFailed(:final failure):
+        return switch (failure) {
+          LocalAudioPublishFailure.silent => const _SoundSilent(),
+          LocalAudioPublishFailure.invalidAttribution ||
+          LocalAudioPublishFailure.fileUnavailable ||
+          LocalAudioPublishFailure.notAuthenticated ||
+          LocalAudioPublishFailure.uploadFailed ||
+          LocalAudioPublishFailure.signingFailed ||
+          LocalAudioPublishFailure.relayRejected => const _SoundFailed(),
+        };
     }
     final signedAudioEvent = published.event;
 
