@@ -28,7 +28,20 @@ void main() {
 
     setUp(() {
       client = _MockNostrClient();
-      event = _FakeEvent();
+      event = Event('0' * 64, 10002, [
+        ['r', primaryRelay],
+      ], '');
+      when(() => client.publicKey).thenReturn(event.pubkey);
+      when(
+        () => client.queryEventsDetailed(
+          any(),
+          useCache: false,
+          requireAllRelaysSettled: true,
+          tempRelays: any(named: 'tempRelays'),
+        ),
+      ).thenAnswer(
+        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+      );
       targets = [primaryRelay, ...IndexerRelayConfig.defaultIndexers];
     });
 
@@ -40,6 +53,71 @@ void main() {
         ),
       ).thenAnswer((_) async => outcome);
     }
+
+    test(
+      'does not replace an existing relay list missed by discovery',
+      () async {
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+            tempRelays: any(named: 'tempRelays'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: [event], timedOut: false, noRelays: false),
+        );
+        stubOutcome(
+          PublishOutcome(
+            eventId: event.id,
+            acceptedBy: [indexer],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          ),
+        );
+
+        await NostrService.bootstrapCallbackFor(client)(event, targets);
+
+        verifyNever(
+          () => client.publishEventAwaitOk(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        );
+      },
+    );
+
+    test('does not bootstrap after an inconclusive relay read', () async {
+      when(
+        () => client.queryEventsDetailed(
+          any(),
+          useCache: false,
+          requireAllRelaysSettled: true,
+          tempRelays: any(named: 'tempRelays'),
+        ),
+      ).thenAnswer(
+        (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+      );
+      stubOutcome(
+        PublishOutcome(
+          eventId: event.id,
+          acceptedBy: [indexer],
+          rejectedBy: const {},
+          noResponseFrom: const [],
+        ),
+      );
+
+      expect(
+        await NostrService.bootstrapCallbackFor(client)(event, targets),
+        isFalse,
+      );
+      verifyNever(
+        () => client.publishEventAwaitOk(
+          any(),
+          targetRelays: any(named: 'targetRelays'),
+        ),
+      );
+    });
 
     test('reports not-published when only the Divine relay accepted', () async {
       // The caller records a permanent "already bootstrapped" flag on true,

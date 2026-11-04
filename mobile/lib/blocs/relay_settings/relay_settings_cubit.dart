@@ -111,11 +111,11 @@ class RelaySettingsCubit extends Cubit<RelaySettingsState> {
       refreshRelays();
       if (!success) {
         if (!_hasRelayConfigured(trimmed)) return AddRelayOutcome.failed;
-        return await _publishRelayListAfterLocalChange()
+        return await _publishRelayListAfterLocalChange(addedRelay: trimmed)
             ? AddRelayOutcome.addedConnectionPending
             : AddRelayOutcome.addedConnectionPendingLocalOnly;
       }
-      return await _publishRelayListAfterLocalChange()
+      return await _publishRelayListAfterLocalChange(addedRelay: trimmed)
           ? AddRelayOutcome.added
           : AddRelayOutcome.addedLocalOnly;
     } catch (e, stackTrace) {
@@ -136,7 +136,7 @@ class RelaySettingsCubit extends Cubit<RelaySettingsState> {
       if (!success && _hasRelayConfigured(relayUrl)) {
         return RemoveRelayOutcome.failed;
       }
-      return await _publishRelayListAfterLocalChange()
+      return await _publishRelayListAfterLocalChange(removedRelay: relayUrl)
           ? RemoveRelayOutcome.removed
           : RemoveRelayOutcome.removedLocalOnly;
     } catch (e, stackTrace) {
@@ -156,11 +156,15 @@ class RelaySettingsCubit extends Cubit<RelaySettingsState> {
         if (!_hasDefaultRelayConfigured()) {
           return RestoreDefaultRelayOutcome.failed;
         }
-        return await _publishRelayListAfterLocalChange()
+        return await _publishRelayListAfterLocalChange(
+              addedRelay: defaultRelayUrl,
+            )
             ? RestoreDefaultRelayOutcome.restoredConnectionPending
             : RestoreDefaultRelayOutcome.restoredConnectionPendingLocalOnly;
       }
-      return await _publishRelayListAfterLocalChange()
+      return await _publishRelayListAfterLocalChange(
+            addedRelay: defaultRelayUrl,
+          )
           ? RestoreDefaultRelayOutcome.restored
           : RestoreDefaultRelayOutcome.restoredLocalOnly;
     } catch (e, stackTrace) {
@@ -205,8 +209,14 @@ class RelaySettingsCubit extends Cubit<RelaySettingsState> {
     return state.relays.any((relay) => relayUrlsEquivalent(relay, relayUrl));
   }
 
-  Future<bool> _publishRelayListAfterLocalChange() async {
-    final result = await _relayListRepository.publishConfiguredRelayList();
+  Future<bool> _publishRelayListAfterLocalChange({
+    String? addedRelay,
+    String? removedRelay,
+  }) async {
+    final result = await _relayListRepository.publishConfiguredRelayList(
+      addedRelay: addedRelay,
+      removedRelay: removedRelay,
+    );
     final error = result.error;
     final stackTrace = result.stackTrace;
     if (error != null) {

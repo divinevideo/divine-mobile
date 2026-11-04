@@ -4,6 +4,7 @@ import 'package:db_client/db_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:meta/meta.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/models/nostr_signature_verification_policy.dart';
@@ -13,6 +14,7 @@ import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/relay_providers.dart';
+import 'package:openvine/repositories/relay_list_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service_factory.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
@@ -809,7 +811,29 @@ class NostrService extends _$NostrService {
   /// about whether the user became discoverable.
   @visibleForTesting
   static BootstrapRelayListCallback bootstrapCallbackFor(NostrClient client) {
-    return (event, targetRelays) async {
+    return (event, targetRelays) => serializeRelayListWrite(client, () async {
+      // Discovery cannot distinguish absence from failed indexers; only this
+      // complete relay read can authorize replacing an empty list.
+      final read = await client.queryEventsDetailed(
+        [
+          nostr_filter.Filter(
+            authors: [event.pubkey],
+            kinds: [EventKind.relayListMetadata],
+          ),
+        ],
+        useCache: false,
+        requireAllRelaysSettled: true,
+        tempRelays: targetRelays,
+      );
+      if (read.noRelays || read.timedOut) return false;
+      if (read.events.any(
+        (existing) =>
+            existing.pubkey == event.pubkey &&
+            existing.kind == EventKind.relayListMetadata,
+      )) {
+        return true;
+      }
+      if (client.publicKey != event.pubkey) return false;
       final outcome = await client.publishEventAwaitOk(
         event,
         targetRelays: targetRelays,
@@ -826,6 +850,6 @@ class NostrService extends _$NostrService {
         );
       }
       return acceptedByIndexer;
-    };
+    });
   }
 }
