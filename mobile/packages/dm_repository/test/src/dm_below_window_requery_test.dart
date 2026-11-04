@@ -699,6 +699,9 @@ void main() {
       expect(sync.belowWindowRequeryTop(_owner), isNull);
 
       relayAnswers = true;
+      await openInbox(relay);
+      expect(belowWindowReads(), afterFirst, reason: 'the run just started');
+
       await sync.setBelowWindowRequeryAttemptAt(_owner, now() - _hour + 60);
       await openInbox(relay);
       expect(belowWindowReads(), afterFirst, reason: 'within the hour');
@@ -786,6 +789,96 @@ void main() {
 
       expect(relay.queryFilters.where(belowWindow), isNotEmpty);
       expect(DmSyncState(prefs).belowWindowRequeryAt(_owner), isNull);
+    });
+
+    test('does not record a run whose message reads went unanswered', () async {
+      final relay = _Relay([inWindow])
+        ..timesOut = (filter) =>
+            belowWindow(filter) &&
+            !(filter.kinds?.contains(EventKind.eventDeletion) ?? false);
+
+      await openInbox(relay);
+
+      expect(
+        relay.queryFilters.where(
+          (f) =>
+              belowWindow(f) &&
+              (f.kinds?.contains(EventKind.eventDeletion) ?? false),
+        ),
+        isNotEmpty,
+        reason: 'the deletion reads were asked and answered',
+      );
+      expect(DmSyncState(prefs).belowWindowRequeryAt(_owner), isNull);
+    });
+
+    test(
+      'does not record a run whose deletion reads went unanswered',
+      () async {
+        final late = await wrapAt(wire: windowStart - 1, content: 'late');
+        final relay = _Relay([inWindow, late])
+          ..timesOut = (filter) =>
+              belowWindow(filter) &&
+              (filter.kinds?.contains(EventKind.eventDeletion) ?? false);
+
+        await openInbox(relay);
+
+        expect(await isStored(late), isTrue);
+        expect(DmSyncState(prefs).belowWindowRequeryAt(_owner), isNull);
+      },
+    );
+
+    test(
+      'does not record a run whose inbox-list read went unanswered',
+      () async {
+        final late = await wrapAt(wire: windowStart - 1, content: 'late');
+        final relay = _Relay([inWindow, late])
+          ..timesOut = (filter) =>
+              filter.kinds?.contains(EventKind.dmRelaysList) ?? false;
+
+        await openInbox(relay);
+
+        expect(await isStored(late), isTrue);
+        expect(DmSyncState(prefs).belowWindowRequeryAt(_owner), isNull);
+      },
+    );
+
+    test(
+      'keeps what an unanswered page carried, without recording the run',
+      () async {
+        final late = await wrapAt(wire: windowStart - 1, content: 'late');
+        final relay = _Relay([inWindow, late]);
+        relay
+          ..timesOut = belowWindow
+          ..timedOutWith = (filter) =>
+              relay.relayAnswer(_Relay.poolUrl, filter).events;
+
+        await openInbox(relay);
+
+        expect(await isStored(late), isTrue);
+        expect(DmSyncState(prefs).belowWindowRequeryAt(_owner), isNull);
+      },
+    );
+
+    test('records a run that stops at the page budget', () async {
+      // Two per answer, so each page past the first adds one message and the
+      // budget runs out above the oldest of them.
+      final messages = [
+        for (var i = 1; i <= DmHistoryDrainConfig.maxPages + 10; i++)
+          nip04At(createdAt: windowStart - 60 * i, content: 'message $i'),
+      ];
+      final relay = _Relay([inWindow, ...messages])..capFor[_Relay.poolUrl] = 2;
+
+      await openInbox(relay);
+
+      final messagePages = relay.queries.where(
+        (query) =>
+            query.filters.any(belowWindow) &&
+            !query.filters.any(
+              (f) => f.kinds?.contains(EventKind.eventDeletion) ?? false,
+            ),
+      );
+      expect(messagePages, hasLength(DmHistoryDrainConfig.maxPages));
+      expect(DmSyncState(prefs).belowWindowRequeryAt(_owner), isNotNull);
     });
 
     test('reports a read that fails with a programming error', () async {
