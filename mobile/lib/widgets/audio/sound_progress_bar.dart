@@ -25,7 +25,9 @@ class SoundProgressBar extends StatelessWidget {
               ColoredBox(color: context.vineColors.outlineDisabled),
               FractionallySizedBox(
                 alignment: AlignmentDirectional.centerStart,
-                widthFactor: progress,
+                // A position stream can overshoot its end or start below it,
+                // and the box asserts on a factor outside 0–1.
+                widthFactor: progress.clamp(0, 1),
                 child: ColoredBox(color: context.vineColors.accentPositive),
               ),
             ],
