@@ -5124,6 +5124,21 @@ class AppLocalizationsUr extends AppLocalizations {
       'Divine مواد کی رپورٹس پر 24 گھنٹوں کے اندر کارروائی کرے گا: مواد ہٹا کر اور قاعدہ توڑنے والا مواد دینے والے صارف کو نکال کر۔';
 
   @override
+  String get reportPrivateNotice =>
+      'This report goes privately to Divine’s moderation team. It isn’t posted publicly.';
+
+  @override
+  String get reportIncludeMessageTitle => 'یہ پیغام شامل کریں';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Divine کی موڈریشن ٹیم اسے دیکھے گی۔ یہ نجی رہے گا اور عوامی طور پر پوسٹ نہیں کیا جائے گا۔';
+
+  @override
+  String get reportMessageTooLong =>
+      'This message is too long to include. Turn off “Include this message” and try again.';
+
+  @override
   String get reportBlockUser => 'اس صارف کو بلاک کریں';
 
   @override

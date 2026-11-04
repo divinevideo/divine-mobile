@@ -1763,6 +1763,8 @@
   },
   "reportWhyReporting": "¿Por qué estás reportando este contenido?",
   "reportPolicyNotice": "Divine va a actuar sobre los reportes de contenido dentro de las 24 horas, removiendo el contenido y expulsando al usuario que lo publicó.",
+  "reportIncludeMessageTitle": "Incluir este mensaje",
+  "reportIncludeMessageDescription": "El equipo de moderación de Divine lo va a ver. Queda en privado y no se publica.",
   "reportBlockUser": "Bloquear a este usuario",
   "reportCancel": "Cancelar",
   "reportSubmit": "Reportar",

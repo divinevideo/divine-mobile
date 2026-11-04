@@ -5054,6 +5054,21 @@ class AppLocalizationsTr extends AppLocalizations {
       'Divine, içerik bildirimlerine 24 saat içinde içeriği kaldırarak ve söz konusu içeriği sağlayan kullanıcıyı çıkararak işlem yapar.';
 
   @override
+  String get reportPrivateNotice =>
+      'This report goes privately to Divine’s moderation team. It isn’t posted publicly.';
+
+  @override
+  String get reportIncludeMessageTitle => 'Bu mesajı ekle';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Divine moderasyon ekibi bunu görecek. Gizli kalır ve herkese açık olarak yayınlanmaz.';
+
+  @override
+  String get reportMessageTooLong =>
+      'This message is too long to include. Turn off “Include this message” and try again.';
+
+  @override
   String get reportBlockUser => 'Bu kullanıcıyı engelle';
 
   @override

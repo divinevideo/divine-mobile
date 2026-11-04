@@ -1756,6 +1756,8 @@
   },
   "reportWhyReporting": "Kenapa kamu melaporkan konten ini?",
   "reportPolicyNotice": "Divine akan menindak laporan konten dalam 24 jam dengan menghapus konten dan mengeluarkan pengguna yang memberikan konten yang melanggar.",
+  "reportIncludeMessageTitle": "Sertakan pesan ini",
+  "reportIncludeMessageDescription": "Tim moderasi Divine akan melihatnya. Pesannya tetap privat dan tidak diposting ke publik.",
   "reportBlockUser": "Blokir pengguna ini",
   "reportCancel": "Batal",
   "reportSubmit": "Laporkan",

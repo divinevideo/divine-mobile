@@ -2484,6 +2484,8 @@
   },
   "reportWhyReporting": "Mengapa anda melaporkan kandungan ini?",
   "reportPolicyNotice": "Divine akan mengambil tindakan terhadap laporan kandungan dalam masa 24 jam dengan mengalih keluar kandungan itu dan mengeluarkan pengguna yang menyediakan kandungan yang melanggar.",
+  "reportIncludeMessageTitle": "Sertakan mesej ini",
+  "reportIncludeMessageDescription": "Pasukan pemantauan Divine akan melihatnya. Mesej ini kekal peribadi dan tidak disiarkan kepada umum.",
   "reportBlockUser": "Sekat pengguna ini",
   "reportCancel": "Batal",
   "reportSubmit": "Laporkan",

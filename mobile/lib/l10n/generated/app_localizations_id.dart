@@ -5035,6 +5035,21 @@ class AppLocalizationsId extends AppLocalizations {
       'Divine akan menindak laporan konten dalam 24 jam dengan menghapus konten dan mengeluarkan pengguna yang memberikan konten yang melanggar.';
 
   @override
+  String get reportPrivateNotice =>
+      'This report goes privately to Divine’s moderation team. It isn’t posted publicly.';
+
+  @override
+  String get reportIncludeMessageTitle => 'Sertakan pesan ini';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Tim moderasi Divine akan melihatnya. Pesannya tetap privat dan tidak diposting ke publik.';
+
+  @override
+  String get reportMessageTooLong =>
+      'This message is too long to include. Turn off “Include this message” and try again.';
+
+  @override
   String get reportBlockUser => 'Blokir pengguna ini';
 
   @override

@@ -1951,6 +1951,8 @@
   },
   "reportWhyReporting": "Защо подаваш сигнал за това съдържание?",
   "reportPolicyNotice": "Divine ще преглежда сигналите за съдържание до 24 часа и при нужда ще премахва съдържание или ще блокира акаунта, който го е публикувал.",
+  "reportIncludeMessageTitle": "Включи това съобщение",
+  "reportIncludeMessageDescription": "Екипът по модерация на Divine ще го види. Остава поверително и не се публикува.",
   "reportBlockUser": "Блокирай този потребител",
   "reportCancel": "Отказ",
   "reportSubmit": "Докладвай",

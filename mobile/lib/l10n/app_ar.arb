@@ -1749,6 +1749,8 @@
   },
   "reportWhyReporting": "لماذا تُبلِّغ عن هذا المحتوى؟",
   "reportPolicyNotice": "ستتصرف Divine بشأن بلاغات المحتوى خلال 24 ساعة بإزالة المحتوى وإخراج المستخدم الذي قدَّم المحتوى المخالف.",
+  "reportIncludeMessageTitle": "تضمين هذه الرسالة",
+  "reportIncludeMessageDescription": "سيطّلع عليها فريق الإشراف في Divine. تبقى خاصة ولا تُنشر علنًا.",
   "reportBlockUser": "حظر هذا المستخدم",
   "reportCancel": "إلغاء",
   "reportSubmit": "إبلاغ",

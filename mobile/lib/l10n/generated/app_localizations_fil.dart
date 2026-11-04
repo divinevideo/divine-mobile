@@ -5146,6 +5146,21 @@ class AppLocalizationsFil extends AppLocalizations {
       'Aaksyunan ng Divine ang mga content report sa loob ng 24 oras sa pamamagitan ng pag-alis ng content at pag-eject sa user na nagbigay ng masamang content.';
 
   @override
+  String get reportPrivateNotice =>
+      'This report goes privately to Divine’s moderation team. It isn’t posted publicly.';
+
+  @override
+  String get reportIncludeMessageTitle => 'Isama ang mensaheng ito';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Makikita ito ng moderation team ng Divine. Mananatili itong private at hindi ito ipo-post sa publiko.';
+
+  @override
+  String get reportMessageTooLong =>
+      'This message is too long to include. Turn off “Include this message” and try again.';
+
+  @override
   String get reportBlockUser => 'I-block ang user na ito';
 
   @override

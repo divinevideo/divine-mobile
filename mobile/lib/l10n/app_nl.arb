@@ -1759,6 +1759,8 @@
   },
   "reportWhyReporting": "Waarom meld je deze inhoud?",
   "reportPolicyNotice": "Divine handelt binnen 24 uur op meldingen van inhoud door de inhoud te verwijderen en de gebruiker die de schendende inhoud plaatste eruit te zetten.",
+  "reportIncludeMessageTitle": "Dit bericht meesturen",
+  "reportIncludeMessageDescription": "Het moderatieteam van Divine krijgt het te zien. Het blijft privé en wordt niet openbaar geplaatst.",
   "reportBlockUser": "Deze gebruiker blokkeren",
   "reportCancel": "Annuleren",
   "reportSubmit": "Melden",

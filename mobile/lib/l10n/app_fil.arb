@@ -1337,6 +1337,8 @@
   "supportCouldNotOpenPage": "Hindi nabuksan ang {pageName}",
   "reportWhyReporting": "Bakit mo rine-report ang content na ito?",
   "reportPolicyNotice": "Aaksyunan ng Divine ang mga content report sa loob ng 24 oras sa pamamagitan ng pag-alis ng content at pag-eject sa user na nagbigay ng masamang content.",
+  "reportIncludeMessageTitle": "Isama ang mensaheng ito",
+  "reportIncludeMessageDescription": "Makikita ito ng moderation team ng Divine. Mananatili itong private at hindi ito ipo-post sa publiko.",
   "reportBlockUser": "I-block ang user na ito",
   "reportCancel": "Kanselahin",
   "reportSubmit": "I-report",

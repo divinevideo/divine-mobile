@@ -2484,6 +2484,8 @@
   },
   "reportWhyReporting": "你为什么要举报该内容？",
   "reportPolicyNotice": "Divine 会在 24 小时内处理内容举报：移除违规内容，并将发布违规内容的用户清出平台。",
+  "reportIncludeMessageTitle": "附上这条消息",
+  "reportIncludeMessageDescription": "Divine 审核团队会看到这条消息。它会保持私密，不会公开发布。",
   "reportBlockUser": "屏蔽该用户",
   "reportCancel": "取消",
   "reportSubmit": "举报",

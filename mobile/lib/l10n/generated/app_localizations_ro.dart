@@ -5261,6 +5261,21 @@ class AppLocalizationsRo extends AppLocalizations {
       'Divine va acționa asupra rapoartelor de conținut în 24 de ore eliminând conținutul și excluțând utilizatorul care a furnizat conținutul ofensator.';
 
   @override
+  String get reportPrivateNotice =>
+      'This report goes privately to Divine’s moderation team. It isn’t posted publicly.';
+
+  @override
+  String get reportIncludeMessageTitle => 'Include acest mesaj';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Echipa de moderare Divine îl va vedea. Rămâne privat și nu este publicat.';
+
+  @override
+  String get reportMessageTooLong =>
+      'This message is too long to include. Turn off “Include this message” and try again.';
+
+  @override
   String get reportBlockUser => 'Blochează acest utilizator';
 
   @override

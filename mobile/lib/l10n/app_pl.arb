@@ -1759,6 +1759,8 @@
   },
   "reportWhyReporting": "Dlaczego zgłaszasz tę treść?",
   "reportPolicyNotice": "Divine zareaguje na zgłoszenia treści w ciągu 24 godzin, usuwając treść i wyrzucając użytkownika, który dostarczył obraźliwą treść.",
+  "reportIncludeMessageTitle": "Dołącz tę wiadomość",
+  "reportIncludeMessageDescription": "Zobaczy ją zespół moderacji Divine. Pozostanie prywatna i nie zostanie opublikowana.",
   "reportBlockUser": "Zablokuj tego użytkownika",
   "reportCancel": "Anuluj",
   "reportSubmit": "Zgłoś",

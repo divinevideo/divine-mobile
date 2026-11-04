@@ -1749,6 +1749,8 @@
   },
   "reportWhyReporting": "このコンテンツを報告する理由は?",
   "reportPolicyNotice": "Divine はコンテンツの報告に24時間以内に対応して、問題のあるコンテンツを削除し、違反ユーザーを排除するよ。",
+  "reportIncludeMessageTitle": "このメッセージを含める",
+  "reportIncludeMessageDescription": "このメッセージは Divine のモデレーションチームが確認します。非公開のままで、一般に公開されることはありません。",
   "reportBlockUser": "このユーザーをブロック",
   "reportCancel": "キャンセル",
   "reportSubmit": "報告",

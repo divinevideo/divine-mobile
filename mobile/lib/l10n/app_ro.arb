@@ -1759,6 +1759,8 @@
   },
   "reportWhyReporting": "De ce raportezi acest conținut?",
   "reportPolicyNotice": "Divine va acționa asupra rapoartelor de conținut în 24 de ore eliminând conținutul și excluțând utilizatorul care a furnizat conținutul ofensator.",
+  "reportIncludeMessageTitle": "Include acest mesaj",
+  "reportIncludeMessageDescription": "Echipa de moderare Divine îl va vedea. Rămâne privat și nu este publicat.",
   "reportBlockUser": "Blochează acest utilizator",
   "reportCancel": "Anulează",
   "reportSubmit": "Raportează",

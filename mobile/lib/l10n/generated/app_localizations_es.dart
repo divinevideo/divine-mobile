@@ -5170,6 +5170,21 @@ class AppLocalizationsEs extends AppLocalizations {
       'Divine va a actuar sobre los reportes de contenido dentro de las 24 horas, removiendo el contenido y expulsando al usuario que lo publicó.';
 
   @override
+  String get reportPrivateNotice =>
+      'This report goes privately to Divine’s moderation team. It isn’t posted publicly.';
+
+  @override
+  String get reportIncludeMessageTitle => 'Incluir este mensaje';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'El equipo de moderación de Divine lo va a ver. Queda en privado y no se publica.';
+
+  @override
+  String get reportMessageTooLong =>
+      'This message is too long to include. Turn off “Include this message” and try again.';
+
+  @override
   String get reportBlockUser => 'Bloquear a este usuario';
 
   @override

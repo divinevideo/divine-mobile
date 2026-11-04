@@ -4991,6 +4991,21 @@ class AppLocalizationsAm extends AppLocalizations {
       'Divine ይዘቱን በማስወገድ እና አጸያፊ ይዘቱን ያቀረበውን ተጠቃሚ በማስወጣት የይዘት ሪፖርቶችን በ24 ሰዓታት ውስጥ ይሰራል።';
 
   @override
+  String get reportPrivateNotice =>
+      'This report goes privately to Divine’s moderation team. It isn’t posted publicly.';
+
+  @override
+  String get reportIncludeMessageTitle => 'ይህን መልእክት ያካትቱ';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'የDivine ቁጥጥር ቡድን ያየዋል። በግል ይቆያል፣ በይፋም አይለጠፍም።';
+
+  @override
+  String get reportMessageTooLong =>
+      'This message is too long to include. Turn off “Include this message” and try again.';
+
+  @override
   String get reportBlockUser => 'ይህን ተጠቃሚ አግድ';
 
   @override

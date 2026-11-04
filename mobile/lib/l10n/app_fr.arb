@@ -1759,6 +1759,8 @@
   },
   "reportWhyReporting": "Pourquoi signales-tu ce contenu ?",
   "reportPolicyNotice": "Divine agira sur les signalements de contenu dans les 24 heures en retirant le contenu et en excluant l'utilisateur qui a fourni le contenu en infraction.",
+  "reportIncludeMessageTitle": "Inclure ce message",
+  "reportIncludeMessageDescription": "L'équipe de modération de Divine le verra. Il reste privé et n'est pas publié.",
   "reportBlockUser": "Bloquer cet utilisateur",
   "reportCancel": "Annuler",
   "reportSubmit": "Signaler",

@@ -1756,6 +1756,8 @@
   },
   "reportWhyReporting": "Bu içeriği neden bildiriyorsun?",
   "reportPolicyNotice": "Divine, içerik bildirimlerine 24 saat içinde içeriği kaldırarak ve söz konusu içeriği sağlayan kullanıcıyı çıkararak işlem yapar.",
+  "reportIncludeMessageTitle": "Bu mesajı ekle",
+  "reportIncludeMessageDescription": "Divine moderasyon ekibi bunu görecek. Gizli kalır ve herkese açık olarak yayınlanmaz.",
   "reportBlockUser": "Bu kullanıcıyı engelle",
   "reportCancel": "İptal",
   "reportSubmit": "Bildir",

@@ -1759,6 +1759,8 @@
   },
   "reportWhyReporting": "Warum meldest du diesen Inhalt?",
   "reportPolicyNotice": "Divine reagiert innerhalb von 24 Stunden auf Inhaltsmeldungen, indem der Inhalt entfernt und der Nutzer, der den problematischen Inhalt bereitgestellt hat, ausgeschlossen wird.",
+  "reportIncludeMessageTitle": "Diese Nachricht mitsenden",
+  "reportIncludeMessageDescription": "Das Moderationsteam von Divine bekommt sie zu sehen. Sie bleibt privat und wird nicht veröffentlicht.",
   "reportBlockUser": "Diesen Nutzer blockieren",
   "reportCancel": "Abbrechen",
   "reportSubmit": "Melden",

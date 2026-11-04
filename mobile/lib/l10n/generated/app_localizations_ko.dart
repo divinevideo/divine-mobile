@@ -4828,6 +4828,21 @@ class AppLocalizationsKo extends AppLocalizations {
       'Divine은 24시간 이내에 신고된 콘텐츠를 조치하여 콘텐츠를 삭제하고 문제가 된 콘텐츠를 제공한 사용자를 퇴출해요.';
 
   @override
+  String get reportPrivateNotice =>
+      'This report goes privately to Divine’s moderation team. It isn’t posted publicly.';
+
+  @override
+  String get reportIncludeMessageTitle => '이 메시지 포함하기';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Divine 검수팀이 이 메시지를 보게 돼요. 비공개로 유지되고, 공개적으로 게시되지 않아요.';
+
+  @override
+  String get reportMessageTooLong =>
+      'This message is too long to include. Turn off “Include this message” and try again.';
+
+  @override
   String get reportBlockUser => '이 사용자 차단';
 
   @override

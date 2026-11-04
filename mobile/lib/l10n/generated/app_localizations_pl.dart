@@ -5257,6 +5257,21 @@ class AppLocalizationsPl extends AppLocalizations {
       'Divine zareaguje na zgłoszenia treści w ciągu 24 godzin, usuwając treść i wyrzucając użytkownika, który dostarczył obraźliwą treść.';
 
   @override
+  String get reportPrivateNotice =>
+      'This report goes privately to Divine’s moderation team. It isn’t posted publicly.';
+
+  @override
+  String get reportIncludeMessageTitle => 'Dołącz tę wiadomość';
+
+  @override
+  String get reportIncludeMessageDescription =>
+      'Zobaczy ją zespół moderacji Divine. Pozostanie prywatna i nie zostanie opublikowana.';
+
+  @override
+  String get reportMessageTooLong =>
+      'This message is too long to include. Turn off “Include this message” and try again.';
+
+  @override
   String get reportBlockUser => 'Zablokuj tego użytkownika';
 
   @override

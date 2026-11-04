@@ -1759,6 +1759,8 @@
   },
   "reportWhyReporting": "Perché stai segnalando questo contenuto?",
   "reportPolicyNotice": "Divine agirà sulle segnalazioni di contenuti entro 24 ore rimuovendo il contenuto ed espellendo l'utente che ha fornito il contenuto offensivo.",
+  "reportIncludeMessageTitle": "Includi questo messaggio",
+  "reportIncludeMessageDescription": "Il team di moderazione di Divine lo vedrà. Resta privato e non viene pubblicato.",
   "reportBlockUser": "Blocca questo utente",
   "reportCancel": "Annulla",
   "reportSubmit": "Segnala",

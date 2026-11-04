@@ -1759,6 +1759,8 @@
   },
   "reportWhyReporting": "Varför rapporterar du det här innehållet?",
   "reportPolicyNotice": "Divine agerar på innehållsrapporter inom 24 timmar genom att ta bort innehållet och stänga av användaren som tillhandahöll det felaktiga innehållet.",
+  "reportIncludeMessageTitle": "Ta med det här meddelandet",
+  "reportIncludeMessageDescription": "Modereringsteamet på Divine får se det. Det förblir privat och publiceras inte.",
   "reportBlockUser": "Blockera den här användaren",
   "reportCancel": "Avbryt",
   "reportSubmit": "Rapportera",
