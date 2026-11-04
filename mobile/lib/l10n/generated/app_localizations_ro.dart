@@ -5401,7 +5401,9 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'De ';
+  String listByAuthor(String name) {
+    return 'de $name';
+  }
 
   @override
   String get listDone => 'Gata';

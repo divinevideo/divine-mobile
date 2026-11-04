@@ -5206,7 +5206,9 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'Bởi ';
+  String listByAuthor(String name) {
+    return 'bởi $name';
+  }
 
   @override
   String get listDone => 'Xong';

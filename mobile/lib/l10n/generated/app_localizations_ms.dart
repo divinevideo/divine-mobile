@@ -5243,7 +5243,9 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'Oleh ';
+  String listByAuthor(String name) {
+    return 'oleh $name';
+  }
 
   @override
   String get listDone => 'Siap';

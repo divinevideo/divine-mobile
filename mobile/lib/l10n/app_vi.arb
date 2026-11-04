@@ -2528,7 +2528,7 @@
       }
     }
   },
-  "listByAuthorPrefix": "Bởi ",
+  "listByAuthor": "bởi {name}",
   "listDone": "Xong",
   "listErrorLoading": "Lỗi khi tải danh sách",
   "listCreateNewList": "Tạo danh sách mới",

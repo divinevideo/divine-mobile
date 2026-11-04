@@ -5291,7 +5291,9 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'Por ';
+  String listByAuthor(String name) {
+    return 'por $name';
+  }
 
   @override
   String get listDone => 'Concluído';

@@ -1,5 +1,5 @@
-// ABOUTME: Hero block of a people list: title, member, video and loop totals,
-// ABOUTME: the description, and a preview of the members who post the most.
+// ABOUTME: Hero block of a people list: title, author byline, member, video and
+// ABOUTME: loop totals, the description, and a preview of the top posters.
 
 import 'package:count_formatter/count_formatter.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/people_lists/view/people_list_member_avatar.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/widgets/list_author_byline.dart';
 import 'package:openvine/widgets/vanished_account_identity.dart';
 
 /// How many members the hero piles up before "View all".
@@ -16,8 +17,9 @@ const kPeopleListPreviewMembers = 5;
 /// How far each piled avatar sits behind the one before it.
 const _previewOverlap = 8.0;
 
-/// The block scrolled with a people list's video grid: name, the stats line,
-/// the description and the members preview that opens the full roster.
+/// The block scrolled with a people list's video grid: name, the author's
+/// byline, the stats line, the description and the members preview that
+/// opens the full roster.
 class PeopleListHeroHeader extends StatelessWidget {
   const PeopleListHeroHeader({
     required this.name,
@@ -27,6 +29,8 @@ class PeopleListHeroHeader extends StatelessWidget {
     this.description,
     this.totalVideos,
     this.totalLoops,
+    this.authorPubkey,
+    this.onAuthorTap,
     super.key,
   });
 
@@ -44,6 +48,12 @@ class PeopleListHeroHeader extends StatelessWidget {
   /// Totals across the members with stats; `null` hides the figure.
   final int? totalVideos;
   final double? totalLoops;
+
+  /// Author to credit as lowercase hex; `null` for the viewer's own list.
+  final String? authorPubkey;
+
+  /// Opens the author's profile from the byline.
+  final VoidCallback? onAuthorTap;
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +73,11 @@ class PeopleListHeroHeader extends StatelessWidget {
               ),
             ),
           ),
+          if (authorPubkey case final authorPubkey?)
+            ListAuthorByline(
+              authorPubkey: authorPubkey,
+              onTap: () => onAuthorTap?.call(),
+            ),
           _StatsLine(
             memberCount: memberCount,
             totalVideos: totalVideos,

@@ -24,13 +24,13 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/utils/share_list_link.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/list_author_byline.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:openvine/widgets/list_owner_action_tile.dart';
 import 'package:openvine/widgets/list_video_player_mode.dart';
 import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:openvine/widgets/share_list_button.dart';
-import 'package:openvine/widgets/user_name.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Owner actions offered by the `...` bottom sheet.
@@ -757,8 +757,8 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   }
 }
 
-/// Hero block scrolled with the grid: list title, video count, description
-/// and the creator/visibility attribution.
+/// Hero block scrolled with the grid: list title, the creator's byline,
+/// video count, description and, for an owned list, its visibility.
 class _ListHeroHeader extends StatelessWidget {
   const _ListHeroHeader({
     required this.name,
@@ -798,6 +798,11 @@ class _ListHeroHeader extends StatelessWidget {
               color: context.vineColors.primaryText,
             ),
           ),
+          if (authorPubkey != null)
+            ListAuthorByline(
+              authorPubkey: authorPubkey,
+              onTap: () => onAuthorTap?.call(authorPubkey),
+            ),
           Text(
             context.l10n.listVideoCount(videoCount),
             style: VineTheme.labelLargeFont(
@@ -811,12 +816,7 @@ class _ListHeroHeader extends StatelessWidget {
                 color: context.vineColors.secondaryText,
               ),
             ),
-          if (authorPubkey != null)
-            _ListAuthorAttribution(
-              authorPubkey: authorPubkey,
-              onTap: () => onAuthorTap?.call(authorPubkey),
-            )
-          else if (isPublic != null)
+          if (authorPubkey == null && isPublic != null)
             Text(
               isPublic
                   ? context.l10n.listVisibilityPublic
@@ -826,48 +826,6 @@ class _ListHeroHeader extends StatelessWidget {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-/// Tappable "By {creator}" row for a list the viewer does not own.
-class _ListAuthorAttribution extends StatelessWidget {
-  const _ListAuthorAttribution({
-    required this.authorPubkey,
-    required this.onTap,
-  });
-
-  final String authorPubkey;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              context.l10n.listByAuthorPrefix,
-              style: VineTheme.bodySmallFont(
-                color: context.vineColors.secondaryText,
-              ),
-            ),
-            Flexible(
-              child: UserName.fromPubKey(
-                authorPubkey,
-                style: VineTheme.bodySmallFont(
-                  color: context.vineColors.primaryText,
-                ).copyWith(fontWeight: FontWeight.w500),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

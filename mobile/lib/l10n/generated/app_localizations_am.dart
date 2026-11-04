@@ -5113,7 +5113,9 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'በ';
+  String listByAuthor(String name) {
+    return 'በ$name';
+  }
 
   @override
   String get listDone => 'ተከናውኗል';

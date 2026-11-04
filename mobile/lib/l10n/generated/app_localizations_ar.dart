@@ -5238,7 +5238,9 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'بقلم ';
+  String listByAuthor(String name) {
+    return 'بقلم $name';
+  }
 
   @override
   String get listDone => 'تم';

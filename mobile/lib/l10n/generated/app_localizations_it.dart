@@ -5312,7 +5312,9 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get listByAuthorPrefix => 'Di ';
+  String listByAuthor(String name) {
+    return 'di $name';
+  }
 
   @override
   String get listDone => 'Fatto';
