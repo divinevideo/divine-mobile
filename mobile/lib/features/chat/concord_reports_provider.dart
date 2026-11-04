@@ -23,14 +23,24 @@ final concordReportsProvider = Provider<ConcordReports?>((ref) {
   final auth = ref.watch(authServiceProvider);
   final account = auth.currentPublicKeyHex;
   if (account == null) return null;
+  var active = true;
+  ref.onDispose(() {
+    active = false;
+  });
+  bool canSubmit() =>
+      active &&
+      catalog.ready &&
+      auth.isAuthenticated &&
+      auth.currentPublicKeyHex == account;
+  void requireCurrentSession() {
+    if (!canSubmit()) throw StateError('Room session changed');
+  }
+
   return ConcordReports(
+    canSubmit: canSubmit,
     url: Uri.parse(concordReportsUrl),
     signer: (template) async {
-      if (!catalog.ready ||
-          !auth.isAuthenticated ||
-          auth.currentPublicKeyHex != account) {
-        throw StateError('Room session changed');
-      }
+      requireCurrentSession();
       final signer = auth.currentIdentity;
       if (signer == null) throw StateError('Room signer unavailable');
       final signed = await signer.signEvent(
@@ -44,16 +54,21 @@ final concordReportsProvider = Provider<ConcordReports?>((ref) {
           createdAt: template['created_at'] as int,
         ),
       );
+      // An external signer can finish after logout or provider teardown.
+      requireCurrentSession();
       if (signed == null) throw StateError('Report signature was declined');
       return signed.toJson();
     },
     post: (url, body, headers) async {
+      requireCurrentSession();
       final client = http.Client();
       try {
         final request = http.Request('POST', url)
           ..followRedirects = false
           ..headers.addAll(headers)
           ..body = body;
+        // Keep the final lifetime check beside dispatch, without an await.
+        requireCurrentSession();
         final response = await http.Response.fromStream(
           await client.send(request),
         ).timeout(const Duration(seconds: 15));

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:concord_protocol/concord_protocol.dart';
@@ -6,7 +7,7 @@ import 'package:test/test.dart';
 
 void main() {
   test(
-    'room report signs the exact HTTP body and configured endpoint with fresh authentication',
+    'room report binds fresh authentication to the exact body and endpoint',
     () async {
       final templates = <Map<String, dynamic>>[];
       final requests = <String>[];
@@ -97,4 +98,38 @@ void main() {
       throwsFormatException,
     );
   });
+  test(
+    'a delayed report signature cannot outlive its account or provider',
+    () async {
+      for (final switched in [true, false]) {
+        final signature = Completer<Map<String, dynamic>>();
+        var account = '11' * 32;
+        var active = true;
+        var requests = 0;
+        final reports = ConcordReports(
+          url: Uri.parse('https://reports.example/v1/reports'),
+          canSubmit: () => active && account == '11' * 32,
+          signer: (_) => signature.future,
+          post: (u, b, h) async {
+            requests++;
+            return {'caseId': 'must-not-submit'};
+          },
+        );
+        final request = reports.submit(
+          communityId: '22' * 32,
+          channelId: '33' * 32,
+          rumorId: '44' * 32,
+          reason: 'Spam',
+        );
+        if (switched) {
+          account = '55' * 32;
+        } else {
+          active = false;
+        }
+        signature.complete(<String, dynamic>{});
+        await expectLater(request, throwsStateError);
+        expect(requests, 0);
+      }
+    },
+  );
 }

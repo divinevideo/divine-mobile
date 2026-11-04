@@ -18,6 +18,7 @@ class ConcordReports {
     required this.url,
     required this.signer,
     required this.post,
+    this.canSubmit,
     int Function()? now,
   }) : _now = now ?? (() => DateTime.now().millisecondsSinceEpoch ~/ 1000) {
     if (url.scheme != 'https' ||
@@ -32,6 +33,10 @@ class ConcordReports {
   final Uri url;
   final SealSigner signer;
   final ConcordReportPost post;
+
+  /// Synchronous lifetime fence, checked before signing and HTTP dispatch.
+  /// An external signer response never extends the originating session.
+  final bool Function()? canSubmit;
   final int Function() _now;
 
   Future<String> submit({
@@ -48,6 +53,9 @@ class ConcordReports {
         reason.trim().isEmpty ||
         reason.length > 2048) {
       throw ArgumentError('Invalid community report');
+    }
+    if (canSubmit?.call() == false) {
+      throw StateError('Report session is no longer active');
     }
     final body = jsonEncode({
       'target': {
@@ -72,6 +80,9 @@ class ConcordReports {
         ['nonce', nonce],
       ],
     });
+    if (canSubmit?.call() == false) {
+      throw StateError('Report session changed while signing');
+    }
     final response = await post(url, body, {
       'content-type': 'application/json',
       'authorization':
