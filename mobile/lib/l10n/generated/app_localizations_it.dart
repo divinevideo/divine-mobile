@@ -15906,7 +15906,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get messagesPublicRoomsDisclosure =>
-      'These rooms are public. Anyone with access can read your messages.';
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
 
   @override
   String get messagesRoomRetiredDraft =>

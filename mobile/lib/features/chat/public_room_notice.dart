@@ -1,4 +1,4 @@
-// ABOUTME: Shared public-test-room disclosure in the room list and conversation.
+// ABOUTME: Shared public-room disclosure in the room list and conversation.
 // ABOUTME: Keeps the privacy boundary visible using Divine's adaptive surfaces.
 
 import 'package:divine_ui/divine_ui.dart';

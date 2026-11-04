@@ -26163,10 +26163,10 @@ abstract class AppLocalizations {
   /// **'Watch video'**
   String get creatorHighlightWatch;
 
-  /// Privacy notice for the real public community rooms.
+  /// Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture.
   ///
   /// In en, this message translates to:
-  /// **'These rooms are public. Anyone with access can read your messages.'**
+  /// **'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.'**
   String get messagesPublicRoomsDisclosure;
 
   /// Status for an unconfirmed message encrypted with an earlier room epoch. It cannot be retried as its old carrier.
