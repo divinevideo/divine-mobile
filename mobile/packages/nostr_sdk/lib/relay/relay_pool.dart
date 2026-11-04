@@ -155,9 +155,10 @@ class RelayPool {
   final Set<String> _authRejected = {};
 
   /// Relay url -> the challenge its current socket last sent, read only beside
-  /// [_authRejected]. strfry sends one challenge per connection and repeats
-  /// it with every refused REQ, and an AUTH it rejected for that challenge is
-  /// rejected again (#9467).
+  /// [_authRejected] and [_authHandshakeStartedAt]. strfry sends one challenge
+  /// per connection and repeats it with every refused REQ, so a repeat is
+  /// signed only when no AUTH for it is pending within [authHandshakeWindow]
+  /// or finally rejected (#9467).
   final Map<String, String> _authChallenge = {};
 
   /// Refusal categories of an AUTH rejection that do not land a relay in
@@ -2557,6 +2558,13 @@ class RelayPool {
           log('🔐 ${relay.url} already rejected AUTH for this challenge');
           // What a fresh rejection would drop: frames parked since the last.
           _rejectAuthRequiredPublishesForRelay(relay, '');
+          return;
+        }
+        // The AUTH already being signed or answered for this challenge
+        // settles whatever this repeat was sent for.
+        if (_authChallenge[relay.url] == challenge &&
+            _hasLiveAuthHandshake(relay)) {
+          log('🔐 ${relay.url} repeated the challenge of its pending AUTH');
           return;
         }
         _authChallenge[relay.url] = challenge;

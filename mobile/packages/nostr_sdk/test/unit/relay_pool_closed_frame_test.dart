@@ -1105,6 +1105,154 @@ void main() {
 
         expect(authFramesSent(relay), equals(1));
       });
+
+      test('is signed again once its unanswered AUTH has outlived '
+          '${RelayPool.authHandshakeWindow}', () async {
+        final relay = await addRelay(LocalNostrSigner(privateKey));
+        await relay.deliver(['AUTH', challenge]);
+        await Future<void>.delayed(RelayPool.authHandshakeWindow * 1.2);
+
+        await relay.deliver(['AUTH', challenge]);
+
+        expect(authFramesSent(relay), equals(2));
+      });
+    });
+
+    group('an AUTH challenge the relay repeats while its AUTH is still '
+        'outstanding', () {
+      const privateKey =
+          '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
+      const challenge = 'connection-challenge';
+      const refusal =
+          'ERROR: auth-required: requested filter requires authentication';
+
+      late _SlowFirstAuthSigner signer;
+      late Nostr nostr;
+      late _ControlledQueryRelay gated;
+
+      int authFramesSent() =>
+          gated.sentMessages.where((m) => m.first == 'AUTH').length;
+
+      Future<QueryResult> readDms() => nostr.readEvents(
+        [
+          {
+            'kinds': [1059],
+          },
+        ],
+        requireAllRelaysSettled: true,
+        timeout: const Duration(seconds: 30),
+      );
+
+      setUp(() async {
+        signer = _SlowFirstAuthSigner(privateKey);
+        nostr = Nostr(signer, [], dummyTempRelay);
+        gated = _ControlledQueryRelay('wss://gated.example');
+        expect(await nostr.relayPool.add(gated), isTrue);
+      });
+
+      /// Two reads strfry refuses while the signer still works on the first
+      /// AUTH: it challenges before each refusal, with the same string.
+      Future<(Future<QueryResult>, Future<QueryResult>)>
+      refuseTwoReads() async {
+        final first = readDms();
+        final firstId = await gated.awaitPendingQuery();
+        final second = readDms();
+        final secondId = await gated.awaitPendingQuery();
+        expect(secondId, isNot(firstId));
+
+        final firstSignature = gated.deliver(['AUTH', challenge]);
+        await pumpEventQueue();
+        await gated.deliver(['CLOSED', firstId, refusal]);
+        await gated.deliver(['AUTH', challenge]);
+        await gated.deliver(['CLOSED', secondId, refusal]);
+
+        signer.releaseFirstAuth.complete();
+        await firstSignature;
+        return (first, second);
+      }
+
+      test('is not signed again, and both refusals end as restricted once '
+          'that AUTH is rejected', () async {
+        final (first, second) = await refuseTwoReads();
+        expect(authFramesSent(), equals(1));
+
+        await gated.deliver([
+          'OK',
+          gated.capturedAuthEventId,
+          false,
+          'error: relay needs serviceUrl to be configured before AUTH can work',
+        ]);
+
+        for (final read in [first, second]) {
+          final result = await read.timeout(
+            const Duration(seconds: 2),
+            onTimeout: () => fail('the read outlived the AUTH rejection'),
+          );
+          expect(result.closedRelayReasons, {
+            'wss://gated.example': 'restricted',
+          });
+        }
+        expect(authFramesSent(), equals(1));
+      });
+
+      test('is not signed again, and both reads are replayed once that AUTH '
+          'succeeds', () async {
+        final (first, second) = await refuseTwoReads();
+        expect(authFramesSent(), equals(1));
+
+        await gated.deliver(['OK', gated.capturedAuthEventId, true, '']);
+        await gated.awaitReqCount(4);
+        final replayed = gated.sentMessages
+            .where((m) => m.first == 'REQ')
+            .skip(2)
+            .map((m) => m[1] as String)
+            .toList();
+        expect(replayed, hasLength(2));
+        for (final subId in replayed) {
+          await gated.deliver(['EOSE', subId]);
+        }
+
+        for (final read in [first, second]) {
+          final result = await read.timeout(const Duration(seconds: 2));
+          expect(result.endedBy, QueryEnd.complete);
+          expect(result.closedRelayReasons, isEmpty);
+        }
+        expect(authFramesSent(), equals(1));
+      });
+
+      test('is not signed again after that AUTH was sent and before the '
+          'relay answers it', () async {
+        // A local key signs before the next frame arrives, so strfry's
+        // repeats land while the relay is still answering the sent AUTH.
+        signer.releaseFirstAuth.complete();
+        final first = readDms();
+        final firstId = await gated.awaitPendingQuery();
+        final second = readDms();
+        final secondId = await gated.awaitPendingQuery();
+        await gated.deliver(['AUTH', challenge]);
+        expect(authFramesSent(), equals(1));
+        await gated.deliver(['CLOSED', firstId, refusal]);
+        await gated.deliver(['AUTH', challenge]);
+        await gated.deliver(['CLOSED', secondId, refusal]);
+        expect(authFramesSent(), equals(1));
+
+        await gated.deliver([
+          'OK',
+          gated.capturedAuthEventId,
+          false,
+          'error: relay needs serviceUrl to be configured before AUTH can work',
+        ]);
+
+        for (final read in [first, second]) {
+          final result = await read.timeout(
+            const Duration(seconds: 2),
+            onTimeout: () => fail('the read outlived the AUTH rejection'),
+          );
+          expect(result.closedRelayReasons, {
+            'wss://gated.example': 'restricted',
+          });
+        }
+      });
     });
 
     test('auth-required CLOSED keeps the query for post-AUTH replay', () async {
