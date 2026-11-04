@@ -272,8 +272,9 @@ class _InviteVideoContent extends StatelessWidget {
 /// It watches with the video's full collaborator list, as the video's own
 /// surfaces do: the repository keys its state by video address alone, so a
 /// narrower list would replace their subscription and drop their answers.
-/// With no video, no invitee, or an invitee the video no longer tags, there is
-/// nothing to watch and the action area gets no relay answer.
+/// With no video, a video that is not the invite's, no invitee, or an invitee
+/// the video no longer tags, there is nothing to watch and the action area
+/// gets no relay answer.
 class _InviteRelayStatusScope extends ConsumerWidget {
   const _InviteRelayStatusScope({
     required this.invite,
