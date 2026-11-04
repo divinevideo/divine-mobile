@@ -33,6 +33,7 @@ import 'package:openvine/blocs/sound_requests/sound_requests_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
+import 'package:openvine/models/collaborator_invite.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/dm_clip_tag.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -2219,6 +2220,11 @@ class _MessageList extends StatelessWidget {
               builder: (author) => CollaboratorInviteCard(
                 invite: invite,
                 isSent: isSent,
+                collaboratorPubkey: CollaboratorInvite.collaboratorPubkeyFor(
+                  isSent: isSent,
+                  currentPubkey: currentPubkey,
+                  counterpartyPubkeys: participantPubkeys,
+                ),
                 senderDisplayName: isSent
                     ? null
                     : author?.name ?? senderDisplayName,
