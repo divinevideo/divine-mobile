@@ -925,6 +925,10 @@ void main() {
       const sourceDTag = 'source-video';
       const namedSoundId =
           'f6789012345678901234567890abcdef1234567890123456789012abcde12345';
+      const reuseVideoId =
+          '06789012345678901234567890abcdef1234567890123456789012abcde12345';
+      const secondUnusedId =
+          '16789012345678901234567890abcdef1234567890123456789012abcde12345';
       const sourceAddress = '34236:$testPubkey1:$sourceDTag';
 
       AudioEvent sound(String id, {String? title, String? source}) =>
@@ -1145,10 +1149,6 @@ void main() {
         test(
           'moves unnamed sounds no other account used after the rest',
           () async {
-            const reuseVideoId =
-                '06789012345678901234567890abcdef1234567890123456789012abcde12345';
-            const secondUnusedId =
-                '16789012345678901234567890abcdef1234567890123456789012abcde12345';
             when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
               (_) async => answered([
                 video(
