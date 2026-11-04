@@ -4,12 +4,15 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('SoundLibraryService', () {
     test('parseManifest creates sounds from JSON', () {
       const manifestJson = '''
@@ -112,6 +115,22 @@ void main() {
         );
       },
     );
+
+    test('legacy bundled sounds remain loadable for saved drafts', () async {
+      // Drafts persist asset URLs, so removing a sound from the picker must
+      // not remove the file an existing draft needs when it renders.
+      const legacyAssetNames = [
+        'sad_violin_sound_effect_hd_shorts_sounde_15_xO-y4s.mp3',
+        'use_headphones_png_for_reels_shorts_vira_06_aTR9TI.mp3',
+        'use_headphones_png_for_reels_shorts_vira_15_aTR9TI.mp3',
+      ];
+
+      for (final name in legacyAssetNames) {
+        final assetPath = 'assets/sounds/sound-bot/$name';
+        final bytes = await rootBundle.load(assetPath);
+        expect(bytes.lengthInBytes, greaterThan(0), reason: assetPath);
+      }
+    });
 
     test('real manifest bundles no silent MP3 sounds', () async {
       final manifestFile = File('assets/sounds/sounds_manifest.json');
