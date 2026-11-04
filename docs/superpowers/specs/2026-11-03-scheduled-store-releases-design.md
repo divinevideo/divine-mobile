@@ -154,10 +154,11 @@ root-level script that `codemagic.yaml` runs. It excludes Markdown,
 `mobile/docs/`, and test-only directories. Docs-only and test-only merges don't
 cost a Mac build. The path list lives beside the coordinator with its own tests.
 
-**Failed builds** are retried once on the next eligible tick, reusing the
-candidate's reservation. After a second failure for the same candidate and
-platform, the coordinator waits for a newer candidate, and the run summary
-reports the failure.
+**Failed builds** are retried once on the next eligible tick. The retry reuses
+the candidate's reservation only if the first attempt failed before
+`shorebird release` (see Build identifiers). After a second failure for the
+same candidate and platform, the coordinator waits for a newer candidate, and
+the run summary reports the failure.
 
 ## Source pinning
 
@@ -240,11 +241,18 @@ Build identifiers and provenance still pin each artifact to its exact source.
   ledger and tries the next number, a bounded number of times.
 - The coordinator passes a reservation key
   (`scheduled/<platform>/<candidate-sha>`) to scheduled builds. A retry with the
-  same key reuses its reservation, version and number, as long as that number
-  never reached the store. If the store already has it, the retry fails closed
-  instead of rebuilding under the same identity: the coordinator should have
-  found the upload. Manual builds use `manual/<codemagic-build-id>`, so a manual
-  build running beside a scheduled one never shares a number.
+  same key reuses its reservation, version and number, as long as nothing was
+  recorded under that identity: no Shorebird release, no provenance record,
+  and no store upload. The Shorebird release preflight refuses a second
+  release of the same `<version>+<build>`, and provenance is create-only, so a
+  build that failed during or after `shorebird release` has spent its number
+  even when nothing reached the store. Its retry reserves a new number under
+  the same key. A refused Play upload is the exception: it is retried without
+  rebuilding (see Google Play). If the store already has the number, the retry
+  fails closed instead of rebuilding under the same identity: the coordinator
+  should have found the upload. Manual builds use
+  `manual/<codemagic-build-id>`, so a manual build running beside a scheduled
+  one never shares a number.
 - The allocator writes `SHOREBIRD_BUILD_NAME`, `SHOREBIRD_BUILD_NUMBER`, and
   `SHOREBIRD_RELEASE_VERSION` to the existing `*_release.env`. Then the
   preflights, `shorebird release`, provenance, and the GitHub publisher all see
@@ -364,7 +372,9 @@ where a review starts between the status read and commit.
 
 - **Internal uploads** need no review, so they have no Apple-style cap. They
   still perform a guarded edit commit. If Play refuses the commit because
-  another review is in progress, the upload is deferred and retried.
+  another review is in progress, the upload is deferred and retried with the
+  same AAB. It is never rebuilt: the build has already created the Shorebird
+  release and provenance record for its `versionCode`.
 - **Production promotion** checks every tick and promotes only when all of these
   hold:
   - The Android level is `production`.
@@ -549,7 +559,10 @@ Cases to test with fakes:
     is missing.
 - **Builds**:
   - A scheduled or manual build is already running.
-  - A failed build is retried once and reuses its reservation.
+  - A build that failed before `shorebird release` is retried once and reuses
+    its reservation.
+  - A build that failed during or after `shorebird release` is retried under a
+    new reservation, never under its spent number.
   - A retry whose number already reached the store fails closed.
 - **Allocation**:
   - Concurrent manual and scheduled allocation get distinct numbers.
@@ -579,6 +592,7 @@ Cases to test with fakes:
   - An editable version record is reused.
 - **Play**:
   - `CHANGES_ALREADY_IN_REVIEW` on an internal upload and on promotion.
+  - A refused internal upload is retried with the same AAB, not rebuilt.
   - A review starts between the status read and the commit.
   - Any other commit error stops the queue until acknowledged.
   - No promotion happened in the trailing 24 hours.
