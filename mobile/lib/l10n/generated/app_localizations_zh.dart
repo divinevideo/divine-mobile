@@ -13241,6 +13241,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get verifyOneTapBadge => '一键';
 
   @override
+  String verifyConnectSignInLifetime(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return 'Sign-in links last $_temp0. After that, sign in again to keep the link.';
+  }
+
+  @override
   String verifyConnectOauthExplainer(String platform) {
     return '登录 $platform，剩下的交给我们。不会发布任何内容。';
   }

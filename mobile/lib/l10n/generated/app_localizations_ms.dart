@@ -14089,6 +14089,17 @@ class AppLocalizationsMs extends AppLocalizations {
   String get verifyOneTapBadge => 'Satu ketik';
 
   @override
+  String verifyConnectSignInLifetime(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return 'Sign-in links last $_temp0. After that, sign in again to keep the link.';
+  }
+
+  @override
   String verifyConnectOauthExplainer(String platform) {
     return 'Log masuk ke $platform, kami uruskan yang selebihnya. Tiada apa-apa disiarkan.';
   }

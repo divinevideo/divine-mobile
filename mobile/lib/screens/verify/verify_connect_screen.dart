@@ -275,6 +275,19 @@ class _ConnectForm extends StatelessWidget {
               color: context.vineColors.mutedText,
             ),
           ),
+          // Shown only when the verifier reports a lifetime for this
+          // platform. Platforms whose links last until unlinked omit the
+          // field (Bluesky, once divine-identify-verification-service#90
+          // lands), so the notice goes away there without an app change.
+          if (state.platform.signinExpiresAfterDays case final days?) ...[
+            const SizedBox(height: 8),
+            Text(
+              l10n.verifyConnectSignInLifetime(days),
+              style: VineTheme.bodySmallFont(
+                color: context.vineColors.mutedText,
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           if (state.platform.key == 'bluesky') ...[
             // Same key as the copy in the proof block below: this field moves

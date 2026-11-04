@@ -14262,6 +14262,17 @@ class AppLocalizationsEs extends AppLocalizations {
   String get verifyOneTapBadge => 'Un toque';
 
   @override
+  String verifyConnectSignInLifetime(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return 'Sign-in links last $_temp0. After that, sign in again to keep the link.';
+  }
+
+  @override
   String verifyConnectOauthExplainer(String platform) {
     return 'Iniciá sesión en $platform y nosotros hacemos el resto. No se publica nada.';
   }

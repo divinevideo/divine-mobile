@@ -749,6 +749,125 @@ void main() {
     });
   });
 
+  group('$VerifyConnectView sign-in lifetime notice', () {
+    const lasting30 = VerifierPlatform(
+      key: 'bluesky',
+      label: 'Bluesky',
+      supported: true,
+      oauth: true,
+      signinExpiresAfterDays: 30,
+    );
+    late VerifyConnectCubit cubit;
+
+    tearDown(() async {
+      await cubit.close();
+    });
+
+    Future<AppLocalizations> pump(
+      WidgetTester tester, {
+      required VerifierPlatform platform,
+      bool oauthAvailable = true,
+      String? replacingIdentity,
+    }) async {
+      cubit = VerifyConnectCubit(
+        repository: _MockIdentityClaimsRepository(),
+        pubkey: _pubkey,
+        platform: platform,
+        oauthReturnUrl: _returnUrl,
+        analytics: const NoOpAnalyticsEventSink(),
+        launchOAuth: (_) async => null,
+        replacingIdentity: replacingIdentity,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: VineTheme.theme,
+          home: BlocProvider<VerifyConnectCubit>.value(
+            value: cubit,
+            child: VerifyConnectView(
+              npub: _npub,
+              oauthAvailable: oauthAvailable,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      return lookupAppLocalizations(const Locale('en'));
+    }
+
+    testWidgets('says how many days the verifier reports', (tester) async {
+      final l10n = await pump(tester, platform: lasting30);
+
+      expect(
+        find.text(l10n.verifyConnectSignInLifetime(30)),
+        findsOneWidget,
+      );
+      expect(
+        l10n.verifyConnectSignInLifetime(30),
+        startsWith('Sign-in links last 30 days.'),
+      );
+    });
+
+    testWidgets('uses the singular for one day', (tester) async {
+      final l10n = await pump(
+        tester,
+        platform: const VerifierPlatform(
+          key: 'bluesky',
+          label: 'Bluesky',
+          supported: true,
+          oauth: true,
+          signinExpiresAfterDays: 1,
+        ),
+      );
+
+      expect(
+        find.text(l10n.verifyConnectSignInLifetime(1)),
+        findsOneWidget,
+      );
+      expect(
+        l10n.verifyConnectSignInLifetime(1),
+        startsWith('Sign-in links last 1 day.'),
+      );
+    });
+
+    testWidgets('shows nothing when the verifier reports no lifetime', (
+      tester,
+    ) async {
+      final l10n = await pump(
+        tester,
+        platform: const VerifierPlatform(
+          key: 'bluesky',
+          label: 'Bluesky',
+          supported: true,
+          oauth: true,
+        ),
+      );
+
+      expect(find.text(l10n.verifyConnectOauthCta('Bluesky')), findsOne);
+      expect(find.textContaining('Sign-in links last'), findsNothing);
+    });
+
+    testWidgets('shows nothing when sign-in is not showing', (tester) async {
+      await pump(tester, platform: lasting30, oauthAvailable: false);
+
+      expect(find.textContaining('Sign-in links last'), findsNothing);
+    });
+
+    testWidgets('shows while signing in again', (tester) async {
+      final l10n = await pump(
+        tester,
+        platform: lasting30,
+        replacingIdentity: 'alice.bsky.social',
+      );
+
+      expect(
+        find.text(l10n.verifyConnectSignInLifetime(30)),
+        findsOneWidget,
+      );
+    });
+  });
+
   group('$VerifyConnectView after a sign-in returns', () {
     late _MockIdentityClaimsRepository repository;
     late VerifyConnectCubit cubit;

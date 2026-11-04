@@ -614,6 +614,7 @@ void main() {
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
   // Verify: renewing a sign-in link in place; translation debt.
+  'verifyConnectSignInLifetime',
   'verifySignInAgain',
   'verifySignInAgainSemanticLabel',
   'verifyStatusAccountChanged',

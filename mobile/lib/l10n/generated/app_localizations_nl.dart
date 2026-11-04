@@ -14165,6 +14165,17 @@ class AppLocalizationsNl extends AppLocalizations {
   String get verifyOneTapBadge => 'Eén tik';
 
   @override
+  String verifyConnectSignInLifetime(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return 'Sign-in links last $_temp0. After that, sign in again to keep the link.';
+  }
+
+  @override
   String verifyConnectOauthExplainer(String platform) {
     return 'Log in bij $platform, de rest doen wij. Er wordt niets gepost.';
   }

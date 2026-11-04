@@ -13423,6 +13423,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get verifyOneTapBadge => '한 번 탭';
 
   @override
+  String verifyConnectSignInLifetime(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return 'Sign-in links last $_temp0. After that, sign in again to keep the link.';
+  }
+
+  @override
   String verifyConnectOauthExplainer(String platform) {
     return '$platform에 로그인하면 나머지는 우리가 처리해. 아무것도 게시되지 않아.';
   }
