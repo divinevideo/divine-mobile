@@ -16,14 +16,23 @@ import 'package:openvine/features/chat/chat_draft_cache.dart';
 import 'package:openvine/features/chat/chat_message_tile.dart';
 import 'package:openvine/features/chat/concord_reports_provider.dart';
 import 'package:openvine/features/chat/public_room_notice.dart';
+import 'package:openvine/l10n/content_filter_reason_localizations.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mentions/mention_text_editing.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_input_bar.dart';
+import 'package:openvine/services/content_moderation_types.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/mentions/mention_overlay.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+const List<ContentFilterReason> _roomReportReasons = [
+  ContentFilterReason.spam,
+  ContentFilterReason.harassment,
+  ContentFilterReason.violence,
+  ContentFilterReason.sexualContent,
+];
 
 /// Native conversation for the Concord POC selected from Messages.
 class ChatScreen extends ConsumerStatefulWidget {
@@ -91,14 +100,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     final reason = await VineBottomSheetSelectionMenu.show(
       context: context,
       title: Text(context.l10n.reportWhyReporting),
+      // Moderators get Divine's stable reason label, not the reporter's
+      // translated wording.
       options: [
-        for (final label in [
-          context.l10n.reportReasonSpam,
-          context.l10n.reportReasonHarassment,
-          context.l10n.reportReasonViolence,
-          context.l10n.reportReasonSexualContent,
-        ])
-          VineBottomSheetSelectionOptionData(label: label, value: label),
+        for (final choice in _roomReportReasons)
+          VineBottomSheetSelectionOptionData(
+            label: context.l10n.reportReasonTitle(choice),
+            value: contentFilterReasonToNip32Label(choice),
+          ),
       ],
     );
     if (reason == null || !mounted) return;

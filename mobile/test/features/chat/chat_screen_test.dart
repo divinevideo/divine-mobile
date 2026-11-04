@@ -182,6 +182,7 @@ void main() {
           'channelId': channel,
           'rumorId': message.id,
         });
+        expect(submitted!['reason'], 'NS-spam');
         expect(
           find.text('Thank you for helping keep Divine safe.'),
           findsOneWidget,
