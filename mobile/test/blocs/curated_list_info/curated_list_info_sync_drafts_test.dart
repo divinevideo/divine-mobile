@@ -61,6 +61,9 @@ void main() {
             allowedCollaborators: any(named: 'allowedCollaborators'),
             onLocalSaved: any(named: 'onLocalSaved'),
             onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
           ),
         ).thenAnswer(
           (_) async => const CuratedListUpdateResult.privateListFull(),
@@ -151,6 +154,9 @@ void main() {
             allowedCollaborators: any(named: 'allowedCollaborators'),
             onLocalSaved: any(named: 'onLocalSaved'),
             onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
           ),
         ).thenAnswer((_) async => const CuratedListUpdateResult.saved());
         final cubit = editor(service, saved);
@@ -174,6 +180,9 @@ void main() {
             isCollaborative: true,
             allowedCollaborators: [carol],
             onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
           ),
         ).called(1);
       },
@@ -226,6 +235,9 @@ void main() {
             allowedCollaborators: any(named: 'allowedCollaborators'),
             onLocalSaved: any(named: 'onLocalSaved'),
             onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
           ),
         ).thenAnswer((_) async => const CuratedListUpdateResult.saved());
         final cubit = editor(service, saved);
@@ -487,6 +499,9 @@ void main() {
           allowedCollaborators: any(named: 'allowedCollaborators'),
           onLocalSaved: any(named: 'onLocalSaved'),
           onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+          previousAllowedCollaborators: any(
+            named: 'previousAllowedCollaborators',
+          ),
         ),
       ).thenAnswer((_) async => const CuratedListUpdateResult.failed());
       final cubit = editor(service, saved);
@@ -619,6 +634,9 @@ void main() {
               allowedCollaborators: any(named: 'allowedCollaborators'),
               onLocalSaved: any(named: 'onLocalSaved'),
               onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+              previousAllowedCollaborators: any(
+                named: 'previousAllowedCollaborators',
+              ),
             ),
           ).thenAnswer((_) async {
             if (accepted) current = list(isPublic: false, pending: false);

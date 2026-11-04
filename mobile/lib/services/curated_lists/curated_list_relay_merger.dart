@@ -112,8 +112,13 @@ class CuratedListRelayMerger {
         return;
       }
 
-      if (event.createdAt >
-          existingList.updatedAt.millisecondsSinceEpoch ~/ 1000) {
+      final existingSecond =
+          existingList.updatedAt.millisecondsSinceEpoch ~/ 1000;
+      if (event.createdAt > existingSecond ||
+          (event.createdAt == existingSecond &&
+              !existingList.pendingRepublish &&
+              existingList.nostrEventId != null &&
+              event.id.compareTo(existingList.nostrEventId!) < 0)) {
         Log.debug(
           'Updating existing list from relay: ${curatedList.name}',
           name: 'CuratedListService',

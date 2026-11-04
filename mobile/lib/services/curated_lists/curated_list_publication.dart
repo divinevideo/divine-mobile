@@ -24,16 +24,21 @@ extension CuratedListPublication on CuratedListService {
     )) {
       return false;
     }
-    final published = await _publisher.publish(
-      sourceList,
-      signedRetry: signedRetry,
-      confirmed: confirmed,
-      onPublicationUnconfirmed: onPublicationUnconfirmed,
-    );
-    if (!published && isCurrentSession) {
-      _cacheStore.refreshUnchangedLists(_lists);
+    _inFlightListPublications.add(sourceList.authorScopedId);
+    try {
+      final published = await _publisher.publish(
+        sourceList,
+        signedRetry: signedRetry,
+        confirmed: confirmed,
+        onPublicationUnconfirmed: onPublicationUnconfirmed,
+      );
+      if (!published && isCurrentSession) {
+        _cacheStore.refreshUnchangedLists(_lists);
+      }
+      return published;
+    } finally {
+      _inFlightListPublications.remove(sourceList.authorScopedId);
     }
-    return published;
   }
 
   Future<bool> _persistPublication(
@@ -93,48 +98,53 @@ extension CuratedListPublication on CuratedListService {
     );
 
     for (final list in stranded) {
-      final saved = await _serializeListOperation<bool>(list.id, () async {
-        final currentOwner = _relayGateway.currentAuthenticatedPubkey();
-        if (currentOwner == null ||
-            currentOwner != owner ||
-            !_isCurrent(owner)) {
-          return false;
-        }
-        var current = getListById(list.authorScopedId);
-        if (current == null) return false;
-        if (!_cacheStore.hasUnambiguousOwnerEvidence(current)) return false;
-        if (!_relayEvidence.allows(current)) return true;
-        // An ACKed permission target is completed by the visible Sync now
-        // action, never silently through a new edit or startup publication.
-        if (current.hasPendingPermissionRecovery) return true;
-        if (current.id == defaultListId &&
-            !_defaultAuthority.authorizeCreation(
-              current.copyWith(pubkey: currentOwner),
-            )) {
-          return true;
-        }
-        if (current.nostrEventId != null && !current.pendingRepublish) {
-          await _publisher.retryPlaintextRedactions(current.authorScopedId);
-          return _isCurrent(owner);
-        }
-        if (_isUnpublishedLocalList(current)) {
-          final currentId = current.id;
-          final currentIndex = _listIndex(currentId);
-          if (currentIndex == -1) return false;
-          final source = current;
-          current = current.copyWith(pubkey: currentOwner);
-          _lists[currentIndex] = current;
-          if (!await _saveLists(
-                ownershipClaims: {current.authorScopedId: source},
-              ) ||
+      final saved = await _serializeListOperation<bool>(
+        list.id,
+        () async {
+          final currentOwner = _relayGateway.currentAuthenticatedPubkey();
+          if (currentOwner == null ||
+              currentOwner != owner ||
               !_isCurrent(owner)) {
             return false;
           }
-        }
-        if (current.pubkey != currentOwner) return false;
-        await _publishListToNostr(current, confirmed: true);
-        return _isCurrent(owner);
-      }, cancelled: false);
+          var current = getListById(list.authorScopedId);
+          if (current == null) return false;
+          if (!_cacheStore.hasUnambiguousOwnerEvidence(current)) return false;
+          if (!_relayEvidence.allows(current)) return true;
+          // An ACKed permission target is completed by the visible Sync now
+          // action, never silently through a new edit or startup publication.
+          if (current.hasPendingPermissionRecovery) return true;
+          if (current.id == defaultListId &&
+              !_defaultAuthority.authorizeCreation(
+                current.copyWith(pubkey: currentOwner),
+              )) {
+            return true;
+          }
+          if (current.nostrEventId != null && !current.pendingRepublish) {
+            await _publisher.retryPlaintextRedactions(current.authorScopedId);
+            return _isCurrent(owner);
+          }
+          if (_isUnpublishedLocalList(current)) {
+            final currentId = current.id;
+            final currentIndex = _listIndex(currentId);
+            if (currentIndex == -1) return false;
+            final source = current;
+            current = current.copyWith(pubkey: currentOwner);
+            _lists[currentIndex] = current;
+            if (!await _saveLists(
+                  ownershipClaims: {current.authorScopedId: source},
+                ) ||
+                !_isCurrent(owner)) {
+              return false;
+            }
+          }
+          if (current.pubkey != currentOwner) return false;
+          await _publishListToNostr(current, confirmed: true);
+          return _isCurrent(owner);
+        },
+        cancelled: false,
+        recovering: true,
+      );
       if (!saved) return false;
     }
     return true;
@@ -196,5 +206,6 @@ extension CuratedListPublication on CuratedListService {
       );
     },
     cancelled: false,
+    recovering: true,
   );
 }

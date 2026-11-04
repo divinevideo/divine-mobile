@@ -131,6 +131,9 @@ void main() {
           allowedCollaborators: any(named: 'allowedCollaborators'),
           onLocalSaved: any(named: 'onLocalSaved'),
           onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+          previousAllowedCollaborators: any(
+            named: 'previousAllowedCollaborators',
+          ),
         ),
       ).thenAnswer((invocation) {
         (invocation.namedArguments[#onLocalSaved] as void Function()?)?.call();
@@ -966,6 +969,9 @@ void main() {
                 onPublicationUnconfirmed: any(
                   named: 'onPublicationUnconfirmed',
                 ),
+                previousAllowedCollaborators: any(
+                  named: 'previousAllowedCollaborators',
+                ),
               ),
             ).thenAnswer(
               (_) async => const CuratedListUpdateResult.privateListFull(),
@@ -1020,6 +1026,9 @@ void main() {
               allowedCollaborators: any(named: 'allowedCollaborators'),
               onLocalSaved: any(named: 'onLocalSaved'),
               onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+              previousAllowedCollaborators: any(
+                named: 'previousAllowedCollaborators',
+              ),
             ),
           ).thenAnswer((_) => answer.future);
           final outcomes = <ListInfoSheetOutcome>[];
@@ -1059,6 +1068,9 @@ void main() {
               allowedCollaborators: any(named: 'allowedCollaborators'),
               onLocalSaved: any(named: 'onLocalSaved'),
               onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+              previousAllowedCollaborators: any(
+                named: 'previousAllowedCollaborators',
+              ),
             ),
           ).thenAnswer((invocation) async {
             (invocation.namedArguments[#onPublicationUnconfirmed]
@@ -1101,6 +1113,9 @@ void main() {
               allowedCollaborators: any(named: 'allowedCollaborators'),
               onLocalSaved: any(named: 'onLocalSaved'),
               onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+              previousAllowedCollaborators: any(
+                named: 'previousAllowedCollaborators',
+              ),
             ),
           ).thenAnswer((invocation) {
             unconfirmed =
@@ -1460,6 +1475,9 @@ void main() {
               allowedCollaborators: const [],
               onLocalSaved: any(named: 'onLocalSaved'),
               onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+              previousAllowedCollaborators: any(
+                named: 'previousAllowedCollaborators',
+              ),
             ),
           ).called(1);
         },
@@ -1634,6 +1652,9 @@ void main() {
             allowedCollaborators: const [],
             onLocalSaved: any(named: 'onLocalSaved'),
             onPublicationUnconfirmed: any(named: 'onPublicationUnconfirmed'),
+            previousAllowedCollaborators: any(
+              named: 'previousAllowedCollaborators',
+            ),
           ),
         ).called(1);
       });

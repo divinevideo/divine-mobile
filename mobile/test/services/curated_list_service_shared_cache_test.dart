@@ -14,6 +14,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/committed_list_account.dart';
+import '../helpers/curated_list_publish_stubs.dart';
 
 class _Auth extends Mock implements AuthService {}
 
@@ -34,6 +35,7 @@ void main() {
     setUpAll(() => registerFallbackValue(Event(owner, 30005, [], '')));
 
     void stubActor(_Auth auth, _Client client, String pubkey, int revision) {
+      stubAuthoritativeListRead(client);
       when(() => auth.isAuthenticated).thenReturn(true);
       when(() => auth.currentPublicKeyHex).thenReturn(pubkey);
       Future<Event?> sign(Invocation invocation) async => Event.fromJson({

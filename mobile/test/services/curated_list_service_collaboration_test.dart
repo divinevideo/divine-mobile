@@ -46,6 +46,7 @@ void main() {
 
     // Helper to stub publishEvent - call after reset(mockNostr)
     void stubPublishEvent() {
+      stubAuthoritativeListRead(mockNostr);
       when(() => mockNostr.publishEvent(any())).thenAnswer((invocation) async {
         return PublishSuccess(
           event: invocation.positionalArguments[0] as Event,
