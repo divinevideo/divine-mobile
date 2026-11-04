@@ -1,6 +1,5 @@
 // ABOUTME: Resolves configured real Rooms from verified Concord membership.
 // ABOUTME: Keeps invalid production configuration visibly closed.
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:concord_protocol/concord_protocol.dart';
@@ -10,8 +9,10 @@ import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/features/chat/concord_session.dart';
 import 'package:openvine/features/chat/concord_store.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 
 const concordInviteUrl = String.fromEnvironment('CONCORD_INVITE_URL');
 
@@ -91,9 +92,20 @@ final StreamProvider<ConcordRoomCatalog> concordRoomCatalogProvider =
           scope: '$concordRelayUrl/community/${coordinate.author}',
         ),
       );
-      ref.onDispose(() {
-        unawaited(session.close().whenComplete(relay.close));
-      });
+      final close = ref.read(accountStateWriteBarrierProvider).register(
+        account,
+        () async {
+          await session.close();
+          await relay.close();
+        },
+      );
+      ref.onDispose(
+        () => runProviderDetached(
+          close(),
+          'close community membership',
+          logName: 'ConcordCommunity',
+        ),
+      );
       await session.start();
       String signatureOf() => jsonEncode([
         session.control!.name,

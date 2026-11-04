@@ -41,6 +41,21 @@ class _Relay implements RelayGateway, RelayHistoryStatus {
   }
 }
 
+class _DelayedStore extends InMemoryConcordStore {
+  _DelayedStore(super.pubkey);
+  final writing = Completer<void>();
+  final release = Completer<void>();
+  @override
+  Future<void> writeBatch(
+    Map<String, String> values, {
+    List<String> remove = const [],
+  }) async {
+    if (!writing.isCompleted) writing.complete();
+    await release.future;
+    await super.writeBatch(values, remove: remove);
+  }
+}
+
 void main() {
   final fixture =
       jsonDecode(
@@ -254,6 +269,24 @@ void main() {
       });
       await next.close();
       await nextRelay.close();
+    },
+  );
+  test(
+    'close drains a pending bootstrap write before account erasure',
+    () async {
+      final relay = _Relay(events());
+      final store = _DelayedStore(expected['member'] as String);
+      final s = session(relay, expected['member'] as String, store);
+      final bootstrap = s.start();
+      await store.writing.future;
+      final erased = s.close().then((_) => store.clearAccount());
+      await Future<void>.delayed(Duration.zero);
+      store.release.complete();
+      await Future.wait([bootstrap, erased]);
+      expect(await store.get('community-held-roots'), isNull);
+      expect(await store.get('community-control-wraps'), isNull);
+      expect(await store.get('community-control-heads'), isNull);
+      await relay.close();
     },
   );
 }

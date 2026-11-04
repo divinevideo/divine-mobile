@@ -31,6 +31,8 @@ class ConcordCommunitySession {
   final _heldRoots = <int, ConcordInviteBundle>{};
   final _snapshotIds = <String>{};
   Future<void> _work = Future.value();
+  Future<void>? _starting;
+  Future<void>? _closing;
   ConcordInviteBundle? bundle;
   ConcordControlState? control;
   Object? failure;
@@ -75,7 +77,12 @@ class ConcordCommunitySession {
     });
   }
 
-  Future<void> start() async {
+  Future<void> start() {
+    if (_closed) return Future.error(StateError('Community session is closed'));
+    return _starting ??= _start();
+  }
+
+  Future<void> _start() async {
     try {
       final candidates = <Map<String, dynamic>>[];
       _subscriptions.add(
@@ -131,6 +138,8 @@ class ConcordCommunitySession {
         token: fragment.token,
         nowMs: _nowMs(),
       );
+      if (_closed)
+        throw StateError('Community session closed during bootstrap');
       final savedRoots = await store.get('community-held-roots');
       if (savedRoots != null) {
         for (final raw in jsonDecode(savedRoots) as List) {
@@ -197,6 +206,8 @@ class ConcordCommunitySession {
         bundle!.communityId,
         bundle!.rootEpoch,
       );
+      if (_closed)
+        throw StateError('Community session closed during bootstrap');
       _subscriptions.add(
         relay
             .subscribe({
@@ -359,26 +370,30 @@ class ConcordCommunitySession {
     }
   }
 
-  Future<void> _persist() => store.writeBatch({
-    'community-held-roots': jsonEncode([
-      for (final held in _heldRoots.values)
-        {
-          'community_id': held.communityId,
-          'owner': held.owner,
-          'owner_salt': held.ownerSalt,
-          'community_root': held.communityRoot,
-          'root_epoch': held.rootEpoch,
-          if (held.controlPubkey != null) 'control_pk': held.controlPubkey,
-          'channels': <dynamic>[],
-          'relays': <String>[],
-        },
-    ]),
-    'community-control-wraps': jsonEncode(_wraps.values.toList()),
-    'community-control-heads': jsonEncode({
-      for (final entry in _acceptedHeads.entries)
-        entry.key: entry.value.rumorId,
-    }),
-  });
+  Future<void> _persist() async {
+    if (_closed) return;
+    await store.writeBatch({
+      'community-held-roots': jsonEncode([
+        for (final held in _heldRoots.values)
+          {
+            'community_id': held.communityId,
+            'owner': held.owner,
+            'owner_salt': held.ownerSalt,
+            'community_root': held.communityRoot,
+            'root_epoch': held.rootEpoch,
+            if (held.controlPubkey != null) 'control_pk': held.controlPubkey,
+            'channels': <dynamic>[],
+            'relays': <String>[],
+          },
+      ]),
+      'community-control-wraps': jsonEncode(_wraps.values.toList()),
+      'community-control-heads': jsonEncode({
+        for (final entry in _acceptedHeads.entries)
+          entry.key: entry.value.rumorId,
+      }),
+    });
+  }
+
   void _refold() {
     control = foldCommunityControl(
       _editions.values.toList(),
@@ -398,12 +413,19 @@ class ConcordCommunitySession {
     _notify();
   }
 
-  Future<void> close() async {
+  Future<void> close() => _closing ??= _close();
+
+  Future<void> _close() async {
     _closed = true;
     for (final subscription in _subscriptions) {
       await subscription.cancel();
     }
     await _work;
+    try {
+      await _starting;
+    } on Object {
+      /* A cancelled bootstrap has still drained. */
+    }
     await _changes.close();
   }
 }
