@@ -1161,6 +1161,103 @@ void main() {
       ).called(1);
     });
 
+    /// An AuthService with Keycast OAuth, about to sign back in to a
+    /// Keycast-only account whose archived session has expired; the refresh
+    /// answers [refreshed] after running [duringRefresh].
+    AuthService expiredOAuthAccount({
+      required KeycastSession refreshed,
+      void Function(AuthService service)? duringRefresh,
+    }) {
+      final pubkeyHex = testKeyContainer.publicKeyHex;
+      mockSecureStorage.data['keycast_session_$pubkeyHex'] = jsonEncode({
+        'bunker_url': 'wss://keycast.example.com',
+        'access_token': 'expired_token',
+        'scope': 'policy:full',
+        'expires_at': DateTime.now()
+            .subtract(const Duration(hours: 1))
+            .toIso8601String(),
+        'refresh_token': 'refresh_token',
+        'user_pubkey': pubkeyHex,
+      });
+      // A Keycast-only account: no local key to fall back on.
+      when(
+        () => mockKeyStorage.getIdentityKeyContainer(any()),
+      ).thenAnswer((_) async => null);
+      // KeycastOAuth answers null for an expired session.
+      when(mockOAuthClient.getSession).thenAnswer((_) async => null);
+      when(mockOAuthClient.close).thenReturn(null);
+      when(mockOAuthClient.logout).thenAnswer((_) async {});
+      final service = AuthService(
+        relayDiscoveryService: _networkFreeDiscovery(),
+        profileCheckIndexerUrl: 'unsupported://profile.invalid',
+        backgroundActivityManager: BackgroundActivityManager(),
+        userDataCleanupService: mockCleanupService,
+        keyStorage: mockKeyStorage,
+        flutterSecureStorage: mockSecureStorage,
+        oauthClient: mockOAuthClient,
+      );
+      addTearDown(service.dispose);
+      when(
+        () => mockOAuthClient.refreshSession(
+          userPubkey: any(named: 'userPubkey'),
+        ),
+      ).thenAnswer((_) async {
+        duringRefresh?.call(service);
+        return refreshed;
+      });
+      return service;
+    }
+
+    KeycastSession refreshedSession() => KeycastSession(
+      bunkerUrl: 'wss://keycast.example.com',
+      accessToken: 'refreshed_token',
+      expiresAt: DateTime.now().add(const Duration(hours: 1)),
+      refreshToken: 'rotated_refresh_token',
+      userPubkey: testKeyContainer.publicKeyHex,
+    );
+
+    test(
+      'signs in on the refreshed session when the restored OAuth session '
+      'has expired (#10318)',
+      () async {
+        final pubkeyHex = testKeyContainer.publicKeyHex;
+        final service = expiredOAuthAccount(refreshed: refreshedSession());
+
+        await service.signInForAccount(
+          pubkeyHex,
+          AuthenticationSource.divineOAuth,
+        );
+
+        expect(service.authState, AuthState.authenticated);
+        expect(service.currentPublicKeyHex, pubkeyHex);
+        final active = KeycastSession.fromJson(
+          jsonDecode(mockSecureStorage.data['keycast_session']!)
+              as Map<String, dynamic>,
+        );
+        expect(active.accessToken, 'refreshed_token');
+      },
+    );
+
+    test(
+      'does not apply a refreshed session to a sign-in retired while it '
+      'refreshed',
+      () async {
+        final service = expiredOAuthAccount(
+          refreshed: refreshedSession(),
+          duringRefresh: (service) => service.retireAccountSwitchActivation(),
+        );
+
+        await expectLater(
+          service.signInForAccount(
+            testKeyContainer.publicKeyHex,
+            AuthenticationSource.divineOAuth,
+          ),
+          throwsA(isA<AccountActivationRetiredException>()),
+        );
+        expect(service.currentPublicKeyHex, isNull);
+      },
+    );
+
     test('restores OAuth session for divineOAuth auth source', () async {
       final pubkeyHex = testKeyContainer.publicKeyHex;
 
