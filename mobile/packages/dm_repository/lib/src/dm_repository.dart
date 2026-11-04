@@ -2510,7 +2510,7 @@ class DmRepository {
         _errorReporter?.call(
           e,
           stackTrace,
-          site: DmRepositoryReportableSites.historyDrainUnexpectedFailure,
+          site: DmRepositoryReportableSites.belowWindowRequeryUnexpectedFailure,
         );
       }
     }

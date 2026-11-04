@@ -803,7 +803,7 @@ void main() {
       );
 
       expect(reported, [
-        DmRepositoryReportableSites.historyDrainUnexpectedFailure,
+        DmRepositoryReportableSites.belowWindowRequeryUnexpectedFailure,
       ]);
       expect(DmSyncState(prefs).belowWindowRequeryAt(_owner), isNull);
     });
