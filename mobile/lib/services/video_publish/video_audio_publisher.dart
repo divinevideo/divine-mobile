@@ -177,6 +177,7 @@ class VideoAudioPublisher {
   }) async {
     var selectedAudioReferenceId = selectedAudioEventId;
     var selectedAudioReferenceRelay = selectedAudioRelay;
+    var renderedAudioAttribution = audioShareAttribution;
 
     if (selectedAudio != null && !await canReuseSelectedAudio(selectedAudio)) {
       // Only the sound's own event carries evidence strong enough to tell
@@ -246,7 +247,8 @@ class VideoAudioPublisher {
           case _SoundSilent():
             // Nothing of the import can be heard, so there is no sound to
             // credit. The video still publishes, and the rendered-audio step
-            // below shares whatever the video does play.
+            // below shares whatever the video does play, credited to the
+            // creator: the import's credit describes a file nobody hears.
             Log.info(
               'Imported audio is silent; publishing the video without it',
               name: _logName,
@@ -254,6 +256,7 @@ class VideoAudioPublisher {
             );
             selectedAudioReferenceId = null;
             selectedAudioReferenceRelay = null;
+            renderedAudioAttribution = null;
           case _SoundFailed():
             Log.error(
               'Imported audio publishing failed; blocking video publish',
@@ -378,7 +381,7 @@ class VideoAudioPublisher {
           pubkey: userPubkey,
           relayHint: relayHint,
           videoTitle: upload.title,
-          attribution: audioShareAttribution,
+          attribution: renderedAudioAttribution,
         );
 
         switch (extracted) {

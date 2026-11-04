@@ -769,11 +769,22 @@ void main() {
         });
 
         test(
-          'shares the rendered audio when the imported sound is silent',
+          'shares the rendered audio as the creator\'s own when the imported '
+          'sound is silent',
           () async {
             final take = File('${tempDir.path}/take-1.m4a')
               ..writeAsBytesSync(const [1]);
             stubTrim(take.path, const SilentSound());
+            const importCredit = AudioShareAttribution(
+              title: 'Take 1',
+              creatorName: 'Artist Y',
+              creatorUrl: 'https://artist.example',
+              sourceUrl: 'https://source.example/take-1',
+              licenseName: 'CC BY 4.0',
+              licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+              publicTags: ['synthwave'],
+              confirmedOwnWork: false,
+            );
 
             final resolution = await renderedPublisher().resolveForPublish(
               upload: upload.copyWith(localVideoPath: videoPath),
@@ -785,12 +796,7 @@ void main() {
                 createdAt: 0,
                 url: take.path,
               ),
-              audioShareAttribution: const AudioShareAttribution(
-                title: 'Take 1',
-                creatorName: 'Someone',
-                publicTags: [],
-                confirmedOwnWork: true,
-              ),
+              audioShareAttribution: importCredit,
             );
 
             expect(
@@ -811,6 +817,27 @@ void main() {
                     ).captured.single
                     as File;
             expect(uploaded.path, wavPath);
+            final [content as String, tags as List<List<String>>] = verify(
+              () => authService.createAndSignEvent(
+                kind: 1063,
+                content: captureAny(named: 'content'),
+                tags: captureAny(named: 'tags'),
+              ),
+            ).captured;
+            expect(tags, contains(equals(['title', 'Plants'])));
+            expect(tags, contains(equals(['p', _self])));
+            final published = [content, ...tags.expand((tag) => tag)];
+            for (final credit in [
+              importCredit.title,
+              importCredit.creatorName,
+              importCredit.creatorUrl!,
+              importCredit.sourceUrl!,
+              importCredit.licenseName!,
+              importCredit.licenseUrl!,
+              ...importCredit.publicTags,
+            ]) {
+              expect(published, everyElement(isNot(contains(credit))));
+            }
           },
         );
 
