@@ -383,6 +383,24 @@ void main() {
         expect(audioEvent.title, equals('Bruh Sound Effect'));
       });
 
+      test("carries the manifest's source link, also through JSON", () {
+        final audioEvent = AudioEvent.fromBundledSound(
+          VineSound(
+            id: 'freesound_yay',
+            title: 'YAY!',
+            assetPath: 'assets/sounds/yay.mp3',
+            duration: const Duration(seconds: 4),
+            sourceUrl: 'https://freesound.org/s/61691/',
+          ),
+        );
+
+        expect(audioEvent.sourceUrl, equals('https://freesound.org/s/61691/'));
+        expect(
+          AudioEvent.fromJson(audioEvent.toJson()).sourceUrl,
+          equals('https://freesound.org/s/61691/'),
+        );
+      });
+
       test('isBundled returns true for bundled sounds', () {
         final vineSound = VineSound(
           id: 'test',

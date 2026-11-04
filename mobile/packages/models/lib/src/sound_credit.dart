@@ -43,6 +43,17 @@ class SoundCredit {
   /// The licence's name, such as `CC BY 4.0`.
   final String? license;
 
+  /// Whether this line credits [sound].
+  ///
+  /// Matched by the sound's title rather than the whole line: the event a
+  /// video references can name the creator, licence or source differently
+  /// from the sound that was credited when the video was published.
+  bool credits(AudioEvent sound) {
+    final title = _oneLine(sound.title);
+    if (title == null) return line == soundCreditLine(sound);
+    return work == title || work.startsWith('$title – ');
+  }
+
   @override
   bool operator ==(Object other) =>
       other is SoundCredit &&
@@ -57,17 +68,25 @@ class SoundCredit {
 /// The line crediting [sound] in a video's content, or `null` when its
 /// licence asks for no credit.
 ///
-/// `♪ <title> – <creator>, <licence> <licence link> (edited)`, leaving out
-/// what the sound does not say.
+/// `♪ <title> – <creator> <source link>, <licence> <licence link> (edited)`,
+/// leaving out what the sound does not say.
+///
+/// The source link (CC BY 4.0 §3(a)(1)(A)(v)) is taken only from the app's
+/// own manifest or the sound proxy, never from a Nostr event: the poster
+/// signs it without seeing it, and a published sound is reached through the
+/// video's `e … audio` reference anyway.
 String? soundCreditLine(AudioEvent sound) {
   if (!sound.requiresAttribution) return null;
   final external = sound.externalSource;
   final work = [
-    sound.title,
-    sound.creatorName ??
-        external?.creatorName ??
-        (sound.isBundled ? sound.source : null),
-  ].map(_oneLine).whereType<String>().join(' – ');
+    [
+      sound.title,
+      sound.creatorName ??
+          external?.creatorName ??
+          (sound.isBundled ? sound.source : null),
+    ].map(_oneLine).whereType<String>().join(' – '),
+    _httpsLink(sound.sourceUrl ?? external?.sourceUrl),
+  ].whereType<String>().where((part) => part.isNotEmpty).join(' ');
   final terms = [
     sound.licenseName ?? external?.license.name,
     _creativeCommonsLink(sound.licenseUrl ?? external?.license.url),
@@ -120,7 +139,7 @@ SoundCredit _parseCredit(String line) {
   // The work may hold commas; the terms, a licence name and its link, are
   // whatever follows the last one.
   final split = credit.lastIndexOf(', ');
-  if (split == -1) return SoundCredit(line: line, work: credit);
+  if (split == -1) return SoundCredit(line: line, work: _withoutLink(credit));
   final license = credit
       .substring(split + 2)
       .split(' ')
@@ -129,9 +148,17 @@ SoundCredit _parseCredit(String line) {
       .trim();
   return SoundCredit(
     line: line,
-    work: credit.substring(0, split),
+    work: _withoutLink(credit.substring(0, split)),
     license: license.isEmpty ? null : license,
   );
+}
+
+/// [work] without the source link that ends it.
+String _withoutLink(String work) {
+  final space = work.lastIndexOf(' ');
+  return space != -1 && work.startsWith('https://', space + 1)
+      ? work.substring(0, space)
+      : work;
 }
 
 /// [url] as an HTTPS link when it points at a Creative Commons licence, else
@@ -150,6 +177,14 @@ String? _creativeCommonsLink(String? url) {
         'www.creativecommons.org',
       }.contains(uri.host)
       ? uri.replace(scheme: 'https', port: 443).toString()
+      : null;
+}
+
+/// [url] when it is an HTTPS link, else null.
+String? _httpsLink(String? url) {
+  final uri = Uri.tryParse(url?.trim() ?? '');
+  return uri != null && uri.scheme == 'https' && uri.host.isNotEmpty
+      ? uri.toString()
       : null;
 }
 

@@ -52,7 +52,7 @@ void main() {
       );
     });
 
-    test('credits a shipped sound by its source', () {
+    test('credits a shipped sound by its source, linking where it lives', () {
       final shipped = AudioEvent.fromBundledSound(
         VineSound(
           id: 'freesound_yay',
@@ -69,10 +69,66 @@ void main() {
       expect(
         soundCreditLine(shipped),
         equals(
-          '♪ YAY! – IFartInUrGeneralDirection via Freesound, '
+          '♪ YAY! – IFartInUrGeneralDirection via Freesound '
+          'https://freesound.org/people/x/sounds/61691/, '
           'CC BY 4.0 $_ccBy (edited)',
         ),
       );
+    });
+
+    test("links a provider sound's page", () {
+      final provided = _sound(creatorName: null).copyWith(
+        externalSource: AudioExternalSource(
+          provider: 'freesound',
+          providerSoundId: '1',
+          providerName: 'Freesound',
+          creatorName: 'YellowTree',
+          sourceUrl: 'https://freesound.org/s/1/',
+          license: AudioLicenseMetadata(
+            type: 'cc-by',
+            name: 'CC BY 4.0',
+            url: _ccBy,
+            allowsCommercialUse: true,
+            allowsDerivatives: true,
+            requiresAttribution: true,
+          ),
+        ),
+      );
+
+      expect(
+        soundCreditLine(provided),
+        equals(
+          '♪ Monkeys Spinning Monkeys – YellowTree https://freesound.org/s/1/, '
+          'CC BY 4.0 $_ccBy (edited)',
+        ),
+      );
+    });
+
+    // A published sound's own `source` is written by whoever published it,
+    // and the poster never sees the line before it is signed into their post.
+    test("does not link a published sound's source or a non-HTTPS page", () {
+      expect(
+        soundCreditLine(
+          AudioEvent(
+            id: 'a' * 64,
+            pubkey: 'b' * 64,
+            createdAt: 1,
+            title: 'Monkeys Spinning Monkeys',
+            source: 'https://phish.example/',
+            creatorName: 'Kevin MacLeod (incompetech.com)',
+            licenseName: 'CC BY 4.0',
+            licenseUrl: _ccBy,
+          ),
+        ),
+        equals(line),
+      );
+      for (final page in ['http://freesound.org/s/1/', 'javascript:alert(1)']) {
+        expect(
+          soundCreditLine(_sound().copyWith(sourceUrl: page)),
+          equals(line),
+          reason: page,
+        );
+      }
     });
 
     test('keeps the line on one line and leaves out what is missing', () {
@@ -210,6 +266,22 @@ void main() {
       );
     });
 
+    test('reads the work without its source link', () {
+      expect(
+        soundCreditsFromContent(
+          '♪ YAY! – Someone via Freesound https://freesound.org/s/1/, '
+          'CC BY 4.0 $_ccBy (edited)',
+        ).single,
+        isA<SoundCredit>()
+            .having(
+              (credit) => credit.work,
+              'work',
+              'YAY! – Someone via Freesound',
+            )
+            .having((credit) => credit.license, 'license', 'CC BY 4.0'),
+      );
+    });
+
     test('keeps a comma in the work', () {
       expect(
         soundCreditsFromContent(
@@ -242,6 +314,32 @@ void main() {
     test('ignores a credit-shaped caption line not set apart by a blank '
         'line', () {
       expect(soundCreditsFromContent('my caption\n$line'), isEmpty);
+    });
+  });
+
+  group('SoundCredit.credits', () {
+    final credit = soundCreditsFromContent(line).single;
+
+    // The event a video references can name the creator, licence or source
+    // differently from the sound credited when it was published.
+    test('matches its sound by title, however the rest is named', () {
+      expect(credit.credits(_sound(creatorName: 'Kevin MacLeod')), isTrue);
+      expect(credit.credits(_sound(creatorName: null)), isTrue);
+    });
+
+    test('does not match another sound', () {
+      expect(credit.credits(_sound(title: 'Monkeys')), isFalse);
+      expect(credit.credits(_sound(title: 'Elevator Music')), isFalse);
+    });
+
+    test('matches an untitled sound only by its whole line', () {
+      final untitled = _sound(title: null);
+      final untitledCredit = soundCreditsFromContent(
+        soundCreditLine(untitled)!,
+      ).single;
+
+      expect(untitledCredit.credits(untitled), isTrue);
+      expect(credit.credits(untitled), isFalse);
     });
   });
 

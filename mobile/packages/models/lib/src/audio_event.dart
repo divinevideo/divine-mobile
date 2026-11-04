@@ -82,6 +82,7 @@ class AudioEvent {
     this.creatorUrl,
     String? licenseName,
     this.licenseUrl,
+    this.sourceUrl,
     List<String> publicTags = const [],
     this.proxyId,
     this.proxyProtocol,
@@ -284,6 +285,7 @@ class AudioEvent {
       // `unknown` or leaves them out.
       licenseName: sound.licenseUrl == null ? null : sound.license,
       licenseUrl: sound.licenseUrl,
+      sourceUrl: sound.sourceUrl,
     );
   }
 
@@ -370,6 +372,7 @@ class AudioEvent {
       creatorUrl: json['creatorUrl'] as String?,
       licenseName: json['licenseName'] as String?,
       licenseUrl: json['licenseUrl'] as String?,
+      sourceUrl: json['sourceUrl'] as String?,
       publicTags: _normalizedStringList(json['publicTags']),
       proxyId: json['proxyId'] as String?,
       proxyProtocol: json['proxyProtocol'] as String?,
@@ -804,6 +807,11 @@ class AudioEvent {
   /// Canonical public license URL.
   final String? licenseUrl;
 
+  /// The page the sound was published on, for a sound the app ships: the
+  /// link its manifest names. Never read from a Nostr event, so a credit can
+  /// link it without trusting whoever published one.
+  final String? sourceUrl;
+
   /// Public catalog tags. These are distinct from private library hashtags.
   final List<String> publicTags;
 
@@ -1111,6 +1119,7 @@ class AudioEvent {
     String? creatorUrl,
     String? licenseName,
     String? licenseUrl,
+    String? sourceUrl,
     List<String>? publicTags,
     String? proxyId,
     String? proxyProtocol,
@@ -1160,6 +1169,7 @@ class AudioEvent {
       creatorUrl: creatorUrl ?? this.creatorUrl,
       licenseName: licenseName ?? this.licenseName,
       licenseUrl: licenseUrl ?? this.licenseUrl,
+      sourceUrl: sourceUrl ?? this.sourceUrl,
       publicTags: publicTags ?? this.publicTags,
       proxyId: proxyId ?? this.proxyId,
       proxyProtocol: proxyProtocol ?? this.proxyProtocol,
@@ -1266,6 +1276,7 @@ class AudioEvent {
     'creatorUrl': ?creatorUrl,
     'licenseName': ?licenseName,
     'licenseUrl': ?licenseUrl,
+    'sourceUrl': ?sourceUrl,
     if (publicTags.isNotEmpty) 'publicTags': publicTags,
     'proxyId': ?proxyId,
     'proxyProtocol': ?proxyProtocol,
