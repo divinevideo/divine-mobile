@@ -4533,6 +4533,25 @@ class AppLocalizationsAr extends AppLocalizations {
       'يلزم إعطاء الصوت عنوانًا لمشاركته.';
 
   @override
+  String get soundsShareCoverLabel => 'الغلاف';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'اختياري. يراه الناس بجانب صوتك عندما يختارون صوتًا.';
+
+  @override
+  String get soundsShareCoverAdd => 'إضافة غلاف';
+
+  @override
+  String get soundsShareCoverReplace => 'استبدال';
+
+  @override
+  String get soundsShareCoverRemove => 'إزالة الغلاف';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'غلاف الصوت';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'نوع الملف هذا غير مدعوم. يُرجى اختيار ملف صوتي.';
 
@@ -11093,6 +11112,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'صوت بدون عنوان';
 
   @override
+  String get videoEditorAudioUseSound => 'استخدام';
+
+  @override
   String get videoEditorAudioFileMissing => 'ملف الصوت لم يعد على هذا الجهاز';
 
   @override
@@ -11115,16 +11137,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorAudioSegmentInstruction => 'حدّد مقطع الصوت لفيديوك';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'المجتمع';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'مميز';
+  String get videoEditorAudioCategoryMySounds => 'أصواتي';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'أصواتي';
+  String get videoEditorAudioFilterEffects => 'مؤثرات صوتية';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => 'أداة الممحاة';
@@ -11872,9 +11891,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'الصبغة';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'تم';
 
   @override
   String get videoEditorLevelSemanticLabel => 'المستوى';

@@ -15,6 +15,7 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/paged_sounds.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
@@ -25,6 +26,7 @@ import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_category_bar.dart';
+import 'package:openvine/widgets/video_editor/audio_editor/audio_list_tile.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/video_editor_audio_chip.dart';
 import 'package:openvine/widgets/video_recorder/modes/capture/video_recorder_capture_stack.dart';
@@ -102,6 +104,13 @@ void main() {
             (_) async => _FakeSoundLibraryService(),
           ),
           trendingSoundsProvider.overrideWith(trendingSounds),
+          forYouSoundsProvider.overrideWithBuild(
+            (_, _) async => const PagedSounds(pages: [[]]),
+          ),
+          divineSoundsProvider.overrideWith((_) async => const []),
+          popularSoundsProvider.overrideWithBuild(
+            (_, _) async => const PagedSounds(pages: [[]]),
+          ),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -260,14 +269,15 @@ void main() {
       testWidgets('floats only the search back in on scrolling up', (
         tester,
       ) async {
-        final l10n = lookupAppLocalizations(const Locale('en'));
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
         final search = find.byType(TextField).hitTestable();
-        final importAudio = find
-            .text(l10n.videoEditorAudioImportAudio)
-            .hitTestable();
-        expect(importAudio, findsOneWidget);
+        // Divine's sounds are shuffled by the day, so whichever leads.
+        final firstTitle = tester
+            .widget<AudioListTile>(find.byType(AudioListTile).first)
+            .audio
+            .title!;
+        expect(find.text(firstTitle).hitTestable(), findsOneWidget);
 
         await tester.drag(find.byType(TabBarView), const Offset(0, -500));
         await tester.pumpAndSettle();
@@ -277,55 +287,27 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(search, findsOneWidget);
-        // Back without the list, or the import row above it, returning to the
-        // top.
-        expect(importAudio, findsNothing);
-        expect(find.text('Bundled sound 0').hitTestable(), findsNothing);
+        // Back without the list returning to the top.
+        expect(find.text(firstTitle).hitTestable(), findsNothing);
       });
     });
 
     group('importing audio', () {
-      Future<void> showCommunity(WidgetTester tester) async {
-        tester
-            .widget<AudioCategoryBar>(find.byType(AudioCategoryBar))
-            .onSelect(AudioCategory.community);
-        // The loading indicator keeps animating, so pumpAndSettle would not.
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
-      }
-
-      testWidgets('offers importing while the community sounds load', (
-        tester,
-      ) async {
+      testWidgets('offers importing first on My sounds', (tester) async {
         final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.pumpWidget(
-          buildWidget(trendingSounds: _PendingTrendingSounds.new),
-        );
-        await tester.pump();
-
-        await showCommunity(tester);
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
 
         expect(
           find.text(l10n.videoEditorAudioImportAudio).hitTestable(),
-          findsOneWidget,
+          findsNothing,
         );
-      });
 
-      testWidgets('offers importing when the community sounds fail to load', (
-        tester,
-      ) async {
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.pumpWidget(
-          buildWidget(trendingSounds: _FailingTrendingSounds.new),
-        );
-        await tester.pump();
+        tester
+            .widget<AudioCategoryBar>(find.byType(AudioCategoryBar))
+            .onSelect(AudioCategory.mySounds);
+        await tester.pumpAndSettle();
 
-        await showCommunity(tester);
-
-        expect(
-          find.text(l10n.videoEditorAudioFailedToLoadTitle),
-          findsOneWidget,
-        );
         expect(
           find.text(l10n.videoEditorAudioImportAudio).hitTestable(),
           findsOneWidget,
@@ -639,18 +621,7 @@ class _FakeSoundLibraryService extends SoundLibraryService {
 
 class _FakeTrendingSounds extends TrendingSounds {
   @override
-  Future<List<AudioEvent>> build() async => const [];
-}
-
-class _PendingTrendingSounds extends TrendingSounds {
-  @override
-  Future<List<AudioEvent>> build() => Completer<List<AudioEvent>>().future;
-}
-
-class _FailingTrendingSounds extends TrendingSounds {
-  @override
-  Future<List<AudioEvent>> build() async =>
-      throw Exception('relay unreachable');
+  Future<PagedSounds> build() async => const PagedSounds(pages: [[]]);
 }
 
 class _TestClipManagerNotifier extends ClipManagerNotifier {

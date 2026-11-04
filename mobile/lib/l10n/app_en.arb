@@ -3043,6 +3043,30 @@
   "@soundsShareTitleRequiredHint": {
     "description": "Helper text under the empty Sound title field on the Add sound screen while a recording is set to be shared publicly. Explains why the Share sound button is disabled."
   },
+  "soundsShareCoverLabel": "Cover",
+  "@soundsShareCoverLabel": {
+    "description": "Heading of the optional cover image section on the Add sound screen while a sound is set to be shared publicly."
+  },
+  "soundsShareCoverDescription": "Optional. People see it next to your sound when they pick one.",
+  "@soundsShareCoverDescription": {
+    "description": "Helper text under the cover heading on the Add sound screen. The cover image shows next to the shared sound in the sound picker."
+  },
+  "soundsShareCoverAdd": "Add cover",
+  "@soundsShareCoverAdd": {
+    "description": "Button on the Add sound screen that opens the camera or gallery to pick a cover image for a sound being shared."
+  },
+  "soundsShareCoverReplace": "Replace",
+  "@soundsShareCoverReplace": {
+    "description": "Button on the Add sound screen, shown once a cover image is picked, that opens the camera or gallery to pick a different one."
+  },
+  "soundsShareCoverRemove": "Remove cover",
+  "@soundsShareCoverRemove": {
+    "description": "Row in the cover image sheet on the Add sound screen that removes the picked cover image."
+  },
+  "soundsShareCoverSheetTitle": "Sound cover",
+  "@soundsShareCoverSheetTitle": {
+    "description": "Title of the sheet that offers camera, gallery and remove for the cover image of a sound being shared."
+  },
   "soundsImportUnsupportedFormat": "That file type isn't supported. Pick an audio file.",
   "@soundsImportUnsupportedFormat": {
     "description": "Shown when the picked file's extension is not a supported audio container."
@@ -8441,6 +8465,10 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Play preview",
   "videoEditorAudioPausePreviewSemanticLabel": "Pause preview",
   "videoEditorAudioUntitledSound": "Untitled sound",
+  "videoEditorAudioUseSound": "Use",
+  "@videoEditorAudioUseSound": {
+    "description": "Button on the card for the picked sound in the sound picker that adds the sound to the video."
+  },
   "videoEditorAudioFileMissing": "Audio file is gone from this device",
   "@videoEditorAudioFileMissing": {
     "description": "Subtitle on a saved sound in the video editor's sound picker whose imported audio file is no longer on the device. The entry stays listed but cannot be selected, because attaching it would put a dead source on the draft."
@@ -8451,10 +8479,12 @@
   "videoEditorAudioNoSoundsAvailableSubtitle": "Sounds will appear here when creators share audio",
   "videoEditorAudioFailedToLoadTitle": "Failed to load sounds",
   "videoEditorAudioSegmentInstruction": "Select the audio segment for your video",
-  "videoEditorAudioCategoryDivine": "Divine",
   "videoEditorAudioCategoryCommunity": "Community",
-  "videoEditorAudioCategoryFeatured": "Featured",
   "videoEditorAudioCategoryMySounds": "My Sounds",
+  "videoEditorAudioFilterEffects": "Effects",
+  "@videoEditorAudioFilterEffects": {
+    "description": "Filter chip in the sound picker that narrows the lists to sound effects (booms, laughs, meme lines), as opposed to music. Translate as sound effects, not visual effects."
+  },
   "videoEditorDrawToolEraserSemanticLabel": "Eraser tool",
   "videoEditorDrawToolMarkerSemanticLabel": "Marker tool",
   "videoEditorDrawToolPencilSemanticLabel": "Pencil tool",
@@ -9297,7 +9327,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Hue",
-  "videoEditorDoneSemanticLabel": "Done",
   "videoEditorLevelSemanticLabel": "Level",
   "videoEditorBrushSizeSemanticLabel": "Brush size",
   "@videoEditorBrushSizeSemanticLabel": {

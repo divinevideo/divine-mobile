@@ -26,6 +26,7 @@ import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
@@ -109,9 +110,10 @@ class MockCameraPermissionBloc extends Mock implements CameraPermissionBloc {
 late VideoRecorderBloc recorderBloc;
 late SharedPreferences testPrefs;
 
-/// Stub overrides for the draft storage and clip library services so the
-/// recorder's autosave/clip checks resolve to empty during tests.
-List<Override> _stubStorageOverrides() {
+/// Stub overrides for the draft storage and clip library services and the
+/// sound picker's first lists, so the recorder's autosave/clip checks and its
+/// picker preload resolve to empty during tests.
+List<Override> _stubServiceOverrides() {
   final mockDraftStorage = _MockDraftStorageService();
   when(mockDraftStorage.getAutosaveDraft).thenAnswer((_) async => null);
   final mockClipLibrary = _MockClipLibraryService();
@@ -119,8 +121,16 @@ List<Override> _stubStorageOverrides() {
   return [
     draftStorageServiceProvider.overrideWithValue(mockDraftStorage),
     clipLibraryServiceProvider.overrideWithValue(mockClipLibrary),
+    ..._stubSoundPickerOverrides(),
   ];
 }
+
+/// Stub overrides for the sound picker's first lists, which the recorder
+/// preloads, so the preload reaches no relay during tests.
+List<Override> _stubSoundPickerOverrides() => [
+  forYouSoundCoversProvider.overrideWith((_) async => const {}),
+  divineSoundsProvider.overrideWith((_) async => const []),
+];
 
 /// Helper to build VideoRecorderView with required providers and the mock bloc.
 Widget buildTestWidget({
@@ -149,7 +159,7 @@ Widget buildTestWidget({
   return ProviderScope(
     overrides: [
       sharedPreferencesProvider.overrideWithValue(testPrefs),
-      ..._stubStorageOverrides(),
+      ..._stubServiceOverrides(),
       ...overrides,
     ],
     child: child,
@@ -201,7 +211,7 @@ Widget buildNavigatorTestWidget({
   }
 
   return ProviderScope(
-    overrides: [..._stubStorageOverrides(), ...overrides],
+    overrides: [..._stubServiceOverrides(), ...overrides],
     child: child,
   );
 }
@@ -291,7 +301,7 @@ void main() {
       container = ProviderContainer(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(testPrefs),
-          ..._stubStorageOverrides(),
+          ..._stubServiceOverrides(),
         ],
       );
     });
@@ -741,7 +751,7 @@ void main() {
         final routeContainer = ProviderContainer(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
-            ..._stubStorageOverrides(),
+            ..._stubServiceOverrides(),
           ],
         );
         addTearDown(routeContainer.dispose);
@@ -789,7 +799,7 @@ void main() {
         final routeContainer = ProviderContainer(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(prefs),
-            ..._stubStorageOverrides(),
+            ..._stubServiceOverrides(),
           ],
         );
         addTearDown(routeContainer.dispose);
@@ -1029,6 +1039,7 @@ void main() {
               sharedPreferencesProvider.overrideWithValue(testPrefs),
               draftStorageServiceProvider.overrideWithValue(mockDraftStorage),
               clipLibraryServiceProvider.overrideWithValue(mockClipLibrary),
+              ..._stubSoundPickerOverrides(),
               videoEditorProvider.overrideWith(videoEditor),
             ],
             child: MultiBlocProvider(
@@ -1278,6 +1289,7 @@ void main() {
               sharedPreferencesProvider.overrideWithValue(prefs),
               draftStorageServiceProvider.overrideWithValue(mockDraftStorage),
               clipLibraryServiceProvider.overrideWithValue(mockClipLibrary),
+              ..._stubSoundPickerOverrides(),
             ],
             child: MultiBlocProvider(
               providers: [
@@ -1355,6 +1367,7 @@ void main() {
               sharedPreferencesProvider.overrideWithValue(prefs),
               draftStorageServiceProvider.overrideWithValue(mockDraftStorage),
               clipLibraryServiceProvider.overrideWithValue(mockClipLibrary),
+              ..._stubSoundPickerOverrides(),
             ],
             child: MultiBlocProvider(
               providers: [
@@ -1403,6 +1416,7 @@ void main() {
               sharedPreferencesProvider.overrideWithValue(prefs),
               draftStorageServiceProvider.overrideWithValue(mockDraftStorage),
               clipLibraryServiceProvider.overrideWithValue(mockClipLibrary),
+              ..._stubSoundPickerOverrides(),
             ],
             child: MultiBlocProvider(
               providers: [

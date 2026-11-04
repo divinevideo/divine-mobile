@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/video_editor/video_editor_category_tabs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// A picker of items grouped into categories: a row of category tabs over a
@@ -78,7 +79,7 @@ const double _minTileWidth = 64;
 const double _shadowExtent = 16;
 
 /// The TabBar's default; each tab is padded by it below its label.
-const double _tabIndicatorWeight = 2;
+const double _tabIndicatorWeight = VideoEditorCategoryTabs.indicatorWeight;
 
 /// Between a tile's preview and its name.
 const double _previewLabelGap = 4;
@@ -308,7 +309,7 @@ class _CategoryPickerState<C, T> extends State<_CategoryPicker<C, T>>
               color: context.vineColors.surfaceContainerHigh,
               child: Align(
                 alignment: .bottomCenter,
-                child: _CategoryTabs(
+                child: VideoEditorCategoryTabs(
                   controller: tabController,
                   labels: [
                     for (final category in categories)
@@ -336,19 +337,13 @@ class _PickerMetrics {
     double lineOf(TextStyle style) =>
         textScaler.scale(style.fontSize!) * (style.height ?? 1.2);
 
-    // A tab's highlight pads its label line by 6 above and below, as a tiny
-    // DivineButton does; the tab around it is a full tap target.
-    final highlightHeight =
-        lineOf(VineTheme.titleSmallFont(color: colors.accentBrand)) + 12;
+    final tabs = VideoEditorCategoryTabs.extentsOf(textScaler, colors);
     final titleLine = lineOf(
       VineTheme.labelSmallFont(color: colors.onSurfaceMuted),
     );
     return _PickerMetrics._(
-      highlightHeight: highlightHeight,
-      tabHeight: max(
-        kMinInteractiveDimension - _tabIndicatorWeight,
-        highlightHeight,
-      ),
+      highlightHeight: tabs.highlightHeight,
+      tabHeight: tabs.tabHeight,
       firstHeaderExtent: titleLine + _firstHeaderPadding.vertical,
       headerExtent: titleLine + _headerPadding.vertical,
       // A tile is its preview over one line of its name.
@@ -451,67 +446,6 @@ class _GridLayout {
       if (start <= offset + 1) section = index;
     }
     return section;
-  }
-}
-
-/// The category tabs. One highlight slides from tab to tab, and the tab row
-/// scrolls the highlighted tab into view.
-class _CategoryTabs extends StatelessWidget {
-  const _CategoryTabs({
-    required this.controller,
-    required this.labels,
-    required this.tabHeight,
-    required this.highlightHeight,
-    required this.onTap,
-  });
-
-  final TabController controller;
-  final List<String> labels;
-  final double tabHeight;
-  final double highlightHeight;
-  final ValueChanged<int> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.vineColors;
-    final highlightInset = (tabHeight - highlightHeight) / 2;
-    return Material(
-      type: MaterialType.transparency,
-      child: TabBar(
-        controller: controller,
-        isScrollable: true,
-        tabAlignment: TabAlignment.start,
-        padding: const .symmetric(horizontal: 12),
-        labelPadding: const .symmetric(horizontal: 14),
-        indicator: ShapeDecoration(
-          color: colors.surfaceContainer,
-          shape: RoundedRectangleBorder(
-            borderRadius: .circular(16),
-            side: BorderSide(
-              color: colors.isLight ? colors.outline : colors.outlineMuted,
-            ),
-          ),
-        ),
-        indicatorSize: TabBarIndicatorSize.tab,
-        // The highlight hugs the label, not the whole tap target nor the
-        // padding the tab keeps below it.
-        indicatorPadding: .only(
-          top: highlightInset,
-          bottom: highlightInset + _tabIndicatorWeight,
-        ),
-        dividerHeight: 0,
-        overlayColor: const WidgetStatePropertyAll(VineTheme.transparent),
-        splashFactory: NoSplash.splashFactory,
-        labelColor: colors.accentBrand,
-        unselectedLabelColor: colors.onSurfaceVariant,
-        labelStyle: VineTheme.titleSmallFont(color: colors.accentBrand),
-        unselectedLabelStyle: VineTheme.titleSmallFont(
-          color: colors.onSurfaceVariant,
-        ),
-        onTap: onTap,
-        tabs: [for (final label in labels) Tab(height: tabHeight, text: label)],
-      ),
-    );
   }
 }
 

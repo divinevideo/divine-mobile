@@ -4693,6 +4693,25 @@ class AppLocalizationsTe extends AppLocalizations {
       'పంచుకోవడానికి మీ సౌండ్‌కు ఒక శీర్షిక ఇవ్వండి.';
 
   @override
+  String get soundsShareCoverLabel => 'కవర్';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'ఐచ్ఛికం. ఇతరులు సౌండ్ ఎంచుకునేటప్పుడు మీ సౌండ్ పక్కన దీన్ని చూస్తారు.';
+
+  @override
+  String get soundsShareCoverAdd => 'కవర్ జోడించండి';
+
+  @override
+  String get soundsShareCoverReplace => 'భర్తీ చేయండి';
+
+  @override
+  String get soundsShareCoverRemove => 'కవర్‌ను తీసివేయండి';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'సౌండ్ కవర్';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'ఆ ఫైల్ రకానికి మద్దతు లేదు. ఒక ఆడియో ఫైల్‌ను ఎంచుకోండి.';
 
@@ -11378,6 +11397,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'శీర్షికలేని ధ్వని';
 
   @override
+  String get videoEditorAudioUseSound => 'ఉపయోగించు';
+
+  @override
   String get videoEditorAudioFileMissing => 'ఆడియో ఫైల్ ఈ పరికరంలో లేదు';
 
   @override
@@ -11403,16 +11425,13 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీ వీడియో కోసం ఆడియో విభాగాన్ని ఎంచుకోండి';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'సంఘం';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'ఫీచర్ చేయబడింది';
+  String get videoEditorAudioCategoryMySounds => 'నా సౌండ్స్';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'నా సౌండ్స్';
+  String get videoEditorAudioFilterEffects => 'సౌండ్ ఎఫెక్ట్స్';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => 'ఎరేజర్ సాధనం';
@@ -12165,9 +12184,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'రంగు';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'పూర్తయింది';
 
   @override
   String get videoEditorLevelSemanticLabel => 'స్థాయి';

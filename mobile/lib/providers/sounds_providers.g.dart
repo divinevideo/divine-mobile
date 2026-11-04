@@ -8,6 +8,64 @@ part of 'sounds_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// The current author policy for every picker row, including saved sounds
+/// and cached search results that did not come from the paged lists.
+/// Re-evaluated on a block or mute without reloading those lists.
+
+@ProviderFor(soundAuthorFilter)
+final soundAuthorFilterProvider = SoundAuthorFilterProvider._();
+
+/// The current author policy for every picker row, including saved sounds
+/// and cached search results that did not come from the paged lists.
+/// Re-evaluated on a block or mute without reloading those lists.
+
+final class SoundAuthorFilterProvider
+    extends
+        $FunctionalProvider<
+          BlockedVideoFilter,
+          BlockedVideoFilter,
+          BlockedVideoFilter
+        >
+    with $Provider<BlockedVideoFilter> {
+  /// The current author policy for every picker row, including saved sounds
+  /// and cached search results that did not come from the paged lists.
+  /// Re-evaluated on a block or mute without reloading those lists.
+  SoundAuthorFilterProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'soundAuthorFilterProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$soundAuthorFilterHash();
+
+  @$internal
+  @override
+  $ProviderElement<BlockedVideoFilter> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  BlockedVideoFilter create(Ref ref) {
+    return soundAuthorFilter(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(BlockedVideoFilter value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<BlockedVideoFilter>(value),
+    );
+  }
+}
+
+String _$soundAuthorFilterHash() => r'd94589557439192f2cd43a20af0c27295349939c';
+
 /// Provider for SoundsRepository singleton.
 ///
 /// The repository manages Kind 1063 audio events for the audio reuse feature.
@@ -96,55 +154,49 @@ final class SoundsRepositoryProvider
   }
 }
 
-String _$soundsRepositoryHash() => r'7bd99174c8279fd85e52ee3f60bbb889f6e943be';
+String _$soundsRepositoryHash() => r'ee1eabdb6858cd033616241484cd49192481c3ac';
 
-/// Async provider for trending sounds.
+/// The newest sounds, the picker's "New" list, loading older ones page by
+/// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
+/// it fills a screen.
 ///
-/// Fetches and returns a list of trending audio events sorted by creation time
-/// (newest first). Results are automatically cached in the repository.
+/// Unnamed sounds nobody reused are left out
+/// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
 ///
 /// Usage:
 /// ```dart
-/// final trendingSoundsAsync = ref.watch(trendingSoundsProvider);
-/// trendingSoundsAsync.when(
-///   data: (sounds) => SoundList(sounds: sounds),
-///   loading: () => LoadingSpinner(),
-///   error: (e, s) => ErrorWidget(message: e.toString()),
-/// );
+/// final newest = ref.watch(trendingSoundsProvider);
+/// ref.read(trendingSoundsProvider.notifier).loadMore();
 /// ```
 
 @ProviderFor(TrendingSounds)
 final trendingSoundsProvider = TrendingSoundsProvider._();
 
-/// Async provider for trending sounds.
+/// The newest sounds, the picker's "New" list, loading older ones page by
+/// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
+/// it fills a screen.
 ///
-/// Fetches and returns a list of trending audio events sorted by creation time
-/// (newest first). Results are automatically cached in the repository.
+/// Unnamed sounds nobody reused are left out
+/// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
 ///
 /// Usage:
 /// ```dart
-/// final trendingSoundsAsync = ref.watch(trendingSoundsProvider);
-/// trendingSoundsAsync.when(
-///   data: (sounds) => SoundList(sounds: sounds),
-///   loading: () => LoadingSpinner(),
-///   error: (e, s) => ErrorWidget(message: e.toString()),
-/// );
+/// final newest = ref.watch(trendingSoundsProvider);
+/// ref.read(trendingSoundsProvider.notifier).loadMore();
 /// ```
 final class TrendingSoundsProvider
-    extends $AsyncNotifierProvider<TrendingSounds, List<AudioEvent>> {
-  /// Async provider for trending sounds.
+    extends $AsyncNotifierProvider<TrendingSounds, PagedSounds> {
+  /// The newest sounds, the picker's "New" list, loading older ones page by
+  /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
+  /// it fills a screen.
   ///
-  /// Fetches and returns a list of trending audio events sorted by creation time
-  /// (newest first). Results are automatically cached in the repository.
+  /// Unnamed sounds nobody reused are left out
+  /// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
   ///
   /// Usage:
   /// ```dart
-  /// final trendingSoundsAsync = ref.watch(trendingSoundsProvider);
-  /// trendingSoundsAsync.when(
-  ///   data: (sounds) => SoundList(sounds: sounds),
-  ///   loading: () => LoadingSpinner(),
-  ///   error: (e, s) => ErrorWidget(message: e.toString()),
-  /// );
+  /// final newest = ref.watch(trendingSoundsProvider);
+  /// ref.read(trendingSoundsProvider.notifier).loadMore();
   /// ```
   TrendingSoundsProvider._()
     : super(
@@ -165,35 +217,32 @@ final class TrendingSoundsProvider
   TrendingSounds create() => TrendingSounds();
 }
 
-String _$trendingSoundsHash() => r'4788d05c2d430f99a5f9e18c563bf65e1e262c1d';
+String _$trendingSoundsHash() => r'308f904cb163b67176bf6635d34eddd65ee18fc6';
 
-/// Async provider for trending sounds.
+/// The newest sounds, the picker's "New" list, loading older ones page by
+/// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
+/// it fills a screen.
 ///
-/// Fetches and returns a list of trending audio events sorted by creation time
-/// (newest first). Results are automatically cached in the repository.
+/// Unnamed sounds nobody reused are left out
+/// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
 ///
 /// Usage:
 /// ```dart
-/// final trendingSoundsAsync = ref.watch(trendingSoundsProvider);
-/// trendingSoundsAsync.when(
-///   data: (sounds) => SoundList(sounds: sounds),
-///   loading: () => LoadingSpinner(),
-///   error: (e, s) => ErrorWidget(message: e.toString()),
-/// );
+/// final newest = ref.watch(trendingSoundsProvider);
+/// ref.read(trendingSoundsProvider.notifier).loadMore();
 /// ```
 
-abstract class _$TrendingSounds extends $AsyncNotifier<List<AudioEvent>> {
-  FutureOr<List<AudioEvent>> build();
+abstract class _$TrendingSounds extends $AsyncNotifier<PagedSounds> {
+  FutureOr<PagedSounds> build();
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
-    final ref =
-        this.ref as $Ref<AsyncValue<List<AudioEvent>>, List<AudioEvent>>;
+    final ref = this.ref as $Ref<AsyncValue<PagedSounds>, PagedSounds>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<AsyncValue<List<AudioEvent>>, List<AudioEvent>>,
-              AsyncValue<List<AudioEvent>>,
+              AnyNotifier<AsyncValue<PagedSounds>, PagedSounds>,
+              AsyncValue<PagedSounds>,
               Object?,
               Object?
             >;
@@ -768,7 +817,8 @@ final class SoundUsageCountFamily extends $Family
 ///
 /// Sounds with no referenceable Nostr event — bundled assets, unpublished
 /// imports — carry no id and are absent from the map, and a list made only of
-/// those never reaches the repository at all.
+/// those never reaches the repository at all. So is a sound whose count could
+/// not be looked up.
 ///
 /// Usage:
 /// ```dart
@@ -790,7 +840,8 @@ final trendingSoundUsageCountsProvider = TrendingSoundUsageCountsProvider._();
 ///
 /// Sounds with no referenceable Nostr event — bundled assets, unpublished
 /// imports — carry no id and are absent from the map, and a list made only of
-/// those never reaches the repository at all.
+/// those never reaches the repository at all. So is a sound whose count could
+/// not be looked up.
 ///
 /// Usage:
 /// ```dart
@@ -817,7 +868,8 @@ final class TrendingSoundUsageCountsProvider
   ///
   /// Sounds with no referenceable Nostr event — bundled assets, unpublished
   /// imports — carry no id and are absent from the map, and a list made only of
-  /// those never reaches the repository at all.
+  /// those never reaches the repository at all. So is a sound whose count could
+  /// not be looked up.
   ///
   /// Usage:
   /// ```dart
@@ -851,7 +903,723 @@ final class TrendingSoundUsageCountsProvider
 }
 
 String _$trendingSoundUsageCountsHash() =>
-    r'7d9367cf22ea3fabd8af5b278441ed8bae5afad9';
+    r'c5492e930811075fb6fa755317b14139e842cc43';
+
+/// The reuse counts [trendingSoundUsageCounts] has looked up, so a list that
+/// loads more asks only about its new rows. Each lookup scans a capped number
+/// of videos for the whole batch, so asking again about every row loaded
+/// would also spread that cap ever thinner.
+
+@ProviderFor(_soundUsageCountCache)
+final _soundUsageCountCacheProvider = _SoundUsageCountCacheProvider._();
+
+/// The reuse counts [trendingSoundUsageCounts] has looked up, so a list that
+/// loads more asks only about its new rows. Each lookup scans a capped number
+/// of videos for the whole batch, so asking again about every row loaded
+/// would also spread that cap ever thinner.
+
+final class _SoundUsageCountCacheProvider
+    extends
+        $FunctionalProvider<
+          _SoundUsageCountCache,
+          _SoundUsageCountCache,
+          _SoundUsageCountCache
+        >
+    with $Provider<_SoundUsageCountCache> {
+  /// The reuse counts [trendingSoundUsageCounts] has looked up, so a list that
+  /// loads more asks only about its new rows. Each lookup scans a capped number
+  /// of videos for the whole batch, so asking again about every row loaded
+  /// would also spread that cap ever thinner.
+  _SoundUsageCountCacheProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'_soundUsageCountCacheProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$_soundUsageCountCacheHash();
+
+  @$internal
+  @override
+  $ProviderElement<_SoundUsageCountCache> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  _SoundUsageCountCache create(Ref ref) {
+    return _soundUsageCountCache(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(_SoundUsageCountCache value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<_SoundUsageCountCache>(value),
+    );
+  }
+}
+
+String _$_soundUsageCountCacheHash() =>
+    r'47dc3de33708337d2aad049beee12c833d138479';
+
+/// The sounds people are picking up right now, the most trending first,
+/// with how many videos use each, loading further down the ranking page by
+/// page as the list is scrolled ([PopularSounds.loadMore]).
+///
+/// Usage:
+/// ```dart
+/// final popular = ref.watch(popularSoundsProvider);
+/// ```
+
+@ProviderFor(PopularSounds)
+final popularSoundsProvider = PopularSoundsProvider._();
+
+/// The sounds people are picking up right now, the most trending first,
+/// with how many videos use each, loading further down the ranking page by
+/// page as the list is scrolled ([PopularSounds.loadMore]).
+///
+/// Usage:
+/// ```dart
+/// final popular = ref.watch(popularSoundsProvider);
+/// ```
+final class PopularSoundsProvider
+    extends $AsyncNotifierProvider<PopularSounds, PagedSounds> {
+  /// The sounds people are picking up right now, the most trending first,
+  /// with how many videos use each, loading further down the ranking page by
+  /// page as the list is scrolled ([PopularSounds.loadMore]).
+  ///
+  /// Usage:
+  /// ```dart
+  /// final popular = ref.watch(popularSoundsProvider);
+  /// ```
+  PopularSoundsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'popularSoundsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$popularSoundsHash();
+
+  @$internal
+  @override
+  PopularSounds create() => PopularSounds();
+}
+
+String _$popularSoundsHash() => r'09b6fa7ab9ade92315821b460654f53e3a47bebf';
+
+/// The sounds people are picking up right now, the most trending first,
+/// with how many videos use each, loading further down the ranking page by
+/// page as the list is scrolled ([PopularSounds.loadMore]).
+///
+/// Usage:
+/// ```dart
+/// final popular = ref.watch(popularSoundsProvider);
+/// ```
+
+abstract class _$PopularSounds extends $AsyncNotifier<PagedSounds> {
+  FutureOr<PagedSounds> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<PagedSounds>, PagedSounds>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<PagedSounds>, PagedSounds>,
+              AsyncValue<PagedSounds>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// Divine's own sounds published on the network, for the picker to show
+/// beside, and tie to, the ones the app ships (`linkDivineSounds`).
+///
+/// A failed lookup leaves just the shipped sounds, which need no network.
+
+@ProviderFor(divineSounds)
+final divineSoundsProvider = DivineSoundsProvider._();
+
+/// Divine's own sounds published on the network, for the picker to show
+/// beside, and tie to, the ones the app ships (`linkDivineSounds`).
+///
+/// A failed lookup leaves just the shipped sounds, which need no network.
+
+final class DivineSoundsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<AudioEvent>>,
+          List<AudioEvent>,
+          FutureOr<List<AudioEvent>>
+        >
+    with $FutureModifier<List<AudioEvent>>, $FutureProvider<List<AudioEvent>> {
+  /// Divine's own sounds published on the network, for the picker to show
+  /// beside, and tie to, the ones the app ships (`linkDivineSounds`).
+  ///
+  /// A failed lookup leaves just the shipped sounds, which need no network.
+  DivineSoundsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'divineSoundsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$divineSoundsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<AudioEvent>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<AudioEvent>> create(Ref ref) {
+    return divineSounds(ref);
+  }
+}
+
+String _$divineSoundsHash() => r'9810f55d815543cfd9e2405e3e6a4100861b3f64';
+
+/// The newest sounds published by people the viewer follows, for the
+/// picker's "For you" list, loading older ones page by page as it is
+/// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
+/// screen.
+///
+/// Divine's own sounds are left out even when the viewer follows a Divine
+/// sound account: the picker lists them from [divineSounds], tied to the
+/// ones the app ships, and would otherwise show each twice.
+///
+/// A single empty page when the viewer follows nobody yet; the picker then
+/// leads with Divine's own sounds.
+
+@ProviderFor(ForYouSounds)
+final forYouSoundsProvider = ForYouSoundsProvider._();
+
+/// The newest sounds published by people the viewer follows, for the
+/// picker's "For you" list, loading older ones page by page as it is
+/// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
+/// screen.
+///
+/// Divine's own sounds are left out even when the viewer follows a Divine
+/// sound account: the picker lists them from [divineSounds], tied to the
+/// ones the app ships, and would otherwise show each twice.
+///
+/// A single empty page when the viewer follows nobody yet; the picker then
+/// leads with Divine's own sounds.
+final class ForYouSoundsProvider
+    extends $AsyncNotifierProvider<ForYouSounds, PagedSounds> {
+  /// The newest sounds published by people the viewer follows, for the
+  /// picker's "For you" list, loading older ones page by page as it is
+  /// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
+  /// screen.
+  ///
+  /// Divine's own sounds are left out even when the viewer follows a Divine
+  /// sound account: the picker lists them from [divineSounds], tied to the
+  /// ones the app ships, and would otherwise show each twice.
+  ///
+  /// A single empty page when the viewer follows nobody yet; the picker then
+  /// leads with Divine's own sounds.
+  ForYouSoundsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'forYouSoundsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$forYouSoundsHash();
+
+  @$internal
+  @override
+  ForYouSounds create() => ForYouSounds();
+}
+
+String _$forYouSoundsHash() => r'4e3765a54b30199fd2c60394634f55554490ec0d';
+
+/// The newest sounds published by people the viewer follows, for the
+/// picker's "For you" list, loading older ones page by page as it is
+/// scrolled ([ForYouSounds.loadMore]), and on its own until it fills a
+/// screen.
+///
+/// Divine's own sounds are left out even when the viewer follows a Divine
+/// sound account: the picker lists them from [divineSounds], tied to the
+/// ones the app ships, and would otherwise show each twice.
+///
+/// A single empty page when the viewer follows nobody yet; the picker then
+/// leads with Divine's own sounds.
+
+abstract class _$ForYouSounds extends $AsyncNotifier<PagedSounds> {
+  FutureOr<PagedSounds> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<PagedSounds>, PagedSounds>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<PagedSounds>, PagedSounds>,
+              AsyncValue<PagedSounds>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
+/// Covers for the newest sounds list, keyed by
+/// [AudioEvent.sourceVideoReference], `null` for a video looked up and not
+/// found: deleted, or filtered out for this viewer. A sound the lookup has
+/// not reached yet, or could not, is absent.
+///
+/// Like [trendingSoundUsageCounts], the whole list resolves in one batched
+/// lookup rather than one per row, and the list never waits on it. Sounds
+/// that came from no video are absent too.
+///
+/// Usage:
+/// ```dart
+/// final covers = ref.watch(trendingSoundCoversProvider).value;
+/// final cover = covers?[sound.sourceVideoReference];
+/// ```
+
+@ProviderFor(trendingSoundCovers)
+final trendingSoundCoversProvider = TrendingSoundCoversProvider._();
+
+/// Covers for the newest sounds list, keyed by
+/// [AudioEvent.sourceVideoReference], `null` for a video looked up and not
+/// found: deleted, or filtered out for this viewer. A sound the lookup has
+/// not reached yet, or could not, is absent.
+///
+/// Like [trendingSoundUsageCounts], the whole list resolves in one batched
+/// lookup rather than one per row, and the list never waits on it. Sounds
+/// that came from no video are absent too.
+///
+/// Usage:
+/// ```dart
+/// final covers = ref.watch(trendingSoundCoversProvider).value;
+/// final cover = covers?[sound.sourceVideoReference];
+/// ```
+
+final class TrendingSoundCoversProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, SoundCover?>>,
+          Map<String, SoundCover?>,
+          FutureOr<Map<String, SoundCover?>>
+        >
+    with
+        $FutureModifier<Map<String, SoundCover?>>,
+        $FutureProvider<Map<String, SoundCover?>> {
+  /// Covers for the newest sounds list, keyed by
+  /// [AudioEvent.sourceVideoReference], `null` for a video looked up and not
+  /// found: deleted, or filtered out for this viewer. A sound the lookup has
+  /// not reached yet, or could not, is absent.
+  ///
+  /// Like [trendingSoundUsageCounts], the whole list resolves in one batched
+  /// lookup rather than one per row, and the list never waits on it. Sounds
+  /// that came from no video are absent too.
+  ///
+  /// Usage:
+  /// ```dart
+  /// final covers = ref.watch(trendingSoundCoversProvider).value;
+  /// final cover = covers?[sound.sourceVideoReference];
+  /// ```
+  TrendingSoundCoversProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'trendingSoundCoversProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$trendingSoundCoversHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<String, SoundCover?>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<String, SoundCover?>> create(Ref ref) {
+    return trendingSoundCovers(ref);
+  }
+}
+
+String _$trendingSoundCoversHash() =>
+    r'4b426fabdb90ce0719f7f59ed6f959ed292f0d19';
+
+/// Covers for [popularSounds], keyed like [trendingSoundCovers].
+
+@ProviderFor(popularSoundCovers)
+final popularSoundCoversProvider = PopularSoundCoversProvider._();
+
+/// Covers for [popularSounds], keyed like [trendingSoundCovers].
+
+final class PopularSoundCoversProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, SoundCover?>>,
+          Map<String, SoundCover?>,
+          FutureOr<Map<String, SoundCover?>>
+        >
+    with
+        $FutureModifier<Map<String, SoundCover?>>,
+        $FutureProvider<Map<String, SoundCover?>> {
+  /// Covers for [popularSounds], keyed like [trendingSoundCovers].
+  PopularSoundCoversProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'popularSoundCoversProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$popularSoundCoversHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<String, SoundCover?>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<String, SoundCover?>> create(Ref ref) {
+    return popularSoundCovers(ref);
+  }
+}
+
+String _$popularSoundCoversHash() =>
+    r'458cbcf12a6468d0b84ae08477de3738a957f53f';
+
+/// Covers for [forYouSounds], keyed like [trendingSoundCovers].
+
+@ProviderFor(forYouSoundCovers)
+final forYouSoundCoversProvider = ForYouSoundCoversProvider._();
+
+/// Covers for [forYouSounds], keyed like [trendingSoundCovers].
+
+final class ForYouSoundCoversProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, SoundCover?>>,
+          Map<String, SoundCover?>,
+          FutureOr<Map<String, SoundCover?>>
+        >
+    with
+        $FutureModifier<Map<String, SoundCover?>>,
+        $FutureProvider<Map<String, SoundCover?>> {
+  /// Covers for [forYouSounds], keyed like [trendingSoundCovers].
+  ForYouSoundCoversProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'forYouSoundCoversProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$forYouSoundCoversHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<String, SoundCover?>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<String, SoundCover?>> create(Ref ref) {
+    return forYouSoundCovers(ref);
+  }
+}
+
+String _$forYouSoundCoversHash() => r'f97f9dd50cfc07914a71b535d84b27f66548d148';
+
+/// Covers for the sounds a community search reached, keyed like
+/// [trendingSoundCovers].
+
+@ProviderFor(soundSearchCovers)
+final soundSearchCoversProvider = SoundSearchCoversFamily._();
+
+/// Covers for the sounds a community search reached, keyed like
+/// [trendingSoundCovers].
+
+final class SoundSearchCoversProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, SoundCover?>>,
+          Map<String, SoundCover?>,
+          FutureOr<Map<String, SoundCover?>>
+        >
+    with
+        $FutureModifier<Map<String, SoundCover?>>,
+        $FutureProvider<Map<String, SoundCover?>> {
+  /// Covers for the sounds a community search reached, keyed like
+  /// [trendingSoundCovers].
+  SoundSearchCoversProvider._({
+    required SoundSearchCoversFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'soundSearchCoversProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$soundSearchCoversHash();
+
+  @override
+  String toString() {
+    return r'soundSearchCoversProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<String, SoundCover?>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<String, SoundCover?>> create(Ref ref) {
+    final argument = this.argument as String;
+    return soundSearchCovers(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SoundSearchCoversProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$soundSearchCoversHash() => r'45f3d50707281f5fd38463c3ecfae631a0fee6e2';
+
+/// Covers for the sounds a community search reached, keyed like
+/// [trendingSoundCovers].
+
+final class SoundSearchCoversFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<Map<String, SoundCover?>>, String> {
+  SoundSearchCoversFamily._()
+    : super(
+        retry: null,
+        name: r'soundSearchCoversProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Covers for the sounds a community search reached, keyed like
+  /// [trendingSoundCovers].
+
+  SoundSearchCoversProvider call(String query) =>
+      SoundSearchCoversProvider._(argument: query, from: this);
+
+  @override
+  String toString() => r'soundSearchCoversProvider';
+}
+
+/// What My sounds' saved sounds' source videos left: their covers, keyed and
+/// marked like [trendingSoundCovers], so the tab can leave out the sounds that
+/// can no longer be reused.
+
+@ProviderFor(savedSoundSources)
+final savedSoundSourcesProvider = SavedSoundSourcesFamily._();
+
+/// What My sounds' saved sounds' source videos left: their covers, keyed and
+/// marked like [trendingSoundCovers], so the tab can leave out the sounds that
+/// can no longer be reused.
+
+final class SavedSoundSourcesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, SoundCover?>>,
+          Map<String, SoundCover?>,
+          FutureOr<Map<String, SoundCover?>>
+        >
+    with
+        $FutureModifier<Map<String, SoundCover?>>,
+        $FutureProvider<Map<String, SoundCover?>> {
+  /// What My sounds' saved sounds' source videos left: their covers, keyed and
+  /// marked like [trendingSoundCovers], so the tab can leave out the sounds that
+  /// can no longer be reused.
+  SavedSoundSourcesProvider._({
+    required SavedSoundSourcesFamily super.from,
+    required SoundSourceReferences super.argument,
+  }) : super(
+         retry: null,
+         name: r'savedSoundSourcesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$savedSoundSourcesHash();
+
+  @override
+  String toString() {
+    return r'savedSoundSourcesProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<String, SoundCover?>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<String, SoundCover?>> create(Ref ref) {
+    final argument = this.argument as SoundSourceReferences;
+    return savedSoundSources(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SavedSoundSourcesProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$savedSoundSourcesHash() => r'07756bea37ab7d70229d56768596c43a85770cca';
+
+/// What My sounds' saved sounds' source videos left: their covers, keyed and
+/// marked like [trendingSoundCovers], so the tab can leave out the sounds that
+/// can no longer be reused.
+
+final class SavedSoundSourcesFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<Map<String, SoundCover?>>,
+          SoundSourceReferences
+        > {
+  SavedSoundSourcesFamily._()
+    : super(
+        retry: null,
+        name: r'savedSoundSourcesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// What My sounds' saved sounds' source videos left: their covers, keyed and
+  /// marked like [trendingSoundCovers], so the tab can leave out the sounds that
+  /// can no longer be reused.
+
+  SavedSoundSourcesProvider call(SoundSourceReferences sources) =>
+      SavedSoundSourcesProvider._(argument: sources, from: this);
+
+  @override
+  String toString() => r'savedSoundSourcesProvider';
+}
+
+/// The covers the picker's lists have looked up, shared by them, so a list
+/// that loads more asks only about its new rows.
+///
+/// Made anew with the videos repository, whose viewer decides which videos
+/// are found, and for each account, whose own sounds it may always reuse.
+
+@ProviderFor(_soundCoverCache)
+final _soundCoverCacheProvider = _SoundCoverCacheProvider._();
+
+/// The covers the picker's lists have looked up, shared by them, so a list
+/// that loads more asks only about its new rows.
+///
+/// Made anew with the videos repository, whose viewer decides which videos
+/// are found, and for each account, whose own sounds it may always reuse.
+
+final class _SoundCoverCacheProvider
+    extends
+        $FunctionalProvider<
+          _SoundCoverCache,
+          _SoundCoverCache,
+          _SoundCoverCache
+        >
+    with $Provider<_SoundCoverCache> {
+  /// The covers the picker's lists have looked up, shared by them, so a list
+  /// that loads more asks only about its new rows.
+  ///
+  /// Made anew with the videos repository, whose viewer decides which videos
+  /// are found, and for each account, whose own sounds it may always reuse.
+  _SoundCoverCacheProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'_soundCoverCacheProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$_soundCoverCacheHash();
+
+  @$internal
+  @override
+  $ProviderElement<_SoundCoverCache> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  _SoundCoverCache create(Ref ref) {
+    return _soundCoverCache(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(_SoundCoverCache value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<_SoundCoverCache>(value),
+    );
+  }
+}
+
+String _$_soundCoverCacheHash() => r'1cd87cc3aa83da3ee258ccf49f7e54cbe6a654e6';
 
 /// Viewer-independent reuse terms for explicit and legacy audio events.
 
@@ -907,7 +1675,7 @@ final class AudioReuseTermsProvider
   }
 }
 
-String _$audioReuseTermsHash() => r'6c5b36e30d803320d075b60393eb586e6e2fc72d';
+String _$audioReuseTermsHash() => r'6df56ee2881813312aa6d2862a5c87291cbfd0f9';
 
 /// Viewer-independent reuse terms for explicit and legacy audio events.
 

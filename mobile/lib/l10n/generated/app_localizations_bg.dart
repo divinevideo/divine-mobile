@@ -4584,6 +4584,25 @@ class AppLocalizationsBg extends AppLocalizations {
       'Дай заглавие на звука, за да го споделиш.';
 
   @override
+  String get soundsShareCoverLabel => 'Корица';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'По избор. Хората я виждат до звука ти, когато избират звук.';
+
+  @override
+  String get soundsShareCoverAdd => 'Добави корица';
+
+  @override
+  String get soundsShareCoverReplace => 'Замени';
+
+  @override
+  String get soundsShareCoverRemove => 'Премахни корицата';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Корица на звука';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Този тип файл не се поддържа. Избери аудиофайл.';
 
@@ -11187,6 +11206,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Звук без заглавие';
 
   @override
+  String get videoEditorAudioUseSound => 'Използвай';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Аудиофайлът вече го няма на устройството';
 
@@ -11212,16 +11234,13 @@ class AppLocalizationsBg extends AppLocalizations {
       'Избери аудио сегмента за видеото си';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Общност';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'Препоръчани';
+  String get videoEditorAudioCategoryMySounds => 'Моите звуци';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'Моите звуци';
+  String get videoEditorAudioFilterEffects => 'Ефекти';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel =>
@@ -11971,9 +11990,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Нюанс';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Готово';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Ниво';

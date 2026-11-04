@@ -4250,6 +4250,25 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundsShareTitleRequiredHint => '共有するにはサウンドにタイトルを付けてください。';
 
   @override
+  String get soundsShareCoverLabel => 'カバー';
+
+  @override
+  String get soundsShareCoverDescription =>
+      '任意です。サウンドを選ぶときに、あなたのサウンドの横に表示されます。';
+
+  @override
+  String get soundsShareCoverAdd => 'カバーを追加';
+
+  @override
+  String get soundsShareCoverReplace => '差し替え';
+
+  @override
+  String get soundsShareCoverRemove => 'カバーを削除';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'サウンドのカバー';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'このファイル形式には対応していません。音声ファイルを選んでください。';
 
@@ -10549,6 +10568,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'タイトルなしのサウンド';
 
   @override
+  String get videoEditorAudioUseSound => '使う';
+
+  @override
   String get videoEditorAudioFileMissing => '音声ファイルは端末に残っていません';
 
   @override
@@ -10571,16 +10593,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorAudioSegmentInstruction => '動画に使うオーディオ範囲を選択';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'コミュニティ';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'おすすめ';
+  String get videoEditorAudioCategoryMySounds => 'マイサウンド';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'マイサウンド';
+  String get videoEditorAudioFilterEffects => '効果音';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => '消しゴムツール';
@@ -11286,9 +11305,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => '色相';
-
-  @override
-  String get videoEditorDoneSemanticLabel => '完了';
 
   @override
   String get videoEditorLevelSemanticLabel => 'レベル';

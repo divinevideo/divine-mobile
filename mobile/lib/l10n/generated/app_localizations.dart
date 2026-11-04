@@ -7615,6 +7615,42 @@ abstract class AppLocalizations {
   /// **'Give your sound a title to share it.'**
   String get soundsShareTitleRequiredHint;
 
+  /// Heading of the optional cover image section on the Add sound screen while a sound is set to be shared publicly.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover'**
+  String get soundsShareCoverLabel;
+
+  /// Helper text under the cover heading on the Add sound screen. The cover image shows next to the shared sound in the sound picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. People see it next to your sound when they pick one.'**
+  String get soundsShareCoverDescription;
+
+  /// Button on the Add sound screen that opens the camera or gallery to pick a cover image for a sound being shared.
+  ///
+  /// In en, this message translates to:
+  /// **'Add cover'**
+  String get soundsShareCoverAdd;
+
+  /// Button on the Add sound screen, shown once a cover image is picked, that opens the camera or gallery to pick a different one.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get soundsShareCoverReplace;
+
+  /// Row in the cover image sheet on the Add sound screen that removes the picked cover image.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove cover'**
+  String get soundsShareCoverRemove;
+
+  /// Title of the sheet that offers camera, gallery and remove for the cover image of a sound being shared.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound cover'**
+  String get soundsShareCoverSheetTitle;
+
   /// Shown when the picked file's extension is not a supported audio container.
   ///
   /// In en, this message translates to:
@@ -18785,6 +18821,12 @@ abstract class AppLocalizations {
   /// **'Untitled sound'**
   String get videoEditorAudioUntitledSound;
 
+  /// Button on the card for the picked sound in the sound picker that adds the sound to the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Use'**
+  String get videoEditorAudioUseSound;
+
   /// Subtitle on a saved sound in the video editor's sound picker whose imported audio file is no longer on the device. The entry stays listed but cannot be selected, because attaching it would put a dead source on the draft.
   ///
   /// In en, this message translates to:
@@ -18827,29 +18869,23 @@ abstract class AppLocalizations {
   /// **'Select the audio segment for your video'**
   String get videoEditorAudioSegmentInstruction;
 
-  /// No description provided for @videoEditorAudioCategoryDivine.
-  ///
-  /// In en, this message translates to:
-  /// **'Divine'**
-  String get videoEditorAudioCategoryDivine;
-
   /// No description provided for @videoEditorAudioCategoryCommunity.
   ///
   /// In en, this message translates to:
   /// **'Community'**
   String get videoEditorAudioCategoryCommunity;
 
-  /// No description provided for @videoEditorAudioCategoryFeatured.
-  ///
-  /// In en, this message translates to:
-  /// **'Featured'**
-  String get videoEditorAudioCategoryFeatured;
-
   /// No description provided for @videoEditorAudioCategoryMySounds.
   ///
   /// In en, this message translates to:
   /// **'My Sounds'**
   String get videoEditorAudioCategoryMySounds;
+
+  /// Filter chip in the sound picker that narrows the lists to sound effects (booms, laughs, meme lines), as opposed to music. Translate as sound effects, not visual effects.
+  ///
+  /// In en, this message translates to:
+  /// **'Effects'**
+  String get videoEditorAudioFilterEffects;
 
   /// No description provided for @videoEditorDrawToolEraserSemanticLabel.
   ///
@@ -20054,12 +20090,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hue'**
   String get videoEditorHueSemanticLabel;
-
-  /// No description provided for @videoEditorDoneSemanticLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Done'**
-  String get videoEditorDoneSemanticLabel;
 
   /// No description provided for @videoEditorLevelSemanticLabel.
   ///

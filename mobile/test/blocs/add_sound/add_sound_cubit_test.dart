@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -108,6 +109,7 @@ void main() {
           audio: any(named: 'audio'),
           attribution: any(named: 'attribution'),
           allowAudioReuse: any(named: 'allowAudioReuse'),
+          coverImage: any(named: 'coverImage'),
         ),
       ).thenAnswer((_) => answer());
     }
@@ -511,6 +513,26 @@ void main() {
           ).called(1);
         },
       );
+
+      test('shares the cover the user chose', () async {
+        stubPublish(() async => LocalAudioPublished(_publishedEvent()));
+        final cover = Uint8List.fromList(const [1, 2, 3]);
+        final cubit = await sharingCubit();
+        addTearDown(cubit.close);
+
+        cubit.setCoverImage(cover);
+        await cubit.save();
+
+        expect(cubit.state.status, AddSoundStatus.saved);
+        verify(
+          () => publisher.publish(
+            audio: any(named: 'audio'),
+            attribution: any(named: 'attribution'),
+            allowAudioReuse: true,
+            coverImage: cover,
+          ),
+        ).called(1);
+      });
 
       test('maps a failed publish back to ready and saves nothing', () async {
         stubPublish(

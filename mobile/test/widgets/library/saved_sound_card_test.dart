@@ -183,7 +183,7 @@ void main() {
 
         expect(find.text('Instrumental loop'), findsOneWidget);
         expect(
-          find.byKey(const Key('saved_sound_thumbnail_fallback')),
+          find.byKey(const Key('sound_cover_fallback')),
           findsOneWidget,
         );
         expect(find.byKey(const Key('saved_sound_transcript')), findsNothing);

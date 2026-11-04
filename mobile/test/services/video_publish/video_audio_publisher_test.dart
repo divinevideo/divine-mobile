@@ -7,7 +7,7 @@ import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart'
-    show AudioEvent, AudioExternalSource, AudioLicenseMetadata;
+    show AudioEvent, AudioExternalSource, AudioLicenseMetadata, VineSound;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
@@ -264,6 +264,42 @@ void main() {
             ['e', _soundEventId, 'wss://relay.divine.video', 'audio'],
           ]),
         );
+      });
+
+      test('references the event Divine published for a shipped sound '
+          "instead of passing the audio off as the poster's", () async {
+        final shipped = AudioEvent.fromBundledSound(
+          VineSound(
+            id: 'wednesday',
+            title: 'Wednesday My Dudes',
+            assetPath: 'assets/sounds/wednesday.mp3',
+            duration: const Duration(seconds: 6),
+          ),
+        ).copyWith(linkedEventId: _soundEventId);
+
+        final resolution = await publisher().resolveForPublish(
+          upload: PendingUpload.create(
+            localVideoPath: '/tmp/clip.mp4',
+            nostrPubkey: _self,
+            title: 'Plants',
+          ),
+          videoDTag: 'vine-1',
+          allowAudioReuse: true,
+          selectedAudio: shipped,
+          selectedAudioEventId: shipped.id,
+        );
+
+        expect(
+          resolution,
+          isA<VideoAudioResolved>().having(
+            (r) => r.tags,
+            'tags',
+            contains(
+              equals(['e', _soundEventId, 'wss://relay.divine.video', 'audio']),
+            ),
+          ),
+        );
+        verifyZeroInteractions(relayPublisher);
       });
 
       test('throws when the sound explicitly forbids reuse', () async {
