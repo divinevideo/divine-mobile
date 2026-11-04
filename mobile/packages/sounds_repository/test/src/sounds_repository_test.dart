@@ -1106,6 +1106,31 @@ void main() {
           expect(kept, isEmpty);
         });
 
+        test(
+          'drops a sound titled after its creator that only its creator used',
+          () async {
+            when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+              (_) async => answered([
+                video(
+                  id: testVideoEventId,
+                  pubkey: testPubkey1,
+                  dTag: sourceDTag,
+                  usesSoundId: testEventId1,
+                ),
+              ]),
+            );
+
+            final kept = await repository.withoutUnusedOriginals([
+              sound(
+                testEventId1,
+                title: '${AudioEvent.originalSoundTitle} - @rabble',
+              ),
+            ]);
+
+            expect(kept, isEmpty);
+          },
+        );
+
         test('keeps an unnamed sound credited to a source', () async {
           final credited = [
             sound(testEventId1, source: 'https://example.com/track'),

@@ -661,6 +661,7 @@ void main() {
 
       test('is true for the default title naming its creator', () {
         expect(titled('Original sound - @rabble').hasDefaultTitle, isTrue);
+        expect(titled(' ORIGINAL Sound - @rabble ').hasDefaultTitle, isTrue);
       });
 
       test('is false for a named sound', () {
@@ -689,6 +690,13 @@ void main() {
         expect(sound().isAutoSharedOriginal, isTrue);
         expect(sound(title: null).isAutoSharedOriginal, isTrue);
         expect(sound(source: '  ').isAutoSharedOriginal, isTrue);
+      });
+
+      test('is true for the title the app publishes for a video sound', () {
+        expect(
+          sound(title: 'Original sound - @rabble').isAutoSharedOriginal,
+          isTrue,
+        );
       });
 
       test('is false for a sound its publisher named', () {
