@@ -103,7 +103,7 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text('Spam or Unwanted Content'));
         await tester.pumpAndSettle();
-        expect((submitted!['target'] as Map), {
+        expect(submitted!['target'] as Map, {
           'communityId': community,
           'channelId': channel,
           'rumorId': message.id,
