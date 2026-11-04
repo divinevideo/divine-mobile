@@ -412,6 +412,16 @@ class SoundsRepository {
     if (originals.isEmpty) return sounds;
 
     final reused = await _usedByOtherAccounts(originals) ?? const {};
+    return _originalsLast(sounds, originals, reused: reused);
+  }
+
+  /// [sounds] with those of [originals] not in [reused] moved after the rest,
+  /// each group keeping its order.
+  List<AudioEvent> _originalsLast(
+    List<AudioEvent> sounds,
+    Map<String, AudioEvent> originals, {
+    Set<String> reused = const {},
+  }) {
     bool unused(AudioEvent sound) =>
         originals.containsKey(sound.id) && !reused.contains(sound.id);
     return [
@@ -576,6 +586,7 @@ class SoundsRepository {
         if (sound.matchesSearch(query)) sound.id: sound,
     };
 
+    var relayAnswered = true;
     try {
       final events = await _nostrClient.queryEvents([
         Filter(
@@ -589,6 +600,7 @@ class SoundsRepository {
         if (sound.matchesSearch(query)) matches[sound.id] = sound;
       }
     } on Exception catch (e) {
+      relayAnswered = false;
       Log.error(
         'Error searching sounds by tag: $e',
         name: 'SoundsRepository',
@@ -596,10 +608,13 @@ class SoundsRepository {
       );
     }
 
-    final results = await withUnusedOriginalsLast(
-      withoutBlockedAuthors(matches.values.toList())
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
-    );
+    final newestFirst = withoutBlockedAuthors(matches.values.toList())
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    // Relays that just failed the search would most likely fail the reuse
+    // lookup too, so the unnamed sounds go last without asking them.
+    final results = relayAnswered
+        ? await withUnusedOriginalsLast(newestFirst)
+        : _originalsLast(newestFirst, _autoSharedOriginalsIn(newestFirst));
 
     Log.debug(
       'Sound search for ${terms.length} term(s) matched ${results.length}',

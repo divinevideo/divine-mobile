@@ -530,6 +530,39 @@ void main() {
         expect(sounds.map((sound) => sound.id), equals([testEventId1]));
       });
 
+      test(
+        'lists unnamed cached sounds last without a reuse lookup when the '
+        'relay fails',
+        () async {
+          await primeCache([
+            createAudioEvent(
+              id: testEventId3,
+              pubkey: testPubkey2,
+              title: AudioEvent.originalSoundTitle,
+              publicTags: const ['wind'],
+              createdAt: 2000,
+            ),
+            createAudioEvent(
+              id: testEventId1,
+              pubkey: testPubkey1,
+              title: 'Wind blowing hard',
+              createdAt: 1000,
+            ),
+          ]);
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenThrow(Exception('relay down'));
+
+          final sounds = await repository.searchSounds('wind');
+
+          expect(
+            sounds.map((sound) => sound.id),
+            equals([testEventId1, testEventId3]),
+          );
+          verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
+        },
+      );
+
       test('honours an explicit result limit', () async {
         await repository.searchSounds('wind', limit: 7);
 
