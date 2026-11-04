@@ -390,18 +390,33 @@ definitions:
           echo "ERROR: could not read build name from pubspec.yaml version."
           exit 1
         fi
-        LATEST_GOOGLE_PLAY_BUILD_NUMBER=$(google-play get-latest-build-number --package-name "co.openvine.app" 2>/dev/null || true)
-        BUILD_NUMBER=$PROJECT_BUILD_NUMBER
+        # Fail closed, like the iOS lookup. Falling back to the Codemagic
+        # counter on a lookup error can pick a versionCode Play already holds,
+        # which Play rejects only after a full build and Shorebird release.
+        PLAY_LOOKUP_LOG=$(mktemp)
+        trap 'rm -f "$PLAY_LOOKUP_LOG"' EXIT
+        if ! LATEST_GOOGLE_PLAY_BUILD_NUMBER=$(google-play get-latest-build-number --package-name "co.openvine.app" 2>"$PLAY_LOOKUP_LOG"); then
+          LATEST_GOOGLE_PLAY_BUILD_NUMBER=
+        fi
         case "$LATEST_GOOGLE_PLAY_BUILD_NUMBER" in
           ''|*[!0-9]*)
-            ;;
-          *)
-            NEXT_PLAY_BUILD_NUMBER=$((LATEST_GOOGLE_PLAY_BUILD_NUMBER + 1))
-            if [ "$NEXT_PLAY_BUILD_NUMBER" -gt "$BUILD_NUMBER" ]; then
-              BUILD_NUMBER=$NEXT_PLAY_BUILD_NUMBER
+            echo "ERROR: could not read the latest Google Play build number."
+            if [ -n "$LATEST_GOOGLE_PLAY_BUILD_NUMBER" ]; then
+              echo "       Google Play returned: $LATEST_GOOGLE_PLAY_BUILD_NUMBER"
             fi
+            if [ -s "$PLAY_LOOKUP_LOG" ]; then
+              echo "       Google Play lookup output:"
+              sed 's/^/       /' "$PLAY_LOOKUP_LOG"
+            fi
+            echo "       Refusing to guess a build number Google Play may reject after the build."
+            exit 1
             ;;
         esac
+        BUILD_NUMBER=$PROJECT_BUILD_NUMBER
+        NEXT_PLAY_BUILD_NUMBER=$((LATEST_GOOGLE_PLAY_BUILD_NUMBER + 1))
+        if [ "$NEXT_PLAY_BUILD_NUMBER" -gt "$BUILD_NUMBER" ]; then
+          BUILD_NUMBER=$NEXT_PLAY_BUILD_NUMBER
+        fi
         RELEASE_VERSION="$BUILD_NAME+$BUILD_NUMBER"
         {
           echo "SHOREBIRD_BUILD_NAME=$BUILD_NAME"
