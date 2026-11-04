@@ -105,6 +105,54 @@ void main() {
       expect(cubit.state.stateFor(invite), CollaboratorInviteState.accepted);
     });
 
+    test('loads an accept left in flight by an earlier session as pending', () {
+      when(
+        () => store.getState(
+          videoAddress: invite.videoAddress,
+          creatorPubkey: invite.creatorPubkey,
+          collaboratorPubkey: currentUserPubkey,
+        ),
+      ).thenReturn(CollaboratorInviteState.accepting);
+
+      final cubit = buildCubit()..loadInvites([invite]);
+
+      expect(cubit.state.stateFor(invite), CollaboratorInviteState.pending);
+    });
+
+    test('keeps its own accept in flight when a card reloads it', () async {
+      final publish = Completer<CollaboratorResponseResult>();
+      when(
+        () => store.setState(
+          videoAddress: any(named: 'videoAddress'),
+          creatorPubkey: any(named: 'creatorPubkey'),
+          collaboratorPubkey: any(named: 'collaboratorPubkey'),
+          state: any(named: 'state'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        () => store.getState(
+          videoAddress: invite.videoAddress,
+          creatorPubkey: invite.creatorPubkey,
+          collaboratorPubkey: currentUserPubkey,
+        ),
+      ).thenReturn(CollaboratorInviteState.accepting);
+      when(
+        () => responseService.acceptInvite(any()),
+      ).thenAnswer((_) => publish.future);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+
+      final accepting = cubit.acceptInvite(invite);
+      await pumpEventQueue();
+      expect(cubit.state.stateFor(invite), CollaboratorInviteState.accepting);
+
+      cubit.loadInvites([invite]);
+
+      expect(cubit.state.stateFor(invite), CollaboratorInviteState.accepting);
+      publish.complete(const CollaboratorResponseResult.failure('offline'));
+      await accepting;
+    });
+
     blocTest<CollaboratorInviteActionsCubit, CollaboratorInviteActionsState>(
       'acceptInvite persists accepting, publishes, then persists accepted',
       setUp: () {
@@ -331,5 +379,90 @@ void main() {
         );
       },
     );
+  });
+
+  group(CollaboratorInviteActionsState, () {
+    group('displayStateFor', () {
+      CollaboratorInviteActionsState withLocal(CollaboratorInviteState local) {
+        final state = CollaboratorInviteActionsState(
+          inviteStates: {'${invite.videoAddress}|$creatorPubkey': local},
+        );
+        expect(state.stateFor(invite), local);
+        return state;
+      }
+
+      test('shows accepted when the relay holds an acceptance and nothing '
+          'is stored locally', () {
+        expect(
+          const CollaboratorInviteActionsState().displayStateFor(
+            invite,
+            relayStatus: CollaboratorStatus.confirmed,
+          ),
+          CollaboratorInviteState.accepted,
+        );
+      });
+
+      test('lets a relay acceptance replace a failed local attempt', () {
+        expect(
+          withLocal(CollaboratorInviteState.failed).displayStateFor(
+            invite,
+            relayStatus: CollaboratorStatus.confirmed,
+          ),
+          CollaboratorInviteState.accepted,
+        );
+      });
+
+      test('keeps a local ignore over any relay acceptance', () {
+        expect(
+          withLocal(CollaboratorInviteState.ignored).displayStateFor(
+            invite,
+            relayStatus: CollaboratorStatus.confirmed,
+          ),
+          CollaboratorInviteState.ignored,
+        );
+      });
+
+      test('keeps accepting while the local publish is in flight', () {
+        expect(
+          withLocal(
+            CollaboratorInviteState.accepting,
+          ).displayStateFor(invite, relayStatus: CollaboratorStatus.pending),
+          CollaboratorInviteState.accepting,
+        );
+      });
+
+      test('shows accepted once the relay holds an acceptance during an '
+          'accept', () {
+        expect(
+          withLocal(CollaboratorInviteState.accepting).displayStateFor(
+            invite,
+            relayStatus: CollaboratorStatus.confirmed,
+          ),
+          CollaboratorInviteState.accepted,
+        );
+      });
+
+      test('shows ignored when the repository reports an ignore', () {
+        expect(
+          withLocal(
+            CollaboratorInviteState.pending,
+          ).displayStateFor(invite, relayStatus: CollaboratorStatus.ignored),
+          CollaboratorInviteState.ignored,
+        );
+      });
+
+      test('falls back to the local state when the relay has no answer', () {
+        expect(
+          withLocal(
+            CollaboratorInviteState.failed,
+          ).displayStateFor(invite, relayStatus: CollaboratorStatus.pending),
+          CollaboratorInviteState.failed,
+        );
+        expect(
+          const CollaboratorInviteActionsState().displayStateFor(invite),
+          CollaboratorInviteState.pending,
+        );
+      });
+    });
   });
 }

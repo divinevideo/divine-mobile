@@ -4563,6 +4563,86 @@ void main() {
       );
 
       testWidgets(
+        'names the viewer as the collaborator on a received invite card',
+        (tester) async {
+          final message = DmMessage(
+            id: '9999999999999999999999999999999999999999999999999999999999999999',
+            conversationId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+            senderPubkey: otherPubkey,
+            content: 'You were invited to collaborate.',
+            createdAt: now.millisecondsSinceEpoch ~/ 1000,
+            giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+            tags: const [
+              ['divine', 'collab-invite'],
+              [
+                'a',
+                '34236:$otherPubkey:skate-loop',
+                'wss://relay.divine.video',
+              ],
+              ['p', otherPubkey],
+              ['role', 'Collaborator'],
+            ],
+          );
+
+          await tester.pumpWidget(
+            buildSubject(
+              state: ConversationState(
+                status: ConversationStatus.loaded,
+                messages: [message],
+              ),
+            ),
+          );
+          await tester.pump();
+
+          final card = tester.widget<CollaboratorInviteCard>(
+            find.byType(CollaboratorInviteCard),
+          );
+          expect(card.isSent, isFalse);
+          expect(card.collaboratorPubkey, currentPubkey);
+        },
+      );
+
+      testWidgets(
+        'names the counterparty as the collaborator on a sent invite card',
+        (tester) async {
+          final message = DmMessage(
+            id: '9999999999999999999999999999999999999999999999999999999999999999',
+            conversationId: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+            senderPubkey: currentPubkey,
+            content: 'You were invited to collaborate.',
+            createdAt: now.millisecondsSinceEpoch ~/ 1000,
+            giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+            tags: const [
+              ['divine', 'collab-invite'],
+              [
+                'a',
+                '34236:$currentPubkey:skate-loop',
+                'wss://relay.divine.video',
+              ],
+              ['p', currentPubkey],
+              ['role', 'Collaborator'],
+            ],
+          );
+
+          await tester.pumpWidget(
+            buildSubject(
+              state: ConversationState(
+                status: ConversationStatus.loaded,
+                messages: [message],
+              ),
+            ),
+          );
+          await tester.pump();
+
+          final card = tester.widget<CollaboratorInviteCard>(
+            find.byType(CollaboratorInviteCard),
+          );
+          expect(card.isSent, isTrue);
+          expect(card.collaboratorPubkey, otherPubkey);
+        },
+      );
+
+      testWidgets(
         'renders collaborator invite card instead of plaintext invite copy',
         (tester) async {
           final message = DmMessage(
