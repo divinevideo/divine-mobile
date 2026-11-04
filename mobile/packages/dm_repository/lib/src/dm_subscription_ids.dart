@@ -16,6 +16,11 @@ String dmHistoryDrainSubscriptionId(String pubkey, int page) =>
 String dmCatchUpDebtSubscriptionId(String pubkey, int page) =>
     '${scopedSubscriptionId('dm_catchup', pubkey)}_$page';
 
+/// Subscription id for page [page] of the re-query below the live window of
+/// [pubkey] (#8439).
+String dmBelowWindowRequerySubscriptionId(String pubkey, int page) =>
+    '${scopedSubscriptionId('dm_requery', pubkey)}_$page';
+
 /// Subscription id for the kind-5 read paired with the read [readId] names.
 ///
 /// Deletions are asked for in a REQ of their own: a relay that gates DMs
