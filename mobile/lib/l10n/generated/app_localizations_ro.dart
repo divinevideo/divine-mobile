@@ -4631,9 +4631,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Deja în Sunete';
 
   @override
-  String get soundsSavedLibraryTitle => 'Sunetele mele';
-
-  @override
   String get soundsSavedEmptyTitle => 'Niciun sunet salvat încă';
 
   @override
@@ -4642,6 +4639,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Adaugă sunet';
+
+  @override
+  String get soundsAddSoundHint => 'Importă un fișier sau înregistrează unul';
 
   @override
   String get soundsAddSharePublicly => 'Împărtășește public';
@@ -4734,12 +4734,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'Nu am putut elimina acel sunet. Încearcă din nou.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Se sincronizează sunetele tale…';
-
-  @override
-  String get soundSyncStatusSynced => 'Sunetele sunt la zi';
 
   @override
   String get soundSyncStatusFailed =>
@@ -14214,8 +14208,11 @@ class AppLocalizationsRo extends AppLocalizations {
   String get savedSoundRemoveAction => 'Elimină sunetul salvat';
 
   @override
-  String get savedSoundFileMissing =>
-      'Fișierul audio al acestui sunet nu mai este pe dispozitiv, așa că nu poate fi redat.';
+  String get savedSoundOpenAction => 'Deschide sunetul';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Nu mai poate fi folosit în videoclipuri noi';
 
   @override
   String get savedSoundClearHashtagFilter => 'Șterge filtrul de hashtaguri';

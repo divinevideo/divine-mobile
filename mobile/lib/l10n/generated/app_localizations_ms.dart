@@ -4481,9 +4481,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Sudah ada dalam Bunyi';
 
   @override
-  String get soundsSavedLibraryTitle => 'Bunyi Saya';
-
-  @override
   String get soundsSavedEmptyTitle => 'Belum ada bunyi disimpan';
 
   @override
@@ -4492,6 +4489,9 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Tambah bunyi';
+
+  @override
+  String get soundsAddSoundHint => 'Import fail atau rakam sendiri';
 
   @override
   String get soundsAddSharePublicly => 'Kongsi secara umum';
@@ -4582,12 +4582,6 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => 'Bunyi itu tidak dapat dibuang. Cuba lagi.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Menyegerakkan bunyi anda…';
-
-  @override
-  String get soundSyncStatusSynced => 'Bunyi sudah terkini';
 
   @override
   String get soundSyncStatusFailed =>
@@ -13915,8 +13909,11 @@ class AppLocalizationsMs extends AppLocalizations {
   String get savedSoundRemoveAction => 'Buang bunyi tersimpan';
 
   @override
-  String get savedSoundFileMissing =>
-      'Fail audio bunyi ini sudah tiada pada peranti anda, jadi ia tidak boleh dimainkan.';
+  String get savedSoundOpenAction => 'Buka bunyi';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Tidak boleh digunakan lagi dalam video baharu';
 
   @override
   String get savedSoundClearHashtagFilter => 'Kosongkan penapis hashtag';

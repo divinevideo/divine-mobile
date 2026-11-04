@@ -7543,12 +7543,6 @@ abstract class AppLocalizations {
   /// **'Already in Sounds'**
   String get soundsAlreadySavedToLibrary;
 
-  /// No description provided for @soundsSavedLibraryTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'My Sounds'**
-  String get soundsSavedLibraryTitle;
-
   /// No description provided for @soundsSavedEmptyTitle.
   ///
   /// In en, this message translates to:
@@ -7566,6 +7560,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add sound'**
   String get soundsAddSound;
+
+  /// Under the Add sound row at the top of My Sounds in the Library, which opens a page to pick an audio file or record one.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a file or record one'**
+  String get soundsAddSoundHint;
 
   /// Switch on the Add sound screen. On, the sound is published for anyone on Divine to reuse (with a public credit) before it is saved to My Sounds; off, it stays private.
   ///
@@ -7728,18 +7728,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t remove that sound. Try again.'**
   String get soundsRemoveFailed;
-
-  /// Shown while a saved-sound library sync pass with other devices is in progress.
-  ///
-  /// In en, this message translates to:
-  /// **'Syncing your sounds…'**
-  String get soundSyncStatusSyncing;
-
-  /// Shown after a saved-sound library sync pass completes successfully; the local library matches other devices.
-  ///
-  /// In en, this message translates to:
-  /// **'Sounds up to date'**
-  String get soundSyncStatusSynced;
 
   /// Shown when a saved-sound library sync pass fails for a transient reason (e.g. the relay is unreachable). The app will retry automatically on the next trigger.
   ///
@@ -23343,11 +23331,17 @@ abstract class AppLocalizations {
   /// **'Remove saved sound'**
   String get savedSoundRemoveAction;
 
-  /// Shown on a My Sounds entry whose imported audio file is no longer on the device. The entry keeps the label and hashtags the user wrote, so it is not silently dropped. It deliberately stops short of telling the user to remove the entry: removal publishes a tombstone that deletes it on every synced device, where the file may still be present.
+  /// Action in the menu of a My Sounds entry that opens the sound's own page.
   ///
   /// In en, this message translates to:
-  /// **'This sound\'s audio file is gone from this device, so it can\'t play.'**
-  String get savedSoundFileMissing;
+  /// **'Open sound'**
+  String get savedSoundOpenAction;
+
+  /// Shown in place of the details of a My Sounds entry whose source video was deleted or is hidden from the viewer, or whose creator no longer lets others reuse its sound. The sound picker leaves such a sound out; My Sounds keeps it listed so the user can still remove it.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t be used in new videos anymore'**
+  String get savedSoundReuseUnavailable;
 
   /// No description provided for @savedSoundClearHashtagFilter.
   ///

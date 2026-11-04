@@ -4228,9 +4228,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => '이미 사운드에 있음';
 
   @override
-  String get soundsSavedLibraryTitle => '내 사운드';
-
-  @override
   String get soundsSavedEmptyTitle => '저장된 사운드가 아직 없음';
 
   @override
@@ -4238,6 +4235,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get soundsAddSound => '사운드 추가';
+
+  @override
+  String get soundsAddSoundHint => '파일을 가져오거나 직접 녹음해요';
 
   @override
   String get soundsAddSharePublicly => '공개로 공유';
@@ -4325,12 +4325,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => '해당 사운드를 삭제하지 못했어요. 다시 시도해 주세요.';
-
-  @override
-  String get soundSyncStatusSyncing => '사운드를 동기화하는 중…';
-
-  @override
-  String get soundSyncStatusSynced => '사운드가 최신 상태입니다';
 
   @override
   String get soundSyncStatusFailed => '사운드를 동기화하지 못했어요. 다시 시도할게요.';
@@ -13259,7 +13253,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get savedSoundRemoveAction => '저장한 사운드 삭제';
 
   @override
-  String get savedSoundFileMissing => '이 사운드의 오디오 파일이 기기에 없어서 재생할 수 없어요.';
+  String get savedSoundOpenAction => '사운드 열기';
+
+  @override
+  String get savedSoundReuseUnavailable => '이제 새 영상에는 쓸 수 없어요';
 
   @override
   String get savedSoundClearHashtagFilter => '해시태그 필터 지우기';

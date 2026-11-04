@@ -4543,9 +4543,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Ya está en Sonidos';
 
   @override
-  String get soundsSavedLibraryTitle => 'Mis sonidos';
-
-  @override
   String get soundsSavedEmptyTitle => 'Aún no hay sonidos guardados';
 
   @override
@@ -4554,6 +4551,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Agregar sonido';
+
+  @override
+  String get soundsAddSoundHint => 'Importá un archivo o grabá uno';
 
   @override
   String get soundsAddSharePublicly => 'Compartir públicamente';
@@ -4646,12 +4646,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'No se pudo quitar ese sonido. Inténtalo de nuevo.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Sincronizando tus sonidos…';
-
-  @override
-  String get soundSyncStatusSynced => 'Sonidos actualizados';
 
   @override
   String get soundSyncStatusFailed =>
@@ -14086,8 +14080,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get savedSoundRemoveAction => 'Quitar el sonido guardado';
 
   @override
-  String get savedSoundFileMissing =>
-      'El archivo de audio de este sonido ya no está en el dispositivo, así que no se puede reproducir.';
+  String get savedSoundOpenAction => 'Abrir el sonido';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Ya no se puede usar en videos nuevos';
 
   @override
   String get savedSoundClearHashtagFilter => 'Borrar el filtro de hashtags';

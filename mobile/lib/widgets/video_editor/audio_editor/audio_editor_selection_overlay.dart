@@ -12,6 +12,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/utils/video_editor_utils.dart';
 import 'package:openvine/widgets/audio/sound_cover_image.dart';
+import 'package:openvine/widgets/audio/sound_progress_bar.dart';
 import 'package:sound_service/sound_service.dart';
 
 /// The picked sound as a small player, shaped like the picker's rows.
@@ -229,6 +230,8 @@ class _PlaybackProgressLineState extends State<_PlaybackProgressLine> {
   /// looping) starts the line over.
   double _progress = 0;
 
+  static const _progressKey = Key('audio_selection_progress');
+
   /// How far back a position must jump to count as starting over rather than
   /// as the player correcting itself.
   static const _restartJump = 0.5;
@@ -272,7 +275,7 @@ class _PlaybackProgressLineState extends State<_PlaybackProgressLine> {
   Widget build(BuildContext context) {
     if (widget.isLoading) {
       _progress = 0;
-      return const _ProgressBar(progress: 0);
+      return const SoundProgressBar(key: _progressKey, progress: 0);
     }
     return StreamBuilder<Duration?>(
       stream: _durationStream,
@@ -281,7 +284,8 @@ class _PlaybackProgressLineState extends State<_PlaybackProgressLine> {
         return StreamBuilder<Duration>(
           stream: _positionStream,
           initialData: Duration.zero,
-          builder: (context, positionSnapshot) => _ProgressBar(
+          builder: (context, positionSnapshot) => SoundProgressBar(
+            key: _progressKey,
             progress: _resolveProgress(
               durationSnapshot.data,
               positionSnapshot.data,
@@ -289,36 +293,6 @@ class _PlaybackProgressLineState extends State<_PlaybackProgressLine> {
           ),
         );
       },
-    );
-  }
-}
-
-class _ProgressBar extends StatelessWidget {
-  const _ProgressBar({required this.progress});
-
-  final double progress;
-
-  @override
-  Widget build(BuildContext context) {
-    return ExcludeSemantics(
-      child: ClipRRect(
-        borderRadius: .circular(2),
-        child: SizedBox(
-          key: const Key('audio_selection_progress'),
-          height: 3,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              ColoredBox(color: context.vineColors.outlineDisabled),
-              FractionallySizedBox(
-                alignment: AlignmentDirectional.centerStart,
-                widthFactor: progress,
-                child: ColoredBox(color: context.vineColors.accentPositive),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

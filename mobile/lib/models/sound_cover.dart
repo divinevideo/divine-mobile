@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:meta/meta.dart';
 import 'package:models/models.dart' show AudioEvent, VideoEvent;
 import 'package:nostr_sdk/nostr_sdk.dart' show isLoopbackHost;
+import 'package:openvine/models/saved_sound.dart';
 
 /// Artwork shown beside a sound in a list.
 ///
@@ -29,6 +30,42 @@ class SoundCover {
     final imageUrl = audio.imageUrl;
     if (imageUrl == null || !isScreenedHost(imageUrl)) return null;
     return SoundCover(imageUrl: imageUrl, blurhash: audio.blurhash);
+  }
+
+  /// The cover of [sound], a sound saved to My Sounds.
+  ///
+  /// [sourceCovers] is what a lookup of the saved sounds' source videos
+  /// found. A video it found gives the frame it shows now, kept out when the
+  /// feed would hide it, and one it found gone gives none. Until it answers,
+  /// the frame stored with the sound stands in.
+  static SoundCover? forSavedSound(
+    SavedSound sound, {
+    Map<String, SoundCover?>? sourceCovers,
+  }) {
+    if (publishedWith(sound.audio) case final cover?) return cover;
+    final reference = sound.audio.sourceVideoReference;
+    if (reference != null && (sourceCovers?.containsKey(reference) ?? false)) {
+      return sourceCovers![reference];
+    }
+    final thumbnailUrl = sound.sourceContext?.thumbnailUrl;
+    return thumbnailUrl == null ? null : SoundCover(imageUrl: thumbnailUrl);
+  }
+
+  /// Whether [audio] was taken from a video [sourceCovers] looked for and
+  /// found gone: deleted, hidden from this viewer, or from a creator who lets
+  /// no one else reuse its sound. A video the lookup has not reached is not.
+  ///
+  /// [sourceCovers] is keyed by [AudioEvent.sourceVideoReference], `null` for
+  /// a video found gone, as the sound providers' cover lookups return it.
+  static bool isSourceGone(
+    AudioEvent audio,
+    Map<String, SoundCover?>? sourceCovers,
+  ) {
+    final reference = audio.sourceVideoReference;
+    return reference != null &&
+        sourceCovers != null &&
+        sourceCovers.containsKey(reference) &&
+        sourceCovers[reference] == null;
   }
 
   /// Whether [url] is on Divine's media server, which screens every image it

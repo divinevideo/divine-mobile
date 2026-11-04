@@ -4211,9 +4211,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'すでにサウンドにあります';
 
   @override
-  String get soundsSavedLibraryTitle => 'マイサウンド';
-
-  @override
   String get soundsSavedEmptyTitle => '保存されたサウンドはまだありません';
 
   @override
@@ -4221,6 +4218,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'サウンドを追加';
+
+  @override
+  String get soundsAddSoundHint => 'ファイルの読み込みまたは録音';
 
   @override
   String get soundsAddSharePublicly => '一般に公開';
@@ -4308,12 +4308,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => 'そのサウンドを削除できませんでした。もう一度お試しください。';
-
-  @override
-  String get soundSyncStatusSyncing => 'サウンドを同期しています…';
-
-  @override
-  String get soundSyncStatusSynced => 'サウンドは最新です';
 
   @override
   String get soundSyncStatusFailed => 'サウンドを同期できませんでした。もう一度試します。';
@@ -13237,7 +13231,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get savedSoundRemoveAction => '保存したサウンドを削除';
 
   @override
-  String get savedSoundFileMissing => 'このサウンドの音声ファイルは端末に残っていないため再生できません。';
+  String get savedSoundOpenAction => 'サウンドを開く';
+
+  @override
+  String get savedSoundReuseUnavailable => '新しい動画では使えなくなりました';
 
   @override
   String get savedSoundClearHashtagFilter => 'ハッシュタグの絞り込みを解除';

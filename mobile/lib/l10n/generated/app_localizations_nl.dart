@@ -4505,9 +4505,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Al in Sounds';
 
   @override
-  String get soundsSavedLibraryTitle => 'Mijn sounds';
-
-  @override
   String get soundsSavedEmptyTitle => 'Nog geen opgeslagen sounds';
 
   @override
@@ -4516,6 +4513,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Sound toevoegen';
+
+  @override
+  String get soundsAddSoundHint => 'Importeer een bestand of neem er een op';
 
   @override
   String get soundsAddSharePublicly => 'Openbaar delen';
@@ -4609,12 +4609,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'Dat geluid kon niet worden verwijderd. Probeer het opnieuw.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Je sounds worden gesynchroniseerd…';
-
-  @override
-  String get soundSyncStatusSynced => 'Sounds zijn up-to-date';
 
   @override
   String get soundSyncStatusFailed =>
@@ -13991,8 +13985,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get savedSoundRemoveAction => 'Opgeslagen geluid verwijderen';
 
   @override
-  String get savedSoundFileMissing =>
-      'Het audiobestand van dit geluid staat niet meer op dit apparaat, dus het kan niet spelen.';
+  String get savedSoundOpenAction => 'Geluid openen';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Kan niet meer in nieuwe video\'s worden gebruikt';
 
   @override
   String get savedSoundClearHashtagFilter => 'Hashtagfilter wissen';

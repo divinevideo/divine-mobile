@@ -4385,9 +4385,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'ቀድሞውኑ በድምፆች ውስጥ';
 
   @override
-  String get soundsSavedLibraryTitle => 'የእኔ ድምፆች';
-
-  @override
   String get soundsSavedEmptyTitle => 'ገና የተቀመጠ ድምፅ የለም';
 
   @override
@@ -4396,6 +4393,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'ድምፅ ያክሉ';
+
+  @override
+  String get soundsAddSoundHint => 'ፋይል ያስገቡ ወይም ይቅዱ';
 
   @override
   String get soundsAddSharePublicly => 'በይፋ ያጋሩ';
@@ -4483,12 +4483,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => 'ያን ድምፅ ማስወገድ አልተቻለም። እንደገና ሞክር።';
-
-  @override
-  String get soundSyncStatusSyncing => 'ድምፆችዎ በማመሳሰል ላይ…';
-
-  @override
-  String get soundSyncStatusSynced => 'ድምፆች ወቅታዊ ናቸው';
 
   @override
   String get soundSyncStatusFailed => 'ድምፆችዎን ማመሳሰል አልተቻለም። እንደገና እንሞክራለን።';
@@ -13575,8 +13569,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get savedSoundRemoveAction => 'የተቀመጠውን ድምፅ አስወግድ';
 
   @override
-  String get savedSoundFileMissing =>
-      'የዚህ ድምፅ የድምፅ ፋይል በዚህ መሣሪያ ላይ የለም፣ ስለዚህ መጫወት አይችልም።';
+  String get savedSoundOpenAction => 'ድምፁን ይክፈቱ';
+
+  @override
+  String get savedSoundReuseUnavailable => 'ከእንግዲህ በአዲስ ቪዲዮዎች ውስጥ መጠቀም አይቻልም';
 
   @override
   String get savedSoundClearHashtagFilter => 'የሃሽታግ ማጣሪያን አጽዳ';

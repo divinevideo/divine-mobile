@@ -4491,9 +4491,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'موجود بالفعل في الأصوات';
 
   @override
-  String get soundsSavedLibraryTitle => 'أصواتي';
-
-  @override
   String get soundsSavedEmptyTitle => 'لا توجد أصوات محفوظة بعد';
 
   @override
@@ -4502,6 +4499,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'إضافة صوت';
+
+  @override
+  String get soundsAddSoundHint => 'استيراد ملف أو تسجيل صوت';
 
   @override
   String get soundsAddSharePublicly => 'مشاركة علنية';
@@ -4592,12 +4592,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => 'تعذّرت إزالة هذا الصوت. حاول مرة أخرى.';
-
-  @override
-  String get soundSyncStatusSyncing => 'جارٍ مزامنة أصواتك…';
-
-  @override
-  String get soundSyncStatusSynced => 'الأصوات محدَّثة';
 
   @override
   String get soundSyncStatusFailed => 'تعذّرت مزامنة أصواتك. سنحاول مرة أخرى.';
@@ -13936,8 +13930,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get savedSoundRemoveAction => 'إزالة الصوت المحفوظ';
 
   @override
-  String get savedSoundFileMissing =>
-      'ملف الصوت الخاص بهذا المقطع لم يعد موجودًا على هذا الجهاز، لذا لا يمكن تشغيله.';
+  String get savedSoundOpenAction => 'فتح الصوت';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'لم يعد استخدامه ممكنًا في فيديوهات جديدة';
 
   @override
   String get savedSoundClearHashtagFilter => 'مسح تصفية الوسوم';

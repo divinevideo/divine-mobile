@@ -4542,9 +4542,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Вече е в Звуци';
 
   @override
-  String get soundsSavedLibraryTitle => 'Моите звуци';
-
-  @override
   String get soundsSavedEmptyTitle => 'Все още няма запазени звуци';
 
   @override
@@ -4553,6 +4550,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Добави звук';
+
+  @override
+  String get soundsAddSoundHint => 'Импортирай файл или запиши звук';
 
   @override
   String get soundsAddSharePublicly => 'Сподели публично';
@@ -4644,12 +4644,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'Този звук не можа да се премахне. Опитай пак.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Синхронизиране на звуците ви…';
-
-  @override
-  String get soundSyncStatusSynced => 'Звуците са актуални';
 
   @override
   String get soundSyncStatusFailed =>
@@ -14055,8 +14049,11 @@ class AppLocalizationsBg extends AppLocalizations {
   String get savedSoundRemoveAction => 'Премахни запазения звук';
 
   @override
-  String get savedSoundFileMissing =>
-      'Аудиофайлът на този звук вече го няма на устройството, затова не може да се възпроизведе.';
+  String get savedSoundOpenAction => 'Отвори звука';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Вече не може да се използва в нови видеоклипове';
 
   @override
   String get savedSoundClearHashtagFilter => 'Изчисти филтъра по хаштаг';
