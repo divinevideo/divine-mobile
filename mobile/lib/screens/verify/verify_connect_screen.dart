@@ -262,6 +262,15 @@ class _ConnectForm extends StatelessWidget {
     // they were, so a proof linked meanwhile would be dropped once that
     // sign-in is published.
     final inputsEnabled = !state.isBusy && signedInAccount == null;
+    // Signing in again is the sign-in alone; the proof post adds nothing to
+    // it. Kept when sign-in cannot run here (iOS below 17.4, a platform
+    // without it, the list still loading, or a sign-in that failed to
+    // start), else the page leaves nothing that can work.
+    final showProof = !(state.renewsBySignInOnly && showOAuth);
+    // A renewal's proof post is made for the renewed handle, so while it is
+    // on offer the field shows that handle and cannot be changed: a post
+    // under another handle would add a second link beside the lapsed one.
+    final lockedIdentity = showProof ? state.replacingIdentity : null;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -302,6 +311,7 @@ class _ConnectForm extends StatelessWidget {
               key: const ValueKey('verify-identity-field'),
               state: state,
               enabled: inputsEnabled,
+              lockedIdentity: lockedIdentity,
             ),
             const SizedBox(height: 12),
           ],
@@ -348,11 +358,7 @@ class _ConnectForm extends StatelessWidget {
             const SizedBox(height: 24),
           ],
         ],
-        // Signing in again is the sign-in alone; the proof post adds nothing to
-        // it. Kept when sign-in cannot run here (iOS below 17.4, a platform
-        // without it, the list still loading, or a sign-in that failed to
-        // start), else the page leaves nothing that can work.
-        if (!(state.renewsBySignInOnly && showOAuth)) ...[
+        if (showProof) ...[
           _SectionLabel(l10n.verifyConnectProofTitle),
           // Bluesky's note says a sign-in above is all it takes, which reads
           // wrong while the card above still asks to link the account.
@@ -376,6 +382,7 @@ class _ConnectForm extends StatelessWidget {
               key: const ValueKey('verify-identity-field'),
               state: state,
               enabled: inputsEnabled,
+              lockedIdentity: lockedIdentity,
             ),
             const SizedBox(height: 12),
           ],
@@ -422,11 +429,16 @@ class _IdentityField extends StatefulWidget {
   const _IdentityField({
     required this.state,
     required this.enabled,
+    this.lockedIdentity,
     super.key,
   });
 
   final VerifyConnectState state;
   final bool enabled;
+
+  /// The handle this field is fixed to, shown and not editable. Null while
+  /// the handle can be typed.
+  final String? lockedIdentity;
 
   @override
   State<_IdentityField> createState() => _IdentityFieldState();
@@ -436,7 +448,20 @@ class _IdentityFieldState extends State<_IdentityField> {
   // Seeded from the cubit's handle when this field is built, which is the
   // linked one when a sign-in is renewed. From then on the typing feeds the
   // cubit.
-  late final _controller = TextEditingController(text: widget.state.identity);
+  late final _controller = TextEditingController(
+    text: widget.lockedIdentity ?? widget.state.identity,
+  );
+
+  @override
+  void didUpdateWidget(_IdentityField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The field outlives the lock coming on (Bluesky keeps it across a failed
+    // start), so a handle typed before then is replaced by the locked one.
+    final locked = widget.lockedIdentity;
+    if (locked != null && _controller.text != locked) {
+      _controller.text = locked;
+    }
+  }
 
   @override
   void dispose() {
@@ -452,7 +477,7 @@ class _IdentityFieldState extends State<_IdentityField> {
       labelText: verifyIdentityFieldLabel(context.l10n, platformKey),
       hintText: verifyIdentityHint(platformKey),
       filled: true,
-      enabled: widget.enabled,
+      enabled: widget.enabled && widget.lockedIdentity == null,
       textInputAction: .next,
       textCapitalization: TextCapitalization.none,
       onChanged: context.read<VerifyConnectCubit>().identityChanged,

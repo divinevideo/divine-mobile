@@ -116,8 +116,12 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     emitIfOpen(state.copyWith(platform: platform));
   }
 
-  /// Records the account handle the user is claiming.
+  /// Records the account handle the user is claiming. Ignored once the handle
+  /// is locked to the link being renewed.
   void identityChanged(String identity) {
+    // A Bluesky sign-in retry starts from this field, so a typed handle would
+    // start a sign-in under another account than the one shown.
+    if (state.identityLocked) return;
     emit(state.copyWith(identity: identity.trim(), clearError: true));
   }
 
@@ -135,7 +139,8 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
 
     // A pasted post link has to be taken apart before it is sent: most
     // verifiers rebuild the URL from the handle and a bare id, so a link in
-    // the proof field looks up a URL that cannot exist.
+    // the proof field looks up a URL that cannot exist. In a renewal it is
+    // for the renewed handle, so the post replaces that link.
     final input = state.normalizedInput;
     if (input.problem != null) {
       return _fail(switch (input.problem!) {
@@ -271,6 +276,17 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
       if (isClosed) return;
       addError(error, stackTrace);
       return _fail(VerifyConnectError.verifierUnreachable);
+    } on VerifierApiException catch (error, stackTrace) {
+      if (isClosed) return;
+      addError(error, stackTrace);
+      // A 4xx refuses what was sent, such as a Bluesky handle the verifier
+      // cannot resolve. The handle stays editable and the proof post hidden,
+      // so the person can correct it and sign in again.
+      final refused = error.statusCode >= 400 && error.statusCode < 500;
+      return _fail(
+        VerifyConnectError.oauthFailed,
+        signInFailedToStart: !refused,
+      );
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);
@@ -598,6 +614,9 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     emit(
       state.copyWith(
         status: VerifyConnectStatus.editing,
+        // A renewal locks its handle once the proof post is on offer, so a
+        // handle typed before then goes back to the renewed one.
+        identity: signInFailedToStart ? state.replacingIdentity : null,
         error: error,
         errorAttempt: state.errorAttempt + 1,
         clearSignedInAccount: true,

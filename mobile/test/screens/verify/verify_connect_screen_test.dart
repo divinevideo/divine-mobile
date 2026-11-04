@@ -831,6 +831,168 @@ void main() {
       expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
     });
 
+    group('once a sign-in fails to start', () {
+      late _MockIdentityClaimsRepository repository;
+
+      setUp(() {
+        repository = _MockIdentityClaimsRepository();
+        when(
+          () => repository.startSignIn(
+            platform: any(named: 'platform'),
+            pubkey: any(named: 'pubkey'),
+            returnUrl: any(named: 'returnUrl'),
+            startCheck: any(named: 'startCheck'),
+            handle: any(named: 'handle'),
+          ),
+        ).thenThrow(const VerifierApiException(500, 'returned 500'));
+      });
+
+      TextField identityField(WidgetTester tester) => tester.widget<TextField>(
+        find.descendant(
+          of: find.byKey(const ValueKey('verify-identity-field')),
+          matching: find.byType(TextField),
+        ),
+      );
+
+      testWidgets('fixes the handle to the one being renewed', (tester) async {
+        final l10n = await pump(
+          tester,
+          platform: twitterOAuth,
+          oauthAvailable: true,
+          replacingIdentity: 'jack',
+          repository: repository,
+        );
+        await tester.tap(find.text(l10n.verifyConnectOauthCta('Twitter / X')));
+        await tester.pump();
+        await tester.pump();
+
+        await tester.enterText(
+          find.byKey(const ValueKey('verify-proof-field')),
+          'https://x.com/other/status/1',
+        );
+        await tester.pump();
+
+        expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+        expect(identityField(tester).enabled, isFalse);
+        expect(identityField(tester).controller!.text, equals('jack'));
+      });
+
+      testWidgets('shows the renewed Bluesky handle, not one typed before', (
+        tester,
+      ) async {
+        final l10n = await pump(
+          tester,
+          platform: blueskyOAuth,
+          oauthAvailable: true,
+          replacingIdentity: 'alice.bsky.social',
+          repository: repository,
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('verify-identity-field')),
+          'bob.bsky.social',
+        );
+        await tester.tap(find.text(l10n.verifyConnectOauthCta('Bluesky')));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+        expect(identityField(tester).enabled, isFalse);
+        expect(
+          identityField(tester).controller!.text,
+          equals('alice.bsky.social'),
+        );
+      });
+
+      testWidgets('leaves the handle editable on a plain connect', (
+        tester,
+      ) async {
+        final l10n = await pump(
+          tester,
+          platform: blueskyOAuth,
+          oauthAvailable: true,
+          repository: repository,
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('verify-identity-field')),
+          'bob.bsky.social',
+        );
+        await tester.tap(find.text(l10n.verifyConnectOauthCta('Bluesky')));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+        expect(identityField(tester).enabled, isTrue);
+        expect(
+          identityField(tester).controller!.text,
+          equals('bob.bsky.social'),
+        );
+      });
+    });
+
+    testWidgets(
+      'keeps the Bluesky handle editable when the verifier refuses it',
+      (
+        tester,
+      ) async {
+        // A 400 is the verifier refusing the handle, not a sign-in that cannot
+        // start: the person corrects it and signs in again.
+        final repository = _MockIdentityClaimsRepository();
+        when(
+          () => repository.startSignIn(
+            platform: any(named: 'platform'),
+            pubkey: any(named: 'pubkey'),
+            returnUrl: any(named: 'returnUrl'),
+            startCheck: any(named: 'startCheck'),
+            handle: any(named: 'handle'),
+          ),
+        ).thenThrow(const VerifierApiException(400, 'returned 400'));
+        final l10n = await pump(
+          tester,
+          platform: blueskyOAuth,
+          oauthAvailable: true,
+          replacingIdentity: 'alice.bsky.social',
+          repository: repository,
+        );
+        await tester.tap(find.text(l10n.verifyConnectOauthCta('Bluesky')));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text(l10n.verifyErrorOauthFailed), findsOneWidget);
+        expect(find.text(l10n.verifyConnectProofCta), findsNothing);
+        expect(find.byKey(const ValueKey('verify-proof-field')), findsNothing);
+        final field = tester.widget<TextField>(
+          find.descendant(
+            of: find.byKey(const ValueKey('verify-identity-field')),
+            matching: find.byType(TextField),
+          ),
+        );
+        expect(field.enabled, isTrue);
+        expect(field.controller!.text, equals('alice.bsky.social'));
+      },
+    );
+
+    testWidgets('fixes the handle where a renewal can only post a proof', (
+      tester,
+    ) async {
+      // iOS below 17.4: the proof post is all there is, and it is made for
+      // the renewed handle whatever the field holds.
+      await pump(
+        tester,
+        platform: _bluesky,
+        oauthAvailable: false,
+        replacingIdentity: 'alice.bsky.social',
+      );
+
+      final field = tester.widget<TextField>(
+        find.descendant(
+          of: find.byKey(const ValueKey('verify-identity-field')),
+          matching: find.byType(TextField),
+        ),
+      );
+      expect(field.enabled, isFalse);
+      expect(field.controller!.text, equals('alice.bsky.social'));
+    });
+
     testWidgets('keeps the proof form when not signing in again', (
       tester,
     ) async {
@@ -898,6 +1060,12 @@ void main() {
 
       expect(
         find.text(l10n.verifyConnectSignInLifetime(30)),
+        findsOneWidget,
+      );
+      // The absence tests look the notice up by this key, so it has to be
+      // on the notice for them to mean anything.
+      expect(
+        find.byKey(const ValueKey('verify-signin-lifetime')),
         findsOneWidget,
       );
     });

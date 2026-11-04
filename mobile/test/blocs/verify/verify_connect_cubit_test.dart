@@ -1437,7 +1437,29 @@ void main() {
       );
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
-        'returns to editing when the start request is refused',
+        'returns to editing when the start request fails',
+        build: () => build(_twitter),
+        setUp: () => when(
+          () => repository.startSignIn(
+            platform: any(named: 'platform'),
+            pubkey: any(named: 'pubkey'),
+            returnUrl: any(named: 'returnUrl'),
+            startCheck: any(named: 'startCheck'),
+            handle: any(named: 'handle'),
+          ),
+        ).thenThrow(const VerifierApiException(500, 'returned 500')),
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
+          expect(cubit.state.status, equals(VerifyConnectStatus.editing));
+          expect(launched, isEmpty);
+          expect(cubit.state.signInFailedToStart, isTrue);
+        },
+        errors: () => [isA<VerifierApiException>()],
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'does not count a refused start as a failed start',
         build: () => build(_twitter),
         setUp: () => when(
           () => repository.startSignIn(
@@ -1453,7 +1475,7 @@ void main() {
           expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
           expect(cubit.state.status, equals(VerifyConnectStatus.editing));
           expect(launched, isEmpty);
-          expect(cubit.state.signInFailedToStart, isTrue);
+          expect(cubit.state.signInFailedToStart, isFalse);
         },
         errors: () => [isA<VerifierApiException>()],
       );
@@ -2578,8 +2600,24 @@ void main() {
       test(
         'hands back no replaced handle when linked by a proof post',
         () async {
-          // The proof post publishes without dropping the renewed link, so the
-          // dashboard must keep its row.
+          // The proof post is for the renewed handle, so its tag takes that
+          // link's place under the same key, and the dashboard redraws the
+          // same row rather than dropping one.
+          final cubit = build(_twitter, replacingIdentity: 'jack');
+          addTearDown(cubit.close);
+          cubit.proofChanged('https://x.com/jack/status/1');
+          await cubit.submitProof();
+
+          expect(cubit.state.status, VerifyConnectStatus.linked);
+          expect(cubit.state.replacedIdentity, isNull);
+        },
+      );
+
+      test(
+        'makes a proof post for the renewed handle where sign-in never ran',
+        () async {
+          // iOS below 17.4 shows only the proof post, and no failed start has
+          // locked the handle, so the post itself has to hold to it.
           final cubit = build(_twitter, replacingIdentity: 'jack');
           addTearDown(cubit.close);
           cubit
@@ -2587,10 +2625,147 @@ void main() {
             ..proofChanged('https://x.com/other/status/1');
           await cubit.submitProof();
 
-          expect(cubit.state.status, VerifyConnectStatus.linked);
-          expect(cubit.state.replacedIdentity, isNull);
+          final (claim, replacing) = published();
+          expect(claim.identity, equals('jack'));
+          expect(replacing, isNull);
         },
       );
+
+      test(
+        'keeps the Bluesky handle editable when the verifier refuses it',
+        () async {
+          // The verifier answers 400 for a handle it cannot resolve, which is
+          // how a moved handle shows up: the person fixes it and signs in.
+          final startedHandles = <String?>[];
+          when(
+            () => repository.startSignIn(
+              platform: any(named: 'platform'),
+              pubkey: any(named: 'pubkey'),
+              returnUrl: any(named: 'returnUrl'),
+              startCheck: any(named: 'startCheck'),
+              handle: any(named: 'handle'),
+            ),
+          ).thenAnswer((invocation) async {
+            startedHandles.add(invocation.namedArguments[#handle] as String?);
+            throw const VerifierApiException(400, 'returned 400');
+          });
+          final cubit = build(_bluesky, replacingIdentity: 'alice.bsky.social');
+          addTearDown(cubit.close);
+          await cubit.connectWithOAuth();
+          expect(cubit.state.error, VerifyConnectError.oauthFailed);
+          expect(cubit.state.signInFailedToStart, isFalse);
+
+          cubit.identityChanged('alice.example.com');
+          expect(cubit.state.identity, equals('alice.example.com'));
+          await cubit.connectWithOAuth();
+
+          expect(
+            startedHandles,
+            equals(['alice.bsky.social', 'alice.example.com']),
+          );
+        },
+      );
+
+      group('after a sign-in fails to start', () {
+        // Every handle the sign-in was started with.
+        late List<String?> startedHandles;
+
+        setUp(() {
+          startedHandles = [];
+          when(
+            () => repository.startSignIn(
+              platform: any(named: 'platform'),
+              pubkey: any(named: 'pubkey'),
+              returnUrl: any(named: 'returnUrl'),
+              startCheck: any(named: 'startCheck'),
+              handle: any(named: 'handle'),
+            ),
+          ).thenAnswer((invocation) async {
+            startedHandles.add(invocation.namedArguments[#handle] as String?);
+            throw const VerifierApiException(500, 'returned 500');
+          });
+        });
+
+        test(
+          'makes the proof post for the renewed handle typed before it',
+          () async {
+            final cubit = build(_twitter, replacingIdentity: 'jack');
+            addTearDown(cubit.close);
+            cubit.identityChanged('other');
+            await cubit.connectWithOAuth();
+            expect(cubit.state.signInFailedToStart, isTrue);
+
+            cubit.proofChanged('https://x.com/other/status/1');
+            await cubit.submitProof();
+
+            final checked =
+                verify(
+                      () => repository.verifyClaim(captureAny()),
+                    ).captured.single
+                    as IdentityClaim;
+            expect(checked.identity, equals('jack'));
+            final (claim, replacing) = published();
+            // Same platform and handle as the renewed link, so the event
+            // drops that link's tag for this one: still one link.
+            expect(claim.platform, equals('twitter'));
+            expect(claim.identity, equals('jack'));
+            expect(claim.proof, equals('1'));
+            expect(replacing, isNull);
+            expect(cubit.state.linkedClaim, equals(claim));
+          },
+        );
+
+        test(
+          'ignores a handle changed once the proof post is offered',
+          () async {
+            final cubit = build(_twitter, replacingIdentity: 'jack');
+            addTearDown(cubit.close);
+            await cubit.connectWithOAuth();
+
+            cubit
+              ..identityChanged('other')
+              ..proofChanged('https://x.com/other/status/1');
+            expect(cubit.state.identity, equals('jack'));
+            await cubit.submitProof();
+
+            expect(published().$1.identity, equals('jack'));
+          },
+        );
+
+        test(
+          'retries the Bluesky sign-in under the renewed handle it shows',
+          () async {
+            final cubit = build(
+              _bluesky,
+              replacingIdentity: 'alice.bsky.social',
+            );
+            addTearDown(cubit.close);
+            cubit.identityChanged('bob.bsky.social');
+            await cubit.connectWithOAuth();
+            expect(cubit.state.identity, equals('alice.bsky.social'));
+
+            cubit.identityChanged('carol.bsky.social');
+            await cubit.connectWithOAuth();
+
+            expect(
+              startedHandles,
+              equals(['bob.bsky.social', 'alice.bsky.social']),
+            );
+          },
+        );
+
+        test('leaves the handle editable on a plain connect', () async {
+          final cubit = build(_bluesky);
+          addTearDown(cubit.close);
+          cubit.identityChanged('bob.bsky.social');
+          await cubit.connectWithOAuth();
+          expect(cubit.state.signInFailedToStart, isTrue);
+
+          cubit.identityChanged('carol.bsky.social');
+
+          expect(cubit.state.identity, equals('carol.bsky.social'));
+        });
+      });
     });
   });
 }
