@@ -1145,6 +1145,10 @@ void main() {
         test(
           'moves unnamed sounds no other account used after the rest',
           () async {
+            const reuseVideoId =
+                '06789012345678901234567890abcdef1234567890123456789012abcde12345';
+            const secondUnusedId =
+                '16789012345678901234567890abcdef1234567890123456789012abcde12345';
             when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
               (_) async => answered([
                 video(
@@ -1154,7 +1158,7 @@ void main() {
                   usesSoundId: testEventId2,
                 ),
                 video(
-                  id: testVideoEventId,
+                  id: reuseVideoId,
                   pubkey: testPubkey2,
                   dTag: 'reuse',
                   usesSoundId: testEventId1,
@@ -1165,6 +1169,7 @@ void main() {
             final ordered = await repository.withUnusedOriginalsLast([
               sound(testEventId2),
               sound(testEventId1),
+              sound(secondUnusedId),
               sound(namedSoundId, title: 'Named beat'),
             ]);
 
@@ -1172,6 +1177,7 @@ void main() {
               testEventId1,
               namedSoundId,
               testEventId2,
+              secondUnusedId,
             ]);
           },
         );
