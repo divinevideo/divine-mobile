@@ -461,6 +461,39 @@ void main() {
         );
       });
 
+      test(
+        'lists unnamed sounds no other account used after named ones',
+        () async {
+          when(() => mockNostrClient.queryEvents(any())).thenAnswer(
+            (_) async => [
+              createAudioEvent(
+                id: testEventId3,
+                pubkey: testPubkey2,
+                title: AudioEvent.originalSoundTitle,
+                publicTags: const ['crowd'],
+                createdAt: 3000,
+              ),
+              createAudioEvent(
+                id: testEventId2,
+                pubkey: testPubkey2,
+                title: 'Crowd murmur',
+                createdAt: 2000,
+              ),
+            ],
+          );
+          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+          );
+
+          final sounds = await repository.searchSounds('crowd');
+
+          expect(
+            sounds.map((sound) => sound.id),
+            equals([testEventId2, testEventId3]),
+          );
+        },
+      );
+
       test('falls back to cached matches when the relay fails', () async {
         await primeCache([
           createAudioEvent(
@@ -837,17 +870,21 @@ void main() {
       });
     });
 
-    group('withoutUnusedOriginals', () {
+    group('unnamed video sounds', () {
       const sourceDTag = 'source-video';
+      const namedSoundId =
+          'f6789012345678901234567890abcdef1234567890123456789012abcde12345';
       const sourceAddress = '34236:$testPubkey1:$sourceDTag';
 
-      AudioEvent sound(String id, {String? title}) => AudioEvent(
-        id: id,
-        pubkey: testPubkey1,
-        createdAt: 1700000000,
-        title: title ?? AudioEvent.originalSoundTitle,
-        sourceVideoReference: sourceAddress,
-      );
+      AudioEvent sound(String id, {String? title, String? source}) =>
+          AudioEvent(
+            id: id,
+            pubkey: testPubkey1,
+            createdAt: 1700000000,
+            title: title ?? AudioEvent.originalSoundTitle,
+            source: source,
+            sourceVideoReference: sourceAddress,
+          );
 
       ({List<Event> events, bool timedOut, bool noRelays}) answered(
         List<Event> events,
@@ -871,103 +908,198 @@ void main() {
         'sig': '',
       });
 
-      test('keeps an unnamed sound another video uses', () async {
-        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
-          (_) async => answered([
-            video(
-              id: testVideoEventId,
-              pubkey: testPubkey1,
-              dTag: sourceDTag,
-              usesSoundId: testEventId1,
-            ),
-            video(
-              id: testEventId2,
-              pubkey: testPubkey2,
-              dTag: 'reuse',
-              usesSoundId: testEventId1,
-            ),
-          ]),
+      group('withoutUnusedOriginals', () {
+        test('keeps an unnamed sound another video uses', () async {
+          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+            (_) async => answered([
+              video(
+                id: testVideoEventId,
+                pubkey: testPubkey1,
+                dTag: sourceDTag,
+                usesSoundId: testEventId1,
+              ),
+              video(
+                id: testEventId2,
+                pubkey: testPubkey2,
+                dTag: 'reuse',
+                usesSoundId: testEventId1,
+              ),
+            ]),
+          );
+
+          final kept = await repository.withoutUnusedOriginals([
+            sound(testEventId1),
+          ]);
+
+          expect(kept.map((s) => s.id), [testEventId1]);
+        });
+
+        test('drops an unnamed sound only its source video uses', () async {
+          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+            (_) async => answered([
+              video(
+                id: testVideoEventId,
+                pubkey: testPubkey1,
+                dTag: sourceDTag,
+                usesSoundId: testEventId1,
+              ),
+            ]),
+          );
+
+          final kept = await repository.withoutUnusedOriginals([
+            sound(testEventId1),
+            sound(testEventId2, title: 'Named beat'),
+          ]);
+
+          expect(kept.map((s) => s.id), [testEventId2]);
+        });
+
+        test('asks only about the unnamed sounds, in one query', () async {
+          when(
+            () => mockNostrClient.queryEventsDetailed(any()),
+          ).thenAnswer((_) async => answered([]));
+
+          await repository.withoutUnusedOriginals([
+            sound(testEventId1),
+            sound(testEventId2, title: 'Named beat'),
+          ]);
+
+          final filters =
+              verify(
+                    () => mockNostrClient.queryEventsDetailed(captureAny()),
+                  ).captured.single
+                  as List<Filter>;
+          expect(filters.single.kinds, [34236]);
+          expect(filters.single.e, [testEventId1]);
+        });
+
+        test('returns named sounds without querying', () async {
+          final named = [sound(testEventId1, title: 'Named beat')];
+
+          expect(await repository.withoutUnusedOriginals(named), named);
+          verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
+        });
+
+        test('keeps every sound when the lookup fails', () async {
+          when(
+            () => mockNostrClient.queryEventsDetailed(any()),
+          ).thenThrow(Exception('relay down'));
+          final sounds = [sound(testEventId1)];
+
+          expect(await repository.withoutUnusedOriginals(sounds), sounds);
+        });
+
+        test('keeps every sound when the lookup runs out of time', () async {
+          // The video reusing the sound had not arrived yet.
+          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: true, noRelays: false),
+          );
+          final sounds = [sound(testEventId1)];
+
+          expect(await repository.withoutUnusedOriginals(sounds), sounds);
+        });
+
+        test('keeps every sound when no relay was asked', () async {
+          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+            (_) async => (events: <Event>[], timedOut: false, noRelays: true),
+          );
+          final sounds = [sound(testEventId1)];
+
+          expect(await repository.withoutUnusedOriginals(sounds), sounds);
+        });
+
+        test('drops an unnamed sound only its creator uses', () async {
+          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+            (_) async => answered([
+              video(
+                id: testVideoEventId,
+                pubkey: testPubkey1,
+                dTag: sourceDTag,
+                usesSoundId: testEventId1,
+              ),
+              video(
+                id: testEventId2,
+                pubkey: testPubkey1,
+                dTag: 'another-video',
+                usesSoundId: testEventId1,
+              ),
+            ]),
+          );
+
+          final kept = await repository.withoutUnusedOriginals([
+            sound(testEventId1),
+          ]);
+
+          expect(kept, isEmpty);
+        });
+
+        test('keeps an unnamed sound credited to a source', () async {
+          final credited = [
+            sound(testEventId1, source: 'https://example.com/track'),
+          ];
+
+          expect(await repository.withoutUnusedOriginals(credited), credited);
+          verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
+        });
+      });
+
+      group('withUnusedOriginalsLast', () {
+        test(
+          'moves unnamed sounds no other account used after the rest',
+          () async {
+            when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+              (_) async => answered([
+                video(
+                  id: testVideoEventId,
+                  pubkey: testPubkey1,
+                  dTag: sourceDTag,
+                  usesSoundId: testEventId2,
+                ),
+                video(
+                  id: testVideoEventId,
+                  pubkey: testPubkey2,
+                  dTag: 'reuse',
+                  usesSoundId: testEventId1,
+                ),
+              ]),
+            );
+
+            final ordered = await repository.withUnusedOriginalsLast([
+              sound(testEventId2),
+              sound(testEventId1),
+              sound(namedSoundId, title: 'Named beat'),
+            ]);
+
+            expect(ordered.map((s) => s.id), [
+              testEventId1,
+              namedSoundId,
+              testEventId2,
+            ]);
+          },
         );
 
-        final kept = await repository.withoutUnusedOriginals([
-          sound(testEventId1),
-        ]);
+        test('moves every unnamed sound last when the lookup fails', () async {
+          when(
+            () => mockNostrClient.queryEventsDetailed(any()),
+          ).thenThrow(Exception('relay down'));
 
-        expect(kept.map((s) => s.id), [testEventId1]);
-      });
+          final ordered = await repository.withUnusedOriginalsLast([
+            sound(testEventId1),
+            sound(namedSoundId, title: 'Named beat'),
+          ]);
 
-      test('drops an unnamed sound only its source video uses', () async {
-        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
-          (_) async => answered([
-            video(
-              id: testVideoEventId,
-              pubkey: testPubkey1,
-              dTag: sourceDTag,
-              usesSoundId: testEventId1,
-            ),
-          ]),
-        );
+          expect(ordered.map((s) => s.id), [namedSoundId, testEventId1]);
+        });
 
-        final kept = await repository.withoutUnusedOriginals([
-          sound(testEventId1),
-          sound(testEventId2, title: 'Named beat'),
-        ]);
+        test('returns named sounds as given without querying', () async {
+          final named = [
+            sound(testEventId1, title: 'Named beat'),
+            sound(testEventId2, title: 'Another beat'),
+          ];
 
-        expect(kept.map((s) => s.id), [testEventId2]);
-      });
-
-      test('asks only about the unnamed sounds, in one query', () async {
-        when(
-          () => mockNostrClient.queryEventsDetailed(any()),
-        ).thenAnswer((_) async => answered([]));
-
-        await repository.withoutUnusedOriginals([
-          sound(testEventId1),
-          sound(testEventId2, title: 'Named beat'),
-        ]);
-
-        final filters =
-            verify(
-                  () => mockNostrClient.queryEventsDetailed(captureAny()),
-                ).captured.single
-                as List<Filter>;
-        expect(filters.single.kinds, [34236]);
-        expect(filters.single.e, [testEventId1]);
-      });
-
-      test('returns named sounds without querying', () async {
-        final named = [sound(testEventId1, title: 'Named beat')];
-
-        expect(await repository.withoutUnusedOriginals(named), named);
-        verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
-      });
-
-      test('keeps every sound when the lookup fails', () async {
-        when(
-          () => mockNostrClient.queryEventsDetailed(any()),
-        ).thenThrow(Exception('relay down'));
-        final sounds = [sound(testEventId1)];
-
-        expect(await repository.withoutUnusedOriginals(sounds), sounds);
-      });
-
-      test('keeps every sound when the lookup runs out of time', () async {
-        // The video reusing the sound had not arrived yet.
-        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
-          (_) async => (events: <Event>[], timedOut: true, noRelays: false),
-        );
-        final sounds = [sound(testEventId1)];
-
-        expect(await repository.withoutUnusedOriginals(sounds), sounds);
-      });
-
-      test('keeps every sound when no relay was asked', () async {
-        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
-          (_) async => (events: <Event>[], timedOut: false, noRelays: true),
-        );
-        final sounds = [sound(testEventId1)];
-
-        expect(await repository.withoutUnusedOriginals(sounds), sounds);
+          expect(await repository.withUnusedOriginalsLast(named), named);
+          verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
+        });
       });
     });
 

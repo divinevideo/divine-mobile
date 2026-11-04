@@ -367,14 +367,15 @@ class SoundsRepository {
     ];
   }
 
-  /// [sounds] without the ones nobody picked up: a sound that kept its
-  /// default title ([AudioEvent.hasDefaultTitle]) and that no video uses but
-  /// the one it was taken from.
+  /// [sounds] without the ones nobody picked up: a video's own audio left
+  /// untitled and uncredited ([AudioEvent.isAutoSharedOriginal]) that no
+  /// other account has used in a video.
   ///
-  /// Those are the audio of someone's video, shared by default, and make up
-  /// most of the newest sounds while rarely being worth reusing. One that
-  /// another video uses has shown otherwise and stays, as does every sound
-  /// its publisher named. Keeps the order of [sounds].
+  /// Those are shared by default when a video is posted and make up most of
+  /// the newest sounds while rarely being worth reusing. One that another
+  /// account used has shown otherwise and stays, as does every sound its
+  /// publisher named or credited. The video it was taken from and its
+  /// creator's other videos do not count. Keeps the order of [sounds].
   ///
   /// Costs one relay query, for the videos that reference the unnamed
   /// sounds. When it fails, or runs out of time and so may have missed the
@@ -383,57 +384,86 @@ class SoundsRepository {
   Future<List<AudioEvent>> withoutUnusedOriginals(
     List<AudioEvent> sounds,
   ) async {
-    final unnamed = {
-      for (final sound in sounds)
-        if (sound.hasDefaultTitle && !sound.isBundled) sound.id: sound,
-    };
-    if (unnamed.isEmpty) return sounds;
+    final originals = _autoSharedOriginalsIn(sounds);
+    if (originals.isEmpty) return sounds;
 
+    final reused = await _usedByOtherAccounts(originals);
+    if (reused == null) return sounds;
+    return [
+      for (final sound in sounds)
+        if (!originals.containsKey(sound.id) || reused.contains(sound.id))
+          sound,
+    ];
+  }
+
+  /// [sounds] in their order, except that a video's own audio left untitled
+  /// and uncredited ([AudioEvent.isAutoSharedOriginal]) follows the rest
+  /// unless another account has used it in a video.
+  ///
+  /// For lists that show such sounds rather than leave them out
+  /// ([withoutUnusedOriginals]), so that the sounds their publishers named
+  /// come first. Costs one relay query when [sounds] holds any. When it
+  /// fails, every one of them follows the rest: they are ranked down, not
+  /// hidden.
+  Future<List<AudioEvent>> withUnusedOriginalsLast(
+    List<AudioEvent> sounds,
+  ) async {
+    final originals = _autoSharedOriginalsIn(sounds);
+    if (originals.isEmpty) return sounds;
+
+    final reused = await _usedByOtherAccounts(originals) ?? const {};
+    bool unused(AudioEvent sound) =>
+        originals.containsKey(sound.id) && !reused.contains(sound.id);
+    return [
+      ...sounds.where((sound) => !unused(sound)),
+      ...sounds.where(unused),
+    ];
+  }
+
+  Map<String, AudioEvent> _autoSharedOriginalsIn(List<AudioEvent> sounds) => {
+    for (final sound in sounds)
+      if (sound.isAutoSharedOriginal) sound.id: sound,
+  };
+
+  /// The ids of [originals] that a video by an account other than the
+  /// sound's own uses, or `null` when the relays could not tell in time.
+  Future<Set<String>?> _usedByOtherAccounts(
+    Map<String, AudioEvent> originals,
+  ) async {
     final ({List<Event> events, bool timedOut, bool noRelays}) read;
     try {
       read = await _nostrClient.queryEventsDetailed([
         Filter(
           kinds: const [NIP71VideoKinds.addressableShortVideo],
-          e: unnamed.keys.toList(),
+          e: originals.keys.toList(),
           limit: maxBatchedUsageCountScan,
         ),
       ]);
     } on Object catch (e) {
       Log.warning(
-        'Could not tell which unnamed sounds are reused, keeping them: $e',
+        'Could not tell which unnamed sounds are reused: $e',
         name: 'SoundsRepository',
         category: LogCategory.api,
       );
-      return sounds;
+      return null;
     }
     if (read.timedOut || read.noRelays) {
       Log.warning(
-        'Could not tell in time which unnamed sounds are reused, keeping them',
+        'Could not tell in time which unnamed sounds are reused',
         name: 'SoundsRepository',
         category: LogCategory.api,
       );
-      return sounds;
+      return null;
     }
 
-    final reused = <String>{};
-    for (final video in read.events) {
-      final dTag = video.tags
-          .where((tag) => tag.length >= 2 && tag[0] == 'd')
-          .map((tag) => tag[1])
-          .firstOrNull;
-      final address = '${video.kind}:${video.pubkey}:$dTag';
-      for (final tag in video.tags) {
-        if (tag.length < 2 || tag[0] != 'e') continue;
-        final sound = unnamed[tag[1]];
-        if (sound != null && sound.sourceVideoReference != address) {
-          reused.add(sound.id);
-        }
-      }
-    }
-    return [
-      for (final sound in sounds)
-        if (!unnamed.containsKey(sound.id) || reused.contains(sound.id)) sound,
-    ];
+    return {
+      for (final video in read.events)
+        for (final tag in video.tags)
+          if (tag.length >= 2 && tag[0] == 'e')
+            if (originals[tag[1]] case final sound?
+                when sound.pubkey != video.pubkey)
+              sound.id,
+    };
   }
 
   /// Fetch sounds by a specific creator pubkey.
@@ -505,6 +535,10 @@ class SoundsRepository {
   /// them. Returns an empty list without querying when [query] holds no
   /// searchable term.
   ///
+  /// Newest first, except that a video's own audio left untitled and that no
+  /// other account used follows the rest ([withUnusedOriginalsLast]): a
+  /// search still finds those, after the sounds their publishers named.
+  ///
   /// Best-effort on the relay half: a query that throws an [Exception] is
   /// logged and the cached matches are returned anyway, since a search over a
   /// partial index is already partial and fewer results read better than an
@@ -549,8 +583,10 @@ class SoundsRepository {
       );
     }
 
-    final results = withoutBlockedAuthors(matches.values.toList())
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final results = await withUnusedOriginalsLast(
+      withoutBlockedAuthors(matches.values.toList())
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
+    );
 
     Log.debug(
       'Sound search for ${terms.length} term(s) matched ${results.length}',
