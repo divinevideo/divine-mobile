@@ -247,13 +247,17 @@ class _VerifyContent extends StatelessWidget {
               ),
             ),
           for (final claim in claims)
-            _linkedClaimRow(
+            VerifyClaimRow(
               claim: claim,
-              verifiedKeys: verifiedKeys,
-              removingKey: removingKey,
-              onRemove: () => _confirmRemove(context, claim),
+              isVerified: verifiedKeys.contains(VerifyState.keyOf(claim)),
+              isRemoving: removingKey == VerifyState.keyOf(claim),
+              onRemove: removingKey != null
+                  ? null
+                  : () => _confirmRemove(context, claim),
               lapse: signInLapse(claim),
-              onSignInAgain: oauthUsable && canSignInAgain(claim)
+              // Renewing publishes over the same links an unlink is rewriting.
+              onSignInAgain:
+                  removingKey == null && oauthUsable && canSignInAgain(claim)
                   ? () =>
                         _openConnect(context, claim.platform, replacing: claim)
                   : null,
@@ -273,26 +277,6 @@ class _VerifyContent extends StatelessWidget {
               onTap: () => _openConnect(context, platform.key),
             ),
       ],
-    );
-  }
-
-  Widget _linkedClaimRow({
-    required IdentityClaim claim,
-    required Set<String> verifiedKeys,
-    required String? removingKey,
-    required VoidCallback onRemove,
-    required SignInLapse? lapse,
-    required VoidCallback? onSignInAgain,
-  }) {
-    final key = VerifyState.keyOf(claim);
-    return VerifyClaimRow(
-      claim: claim,
-      isVerified: verifiedKeys.contains(key),
-      isRemoving: removingKey == key,
-      onRemove: removingKey != null ? null : onRemove,
-      lapse: lapse,
-      // Renewing publishes over the same links an unlink is rewriting.
-      onSignInAgain: removingKey != null ? null : onSignInAgain,
     );
   }
 
