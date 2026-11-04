@@ -2647,7 +2647,6 @@ void main() {
         verify(
           () => mockFunnelcakeClient.getRecentVideosPage(
             limit: 1,
-            cursor: null,
             newCreatorsOnly: true,
           ),
         ).called(1);
