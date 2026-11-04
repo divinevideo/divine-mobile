@@ -19,25 +19,27 @@ class _Membership extends Fake implements ConcordCommunitySession {
 }
 
 void main() {
-  test('real channel persistence scope stays stable across root epochs', () {
-    final owner = '11' * 32;
-    final salt = '22' * 32;
-    ConcordInviteBundle bundle(int epoch, String root) =>
-        ConcordInviteBundle.fromJson({
-          'community_id': deriveCommunityId(owner, salt),
-          'owner': owner,
-          'owner_salt': salt,
-          'community_root': root,
-          'root_epoch': epoch,
-          'channels': <dynamic>[],
-          'relays': <String>[],
-        }, nowMs: 0);
-    final membership = _Membership()..bundle = bundle(0, '33' * 32);
-    final catalog = ConcordRoomCatalog.real(membership);
-    final oldScope = catalog.scope;
-    membership.bundle = bundle(1, '44' * 32);
-    expect(catalog.scope, oldScope);
-    expect(catalog.epoch, 1);
+  group('ConcordRoomCatalog', () {
+    test('real channel persistence scope stays stable across root epochs', () {
+      final owner = '11' * 32;
+      final salt = '22' * 32;
+      ConcordInviteBundle bundle(int epoch, String root) =>
+          ConcordInviteBundle.fromJson({
+            'community_id': deriveCommunityId(owner, salt),
+            'owner': owner,
+            'owner_salt': salt,
+            'community_root': root,
+            'root_epoch': epoch,
+            'channels': <dynamic>[],
+            'relays': <String>[],
+          }, nowMs: 0);
+      final membership = _Membership()..bundle = bundle(0, '33' * 32);
+      final catalog = ConcordRoomCatalog.real(membership);
+      final oldScope = catalog.scope;
+      membership.bundle = bundle(1, '44' * 32);
+      expect(catalog.scope, oldScope);
+      expect(catalog.epoch, 1);
+    });
   });
   group('buildConcordRepository', () {
     test(
