@@ -48,7 +48,7 @@ void main() {
       expect(_rangeOf([peaks], 4), isNull);
     });
 
-    test('counts a block at the threshold as audible', () {
+    test('counts a single 5 ms block as audible', () {
       final peaks = _peaks(
         4,
         loud: [(1, 1.005)],
@@ -117,6 +117,36 @@ void main() {
         AudibleRange(
           start: _seconds(3) - soundEdgeMargin,
           end: _seconds(4) + soundEdgeMargin,
+        ),
+      );
+    });
+
+    test('reads to the end of the longer channel', () {
+      final range = _rangeOf([
+        _peaks(4),
+        _peaks(6, loud: const [(5, 5.5)]),
+      ], 6);
+
+      expect(
+        range,
+        AudibleRange(
+          start: _seconds(5) - soundEdgeMargin,
+          end: _seconds(5.5) + soundEdgeMargin,
+        ),
+      );
+    });
+
+    test('reads past the end of the shorter channel', () {
+      final range = _rangeOf([
+        _peaks(6, loud: const [(5, 5.5)]),
+        _peaks(4),
+      ], 6);
+
+      expect(
+        range,
+        AudibleRange(
+          start: _seconds(5) - soundEdgeMargin,
+          end: _seconds(5.5) + soundEdgeMargin,
         ),
       );
     });

@@ -45,6 +45,7 @@ class _FakeProVideoEditor extends ProVideoEditor {
   Object? waveformError;
   Object? extractError;
   Duration? writtenDuration;
+  final measured = <WaveformConfigs>[];
   final extractions = <(String, AudioExtractConfigs)>[];
 
   @override
@@ -55,6 +56,7 @@ class _FakeProVideoEditor extends ProVideoEditor {
     WaveformConfigs value, {
     NativeLogLevel? nativeLogLevel,
   }) async {
+    measured.add(value);
     if (waveformError case final error?) throw error;
     return waveform!;
   }
@@ -92,28 +94,58 @@ class _FakeProVideoEditor extends ProVideoEditor {
 }
 
 void main() {
-  late Directory tempDir;
-  late File source;
-  late _FakeProVideoEditor editor;
-  late SoundSilenceTrimmer trimmer;
-
-  setUp(() {
-    tempDir = Directory.systemTemp.createTempSync('sound-silence-trimmer');
-    source = File('${tempDir.path}/sound.wav')..writeAsBytesSync(const [0]);
-    editor = _FakeProVideoEditor();
-    trimmer = SoundSilenceTrimmer(
-      editor: editor,
-      temporaryDirectory: () async => tempDir,
-    );
-  });
-
-  tearDown(() => tempDir.deleteSync(recursive: true));
-
-  Future<SoundTrimResult> trim([String mimeType = 'audio/wav']) =>
-      trimmer.trim(path: source.path, mimeType: mimeType);
-
   group(SoundSilenceTrimmer, () {
+    late Directory tempDir;
+    late File source;
+    late _FakeProVideoEditor editor;
+    late SoundSilenceTrimmer trimmer;
+
+    setUp(() {
+      tempDir = Directory.systemTemp.createTempSync('sound-silence-trimmer');
+      source = File('${tempDir.path}/sound.wav')..writeAsBytesSync(const [0]);
+      editor = _FakeProVideoEditor();
+      trimmer = SoundSilenceTrimmer(
+        editor: editor,
+        temporaryDirectory: () async => tempDir,
+      );
+    });
+
+    tearDown(() => tempDir.deleteSync(recursive: true));
+
+    Future<SoundTrimResult> trim([String mimeType = 'audio/wav']) =>
+        trimmer.trim(path: source.path, mimeType: mimeType);
+
     group('trim', () {
+      test('measures the sound itself at full resolution', () async {
+        editor.waveform = _waveform(6);
+
+        await trim();
+
+        final configs = editor.measured.single;
+        expect(configs.video.file?.path, source.path);
+        expect(configs.resolution, WaveformResolution.high);
+      });
+
+      test('cuts a sound heard on the right channel only', () async {
+        final silent = Float32List(10 * _blocksPerSecond);
+        editor
+          ..waveform = WaveformData(
+            leftChannel: silent,
+            rightChannel: _waveform(10, loud: [(2, 5)]).leftChannel,
+            sampleRate: 48000,
+            duration: _seconds(10),
+            samplesPerSecond: _blocksPerSecond,
+          )
+          ..writtenDuration = const Duration(milliseconds: 3400);
+
+        final result = await trim() as AudibleSound;
+
+        final configs = editor.extractions.single.$2;
+        expect(configs.startTime, _seconds(2) - soundEdgeMargin);
+        expect(configs.endTime, _seconds(5) + soundEdgeMargin);
+        expect(result.isTrimmed, isTrue);
+      });
+
       test('refuses a sound with nothing to hear', () async {
         editor.waveform = _waveform(6);
 
@@ -156,6 +188,18 @@ void main() {
           ..writtenDuration = const Duration(milliseconds: 3400);
 
         final result = await trim('audio/mp4') as AudibleSound;
+
+        expect(editor.extractions.single.$2.format, AudioFormat.m4a);
+        expect(result.path, endsWith('.m4a'));
+        expect(result.mimeType, 'audio/mp4');
+      });
+
+      test('copies an ADTS AAC file into an m4a when it cuts', () async {
+        editor
+          ..waveform = _waveform(10, loud: [(2, 5)])
+          ..writtenDuration = const Duration(milliseconds: 3400);
+
+        final result = await trim('audio/aac') as AudibleSound;
 
         expect(editor.extractions.single.$2.format, AudioFormat.m4a);
         expect(result.path, endsWith('.m4a'));
@@ -327,6 +371,18 @@ void main() {
 
         expect(await trimmer.isSilent(source.path), isTrue);
         expect(editor.extractions, isEmpty);
+      });
+
+      test('is false for a sound heard on the right channel only', () async {
+        editor.waveform = WaveformData(
+          leftChannel: Float32List(10 * _blocksPerSecond),
+          rightChannel: _waveform(10, loud: [(2, 5)]).leftChannel,
+          sampleRate: 48000,
+          duration: _seconds(10),
+          samplesPerSecond: _blocksPerSecond,
+        );
+
+        expect(await trimmer.isSilent(source.path), isFalse);
       });
 
       test('is false for a sound with something to hear', () async {
