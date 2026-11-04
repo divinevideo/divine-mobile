@@ -968,6 +968,7 @@ class DmRepository {
 
   /// How long a finished [_requeryBelowWindowIfDue] waits before the next.
   static const int _belowWindowRequeryIntervalSeconds = 86400;
+  static const int _belowWindowRequeryMaxDepthSeconds = 30 * 86400;
 
   /// How long a catch-up may hold wire stamps back before the newest one
   /// handled is saved anyway.
@@ -2354,7 +2355,10 @@ class DmRepository {
   );
 
   /// Asks again for the week below the live window, at most once a day, on
-  /// an install whose history drain has completed.
+  /// an install whose history drain has completed. The band starts a week
+  /// below the earlier of this window start and the one the last finished run
+  /// read below, so a run after a long gap covers the stamps between the two,
+  /// but never more than thirty days below the window.
   ///
   /// The live subscription asks from [_liveWindowStart] up and a completed
   /// drain never asks again, so a gift wrap that reaches a relay after a newer
@@ -2381,7 +2385,14 @@ class DmRepository {
     if (last != null && startedAt - last < _belowWindowRequeryIntervalSeconds) {
       return;
     }
-    final floor = top - _belowWindowRequeryDepthSeconds;
+    // From a week below the window start the last finished run read below,
+    // when that is lower, so no stamp falls between two runs.
+    final lastTop = syncState.belowWindowRequeryTop(pubkey);
+    final readsBelow = lastTop != null && lastTop < top ? lastTop : top;
+    final floor = max(
+      readsBelow - _belowWindowRequeryDepthSeconds,
+      top - _belowWindowRequeryMaxDepthSeconds,
+    );
     try {
       final inbox = await _drainOwnInboxRelays(pubkey, generation);
       if (_ingestSessionEnded(pubkey, generation)) return;
@@ -2438,7 +2449,11 @@ class DmRepository {
       final answered =
           inbox.conclusive && messagesAnswered && deletionsAnswered;
       if (answered && !_ingestSessionEnded(pubkey, generation)) {
-        await syncState.setBelowWindowRequeryAt(pubkey, startedAt);
+        await syncState.recordBelowWindowRequery(
+          pubkey,
+          at: startedAt,
+          top: top,
+        );
       }
       final walks = [...messages, ...deletions];
       for (final walk in walks) {

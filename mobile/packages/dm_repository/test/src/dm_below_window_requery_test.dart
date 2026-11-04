@@ -547,6 +547,54 @@ void main() {
       expect(relay.everyFilter.where((f) => _admits(f, tooDeep)), isEmpty);
     });
 
+    test(
+      'reads a week below the last finished run when it read lower',
+      () async {
+        final lastTop = windowStart - 10 * _day;
+        await DmSyncState(
+          prefs,
+        ).recordBelowWindowRequery(_owner, at: now() - 2 * _day, top: lastTop);
+        // Between the band that run read and the one this window alone gives.
+        final between = await wrapAt(
+          wire: windowStart - 8 * _day,
+          content: 'between two runs',
+        );
+        final relay = _Relay([inWindow, between]);
+
+        await openInbox(relay);
+
+        expect(await isStored(between), isTrue);
+        expect(
+          relay.queryFilters.where(belowWindow).map((f) => f.since).toSet(),
+          {lastTop - 7 * _day},
+        );
+      },
+    );
+
+    test('reads at most thirty days below the window', () async {
+      await DmSyncState(prefs).recordBelowWindowRequery(
+        _owner,
+        at: now() - 2 * _day,
+        top: windowStart - 100 * _day,
+      );
+      final relay = _Relay([inWindow]);
+
+      await openInbox(relay);
+
+      expect(
+        relay.queryFilters.where(belowWindow).map((f) => f.since).toSet(),
+        {windowStart - 30 * _day},
+      );
+    });
+
+    test('remembers the window start a finished run read below', () async {
+      final relay = _Relay([inWindow]);
+
+      await openInbox(relay);
+
+      expect(DmSyncState(prefs).belowWindowRequeryTop(_owner), windowStart);
+    });
+
     test("asks the account's own inbox relays too", () async {
       final late = await wrapAt(wire: windowStart - 1, content: 'late');
       final relay = _Relay([inWindow, late, ownInboxList()]);
@@ -619,7 +667,11 @@ void main() {
 
       await DmSyncState(
         prefs,
-      ).setBelowWindowRequeryAt(_owner, now() - _day - 1);
+      ).recordBelowWindowRequery(
+        _owner,
+        at: now() - _day - 1,
+        top: windowStart,
+      );
       await openInbox(relay);
       expect(belowWindowReads(), greaterThan(afterFirst));
     });

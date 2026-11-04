@@ -552,6 +552,8 @@ class _FakeDmSyncState implements DmSyncState {
       <({String pubkey, int createdAt})>[];
   bool drainCoveredOwnInboxOverride = false;
   int? belowWindowRequeryAtOverride;
+  int? belowWindowRequeryTopOverride;
+  int? belowWindowRequeryAttemptAtOverride;
   bool completedBeforeOverride = false;
   final List<String> inboxCoveredPubkeys = <String>[];
   final List<String> rearmedForInboxPubkeys = <String>[];
@@ -598,8 +600,25 @@ class _FakeDmSyncState implements DmSyncState {
   int? belowWindowRequeryAt(String pubkey) => belowWindowRequeryAtOverride;
 
   @override
-  Future<void> setBelowWindowRequeryAt(String pubkey, int at) async {
+  int? belowWindowRequeryTop(String pubkey) => belowWindowRequeryTopOverride;
+
+  @override
+  Future<void> recordBelowWindowRequery(
+    String pubkey, {
+    required int at,
+    required int top,
+  }) async {
+    belowWindowRequeryTopOverride = top;
     belowWindowRequeryAtOverride = at;
+  }
+
+  @override
+  int? belowWindowRequeryAttemptAt(String pubkey) =>
+      belowWindowRequeryAttemptAtOverride;
+
+  @override
+  Future<void> setBelowWindowRequeryAttemptAt(String pubkey, int at) async {
+    belowWindowRequeryAttemptAtOverride = at;
   }
 
   @override
