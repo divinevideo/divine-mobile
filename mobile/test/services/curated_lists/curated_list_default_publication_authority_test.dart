@@ -114,8 +114,9 @@ class _Harness {
               invocation.namedArguments[#timeout] as Duration,
               onTimeout: (sink) => sink.close(),
             )) {
-          if (filters.any((filter) => filter.checkEvent(event)))
+          if (filters.any((filter) => filter.checkEvent(event))) {
             events.add(event);
+          }
         }
       } on Object {
         completed = false;
