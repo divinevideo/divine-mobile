@@ -141,8 +141,11 @@ final StreamProvider<ConcordRoomCatalog> concordRoomCatalogProvider =
 
 /// POC synchronous callers stay available when no real invite is configured.
 /// Configured real Rooms never fall through to deterministic test keys.
-ConcordRoomCatalog? currentConcordCatalog(Ref ref) {
-  final state = ref.watch(concordRoomCatalogProvider);
-  return state.asData?.value ??
-      (concordInviteUrl.isEmpty ? ConcordRoomCatalog.poc() : null);
-}
+ConcordRoomCatalog? resolveConcordCatalog(
+  AsyncValue<ConcordRoomCatalog> state,
+) =>
+    state.asData?.value ??
+    (concordInviteUrl.isEmpty ? ConcordRoomCatalog.poc() : null);
+
+ConcordRoomCatalog? currentConcordCatalog(Ref ref) =>
+    resolveConcordCatalog(ref.watch(concordRoomCatalogProvider));

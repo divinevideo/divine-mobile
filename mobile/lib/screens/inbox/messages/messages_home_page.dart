@@ -105,16 +105,13 @@ class _MessagesContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final catalogState = ref.watch(concordRoomCatalogProvider);
-    final catalog =
-        catalogState.asData?.value ??
-        (concordInviteUrl.isEmpty ? ConcordRoomCatalog.poc() : null);
+    final catalog = resolveConcordCatalog(catalogState);
     return MessagesHomeView(
       direct: direct,
       roomsUnreadCount: summaries.values.totalUnread,
       roomsUnreadLimited: summaries.values.totalUnreadLimited,
-      // The backend currently exposes a fixed POC catalog in ChatState.
-      // The public-test disclosure remains until real membership data exists.
-      rooms: catalog == null && concordInviteUrl.isNotEmpty
+      // A configured invite that has not resolved never shows POC rooms.
+      rooms: catalog == null
           ? Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -134,10 +131,10 @@ class _MessagesContent extends ConsumerWidget {
               ),
             )
           : RoomsView(
-              isTest: !(catalog?.isReal ?? concordInviteUrl.isNotEmpty),
-              communities: catalog?.communities ?? const [],
+              isTest: !catalog.isReal,
+              communities: catalog.communities,
               activity: summaries,
-              channelIdFor: (_, channel) => catalog!.channelId(channel),
+              channelIdFor: (_, channel) => catalog.channelId(channel),
               onRetry: onRetry,
               onRoomSelected: (community, channel) => runDetached(
                 context.pushNamed<void>(

@@ -80,9 +80,7 @@ class ChatPage extends ConsumerWidget {
       return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
     }
     final catalogState = ref.watch(concordRoomCatalogProvider);
-    final catalog =
-        catalogState.asData?.value ??
-        (concordInviteUrl.isEmpty ? ConcordRoomCatalog.poc() : null);
+    final catalog = resolveConcordCatalog(catalogState);
     if (catalog == null || !catalog.ready) {
       if (catalogState.isLoading) {
         return const Center(child: DivineCircularProgressIndicator());
