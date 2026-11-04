@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:db_client/db_client.dart';
+import 'package:dm_repository/dm_repository.dart' show maxDmRumorBytes;
 import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -1036,6 +1037,36 @@ void main() {
         expect(result.error, contains('Failed to create report event'));
 
         // Verify publishEvent was NOT called
+        verifyNever(
+          () => mockNostrService.publishEvent(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        );
+      },
+    );
+
+    test(
+      'a private report without a durable queue still never signs or '
+      'publishes a kind-1984 event (#7340)',
+      () async {
+        final result = await service.reportContent(
+          eventId: _validEventId('a'),
+          authorPubkey: _validEventId('c'),
+          reason: ContentFilterReason.harassment,
+          details: 'reporter note',
+          publishToRelays: false,
+        );
+
+        // Zendesk is unconfigured here, so nothing left the device.
+        expect(result.delivery, ReportDelivery.localOnly);
+        verifyNever(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        );
         verifyNever(
           () => mockNostrService.publishEvent(
             any(),
@@ -2363,5 +2394,219 @@ void main() {
         );
       },
     );
+
+    // A kind-1984 is public and signed by the reporter, and its `p` tag names
+    // the reported account, so a report made from a direct message would
+    // tie the reporter to the person they message (#7340). Those reports go
+    // only through the private channels.
+    group('private reports (#7340)', () {
+      final rumorId = _validEventId('a');
+      final sender = _validEventId('c');
+      final moderator = _validEventId('f');
+      late List<PendingReport> deliveredDms;
+      late ContentReportingService private;
+
+      setUp(() async {
+        deliveredDms = [];
+        private = ContentReportingService(
+          nostrService: mockNostrService,
+          authService: mockAuthService,
+          prefs: prefs,
+          moderationRelayUrl: 'wss://relay.divine.video',
+          pendingReportsDao: dao,
+          currentModerationPubkey: () => moderator,
+          deliverModerationDm: (report) async {
+            deliveredDms.add(report);
+            return true;
+          },
+        );
+        await private.initialize();
+      });
+
+      Future<void> sweep() => ReportRetryService(
+        driver: private,
+        pendingReportsDao: dao,
+        userPubkey: testPublicKey,
+        appForegroundStream: const Stream.empty(),
+      ).sweep();
+
+      Map<String, dynamic> moderationPayload(PendingReport row) =>
+          jsonDecode(row.moderationPayload!) as Map<String, dynamic>;
+
+      test('a DM report is delivered privately and never builds, signs or '
+          'publishes a kind-1984 event', () async {
+        final result = await private.reportContent(
+          eventId: rumorId,
+          authorPubkey: sender,
+          reason: ContentFilterReason.harassment,
+          details: 'reporter note',
+          publishToRelays: false,
+        );
+        expect(result.delivery, ReportDelivery.queued);
+
+        final row = (await dao.getById(result.reportId!))!;
+        expect(row.relayStatus, PendingReportChannelStatus.done);
+        expect(row.eventJson, isEmpty);
+        expect(row.targetRelays, isNull);
+        expect(row.eventJson + row.zendeskPayload, isNot(contains('1984')));
+
+        await sweep();
+
+        // The private channel did run, so the absence below is not an idle
+        // sweep.
+        expect(deliveredDms.map((dm) => dm.reportId), [result.reportId]);
+        verifyNever(
+          () => mockAuthService.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        );
+        verifyNever(
+          () => mockNostrService.publishEvent(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        );
+      });
+
+      test(
+        'a user report made from a DM screen is delivered privately',
+        () async {
+          final result = await private.reportUser(
+            userPubkey: sender,
+            reason: ContentFilterReason.harassment,
+            details: '',
+            publishToRelays: false,
+          );
+
+          final row = (await dao.getById(result.reportId!))!;
+          expect(row.relayStatus, PendingReportChannelStatus.done);
+          expect(row.eventJson, isEmpty);
+          expect(row.moderationStatus, PendingReportChannelStatus.pending);
+          await sweep();
+          verifyNever(
+            () => mockNostrService.publishEvent(
+              any(),
+              targetRelays: any(named: 'targetRelays'),
+            ),
+          );
+        },
+      );
+
+      test('the unverified excerpt travels only in the moderation DM, '
+          'labelled and tagged', () async {
+        const excerpt = 'the message they sent me';
+        final result = await private.reportContent(
+          eventId: rumorId,
+          authorPubkey: sender,
+          reason: ContentFilterReason.harassment,
+          details: 'reporter note',
+          publishToRelays: false,
+          moderationContent: 'DM Message Report\nReason: Harassment',
+          unverifiedMessageExcerpt: excerpt,
+        );
+
+        final row = (await dao.getById(result.reportId!))!;
+        final payload = moderationPayload(row);
+        expect(
+          payload['content'],
+          'DM Message Report\nReason: Harassment\n\n'
+          '${ContentReportingService.unverifiedExcerptHeading}\n$excerpt',
+        );
+        expect(
+          payload['tags'],
+          contains(equals(ContentReportingService.unverifiedExcerptTag)),
+        );
+        expect(row.zendeskPayload, isNot(contains(excerpt)));
+        expect(row.eventJson, isNot(contains(excerpt)));
+      });
+
+      test('the excerpt is redacted on its own', () async {
+        final result = await private.reportContent(
+          eventId: rumorId,
+          authorPubkey: sender,
+          reason: ContentFilterReason.harassment,
+          details: '',
+          publishToRelays: false,
+          moderationContent: 'DM Message Report',
+          unverifiedMessageExcerpt: 'api_key=secret-value',
+        );
+
+        final content =
+            moderationPayload((await dao.getById(result.reportId!))!)['content']
+                as String;
+        expect(content, startsWith('DM Message Report\n\n'));
+        expect(content, isNot(contains('secret-value')));
+      });
+
+      test('a DM without the excerpt carries no evidence tag', () async {
+        final result = await private.reportContent(
+          eventId: rumorId,
+          authorPubkey: sender,
+          reason: ContentFilterReason.harassment,
+          details: '',
+          publishToRelays: false,
+        );
+
+        final payload = moderationPayload(
+          (await dao.getById(result.reportId!))!,
+        );
+        expect(
+          payload['content'],
+          isNot(contains(ContentReportingService.unverifiedExcerptHeading)),
+        );
+        expect(
+          payload['tags'],
+          isNot(contains(equals(ContentReportingService.unverifiedExcerptTag))),
+        );
+      });
+
+      test('refuses an excerpt on a report that would also be published', () {
+        expect(
+          () => private.reportContent(
+            eventId: rumorId,
+            authorPubkey: sender,
+            reason: ContentFilterReason.harassment,
+            details: '',
+            unverifiedMessageExcerpt: 'the message they sent me',
+          ),
+          throwsArgumentError,
+        );
+      });
+
+      test('refuses a report whose moderation DM the NIP-17 wrap cannot carry, '
+          'before anything is saved', () async {
+        final result = await private.reportContent(
+          eventId: rumorId,
+          authorPubkey: sender,
+          reason: ContentFilterReason.harassment,
+          details: '',
+          publishToRelays: false,
+          unverifiedMessageExcerpt: 'x' * maxDmRumorBytes,
+        );
+
+        expect(result.success, isFalse);
+        expect(result.delivery, ReportDelivery.tooLong);
+        expect(
+          await dao.getRetryableForUser(userPubkey: testPublicKey),
+          isEmpty,
+        );
+      });
+
+      test('an excerpt that fits is accepted', () async {
+        final result = await private.reportContent(
+          eventId: rumorId,
+          authorPubkey: sender,
+          reason: ContentFilterReason.harassment,
+          details: '',
+          publishToRelays: false,
+          unverifiedMessageExcerpt: 'x' * (maxDmRumorBytes ~/ 2),
+        );
+
+        expect(result.delivery, ReportDelivery.queued);
+      });
+    });
   });
 }

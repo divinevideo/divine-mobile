@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
+import 'package:dm_repository/dm_repository.dart' show maxDmRumorBytes;
 import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -43,6 +44,11 @@ enum ReportDelivery {
   /// silent no-op, never as a failed delivery to retry or hand to a fallback
   /// channel such as the moderation DM.
   refused,
+
+  /// The report was refused before anything was saved, because its moderation
+  /// DM is larger than a NIP-17 gift wrap can carry. Unlike [refused] this is
+  /// a failure the reporter can act on, by sending less (#7340).
+  tooLong,
 }
 
 /// Report submission result
@@ -93,6 +99,13 @@ class ReportResult {
     error: error,
     timestamp: DateTime.now(),
     delivery: ReportDelivery.localOnly,
+  );
+
+  factory ReportResult.tooLong(String error) => ReportResult(
+    success: false,
+    error: error,
+    timestamp: DateTime.now(),
+    delivery: ReportDelivery.tooLong,
   );
 }
 
@@ -194,6 +207,23 @@ class ContentReportingService implements ReportChannelDriver {
 
   static const String reportsStorageKey = 'content_reports_history';
 
+  /// Heads the reported message when a reporter chooses to include it. The
+  /// text is whatever the reporter's device decrypted: a NIP-17 rumor is
+  /// unsigned, so it is an allegation for human review, not proof.
+  static const String unverifiedExcerptHeading =
+      'Unverified message excerpt provided by the reporter:';
+
+  /// Marks a moderation DM that carries [unverifiedExcerptHeading], so the
+  /// moderation service can tell it apart without reading the body.
+  static const List<String> unverifiedExcerptTag = [
+    'evidence',
+    'unverified_excerpt',
+  ];
+
+  /// The tag `DmRepository.enqueueSend` adds to every rumor, carrying the
+  /// idempotency key, which for a moderation DM is the report id.
+  static const String _dmIdempotencyTagKey = 'batch';
+
   final List<ContentReport> _reportHistory = [];
   bool _isInitialized = false;
 
@@ -239,6 +269,20 @@ class ContentReportingService implements ReportChannelDriver {
   ///
   /// [addressableCoordinate] names an addressable target, such as a list, as
   /// an `a` tag beside the NIP-56 `e` and `p` tags.
+  ///
+  /// With [publishToRelays] false no NIP-56 event is built at all: the report
+  /// goes only to the moderation DM and the support ticket. A kind-1984 is
+  /// public and signed by the reporter, and its `p` tag names the reported
+  /// account, so a report made from a direct message must not have one —
+  /// it would tie the reporter to the person they message (#7340).
+  ///
+  /// [unverifiedMessageExcerpt] is the reported message as the reporter's
+  /// device shows it, sent only in the moderation DM and only for a private
+  /// report. A moderation DM that a NIP-17 gift wrap cannot carry is refused
+  /// before anything is saved, with [ReportDelivery.tooLong].
+  ///
+  /// Throws an [ArgumentError] when [unverifiedMessageExcerpt] is given while
+  /// [publishToRelays] is true.
   @useResult
   Future<ReportResult> reportContent({
     required String eventId,
@@ -252,7 +296,16 @@ class ContentReportingService implements ReportChannelDriver {
     String? moderationContent,
     List<List<String>> moderationTags = const [],
     String? addressableCoordinate,
+    bool publishToRelays = true,
+    String? unverifiedMessageExcerpt,
   }) async {
+    if (unverifiedMessageExcerpt != null && publishToRelays) {
+      throw ArgumentError.value(
+        unverifiedMessageExcerpt,
+        'unverifiedMessageExcerpt',
+        'is only sent with a private report (publishToRelays: false)',
+      );
+    }
     try {
       if (!_isInitialized) {
         await initialize();
@@ -308,47 +361,73 @@ class ContentReportingService implements ReportChannelDriver {
         if (reporter == null) {
           return ReportResult.failure('No reporting account');
         }
-        final event = await _createReportingEvent(
-          reportId: reportId,
-          eventId: eventId,
-          authorPubkey: authorPubkey,
-          reason: reason,
-          details: safeDetails,
-          additionalContext: safeAdditionalContext,
-          hashtags: hashtags,
-          nip56EventIds: nip56EventIds,
-          addressableCoordinate: addressableCoordinate,
-          sign: false,
-        );
-        if (event == null ||
-            event.pubkey != reporter ||
+        final event = publishToRelays
+            ? await _createReportingEvent(
+                reportId: reportId,
+                eventId: eventId,
+                authorPubkey: authorPubkey,
+                reason: reason,
+                details: safeDetails,
+                additionalContext: safeAdditionalContext,
+                hashtags: hashtags,
+                nip56EventIds: nip56EventIds,
+                addressableCoordinate: addressableCoordinate,
+                sign: false,
+              )
+            : null;
+        if ((publishToRelays && (event == null || event.pubkey != reporter)) ||
             _authService.currentPublicKeyHex != reporter) {
           return ReportResult.failure('Reporting account changed');
         }
         final recipient = currentModerationPubkey?.call();
+        final dmContent = _moderationDmContent(
+          sanitizeDiagnosticText(
+            moderationContent ??
+                [
+                  'Content Report',
+                  'Reason: ${reason.name}',
+                  'Event: $eventId',
+                  if (_hasNote(safeDetails)) 'Details: $safeDetails',
+                ].join('\n'),
+          ),
+          unverifiedMessageExcerpt: unverifiedMessageExcerpt,
+        );
+        final dmTags = [
+          ...moderationTags.isEmpty
+              ? moderationDmTags(reason: reason)
+              : moderationTags,
+          if (unverifiedMessageExcerpt != null) unverifiedExcerptTag,
+        ];
+        if (recipient != null &&
+            _exceedsDmRumorLimit(
+              sender: reporter,
+              recipient: recipient,
+              content: dmContent,
+              tags: dmTags,
+              reportId: reportId,
+            )) {
+          return ReportResult.tooLong('Moderation DM is too large to send');
+        }
         final dm = recipient == null
             ? null
             : jsonEncode({
                 'recipientPubkey': recipient,
-                'content': sanitizeDiagnosticText(
-                  moderationContent ??
-                      [
-                        'Content Report',
-                        'Reason: ${reason.name}',
-                        'Event: $eventId',
-                        if (_hasNote(safeDetails)) 'Details: $safeDetails',
-                      ].join('\n'),
-                ),
-                'tags': moderationTags.isEmpty
-                    ? moderationDmTags(reason: reason)
-                    : moderationTags,
+                'content': dmContent,
+                'tags': dmTags,
               });
         await dao.enqueue(
           PendingReport(
             reportId: reportId,
             userPubkey: reporter,
-            eventJson: jsonEncode(event.toJson()),
-            targetRelays: jsonEncode(_targetRelaysForReport(sourceRelay)),
+            // A private report has no relay intent: its relay channel is
+            // retired at birth, so nothing ever reads this column for it.
+            eventJson: event == null ? '' : jsonEncode(event.toJson()),
+            targetRelays: event == null
+                ? null
+                : jsonEncode(_targetRelaysForReport(sourceRelay)),
+            relayStatus: event == null
+                ? PendingReportChannelStatus.done
+                : PendingReportChannelStatus.pending,
             zendeskPayload: jsonEncode(
               _buildZendeskPayload(
                 reportId: reportId,
@@ -389,19 +468,21 @@ class ContentReportingService implements ReportChannelDriver {
       }
 
       // Create and broadcast NIP-56 reporting event (kind 1984)
-      final reportEvent = await _createReportingEvent(
-        reportId: reportId,
-        eventId: eventId,
-        authorPubkey: authorPubkey,
-        reason: reason,
-        details: safeDetails,
-        additionalContext: safeAdditionalContext,
-        hashtags: hashtags,
-        nip56EventIds: nip56EventIds,
-        addressableCoordinate: addressableCoordinate,
-      );
+      final reportEvent = publishToRelays
+          ? await _createReportingEvent(
+              reportId: reportId,
+              eventId: eventId,
+              authorPubkey: authorPubkey,
+              reason: reason,
+              details: safeDetails,
+              additionalContext: safeAdditionalContext,
+              hashtags: hashtags,
+              nip56EventIds: nip56EventIds,
+              addressableCoordinate: addressableCoordinate,
+            )
+          : null;
 
-      if (reportEvent == null) {
+      if (publishToRelays && reportEvent == null) {
         return ReportResult.failure('Failed to create report event');
       }
 
@@ -417,10 +498,9 @@ class ContentReportingService implements ReportChannelDriver {
         additionalContext: safeAdditionalContext,
       );
 
-      final relayAccepted = await _publishReportEvent(
-        reportEvent,
-        targetRelays,
-      );
+      final relayAccepted =
+          reportEvent != null &&
+          await _publishReportEvent(reportEvent, targetRelays);
       final zendeskFiled = await _fileZendeskTicket(
         zendeskPayload,
         externalId: reportId,
@@ -463,6 +543,45 @@ class ContentReportingService implements ReportChannelDriver {
     }
   }
 
+  /// The moderation DM body, with the reported message appended under
+  /// [unverifiedExcerptHeading] when the reporter chose to include it. The
+  /// excerpt is redacted on its own: redaction spans lines, so sanitizing the
+  /// assembled body would let one part erase the next.
+  static String _moderationDmContent(
+    String sanitizedContent, {
+    required String? unverifiedMessageExcerpt,
+  }) {
+    if (unverifiedMessageExcerpt == null) return sanitizedContent;
+    final excerpt = sanitizeDiagnosticText(unverifiedMessageExcerpt);
+    return '$sanitizedContent\n\n$unverifiedExcerptHeading\n$excerpt';
+  }
+
+  /// Whether the moderation DM's rumor would exceed [maxDmRumorBytes], built
+  /// the way `Nip17MessageService.buildRumor` and `DmRepository.enqueueSend`
+  /// build it. The DM is sent later by the retry worker, so a rumor the gift
+  /// wrap cannot carry must be refused here, while the reporter can still
+  /// send less; afterwards it would only retry in the background, forever.
+  static bool _exceedsDmRumorLimit({
+    required String sender,
+    required String recipient,
+    required String content,
+    required List<List<String>> tags,
+    required String reportId,
+  }) {
+    final rumor = Event(
+      sender,
+      EventKind.privateDirectMessage,
+      [
+        ['p', recipient],
+        ...tags,
+        [_dmIdempotencyTagKey, reportId],
+      ],
+      content,
+      createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    );
+    return utf8.encode(jsonEncode(rumor.toJson())).length > maxDmRumorBytes;
+  }
+
   List<String> _targetRelaysForReport(String? sourceRelay) {
     final relay = _normalizeRelayUrl(sourceRelay);
     return {_moderationRelayUrl, ?relay}.toList();
@@ -481,7 +600,8 @@ class ContentReportingService implements ReportChannelDriver {
   /// Report user for harassment or abuse.
   ///
   /// Same contract as [reportContent]: failures come back as a returned
-  /// value, so the result must be read.
+  /// value, so the result must be read. [publishToRelays] is false for a
+  /// report made from a direct-message screen, as in [reportContent].
   @useResult
   Future<ReportResult> reportUser({
     required String userPubkey,
@@ -490,6 +610,7 @@ class ContentReportingService implements ReportChannelDriver {
     List<String>? relatedEventIds,
     String? moderationContent,
     List<List<String>> moderationTags = const [],
+    bool publishToRelays = true,
   }) async {
     final validRelatedEventIds = relatedEventIds
         ?.where(_isValidEventId)
@@ -520,6 +641,7 @@ class ContentReportingService implements ReportChannelDriver {
             if (_hasNote(details)) 'Details: $details',
           ].join('\n'),
       moderationTags: moderationTags,
+      publishToRelays: publishToRelays,
     );
   }
 
