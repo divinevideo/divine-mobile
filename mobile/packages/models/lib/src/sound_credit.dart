@@ -84,7 +84,7 @@ String? soundCreditLine(AudioEvent sound) {
       sound.creatorName ??
           external?.creatorName ??
           (sound.isBundled ? sound.source : null),
-    ].map(_oneLine).whereType<String>().join(' – '),
+    ].map(_withoutLinks).whereType<String>().join(' – '),
     _httpsLink(sound.sourceUrl ?? external?.sourceUrl),
   ].whereType<String>().where((part) => part.isNotEmpty).join(' ');
   final terms = [
@@ -187,6 +187,15 @@ String? _httpsLink(String? url) {
       ? uri.toString()
       : null;
 }
+
+/// [value] on one line, without any word that holds a link.
+///
+/// A published sound's title and creator come from its event, written by
+/// whoever published the sound, and Divine hides a link that ends the work
+/// when it reads the line back, so a link here would be signed unseen.
+String? _withoutLinks(String? value) => _oneLine(
+  value?.split(RegExp(r'\s+')).where((word) => !word.contains('://')).join(' '),
+);
 
 String? _oneLine(String? value) {
   final text = value?.replaceAll(RegExp(r'\s+'), ' ').trim();

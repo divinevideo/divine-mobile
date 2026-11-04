@@ -140,6 +140,20 @@ void main() {
 
     // The link comes from the sound's own event, and the poster never sees
     // the line before it is signed into their post.
+    // A published sound's title and creator come from its event, and the
+    // poster signs the line without seeing it.
+    test('writes no link from the title or creator', () {
+      expect(
+        soundCreditLine(
+          _sound(
+            title: 'Chill Loop https://phish.example/a',
+            creatorName: 'DJ Someone https://phish.example/login',
+          ),
+        ),
+        equals('♪ Chill Loop – DJ Someone, CC BY 4.0 $_ccBy (edited)'),
+      );
+    });
+
     test('writes only a Creative Commons licence link', () {
       for (final link in [
         'https://phish.example/licenses/by/4.0/',
