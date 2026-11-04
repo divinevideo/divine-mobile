@@ -290,6 +290,39 @@ class VideosRepository {
     );
   }
 
+  /// Refreshes the reuse decisions for the videos [addressableIds] name,
+  /// keyed by those ids, in one request per hundred.
+  ///
+  /// An id that names no addressable short video is left out unasked.
+  ///
+  /// Throws [FunnelcakeNotConfiguredException] without an available
+  /// Funnelcake client, and [FunnelcakeException] when it cannot decide.
+  Future<Map<String, AudioReusePolicy>> refreshAudioReusePolicies(
+    Iterable<String> addressableIds,
+  ) async {
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+    final addresses = <String, AId>{
+      for (final id in addressableIds)
+        if (AId.fromString(id) case final address?
+            when (address.kind == EventKind.videoVertical ||
+                    address.kind == EventKind.videoHorizontal) &&
+                _hexPubkey.hasMatch(address.pubkey) &&
+                address.dTag.isNotEmpty)
+          id: address,
+    };
+    if (addresses.isEmpty) return const {};
+    final policies = await client.refreshAudioReusePolicies([
+      for (final address in addresses.values)
+        (kind: address.kind, pubkey: address.pubkey, dTag: address.dTag),
+    ]);
+    return Map.fromIterables(addresses.keys, policies);
+  }
+
+  static final _hexPubkey = RegExp(r'^[0-9a-fA-F]{64}$');
+
   /// Clears the in-memory feed cache.
   ///
   /// When [key] is provided, only that feed mode's cache is removed
@@ -1737,11 +1770,8 @@ class VideosRepository {
     return _hydrateVideosWithBulkStats(videos);
   }
 
-  /// Number of filters to batch in a single relay query.
-  ///
-  /// Batching improves performance while staying compatible with relays
-  /// that may have issues with too many filters in one REQ.
-  static const int _addressableIdBatchSize = 20;
+  /// Number of addresses asked for in one relay query.
+  static const int _addressableIdBatchSize = 50;
 
   /// Fetches videos by their addressable IDs.
   ///
@@ -1777,42 +1807,13 @@ class VideosRepository {
     bool cacheResults = false,
     bool includeFeedShape = true,
   }) async {
-    if (addressableIds.isEmpty) return [];
+    final addresses = _videoAddresses(addressableIds);
+    if (addresses.isEmpty) return [];
 
-    // Parse addressable IDs and build filters
-    final filters = <Filter>[];
-
-    for (final addressableId in addressableIds) {
-      final parsed = AId.fromString(addressableId);
-      if (parsed != null && NIP71VideoKinds.isVideoKind(parsed.kind)) {
-        // Note: No limit needed - addressable events are unique by
-        // kind:pubkey:d-tag, so there's only one latest version per ID.
-        // Adding limit:1 per filter causes issues when batching multiple
-        // filters, as relays may apply a global limit.
-        filters.add(
-          Filter(
-            kinds: [parsed.kind],
-            authors: [parsed.pubkey],
-            d: [parsed.dTag],
-          ),
-        );
-      }
-    }
-
-    if (filters.isEmpty) return [];
-
-    // Batch filters to balance performance with relay compatibility.
-    // Some relays have issues with too many filters in a single REQ,
-    // so we batch them in chunks rather than sending all at once or
-    // querying one at a time.
-    final futures = <Future<List<Event>>>[];
-    for (var i = 0; i < filters.length; i += _addressableIdBatchSize) {
-      final batchEnd = (i + _addressableIdBatchSize).clamp(0, filters.length);
-      final batch = filters.sublist(i, batchEnd);
-      futures.add(_nostrClient.queryEvents(batch));
-    }
-
-    final results = await Future.wait(futures);
+    final results = await Future.wait([
+      for (final filter in _addressFilters(addresses))
+        _nostrClient.queryEvents([filter]),
+    ]);
     final events = results.expand((e) => e).toList();
 
     // Optionally save fetched events to cache
@@ -1820,6 +1821,104 @@ class VideosRepository {
       await _localStorage.saveEventsBatch(events);
     }
 
+    final foundVideos = _latestVisibleVideosByAddress(
+      events,
+      includeFeedShape: includeFeedShape,
+    );
+
+    // Find which IDs weren't found on Nostr
+    final missingIds = addressableIds
+        .where((id) => !foundVideos.containsKey(id))
+        .toList();
+
+    // Try Funnelcake API fallback for missing videos
+    if (missingIds.isNotEmpty &&
+        _funnelcakeApiClient != null &&
+        _funnelcakeApiClient.isAvailable) {
+      await _fetchMissingVideosFromFunnelcake(
+        missingIds,
+        foundVideos,
+        includeFeedShape: includeFeedShape,
+      );
+    }
+
+    return _hydrateVideosWithBulkStats([
+      for (final addressableId in addressableIds) ?foundVideos[addressableId],
+    ]);
+  }
+
+  /// The videos at [addressableIds] as the relays alone hold them, in that
+  /// order, and whether every relay answered in full.
+  ///
+  /// For a caller that needs only what each event carries, such as its
+  /// thumbnail, and would rather have it fast: the Funnelcake fallback and
+  /// the bulk-stats merge of [getVideosByAddressableIds] each add a round
+  /// trip after the relays answer, the fallback one per author.
+  ///
+  /// Only while `complete` is true does a video missing from `videos` mean
+  /// the relays hold none this viewer may see, deleted or filtered out. A
+  /// relay that ran out of time, closed the read or never answered may still
+  /// hold one. [includeFeedShape] works as for [getVideosByAddressableIds].
+  Future<({List<VideoEvent> videos, bool complete})>
+  getVideosFromRelaysByAddressableIds(
+    List<String> addressableIds, {
+    bool includeFeedShape = true,
+  }) async {
+    final addresses = _videoAddresses(addressableIds);
+    if (addresses.isEmpty) return (videos: <VideoEvent>[], complete: true);
+
+    final reads = await Future.wait([
+      for (final filter in _addressFilters(addresses))
+        _nostrClient.readEvents([filter]),
+    ]);
+    final foundVideos = _latestVisibleVideosByAddress(
+      reads.expand((read) => read.events),
+      includeFeedShape: includeFeedShape,
+    );
+    return (
+      videos: [
+        for (final addressableId in addressableIds) ?foundVideos[addressableId],
+      ],
+      complete: reads.every((read) => read.isComplete),
+    );
+  }
+
+  /// The video addresses among [addressableIds], in their order.
+  static List<AId> _videoAddresses(List<String> addressableIds) => [
+    for (final addressableId in addressableIds)
+      if (AId.fromString(addressableId) case final parsed?
+          when NIP71VideoKinds.isVideoKind(parsed.kind))
+        parsed,
+  ];
+
+  /// The relay filters asking for [addresses]: one per batch, listing every
+  /// author and d-tag in it, rather than a filter per address.
+  ///
+  /// relay.divine.video caps a REQ at ten filters, and answered 48 addresses
+  /// as five ten-filter REQs in about 4 s against 0.3-0.6 s as one combined
+  /// filter. The combined filter also matches an author's video under another
+  /// address's d-tag; [_latestVisibleVideosByAddress] keys by the exact
+  /// address, so a caller looking up what it asked for drops those. No limit:
+  /// a relay may apply one limit to the whole filter, and each address has
+  /// one latest revision.
+  static Iterable<Filter> _addressFilters(List<AId> addresses) sync* {
+    for (var i = 0; i < addresses.length; i += _addressableIdBatchSize) {
+      final batch = addresses.skip(i).take(_addressableIdBatchSize);
+      yield Filter(
+        kinds: {for (final a in batch) a.kind}.toList(),
+        authors: {for (final a in batch) a.pubkey}.toList(),
+        d: {for (final a in batch) a.dTag}.toList(),
+      );
+    }
+  }
+
+  /// The latest revision at each address among [events], as the video this
+  /// viewer may see, keyed by `kind:pubkey:d-tag`. An address whose latest
+  /// revision is filtered out is absent.
+  Map<String, VideoEvent> _latestVisibleVideosByAddress(
+    Iterable<Event> events, {
+    required bool includeFeedShape,
+  }) {
     // Relays can disagree about the latest revision. Choose by the signed
     // timestamp (then lowest event ID per NIP-01), before parsing/filtering so
     // an older eligible revision cannot replace a newer filtered revision.
@@ -1844,33 +1943,7 @@ class VideosRepository {
       );
       if (video != null) foundVideos[entry.key] = video;
     }
-
-    // Find which IDs weren't found on Nostr
-    final missingIds = addressableIds
-        .where((id) => !foundVideos.containsKey(id))
-        .toList();
-
-    // Try Funnelcake API fallback for missing videos
-    if (missingIds.isNotEmpty &&
-        _funnelcakeApiClient != null &&
-        _funnelcakeApiClient.isAvailable) {
-      await _fetchMissingVideosFromFunnelcake(
-        missingIds,
-        foundVideos,
-        includeFeedShape: includeFeedShape,
-      );
-    }
-
-    // Build result list preserving original order
-    final videos = <VideoEvent>[];
-    for (final addressableId in addressableIds) {
-      final video = foundVideos[addressableId];
-      if (video != null) {
-        videos.add(video);
-      }
-    }
-
-    return _hydrateVideosWithBulkStats(videos);
+    return foundVideos;
   }
 
   /// Fetches missing videos from Funnelcake API and adds them to [foundVideos].

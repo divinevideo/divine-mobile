@@ -438,6 +438,45 @@ class AudioPlaybackService {
     }
   }
 
+  /// Sets whether playback starts over at the end of the audio instead of
+  /// stopping there. Applies to every source loaded after it too.
+  ///
+  /// Done here rather than with just_audio's `LoopMode.one`: on iOS the
+  /// player stays at the end of the audio, still playing, and reports
+  /// neither a loop nor completion (seen with just_audio 0.10.5). The end
+  /// shows on every platform either as a completed state or as the position
+  /// reaching the duration, so either one starts the audio over.
+  void setLooping({required bool looping}) {
+    if (_isDisposed) return;
+    unawaited(_loopSubscription?.cancel());
+    _loopSubscription = looping
+        ? Rx.merge<void>([
+            _audioPlayer.processingStateStream.where(
+              (state) => state == ProcessingState.completed,
+            ),
+            _audioPlayer.positionStream.where((position) {
+              final duration = _audioPlayer.duration;
+              return duration != null && position >= duration;
+            }),
+          ]).listen((_) => unawaited(_startOver()))
+        : null;
+  }
+
+  StreamSubscription<void>? _loopSubscription;
+
+  Future<void> _startOver() async {
+    if (_isDisposed || !_audioPlayer.playing) return;
+    try {
+      await _audioPlayer.seek(Duration.zero);
+    } on Exception catch (e) {
+      Log.warning(
+        'Failed to start the audio over: $e',
+        name: 'AudioPlaybackService',
+        category: LogCategory.video,
+      );
+    }
+  }
+
   /// Configures the audio session for recording mode.
   ///
   /// This sets up the audio session to:
@@ -478,6 +517,7 @@ class AudioPlaybackService {
     if (_isDisposed) return;
 
     _isDisposed = true;
+    await _loopSubscription?.cancel();
     await _deviceChangeSubscription?.cancel();
     await _headphonesConnectedSubject.close();
     await _audioPlayer.dispose();

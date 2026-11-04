@@ -288,7 +288,9 @@ class VideoEditorProviderState {
   /// original sound (`video_<eventId>`) or a published Kind 1063, i.e. it has
   /// an [AudioEvent.attributionEventId]. Bundled "divine" sounds, self-imported
   /// audio, voice-over takes, and the video's own clip-anchored original sound
-  /// are all the user's own to offer, so they keep the toggle.
+  /// are all the user's own to offer, so they keep the toggle. A bundled sound
+  /// Divine also published is the exception: it carries that event as its
+  /// [AudioEvent.linkedEventId], and the video references the event instead.
   ///
   /// In the reused-from-another case "Publish this sound" ([allowAudioReuse])
   /// is a no-op — the publisher references the source event instead of

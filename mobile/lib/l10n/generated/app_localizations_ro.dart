@@ -4673,6 +4673,25 @@ class AppLocalizationsRo extends AppLocalizations {
       'Dă-i un titlu sunetului ca să-l poți împărtăși.';
 
   @override
+  String get soundsShareCoverLabel => 'Copertă';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Opțional. Oamenii o văd lângă sunetul tău când aleg unul.';
+
+  @override
+  String get soundsShareCoverAdd => 'Adaugă copertă';
+
+  @override
+  String get soundsShareCoverReplace => 'Înlocuiește';
+
+  @override
+  String get soundsShareCoverRemove => 'Elimină coperta';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Coperta sunetului';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Acest tip de fișier nu este acceptat. Alege un fișier audio.';
 
@@ -11321,6 +11340,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Sunet fără titlu';
 
   @override
+  String get videoEditorAudioUseSound => 'Folosește';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Fișierul audio nu mai este pe dispozitiv';
 
@@ -11347,16 +11369,13 @@ class AppLocalizationsRo extends AppLocalizations {
       'Alege segmentul audio pentru videoclipul tău';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Comunitate';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'Recomandate';
+  String get videoEditorAudioCategoryMySounds => 'Sunetele mele';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'Sunetele mele';
+  String get videoEditorAudioFilterEffects => 'Efecte';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => 'Instrument săgeată';
@@ -12109,9 +12128,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Nuanță';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Gata';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Nivel';

@@ -4425,6 +4425,25 @@ class AppLocalizationsAm extends AppLocalizations {
   String get soundsShareTitleRequiredHint => 'ለማጋራት ለድምፅዎ ርዕስ ይስጡት።';
 
   @override
+  String get soundsShareCoverLabel => 'ሽፋን';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'አማራጭ። ሰዎች ድምፅ ሲመርጡ ከድምፅዎ አጠገብ ያዩታል።';
+
+  @override
+  String get soundsShareCoverAdd => 'ሽፋን ጨምር';
+
+  @override
+  String get soundsShareCoverReplace => 'ተካ';
+
+  @override
+  String get soundsShareCoverRemove => 'ሽፋኑን አስወግድ';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'የድምፅ ሽፋን';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'ይህ የፋይል አይነት አይደገፍም። የድምፅ ፋይል ይምረጡ።';
 
@@ -10833,6 +10852,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'ርዕስ አልባ ድምጽ';
 
   @override
+  String get videoEditorAudioUseSound => 'ተጠቀም';
+
+  @override
   String get videoEditorAudioFileMissing => 'የድምፅ ፋይሉ በዚህ መሣሪያ ላይ የለም';
 
   @override
@@ -10855,16 +10877,13 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorAudioSegmentInstruction => 'ለቪዲዮዎ የድምጽ ክፍሉን ይምረጡ';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'ማህበረሰብ';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'ተለይቶ የቀረበ';
+  String get videoEditorAudioCategoryMySounds => 'የእኔ ድምፆች';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'የእኔ ድምፆች';
+  String get videoEditorAudioFilterEffects => 'የድምፅ ውጤቶች';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => 'የቀስት መሣሪያ';
@@ -11580,9 +11599,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'ሁ';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'ተከናውኗል';
 
   @override
   String get videoEditorLevelSemanticLabel => 'ደረጃ';

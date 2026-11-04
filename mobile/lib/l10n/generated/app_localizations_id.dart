@@ -4454,6 +4454,25 @@ class AppLocalizationsId extends AppLocalizations {
       'Beri judul pada suaramu untuk membagikannya.';
 
   @override
+  String get soundsShareCoverLabel => 'Sampul';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Opsional. Orang melihatnya di samping suaramu saat memilih suara.';
+
+  @override
+  String get soundsShareCoverAdd => 'Tambah sampul';
+
+  @override
+  String get soundsShareCoverReplace => 'Ganti';
+
+  @override
+  String get soundsShareCoverRemove => 'Hapus sampul';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Sampul suara';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Jenis file itu tidak didukung. Pilih file audio.';
 
@@ -10991,6 +11010,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Suara tanpa judul';
 
   @override
+  String get videoEditorAudioUseSound => 'Gunakan';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'File audio sudah tidak ada di perangkat';
 
@@ -11016,16 +11038,13 @@ class AppLocalizationsId extends AppLocalizations {
       'Pilih segmen audio untuk videomu';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Komunitas';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'Unggulan';
+  String get videoEditorAudioCategoryMySounds => 'Suara Saya';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'Suara Saya';
+  String get videoEditorAudioFilterEffects => 'Efek suara';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => 'Alat panah';
@@ -11758,9 +11777,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Rona';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Selesai';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Level';

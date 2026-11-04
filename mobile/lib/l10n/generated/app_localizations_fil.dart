@@ -4559,6 +4559,25 @@ class AppLocalizationsFil extends AppLocalizations {
       'Bigyan ng title ang sound mo para ma-share ito.';
 
   @override
+  String get soundsShareCoverLabel => 'Cover';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Opsyonal. Makikita ito ng iba sa tabi ng sound mo kapag pumipili sila.';
+
+  @override
+  String get soundsShareCoverAdd => 'Magdagdag ng cover';
+
+  @override
+  String get soundsShareCoverReplace => 'Palitan';
+
+  @override
+  String get soundsShareCoverRemove => 'Alisin ang cover';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Cover ng sound';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Hindi suportado ang file type na iyan. Pumili ng audio file.';
 
@@ -11167,6 +11186,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Walang pamagat na sound';
 
   @override
+  String get videoEditorAudioUseSound => 'Gamitin';
+
+  @override
   String get videoEditorAudioFileMissing => 'Wala na sa device ang audio file';
 
   @override
@@ -11191,16 +11213,13 @@ class AppLocalizationsFil extends AppLocalizations {
       'Piliin ang audio segment para sa video mo';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Community';
 
   @override
-  String get videoEditorAudioCategoryFeatured => 'Itinatampok';
+  String get videoEditorAudioCategoryMySounds => 'Mga Sound Ko';
 
   @override
-  String get videoEditorAudioCategoryMySounds => 'Mga Sound Ko';
+  String get videoEditorAudioFilterEffects => 'Sound effects';
 
   @override
   String get videoEditorDrawToolArrowSemanticLabel => 'Tool na arrow';
@@ -11945,9 +11964,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Hue';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Tapos na';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Antas';

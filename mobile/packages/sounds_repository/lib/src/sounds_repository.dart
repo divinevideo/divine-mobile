@@ -5,6 +5,7 @@
 
 import 'dart:async';
 
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart'
     show AudioEvent, NIP71VideoKinds, VideoEvent, audioEventKind, searchTermsOf;
 import 'package:nostr_client/nostr_client.dart';
@@ -12,6 +13,13 @@ import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:sounds_repository/src/sound_library_api_client.dart';
 import 'package:unified_logger/unified_logger.dart';
+
+/// The sounds being picked up right now, the most trending first, with the
+/// number of videos that use each, keyed by event id.
+typedef RankedSounds = ({
+  List<AudioEvent> sounds,
+  Map<String, int> usageCounts,
+});
 
 /// Repository for managing audio events (Kind 1063) for audio reuse.
 ///
@@ -33,8 +41,21 @@ class SoundsRepository {
   SoundsRepository({
     required NostrClient nostrClient,
     SoundLibraryApiClient? soundLibraryApiClient,
+    FunnelcakeApiClient? funnelcakeApiClient,
+    Set<String> divineSoundPublishers = const {},
+    bool Function(String pubkey)? blockFilter,
   }) : _nostrClient = nostrClient,
-       _soundLibraryApiClient = soundLibraryApiClient;
+       _soundLibraryApiClient = soundLibraryApiClient,
+       _funnelcakeApiClient = funnelcakeApiClient,
+       _divineSoundPublishers = divineSoundPublishers,
+       _blockFilter = blockFilter;
+
+  /// Default cap on the Divine library sounds one [fetchDivineSounds] pulls.
+  static const int maxDivineSounds = 500;
+
+  /// How many of the ranking [fetchPopularSounds] asks for unless told
+  /// otherwise, and so how far apart its pages' offsets are.
+  static const int popularPageSize = 50;
 
   /// Default cap on the video events one batched usage-count query pulls.
   ///
@@ -84,6 +105,15 @@ class SoundsRepository {
 
   final NostrClient _nostrClient;
   final SoundLibraryApiClient? _soundLibraryApiClient;
+  final FunnelcakeApiClient? _funnelcakeApiClient;
+
+  /// The accounts that publish Divine's own sounds; see [fetchDivineSounds].
+  final Set<String> _divineSoundPublishers;
+
+  /// Whether the viewer blocked or muted the author with the given pubkey;
+  /// see [withoutBlockedAuthors]. Asked on every call, so it follows the
+  /// viewer's latest choice.
+  final bool Function(String pubkey)? _blockFilter;
 
   /// BehaviorSubject replays last value to late subscribers
   final _soundsSubject = BehaviorSubject<List<AudioEvent>>.seeded(const []);
@@ -173,16 +203,31 @@ class SoundsRepository {
   ///
   /// Returns a list of [AudioEvent]s sorted by creation time (newest first).
   /// Results are cached for future use.
-  Future<List<AudioEvent>> fetchTrendingSounds({int limit = 50}) async {
+  ///
+  /// With [until], only sounds published at or before that Unix time, for
+  /// the pages after the first.
+  ///
+  /// Keeps sounds by authors the viewer blocked or muted: a caller paging by
+  /// [until] needs the whole page, or a page of nothing but theirs would end
+  /// its list. Narrow the page with [withoutBlockedAuthors].
+  Future<List<AudioEvent>> fetchTrendingSounds({
+    int limit = 50,
+    int? until,
+  }) async {
     Log.debug(
-      'Fetching trending sounds (limit: $limit)',
+      'Fetching trending sounds (limit: $limit, until: $until)',
       name: 'SoundsRepository',
       category: LogCategory.api,
     );
 
     try {
       final events = await _nostrClient.queryEvents([
-        Filter(kinds: const [audioEventKind], m: audioMimeTypes, limit: limit),
+        Filter(
+          kinds: const [audioEventKind],
+          m: audioMimeTypes,
+          limit: limit,
+          until: until,
+        ),
       ]);
 
       final audioEvents = _processAndCacheEvents(events);
@@ -202,6 +247,193 @@ class SoundsRepository {
       );
       rethrow;
     }
+  }
+
+  /// Fetch the sounds people are picking up right now, the most trending
+  /// first, with how many videos use each.
+  ///
+  /// Funnelcake ranks them; the events come from the relays, so each sound
+  /// carries the reuse and source-video tags the picker relies on. A ranked
+  /// sound no relay returns is left out. The usage counts are Funnelcake's,
+  /// keyed by event id, since they are what the ranking is built on.
+  ///
+  /// [offset] skips that many of the ranking, for the pages after the
+  /// first. The usage counts hold an entry for every ranked sound, so fewer
+  /// of them than [limit] means the ranking ends with this page.
+  ///
+  /// Returns no sounds when no Funnelcake client is available.
+  ///
+  /// Throws whatever the Funnelcake request or the relay query throws.
+  Future<RankedSounds> fetchPopularSounds({
+    int limit = popularPageSize,
+    int offset = 0,
+  }) async {
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) {
+      return (sounds: const <AudioEvent>[], usageCounts: const <String, int>{});
+    }
+
+    final ranked = await client.getTrendingSounds(
+      limit: limit,
+      offset: offset,
+    );
+    final usageCounts = {
+      for (final sound in ranked)
+        if (sound.id.isNotEmpty) sound.id: sound.usageCount,
+    };
+    if (usageCounts.isEmpty) {
+      return (sounds: const <AudioEvent>[], usageCounts: const <String, int>{});
+    }
+
+    final events = await _nostrClient.queryEvents([
+      Filter(ids: usageCounts.keys.toList(), kinds: const [audioEventKind]),
+    ]);
+    final byId = {
+      for (final sound in _processAndCacheEvents(events)) sound.id: sound,
+    };
+    return (
+      sounds: withoutBlockedAuthors([
+        for (final id in usageCounts.keys) ?byId[id],
+      ]),
+      usageCounts: usageCounts,
+    );
+  }
+
+  /// Fetch the newest sounds published by any of [pubkeys], or with [until]
+  /// the newest published at or before that Unix time.
+  ///
+  /// Keeps sounds by authors the viewer blocked or muted, for the reason
+  /// [fetchTrendingSounds] does.
+  ///
+  /// Returns an empty list without querying when [pubkeys] is empty.
+  Future<List<AudioEvent>> fetchSoundsByCreators(
+    Iterable<String> pubkeys, {
+    int limit = 50,
+    int? until,
+  }) async {
+    final authors = {
+      for (final pubkey in pubkeys)
+        if (pubkey.isNotEmpty) pubkey,
+    };
+    if (authors.isEmpty) return const [];
+
+    final events = await _nostrClient.queryEvents([
+      Filter(
+        authors: authors.toList(),
+        kinds: const [audioEventKind],
+        m: audioMimeTypes,
+        limit: limit,
+        until: until,
+      ),
+    ]);
+    return _processAndCacheEvents(events);
+  }
+
+  /// Divine's own sounds published on the network, newest first: those
+  /// Divine's sound accounts signed that were not taken from a video.
+  ///
+  /// The sounds of videos those accounts post are left out; they are posts
+  /// like anyone's, not part of Divine's library. Empty, without asking the
+  /// relays, when no sound account is configured.
+  Future<List<AudioEvent>> fetchDivineSounds({
+    int limit = maxDivineSounds,
+  }) async {
+    if (_divineSoundPublishers.isEmpty) return const [];
+    final events = await _nostrClient.queryEvents([
+      Filter(
+        authors: _divineSoundPublishers.toList(),
+        kinds: const [audioEventKind],
+        m: audioMimeTypes,
+        limit: limit,
+      ),
+    ]);
+    return withoutBlockedAuthors([
+      for (final sound in _processAndCacheEvents(events))
+        if (sound.sourceVideoReference == null) sound,
+    ]);
+  }
+
+  /// [sounds] without those by authors the viewer blocked or muted.
+  ///
+  /// Popular, Divine's sounds, a creator's sounds and searches leave them
+  /// out already; [fetchTrendingSounds] and [fetchSoundsByCreators] do not,
+  /// so their callers narrow each page with this.
+  List<AudioEvent> withoutBlockedAuthors(List<AudioEvent> sounds) {
+    final isBlocked = _blockFilter;
+    if (isBlocked == null) return sounds;
+    return [
+      for (final sound in sounds)
+        if (!isBlocked(sound.pubkey)) sound,
+    ];
+  }
+
+  /// [sounds] without the ones nobody picked up: a sound that kept its
+  /// default title ([AudioEvent.hasDefaultTitle]) and that no video uses but
+  /// the one it was taken from.
+  ///
+  /// Those are the audio of someone's video, shared by default, and make up
+  /// most of the newest sounds while rarely being worth reusing. One that
+  /// another video uses has shown otherwise and stays, as does every sound
+  /// its publisher named. Keeps the order of [sounds].
+  ///
+  /// Costs one relay query, for the videos that reference the unnamed
+  /// sounds. When it fails, or runs out of time and so may have missed the
+  /// videos that reuse one, the sounds come back unchanged, since a list with
+  /// them beats no list.
+  Future<List<AudioEvent>> withoutUnusedOriginals(
+    List<AudioEvent> sounds,
+  ) async {
+    final unnamed = {
+      for (final sound in sounds)
+        if (sound.hasDefaultTitle && !sound.isBundled) sound.id: sound,
+    };
+    if (unnamed.isEmpty) return sounds;
+
+    final ({List<Event> events, bool timedOut, bool noRelays}) read;
+    try {
+      read = await _nostrClient.queryEventsDetailed([
+        Filter(
+          kinds: const [NIP71VideoKinds.addressableShortVideo],
+          e: unnamed.keys.toList(),
+          limit: maxBatchedUsageCountScan,
+        ),
+      ]);
+    } on Object catch (e) {
+      Log.warning(
+        'Could not tell which unnamed sounds are reused, keeping them: $e',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+      return sounds;
+    }
+    if (read.timedOut || read.noRelays) {
+      Log.warning(
+        'Could not tell in time which unnamed sounds are reused, keeping them',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+      return sounds;
+    }
+
+    final reused = <String>{};
+    for (final video in read.events) {
+      final dTag = video.tags
+          .where((tag) => tag.length >= 2 && tag[0] == 'd')
+          .map((tag) => tag[1])
+          .firstOrNull;
+      final address = '${video.kind}:${video.pubkey}:$dTag';
+      for (final tag in video.tags) {
+        if (tag.length < 2 || tag[0] != 'e') continue;
+        final sound = unnamed[tag[1]];
+        if (sound != null && sound.sourceVideoReference != address) {
+          reused.add(sound.id);
+        }
+      }
+    }
+    return [
+      for (final sound in sounds)
+        if (!unnamed.containsKey(sound.id) || reused.contains(sound.id)) sound,
+    ];
   }
 
   /// Fetch sounds by a specific creator pubkey.
@@ -237,7 +469,9 @@ class SoundsRepository {
         ),
       ]);
 
-      final audioEvents = _processAndCacheEvents(events);
+      final audioEvents = withoutBlockedAuthors(
+        _processAndCacheEvents(events),
+      );
 
       Log.debug(
         'Fetched ${audioEvents.length} sounds by creator',
@@ -315,7 +549,7 @@ class SoundsRepository {
       );
     }
 
-    final results = matches.values.toList()
+    final results = withoutBlockedAuthors(matches.values.toList())
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     Log.debug(
