@@ -61,6 +61,14 @@ reporter's details and additional context once at the entry point, before any
 of the three projections is built, and the moderation DM redacts the same
 details before sending.
 
+A report made from a direct message — reporting a received message, or the
+account from a conversation or the inbox — has only the moderation DM (#7340).
+A kind-1984 would be signed by the reporter and name the person they message,
+and a ticket can be mirrored into a public issue, so neither is created. The
+reporter may also include the reported message. It travels only in that DM,
+under an "unverified excerpt" heading, and only private keys are redacted from
+it: moderators read it as evidence, so an email or a handle in it stays.
+
 The email redaction rule also redacts NIP-05 identifiers such as
 `name@divine.video`. That is intentional for public support payloads: NIP-05s
 are public handles, but incidentally collected handles still identify people

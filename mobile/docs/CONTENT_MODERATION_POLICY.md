@@ -61,6 +61,10 @@ This policy is displayed to users in the report dialog.
    - User reports content via ReportContentDialog
    - Report published as kind 1984 event to `wss://relay.divine.video`
    - Report includes: event ID, author pubkey, reason, details, timestamp
+   - A report made from a direct message (a message, or the account from a
+     conversation or the inbox) is not published: it goes to the moderation
+     account as an encrypted NIP-17 message, optionally with the reported
+     message as an unverified excerpt (#7340)
 
 2. **Report Monitoring**
    - Divine moderation team monitors `wss://relay.divine.video` for kind 1984 events

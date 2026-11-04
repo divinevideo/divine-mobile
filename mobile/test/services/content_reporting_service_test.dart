@@ -20,6 +20,7 @@ import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/report_retry_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -28,6 +29,17 @@ class _MockAuthService extends Mock implements AuthService {}
 class _MockPendingReportsDao extends Mock implements PendingReportsDao {}
 
 class _FakeEvent extends Fake implements Event {}
+
+/// A database error whose text repeats the row it failed to write, as
+/// sqlite3's `SqliteException.toString()` does with its bound parameters.
+class _PayloadEchoingException implements Exception {
+  _PayloadEchoingException(this.report);
+
+  final PendingReport report;
+
+  @override
+  String toString() => 'insert failed, parameters: ${report.moderationPayload}';
+}
 
 String _validEventId(String hexDigit) => List.filled(64, hexDigit).join();
 
@@ -2448,13 +2460,17 @@ void main() {
         expect(row.relayStatus, PendingReportChannelStatus.done);
         expect(row.eventJson, isEmpty);
         expect(row.targetRelays, isNull);
-        expect(row.eventJson + row.zendeskPayload, isNot(contains('1984')));
+        // A support ticket can be mirrored into a public GitHub issue
+        // (docs/DIAGNOSTIC_DATA_POLICY.md), so a private report files none.
+        expect(row.zendeskStatus, PendingReportChannelStatus.done);
+        expect(row.zendeskPayload, isEmpty);
 
         await sweep();
 
-        // The private channel did run, so the absence below is not an idle
+        // The private channel did run, so the absences below are not an idle
         // sweep.
         expect(deliveredDms.map((dm) => dm.reportId), [result.reportId]);
+        expect(await dao.getById(result.reportId!), isNull);
         verifyNever(
           () => mockAuthService.createAndSignEvent(
             kind: any(named: 'kind'),
@@ -2523,23 +2539,76 @@ void main() {
         expect(row.eventJson, isNot(contains(excerpt)));
       });
 
-      test('the excerpt is redacted on its own', () async {
+      // Only moderators read the excerpt, so it is evidence: an email or a
+      // handle in a doxxing message has to reach them as sent. A private key
+      // is still never forwarded.
+      test('the excerpt reaches moderators as sent, except for private keys, '
+          'whatever the note before it holds', () async {
+        final nsec = 'nsec1${'q' * 58}';
+        final excerpt = 'write to me at someone@example.com $nsec';
         final result = await private.reportContent(
           eventId: rumorId,
           authorPubkey: sender,
           reason: ContentFilterReason.harassment,
           details: '',
           publishToRelays: false,
-          moderationContent: 'DM Message Report',
-          unverifiedMessageExcerpt: 'api_key=secret-value',
+          // A credential-shaped key at the end would swallow what follows it
+          // if the excerpt were redacted together with the body.
+          moderationContent: 'DM Message Report\nDetails: my password:',
+          unverifiedMessageExcerpt: excerpt,
         );
 
         final content =
             moderationPayload((await dao.getById(result.reportId!))!)['content']
                 as String;
-        expect(content, startsWith('DM Message Report\n\n'));
-        expect(content, isNot(contains('secret-value')));
+        expect(
+          content,
+          endsWith(
+            '\n\n${ContentReportingService.unverifiedExcerptHeading}\n'
+            'write to me at someone@example.com [REDACTED]',
+          ),
+        );
       });
+
+      test('a private report with nowhere private to go is refused', () async {
+        final noModerator = ContentReportingService(
+          nostrService: mockNostrService,
+          authService: mockAuthService,
+          prefs: prefs,
+          moderationRelayUrl: 'wss://relay.divine.video',
+          pendingReportsDao: dao,
+        );
+        await noModerator.initialize();
+
+        final result = await noModerator.reportContent(
+          eventId: rumorId,
+          authorPubkey: sender,
+          reason: ContentFilterReason.harassment,
+          details: '',
+          publishToRelays: false,
+        );
+
+        expect(result.success, isFalse);
+        expect(
+          await dao.getRetryableForUser(userPubkey: testPublicKey),
+          isEmpty,
+        );
+      });
+
+      test(
+        'a report without an excerpt is never refused for its size',
+        () async {
+          final result = await private.reportContent(
+            eventId: _validEventId('b'),
+            authorPubkey: sender,
+            reason: ContentFilterReason.spam,
+            details: '',
+            moderationContent: 'x' * maxDmRumorBytes,
+          );
+
+          expect(result.delivery, ReportDelivery.queued);
+        },
+      );
 
       test('a DM without the excerpt carries no evidence tag', () async {
         final result = await private.reportContent(
@@ -2563,18 +2632,70 @@ void main() {
         );
       });
 
-      test('refuses an excerpt on a report that would also be published', () {
+      test('refuses an excerpt on a report that would also be published, '
+          'without repeating the excerpt in the error', () {
+        const excerpt = 'the message they sent me';
         expect(
           () => private.reportContent(
             eventId: rumorId,
             authorPubkey: sender,
             reason: ContentFilterReason.harassment,
             details: '',
-            unverifiedMessageExcerpt: 'the message they sent me',
+            unverifiedMessageExcerpt: excerpt,
           ),
-          throwsArgumentError,
+          throwsA(
+            isA<ArgumentError>().having(
+              (error) => error.toString(),
+              'toString',
+              isNot(contains(excerpt)),
+            ),
+          ),
         );
       });
+
+      test(
+        'a failed save keeps the excerpt out of the error and the log',
+        () async {
+          const excerpt = 'the message they sent me';
+          final logCapture = LogCaptureService();
+          await logCapture.clearAllLogs();
+          addTearDown(logCapture.clearAllLogs);
+          final failingDao = _MockPendingReportsDao();
+          when(() => failingDao.enqueue(any())).thenAnswer(
+            (invocation) async => throw _PayloadEchoingException(
+              invocation.positionalArguments.single as PendingReport,
+            ),
+          );
+          final crs = ContentReportingService(
+            nostrService: mockNostrService,
+            authService: mockAuthService,
+            prefs: prefs,
+            moderationRelayUrl: 'wss://relay.divine.video',
+            pendingReportsDao: failingDao,
+            currentModerationPubkey: () => moderator,
+          );
+
+          final result = await crs.reportContent(
+            eventId: rumorId,
+            authorPubkey: sender,
+            reason: ContentFilterReason.harassment,
+            details: '',
+            publishToRelays: false,
+            unverifiedMessageExcerpt: excerpt,
+          );
+
+          expect(result.success, isFalse);
+          expect(result.error, isNot(contains(excerpt)));
+          final messages = logCapture.getRecentLogs().map(
+            (entry) => entry.message,
+          );
+          expect(
+            messages,
+            contains(startsWith('Failed to submit content report')),
+          );
+          expect(messages, everyElement(isNot(contains(excerpt))));
+        },
+      );
 
       test('refuses a report whose moderation DM the NIP-17 wrap cannot carry, '
           'before anything is saved', () async {

@@ -1,6 +1,10 @@
 // ABOUTME: Size ceiling for a NIP-17 rumor, derived from the NIP-44 u16 length
 // ABOUTME: prefix and the double encryption NIP-17 performs.
 
+import 'dart:convert';
+
+import 'package:nostr_sdk/event.dart';
+
 /// How large a NIP-17 rumor may serialize to before the send is refused.
 ///
 /// ## Where the hard ceiling comes from
@@ -37,3 +41,12 @@
 /// rumor passes about 28.7 KB. That costs one stored copy, not delivery, so
 /// this bound deliberately stays at the NIP-44 ceiling (#10317).
 const int maxDmRumorBytes = 40000;
+
+/// The tag every `DmRepository` send adds to its rumor, holding the send's
+/// idempotency key. Public so a caller that must size a rumor before it is
+/// sent builds the same one.
+const String dmSendBatchTagKey = 'batch';
+
+/// The size [maxDmRumorBytes] bounds: the UTF-8 bytes of the rumor's JSON,
+/// which is the NIP-44 plaintext.
+int dmRumorBytes(Event rumor) => utf8.encode(jsonEncode(rumor.toJson())).length;
