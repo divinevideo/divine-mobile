@@ -902,6 +902,26 @@ void main() {
       );
     });
 
+    testWidgets('uses the singular for one day', (tester) async {
+      final l10n = await pump(
+        tester,
+        platform: const VerifierPlatform(
+          key: 'bluesky',
+          label: 'Bluesky',
+          supported: true,
+          oauth: true,
+          signinExpiresAfterDays: 1,
+        ),
+      );
+
+      expect(find.text(l10n.verifyConnectSignInLifetime(1)), findsOneWidget);
+      // The one-day wording is its own, not the plural with a 1 in it.
+      expect(
+        l10n.verifyConnectSignInLifetime(1),
+        isNot(l10n.verifyConnectSignInLifetime(2).replaceAll('2', '1')),
+      );
+    });
+
     testWidgets('shows nothing when the verifier reports no lifetime', (
       tester,
     ) async {
