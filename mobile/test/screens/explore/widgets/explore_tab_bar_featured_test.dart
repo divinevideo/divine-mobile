@@ -110,20 +110,38 @@ void main() {
       );
 
       expect(find.text(es.exploreTabFeatured), findsOneWidget);
-      expect(find.text(es.exploreTabNew), findsOneWidget);
+      expect(find.text(es.exploreTabLatest), findsOneWidget);
       expect(find.text(es.exploreTabPopular), findsOneWidget);
       expect(find.text(_l10n.exploreTabFeatured), findsNothing);
     });
 
-    testWidgets('places the tab between New and Popular', (tester) async {
+    testWidgets('places the tab between Latest and Popular', (tester) async {
       await pumpBar(tester, ExploreTabsState(featuredTab: _featured()));
 
+      final latestX = tester.getCenter(find.text(_l10n.exploreTabLatest)).dx;
+      final featuredX = tester
+          .getCenter(find.text(_l10n.exploreTabFeatured))
+          .dx;
+      final popularX = tester.getCenter(find.text(_l10n.exploreTabPopular)).dx;
+
+      expect(featuredX, greaterThan(latestX));
+      expect(featuredX, lessThan(popularX));
+    });
+
+    testWidgets('renders Latest first and New right after it', (tester) async {
+      await pumpBar(
+        tester,
+        ExploreTabsState(newCreatorsAvailable: true, featuredTab: _featured()),
+      );
+
+      final latestX = tester.getCenter(find.text(_l10n.exploreTabLatest)).dx;
       final newX = tester.getCenter(find.text(_l10n.exploreTabNew)).dx;
       final featuredX = tester
           .getCenter(find.text(_l10n.exploreTabFeatured))
           .dx;
       final popularX = tester.getCenter(find.text(_l10n.exploreTabPopular)).dx;
 
+      expect(newX, greaterThan(latestX));
       expect(featuredX, greaterThan(newX));
       expect(featuredX, lessThan(popularX));
     });

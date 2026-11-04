@@ -1,5 +1,5 @@
-// ABOUTME: New Videos feed provider showing videos by original publication time
-// ABOUTME: Uses VideosRepository.getNewVideos so Explore New is distinct from Popular
+// ABOUTME: Explore Latest and New feeds, both ordered by original publication
+// ABOUTME: time; New keeps only videos from creators who debuted recently.
 
 import 'package:models/models.dart';
 import 'package:openvine/constants/app_constants.dart';
@@ -16,10 +16,23 @@ import 'package:unified_logger/unified_logger.dart';
 
 part 'new_videos_feed_provider.g.dart';
 
-/// New Videos feed provider - shows newest videos first.
+/// The two Explore feeds ordered by original publication time.
+enum PublicationFeed {
+  /// Every public video, newest first. The Explore Latest tab and the home
+  /// feed's latest mode.
+  latest,
+
+  /// Only videos from creators whose first video on Divine is at most 30
+  /// days old, three per creator. The Explore New tab. API only.
+  newCreators,
+}
+
+/// Publication-ordered feed provider - shows newest videos first.
 ///
-/// Delegates video fetching to [VideosRepository.getNewVideos] so the Explore
-/// New Videos tab does not share the popular/trending source.
+/// [PublicationFeed.latest] delegates to [VideosRepository.getNewVideos], so
+/// the Explore Latest tab does not share the popular/trending source.
+/// [PublicationFeed.newCreators] delegates to
+/// [VideosRepository.getNewCreatorVideos], which has no relay fallback.
 @Riverpod(keepAlive: true)
 class NewVideosFeed extends _$NewVideosFeed {
   int? _nextCursor;
@@ -28,7 +41,7 @@ class NewVideosFeed extends _$NewVideosFeed {
   final _enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
   @override
-  Future<VideoFeedState> build() async {
+  Future<VideoFeedState> build(PublicationFeed feed) async {
     _nextCursor = null;
     _paginationCursor = null;
 
@@ -39,7 +52,7 @@ class NewVideosFeed extends _$NewVideosFeed {
     final isAppReady = ref.watch(appReadyProvider);
 
     Log.info(
-      'NewVideosFeed: Building (appReady: $isAppReady)',
+      'NewVideosFeed(${feed.name}): Building (appReady: $isAppReady)',
       name: 'NewVideosFeedProvider',
       category: LogCategory.video,
     );
@@ -62,10 +75,16 @@ class NewVideosFeed extends _$NewVideosFeed {
   }) async {
     try {
       final videosRepository = ref.read(videosRepositoryProvider);
-      final page = await videosRepository.getNewVideos(
-        limit: AppConstants.paginationBatchSize,
-        skipCache: bypassRepositoryCache,
-      );
+      final page = switch (feed) {
+        PublicationFeed.latest => await videosRepository.getNewVideos(
+          limit: AppConstants.paginationBatchSize,
+          skipCache: bypassRepositoryCache,
+        ),
+        PublicationFeed.newCreators =>
+          await videosRepository.getNewCreatorVideos(
+            limit: AppConstants.paginationBatchSize,
+          ),
+      };
       final videos = page.videos;
 
       if (!ref.mounted) {
@@ -126,16 +145,31 @@ class NewVideosFeed extends _$NewVideosFeed {
     if (!ref.mounted || currentState.isLoadingMore) return;
     if (!currentState.hasMoreContent) return;
 
+    // New pages only by the server's cursor. Without one, asking again would
+    // return the first page.
+    final paginationCursor = _paginationCursor;
+    if (feed == PublicationFeed.newCreators && paginationCursor == null) {
+      state = AsyncData(currentState.copyWith(hasMoreContent: false));
+      return;
+    }
+
     final paginationGeneration = _paginationGeneration;
     state = AsyncData(currentState.copyWith(isLoadingMore: true));
 
     try {
       final videosRepository = ref.read(videosRepositoryProvider);
-      final page = await videosRepository.getNewVideos(
-        limit: AppConstants.paginationBatchSize,
-        until: _paginationCursor == null ? _nextCursor : null,
-        cursor: _paginationCursor,
-      );
+      final page = switch (feed) {
+        PublicationFeed.latest => await videosRepository.getNewVideos(
+          limit: AppConstants.paginationBatchSize,
+          until: paginationCursor == null ? _nextCursor : null,
+          cursor: paginationCursor,
+        ),
+        PublicationFeed.newCreators =>
+          await videosRepository.getNewCreatorVideos(
+            limit: AppConstants.paginationBatchSize,
+            cursor: paginationCursor,
+          ),
+      };
       final newVideos = page.videos;
 
       // A refresh can install a new first page while this request is pending.

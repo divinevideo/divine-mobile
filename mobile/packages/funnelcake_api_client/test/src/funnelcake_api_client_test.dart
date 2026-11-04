@@ -351,6 +351,43 @@ void main() {
         expect(page.nextCursor, 'p:next-page');
       });
 
+      test('asks for new creators only when newCreatorsOnly is set', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('[]', 200));
+
+        await client.getRecentVideosPage(newCreatorsOnly: true);
+
+        final uri =
+            verify(
+                  () => mockHttpClient.get(
+                    captureAny(),
+                    headers: any(named: 'headers'),
+                  ),
+                ).captured.single
+                as Uri;
+        expect(uri.queryParameters['creators'], equals('new'));
+        expect(uri.queryParameters['sort'], equals('published'));
+      });
+
+      test('leaves the creators filter off by default', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('[]', 200));
+
+        await client.getRecentVideosPage();
+
+        final uri =
+            verify(
+                  () => mockHttpClient.get(
+                    captureAny(),
+                    headers: any(named: 'headers'),
+                  ),
+                ).captured.single
+                as Uri;
+        expect(uri.queryParameters.containsKey('creators'), isFalse);
+      });
+
       test('constructs correct URL with custom limit', () async {
         when(
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),

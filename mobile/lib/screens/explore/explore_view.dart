@@ -15,6 +15,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/providers/classic_vines_provider.dart';
+import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/featured_tabs_providers.dart';
 import 'package:openvine/providers/for_you_provider.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
@@ -285,6 +286,8 @@ class _ExploreViewState extends ConsumerState<ExploreView>
     // Watch tab availability and rebuild the controller when it changes.
     final classicsAvailable =
         ref.watch(classicVinesAvailableProvider).asData?.value ?? false;
+    final newCreatorsAvailable =
+        ref.watch(funnelcakeAvailableProvider).asData?.value ?? false;
     final forYouAvailable = ref.watch(forYouAvailableProvider);
     final appsAvailable =
         nostrAppsSandboxSupported &&
@@ -297,6 +300,7 @@ class _ExploreViewState extends ConsumerState<ExploreView>
     final previousState = _tabsState;
     _tabs.updateAvailability(
       classicsAvailable: classicsAvailable,
+      newCreatorsAvailable: newCreatorsAvailable,
       forYouAvailable: forYouAvailable,
       appsAvailable: appsAvailable,
       featuredTab: featuredTab,

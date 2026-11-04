@@ -849,6 +849,7 @@
     "description": "Name of the Explore tab that shows a server-curated collection. The collection's own name is not this string — it rides beside it in a pill."
   },
   "exploreTabClassics": "క్లాసిక్స్",
+  "exploreTabLatest": "తాజావి",
   "exploreTabNew": "కొత్తది",
   "exploreTabPopular": "జనాదరణ పొందినది",
   "exploreTabCategories": "వర్గాలు",
@@ -4273,6 +4274,7 @@
   "hashtagInputHint": "హ్యాష్‌ట్యాగ్‌లను జోడించండి... #vine #nostr",
   "newVideosTabEmptySubtitle": "కొత్త కంటెంట్ కోసం తర్వాత మళ్లీ తనిఖీ చేయండి",
   "newVideosTabEmptyTitle": "కొత్త వీడియోలలో వీడియోలు లేవు",
+  "latestVideosTabEmptyTitle": "తాజావిలో వీడియోలు లేవు",
   "popularVideosContextTitle": "జనాదరణ పొందిన వీడియోలు",
   "popularVideosEmptySubtitle": "కొత్త కంటెంట్ కోసం తర్వాత మళ్లీ తనిఖీ చేయండి",
   "popularVideosEmptyTitle": "జనాదరణ పొందిన వీడియోలలో వీడియోలు లేవు",

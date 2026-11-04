@@ -2383,6 +2383,12 @@ abstract class AppLocalizations {
   /// **'Classics'**
   String get exploreTabClassics;
 
+  /// Explore tab listing the most recently published videos from everyone.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest'**
+  String get exploreTabLatest;
+
   /// No description provided for @exploreTabNew.
   ///
   /// In en, this message translates to:
@@ -12528,6 +12534,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No videos in New Videos'**
   String get newVideosTabEmptyTitle;
+
+  /// Empty-state title of the Latest tab in Explore.
+  ///
+  /// In en, this message translates to:
+  /// **'No videos in Latest'**
+  String get latestVideosTabEmptyTitle;
 
   /// No description provided for @popularVideosContextTitle.
   ///

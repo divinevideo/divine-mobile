@@ -1409,6 +1409,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get exploreTabClassics => 'Класики';
 
   @override
+  String get exploreTabLatest => 'Последни';
+
+  @override
   String get exploreTabNew => 'Нови';
 
   @override
@@ -7508,6 +7511,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => 'Няма видеа в Нови видеа';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'Няма видеа в Последни';
 
   @override
   String get popularVideosContextTitle => 'Популярни видеа';

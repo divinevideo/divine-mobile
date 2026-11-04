@@ -18,17 +18,18 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/state/video_feed_state.dart';
 import 'package:rxdart/rxdart.dart';
 
-/// Identifies one of the four global, keepAlive Riverpod feed providers that
+/// Identifies one of the global, keepAlive Riverpod feed providers that
 /// [RiverpodFeedRepository] can resolve directly.
-enum _GlobalFeed { forYou, popular, classicVines, newVideos }
+enum _GlobalFeed { forYou, popular, classicVines, newVideos, newCreators }
 
 /// A [FeedRepository] that delegates to the app's existing feed providers and
 /// blocs instead of re-implementing pagination.
 ///
 /// It owns the variants that are globally resolvable from a keepAlive [Ref]:
 ///
-/// * the four home tabs ([ForYouViewSource], [PopularViewSource],
-///   [ClassicVinesViewSource], [NewVideosViewSource]) — delegated to their
+/// * the global feeds ([ForYouViewSource], [PopularViewSource],
+///   [ClassicVinesViewSource], [NewVideosViewSource],
+///   [NewCreatorsViewSource]) — delegated to their
 ///   keepAlive feed providers, which already apply the block / platform
 ///   boundary filter in `build()`;
 /// * the aggregated Explore feed ([ExploreViewSource]) — backed reactively by
@@ -67,6 +68,7 @@ class RiverpodFeedRepository implements FeedRepository {
     PopularViewSource() => _GlobalFeed.popular,
     ClassicVinesViewSource() => _GlobalFeed.classicVines,
     NewVideosViewSource() => _GlobalFeed.newVideos,
+    NewCreatorsViewSource() => _GlobalFeed.newCreators,
     _ => null,
   };
 
@@ -198,7 +200,12 @@ class RiverpodFeedRepository implements FeedRepository {
           fireImmediately: true,
         ),
         _GlobalFeed.newVideos => _ref.listen(
-          newVideosFeedProvider,
+          newVideosFeedProvider(PublicationFeed.latest),
+          (_, next) => onState(next),
+          fireImmediately: true,
+        ),
+        _GlobalFeed.newCreators => _ref.listen(
+          newVideosFeedProvider(PublicationFeed.newCreators),
           (_, next) => onState(next),
           fireImmediately: true,
         ),
@@ -218,7 +225,11 @@ class RiverpodFeedRepository implements FeedRepository {
     _GlobalFeed.classicVines =>
       _ref.read(classicVinesFeedProvider.notifier).loadMore(),
     _GlobalFeed.newVideos =>
-      _ref.read(newVideosFeedProvider.notifier).loadMore(),
+      _ref.read(newVideosFeedProvider(PublicationFeed.latest).notifier)
+          .loadMore(),
+    _GlobalFeed.newCreators =>
+      _ref.read(newVideosFeedProvider(PublicationFeed.newCreators).notifier)
+          .loadMore(),
   };
 
   @override

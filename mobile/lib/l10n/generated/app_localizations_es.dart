@@ -1408,6 +1408,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get exploreTabClassics => 'Clásicos';
 
   @override
+  String get exploreTabLatest => 'Recientes';
+
+  @override
   String get exploreTabNew => 'Nuevos';
 
   @override
@@ -7510,6 +7513,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => 'No hay videos en Videos nuevos';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'No hay videos en Recientes';
 
   @override
   String get popularVideosContextTitle => 'Videos populares';

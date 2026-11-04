@@ -874,6 +874,10 @@
     "description": "Name of the Explore tab that shows a server-curated collection. The collection's own name is not this string — it rides beside it in a pill."
   },
   "exploreTabClassics": "Classics",
+  "exploreTabLatest": "Latest",
+  "@exploreTabLatest": {
+    "description": "Explore tab listing the most recently published videos from everyone."
+  },
   "exploreTabNew": "New",
   "exploreTabPopular": "Popular",
   "exploreTabCategories": "Categories",
@@ -5206,6 +5210,10 @@
   "hashtagInputHint": "Add hashtags... #vine #nostr",
   "newVideosTabEmptySubtitle": "Check back later for new content",
   "newVideosTabEmptyTitle": "No videos in New Videos",
+  "latestVideosTabEmptyTitle": "No videos in Latest",
+  "@latestVideosTabEmptyTitle": {
+    "description": "Empty-state title of the Latest tab in Explore."
+  },
   "popularVideosContextTitle": "Popular Videos",
   "popularVideosEmptySubtitle": "Check back later for new content",
   "popularVideosEmptyTitle": "No videos in Popular Videos",

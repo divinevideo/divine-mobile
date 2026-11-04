@@ -48,8 +48,9 @@ void main() {
       expect(cubit.state.classicsAvailable, isFalse);
       expect(cubit.state.forYouAvailable, isFalse);
       expect(cubit.state.appsAvailable, isFalse);
+      expect(cubit.state.newCreatorsAvailable, isFalse);
       expect(cubit.state.tabNames, const [
-        'new',
+        'latest',
         'popular',
         'categories',
         'lists',
@@ -62,15 +63,17 @@ void main() {
       build: _buildCubit,
       act: (cubit) => cubit.updateAvailability(
         classicsAvailable: true,
+        newCreatorsAvailable: true,
         forYouAvailable: true,
         appsAvailable: true,
       ),
       expect: () => [
-        isA<ExploreTabsState>().having((s) => s.tabCount, 'tabCount', 7).having(
+        isA<ExploreTabsState>().having((s) => s.tabCount, 'tabCount', 8).having(
           (s) => s.tabNames,
           'tabNames',
           const [
             'classics',
+            'latest',
             'new',
             'popular',
             'categories',
@@ -87,6 +90,7 @@ void main() {
       build: _buildCubit,
       act: (cubit) => cubit.updateAvailability(
         classicsAvailable: false,
+        newCreatorsAvailable: false,
         forYouAvailable: false,
         appsAvailable: false,
       ),
@@ -97,15 +101,53 @@ void main() {
       test('shifts indices when an earlier optional tab appears', () {
         const withoutClassics = ExploreTabsState();
         expect(withoutClassics.indexForName('popular'), 1);
-        expect(withoutClassics.newVideosIndex, 0);
+        expect(withoutClassics.latestIndex, 0);
         expect(withoutClassics.trendingIndex, 1);
 
         const withClassics = ExploreTabsState(classicsAvailable: true);
         expect(withClassics.indexForName('classics'), 0);
         expect(withClassics.indexForName('popular'), 2);
-        expect(withClassics.newVideosIndex, 1);
+        expect(withClassics.latestIndex, 1);
         expect(withClassics.trendingIndex, 2);
       });
+
+      test('places New right after Latest only when it is available', () {
+        const withoutNew = ExploreTabsState();
+        expect(withoutNew.tabNames, isNot(contains(exploreNewTabName)));
+        expect(withoutNew.indexForName(exploreLatestTabName), 0);
+
+        const withNew = ExploreTabsState(newCreatorsAvailable: true);
+        expect(withNew.indexForName(exploreLatestTabName), 0);
+        expect(withNew.indexForName(exploreNewTabName), 1);
+        expect(withNew.trendingIndex, 2);
+      });
+
+      test('defaults to the Latest tab', () {
+        const state = ExploreTabsState(newCreatorsAvailable: true);
+        expect(exploreDefaultTabName, exploreLatestTabName);
+        expect(
+          state.nameForIndex(state.indexForName(exploreDefaultTabName)),
+          exploreLatestTabName,
+        );
+      });
+
+      blocTest<ExploreTabsCubit, ExploreTabsState>(
+        'emits when only New availability changes',
+        build: _buildCubit,
+        act: (cubit) => cubit.updateAvailability(
+          classicsAvailable: false,
+          newCreatorsAvailable: true,
+          forYouAvailable: false,
+          appsAvailable: false,
+        ),
+        expect: () => [
+          isA<ExploreTabsState>().having(
+            (s) => s.tabNames.take(2),
+            'first tabs',
+            const ['latest', 'new'],
+          ),
+        ],
+      );
 
       test('nameForIndex round-trips with indexForName', () {
         const state = ExploreTabsState(

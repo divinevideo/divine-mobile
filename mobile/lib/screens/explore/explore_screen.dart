@@ -21,7 +21,8 @@ class ExploreScreen extends ConsumerWidget {
 
   static const _routeTabNames = <String>{
     exploreClassicsTabName,
-    exploreDefaultTabName,
+    exploreLatestTabName,
+    exploreNewTabName,
     explorePopularTabName,
     exploreCategoriesTabName,
     exploreForYouTabName,
@@ -39,7 +40,7 @@ class ExploreScreen extends ConsumerWidget {
   static const pathWithIndex = '/explore/:index';
 
   /// Path for selecting a specific tab by name (grid mode).
-  /// Valid URL slugs: 'classics', 'new', 'popular', 'categories',
+  /// Valid URL slugs: 'classics', 'latest', 'new', 'popular', 'categories',
   /// 'for-you', 'lists', 'apps'.
   static const pathTabSubpath = '/explore/tab/:name';
 

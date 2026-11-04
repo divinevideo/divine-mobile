@@ -60,10 +60,20 @@ final class ClassicVinesViewSource extends ViewSource {
   List<Object?> get props => const [];
 }
 
-/// The chronological "New" videos feed.
+/// The chronological feed of every public video (Explore's Latest tab).
 final class NewVideosViewSource extends ViewSource {
   /// Creates a New Videos view source.
   const NewVideosViewSource();
+
+  @override
+  List<Object?> get props => const [];
+}
+
+/// The chronological feed of videos from creators who debuted recently
+/// (Explore's New tab).
+final class NewCreatorsViewSource extends ViewSource {
+  /// Creates a New Creators view source.
+  const NewCreatorsViewSource();
 
   @override
   List<Object?> get props => const [];

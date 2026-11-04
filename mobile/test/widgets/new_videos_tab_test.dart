@@ -6,6 +6,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/new_videos_feed_provider.dart';
 import 'package:openvine/providers/readiness_gate_providers.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/services/video_event_service.dart';
@@ -78,7 +79,7 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('No videos in New Videos'), findsNothing);
+      expect(find.text('No videos in Latest'), findsNothing);
       verify(
         () => videosRepository.getNewVideos(
           limit: any(named: 'limit'),
@@ -182,6 +183,68 @@ void main() {
           skipCache: true,
         ),
       ).called(1);
+    });
+
+    group('New feed', () {
+      Widget buildNewTab() => testMaterialApp(
+        additionalOverrides: [
+          appReadyProvider.overrideWithValue(true),
+          videosRepositoryProvider.overrideWithValue(videosRepository),
+          videoEventServiceProvider.overrideWithValue(videoEventService),
+          contentBlocklistRepositoryProvider.overrideWithValue(
+            blocklistRepository,
+          ),
+        ],
+        home: const Scaffold(
+          body: NewVideosTab(feed: PublicationFeed.newCreators),
+        ),
+      );
+
+      testWidgets('loads new-creator videos instead of Latest', (
+        tester,
+      ) async {
+        when(
+          () => videosRepository.getNewCreatorVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer(
+          (_) async => HomeFeedResult(videos: [_video('debut-video')]),
+        );
+
+        await tester.pumpWidget(buildNewTab());
+        await tester.pumpAndSettle();
+
+        final grid = tester.widget<ComposableVideoGrid>(
+          find.byType(ComposableVideoGrid),
+        );
+        expect(grid.videos.map((v) => v.id), ['debut-video']);
+        verifyNever(
+          () => videosRepository.getNewVideos(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        );
+      });
+
+      testWidgets('shows the New empty state, not the Latest one', (
+        tester,
+      ) async {
+        when(
+          () => videosRepository.getNewCreatorVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).thenAnswer((_) async => const HomeFeedResult(videos: []));
+
+        await tester.pumpWidget(buildNewTab());
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.newVideosTabEmptyTitle), findsOneWidget);
+        expect(find.text(l10n.latestVideosTabEmptyTitle), findsNothing);
+      });
     });
   });
 }

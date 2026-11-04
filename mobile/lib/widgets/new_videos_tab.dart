@@ -1,5 +1,5 @@
-// ABOUTME: New Videos tab widget showing recent videos sorted by time
-// ABOUTME: Extracted from ExploreScreen for better separation of concerns
+// ABOUTME: Explore Latest and New tabs: videos sorted by publication time,
+// ABOUTME: New keeping only creators who debuted recently.
 
 import 'package:analytics/analytics.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -21,7 +21,11 @@ import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/feed_refresh_control.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Tab widget displaying new/recent videos sorted by time.
+/// Tab widget displaying videos sorted by publication time.
+///
+/// [feed] picks the Explore tab: [PublicationFeed.latest] for Latest (every
+/// new video) or [PublicationFeed.newCreators] for New (videos from creators
+/// who debuted recently).
 ///
 /// Handles its own:
 /// - Riverpod provider watching (newVideosFeedProvider)
@@ -31,10 +35,14 @@ import 'package:unified_logger/unified_logger.dart';
 class NewVideosTab extends ConsumerStatefulWidget {
   const NewVideosTab({
     super.key,
+    this.feed = PublicationFeed.latest,
     this.screenAnalytics,
     this.feedTracker,
     this.errorTracker,
   });
+
+  /// Which publication-ordered feed this tab shows.
+  final PublicationFeed feed;
 
   /// Optional analytics overrides; each defaults to the app's shared instance.
   final ScreenAnalyticsService? screenAnalytics;
@@ -63,9 +71,16 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
         widget.errorTracker ?? ref.read(errorAnalyticsTrackerProvider);
   }
 
+  /// Analytics name of the feed. Latest keeps `new_vines`, the name it had
+  /// as the New tab, so its history stays continuous.
+  String get _feedName => switch (widget.feed) {
+    PublicationFeed.latest => 'new_vines',
+    PublicationFeed.newCreators => 'new_creators',
+  };
+
   @override
   Widget build(BuildContext context) {
-    final newVideosAsync = ref.watch(newVideosFeedProvider);
+    final newVideosAsync = ref.watch(newVideosFeedProvider(widget.feed));
 
     Log.debug(
       '🔍 NewVinesTab: AsyncValue state - isLoading: ${newVideosAsync.isLoading}, '
@@ -77,7 +92,7 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
     // Track feed loading start
     if (newVideosAsync.isLoading && _feedLoadStartTime == null) {
       _feedLoadStartTime = DateTime.now();
-      _feedLoad = _feedTracker.startFeedLoad('new_vines');
+      _feedLoad = _feedTracker.startFeedLoad(_feedName);
     }
 
     // CRITICAL: Check hasValue FIRST before isLoading
@@ -106,19 +121,20 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
         _feedLoad = null;
         _screenAnalytics.markDataLoaded(
           'explore_screen',
-          dataMetrics: {'tab': 'new_vines', 'video_count': videos.length},
+          dataMetrics: {'tab': _feedName, 'video_count': videos.length},
         );
         _feedLoadStartTime = null;
       }
 
       // Track empty feed
       if (videos.isEmpty) {
-        _feedTracker.trackEmptyFeed('new_vines');
+        _feedTracker.trackEmptyFeed(_feedName);
       }
 
       // Get feed state for pagination info
       final feedState = newVideosAsync.value!;
       return _NewVideosContent(
+        feed: widget.feed,
         videos: videos,
         isLoadingMore: feedState.isLoadingMore,
         hasMoreContent: feedState.hasMoreContent,
@@ -139,7 +155,7 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
   }
 
   Future<void> _refreshNewVideos() async {
-    await ref.read(newVideosFeedProvider.notifier).refresh();
+    await ref.read(newVideosFeedProvider(widget.feed).notifier).refresh();
   }
 
   void _trackLoadingState() {
@@ -156,10 +172,10 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
           .inMilliseconds;
       if (elapsed > 5000) {
         _errorTracker.trackSlowOperation(
-          operation: 'new_vines_feed_load',
+          operation: '${_feedName}_feed_load',
           durationMs: elapsed,
           thresholdMs: 5000,
-          location: 'explore_new_vines',
+          location: 'explore_$_feedName',
         );
       }
     }
@@ -177,12 +193,12 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
         ? DateTime.now().difference(_feedLoadStartTime!).inMilliseconds
         : null;
     _feedTracker.trackFeedError(
-      'new_vines',
+      _feedName,
       errorType: 'load_failed',
       errorMessage: error.toString(),
     );
     _errorTracker.trackFeedLoadError(
-      feedType: 'new_vines',
+      feedType: _feedName,
       errorType: 'provider_error',
       errorMessage: error.toString(),
       loadTimeMs: loadTime,
@@ -204,11 +220,13 @@ class _NewVideosTabState extends ConsumerState<NewVideosTab> {
 /// Content widget displaying the video grid
 class _NewVideosContent extends ConsumerStatefulWidget {
   const _NewVideosContent({
+    required this.feed,
     required this.videos,
     this.isLoadingMore = false,
     this.hasMoreContent = false,
   });
 
+  final PublicationFeed feed;
   final List<VideoEvent> videos;
   final bool isLoadingMore;
   final bool hasMoreContent;
@@ -220,7 +238,10 @@ class _NewVideosContent extends ConsumerStatefulWidget {
 class _NewVideosContentState extends ConsumerState<_NewVideosContent> {
   @override
   Widget build(BuildContext context) {
-    final newVideosFeedNotifier = ref.read(newVideosFeedProvider.notifier);
+    final newVideosFeedNotifier = ref.read(
+      newVideosFeedProvider(widget.feed).notifier,
+    );
+    final l10n = context.l10n;
 
     return ComposableVideoGrid(
       videos: widget.videos,
@@ -238,14 +259,24 @@ class _NewVideosContentState extends ConsumerState<_NewVideosContent> {
         runDetached(
           context.push<void>(
             PooledFullscreenVideoFeedScreen.pathForVideoId(videoList[index].id),
-            extra: PooledFullscreenVideoFeedArgs(
-              source: const NewVideosViewSource(),
-              feedRepository: ref.read(feedRepositoryProvider),
-              initialIndex: index,
-              initialVideoId: videoList[index].id,
-              contextTitle: 'New Videos',
-              trafficSource: ViewTrafficSource.discoveryNew,
-            ),
+            extra: switch (widget.feed) {
+              PublicationFeed.latest => PooledFullscreenVideoFeedArgs(
+                source: const NewVideosViewSource(),
+                feedRepository: ref.read(feedRepositoryProvider),
+                initialIndex: index,
+                initialVideoId: videoList[index].id,
+                contextTitle: l10n.exploreTabLatest,
+                trafficSource: ViewTrafficSource.discoveryNew,
+              ),
+              PublicationFeed.newCreators => PooledFullscreenVideoFeedArgs(
+                source: const NewCreatorsViewSource(),
+                feedRepository: ref.read(feedRepositoryProvider),
+                initialIndex: index,
+                initialVideoId: videoList[index].id,
+                contextTitle: l10n.navExploreNewVideos,
+                trafficSource: ViewTrafficSource.discoveryNewCreators,
+              ),
+            },
           ),
           'open new video',
           logName: 'NewVideosTab',
@@ -265,14 +296,16 @@ class _NewVideosContentState extends ConsumerState<_NewVideosContent> {
       },
       isLoadingMore: widget.isLoadingMore,
       hasMoreContent: widget.hasMoreContent,
-      emptyBuilder: _NewVideosEmptyState.new,
+      emptyBuilder: () => _NewVideosEmptyState(feed: widget.feed),
     );
   }
 }
 
 /// Empty state widget for NewVideosTab
 class _NewVideosEmptyState extends StatelessWidget {
-  const _NewVideosEmptyState();
+  const _NewVideosEmptyState({required this.feed});
+
+  final PublicationFeed feed;
 
   @override
   Widget build(BuildContext context) {
@@ -287,7 +320,11 @@ class _NewVideosEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            context.l10n.newVideosTabEmptyTitle,
+            switch (feed) {
+              PublicationFeed.latest => context.l10n.latestVideosTabEmptyTitle,
+              PublicationFeed.newCreators =>
+                context.l10n.newVideosTabEmptyTitle,
+            },
             style: TextStyle(
               color: context.vineColors.primaryText,
               fontSize: 18,

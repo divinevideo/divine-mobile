@@ -1332,6 +1332,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get exploreTabClassics => 'Klasikler';
 
   @override
+  String get exploreTabLatest => 'Son Eklenenler';
+
+  @override
   String get exploreTabNew => 'Yeni';
 
   @override
@@ -7353,6 +7356,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => 'Yeni Videolar\'da video yok';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'Son Eklenenler\'de video yok';
 
   @override
   String get popularVideosContextTitle => 'Popüler Videolar';

@@ -29,6 +29,7 @@ void main() {
     test('returns tab-bar labels for every canonical tab name', () {
       const state = ExploreTabsState(
         classicsAvailable: true,
+        newCreatorsAvailable: true,
         forYouAvailable: true,
         appsAvailable: true,
       );
@@ -37,6 +38,7 @@ void main() {
         state.tabNames.map((name) => labelForExploreTabName(l10n, name)),
         const [
           'Classics',
+          'Latest',
           'New',
           'Popular',
           'Categories',
@@ -50,6 +52,7 @@ void main() {
     test('returns feed-mode shell titles for every canonical tab name', () {
       const state = ExploreTabsState(
         classicsAvailable: true,
+        newCreatorsAvailable: true,
         forYouAvailable: true,
         appsAvailable: true,
       );
@@ -60,6 +63,7 @@ void main() {
         ),
         const [
           'Classics',
+          'Latest',
           'New Videos',
           'Trending',
           'Categories',
