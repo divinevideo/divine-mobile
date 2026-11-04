@@ -32,7 +32,7 @@ List<String> _reqIds(FakeWebSocketChannelFactory factory) {
 void main() {
   group('RelayPool relay routing', () {
     // The production shape this guards: divine's own relay plus one of the
-    // four IndexerRelayConfig.safeFallbackRelays that #2931 connects so DMs
+    // IndexerRelayConfig.safeFallbackRelays that #2931 connects so DMs
     // written to other relays stay visible.
     const pooledPrimary = 'wss://relay.divine.video';
     const pooledFallback = 'wss://relay.nos.social';

@@ -47,10 +47,12 @@ final environmentIndicatorColorProvider = Provider<Color?>((ref) {
     environment: environment,
     configuredRelays: configuredRelays,
     // Relays every account is auto-seeded with (NIP-65 indexers + DM
-    // fallbacks). Excluded so only genuinely user-added relays show purple.
+    // fallbacks, current and retired). Excluded so only genuinely user-added
+    // relays show purple.
     defaultRelayUrls: <String>{
       ...environment.indexerRelays,
       ...IndexerRelayConfig.safeFallbackRelays,
+      ...IndexerRelayConfig.retiredSafeFallbackRelays,
     },
   );
 });

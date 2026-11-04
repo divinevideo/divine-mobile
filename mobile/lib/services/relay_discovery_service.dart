@@ -83,19 +83,24 @@ class IndexerRelayConfig {
   /// keep first-connect latency reasonable. Users can still override this
   /// by adding their own relays via Settings → Relays.
   ///
-  /// NOTE: relay.damus.io was removed from [defaultIndexers] because it
-  /// returns 503 sporadically (see comment above). It is acceptable here
-  /// because fallback connections are fire-and-forget — a single relay's
-  /// transient 503 does not block the others, and [RelayPool.add] will
-  /// retry on reconnect. If it proves persistently unreliable, replace it
-  /// with another general-purpose relay that accepts kind 1059.
+  /// Every entry must serve kind 1059 to the account it is addressed to. A
+  /// relay that stops doing so moves to [retiredSafeFallbackRelays].
   ///
   /// See #2931.
   static const List<String> safeFallbackRelays = [
     'wss://relay.nos.social',
-    'wss://relay.damus.io',
     'wss://nos.lol',
     'wss://relay.primal.net',
+  ];
+
+  /// Former [safeFallbackRelays] entries. Automatic relay adds are saved, so
+  /// devices seeded before an entry was retired still have it, and it stays
+  /// counted as app-seeded rather than user-chosen.
+  ///
+  /// relay.damus.io runs strfry with restricted reads and no `serviceUrl`, so
+  /// it rejects every AUTH and refuses every kind 4 and 1059 read (#9467).
+  static const List<String> retiredSafeFallbackRelays = [
+    'wss://relay.damus.io',
   ];
 }
 
