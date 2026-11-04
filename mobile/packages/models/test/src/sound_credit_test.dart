@@ -81,6 +81,37 @@ void main() {
         equals('♪ Two Lines, CC BY 4.0 $_ccBy (edited)'),
       );
     });
+
+    // The link comes from the sound's own event, and the poster never sees
+    // the line before it is signed into their post.
+    test('writes only a Creative Commons licence link', () {
+      for (final link in [
+        'https://phish.example/licenses/by/4.0/',
+        'http://creativecommons.org/licenses/by/4.0/',
+        'https://creativecommons.org.phish.example/licenses/by/4.0/',
+        'javascript:alert(1)',
+      ]) {
+        expect(
+          soundCreditLine(_sound(licenseUrl: link)),
+          equals(
+            '♪ Monkeys Spinning Monkeys – Kevin MacLeod (incompetech.com), '
+            'CC BY 4.0 (edited)',
+          ),
+          reason: link,
+        );
+      }
+      expect(
+        soundCreditLine(
+          _sound(
+            licenseUrl: 'https://www.creativecommons.org/licenses/by/3.0/',
+          ),
+        ),
+        endsWith(
+          'CC BY 4.0 https://www.creativecommons.org/licenses/by/3.0/ '
+          '(edited)',
+        ),
+      );
+    });
   });
 
   group('soundCreditLines', () {

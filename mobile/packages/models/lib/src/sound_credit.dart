@@ -70,7 +70,7 @@ String? soundCreditLine(AudioEvent sound) {
   ].map(_oneLine).whereType<String>().join(' – ');
   final terms = [
     sound.licenseName ?? external?.license.name,
-    sound.licenseUrl ?? external?.license.url,
+    _creativeCommonsLink(sound.licenseUrl ?? external?.license.url),
   ].map(_oneLine).whereType<String>().join(' ');
   final credit = [work, terms].where((part) => part.isNotEmpty).join(', ');
   return '$soundCreditPrefix$credit $soundCreditEditedMark';
@@ -132,6 +132,22 @@ SoundCredit _parseCredit(String line) {
     work: credit.substring(0, split),
     license: license.isEmpty ? null : license,
   );
+}
+
+/// [url] when it is an HTTPS link to a Creative Commons licence, else null.
+///
+/// The link comes from the sound's event, written by whoever published the
+/// sound, and is signed into the poster's video without them seeing it, so
+/// any other link is left out.
+String? _creativeCommonsLink(String? url) {
+  final uri = Uri.tryParse(url?.trim() ?? '');
+  if (uri == null || uri.scheme != 'https') return null;
+  return const {
+        'creativecommons.org',
+        'www.creativecommons.org',
+      }.contains(uri.host)
+      ? uri.toString()
+      : null;
 }
 
 String? _oneLine(String? value) {
