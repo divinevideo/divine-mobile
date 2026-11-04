@@ -174,4 +174,86 @@ void main() {
       }
     },
   );
+  test(
+    'malformed relay carriers do not suppress valid community authority',
+    () async {
+      final carriers = events();
+      final valid =
+          (fixture['controlEvents'] as List).first as Map<String, dynamic>;
+      carriers.insert(1, {...valid, 'content': 'corrupt encrypted carrier'});
+      final relay = _Relay(carriers);
+      final s = session(
+        relay,
+        expected['member'] as String,
+        InMemoryConcordStore('99' * 32),
+      );
+      await s.start();
+      expect(s.ready, isTrue);
+      expect(s.control!.publicChannels.length, 2);
+      await s.close();
+      await relay.close();
+    },
+  );
+  test(
+    'a refreshed invite reopens retained old-epoch authority without losing accepted floors',
+    () async {
+      final lifecycle =
+          jsonDecode(
+                File(
+                  '../concord_protocol/test/fixtures/community-lifecycle.json',
+                ).readAsStringSync(),
+              )
+              as Map<String, dynamic>;
+      final bundleEvent = lifecycle['bundleEvent'] as Map<String, dynamic>;
+      final link = ConcordInviteFragment.decode(
+        Uri.parse(lifecycle['inviteUrl'] as String).fragment,
+      );
+      final account = (lifecycle['expected'] as Map)['member'] as String;
+      final store = InMemoryConcordStore(account);
+      ConcordCommunitySession build(_Relay relay) => ConcordCommunitySession(
+        relay: relay,
+        store: store,
+        linkSigner: bundleEvent['pubkey'] as String,
+        fragment: link,
+        account: account,
+        nowMs: () => 0,
+      );
+      final firstRelay = _Relay([
+        bundleEvent,
+        ...(lifecycle['controlEvents'] as List).cast<Map<String, dynamic>>(),
+      ]);
+      final first = build(firstRelay);
+      await first.start();
+      final priorHeads = {
+        for (final entry in first.control!.heads.entries)
+          entry.key: entry.value.hash,
+      };
+      final stopped = first.changes.firstWhere((_) => !first.ready);
+      for (final event in lifecycle['baseRekeyEvents'] as List)
+        firstRelay.controllers.last.add(event as Map<String, dynamic>);
+      await stopped.timeout(const Duration(seconds: 10));
+      expect(first.canPublish, isFalse);
+      await first.close();
+      await firstRelay.close();
+      final nextRelay = _Relay([
+        lifecycle['refreshedBundleEvent'] as Map<String, dynamic>,
+        ...(lifecycle['nextEpochControlEvents'] as List)
+            .cast<Map<String, dynamic>>(),
+      ]);
+      final next = build(nextRelay);
+      await next.start();
+      expect(next.bundle!.rootEpoch, 1);
+      expect(next.canPublish, isTrue);
+      expect({
+        for (final entry in next.control!.heads.entries)
+          entry.key: entry.value.hash,
+      }, priorHeads);
+      expect(next.control!.publicChannels.map((c) => c.name).toSet(), {
+        'general',
+        'introductions',
+      });
+      await next.close();
+      await nextRelay.close();
+    },
+  );
 }

@@ -28,6 +28,8 @@ class ConcordCommunitySession {
   final _wraps = <String, Map<String, dynamic>>{};
   final _editions = <String, ConcordEdition>{};
   Map<String, ConcordEdition> _acceptedHeads = {};
+  final _heldRoots = <int, ConcordInviteBundle>{};
+  final _snapshotIds = <String>{};
   Future<void> _work = Future.value();
   ConcordInviteBundle? bundle;
   ConcordControlState? control;
@@ -128,6 +130,30 @@ class ConcordCommunitySession {
         token: fragment.token,
         nowMs: _nowMs(),
       );
+      final savedRoots = await store.get('community-held-roots');
+      if (savedRoots != null) {
+        for (final raw in jsonDecode(savedRoots) as List) {
+          final held = ConcordInviteBundle.fromJson(
+            Map<String, dynamic>.from(raw as Map),
+            nowMs: 0,
+          );
+          if (held.communityId != bundle!.communityId ||
+              held.owner != bundle!.owner)
+            throw StateError(
+              'Saved community identity does not match invitation',
+            );
+          if (held.rootEpoch > bundle!.rootEpoch ||
+              held.rootEpoch == bundle!.rootEpoch &&
+                  (held.communityRoot != bundle!.communityRoot ||
+                      held.controlPubkey != bundle!.controlPubkey)) {
+            throw StateError(
+              'Community invitation would roll back or fork held membership',
+            );
+          }
+          _heldRoots[held.rootEpoch] = held;
+        }
+      }
+      _heldRoots[bundle!.rootEpoch] = bundle!;
       final stopped = await store.get('community-stop');
       if (stopped != null) {
         final stop = jsonDecode(stopped) as Map;
@@ -140,8 +166,15 @@ class ConcordCommunitySession {
       final saved = await store.get('community-control-wraps');
       if (saved != null) {
         for (final raw in jsonDecode(saved) as List) {
+          final record = Map<String, dynamic>.from(raw as Map);
+          if (record['epoch'] is! int ||
+              record['wrap'] is! Map ||
+              !_heldRoots.containsKey(record['epoch'])) {
+            throw StateError('Saved community carrier lacks its held epoch');
+          }
           await _acceptControl(
-            Map<String, dynamic>.from(raw as Map),
+            Map<String, dynamic>.from(record['wrap'] as Map),
+            rootEpoch: record['epoch'] as int,
             persist: false,
           );
         }
@@ -295,21 +328,28 @@ class ConcordCommunitySession {
   Future<void> _acceptControl(
     Map<String, dynamic> wrap, {
     bool persist = true,
+    int? rootEpoch,
   }) async {
-    final held = bundle!;
+    final held = _heldRoots[rootEpoch ?? bundle!.rootEpoch]!;
     final read = controlReadKey(
       held.communityRoot,
       held.communityId,
       held.rootEpoch,
     );
-    final opened = await openControlWrap(
-      wrap: wrap,
-      readKey: read,
-      streamPubkey: held.controlPubkey ?? read.pubkey,
-    );
-    final edition = ConcordEdition.parse(opened);
-    _wraps[wrap['id'] as String] = wrap;
+    ConcordEdition edition;
+    try {
+      final opened = await openControlWrap(
+        wrap: wrap,
+        readKey: read,
+        streamPubkey: held.controlPubkey ?? read.pubkey,
+      );
+      edition = ConcordEdition.parse(opened);
+    } on FormatException {
+      return;
+    }
+    _wraps[wrap['id'] as String] = {'epoch': held.rootEpoch, 'wrap': wrap};
     _editions[edition.rumorId] = edition;
+    if (held.rootEpoch == bundle!.rootEpoch) _snapshotIds.add(edition.rumorId);
     if (_loaded) {
       _refold();
       if (persist) await _persist();
@@ -317,6 +357,19 @@ class ConcordCommunitySession {
   }
 
   Future<void> _persist() => store.writeBatch({
+    'community-held-roots': jsonEncode([
+      for (final held in _heldRoots.values)
+        {
+          'community_id': held.communityId,
+          'owner': held.owner,
+          'owner_salt': held.ownerSalt,
+          'community_root': held.communityRoot,
+          'root_epoch': held.rootEpoch,
+          if (held.controlPubkey != null) 'control_pk': held.controlPubkey,
+          'channels': <dynamic>[],
+          'relays': <String>[],
+        },
+    ]),
     'community-control-wraps': jsonEncode(_wraps.values.toList()),
     'community-control-heads': jsonEncode({
       for (final entry in _acceptedHeads.entries)
@@ -329,7 +382,7 @@ class ConcordCommunitySession {
       communityId: bundle!.communityId,
       owner: bundle!.owner,
       priorHeads: _acceptedHeads,
-      snapshotIds: bundle!.rootEpoch > 0 ? _editions.keys.toSet() : const {},
+      snapshotIds: bundle!.rootEpoch > 0 ? _snapshotIds : const {},
     );
     if (_loaded &&
         (control!.incomplete.isNotEmpty || control!.banned.contains(account))) {
