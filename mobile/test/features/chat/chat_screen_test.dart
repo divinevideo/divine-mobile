@@ -191,6 +191,82 @@ void main() {
         );
       },
     );
+    testWidgets('a room report can name child safety and CSAM', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final cubit = _ChatCubit();
+      final community = '11' * 32;
+      final channel = '22' * 32;
+      final author = '33' * 32;
+      final message = ChatMessage(
+        id: '44' * 32,
+        channelId: channel,
+        author: author,
+        body: 'Report this message',
+        createdAt: 1,
+      );
+      final state = ChatState(
+        isTestCommunity: false,
+        communities: [
+          ChatCommunity(community, 'Synthetic', [channel]),
+        ],
+        selectedCommunityId: community,
+        selectedChannelId: channel,
+      );
+      when(() => cubit.state).thenReturn(state);
+      whenListen(cubit, const Stream<ChatState>.empty(), initialState: state);
+      when(cubit.visibleMessages).thenReturn([message]);
+      Map<String, dynamic>? submitted;
+      final reports = ConcordReports(
+        url: Uri.parse('https://reports.example/v1/reports'),
+        signer: (template) async => {
+          ...template,
+          'pubkey': '55' * 32,
+          'id': '66' * 32,
+          'sig': '77' * 64,
+        },
+        post: (url, body, headers) async {
+          submitted = jsonDecode(body) as Map<String, dynamic>;
+          return {'caseId': 'synthetic-case'};
+        },
+      );
+      await _pumpChatWidget(
+        tester,
+        ProviderScope(
+          overrides: [
+            concordReportsProvider.overrideWithValue(reports),
+            fetchUserProfileProvider(author).overrideWith(
+              (ref) async => UserProfile(
+                pubkey: author,
+                displayName: 'Synthetic member',
+                rawData: const {},
+                createdAt: DateTime(2026),
+                eventId: '88' * 32,
+              ),
+            ),
+            profileIdentityResolvingProvider(author).overrideWithValue(false),
+            profileVanishedProvider(author).overrideWith((ref) => false),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<ChatCubit>.value(
+              value: cubit,
+              child: const ChatScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text(l10n.reportSubmit));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.reportReasonChildSafety), findsOneWidget);
+      await tester.ensureVisible(find.text(l10n.reportReasonCsam));
+      await tester.tap(find.text(l10n.reportReasonCsam));
+      await tester.pumpAndSettle();
+      expect(submitted!['reason'], 'NS-csam');
+    });
     testWidgets('a failed draft discard is logged, not thrown', (
       tester,
     ) async {

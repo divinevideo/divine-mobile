@@ -27,13 +27,6 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/mentions/mention_overlay.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-const List<ContentFilterReason> _roomReportReasons = [
-  ContentFilterReason.spam,
-  ContentFilterReason.harassment,
-  ContentFilterReason.violence,
-  ContentFilterReason.sexualContent,
-];
-
 /// Native conversation for a Concord room selected from Messages.
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
@@ -103,7 +96,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       // Moderators get Divine's stable reason label, not the reporter's
       // translated wording.
       options: [
-        for (final choice in _roomReportReasons)
+        for (final choice in roomReportReasons)
           VineBottomSheetSelectionOptionData(
             label: context.l10n.reportReasonTitle(choice),
             value: contentFilterReasonToNip32Label(choice),
