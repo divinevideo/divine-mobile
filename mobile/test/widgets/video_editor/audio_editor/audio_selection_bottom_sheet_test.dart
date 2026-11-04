@@ -684,6 +684,60 @@ void main() {
         expect(find.text('Saved Track'), findsOneWidget);
         expect(shownCoverUrls(tester), [coverUrl]);
       });
+
+      Future<void> pumpSavedFromVideo(
+        WidgetTester tester, {
+        required SoundCover? lookedUp,
+      }) async {
+        const viewer =
+            'b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2';
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: const AsyncValue.data([]),
+            // The viewer's own, so a gone video leaves it listed.
+            viewerPubkey: viewer,
+            savedSoundRecords: [
+              SavedSound(
+                audio: _createTestAudioEvent(
+                  id: 'saved-sound',
+                  pubkey: viewer,
+                  title: 'Saved Track',
+                ).copyWith(sourceVideoReference: sourceVideo),
+                personalHashtags: const [],
+                catalogTags: const [],
+                waveformSamples: const [],
+                sourceContext: const SavedSoundSourceContext(
+                  thumbnailUrl: 'https://example.com/stored-frame.jpg',
+                ),
+              ),
+            ],
+            savedSources: {sourceVideo: lookedUp},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryMySounds));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('shows what a saved sound video shows now', (tester) async {
+        await pumpSavedFromVideo(
+          tester,
+          lookedUp: const SoundCover(imageUrl: coverUrl),
+        );
+
+        expect(shownCoverUrls(tester), [coverUrl]);
+      });
+
+      testWidgets('shows no frame once a saved sound video is gone', (
+        tester,
+      ) async {
+        await pumpSavedFromVideo(tester, lookedUp: null);
+
+        expect(find.text('Saved Track'), findsOneWidget);
+        expect(shownCoverUrls(tester), isEmpty);
+      });
     });
 
     group('For you', () {

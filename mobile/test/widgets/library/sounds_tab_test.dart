@@ -385,6 +385,62 @@ void main() {
       ));
     });
 
+    group('covers', () {
+      const video = '34236:creator:clip';
+      const storedFrame = 'https://example.com/stored-frame.jpg';
+
+      Future<void> saveClip() =>
+          SavedSoundsService(sharedPreferences).saveSavedSound(
+            SavedSound(
+              audio: _sound(
+                id: 'clip',
+                title: 'Clip Sound',
+              ).copyWith(sourceVideoReference: video),
+              personalHashtags: const [],
+              catalogTags: const [],
+              waveformSamples: const [],
+              sourceContext: const SavedSoundSourceContext(
+                thumbnailUrl: storedFrame,
+              ),
+            ),
+          );
+
+      testWidgets('shows what the source video shows now, not the stored '
+          'frame', (tester) async {
+        // A source now behind a content warning answers with its blurhash.
+        const warned = SoundCover(blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj');
+        await saveClip();
+
+        await pumpSoundsTab(
+          tester,
+          overrides: [
+            savedSoundSourcesProvider.overrideWith(
+              (ref, sources) async => {video: warned},
+            ),
+          ],
+        );
+
+        expect(_tile(tester, 'Clip Sound').cover, warned);
+      });
+
+      testWidgets('shows no frame for a source video found gone', (
+        tester,
+      ) async {
+        await saveClip();
+
+        await pumpSoundsTab(
+          tester,
+          overrides: [
+            savedSoundSourcesProvider.overrideWith(
+              (ref, sources) async => {video: null},
+            ),
+          ],
+        );
+
+        expect(_tile(tester, 'Clip Sound').cover, isNull);
+      });
+    });
+
     testWidgets('keeps a sound the viewer published usable', (tester) async {
       const goneVideo = '34236:creator:gone';
       await SavedSoundsService(sharedPreferences).saveSound(
