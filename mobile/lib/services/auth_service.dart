@@ -996,8 +996,8 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         kSessionRecoveryAnchorKey,
       );
 
-  /// Shared OAuth session refresh logic used by both [initialize] and
-  /// [tryRefreshExpiredSession]. Returns true if refresh succeeded.
+  /// Shared OAuth session refresh logic used by [tryRefreshExpiredSession]
+  /// and [signInForAccount]. Returns true if refresh succeeded.
   Future<bool> _tryRefreshOAuthSession({
     required String caller,
     required _ContinuingAccountSession? continuingSession,
@@ -1030,7 +1030,10 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         category: LogCategory.auth,
       );
       await clearDismissedDivineLoginBannerForCurrentUser(expectedOwnerPubkey);
-      if (expectedOwnerPubkey != null &&
+      // A sign-in has no current account to compare yet; integration checks
+      // its activation entry instead (#10318).
+      if (preparedEntry == null &&
+          expectedOwnerPubkey != null &&
           currentPublicKeyHex != expectedOwnerPubkey) {
         return false;
       }
