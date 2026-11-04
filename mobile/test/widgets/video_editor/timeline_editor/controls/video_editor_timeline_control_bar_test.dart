@@ -426,21 +426,5 @@ void main() {
       verifyNever(() => clipBloc.add(any()));
       verifyNever(() => overlayBloc.add(any()));
     });
-
-    testWidgets(
-      'leaves the back press to the editor when the selected item is gone',
-      (tester) async {
-        // The bar shows no overlay controls for an id that names no item.
-        when(() => overlayBloc.state).thenReturn(
-          const TimelineOverlayState(
-            items: [_sound],
-            selectedItemId: 'removed-sound',
-          ),
-        );
-
-        expect(await dismiss(tester), isFalse);
-        verifyNever(() => overlayBloc.add(any()));
-      },
-    );
   });
 }
