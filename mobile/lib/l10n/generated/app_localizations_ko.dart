@@ -13383,6 +13383,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get verifyStatusUnverified => '인증 안 됨';
 
   @override
+  String get verifyStatusSignInExpired => 'Sign-in expired';
+
+  @override
+  String get verifyStatusAccountChanged => 'Account changed';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '$platform 계정 $identity 연결 해제';
   }

@@ -14222,6 +14222,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get verifyStatusUnverified => 'Sin verificar';
 
   @override
+  String get verifyStatusSignInExpired => 'Sign-in expired';
+
+  @override
+  String get verifyStatusAccountChanged => 'Account changed';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Desvincular la cuenta de $platform $identity';
   }

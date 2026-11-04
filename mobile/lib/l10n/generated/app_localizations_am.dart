@@ -13703,6 +13703,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get verifyStatusUnverified => 'ያልተረጋገጠ';
 
   @override
+  String get verifyStatusSignInExpired => 'Sign-in expired';
+
+  @override
+  String get verifyStatusAccountChanged => 'Account changed';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'የ$platform መለያ $identity ግንኙነት አቋርጥ';
   }

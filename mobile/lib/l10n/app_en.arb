@@ -10941,6 +10941,14 @@
   "@verifyStatusUnverified": {
     "description": "Pill on a linked account the verification service did not confirm."
   },
+  "verifyStatusSignInExpired": "Sign-in expired",
+  "@verifyStatusSignInExpired": {
+    "description": "Pill on a linked account whose sign-in no longer counts because it lapsed."
+  },
+  "verifyStatusAccountChanged": "Account changed",
+  "@verifyStatusAccountChanged": {
+    "description": "Pill on a linked account whose handle now points to a different account than the one that signed in."
+  },
   "verifyUnlinkSemanticLabel": "Unlink {platform} account {identity}",
   "@verifyUnlinkSemanticLabel": {
     "description": "Screen reader label for the button that removes a linked account.",

@@ -23559,6 +23559,18 @@ abstract class AppLocalizations {
   /// **'Not verified'**
   String get verifyStatusUnverified;
 
+  /// Pill on a linked account whose sign-in no longer counts because it lapsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in expired'**
+  String get verifyStatusSignInExpired;
+
+  /// Pill on a linked account whose handle now points to a different account than the one that signed in.
+  ///
+  /// In en, this message translates to:
+  /// **'Account changed'**
+  String get verifyStatusAccountChanged;
+
   /// Screen reader label for the button that removes a linked account.
   ///
   /// In en, this message translates to:

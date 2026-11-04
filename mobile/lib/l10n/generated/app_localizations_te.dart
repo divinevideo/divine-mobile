@@ -14410,6 +14410,12 @@ class AppLocalizationsTe extends AppLocalizations {
   String get verifyStatusUnverified => 'ధృవీకరించబడలేదు';
 
   @override
+  String get verifyStatusSignInExpired => 'Sign-in expired';
+
+  @override
+  String get verifyStatusAccountChanged => 'Account changed';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'అన్‌లింక్ చేయండి $platformఖాతా $identity';
   }

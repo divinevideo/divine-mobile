@@ -13201,6 +13201,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get verifyStatusUnverified => '未验证';
 
   @override
+  String get verifyStatusSignInExpired => 'Sign-in expired';
+
+  @override
+  String get verifyStatusAccountChanged => 'Account changed';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '解除关联 $platform 账号 $identity';
   }

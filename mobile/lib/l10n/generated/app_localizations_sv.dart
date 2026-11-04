@@ -14063,6 +14063,12 @@ class AppLocalizationsSv extends AppLocalizations {
   String get verifyStatusUnverified => 'Inte verifierat';
 
   @override
+  String get verifyStatusSignInExpired => 'Sign-in expired';
+
+  @override
+  String get verifyStatusAccountChanged => 'Account changed';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Ta bort länken till $platform-kontot $identity';
   }

@@ -616,6 +616,8 @@ const _knownUntranslatedDebt = <String>{
   // Verify: renewing a sign-in link in place; translation debt.
   'verifySignInAgain',
   'verifySignInAgainSemanticLabel',
+  'verifyStatusAccountChanged',
+  'verifyStatusSignInExpired',
   // Native challenge Lists presentation; awaiting the translation pass.
   'challengeOrganizerTime',
   'challengeLocalDeadline', 'challengeEnter', 'challengeEnterVideo',

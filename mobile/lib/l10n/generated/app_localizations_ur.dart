@@ -14047,6 +14047,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get verifyStatusUnverified => 'غیر تصدیق شدہ';
 
   @override
+  String get verifyStatusSignInExpired => 'Sign-in expired';
+
+  @override
+  String get verifyStatusAccountChanged => 'Account changed';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '$platform اکاؤنٹ $identity کا جوڑ ختم کریں';
   }

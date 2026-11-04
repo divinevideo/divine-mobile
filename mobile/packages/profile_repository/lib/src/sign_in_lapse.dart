@@ -6,7 +6,8 @@
 /// Signing in again renews the link in place, so the dashboard offers that
 /// only for a claim carrying one of these.
 enum SignInLapse {
-  /// The sign-in is past the lifetime the verifier gives it.
+  /// No sign-in currently counts for this link: it lapsed, was unlinked, or was
+  /// never confirmed.
   expired,
 
   /// The handle now points to a different account than the one that signed

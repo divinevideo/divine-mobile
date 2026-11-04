@@ -16,6 +16,7 @@ class VerifyClaimRow extends StatelessWidget {
     required this.isVerified,
     required this.isRemoving,
     required this.onRemove,
+    this.lapse,
     this.onSignInAgain,
     super.key,
   });
@@ -31,6 +32,11 @@ class VerifyClaimRow extends StatelessWidget {
 
   /// Unlinks the account. Null while another unlink owns the screen.
   final VoidCallback? onRemove;
+
+  /// Why the verifier stopped counting this sign-in link, if it said.
+  ///
+  /// Names the reason on the pill whether or not the renew action is offered.
+  final SignInLapse? lapse;
 
   /// Renews a sign-in link that no longer verifies. Null hides the action.
   final VoidCallback? onSignInAgain;
@@ -82,7 +88,7 @@ class VerifyClaimRow extends StatelessWidget {
                               ],
                             ),
                           ),
-                          _VerdictPill(isVerified: isVerified),
+                          _VerdictPill(isVerified: isVerified, lapse: lapse),
                         ],
                       ),
                     ),
@@ -126,9 +132,10 @@ class VerifyClaimRow extends StatelessWidget {
 }
 
 class _VerdictPill extends StatelessWidget {
-  const _VerdictPill({required this.isVerified});
+  const _VerdictPill({required this.isVerified, required this.lapse});
 
   final bool isVerified;
+  final SignInLapse? lapse;
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +149,13 @@ class _VerdictPill extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         child: Text(
-          isVerified ? l10n.verifyStatusVerified : l10n.verifyStatusUnverified,
+          switch ((isVerified, lapse)) {
+            (true, _) => l10n.verifyStatusVerified,
+            (false, SignInLapse.expired) => l10n.verifyStatusSignInExpired,
+            (false, SignInLapse.accountChanged) =>
+              l10n.verifyStatusAccountChanged,
+            (false, null) => l10n.verifyStatusUnverified,
+          },
           style: VineTheme.labelSmallFont(color: color),
         ),
       ),

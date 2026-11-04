@@ -13980,6 +13980,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get verifyStatusUnverified => 'Doğrulanmadı';
 
   @override
+  String get verifyStatusSignInExpired => 'Sign-in expired';
+
+  @override
+  String get verifyStatusAccountChanged => 'Account changed';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '$platform hesabı $identity bağlantısını kaldır';
   }

@@ -14190,6 +14190,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get verifyStatusUnverified => 'Непотвърден';
 
   @override
+  String get verifyStatusSignInExpired => 'Sign-in expired';
+
+  @override
+  String get verifyStatusAccountChanged => 'Account changed';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Премахни връзката с профила $identity в $platform';
   }

@@ -14066,6 +14066,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get verifyStatusUnverified => 'غير موثّق';
 
   @override
+  String get verifyStatusSignInExpired => 'Sign-in expired';
+
+  @override
+  String get verifyStatusAccountChanged => 'Account changed';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'فك ارتباط حساب $platform ‏$identity';
   }

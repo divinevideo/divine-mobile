@@ -217,6 +217,9 @@ class _VerifyContent extends StatelessWidget {
     final linkable = context.select(
       (VerifyCubit cubit) => cubit.state.linkablePlatforms,
     );
+    final signInLapse = context.select(
+      (VerifyCubit cubit) => cubit.state.signInLapse,
+    );
     final canSignInAgain = context.select(
       (VerifyCubit cubit) => cubit.state.canSignInAgain,
     );
@@ -249,6 +252,11 @@ class _VerifyContent extends StatelessWidget {
               verifiedKeys: verifiedKeys,
               removingKey: removingKey,
               onRemove: () => _confirmRemove(context, claim),
+              // Like the renew action, only a sign-in link says why; a
+              // proof-post link stays on Verified / Not verified.
+              lapse: claim.proof == IdentityClaim.oauthProof
+                  ? signInLapse(claim)
+                  : null,
               onSignInAgain: oauthUsable && canSignInAgain(claim)
                   ? () =>
                         _openConnect(context, claim.platform, replacing: claim)
@@ -277,6 +285,7 @@ class _VerifyContent extends StatelessWidget {
     required Set<String> verifiedKeys,
     required String? removingKey,
     required VoidCallback onRemove,
+    required SignInLapse? lapse,
     required VoidCallback? onSignInAgain,
   }) {
     final key = VerifyState.keyOf(claim);
@@ -285,6 +294,7 @@ class _VerifyContent extends StatelessWidget {
       isVerified: verifiedKeys.contains(key),
       isRemoving: removingKey == key,
       onRemove: removingKey != null ? null : onRemove,
+      lapse: lapse,
       // Renewing publishes over the same links an unlink is rewriting.
       onSignInAgain: removingKey != null ? null : onSignInAgain,
     );

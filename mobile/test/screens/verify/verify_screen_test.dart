@@ -241,13 +241,90 @@ void main() {
     });
 
     testWidgets('marks each link verified or not', (tester) async {
-      await pump(tester, ready());
+      await pump(tester, ready(signInCodes: const {}));
 
       expect(find.text('octocat'), findsOneWidget);
       expect(find.text('jack'), findsOneWidget);
       expect(find.text(l10n.verifyStatusVerified), findsOneWidget);
       expect(find.text(l10n.verifyStatusUnverified), findsOneWidget);
       expect(find.text(l10n.verifyVerifierUnreachable), findsNothing);
+    });
+
+    group('verdict pill', () {
+      testWidgets('says a sign-in expired', (tester) async {
+        await pump(tester, ready());
+
+        expect(find.text(l10n.verifyStatusSignInExpired), findsOneWidget);
+        expect(find.text(l10n.verifyStatusUnverified), findsNothing);
+        expect(find.text(l10n.verifyStatusVerified), findsOneWidget);
+      });
+
+      testWidgets('says the account changed', (tester) async {
+        await pump(
+          tester,
+          ready(
+            signInCodes: const {'twitter:jack': SignInLapse.accountChanged},
+          ),
+        );
+
+        expect(find.text(l10n.verifyStatusAccountChanged), findsOneWidget);
+        expect(find.text(l10n.verifyStatusSignInExpired), findsNothing);
+      });
+
+      testWidgets('says not verified when the verifier gave no reason', (
+        tester,
+      ) async {
+        await pump(tester, ready(signInCodes: const {}));
+
+        expect(find.text(l10n.verifyStatusUnverified), findsOneWidget);
+        expect(find.text(l10n.verifyStatusSignInExpired), findsNothing);
+        expect(find.text(l10n.verifyStatusAccountChanged), findsNothing);
+      });
+
+      testWidgets('says why even where sign-in is off for the platform', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          ready(
+            platforms: const [
+              VerifierPlatform(key: 'github', label: 'GitHub', supported: true),
+              VerifierPlatform(
+                key: 'twitter',
+                label: 'Twitter / X',
+                supported: true,
+                oauth: false,
+              ),
+            ],
+          ),
+          oauthUsable: true,
+        );
+
+        expect(find.text(l10n.verifyStatusSignInExpired), findsOneWidget);
+        expect(find.text(l10n.verifySignInAgain), findsNothing);
+      });
+
+      testWidgets('keeps a proof-post link on not verified', (tester) async {
+        // The verifier can send an account-changed code for a proof-post
+        // claim on a sign-in platform; only sign-in rows say why.
+        const proofPostTwitter = IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'twitter',
+          identity: 'jack',
+          proof: 'abc',
+        );
+        await pump(
+          tester,
+          ready(
+            claims: const [proofPostTwitter],
+            verifiedKeys: const {},
+            signInCodes: const {'twitter:jack': SignInLapse.accountChanged},
+          ),
+        );
+
+        expect(find.text(l10n.verifyStatusUnverified), findsOneWidget);
+        expect(find.text(l10n.verifyStatusAccountChanged), findsNothing);
+      });
     });
 
     testWidgets('says the verdicts are unknown when the verifier is down', (
