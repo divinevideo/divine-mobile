@@ -15,6 +15,7 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/text_wrap_hint/text_wrap_hint_cubit.dart';
+import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -182,6 +183,7 @@ void main() {
                       value: mainBloc ?? mockBloc,
                     ),
                     BlocProvider<ClipEditorBloc>.value(value: clipEditorBloc),
+                    BlocProvider(create: (_) => TimelineOverlayBloc()),
                     BlocProvider(create: (_) => TextWrapHintCubit()),
                     if (loopCubit == null)
                       BlocProvider(
@@ -644,6 +646,23 @@ void main() {
         await tester.binding.handlePopRoute();
         await tester.pump(const Duration(milliseconds: 300));
 
+        verifyNever(() => mockGoRouter.pop<Object?>(any()));
+      });
+
+      testWidgets('closes the marker bar instead of the editor', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(state: const VideoEditorMainState(isMarkerMode: true)),
+        );
+
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+
+        verify(
+          () =>
+              mockBloc.add(const VideoEditorMarkerModeChanged(isActive: false)),
+        ).called(1);
         verifyNever(() => mockGoRouter.pop<Object?>(any()));
       });
     });

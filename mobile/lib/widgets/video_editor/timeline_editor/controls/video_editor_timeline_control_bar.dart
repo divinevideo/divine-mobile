@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_clip_controls.dart';
@@ -30,6 +31,34 @@ class TimelineControlsBar extends StatelessWidget {
   /// Whether the editing tools bar may fill the slot while no
   /// context-specific controls do.
   final bool showEditingTools;
+
+  /// Leaves the context-specific controls the bar shows, as their Done button
+  /// does, and returns whether it showed any.
+  ///
+  /// Android's system back reaches the editor's toolbar, which calls this so
+  /// the back press closes the bar the user sees instead of the editor. The
+  /// checks follow the order [build] picks the controls in.
+  static bool dismissControls(BuildContext context) {
+    final mainBloc = context.read<VideoEditorMainBloc>();
+    final clipBloc = context.read<ClipEditorBloc>();
+    final overlayBloc = context.read<TimelineOverlayBloc>();
+    final overlay = overlayBloc.state;
+
+    if (mainBloc.state.isMarkerMode) {
+      mainBloc.add(const VideoEditorMarkerModeChanged(isActive: false));
+    } else if (clipBloc.state.isMultiSelectMode) {
+      clipBloc.add(const ClipEditorMultiSelectCancelled());
+    } else if (overlay.isLayerMultiSelectMode) {
+      overlayBloc.add(const TimelineOverlayLayerMultiSelectCancelled());
+    } else if (clipBloc.state.isEditing) {
+      clipBloc.add(const ClipEditorEditingStopped());
+    } else if (overlay.items.any((i) => i.id == overlay.selectedItemId)) {
+      overlayBloc.add(const TimelineOverlayItemSelected(null));
+    } else {
+      return false;
+    }
+    return true;
+  }
 
   static const _animationDuration = Duration(milliseconds: 200);
   static final Tween<Offset> _riseTween = Tween(
