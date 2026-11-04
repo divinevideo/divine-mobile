@@ -17,6 +17,7 @@ CHANNEL = {"ios": "app-store", "android": "play-production"}
 _CLAIM_RE = re.compile(r"^allocations/claims/([^/]+)/[^/]+\.json$")
 _PROVENANCE_RE = re.compile(r"^releases/android/(\d+\.\d+\.\d+)\+(\d+)\.json$")
 _BUILD_RE = re.compile(r"^allocations/builds/([^/]+)/(\d+)\.json$")
+_SHA_RE = re.compile(r"[0-9a-f]{40}")
 _MANUAL_KEY_RE = re.compile(r"[A-Za-z0-9]+")
 
 
@@ -126,7 +127,7 @@ def derive_version(floor: Version, claimed: Iterable[Version]) -> Version:
 
 
 def validate_reservation_key(key: str, platform: str, source_sha: str) -> None:
-    if key == f"scheduled/{platform}/{source_sha}":
+    if key == f"scheduled/{platform}/{source_sha}" and _SHA_RE.fullmatch(source_sha):
         return
     if key.startswith("manual/") and _MANUAL_KEY_RE.fullmatch(key[len("manual/") :]):
         return

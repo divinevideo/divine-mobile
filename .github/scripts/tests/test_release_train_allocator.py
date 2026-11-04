@@ -395,6 +395,38 @@ class ReserveBuildNumberTest(unittest.TestCase):
         second = reserve(ledger, key="manual/run42")
         self.assertNotEqual(first[0], second[0])
 
+    def test_key_prefix_does_not_match_a_longer_key(self) -> None:
+        ledger = MemoryLedgerStore(reserved(909, key="manual/abcd"))
+        self.assertEqual(reserve(ledger, key="manual/abc"), (910, False))
+
+    def test_missing_reservation_for_an_indexed_key_fails_closed(self) -> None:
+        ledger = MemoryLedgerStore({key_path("ios", SCHED, 909): {"schema": 1}})
+        with self.assertRaises(LedgerError):
+            reserve(ledger)
+        self.assertEqual(ledger.creates, [])
+
+    def test_retry_considers_the_latest_reservation_for_the_key(self) -> None:
+        files = reserved(909)
+        files.update(reserved(910))
+        ledger = MemoryLedgerStore(files)
+        self.assertEqual(reserve(ledger, shorebird={"1.0.28+909"}), (910, True))
+
+    def test_reserve_validates_the_key(self) -> None:
+        ledger = MemoryLedgerStore()
+        with self.assertRaises(AllocationError):
+            reserve(ledger, key=f"scheduled/ios/{'b' * 40}")
+        self.assertEqual(ledger.creates, [])
+
+    def test_reserve_rejects_a_malformed_sha_without_writing(self) -> None:
+        ledger = MemoryLedgerStore()
+        with self.assertRaises(AllocationError):
+            reserve_build_number(
+                "ios", v("1.0.28"), ledger=ledger, source_sha="",
+                reservation_key="scheduled/ios/", codemagic_build_id="c",
+                store_latest=1, shorebird_versions=frozenset(), now=NOW,
+            )
+        self.assertEqual(ledger.creates, [])
+
     def test_other_paths_are_ignored(self) -> None:
         ledger = MemoryLedgerStore(
             {
@@ -418,6 +450,11 @@ class ValidateReservationKeyTest(unittest.TestCase):
     def test_scheduled_key_must_match_the_platform(self) -> None:
         with self.assertRaises(AllocationError):
             validate_reservation_key(SCHED, "android", SHA)
+
+    def test_scheduled_sha_must_be_40_lowercase_hex(self) -> None:
+        for sha in ("", "HEAD", "main", "a" * 39, "A" * 40, "a" * 41):
+            with self.assertRaises(AllocationError, msg=sha):
+                validate_reservation_key(f"scheduled/ios/{sha}", "ios", sha)
 
     def test_rejects_malformed_keys(self) -> None:
         for key in ("manual/", "manual/a/b", "manual/a-b", "other/x", "", "manual/x\n"):
