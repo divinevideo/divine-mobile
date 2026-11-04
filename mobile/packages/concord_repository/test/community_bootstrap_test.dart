@@ -73,4 +73,55 @@ void main() {
       }
     },
   );
+  test(
+    'folds owner-rooted public rooms, moderator and bans like the bridge',
+    () async {
+      final bundle = await openInviteBundle(
+        event: event,
+        expectedSigner: event['pubkey'] as String,
+        token: fragment.token,
+        nowMs: 0,
+      );
+      final key = controlReadKey(
+        bundle.communityRoot,
+        bundle.communityId,
+        bundle.rootEpoch,
+      );
+      final editions = <ConcordEdition>[];
+      for (final raw in fixture['controlEvents'] as List) {
+        editions.add(
+          ConcordEdition.parse(
+            await openControlWrap(
+              wrap: raw as Map<String, dynamic>,
+              readKey: key,
+              streamPubkey: bundle.controlPubkey!,
+            ),
+          ),
+        );
+      }
+      final folded = foldCommunityControl(
+        editions,
+        communityId: bundle.communityId,
+        owner: bundle.owner,
+      );
+      final expected = fixture['expected'] as Map;
+      expect(folded.publicChannels.map((c) => c.name).toSet(), {
+        'general',
+        'introductions',
+      });
+      expect(folded.banned, {expected['bannedMember']});
+      expect(folded.canManageMessages(expected['moderator'] as String), isTrue);
+      expect(folded.canManageMessages(expected['member'] as String), isFalse);
+      expect(folded.name, 'Synthetic shared community');
+      final reversed = foldCommunityControl(
+        editions.reversed.toList(),
+        communityId: bundle.communityId,
+        owner: bundle.owner,
+      );
+      expect(reversed.publicChannels.map((c) => c.name).toSet(), {
+        'general',
+        'introductions',
+      });
+    },
+  );
 }

@@ -9,3 +9,5 @@ export 'src/envelope.dart';
 export 'src/models.dart';
 
 export 'src/invite.dart';
+
+export 'src/community_control.dart';
