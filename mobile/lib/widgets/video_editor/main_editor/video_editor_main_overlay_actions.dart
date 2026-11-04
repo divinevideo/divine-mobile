@@ -110,9 +110,9 @@ class _TopActions extends ConsumerWidget {
 
     // The editor route never pops itself (see `VideoEditorScreen.build`), so
     // Android's system back lands here and leaves the way the close button
-    // does. An open sub-editor takes that back press itself
-    // (`VideoEditorCanvas`), and the timeline's marker, selection and
-    // multi-select bars close first, so neither must also close the editor.
+    // does, unless an open sub-editor takes the press (`VideoEditorCanvas`)
+    // or the timeline is showing context-specific controls, which close
+    // instead (`TimelineControlsBar.dismissControls`).
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
