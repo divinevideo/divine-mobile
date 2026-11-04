@@ -86,6 +86,40 @@ class StoreStateTest(unittest.TestCase):
                 {"status": "error", "error": {"message": "boom"}}, "ios"
             )
 
+    def test_play_rejects_malformed_codes_and_releases(self):
+        for bad in ("844", ["abc"], [True], [8.9], [""], ["８４"], [None], 844):
+            with self.subTest(codes=bad):
+                with self.assertRaises(ValueError):
+                    play_production_version_codes(
+                        {"track": "production", "releases": [{"versionCodes": bad}]}
+                    )
+        with self.assertRaises(ValueError):
+            play_production_version_codes(
+                {"track": "production", "releases": ["844"]}
+            )
+
+    def test_shorebird_rejects_malformed_payloads(self):
+        def wrap(releases):
+            return {"status": "success", "data": {"releases": releases}}
+
+        bad_payloads = [
+            {"data": {"releases": []}},
+            {"status": "success"},
+            {"status": "success", "data": {}},
+            {"status": "success", "data": []},
+            wrap("x"),
+            wrap([{"platform_statuses": {"ios": "active"}}]),
+            wrap([{"version": 5, "platform_statuses": {"ios": "active"}}]),
+            wrap(["1.0.1"]),
+            wrap([{"version": "1.0.1", "platform_statuses": ["ios"]}]),
+            wrap([{"version": "1.0.1"}]),
+            "nope",
+        ]
+        for payload in bad_payloads:
+            with self.subTest(payload=payload):
+                with self.assertRaises(ValueError):
+                    shorebird_release_versions(payload, "ios")
+
     def test_stable_tags_ignore_betas_and_other_refs(self):
         refs = [
             "refs/tags/1.0.27",
