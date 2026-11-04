@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip44/nip44_v2.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
@@ -72,6 +73,7 @@ PublishOutcome rejectedOutcome(Event event) => PublishOutcome(
 /// whatever the test is about.
 MockNostrSigner stubListSigner(NostrClient client, String pubkey) {
   _registerEventFallback();
+  stubAuthoritativeListRead(client);
   final signer = MockNostrSigner();
   when(() => client.signer).thenReturn(signer);
   when(signer.getPublicKey).thenAnswer((_) async => pubkey);
@@ -117,3 +119,25 @@ void stubListPublishing({
     (i) async => PublishSuccess(event: i.positionalArguments[0] as Event),
   );
 }
+
+/// A completed network read for fixtures that are about publication/storage.
+/// Use [events] to expose the same remote state as the fixture's subscriptions.
+void stubAuthoritativeListRead(
+  NostrClient client, {
+  Iterable<Event> Function() events = _noListEvents,
+}) {
+  registerFallbackValue(<Filter>[]);
+  registerFallbackValue(Duration.zero);
+  when(
+    () => client.queryEventsDetailed(
+      any(),
+      useCache: false,
+      requireAllRelaysSettled: true,
+      timeout: any(named: 'timeout'),
+    ),
+  ).thenAnswer(
+    (_) async => (events: events().toList(), timedOut: false, noRelays: false),
+  );
+}
+
+Iterable<Event> _noListEvents() => const [];

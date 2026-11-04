@@ -194,6 +194,7 @@ void main() {
         await service.addVideoToList(list!.id, 'video_1');
         await service.addVideoToList(list.id, 'video_2');
         reset(mockNostr);
+        stubAuthoritativeListRead(mockNostr);
 
         when(() => mockNostr.publishEvent(any())).thenAnswer((
           invocation,

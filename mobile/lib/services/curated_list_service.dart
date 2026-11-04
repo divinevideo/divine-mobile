@@ -2,6 +2,7 @@
 // ABOUTME: Handles creation, updates, and management of user's video lists
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:clock/clock.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
@@ -9,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/models/curated_list_callbacks.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -268,20 +270,115 @@ class CuratedListService extends ChangeNotifier {
   bool _isSuspended = false;
   bool get _isStopped => _isDisposed || _isSuspended;
   final Set<Completer<void>> _relaySyncCancels = {};
+  final Set<String> _inFlightListPublications = {};
 
   Future<T> _serializeListOperation<T>(
     String listId,
     Future<T> Function() operation, {
     T? cancelled,
+    bool recovering = false,
   }) {
     if (!isReadyForMutations) return Future.value(cancelled as T);
     final owner = _relayGateway.currentAuthenticatedPubkey();
     return _sessionLease.runListOperation(
       getListById(listId)?.authorScopedId ?? listId,
-      operation,
+      () async {
+        if (!await _reconcileListBeforeMutation(
+          listId,
+          owner,
+          recovering: recovering,
+        )) {
+          return cancelled as T;
+        }
+        return operation();
+      },
       isCurrentOwner: () => isReadyForMutations && _isCurrent(owner),
       cancelled: cancelled,
     );
+  }
+
+  /// Reads inside the mutation queue, before the operation builds its delta.
+  /// Background sync alone cannot protect edits made from another device.
+  Future<bool> _reconcileListBeforeMutation(
+    String listId,
+    String? owner, {
+    required bool recovering,
+  }) async {
+    final list = getListById(listId);
+    // Creating a new coordinate has no cached replacement to reconcile.
+    // Signed-out drafts stay local and never publish over relay data.
+    if (list == null || owner == null) return true;
+    if (list.pubkey != null && list.pubkey != owner) return false;
+    if (!recovering && !_defaultAuthority.canMutate(list)) return false;
+
+    final cancel = Completer<void>();
+    _relaySyncCancels.add(cancel);
+    try {
+      final result = await Future.any([
+        _nostrService.queryEventsDetailed(
+          [
+            Filter(authors: [owner], kinds: const [30005], d: [list.id]),
+          ],
+          useCache: false,
+          requireAllRelaysSettled: true,
+          timeout: _relaySyncTimeout,
+        ),
+        cancel.future.then((_) => null),
+      ]);
+      if (result == null ||
+          result.timedOut ||
+          result.noRelays ||
+          cancel.isCompleted ||
+          !_isCurrent(owner)) {
+        return false;
+      }
+      final events = result.events
+          .where(
+            (event) =>
+                event.kind == 30005 &&
+                event.pubkey == owner &&
+                CuratedListConverter.extractDTag(event) == list.id,
+          )
+          .toList();
+      if (events.isNotEmpty &&
+          !await _processReceivedListEvents(
+            events,
+            isCurrentRead: () => !cancel.isCompleted && _isCurrent(owner),
+          )) {
+        return false;
+      }
+      final current = getListById(listId);
+      return !cancel.isCompleted &&
+          _isCurrent(owner) &&
+          current != null &&
+          _relayEvidence.allows(current);
+    } on Object catch (error) {
+      Log.warning(
+        'Not changing list $listId: relay read failed (${error.runtimeType})',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
+      return false;
+    } finally {
+      _relaySyncCancels.remove(cancel);
+    }
+  }
+
+  /// Compare the intended payload, independently of local/retry timestamps.
+  /// A relay echo can confirm an earlier send whose acknowledgement was lost.
+  bool _samePublicationValue(CuratedList left, CuratedList right) {
+    String value(CuratedList list) {
+      final target = list.publicationTarget;
+      final normalized = target.isPublic && target.description == null
+          ? target.copyWith(description: 'Curated video list: ${target.name}')
+          : target;
+      return jsonEncode([
+        normalized.isPublic,
+        CuratedListConverter.toEventTags(normalized),
+      ]);
+    }
+
+    return value(left) == value(right);
   }
 
   /// Stops saving and publishing while another account signs in.
@@ -912,11 +1009,17 @@ class CuratedListService extends ChangeNotifier {
     List<String>? tags,
     bool? isCollaborative,
     List<String>? allowedCollaborators,
+    List<String>? previousAllowedCollaborators,
     String? thumbnailEventId,
     PlayOrder? playOrder,
     void Function()? onLocalSaved,
     void Function()? onPublicationUnconfirmed,
   }) {
+    final collaboratorBaseline = List<String>.of(
+      previousAllowedCollaborators ??
+          getListById(listId)?.allowedCollaborators ??
+          const [],
+    );
     if (isReadyForMutations) {
       final cached = getListById(listId);
       // Reject a known impossible privacy flip before queueing or changing any
@@ -948,6 +1051,7 @@ class CuratedListService extends ChangeNotifier {
         tags: tags,
         isCollaborative: isCollaborative,
         allowedCollaborators: allowedCollaborators,
+        previousAllowedCollaborators: collaboratorBaseline,
         thumbnailEventId: thumbnailEventId,
         playOrder: playOrder,
         onLocalSaved: onLocalSaved,
@@ -959,6 +1063,7 @@ class CuratedListService extends ChangeNotifier {
 
   Future<CuratedListUpdateResult> _updateList({
     required String listId,
+    required List<String> previousAllowedCollaborators,
     String? name,
     String? description,
     String? imageUrl,
@@ -999,6 +1104,29 @@ class CuratedListService extends ChangeNotifier {
         return const CuratedListUpdateResult.failed();
       }
 
+      final collaborators = allowedCollaborators == null
+          ? list.allowedCollaborators
+          : isPublic == false
+          ? allowedCollaborators
+          : (<String>{...list.allowedCollaborators}
+                  ..addAll(
+                    allowedCollaborators.where(
+                      (key) => !previousAllowedCollaborators.contains(key),
+                    ),
+                  )
+                  ..removeAll(
+                    previousAllowedCollaborators.where(
+                      (key) => !allowedCollaborators.contains(key),
+                    ),
+                  ))
+                .toList();
+      final collaborative =
+          allowedCollaborators != null &&
+              isCollaborative != null &&
+              isPublic != false
+          ? collaborators.isNotEmpty
+          : isCollaborative ?? list.isCollaborative;
+
       final updatedList = list.copyWith(
         pubkey: list.pubkey ?? _relayGateway.currentAuthenticatedPubkey(),
         name: name ?? list.name,
@@ -1008,8 +1136,8 @@ class CuratedListService extends ChangeNotifier {
         isPublic: isPublic ?? list.isPublic,
         clearPendingVisibility: isPublic != null,
         tags: tags ?? list.tags,
-        isCollaborative: isCollaborative ?? list.isCollaborative,
-        allowedCollaborators: allowedCollaborators ?? list.allowedCollaborators,
+        isCollaborative: collaborative,
+        allowedCollaborators: collaborators,
         thumbnailEventId: thumbnailEventId ?? list.thumbnailEventId,
         playOrder: playOrder ?? list.playOrder,
         updatedAt: clock.now(),
@@ -1695,6 +1823,35 @@ class CuratedListService extends ChangeNotifier {
         canRun: () => isCurrentRead() && isCurrentSession,
       );
       if (!isCurrentRead() || !_isCurrent(owner)) return;
+      final decoded = CuratedListConverter.fromEvent(
+        event,
+        privateTags: unsealedItemTags.tags,
+        isPrivateEvent:
+            unsealedItemTags.status == UnsealItemTagsStatus.unsealed,
+      );
+      final existing = decoded == null
+          ? null
+          : getListById(decoded.authorScopedId);
+      if (existing != null &&
+          existing.nostrEventId != event.id &&
+          ((existing.pendingRepublish &&
+                  !_inFlightListPublications.contains(
+                    existing.authorScopedId,
+                  )) ||
+              (existing.nostrEventId != null &&
+                  (existing.updatedAt.millisecondsSinceEpoch ~/ 1000 >
+                          event.createdAt ||
+                      (existing.pendingRepublish &&
+                          existing.updatedAt.millisecondsSinceEpoch ~/ 1000 ==
+                              event.createdAt)))) &&
+          !_samePublicationValue(existing, decoded!)) {
+        // Local timestamps include edits and redaction attempts, so they
+        // cannot prove that an unseen relay payload is older than our source.
+        // Keep both copies; without the original mutation baseline, guessing
+        // a union could undo a deliberate removal. Leave the signed evidence
+        // unresolved so neither background backfill nor a retry replaces it.
+        return;
+      }
       _defaultAuthority.observe(event, unsealedItemTags);
       if (!_relayEvidence.decoded(event, unsealedItemTags)) return;
       if (CuratedListConverter.extractDTag(event) == defaultListId &&

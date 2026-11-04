@@ -71,6 +71,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
       _currentOwnerPubkey() == _openingOwnerPubkey;
 
   final CuratedListVideo? _video;
+  List<String>? _collaboratorEditBaseline;
 
   /// Refreshes saved delivery and permissions without replacing unsaved edits.
   ///
@@ -193,6 +194,9 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
   }) {
     _refreshRecoveryHold();
     if (!state.canEdit || isClosed || !isSessionCurrent) return;
+    if (!state.collaboratorsEdited) {
+      _collaboratorEditBaseline = List.of(state.storedCollaborators);
+    }
     final neverOffered = state.collaboratorPubkeys.where(
       (pubkey) => !offered.contains(pubkey),
     );
@@ -355,12 +359,15 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         return;
       }
 
+      // Keep the draft's baseline even if background sync refreshed storage.
+      final collaboratorBaseline =
+          _collaboratorEditBaseline ?? state.storedCollaborators;
       // Only an explicit permissions edit or privacy flip changes collaborators.
       final writesCollaborators =
           (visibilityWillChange && !isPublic) ||
           !const SetEquality<String>().equals(
             collaborators.toSet(),
-            state.storedCollaborators.toSet(),
+            collaboratorBaseline.toSet(),
           );
       // Only a flip sends visibility: the list may have changed since the
       // sheet opened, and resending the opening value would undo that.
@@ -373,6 +380,9 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         isPublic: visibilityWillChange ? isPublic : null,
         isCollaborative: writesCollaborators ? collaborators.isNotEmpty : null,
         allowedCollaborators: writesCollaborators ? collaborators : null,
+        previousAllowedCollaborators: writesCollaborators
+            ? collaboratorBaseline
+            : null,
         onPublicationUnconfirmed: permissionsWillChange
             ? () => publicationUnconfirmed = true
             : null,
