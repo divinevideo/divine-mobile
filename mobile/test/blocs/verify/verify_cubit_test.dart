@@ -426,7 +426,9 @@ void main() {
         build: build,
         act: (cubit) async {
           await cubit.load();
-          cubit.claimLinked(_twitter, replacing: _twitter);
+          // Renewing under the same handle replaces nothing, so the screen
+          // passes no `replacing`.
+          cubit.claimLinked(_twitter);
         },
         verify: (cubit) {
           expect(
