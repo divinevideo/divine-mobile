@@ -25,9 +25,19 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sounds_repository/sounds_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
-import 'package:videos_repository/videos_repository.dart' show VideosRepository;
+import 'package:videos_repository/videos_repository.dart'
+    show BlockedVideoFilter, VideosRepository;
 
 part 'sounds_providers.g.dart';
+
+/// The current author policy for every picker row, including saved sounds
+/// and cached search results that did not come from the paged lists.
+/// Re-evaluated on a block or mute without reloading those lists.
+@riverpod
+BlockedVideoFilter soundAuthorFilter(Ref ref) {
+  ref.watch(blocklistVersionProvider);
+  return createBlockedAuthorFilter(ref);
+}
 
 /// Provider for SoundsRepository singleton.
 ///

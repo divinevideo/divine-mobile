@@ -1104,7 +1104,7 @@ class _PickerSearchInput extends StatelessWidget {
   }
 }
 
-class _SoundsContent extends StatelessWidget {
+class _SoundsContent extends ConsumerWidget {
   const _SoundsContent({
     required this.scrollController,
     required this.sounds,
@@ -1199,7 +1199,11 @@ class _SoundsContent extends StatelessWidget {
   static const _bottomSpace = 120.0;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isBlocked = ref.watch(soundAuthorFilterProvider);
+    final sounds = this.sounds
+        .where((sound) => !isBlocked(sound.pubkey))
+        .toList(growable: false);
     final leading = this.leading;
     final paging = this.paging;
     final onLoadMore = this.onLoadMore;

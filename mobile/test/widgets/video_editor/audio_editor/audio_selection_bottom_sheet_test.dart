@@ -5,6 +5,8 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:content_policy/content_policy.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +22,7 @@ import 'package:openvine/models/paged_sounds.dart';
 import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
@@ -68,6 +71,9 @@ Finder _divineIcon(DivineIconName name) =>
 class _MockAudioPlaybackService extends Mock implements AudioPlaybackService {}
 
 class _MockSoundsRepository extends Mock implements SoundsRepository {}
+
+class _MockContentBlocklistRepository extends Mock
+    implements ContentBlocklistRepository {}
 
 class _MockAudioFilePickerService extends Mock
     implements AudioFilePickerService {}
@@ -145,7 +151,18 @@ void main() {
       bool? consentResult,
       Completer<bool>? pendingConsent,
       AudioFilePickerService? audioFilePicker,
+      Set<String> blockedSoundAuthors = const {},
     }) {
+      final blocklist = _MockContentBlocklistRepository();
+      when(() => blocklist.currentState).thenAnswer(
+        (_) => ContentPolicyState(
+          currentUserPubkey: viewerPubkey ?? 'viewer',
+          blockedPubkeys: blockedSoundAuthors,
+          mutedPubkeys: const {},
+          pubkeysBlockingUs: const {},
+          pubkeysMutingUs: const {},
+        ),
+      );
       final savedSoundsBloc = _MockSavedSoundsBloc();
       when(() => savedSoundsBloc.state).thenReturn(
         SavedSoundsState(
@@ -168,6 +185,7 @@ void main() {
         value: savedSoundsBloc,
         child: ProviderScope(
           overrides: [
+            contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
             // `audioReuseConsentProvider` reads the viewer so it can grant a
             // creator consent for their own sound.
             authServiceProvider.overrideWithValue(
@@ -2176,6 +2194,73 @@ void main() {
     });
 
     group('Initial state', () {
+      testWidgets('hides blocked standalone sounds in My Sounds', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: const AsyncValue.data([]),
+            blockedSoundAuthors: const {'blocked'},
+            savedSounds: [
+              _createTestAudioEvent(
+                id: 'blocked-sound',
+                pubkey: 'blocked',
+                title: 'Blocked sound',
+              ),
+              _createTestAudioEvent(id: 'kept-sound', title: 'Kept sound'),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryMySounds));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Kept sound'), findsOneWidget);
+        expect(find.text('Blocked sound'), findsNothing);
+      });
+
+      testWidgets('drops a newly blocked search result without a new search', (
+        tester,
+      ) async {
+        final blocked = <String>{};
+        final searches = <String>[];
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: const AsyncValue.data([]),
+            blockedSoundAuthors: blocked,
+            relaySearches: searches,
+            searchResults: {
+              'drum': [
+                _createTestAudioEvent(
+                  id: 'remote-sound',
+                  pubkey: 'blocked-later',
+                  title: 'Remote drum',
+                ),
+              ],
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'drum');
+        await tester.pumpAndSettle(const Duration(milliseconds: 400));
+        expect(find.text('Remote drum'), findsOneWidget);
+        expect(searches, ['drum']);
+
+        blocked.add('blocked-later');
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AudioSelectionBottomSheet)),
+        );
+        container.read(blocklistVersionProvider.notifier).increment();
+        await tester.pumpAndSettle();
+
+        expect(find.text('Remote drum'), findsNothing);
+        expect(searches, ['drum']);
+      });
+
       testWidgets('renders no $AudioListTile while no sounds are loaded', (
         tester,
       ) async {
