@@ -1446,6 +1446,69 @@ void main() {
       );
     });
 
+    test('tryRefreshExpiredSession does not sign back in when the user signs '
+        'out while the refresh is in flight', () async {
+      SharedPreferences.setMockInitialValues({
+        'authentication_source': 'divineOAuth',
+        'tos_accepted': true,
+      });
+
+      final pubkey = 'ab' * 32;
+      final expiredSession = KeycastSession(
+        bunkerUrl: 'https://login.divine.video/api/nostr',
+        accessToken: 'expired_token',
+        expiresAt: DateTime.now().subtract(const Duration(hours: 1)),
+        refreshToken: 'refresh_token_still_valid',
+        userPubkey: pubkey,
+      );
+      secureStorage['keycast_session'] = jsonEncode(expiredSession.toJson());
+      secureStorage['keycast_refresh_token'] = 'refresh_token_still_valid';
+
+      final pendingRefresh = Completer<KeycastSession?>();
+      var holdRefresh = false;
+      when(() => mockOAuthClient.getSession()).thenAnswer((_) async => null);
+      when(() => mockOAuthClient.logout()).thenAnswer((_) async {});
+      when(
+        () => mockOAuthClient.refreshSession(
+          userPubkey: any(named: 'userPubkey'),
+        ),
+      ).thenAnswer((_) {
+        if (!holdRefresh) throw OAuthNetworkException('offline');
+        return pendingRefresh.future;
+      });
+
+      final authService = createAuthService();
+      String? signedInBeforeRefresh;
+      bool? refreshResult;
+
+      // Assert outside the guarded zone: a failure inside it never completes.
+      await runIgnoringMockedHttpErrors(() async {
+        await authService.initialize();
+        await waitForRpcUpgradeToSettle(authService);
+        signedInBeforeRefresh = authService.currentPublicKeyHex;
+
+        holdRefresh = true;
+        final refreshed = authService.tryRefreshExpiredSession();
+        await pumpEventQueue();
+        await authService.signOut();
+        pendingRefresh.complete(
+          KeycastSession(
+            bunkerUrl: 'https://login.divine.video/api/nostr',
+            accessToken: 'fresh_token',
+            expiresAt: DateTime.now().add(const Duration(hours: 1)),
+            refreshToken: 'next_refresh_token',
+            userPubkey: pubkey,
+          ),
+        );
+        refreshResult = await refreshed;
+      });
+
+      expect(signedInBeforeRefresh, pubkey);
+      expect(refreshResult, isFalse);
+      expect(authService.authState, equals(AuthState.unauthenticated));
+      expect(authService.currentPublicKeyHex, isNull);
+    });
+
     test('concurrent tryRefreshExpiredSession calls share one in-flight future '
         '(single-flight guard)', () async {
       // Regression for #4626: if multiple UI surfaces call
