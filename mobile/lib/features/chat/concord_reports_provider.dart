@@ -69,9 +69,11 @@ final concordReportsProvider = Provider<ConcordReports?>((ref) {
           ..body = body;
         // Keep the final lifetime check beside dispatch, without an await.
         requireCurrentSession();
-        final response = await http.Response.fromStream(
-          await client.send(request),
-        ).timeout(const Duration(seconds: 15));
+        // The timeout covers the response headers too, not only the body.
+        final response = await client
+            .send(request)
+            .then(http.Response.fromStream)
+            .timeout(const Duration(seconds: 15));
         if (response.statusCode != 202) {
           throw StateError('Room report could not be submitted');
         }

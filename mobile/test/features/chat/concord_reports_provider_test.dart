@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:concord_repository/concord_repository.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -131,5 +132,50 @@ void main() {
         expect(requests, 0);
       },
     );
+
+    test('fails when the service never answers the request', () {
+      fakeAsync((async) {
+        final identity = _Identity();
+        identity.started.future.then(identity.signing.complete).ignore();
+        final session = _Session();
+        when(() => session.ready).thenReturn(true);
+        final container = ProviderContainer(
+          overrides: [
+            authServiceProvider.overrideWithValue(_Auth(identity)),
+            concordRoomCatalogProvider.overrideWith(
+              (ref) => Stream.value(ConcordRoomCatalog.real(session)),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        container.listen(concordRoomCatalogProvider, (_, _) {});
+        async.flushMicrotasks();
+        final reports = container.read(concordReportsProvider)!;
+        Object? failure;
+        http
+            .runWithClient(
+              () => reports
+                  .submit(
+                    communityId: '22' * 32,
+                    channelId: '33' * 32,
+                    rumorId: '44' * 32,
+                    reason: 'Spam',
+                  )
+                  .then<void>(
+                    (_) {},
+                    onError: (Object error) => failure = error,
+                  ),
+              // A service that accepts the connection but never sends headers.
+              () => MockClient((_) => Completer<http.Response>().future),
+            )
+            .ignore();
+        async.flushMicrotasks();
+        expect(failure, isNull);
+
+        async.elapse(const Duration(seconds: 16));
+
+        expect(failure, isA<TimeoutException>());
+      });
+    });
   });
 }
