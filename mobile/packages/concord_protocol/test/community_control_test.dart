@@ -309,6 +309,9 @@ void main() {
           version: 3,
           prev: 'aa' * 32,
         );
+        // An earlier-epoch v1 makes the chain walk see a gap below v3, so only
+        // the snapshot bootstrap can seat the compacted metadata cleanly.
+        final earlierMetadata = edition(owner, '0', cid, {'name': 'earlier'});
         final metadata = edition(
           owner,
           '0',
@@ -318,7 +321,7 @@ void main() {
           prev: 'bb' * 32,
         );
         final state = foldCommunityControl(
-          [first, third, metadata],
+          [first, third, earlierMetadata, metadata],
           communityId: cid,
           owner: owner,
           snapshotIds: {metadata.rumorId},
