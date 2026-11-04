@@ -1299,6 +1299,7 @@
   "reportIncludeMessageTitle": "이 메시지 포함하기",
   "reportIncludeMessageDescription": "Divine 검수팀이 이 메시지를 보게 돼요. 비공개로 유지되고, 공개적으로 게시되지 않아요.",
   "reportMessageTooLong": "이 메시지는 너무 길어서 포함할 수 없어요. ‘{optionTitle}’ 체크를 해제하고 다시 시도해 주세요.",
+  "reportDetailsTooLong": "자세한 내용이 너무 길어서 보낼 수 없어요. 줄여서 다시 시도해 주세요.",
   "reportBlockUser": "이 사용자 차단",
   "reportCancel": "취소",
   "reportSubmit": "신고",

@@ -5277,6 +5277,10 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get reportDetailsTooLong =>
+      'Detaliile tale sunt prea lungi ca să fie trimise. Scurtează-le și încearcă din nou.';
+
+  @override
   String get reportBlockUser => 'Blochează acest utilizator';
 
   @override

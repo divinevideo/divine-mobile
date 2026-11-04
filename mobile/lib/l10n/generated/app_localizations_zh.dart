@@ -4800,6 +4800,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get reportDetailsTooLong => '你填写的详情太长，无法发送。请精简后重试。';
+
+  @override
   String get reportBlockUser => '屏蔽该用户';
 
   @override

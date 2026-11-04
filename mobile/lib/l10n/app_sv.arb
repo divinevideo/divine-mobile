@@ -1763,6 +1763,7 @@
   "reportIncludeMessageTitle": "Ta med det här meddelandet",
   "reportIncludeMessageDescription": "Modereringsteamet på Divine får se det. Det förblir privat och publiceras inte.",
   "reportMessageTooLong": "Meddelandet är för långt för att tas med. Avmarkera ”{optionTitle}” och försök igen.",
+  "reportDetailsTooLong": "Dina detaljer är för långa för att skickas. Korta ner dem och försök igen.",
   "reportBlockUser": "Blockera den här användaren",
   "reportCancel": "Avbryt",
   "reportSubmit": "Rapportera",

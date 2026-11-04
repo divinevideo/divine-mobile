@@ -2733,6 +2733,41 @@ void main() {
         expect(result.delivery, ReportDelivery.queued);
       });
 
+      // The note field caps characters, not bytes: 10,000 four-byte emoji
+      // fill a DM by themselves, and the DM is a private report's only
+      // channel, so it would be shown as sent and never arrive.
+      test('refuses a private report whose details alone the NIP-17 wrap '
+          'cannot carry, before anything is saved', () async {
+        final result = await private.reportContent(
+          eventId: rumorId,
+          authorPubkey: sender,
+          reason: ContentFilterReason.harassment,
+          details: '😀' * 10000,
+          publishToRelays: false,
+        );
+
+        expect(result.success, isFalse);
+        expect(result.delivery, ReportDelivery.detailsTooLong);
+        expect(
+          await dao.getRetryableForUser(userPubkey: testPublicKey),
+          isEmpty,
+        );
+      });
+
+      test('blames the details rather than the included message when the '
+          'details alone are too large', () async {
+        final result = await private.reportContent(
+          eventId: rumorId,
+          authorPubkey: sender,
+          reason: ContentFilterReason.harassment,
+          details: '😀' * 10000,
+          publishToRelays: false,
+          unverifiedMessageExcerpt: 'a short message',
+        );
+
+        expect(result.delivery, ReportDelivery.detailsTooLong);
+      });
+
       test('sizes the DM as the DM layer builds it, recipient and batch '
           'tags included', () async {
         // The rumor `DmRepository.enqueueSend` wraps for this report:

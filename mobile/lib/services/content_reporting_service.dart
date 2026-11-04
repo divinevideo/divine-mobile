@@ -51,6 +51,13 @@ enum ReportDelivery {
   /// wrap can carry. Unlike [refused] this is a failure the reporter can act
   /// on, by leaving the message out (#7340).
   tooLong,
+
+  /// The private report was refused before anything was saved, because the
+  /// reporter's details alone make its moderation DM larger than a NIP-17
+  /// gift wrap can carry. The DM is a private report's only channel, so the
+  /// reporter has to shorten the details; leaving the message out would not
+  /// be enough.
+  detailsTooLong,
 }
 
 /// Report submission result
@@ -108,6 +115,13 @@ class ReportResult {
     error: error,
     timestamp: DateTime.now(),
     delivery: ReportDelivery.tooLong,
+  );
+
+  factory ReportResult.detailsTooLong(String error) => ReportResult(
+    success: false,
+    error: error,
+    timestamp: DateTime.now(),
+    delivery: ReportDelivery.detailsTooLong,
   );
 }
 
@@ -280,10 +294,11 @@ class ContentReportingService implements ReportChannelDriver {
   ///
   /// [unverifiedMessageExcerpt] is the reported message as the reporter's
   /// device shows it, sent only in the moderation DM and only for a private
-  /// report. When the included message makes the moderation DM larger than a
-  /// NIP-17 gift wrap can carry, the report is refused before anything is
-  /// saved, with [ReportDelivery.tooLong]. A private report's DM keeps the
-  /// details as typed apart from private keys.
+  /// report. A private report whose moderation DM is larger than a NIP-17
+  /// gift wrap can carry is refused before anything is saved: with
+  /// [ReportDelivery.detailsTooLong] when the details alone are too large,
+  /// and with [ReportDelivery.tooLong] when only the included message makes
+  /// it so. Its DM keeps the details as typed apart from private keys.
   ///
   /// Throws an [ArgumentError] when [unverifiedMessageExcerpt] is given while
   /// [publishToRelays] is true.
@@ -407,22 +422,38 @@ class ContentReportingService implements ReportChannelDriver {
           dmBody,
           unverifiedMessageExcerpt: unverifiedMessageExcerpt,
         );
+        final reportDmTags = moderationTags.isEmpty
+            ? moderationDmTags(reason: reason)
+            : moderationTags;
         final dmTags = [
-          ...moderationTags.isEmpty
-              ? moderationDmTags(reason: reason)
-              : moderationTags,
+          ...reportDmTags,
           if (unverifiedMessageExcerpt != null) unverifiedExcerptTag,
         ];
-        if (recipient != null &&
-            unverifiedMessageExcerpt != null &&
-            _exceedsDmRumorLimit(
-              sender: reporter,
-              recipient: recipient,
-              content: dmContent,
-              tags: dmTags,
-              reportId: reportId,
-            )) {
-          return ReportResult.tooLong('Moderation DM is too large to send');
+        if (!publishToRelays && recipient != null) {
+          // The DM is a private report's only channel, so one the gift wrap
+          // cannot carry would be shown as sent and never arrive. The details
+          // are checked first: leaving the message out cannot shrink them.
+          if (_exceedsDmRumorLimit(
+            sender: reporter,
+            recipient: recipient,
+            content: dmBody,
+            tags: reportDmTags,
+            reportId: reportId,
+          )) {
+            return ReportResult.detailsTooLong(
+              'Moderation DM is too large to send without the message',
+            );
+          }
+          if (unverifiedMessageExcerpt != null &&
+              _exceedsDmRumorLimit(
+                sender: reporter,
+                recipient: recipient,
+                content: dmContent,
+                tags: dmTags,
+                reportId: reportId,
+              )) {
+            return ReportResult.tooLong('Moderation DM is too large to send');
+          }
         }
         final dm = recipient == null
             ? null

@@ -2488,6 +2488,7 @@
   "reportIncludeMessageTitle": "附上这条消息",
   "reportIncludeMessageDescription": "Divine 审核团队会看到这条消息。它会保持私密，不会公开发布。",
   "reportMessageTooLong": "这条消息太长，无法附上。请取消勾选“{optionTitle}”后重试。",
+  "reportDetailsTooLong": "你填写的详情太长，无法发送。请精简后重试。",
   "reportBlockUser": "屏蔽该用户",
   "reportCancel": "取消",
   "reportSubmit": "举报",

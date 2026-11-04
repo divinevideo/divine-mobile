@@ -1767,6 +1767,7 @@
   "reportIncludeMessageTitle": "Incluir este mensaje",
   "reportIncludeMessageDescription": "El equipo de moderación de Divine lo va a ver. Queda en privado y no se publica.",
   "reportMessageTooLong": "Este mensaje es demasiado largo para incluirlo. Desmarcá «{optionTitle}» y probá de nuevo.",
+  "reportDetailsTooLong": "Tus detalles son demasiado largos para enviarlos. Acortalos y probá de nuevo.",
   "reportBlockUser": "Bloquear a este usuario",
   "reportCancel": "Cancelar",
   "reportSubmit": "Reportar",

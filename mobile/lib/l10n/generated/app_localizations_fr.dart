@@ -5209,6 +5209,10 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get reportDetailsTooLong =>
+      'Tes détails sont trop longs pour être envoyés. Raccourcis-les et réessaie.';
+
+  @override
   String get reportBlockUser => 'Bloquer cet utilisateur';
 
   @override

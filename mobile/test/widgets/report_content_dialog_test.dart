@@ -2690,6 +2690,39 @@ void main() {
       );
     });
 
+    testWidgets('details too large to send ask for shorter details and the '
+        'sheet stays open', (tester) async {
+      when(
+        () => mockReportingService.reportContent(
+          eventId: any(named: 'eventId'),
+          authorPubkey: any(named: 'authorPubkey'),
+          reason: any(named: 'reason'),
+          details: any(named: 'details'),
+          sourceRelay: any(named: 'sourceRelay'),
+          additionalContext: any(named: 'additionalContext'),
+          hashtags: any(named: 'hashtags'),
+          moderationContent: any(named: 'moderationContent'),
+          moderationTags: any(named: 'moderationTags'),
+          publishToRelays: any(named: 'publishToRelays'),
+          unverifiedMessageExcerpt: any(named: 'unverifiedMessageExcerpt'),
+        ),
+      ).thenAnswer((_) async => ReportResult.detailsTooLong('too large'));
+      await openMessageReport(tester);
+
+      await pickSpamAndSubmit(tester);
+
+      expect(find.text(l10n.reportDetailsTooLong), findsOneWidget);
+      expect(
+        find.text(l10n.reportMessageTooLong(l10n.reportIncludeMessageTitle)),
+        findsNothing,
+      );
+      expect(find.text(l10n.reportFailed), findsNothing);
+      expect(
+        find.widgetWithText(DivineButton, l10n.reportSubmit),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('a user report from a DM screen says it stays private and is '
         'filed without a public event', (tester) async {
       await open(

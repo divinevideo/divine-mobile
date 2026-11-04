@@ -5007,6 +5007,10 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get reportDetailsTooLong =>
+      'ዝርዝሮችዎ ለመላክ በጣም ረጅም ናቸው። ያሳጥሯቸውና እንደገና ይሞክሩ።';
+
+  @override
   String get reportBlockUser => 'ይህን ተጠቃሚ አግድ';
 
   @override

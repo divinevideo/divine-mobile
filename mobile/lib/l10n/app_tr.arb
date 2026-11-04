@@ -1760,6 +1760,7 @@
   "reportIncludeMessageTitle": "Bu mesajı ekle",
   "reportIncludeMessageDescription": "Divine moderasyon ekibi bunu görecek. Gizli kalır ve herkese açık olarak yayınlanmaz.",
   "reportMessageTooLong": "Bu mesaj eklenemeyecek kadar uzun. “{optionTitle}” işaretini kaldırıp tekrar dene.",
+  "reportDetailsTooLong": "Ayrıntıların gönderilemeyecek kadar uzun. Kısaltıp tekrar dene.",
   "reportBlockUser": "Bu kullanıcıyı engelle",
   "reportCancel": "İptal",
   "reportSubmit": "Bildir",

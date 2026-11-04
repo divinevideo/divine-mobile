@@ -5070,6 +5070,10 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get reportDetailsTooLong =>
+      'Ayrıntıların gönderilemeyecek kadar uzun. Kısaltıp tekrar dene.';
+
+  @override
   String get reportBlockUser => 'Bu kullanıcıyı engelle';
 
   @override

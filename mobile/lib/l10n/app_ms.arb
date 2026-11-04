@@ -2488,6 +2488,7 @@
   "reportIncludeMessageTitle": "Sertakan mesej ini",
   "reportIncludeMessageDescription": "Pasukan pemantauan Divine akan melihatnya. Mesej ini kekal peribadi dan tidak disiarkan kepada umum.",
   "reportMessageTooLong": "Mesej ini terlalu panjang untuk disertakan. Nyahtanda “{optionTitle}” dan cuba lagi.",
+  "reportDetailsTooLong": "Butiran anda terlalu panjang untuk dihantar. Pendekkan dan cuba lagi.",
   "reportBlockUser": "Sekat pengguna ini",
   "reportCancel": "Batal",
   "reportSubmit": "Laporkan",

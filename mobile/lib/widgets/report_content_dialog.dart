@@ -729,6 +729,7 @@ class _ReportContentViewState extends State<_ReportContentView> {
         ReportSubmissionStatus.tooLong => l10n.reportMessageTooLong(
           l10n.reportIncludeMessageTitle,
         ),
+        ReportSubmissionStatus.detailsTooLong => l10n.reportDetailsTooLong,
         _ => null,
       };
     });

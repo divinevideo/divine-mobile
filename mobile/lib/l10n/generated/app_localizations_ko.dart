@@ -4844,6 +4844,9 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get reportDetailsTooLong => '자세한 내용이 너무 길어서 보낼 수 없어요. 줄여서 다시 시도해 주세요.';
+
+  @override
   String get reportBlockUser => '이 사용자 차단';
 
   @override

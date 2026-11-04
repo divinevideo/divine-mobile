@@ -5162,6 +5162,10 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get reportDetailsTooLong =>
+      'Masyadong mahaba ang mga detalye mo para maipadala. Paikliin ang mga ito at subukan ulit.';
+
+  @override
   String get reportBlockUser => 'I-block ang user na ito';
 
   @override

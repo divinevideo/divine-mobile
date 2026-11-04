@@ -2488,6 +2488,7 @@
   "reportIncludeMessageTitle": "Gửi kèm tin nhắn này",
   "reportIncludeMessageDescription": "Đội kiểm duyệt của Divine sẽ xem tin nhắn này. Tin nhắn vẫn được giữ riêng tư và không được đăng công khai.",
   "reportMessageTooLong": "Tin nhắn này quá dài để gửi kèm. Bỏ chọn “{optionTitle}” rồi thử lại.",
+  "reportDetailsTooLong": "Phần chi tiết của bạn quá dài để gửi. Rút ngắn rồi thử lại.",
   "reportBlockUser": "Chặn người dùng này",
   "reportCancel": "Hủy",
   "reportSubmit": "Báo cáo",

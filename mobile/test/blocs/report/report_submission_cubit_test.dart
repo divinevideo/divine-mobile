@@ -500,6 +500,22 @@ void main() {
       expect(cubit.state.status, ReportSubmissionStatus.submitted);
     });
 
+    test('a report whose details the moderation DM cannot carry ends in '
+        'detailsTooLong and can be sent again', () async {
+      stubPrivateContent(ReportResult.detailsTooLong('too large'));
+      final cubit = build(reportTarget: messageTarget);
+      addTearDown(cubit.close);
+
+      await submit(cubit);
+      expect(cubit.state.status, ReportSubmissionStatus.detailsTooLong);
+
+      stubPrivateContent(
+        ReportResult.createSuccess('report', delivery: ReportDelivery.queued),
+      );
+      await submit(cubit);
+      expect(cubit.state.status, ReportSubmissionStatus.submitted);
+    });
+
     test('a user report made from a DM screen is filed privately', () async {
       when(
         () => service.reportUser(

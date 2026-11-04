@@ -1341,6 +1341,7 @@
   "reportIncludeMessageTitle": "Isama ang mensaheng ito",
   "reportIncludeMessageDescription": "Makikita ito ng moderation team ng Divine. Mananatili itong private at hindi ito ipo-post sa publiko.",
   "reportMessageTooLong": "Masyadong mahaba ang mensaheng ito para maisama. I-uncheck ang “{optionTitle}” at subukan ulit.",
+  "reportDetailsTooLong": "Masyadong mahaba ang mga detalye mo para maipadala. Paikliin ang mga ito at subukan ulit.",
   "reportBlockUser": "I-block ang user na ito",
   "reportCancel": "Kanselahin",
   "reportSubmit": "I-report",

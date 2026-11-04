@@ -5123,6 +5123,10 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String get reportDetailsTooLong =>
+      'Butiran anda terlalu panjang untuk dihantar. Pendekkan dan cuba lagi.';
+
+  @override
   String get reportBlockUser => 'Sekat pengguna ini';
 
   @override

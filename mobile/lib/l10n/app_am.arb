@@ -2197,6 +2197,7 @@
   "reportIncludeMessageTitle": "ይህን መልእክት ያካትቱ",
   "reportIncludeMessageDescription": "የDivine ቁጥጥር ቡድን ያየዋል። በግል ይቆያል፣ በይፋም አይለጠፍም።",
   "reportMessageTooLong": "ይህ መልእክት ለማካተት በጣም ረጅም ነው። «{optionTitle}»ን ያጥፉና እንደገና ይሞክሩ።",
+  "reportDetailsTooLong": "ዝርዝሮችዎ ለመላክ በጣም ረጅም ናቸው። ያሳጥሯቸውና እንደገና ይሞክሩ።",
   "reportBlockUser": "ይህን ተጠቃሚ አግድ",
   "reportCancel": "ሰርዝ",
   "reportSubmit": "ሪፖርት አድርግ",

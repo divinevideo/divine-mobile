@@ -5089,6 +5089,10 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get reportDetailsTooLong =>
+      'Phần chi tiết của bạn quá dài để gửi. Rút ngắn rồi thử lại.';
+
+  @override
   String get reportBlockUser => 'Chặn người dùng này';
 
   @override

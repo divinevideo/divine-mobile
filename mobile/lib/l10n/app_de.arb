@@ -1763,6 +1763,7 @@
   "reportIncludeMessageTitle": "Diese Nachricht mitsenden",
   "reportIncludeMessageDescription": "Das Moderationsteam von Divine bekommt sie zu sehen. Sie bleibt privat und wird nicht veröffentlicht.",
   "reportMessageTooLong": "Diese Nachricht ist zu lang, um sie mitzusenden. Entferne den Haken bei „{optionTitle}“ und versuch es nochmal.",
+  "reportDetailsTooLong": "Deine Details sind zu lang, um sie zu senden. Kürze sie und versuch es nochmal.",
   "reportBlockUser": "Diesen Nutzer blockieren",
   "reportCancel": "Abbrechen",
   "reportSubmit": "Melden",

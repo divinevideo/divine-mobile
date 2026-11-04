@@ -1753,6 +1753,7 @@
   "reportIncludeMessageTitle": "このメッセージを含める",
   "reportIncludeMessageDescription": "このメッセージは Divine のモデレーションチームが確認します。非公開のままで、一般に公開されることはありません。",
   "reportMessageTooLong": "このメッセージは長すぎて含められません。「{optionTitle}」のチェックを外して、もう一度お試しください。",
+  "reportDetailsTooLong": "詳細が長すぎて送信できません。短くして、もう一度お試しください。",
   "reportBlockUser": "このユーザーをブロック",
   "reportCancel": "キャンセル",
   "reportSubmit": "報告",

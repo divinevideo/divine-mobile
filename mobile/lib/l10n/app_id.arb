@@ -1760,6 +1760,7 @@
   "reportIncludeMessageTitle": "Sertakan pesan ini",
   "reportIncludeMessageDescription": "Tim moderasi Divine akan melihatnya. Pesannya tetap privat dan tidak diposting ke publik.",
   "reportMessageTooLong": "Pesan ini terlalu panjang untuk disertakan. Hapus centang “{optionTitle}” lalu coba lagi.",
+  "reportDetailsTooLong": "Detail kamu terlalu panjang untuk dikirim. Persingkat lalu coba lagi.",
   "reportBlockUser": "Blokir pengguna ini",
   "reportCancel": "Batal",
   "reportSubmit": "Laporkan",

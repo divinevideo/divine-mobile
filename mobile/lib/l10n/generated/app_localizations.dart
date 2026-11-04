@@ -8629,6 +8629,12 @@ abstract class AppLocalizations {
   /// **'This message is too long to include. Uncheck “{optionTitle}” and try again.'**
   String reportMessageTooLong(String optionTitle);
 
+  /// Error on a private report sheet (one opened from direct messages) when the text typed into the report's details field is too large to send to moderators. 'Details' is that field, labelled by reportDetailsOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Your details are too long to send. Shorten them and try again.'**
+  String get reportDetailsTooLong;
+
   /// No description provided for @reportBlockUser.
   ///
   /// In en, this message translates to:

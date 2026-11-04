@@ -117,6 +117,10 @@ enum ReportSubmissionStatus {
   /// The report with the included message is larger than its moderation DM
   /// can carry; sending it without the message would fit.
   tooLong,
+
+  /// The details alone make the report larger than its moderation DM can
+  /// carry, so the reporter has to shorten them.
+  detailsTooLong,
 }
 
 class ReportSubmissionState extends Equatable {
@@ -210,6 +214,8 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
             _ when result.isSilentSuccess => ReportSubmissionStatus.submitted,
             ReportResult(delivery: ReportDelivery.tooLong) =>
               ReportSubmissionStatus.tooLong,
+            ReportResult(delivery: ReportDelivery.detailsTooLong) =>
+              ReportSubmissionStatus.detailsTooLong,
             _ => ReportSubmissionStatus.failure,
           },
         ),

@@ -1763,6 +1763,7 @@
   "reportIncludeMessageTitle": "Inclure ce message",
   "reportIncludeMessageDescription": "L'équipe de modération de Divine le verra. Il reste privé et n'est pas publié.",
   "reportMessageTooLong": "Ce message est trop long pour être inclus. Décoche « {optionTitle} » et réessaie.",
+  "reportDetailsTooLong": "Tes détails sont trop longs pour être envoyés. Raccourcis-les et réessaie.",
   "reportBlockUser": "Bloquer cet utilisateur",
   "reportCancel": "Annuler",
   "reportSubmit": "Signaler",

@@ -5140,6 +5140,10 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get reportDetailsTooLong =>
+      'آپ کی تفصیلات بھیجنے کے لیے بہت لمبی ہیں۔ انہیں مختصر کریں اور دوبارہ کوشش کریں۔';
+
+  @override
   String get reportBlockUser => 'اس صارف کو بلاک کریں';
 
   @override

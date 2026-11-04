@@ -5125,6 +5125,10 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get reportDetailsTooLong =>
+      'التفاصيل طويلة جدًا ولا يمكن إرسالها. يرجى اختصارها ثم المحاولة مرة أخرى.';
+
+  @override
   String get reportBlockUser => 'حظر هذا المستخدم';
 
   @override

@@ -1763,6 +1763,7 @@
   "reportIncludeMessageTitle": "Include acest mesaj",
   "reportIncludeMessageDescription": "Echipa de moderare Divine îl va vedea. Rămâne privat și nu este publicat.",
   "reportMessageTooLong": "Mesajul e prea lung ca să fie inclus. Debifează „{optionTitle}” și încearcă din nou.",
+  "reportDetailsTooLong": "Detaliile tale sunt prea lungi ca să fie trimise. Scurtează-le și încearcă din nou.",
   "reportBlockUser": "Blochează acest utilizator",
   "reportCancel": "Anulează",
   "reportSubmit": "Raportează",

@@ -3529,6 +3529,10 @@
       }
     }
   },
+  "reportDetailsTooLong": "Your details are too long to send. Shorten them and try again.",
+  "@reportDetailsTooLong": {
+    "description": "Error on a private report sheet (one opened from direct messages) when the text typed into the report's details field is too large to send to moderators. 'Details' is that field, labelled by reportDetailsOptional."
+  },
   "reportBlockUser": "Block this user",
   "reportCancel": "Cancel",
   "reportSubmit": "Report",

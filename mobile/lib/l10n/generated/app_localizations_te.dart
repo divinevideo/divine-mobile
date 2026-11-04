@@ -5301,6 +5301,10 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get reportDetailsTooLong =>
+      'మీ వివరాలు పంపడానికి చాలా పొడవుగా ఉన్నాయి. వాటిని కుదించి, మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get reportBlockUser => 'ఈ వినియోగదారుని బ్లాక్ చేయండి';
 
   @override
