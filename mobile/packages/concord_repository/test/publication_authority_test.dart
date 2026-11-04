@@ -24,7 +24,7 @@ class _Cipher implements StreamCipher {
 
 void main() {
   test(
-    'a signer returning after authority changes cannot publish or accept the draft into its outbox',
+    'authority loss during signing prevents publication and acceptance',
     () async {
       var allowed = true;
       final relay = _Relay();

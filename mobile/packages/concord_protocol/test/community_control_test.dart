@@ -1,12 +1,16 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:test/test.dart';
 
+import 'fixture_reader.dart';
+
 void main() {
-  final owner = '11' * 32, member = '22' * 32, admin = '33' * 32;
+  final owner = '11' * 32;
+  final member = '22' * 32;
+  final admin = '33' * 32;
   final cid = deriveCommunityId(owner, '44' * 32);
-  final roleId = '55' * 32, channel = '66' * 32;
+  final roleId = '55' * 32;
+  final channel = '66' * 32;
   var serial = 0;
   ConcordEdition edition(
     String author,
@@ -96,7 +100,7 @@ void main() {
         owner,
         '3',
         grant.entityId,
-        {'member': admin, 'role_ids': []},
+        {'member': admin, 'role_ids': <String>[]},
         version: 2,
         prev: grant.hash,
       );
@@ -286,13 +290,9 @@ void main() {
     },
   );
   test(
-    'matches shared kernel projections for compacted, mixed and banned histories',
+    'matches kernel projections for compacted, mixed and banned histories',
     () {
-      final fixture =
-          jsonDecode(
-                File('test/fixtures/control-parity.json').readAsStringSync(),
-              )
-              as Map<String, dynamic>;
+      final fixture = readConcordFixture('control-parity.json');
       for (final raw in fixture['cases'] as List) {
         final c = raw as Map<String, dynamic>;
         final editions = (c['opened'] as List)

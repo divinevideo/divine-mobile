@@ -64,7 +64,8 @@ void main() {
   test(
     'bundle normalizes bounded relay and description previews like CORD-05',
     () {
-      final owner = '11' * 32, salt = '22' * 32;
+      final owner = '11' * 32;
+      final salt = '22' * 32;
       final bundle = ConcordInviteBundle.fromJson({
         'community_id': deriveCommunityId(owner, salt),
         'owner': owner,

@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:test/test.dart';
+
+import 'fixture_reader.dart';
 
 class _Relay implements RelayGateway, RelayHistoryStatus {
   _Relay(this.events);
@@ -27,8 +27,9 @@ class _Relay implements RelayGateway, RelayHistoryStatus {
     scheduleMicrotask(() async {
       for (final event in events) {
         if ((filter['kinds'] as List).contains(event['kind']) &&
-            (filter['authors'] as List).contains(event['pubkey']))
+            (filter['authors'] as List).contains(event['pubkey'])) {
           controller.add(event);
+        }
       }
       await Future<void>.delayed(Duration.zero);
       done.complete();
@@ -37,7 +38,9 @@ class _Relay implements RelayGateway, RelayHistoryStatus {
   }
 
   Future<void> close() async {
-    for (final c in controllers) await c.close();
+    for (final c in controllers) {
+      await c.close();
+    }
   }
 }
 
@@ -57,13 +60,7 @@ class _DelayedStore extends InMemoryConcordStore {
 }
 
 void main() {
-  final fixture =
-      jsonDecode(
-            File(
-              '../concord_protocol/test/fixtures/community-interop.json',
-            ).readAsStringSync(),
-          )
-          as Map<String, dynamic>;
+  final fixture = readConcordFixture('community-interop.json');
   final event = fixture['bundleEvent'] as Map<String, dynamic>;
   final expected = fixture['expected'] as Map;
   final fragment = ConcordInviteFragment.decode(
@@ -103,7 +100,8 @@ void main() {
         'general',
         'introductions',
       });
-      for (final c in expected['channels'] as List) {
+      for (final raw in expected['channels'] as List) {
+        final c = raw as Map<String, dynamic>;
         final stream = publicChannelKey(
           s.bundle!.communityRoot,
           c['id'] as String,
@@ -147,15 +145,9 @@ void main() {
     await relay.close();
   });
   test(
-    'owner rotation and dissolution stop publication while impostor tombstones do not',
+    'owner lifecycle signals stop publication; impostors do not',
     () async {
-      final lifecycle =
-          jsonDecode(
-                File(
-                  '../concord_protocol/test/fixtures/community-lifecycle.json',
-                ).readAsStringSync(),
-              )
-              as Map<String, dynamic>;
+      final lifecycle = readConcordFixture('community-lifecycle.json');
       final bundleEvent = lifecycle['bundleEvent'] as Map<String, dynamic>;
       for (final name in [
         'baseRekeyEvents',
@@ -210,15 +202,9 @@ void main() {
     },
   );
   test(
-    'a refreshed invite reopens retained old-epoch authority without losing accepted floors',
+    'a refreshed invite retains old-epoch authority and accepted floors',
     () async {
-      final lifecycle =
-          jsonDecode(
-                File(
-                  '../concord_protocol/test/fixtures/community-lifecycle.json',
-                ).readAsStringSync(),
-              )
-              as Map<String, dynamic>;
+      final lifecycle = readConcordFixture('community-lifecycle.json');
       final bundleEvent = lifecycle['bundleEvent'] as Map<String, dynamic>;
       final link = ConcordInviteFragment.decode(
         Uri.parse(lifecycle['inviteUrl'] as String).fragment,
@@ -244,8 +230,9 @@ void main() {
           entry.key: entry.value.hash,
       };
       final stopped = first.changes.firstWhere((_) => !first.ready);
-      for (final event in lifecycle['baseRekeyEvents'] as List)
+      for (final event in lifecycle['baseRekeyEvents'] as List) {
         firstRelay.controllers.last.add(event as Map<String, dynamic>);
+      }
       await stopped.timeout(const Duration(seconds: 10));
       expect(first.canPublish, isFalse);
       await first.close();

@@ -1,10 +1,9 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:bip340/bip340.dart' as schnorr;
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:test/test.dart';
+
+import 'fixture_reader.dart';
 
 class _Relay implements RelayGateway {
   @override
@@ -23,15 +22,9 @@ class _Cipher implements StreamCipher {
 
 void main() {
   test(
-    'bridge moderation hides banned authors and cited moderator removals from retained history',
+    'retained history honors bans and cited moderator removals',
     () async {
-      final fixture =
-          jsonDecode(
-                File(
-                  '../concord_protocol/test/fixtures/community-moderation.json',
-                ).readAsStringSync(),
-              )
-              as Map<String, dynamic>;
+      final fixture = readConcordFixture('community-moderation.json');
       final event = fixture['bundleEvent'] as Map<String, dynamic>;
       final fragment = ConcordInviteFragment.decode(
         Uri.parse(fixture['inviteUrl'] as String).fragment,
@@ -87,8 +80,9 @@ void main() {
         streamSeedHex: stream.seedHex,
         streamPubkey: stream.pubkey,
       );
-      for (final name in ['chatEvent', 'bannedChatEvent'])
+      for (final name in ['chatEvent', 'bannedChatEvent']) {
         await first.ingestSealedWrap(fixture[name] as Map<String, dynamic>);
+      }
       final unaffectedAuthor = schnorr.getPublicKey('33' * 32);
       final tags = <List<String>>[
         ['channel', channel],

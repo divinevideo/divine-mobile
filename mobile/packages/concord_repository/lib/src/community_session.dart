@@ -138,8 +138,9 @@ class ConcordCommunitySession {
         token: fragment.token,
         nowMs: _nowMs(),
       );
-      if (_closed)
+      if (_closed) {
         throw StateError('Community session closed during bootstrap');
+      }
       final savedRoots = await store.get('community-held-roots');
       if (savedRoots != null) {
         for (final raw in jsonDecode(savedRoots) as List) {
@@ -206,8 +207,9 @@ class ConcordCommunitySession {
         bundle!.communityId,
         bundle!.rootEpoch,
       );
-      if (_closed)
+      if (_closed) {
         throw StateError('Community session closed during bootstrap');
+      }
       _subscriptions.add(
         relay
             .subscribe({

@@ -1,19 +1,12 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:bip340/bip340.dart' as schnorr;
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:test/test.dart';
 
+import 'fixture_reader.dart';
+
 void main() {
-  final fixture =
-      jsonDecode(
-            File(
-              '../concord_protocol/test/fixtures/community-interop.json',
-            ).readAsStringSync(),
-          )
-          as Map<String, dynamic>;
+  final fixture = readConcordFixture('community-interop.json');
   final event = fixture['bundleEvent'] as Map<String, dynamic>;
   final fragment = ConcordInviteFragment.decode(
     Uri.parse(fixture['inviteUrl'] as String).fragment,
