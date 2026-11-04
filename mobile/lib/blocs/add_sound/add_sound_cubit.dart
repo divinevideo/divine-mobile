@@ -82,9 +82,9 @@ typedef LocalAudioPublisherReader = LocalAudioEventPublisher Function();
 ///   ([AddSoundState.accountId]). If the account changes while a copy or save
 ///   is in flight, the work is abandoned rather than writing one account's
 ///   sound into another account's library.
-/// * **Nothing silent.** A picked file or a recording with nothing to hear is
-///   refused right after import, so a silent sound never reaches My Sounds
-///   and never gets as far as a share.
+/// * **Nothing silent.** A picked file or a recording measured as having
+///   nothing to hear is refused right after import, and one the share finds
+///   silent is dropped the same way, so it is neither saved nor shared.
 /// * **Cleanup.** A copy no private library record came to own — cancelled,
 ///   replaced by another pick, abandoned, or superseded by its published
 ///   upload — is handed to the reclaimer, which deletes it only when no draft

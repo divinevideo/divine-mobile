@@ -1,5 +1,5 @@
-// ABOUTME: Riverpod DI for sharing a device-local sound publicly — the
-// ABOUTME: publisher that mints its Kind 1063 and the silence check before it.
+// ABOUTME: Riverpod DI for adding and sharing a device-local sound — the
+// ABOUTME: silence check both run and the publisher that mints its Kind 1063.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -10,8 +10,8 @@ import 'package:openvine/services/local_audio_event_publisher.dart';
 import 'package:openvine/services/sound_silence_trimmer.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 
-/// Measures sounds for anything audible and cuts their silent edges before
-/// they are added to My Sounds or published.
+/// Checks sounds for anything audible before they are added to My Sounds or
+/// shared, and cuts the silent edges off the copy that is published.
 final soundSilenceTrimmerProvider = Provider<SoundSilenceTrimmer>(
   (ref) => SoundSilenceTrimmer(),
 );

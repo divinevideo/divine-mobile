@@ -1,5 +1,5 @@
-// ABOUTME: Readies a sound file for publishing as a Kind 1063: leaves out a
-// ABOUTME: sound with nothing to hear and cuts the silence off its edges.
+// ABOUTME: Checks a sound for anything audible before it is added or shared
+// ABOUTME: as a Kind 1063, and cuts the silence off the published copy.
 
 import 'dart:io';
 import 'dart:math' as math;
@@ -41,16 +41,17 @@ final class AudibleSound extends SoundTrimResult {
   final Duration? trimmedDuration;
 
   /// Whether [path] is a cut copy, which the caller deletes with
-  /// [SoundSilenceTrimmer.deleteTrimmedCopy] once it is uploaded.
+  /// [SoundSilenceTrimmer.deleteTrimmedCopy] once the publish attempt is over.
   bool get isTrimmed => trimmedDuration != null;
 }
 
 /// Checks a sound for anything audible before it is published or added to My
 /// Sounds, and cuts the silence off its start and end.
 ///
-/// Audibility is the peak of every 5 ms of the sound against
-/// [soundSilenceThresholdDbfs], measured by `pro_video_editor`'s waveform
-/// reader; [soundEdgeMargin] of silence is kept on each cut edge.
+/// Audibility is the peak of every block `pro_video_editor`'s waveform reader
+/// measures at [WaveformResolution.high], against
+/// [soundSilenceThresholdDbfs]; [soundEdgeMargin] of silence is kept on each
+/// cut edge.
 ///
 /// A cut copy is written without re-encoding: a WAV stays WAV, and AAC (an
 /// `.m4a` or `.aac` file, which includes the app's own recordings) is copied

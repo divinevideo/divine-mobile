@@ -10,11 +10,11 @@ import 'package:equatable/equatable.dart';
 ///
 /// It is ffmpeg's default `silencedetect` threshold. Digital silence, the
 /// dither of a 16-bit file and what an AAC encoder leaves of silence all stay
-/// near -90 dBFS, well below it, so a muted or soundless recording is always
-/// caught. At an ordinary listening volume a -60 dBFS peak plays at about
-/// the threshold of hearing, so nothing quieter is lost. It is compared with
-/// peaks rather than an average, so a short sound in a quiet stretch still
-/// counts as audible.
+/// at or below about -90 dBFS, well below it, so a muted or soundless
+/// recording is always caught. At an ordinary listening volume a -60 dBFS
+/// peak plays at about the threshold of hearing, so nothing quieter is lost.
+/// It is compared with peaks rather than an average, so a short sound in a
+/// quiet stretch still counts as audible.
 const double soundSilenceThresholdDbfs = -60;
 
 /// The silence kept before the first and after the last audible moment when

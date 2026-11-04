@@ -54,7 +54,7 @@ final class VideoAudioResolved extends VideoAudioResolution {
   final bool reuseDegraded;
 }
 
-/// How publishing one of the video's own sounds as a Kind 1063 ended.
+/// How publishing an imported or extracted sound as a Kind 1063 ended.
 sealed class _SoundOutcome {
   const _SoundOutcome();
 }
@@ -70,7 +70,7 @@ final class _SoundSilent extends _SoundOutcome {
   const _SoundSilent();
 }
 
-/// A step failed; the reason has already been logged.
+/// A step failed or the operation went stale; nothing was published.
 final class _SoundFailed extends _SoundOutcome {
   const _SoundFailed();
 }
@@ -86,9 +86,9 @@ final class _SoundFailed extends _SoundOutcome {
 /// * the video's own rendered audio, extracted and published as the
 ///   creator's reusable original sound.
 ///
-/// The two sounds this publisher uploads go through [SoundSilenceTrimmer]
-/// first: one with nothing to hear is not published, and the video publishes
-/// without it rather than failing over it.
+/// Every sound this publisher uploads goes through [SoundSilenceTrimmer]
+/// first: one with nothing to hear is not published, and that is not a
+/// failure.
 ///
 /// [resolveForPublish] applies the consent rules and picks the path. It is the
 /// only place reuse consent is checked, so the methods that mint each Kind
@@ -480,6 +480,9 @@ class VideoAudioPublisher {
   /// Uploads an imported local sound to Blossom and publishes it as a Kind
   /// 1063 credited with [attribution].
   ///
+  /// Returns [_SoundSilent] when the file has nothing to hear and
+  /// [_SoundFailed] when a step fails.
+  ///
   /// Throws [AccountRestrictedPublishException] when the authoritative relay
   /// reports the account suspended or banned.
   Future<_SoundOutcome> _publishImportedAudioEvent({
@@ -648,10 +651,10 @@ class VideoAudioPublisher {
   /// uploads it to Blossom, and publishes it as the creator's Kind 1063
   /// original sound.
   ///
-  /// Returns [_SoundSilent] when the video has nothing to hear and
-  /// [_SoundFailed] when any step fails; either way the caller publishes the
-  /// video without the sound. The audio title uses [attribution] or
-  /// [videoTitle] when provided, falling back to "Original sound - @username".
+  /// Returns [_SoundSilent] when the video has nothing to hear, and
+  /// [_SoundFailed] when a step fails or, with [enforceOwner], the operation
+  /// goes stale. The audio title uses [attribution] or [videoTitle] when
+  /// provided, falling back to "Original sound - @username".
   Future<_SoundOutcome> _publishExtractedAudioEvent({
     required String videoPath,
     required String videoDTag,
