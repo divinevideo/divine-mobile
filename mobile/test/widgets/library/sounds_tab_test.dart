@@ -343,6 +343,48 @@ void main() {
       expect(audio.loadedUrls, isEmpty);
     });
 
+    testWidgets('stops a preview the lookup then finds can no longer be used', (
+      tester,
+    ) async {
+      const goneVideo = '34236:creator:gone';
+      await SavedSoundsService(sharedPreferences).saveSound(
+        _sound(
+          id: 'gone',
+          title: 'Gone Sound',
+        ).copyWith(sourceVideoReference: goneVideo),
+      );
+      final audio = _FakeAudioPlaybackService();
+      addTearDown(audio.positions.close);
+      final lookup = Completer<Map<String, SoundCover?>>();
+
+      await pumpSoundsTab(
+        tester,
+        audioService: audio,
+        overrides: [
+          savedSoundSourcesProvider.overrideWith(
+            (ref, sources) => lookup.future,
+          ),
+        ],
+      );
+
+      // Tapped before the lookup answers, so the row still takes the tap.
+      await tester.tap(find.text('Gone Sound'));
+      await tester.pump();
+      expect(_preview(tester, 'Gone Sound'), (previewing: true, playing: true));
+      expect(audio.stopCalls, 1, reason: 'the stop before the load');
+
+      lookup.complete({goneVideo: null});
+      await tester.pumpAndSettle();
+
+      // The greyed row takes no tap, so nothing on it could stop the sound.
+      expect(_tile(tester, 'Gone Sound').cannotBeReused, isTrue);
+      expect(audio.stopCalls, 2);
+      expect(_preview(tester, 'Gone Sound'), (
+        previewing: false,
+        playing: false,
+      ));
+    });
+
     testWidgets('keeps a sound the viewer published usable', (tester) async {
       const goneVideo = '34236:creator:gone';
       await SavedSoundsService(sharedPreferences).saveSound(

@@ -407,6 +407,17 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
     await SavedSoundDetailsEditor.show(context, sound: sound);
   }
 
+  /// Stops the preview once the source lookup finds its sound can no longer
+  /// be used. Its row then takes no tap, so nothing on it could stop it.
+  void _onPreviewUnavailable() {
+    runDetached(
+      _stopPreview(),
+      'stop the preview of a sound that can no longer be used',
+      logName: 'SoundsTab',
+      category: LogCategory.ui,
+    );
+  }
+
   /// Opens [sound]'s actions under the fuller view of it that has no room in
   /// its row.
   Future<void> _onOpenMore(SavedSound sound, _SavedSoundView view) {
@@ -482,6 +493,7 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
           playingProgress: _previewProgress,
           playingProgressValue: _previewProgressValue,
           onPreview: (sound) => _onPreviewTap(sound.audio),
+          onPreviewUnavailable: _onPreviewUnavailable,
           onOpenMore: _onOpenMore,
         ),
         const SliverBottomSafeArea(),
@@ -514,6 +526,7 @@ class _SoundsContent extends StatelessWidget {
     required this.playingProgress,
     required this.playingProgressValue,
     required this.onPreview,
+    required this.onPreviewUnavailable,
     required this.onOpenMore,
   });
 
@@ -522,6 +535,7 @@ class _SoundsContent extends StatelessWidget {
   final Stream<double>? playingProgress;
   final double playingProgressValue;
   final ValueChanged<SavedSound> onPreview;
+  final VoidCallback onPreviewUnavailable;
   final _OpenMore onOpenMore;
 
   @override
@@ -538,6 +552,7 @@ class _SoundsContent extends StatelessWidget {
           playingProgress: playingProgress,
           playingProgressValue: playingProgressValue,
           onPreview: onPreview,
+          onPreviewUnavailable: onPreviewUnavailable,
           onOpenMore: onOpenMore,
         );
       },
@@ -794,6 +809,7 @@ class _SavedSoundsSection extends ConsumerWidget {
     required this.playingProgress,
     required this.playingProgressValue,
     required this.onPreview,
+    required this.onPreviewUnavailable,
     required this.onOpenMore,
   });
 
@@ -803,6 +819,10 @@ class _SavedSoundsSection extends ConsumerWidget {
   final Stream<double>? playingProgress;
   final double playingProgressValue;
   final ValueChanged<SavedSound> onPreview;
+
+  /// Called when the lookup marks the previewing sound as one that can no
+  /// longer be used, so the preview started before it answered stops.
+  final VoidCallback onPreviewUnavailable;
   final _OpenMore onOpenMore;
 
   @override
@@ -811,16 +831,29 @@ class _SavedSoundsSection extends ConsumerWidget {
     final hashtags =
         state.sounds.expand((sound) => sound.personalHashtags).toSet().toList()
           ..sort();
-    final sourcesLookup = ref.watch(
-      savedSoundSourcesProvider(
-        SoundSourceReferences(state.sounds.map((sound) => sound.audio)),
-      ),
+    final sourcesProvider = savedSoundSourcesProvider(
+      SoundSourceReferences(state.sounds.map((sound) => sound.audio)),
     );
+    final sourcesLookup = ref.watch(sourcesProvider);
     // Nothing to go on while the lookup runs or when it failed: rows then
     // keep the frame stored with them, and none is marked gone.
     final sourceCovers = sourcesLookup.hasError ? null : sourcesLookup.value;
     // Whose own sounds stay usable follows account changes, as in the picker.
     final viewer = ref.watch(currentAccountIdProvider);
+    ref.listen(sourcesProvider, (_, next) {
+      final playing = playingSoundId;
+      if (playing == null || next.hasError) return;
+      for (final sound in state.sounds) {
+        if (sound.id == playing &&
+            SoundCover.cannotBeReused(
+              sound.audio,
+              next.value,
+              viewer: viewer,
+            )) {
+          onPreviewUnavailable();
+        }
+      }
+    });
     return SliverMainAxisGroup(
       slivers: [
         if (hashtags.isNotEmpty)
