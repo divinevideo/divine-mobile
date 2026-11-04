@@ -3467,12 +3467,18 @@ void main() {
           sharedPreferences: preferences,
           currentPubkey: () => _pubkey(1),
           signer: () => dismissalSigner,
-          signEvent: ({required kind, required content, required tags}) async =>
-              _event(
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => _event(
                 id: _eventId(127),
                 pubkey: _pubkey(4),
                 kind: kind,
                 content: content,
+                createdAt: createdAt ?? 1000,
                 tags: tags,
               ),
         );
@@ -3564,13 +3570,19 @@ void main() {
             currentPubkey: () => owner,
             signer: () => dismissalSigner,
             signEvent:
-                ({required kind, required content, required tags}) async {
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async {
                   return signedEvent = _event(
                     id: _eventId(124),
                     pubkey: owner,
                     kind: kind,
                     tags: tags,
                     content: content,
+                    createdAt: createdAt ?? 1000,
                   );
                 },
           );
@@ -3607,6 +3619,192 @@ void main() {
           verifyNever(() => nostrClient.publishEventAwaitOk(any()));
         },
       );
+    });
+
+    group('profile badge replacement ordering', () {
+      final firstCoordinate = '30009:${_pubkey(2)}:first';
+      final remoteCoordinate = '30009:${_pubkey(2)}:remote';
+      final nextCoordinate = '30009:${_pubkey(2)}:next';
+      late int now;
+      late List<Event> remote;
+      late List<Event> attempts;
+
+      BadgeAwardViewData award(String coordinate, int id) => BadgeAwardViewData(
+        award: Nip58BadgeParser.parseAward(
+          _awardEvent(
+            id: _eventId(id),
+            issuerPubkey: _pubkey(2),
+            definitionCoordinate: coordinate,
+            recipients: [_pubkey(1)],
+          ),
+        )!,
+      );
+
+      setUp(() {
+        now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        remote = [];
+        attempts = [];
+        repository = BadgeRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: preferences,
+          currentPubkey: () => _pubkey(1),
+          signer: () => dismissalSigner,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async {
+                final event = _event(
+                  id: 'f' * 64,
+                  pubkey: _pubkey(1),
+                  kind: kind,
+                  content: content,
+                  tags: tags,
+                  createdAt: createdAt ?? now,
+                );
+                attempts.add(event);
+                return event;
+              },
+        );
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (events: remote, timedOut: false, noRelays: false),
+        );
+      });
+
+      test(
+        'keeps the canonical lower-id relay winner in the same second',
+        () async {
+          await repository.acceptAward(award(firstCoordinate, 130));
+          remote = [
+            _profileBadgesEvent(
+              id: '0' * 64,
+              pubkey: _pubkey(1),
+              createdAt: attempts.single.createdAt,
+              tags: [
+                ['a', firstCoordinate],
+                ['e', _eventId(130)],
+                ['a', remoteCoordinate],
+                ['e', _eventId(131)],
+              ],
+            ),
+          ];
+
+          await repository.acceptAward(award(nextCoordinate, 132));
+
+          expect(attempts.last.tags, [
+            ['a', firstCoordinate],
+            ['e', _eventId(130)],
+            ['a', remoteCoordinate],
+            ['e', _eventId(131)],
+            ['a', nextCoordinate],
+            ['e', _eventId(132)],
+          ]);
+        },
+      );
+
+      test(
+        'signs strictly after a relay revision within the clock budget',
+        () async {
+          remote = [
+            _profileBadgesEvent(
+              id: _eventId(133),
+              pubkey: _pubkey(1),
+              createdAt: now + 10,
+              tags: [],
+            ),
+          ];
+
+          await repository.acceptAward(award(nextCoordinate, 132));
+
+          expect(attempts.single.createdAt, now + 11);
+        },
+      );
+
+      test('refuses a signer that changes the reserved timestamp', () async {
+        repository = BadgeRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: preferences,
+          currentPubkey: () => _pubkey(1),
+          signer: () => dismissalSigner,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => _event(
+                id: _eventId(135),
+                pubkey: _pubkey(1),
+                kind: kind,
+                content: content,
+                tags: tags,
+                createdAt: now,
+              ),
+        );
+        remote = [
+          _profileBadgesEvent(
+            id: _eventId(136),
+            pubkey: _pubkey(1),
+            createdAt: now + 10,
+            tags: [],
+          ),
+        ];
+
+        await expectLater(
+          repository.acceptAward(award(nextCoordinate, 132)),
+          throwsStateError,
+        );
+
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test('a retry is later than an unconfirmed signed attempt', () async {
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer(
+          (call) async => _rejectedPublishOutcome(
+            call.positionalArguments.single as Event,
+          ),
+        );
+        await expectLater(
+          repository.acceptAward(award(firstCoordinate, 130)),
+          throwsA(isA<BadgePublishException>()),
+        );
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer(
+          (call) async => _acceptedPublishOutcome(
+            call.positionalArguments.single as Event,
+          ),
+        );
+
+        await repository.acceptAward(award(firstCoordinate, 130));
+
+        expect(attempts.last.createdAt, greaterThan(attempts.first.createdAt));
+      });
+
+      test('refuses a source beyond the bounded future clock window', () async {
+        remote = [
+          _profileBadgesEvent(
+            id: _eventId(134),
+            pubkey: _pubkey(1),
+            createdAt: now + 3600,
+            tags: [],
+          ),
+        ];
+
+        await expectLater(
+          repository.acceptAward(award(nextCoordinate, 132)),
+          throwsStateError,
+        );
+
+        expect(attempts, isEmpty);
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
     });
 
     test('acceptAward publishes a kind 10008 profile badges event', () async {
@@ -3898,6 +4096,7 @@ void main() {
               pubkey: _pubkey(1),
               kind: kind,
               content: content,
+              createdAt: createdAt ?? 1000,
               tags: tags,
             ),
       );
@@ -4856,6 +5055,7 @@ void main() {
               kind: kind,
               tags: tags,
               content: content,
+              createdAt: createdAt ?? 1000,
             ),
       );
       final award = _awardEvent(
@@ -5187,20 +5387,21 @@ void main() {
       test('a genuinely newer list from another device still wins', () async {
         _stubQueries(nostrClient, {
           'awarded': [award],
+        });
+        await repository.acceptAward(
+          BadgeAwardViewData(award: Nip58BadgeParser.parseAward(award)!),
+        );
+        _stubQueries(nostrClient, {
+          'awarded': [award],
           'profileCurrent:${_pubkey(1)}': [
             _profileBadgesEvent(
               id: _eventId(72),
               pubkey: _pubkey(1),
               tags: const [],
-              // The signer stamps the published event with createdAt 1000.
-              createdAt: 4000,
+              createdAt: lastSignedEvent()!.createdAt + 1,
             ),
           ],
         });
-
-        await repository.acceptAward(
-          BadgeAwardViewData(award: Nip58BadgeParser.parseAward(award)!),
-        );
 
         expect(
           (await repository.loadAwardedBadges()).single.isAccepted,

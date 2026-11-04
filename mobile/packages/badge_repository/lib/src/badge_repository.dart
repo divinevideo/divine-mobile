@@ -391,6 +391,8 @@ class BadgeRepository {
   final BadgeEventSigner _signEvent;
   final BadgeDismissalSync _dismissalSync;
   Future<void>? _profileBadgeWriteTail;
+  final _profileBadgeAttemptedAt = <String, int>{};
+  static const _profileBadgeFutureBudgetSeconds = 60;
 
   /// Null leaves awards unfiltered, which is what an anonymous or test
   /// repository wants — there is no blocklist to consult.
@@ -2133,15 +2135,10 @@ class BadgeRepository {
   ) {
     final published = _publishedProfileBadges;
     if (published == null || published.pubkey != pubkey) return fromRelays;
-    // `>=` rather than `>`: `created_at` has one-second resolution, so an
-    // accept and an undo in the same second tie, and the newest-wins sort
-    // would fall through to comparing event ids — which would hand the
-    // decision to a coin flip instead of to the write that just happened.
-    if (fromRelays != null &&
-        fromRelays.event.createdAt > published.badges.event.createdAt) {
-      return fromRelays;
-    }
-    return published.badges;
+    return _newestParsedProfileBadges([
+      published.badges.event,
+      if (fromRelays != null) fromRelays.event,
+    ]);
   }
 
   Future<Nip58BadgeDefinition?> _loadDefinition(String coordinate) async {
@@ -2222,6 +2219,21 @@ class BadgeRepository {
     return Nip58BadgeParser.parseAward(sorted.first);
   }
 
+  int _nextProfileBadgeTimestamp(String owner, Nip58ProfileBadges? source) {
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    var timestamp = now;
+    final latest = source?.event.createdAt;
+    if (latest != null && latest >= timestamp) timestamp = latest + 1;
+    final attempted = _profileBadgeAttemptedAt[owner];
+    if (attempted != null && attempted >= timestamp) timestamp = attempted + 1;
+    if (timestamp > now + _profileBadgeFutureBudgetSeconds) {
+      throw StateError('Profile badge timestamp exceeds the clock window');
+    }
+    // Reserve before signing: a send whose ACK is lost may already be live.
+    _profileBadgeAttemptedAt[owner] = timestamp;
+    return timestamp;
+  }
+
   Future<void> _publishProfileBadges(
     List<Nip58ProfileBadgeRef> refs, {
     required Nip58ProfileBadges? source,
@@ -2273,6 +2285,7 @@ class BadgeRepository {
       tags: tags,
       content: source?.event.content ?? '',
       expectedPubkey: owner,
+      createdAt: _nextProfileBadgeTimestamp(owner, source),
     );
 
     final published = Nip58BadgeParser.parseProfileBadges(event);
@@ -2295,6 +2308,7 @@ class BadgeRepository {
     int? createdAt,
     String content = '',
     String? expectedPubkey,
+    int? createdAt,
   }) async {
     if (expectedPubkey != null) _ensureCurrentPubkey(expectedPubkey);
     final event = await _signEvent(
@@ -2318,6 +2332,9 @@ class BadgeRepository {
       if (event.pubkey != expectedPubkey) {
         throw StateError('Profile badges were signed by a different account');
       }
+    }
+    if (createdAt != null && event.createdAt != createdAt) {
+      throw StateError('Profile badges were signed with a different timestamp');
     }
     final outcome = await _nostrClient.publishEventAwaitOk(event);
     if (outcome.failed) {
