@@ -403,7 +403,7 @@ class SoundsRepository {
   /// and uncredited ([AudioEvent.isAutoSharedOriginal]) follows the rest
   /// unless another account has used it in a video.
   ///
-  /// For lists that show such sounds rather than leave them out
+  /// How [searchSounds] lists such sounds rather than leave them out
   /// ([withoutUnusedOriginals]), so that the sounds their publishers named
   /// or credited come first. Costs one relay query when [sounds] holds any.
   /// When that lookup cannot tell, as [withoutUnusedOriginals] describes,
