@@ -961,6 +961,34 @@ void main() {
       expect(row!.isDeleted, isTrue);
     });
 
+    test('pages deletions past a relay that caps each answer', () async {
+      final messages = [
+        for (var i = 1; i <= 5; i++)
+          nip04At(
+            createdAt: windowStart - 7200 - 100 * i,
+            content: 'retract me $i',
+          ),
+      ];
+      final deletions = [
+        for (final message in messages)
+          nip04DeletionAt(
+            createdAt: message.createdAt + 3600,
+            target: message.id,
+          ),
+      ];
+      final relay = _Relay([inWindow, ...messages, ...deletions])..cap = 2;
+
+      await openInbox(relay);
+
+      for (final message in messages) {
+        final row = await DirectMessagesDao(
+          db,
+        ).getMessageById(message.id, ownerPubkey: _owner);
+        expect(row, isNotNull, reason: message.id);
+        expect(row!.isDeleted, isTrue, reason: message.id);
+      }
+    });
+
     test('applies a read marker stranded below the window', () async {
       final cursor = inWindow.createdAt + 600;
       final marker = await readMarkerAt(
