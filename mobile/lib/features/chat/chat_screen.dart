@@ -358,8 +358,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                                   : null,
                               onDiscardDraft:
                                   state.retiredPendingIds.contains(message.id)
-                                  ? () => unawaited(
+                                  ? () => runDetached(
                                       cubit.discardPendingDraft(message.id),
+                                      'discard retired room draft',
+                                      logName: 'ChatScreen',
+                                      category: LogCategory.ui,
                                     )
                                   : null,
                               // Your own messages, sent or not, are not
@@ -368,7 +371,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                                   ref.watch(concordReportsProvider) == null ||
                                       message.author == state.account
                                   ? null
-                                  : () => unawaited(_report(message)),
+                                  : () => runDetached(
+                                      _report(message),
+                                      'report room message',
+                                      logName: 'ChatScreen',
+                                      category: LogCategory.ui,
+                                    ),
                               onRetry: () => runDetached(
                                 cubit.retry(message.id),
                                 'retry room message',

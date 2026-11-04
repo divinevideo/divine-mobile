@@ -189,6 +189,64 @@ void main() {
         );
       },
     );
+    testWidgets('a failed draft discard is logged, not thrown', (
+      tester,
+    ) async {
+      final cubit = _ChatCubit();
+      final author = '33' * 32;
+      final message = ChatMessage(
+        id: '44' * 32,
+        channelId: 'general',
+        author: author,
+        body: 'Earlier message',
+        createdAt: 1,
+      );
+      final state = ChatState(
+        pendingIds: [message.id],
+        retiredPendingIds: [message.id],
+      );
+      when(() => cubit.state).thenReturn(state);
+      whenListen(cubit, const Stream<ChatState>.empty(), initialState: state);
+      when(cubit.visibleMessages).thenReturn([message]);
+      when(
+        () => cubit.discardPendingDraft(message.id),
+      ).thenAnswer((_) async => throw StateError('store unavailable'));
+      await _pumpChatWidget(
+        tester,
+        ProviderScope(
+          overrides: [
+            fetchUserProfileProvider(author).overrideWith(
+              (ref) async => UserProfile(
+                pubkey: author,
+                displayName: 'Synthetic member',
+                rawData: const {},
+                createdAt: DateTime(2026),
+                eventId: '88' * 32,
+              ),
+            ),
+            profileIdentityResolvingProvider(author).overrideWithValue(false),
+            profileVanishedProvider(author).overrideWith((ref) => false),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<ChatCubit>.value(
+              value: cubit,
+              child: const ChatScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.text(
+          lookupAppLocalizations(const Locale('en')).messagesRoomDiscardDraft,
+        ),
+      );
+      await tester.pump();
+      verify(() => cubit.discardPendingDraft(message.id)).called(1);
+      expect(tester.takeException(), isNull);
+    });
     testWidgets('offers Report only on other members’ messages', (
       tester,
     ) async {
