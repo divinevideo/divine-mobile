@@ -191,6 +191,10 @@ class VideoEventPublisher {
 
   /// Publish a video event with custom metadata
   ///
+  /// [creditedSounds] are the audio tracks the edit mixes into the video. The
+  /// credit names them when there are any, and [selectedAudio] otherwise: the
+  /// render mixes the selected sound in only when the timeline has no track.
+  ///
   /// Throws [AudioReuseNotPermittedException] when [selectedAudio] is not
   /// cleared for reuse — see [publishDirectUpload].
   /// Throws [AccountRestrictedPublishException] when an authoritative Divine
@@ -495,9 +499,19 @@ class VideoEventPublisher {
       if (imetaTag == null) return false;
       tags.add(imetaTag);
 
+      // Each sound whose licence asks for credit is credited in the content
+      // and the summary: other clients rarely follow the `e … audio`
+      // reference, and a sound added only in the editor has none. Credits
+      // follow the render, which mixes the selected sound in only when the
+      // timeline has no track.
+      final creditLines = soundCreditLines(
+        creditedSounds.isNotEmpty ? creditedSounds : [?selectedAudio],
+      );
+
       addVideoMetadataTags(
         tags,
         upload: upload,
+        creditLines: creditLines,
         publishedAt: scheduledAt ?? DateTime.now(),
         language: language,
         contentWarning: contentWarning,
@@ -552,14 +566,12 @@ class VideoEventPublisher {
         );
       }
 
-      // Each sound whose licence asks for credit is credited in the content
-      // too: other clients rarely follow the `e … audio` reference, and a
-      // sound added only in the editor has none. The NIP-27 Inspired By
-      // person reference goes last, where readers expect it.
+      // The NIP-27 Inspired By person reference goes last, where readers
+      // expect it.
       final content = withInspiredByContentReference(
         withSoundCreditLines(
           upload.description ?? upload.title ?? '',
-          soundCreditLines([?selectedAudio, ...creditedSounds]),
+          creditLines,
         ),
         inspiredByNpubs,
       );

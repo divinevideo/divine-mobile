@@ -397,12 +397,12 @@ void main() {
           );
         });
 
-        test('credits each sound once, the selected sound first', () async {
+        test('credits each editor track once, in timeline order', () async {
           stubSignAndPublish();
-          final selected = sound(
+          final monkeys = sound(
             licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
           );
-          final track = selected.copyWith(
+          final elevator = monkeys.copyWith(
             id: 'e' * 64,
             title: 'Elevator Music',
             creatorName: 'YellowTree',
@@ -410,19 +410,68 @@ void main() {
 
           final result = await publisher.publishDirectUpload(
             createUpload().copyWith(description: 'my caption'),
-            selectedAudio: selected,
-            // The selected sound is also a track on the editor's timeline.
-            creditedSounds: [selected, track],
+            creditedSounds: [elevator, monkeys, elevator],
           );
 
           expect(result, isTrue);
           expect(
             soundCreditsFromContent(capturedContent).map((c) => c.work),
             equals([
-              'Monkeys Spinning Monkeys – Kevin MacLeod (incompetech.com)',
               'Elevator Music – YellowTree',
+              'Monkeys Spinning Monkeys – Kevin MacLeod (incompetech.com)',
             ]),
           );
+        });
+
+        test(
+          'does not credit a selected sound the timeline left out',
+          () async {
+            // The render mixes the selected sound in only when the timeline has
+            // no track, so a timeline track replaces it.
+            stubSignAndPublish();
+            final selected = sound(
+              licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+            );
+
+            final result = await publisher.publishDirectUpload(
+              createUpload().copyWith(description: 'my caption'),
+              selectedAudio: selected,
+              creditedSounds: [
+                selected.copyWith(
+                  id: 'e' * 64,
+                  title: 'Elevator Music',
+                  creatorName: 'YellowTree',
+                ),
+              ],
+            );
+
+            expect(result, isTrue);
+            expect(
+              soundCreditsFromContent(capturedContent).map((c) => c.work),
+              equals(['Elevator Music – YellowTree']),
+            );
+          },
+        );
+
+        test('credits the sound in the summary too', () async {
+          // The Bluesky bridge shows the summary instead of the content.
+          stubSignAndPublish();
+          final npub = NostrKeyUtils.encodePubKey(inspiredPersonPubkey);
+
+          final result = await publisher.publishDirectUpload(
+            createUpload().copyWith(description: 'my caption'),
+            inspiredByNpubs: [npub],
+            selectedAudio: sound(
+              licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+            ),
+          );
+
+          expect(result, isTrue);
+          expect(
+            capturedTags.where((tag) => tag.first == 'summary').single[1],
+            equals(stripInspiredByAttribution(capturedContent)),
+          );
+          expect(soundCreditsFromContent(capturedContent), hasLength(1));
         });
       });
 

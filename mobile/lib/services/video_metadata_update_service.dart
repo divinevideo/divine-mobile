@@ -376,9 +376,16 @@ class VideoMetadataUpdateService {
       // videos.
       tags.add(['title', editorState.title.trim()]);
 
+      // Credited like the content, for clients that show the summary.
       final summary = editorState.description.trim();
       if (summary.isNotEmpty) {
-        tags.add(['summary', summary]);
+        tags.add([
+          'summary',
+          withSoundCreditLines(
+            summary,
+            originalVideo.soundCredits.map((credit) => credit.line),
+          ),
+        ]);
       }
 
       for (final hashtag in HashtagExtractor.normalizeVideoHashtags(

@@ -61,21 +61,7 @@ class _SharedAudioSection extends ConsumerWidget {
 
     return audioAsync.when(
       data: (audio) {
-        if (audio == null) {
-          if (video.soundCredits.isNotEmpty) {
-            return _ContentCreditSection(credits: video.soundCredits);
-          }
-          // The shared audio event couldn't be resolved (e.g. the source
-          // video isn't reachable by id). This video still reused a sound, so
-          // credit the reused sound's original creator rather than the
-          // reusing user.
-          return _OriginalSoundSection(
-            video: video,
-            reusedCreatorPubkey: AudioAttributionCredit.reusedCreatorPubkeyFor(
-              video,
-            ),
-          );
-        }
+        if (audio == null) return _UnresolvedSharedAudioSection(video: video);
         return MetadataSection(
           label: context.l10n.metadataSoundsLabel,
           child: Column(
@@ -86,7 +72,7 @@ class _SharedAudioSection extends ConsumerWidget {
               // Further credited sounds, such as music added in the editor,
               // have no event of their own.
               for (final credit in video.soundCredits)
-                if (credit.line != soundCreditLine(audio))
+                if (!credit.credits(audio))
                   Padding(
                     padding: const EdgeInsets.only(top: 16),
                     child: _ContentCreditRow(credit: credit),
@@ -102,13 +88,35 @@ class _SharedAudioSection extends ConsumerWidget {
         label: context.l10n.metadataSoundsLabel,
         child: const _SoundSkeleton(),
       ),
-      error: (error, stack) => video.soundCredits.isNotEmpty
-          ? _ContentCreditSection(credits: video.soundCredits)
-          : _OriginalSoundSection(
-              video: video,
-              reusedCreatorPubkey:
-                  AudioAttributionCredit.reusedCreatorPubkeyFor(video),
-            ),
+      error: (error, stack) => _UnresolvedSharedAudioSection(video: video),
+    );
+  }
+}
+
+/// Section for a video whose referenced sound event couldn't be resolved, for
+/// example when the source video isn't reachable by id.
+///
+/// A reused sound is credited to its original creator rather than the reusing
+/// user, above the credit lines of the video's content, which can be for other
+/// sounds, such as music added in the editor. Without a reused creator, the
+/// credit lines stand alone.
+class _UnresolvedSharedAudioSection extends StatelessWidget {
+  const _UnresolvedSharedAudioSection({required this.video});
+
+  final VideoEvent video;
+
+  @override
+  Widget build(BuildContext context) {
+    final reusedCreatorPubkey = AudioAttributionCredit.reusedCreatorPubkeyFor(
+      video,
+    );
+    if (reusedCreatorPubkey == null && video.soundCredits.isNotEmpty) {
+      return _ContentCreditSection(credits: video.soundCredits);
+    }
+    return _OriginalSoundSection(
+      video: video,
+      reusedCreatorPubkey: reusedCreatorPubkey,
+      credits: video.soundCredits,
     );
   }
 }
@@ -193,7 +201,11 @@ class _ContentCreditRow extends StatelessWidget {
 /// [_canReuseSound]. When it may not, the row is display-only credit, so a
 /// creator who left audio sharing off is not silently made reusable.
 class _OriginalSoundSection extends ConsumerWidget {
-  const _OriginalSoundSection({required this.video, this.reusedCreatorPubkey});
+  const _OriginalSoundSection({
+    required this.video,
+    this.reusedCreatorPubkey,
+    this.credits = const [],
+  });
 
   final VideoEvent video;
 
@@ -201,6 +213,9 @@ class _OriginalSoundSection extends ConsumerWidget {
   /// video's inspired-by source) but the shared audio event couldn't be
   /// fetched. This pubkey is credited instead of the reusing user.
   final String? reusedCreatorPubkey;
+
+  /// Credit lines from the video's content, listed below the reused sound.
+  final List<SoundCredit> credits;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -226,6 +241,11 @@ class _OriginalSoundSection extends ConsumerWidget {
                 ? () => _navigateToSoundDetail(context, creatorName)
                 : null,
           ),
+          for (final credit in credits)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: _ContentCreditRow(credit: credit),
+            ),
           if (!video.hasAudioReference &&
               video.addressableId != null &&
               context.read<SoundRequestsCubit?>() != null)

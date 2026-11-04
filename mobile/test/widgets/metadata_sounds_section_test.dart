@@ -448,6 +448,35 @@ void main() {
         expect(find.text('Cool Beat'), findsOneWidget);
         expect(_divineIcon(DivineIconName.waveform), findsOneWidget);
       });
+
+      testWidgets(
+        'does not repeat the referenced sound when its event names it '
+        'differently',
+        (tester) async {
+          // A shipped sound is credited from the app's manifest, but the
+          // video references the event Divine published for it, which can
+          // name its creator and source differently.
+          final published = testAudio.copyWith(
+            creatorName: 'Someone',
+            licenseName: 'CC BY 4.0',
+            licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+          );
+          final video = createVideoWithAudio(
+            content:
+                'Hi\n\n♪ Cool Beat – Someone via Freesound '
+                'https://freesound.org/s/1/, CC BY 4.0 '
+                'https://creativecommons.org/licenses/by/4.0/ (edited)',
+          );
+
+          await tester.pumpWidget(
+            buildTestWidget(video: video, audioOverride: published),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text('Cool Beat'), findsOneWidget);
+          expect(_divineIcon(DivineIconName.waveform), findsOneWidget);
+        },
+      );
     });
 
     group('Original sound', () {
@@ -677,12 +706,12 @@ void main() {
       const reusedCreatorPubkey =
           'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
 
-      VideoEvent reusedVideo() {
+      VideoEvent reusedVideo({String content = 'Reused audio'}) {
         final now = DateTime.now();
         return VideoEvent(
           id: testVideoId,
           pubkey: testPubkey,
-          content: 'Reused audio',
+          content: content,
           videoUrl: 'https://example.com/video.mp4',
           createdAt: now.millisecondsSinceEpoch ~/ 1000,
           timestamp: now,
@@ -725,6 +754,35 @@ void main() {
           );
           // The reusing user's own author name must not be credited.
           expect(find.text('Jake Lara'), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'keeps the source creator above the credits of other sounds',
+        (tester) async {
+          // The credit line is for music added in the editor, not for the
+          // reused sound, so it must not replace the reused sound's creator.
+          final video = reusedVideo(
+            content:
+                'Reused audio\n\n♪ Elevator Music – YellowTree via Freesound, '
+                'CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ '
+                '(edited)',
+          );
+
+          await tester.pumpWidget(
+            buildTestWidget(video: video, resolvesAudio: false),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text('Original sound'), findsOneWidget);
+          expect(
+            find.text(UserProfile.defaultDisplayNameFor(reusedCreatorPubkey)),
+            findsOneWidget,
+          );
+          expect(
+            find.text('Elevator Music – YellowTree via Freesound'),
+            findsOneWidget,
+          );
         },
       );
 

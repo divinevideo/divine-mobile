@@ -104,16 +104,16 @@ provenance. Publishing lives in
 
 ### Sound Credit Line
 
-When a video uses a sound under a licence that asks for attribution (any Creative Commons Attribution licence, `AudioEvent.requiresAttribution`), the app ends the video's `content` with a credit line, after the caption and a blank line. Each such sound gets its own line, the selected sound first and then the editor's audio tracks in timeline order, each sound once:
+When a video uses a sound under a licence that asks for attribution (any Creative Commons Attribution licence, `AudioEvent.requiresAttribution`), the app ends the video's `content` with a credit line, after the caption and a blank line. Each such sound in the video's audio gets its own line, each sound once: the editor's audio tracks in timeline order or, when the timeline has none, the selected sound, the same choice the render makes:
 
 ```
 My caption #fun
 
 ♪ Monkeys Spinning Monkeys – Kevin MacLeod (incompetech.com), CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ (edited)
-♪ Elevator Music – YellowTree via Freesound, CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ (edited)
+♪ Elevator Music – YellowTree via Freesound https://freesound.org/s/123456/, CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ (edited)
 ```
 
-A line names the title, the creator, the licence and its link, and says the sound was changed: the video uses an excerpt mixed into its own audio, which CC BY 4.0 §3(a)(1)(B) asks to indicate. Other clients rarely follow the `["e", <sound event id>, <relay>, "audio"]` reference, so the credit travels in the text every client shows; a sound the app ships, or one added only as an editor track, has no reference at all. The lines are English whatever the poster's language, and come before an Inspired By line, which readers expect last.
+A line names the title, the creator, where the sound is published, the licence and its link, and says the sound was changed: the video uses an excerpt mixed into its own audio, which CC BY 4.0 §3(a)(1)(B) asks to indicate. The poster signs the line without seeing it, so its links come only from sources the app trusts: the source link from the app's sound manifest or the sound proxy (never from a sound's Nostr event, which the `e … audio` reference already points to), over HTTPS, and the licence link only when it points at `creativecommons.org`. Other clients rarely follow the `["e", <sound event id>, <relay>, "audio"]` reference, so the credit travels in the text every client shows; a sound the app ships, or one added only as an editor track, has no reference at all. The lines are English whatever the poster's language, and come before an Inspired By line, which readers expect last. The `summary` tag carries the same lines after the caption, because clients such as the Bluesky bridge show the summary instead of the content.
 
 This is a Divine convention. The app hides the lines from the caption it shows (`VideoEvent.displayContent`) and shows the credits instead: the sound pill shows the referenced sound or, when that is not at hand, the first line, and the About sheet lists every line (`VideoEvent.soundCredits`). The metadata edit flow keeps them: the editor never shows them, and an edit cannot change the sounds. Writer and parser share `mobile/packages/models/lib/src/sound_credit.dart`.
 

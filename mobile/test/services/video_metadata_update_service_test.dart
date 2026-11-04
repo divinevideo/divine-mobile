@@ -787,6 +787,7 @@ void main() {
             '♪ Elevator Music – YellowTree via Freesound, '
             'CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ (edited)';
         String? capturedContent;
+        List<List<String>>? capturedTags;
         when(
           () => mockAuthService.createAndSignEvent(
             kind: any(named: 'kind'),
@@ -796,10 +797,11 @@ void main() {
           ),
         ).thenAnswer((invocation) async {
           capturedContent = invocation.namedArguments[#content] as String;
+          capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
           return Event(
             _ownerPubkey,
             NIP71VideoKinds.addressableShortVideo,
-            invocation.namedArguments[#tags] as List<List<String>>,
+            capturedTags!,
             capturedContent!,
           );
         });
@@ -812,6 +814,11 @@ void main() {
 
         expect(result, isA<VideoUpdateSuccess>());
         expect(capturedContent, equals('New caption\n\n$credit'));
+        // Clients such as the Bluesky bridge show the summary instead.
+        expect(
+          capturedTags!.where((tag) => tag.first == 'summary').single[1],
+          equals('New caption\n\n$credit'),
+        );
       });
 
       test(
