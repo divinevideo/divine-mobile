@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:bip340/bip340.dart' as schnorr;
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:test/test.dart';
@@ -10,18 +12,33 @@ class _Relay implements RelayGateway, RelayHistoryStatus {
   _Relay(this.events);
   final List<Map<String, dynamic>> events;
   final pending = <Future<void>>[];
+  int publications = 0;
+  final filters = <Map<String, dynamic>>[];
   final controllers = <StreamController<Map<String, dynamic>>>[];
   @override
   bool historyLimited = false;
   @override
   Future<void> get historyReady => Future.wait(pending);
   @override
-  Future<void> publish(Map<String, dynamic> event) async =>
-      throw StateError('Read-only bootstrap');
+  Future<void> publish(Map<String, dynamic> event) async {
+    publications++;
+    throw StateError('Read-only bootstrap');
+  }
+
+  void receive(Map<String, dynamic> event) {
+    for (var i = 0; i < filters.length; i++) {
+      if ((filters[i]['authors'] as List).contains(event['pubkey']) &&
+          (filters[i]['kinds'] as List).contains(event['kind'])) {
+        controllers[i].add(event);
+      }
+    }
+  }
+
   @override
   Stream<Map<String, dynamic>> subscribe(Map<String, dynamic> filter) {
     final controller = StreamController<Map<String, dynamic>>();
     controllers.add(controller);
+    filters.add(filter);
     final done = Completer<void>();
     pending.add(done.future);
     scheduleMicrotask(() async {
@@ -42,6 +59,13 @@ class _Relay implements RelayGateway, RelayHistoryStatus {
       await c.close();
     }
   }
+}
+
+class _OutboxCipher implements StreamCipher {
+  @override
+  String open(String p, String k) => throw UnimplementedError();
+  @override
+  String seal(String p, String k) => throw UnimplementedError();
 }
 
 class _DelayedStore extends InMemoryConcordStore {
@@ -276,4 +300,168 @@ void main() {
       await relay.close();
     },
   );
+  group('Retained outbox drafts', () {
+    test(
+      'earlier-epoch pending messages remain recoverable without replay',
+      () async {
+        final lifecycle = readConcordFixture('community-lifecycle.json');
+        final bundleEvent = lifecycle['bundleEvent'] as Map<String, dynamic>;
+        final link = ConcordInviteFragment.decode(
+          Uri.parse(lifecycle['inviteUrl'] as String).fragment,
+        );
+        final secret = '33' * 32;
+        final account = schnorr.getPublicKey(secret);
+        final memberStore = InMemoryConcordStore(account);
+        final outboxStore = InMemoryConcordStore(account);
+        final channel =
+            (((lifecycle['expected'] as Map)['channels'] as List).first
+                    as Map)['id']
+                as String;
+        ConcordCommunitySession membership(_Relay relay) =>
+            ConcordCommunitySession(
+              relay: relay,
+              store: memberStore,
+              linkSigner: bundleEvent['pubkey'] as String,
+              fragment: link,
+              account: account,
+              nowMs: () => 0,
+            );
+        ConcordRepository chat(_Relay relay, ConcordCommunitySession member) =>
+            ConcordRepository(
+              relay: relay,
+              store: outboxStore,
+              cipher: _OutboxCipher(),
+              outboxAuthor: account,
+              canPublish: () => member.canPublish,
+              controlState: () => member.control,
+              historicalOutboxKeys: () => {
+                for (final root in member.heldMembership)
+                  if (root.rootEpoch < member.bundle!.rootEpoch)
+                    publicChannelKey(
+                      root.communityRoot,
+                      channel,
+                      root.rootEpoch,
+                    ).pubkey: (
+                      key: publicChannelKey(
+                        root.communityRoot,
+                        channel,
+                        root.rootEpoch,
+                      ),
+                      epoch: root.rootEpoch,
+                    ),
+              },
+              sealedTransport: SealedChatTransport(
+                relay: relay,
+                signer: (template) async {
+                  final id = computeEventId(
+                    pubkey: account,
+                    createdAt: template['created_at'] as int,
+                    kind: template['kind'] as int,
+                    tags: (template['tags'] as List).cast<List<String>>(),
+                    content: template['content'] as String,
+                  );
+                  return {
+                    ...template,
+                    'pubkey': account,
+                    'id': id,
+                    'sig': schnorr.sign(secret, id, '00' * 32),
+                  };
+                },
+              ),
+            );
+        final firstRelay = _Relay([
+          bundleEvent,
+          ...(lifecycle['controlEvents'] as List).cast<Map<String, dynamic>>(),
+        ]);
+        final firstMember = membership(firstRelay);
+        await firstMember.start();
+        final first = chat(firstRelay, firstMember);
+        final oldKey = publicChannelKey(
+          firstMember.bundle!.communityRoot,
+          channel,
+          0,
+        );
+        await first.startChannel(
+          channelId: channel,
+          epoch: 0,
+          streamSeedHex: oldKey.seedHex,
+          streamPubkey: oldKey.pubkey,
+        );
+        await expectLater(
+          first.sendSealedMessage(
+            channelId: channel,
+            author: account,
+            body: 'Keep this pending draft',
+            createdAt: 1793760000,
+            ms: 0,
+            streamSeedHex: oldKey.seedHex,
+            streamPubkey: oldKey.pubkey,
+          ),
+          throwsStateError,
+        );
+        final originalId = first.pendingIds.single;
+        final stopped = firstMember.changes.firstWhere(
+          (_) => !firstMember.ready,
+        );
+        for (final event in lifecycle['baseRekeyEvents'] as List) {
+          firstRelay.receive(event as Map<String, dynamic>);
+        }
+        await stopped.timeout(const Duration(seconds: 10));
+        await first.close();
+        await firstMember.close();
+        await firstRelay.close();
+        final nextRelay = _Relay([
+          lifecycle['refreshedBundleEvent'] as Map<String, dynamic>,
+          ...(lifecycle['nextEpochControlEvents'] as List)
+              .cast<Map<String, dynamic>>(),
+        ]);
+        final nextMember = membership(nextRelay);
+        await nextMember.start();
+        final next = chat(nextRelay, nextMember);
+        final currentKey = publicChannelKey(
+          nextMember.bundle!.communityRoot,
+          channel,
+          1,
+        );
+        await next.startChannel(
+          channelId: channel,
+          epoch: 1,
+          streamSeedHex: currentKey.seedHex,
+          streamPubkey: currentKey.pubkey,
+        );
+        expect(next.pendingIds, [originalId]);
+        expect(next.pendingRequiresDraftRestore(originalId), isTrue);
+        final draft = next.timeline(now: 1793761700).messages.single;
+        expect(draft.body, 'Keep this pending draft');
+        await expectLater(
+          next.retryPending(messageId: originalId),
+          throwsStateError,
+        );
+        expect(nextRelay.publications, 0);
+        await expectLater(
+          next.sendSealedMessage(
+            channelId: channel,
+            author: account,
+            body: draft.body,
+            createdAt: 1793760001,
+            ms: 0,
+            epoch: 1,
+            streamSeedHex: currentKey.seedHex,
+            streamPubkey: currentKey.pubkey,
+          ),
+          throwsStateError,
+        );
+        expect(next.pendingIds.length, 2);
+        final newId = next.pendingIds.singleWhere((id) => id != originalId);
+        final saved =
+            jsonDecode((await outboxStore.get('sealed:$newId'))!) as Map;
+        expect((saved['wrap'] as Map)['pubkey'], currentKey.pubkey);
+        await next.discardPendingDraft(originalId);
+        expect(next.pendingIds, [newId]);
+        await next.close();
+        await nextMember.close();
+        await nextRelay.close();
+      },
+    );
+  });
 }

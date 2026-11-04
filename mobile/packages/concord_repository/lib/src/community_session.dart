@@ -44,6 +44,8 @@ class ConcordCommunitySession {
       _pending == 0 &&
       (relay is! RelaySynchronizationStatus ||
           (relay as RelaySynchronizationStatus).synchronized);
+  Iterable<ConcordInviteBundle> get heldMembership =>
+      List.unmodifiable(_heldRoots.values);
   Stream<void> get changes => _changes.stream;
   bool get ready =>
       _loaded &&

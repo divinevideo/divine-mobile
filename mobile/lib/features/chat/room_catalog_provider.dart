@@ -48,10 +48,22 @@ class ConcordRoomCatalog {
           session!.bundle!.rootEpoch,
         )
       : pocStreamKeyFor(channel);
+  Map<String, ConcordOutboxReadKey> outboxReadKeys(String channel) {
+    final keys = <String, ConcordOutboxReadKey>{};
+    for (final held
+        in session?.heldMembership ?? const <ConcordInviteBundle>[]) {
+      if (held.rootEpoch >= epoch) continue;
+      final key = publicChannelKey(held.communityRoot, channel, held.rootEpoch);
+      keys[key.pubkey] = (key: key, epoch: held.rootEpoch);
+    }
+    return Map.unmodifiable(keys);
+  }
+
   int get epoch => session?.bundle?.rootEpoch ?? 0;
+  // Rotation changes carrier keys, not the ownership of durable drafts.
   String get scope => session == null
       ? concordRelayUrl
-      : '$concordRelayUrl/${session!.bundle?.communityId}/$epoch';
+      : '$concordRelayUrl/${session!.bundle?.communityId}';
 }
 
 final StreamProvider<ConcordRoomCatalog> concordRoomCatalogProvider =

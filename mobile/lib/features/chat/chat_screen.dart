@@ -338,6 +338,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                                 message.id,
                               ),
                               sending: state.sending,
+                              onRestoreDraft:
+                                  state.retiredPendingIds.contains(message.id)
+                                  ? () {
+                                      final text = _controller.text.isEmpty
+                                          ? message.body
+                                          : '${_controller.text}\n${message.body}';
+                                      _controller.value = TextEditingValue(
+                                        text: text,
+                                        selection: TextSelection.collapsed(
+                                          offset: text.length,
+                                        ),
+                                      );
+                                    }
+                                  : null,
+                              onDiscardDraft:
+                                  state.retiredPendingIds.contains(message.id)
+                                  ? () => unawaited(
+                                      cubit.discardPendingDraft(message.id),
+                                    )
+                                  : null,
                               onReport:
                                   ref.watch(concordReportsProvider) == null
                                   ? null

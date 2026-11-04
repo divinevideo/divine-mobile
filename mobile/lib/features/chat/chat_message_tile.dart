@@ -26,6 +26,8 @@ class ChatMessageTile extends ConsumerWidget {
     required this.sending,
     required this.onRetry,
     this.onReport,
+    this.onRestoreDraft,
+    this.onDiscardDraft,
     super.key,
   });
 
@@ -35,6 +37,8 @@ class ChatMessageTile extends ConsumerWidget {
   final bool sending;
   final VoidCallback onRetry;
   final VoidCallback? onReport;
+  final VoidCallback? onRestoreDraft;
+  final VoidCallback? onDiscardDraft;
 
   void _openProfile(BuildContext context) {
     FocusScope.of(context).unfocus();
@@ -161,6 +165,8 @@ class ChatMessageTile extends ConsumerWidget {
                       Text(
                         sending
                             ? context.l10n.authSending
+                            : onRestoreDraft != null
+                            ? context.l10n.messagesRoomRetiredDraft
                             : context.l10n.dmStatusFailed,
                         style: VineTheme.bodySmallFont(
                           color: context.vineColors.onSurfaceMuted,
@@ -168,8 +174,17 @@ class ChatMessageTile extends ConsumerWidget {
                       ),
                       if (!sending)
                         DivineButton(
-                          onPressed: onRetry,
-                          label: context.l10n.dmSendFailedRetry,
+                          onPressed: onRestoreDraft ?? onRetry,
+                          label: onRestoreDraft != null
+                              ? context.l10n.messagesRoomRestoreDraft
+                              : context.l10n.dmSendFailedRetry,
+                          type: DivineButtonType.link,
+                          size: DivineButtonSize.small,
+                        ),
+                      if (!sending && onDiscardDraft != null)
+                        DivineButton(
+                          onPressed: onDiscardDraft,
+                          label: context.l10n.messagesRoomDiscardDraft,
                           type: DivineButtonType.link,
                           size: DivineButtonSize.small,
                         ),

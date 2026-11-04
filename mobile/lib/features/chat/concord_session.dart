@@ -55,6 +55,7 @@ ConcordRepository buildConcordRepository({
   NostrSigner? Function()? signerForSend,
   ConcordControlState? Function()? controlState,
   bool Function()? canPublish,
+  Map<String, ConcordOutboxReadKey> Function()? historicalOutboxKeys,
 }) {
   final relay = WebSocketRelayGateway(concordRelayUrl);
   final sealed = signer != null && pubkey != null
@@ -92,6 +93,8 @@ ConcordRepository buildConcordRepository({
     cipher: _UnavailableCipher(),
     controlState: controlState,
     canPublish: canPublish,
+    historicalOutboxKeys: historicalOutboxKeys,
+    outboxAuthor: pubkey,
     sealedTransport: sealed,
   );
 }

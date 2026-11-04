@@ -54,6 +54,7 @@ class ChatState {
     this.sendFailed = false,
     this.loadFailed = false,
     this.pendingIds = const [],
+    this.retiredPendingIds = const [],
   });
   final String account;
   final bool isTestCommunity;
@@ -68,6 +69,7 @@ class ChatState {
   final bool sendFailed;
   final bool loadFailed;
   final List<String> pendingIds;
+  final List<String> retiredPendingIds;
 
   ChatState copyWith({
     List<ChatMessage>? messages,
@@ -81,6 +83,7 @@ class ChatState {
     bool? sendFailed,
     bool? loadFailed,
     List<String>? pendingIds,
+    List<String>? retiredPendingIds,
   }) => ChatState(
     account: account,
     isTestCommunity: isTestCommunity,
@@ -95,6 +98,7 @@ class ChatState {
     sendFailed: sendFailed ?? this.sendFailed,
     loadFailed: loadFailed ?? this.loadFailed,
     pendingIds: pendingIds ?? this.pendingIds,
+    retiredPendingIds: retiredPendingIds ?? this.retiredPendingIds,
   );
 }
 
@@ -208,6 +212,9 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
         messages: t.messages,
         reactions: t.reactions,
         pendingIds: pending,
+        retiredPendingIds: pending
+            .where(_repo.pendingRequiresDraftRestore)
+            .toList(),
         sendFailed:
             state.sendFailed &&
             !(state.pendingIds.isNotEmpty && pending.isEmpty),
@@ -300,6 +307,11 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     }
     refresh(now: now);
     return _repo.pendingIds.any((id) => !before.contains(id));
+  }
+
+  Future<void> discardPendingDraft(String id) async {
+    await _repo.discardPendingDraft(id);
+    refresh(now: DateTime.now().millisecondsSinceEpoch ~/ 1000);
   }
 
   Future<void> retry(String id) async {

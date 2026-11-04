@@ -73,6 +73,8 @@ final chatMentionRepositoryProvider = Provider<ChatMentionRepository?>((ref) {
         ),
       );
       room.controlState = () => catalog.session?.control;
+      final historicalKeys = catalog.outboxReadKeys(channel);
+      room.historicalOutboxKeys = () => historicalKeys;
       room.canPublish = () =>
           catalog.canSend &&
           catalog.communities.any((c) => c.channels.contains(channel));

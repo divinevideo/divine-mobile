@@ -8,7 +8,10 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
-class _Repo extends Mock implements ConcordRepository {}
+class _Repo extends Mock implements ConcordRepository {
+  @override
+  bool pendingRequiresDraftRestore(String id) => false;
+}
 
 class _Transport extends Mock implements SealedChatTransport {}
 

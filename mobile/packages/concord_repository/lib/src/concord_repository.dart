@@ -75,6 +75,9 @@ class InMemoryConcordStore implements AccountScopedStore {
   }
 }
 
+/// Held stream material used only to recover this account's pending messages.
+typedef ConcordOutboxReadKey = ({GroupKey key, int epoch});
+
 class ConcordRepository {
   ConcordRepository({
     required this.relay,
@@ -84,6 +87,8 @@ class ConcordRepository {
     this.historyLimit = 200,
     this.controlState,
     this.canPublish,
+    this.historicalOutboxKeys,
+    this.outboxAuthor,
   }) : assert(historyLimit > 0, 'historyLimit must be positive');
 
   /// Recent delivered wraps retained per room. Unsent records are kept.
@@ -91,6 +96,8 @@ class ConcordRepository {
   final RelayGateway relay;
   ConcordControlState? Function()? controlState;
   bool Function()? canPublish;
+  Map<String, ConcordOutboxReadKey> Function()? historicalOutboxKeys;
+  final String? outboxAuthor;
   final AccountScopedStore store;
   final StreamCipher cipher;
 
@@ -337,7 +344,32 @@ class ConcordRepository {
 
   Future<void> _openRecord(Map<String, dynamic> wrap) async {
     try {
-      final rumor = await _open(wrap);
+      Map<String, dynamic> rumor;
+      if (wrap['pubkey'] == _streamPubkey) {
+        rumor = await _open(wrap);
+      } else {
+        final retained = _sealed.values
+            .where(
+              (r) =>
+                  r['pending'] == true &&
+                  (r['wrap'] as Map)['id'] == wrap['id'],
+            )
+            .firstOrNull;
+        final held = historicalOutboxKeys?.call()[wrap['pubkey']];
+        if (retained == null || held == null || outboxAuthor == null) return;
+        final opened = await openSealedIncoming(
+          wrap: wrap,
+          expectedChannelId: _channelId!,
+          expectedEpoch: held.epoch,
+          streamSeedHex: held.key.seedHex,
+          streamPubkey: held.key.pubkey,
+        );
+        rumor = opened['rumor'] as Map<String, dynamic>;
+        if (rumor['pubkey'] != outboxAuthor ||
+            (rumor['kind'] != 9 && rumor['kind'] != 1111)) {
+          return;
+        }
+      }
       if (!_closed) _applyRumor(rumor);
     } on FormatException {
       // Invalid local records never become timeline state.
@@ -509,6 +541,13 @@ class ConcordRepository {
     ].where((id) => messageId == null || id == messageId)) {
       final sealed = _sealed[id];
       if (sealed != null) {
+        // A retained draft survives rotation, but its old carrier must never
+        // become a send in the refreshed room merely because retry was tapped.
+        if (pendingRequiresDraftRestore(id)) {
+          throw StateError(
+            'Restore this earlier-epoch draft before sending again',
+          );
+        }
         try {
           if (canPublish?.call() == false) {
             throw StateError('Community authority is unavailable');
@@ -721,6 +760,17 @@ class ConcordRepository {
     );
   }
 
+  bool pendingRequiresDraftRestore(String id) =>
+      _channelId != null &&
+      _sealed[id]?['pending'] == true &&
+      (_sealed[id]!['wrap'] as Map)['pubkey'] != _streamPubkey;
+
+  Future<void> discardPendingDraft(String id) => _serial(() async {
+    if (_closed || _sealed[id]?['pending'] != true) return;
+    final retained = {..._sealed}..remove(id);
+    await _saveSealed(retained);
+    _notify();
+  });
   void refreshModeration() => _notify();
   void ingestControl(ControlEvent c) => _controls.add(c);
   FoldedThread timeline({required int now}) => foldControls(

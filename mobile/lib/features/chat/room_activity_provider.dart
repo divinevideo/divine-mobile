@@ -1,4 +1,3 @@
-import 'dart:async';
 // ABOUTME: Shares each account's verified Concord sessions between list and room.
 // ABOUTME: Tears down relay listeners when authentication or chat access changes.
 
@@ -9,6 +8,7 @@ import 'package:openvine/features/chat/concord_store.dart';
 import 'package:openvine/features/chat/room_catalog_provider.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
@@ -44,6 +44,7 @@ final Provider<RoomActivityRepository?> roomActivityRepositoryProvider =
                   scope: '${catalog.scope}/$channel',
                 );
                 final key = catalog.stream(channel);
+                final historicalKeys = catalog.outboxReadKeys(channel);
                 return RoomActivityChannel(
                   channelId: catalog.channelId(channel),
                   epoch: catalog.epoch,
@@ -52,6 +53,7 @@ final Provider<RoomActivityRepository?> roomActivityRepositoryProvider =
                     signer: signer,
                     store: store,
                     controlState: () => catalog.session?.control,
+                    historicalOutboxKeys: () => historicalKeys,
                     canPublish: () =>
                         catalog.canSend &&
                         catalog.communities.any(
@@ -73,10 +75,17 @@ final Provider<RoomActivityRepository?> roomActivityRepositoryProvider =
       final authorityChanges = catalog.session?.changes.listen(
         (_) => activity.refreshModeration(),
       );
+      final close = ref.read(accountStateWriteBarrierProvider).register(
+        account,
+        () async {
+          final closing = activity.close();
+          await authorityChanges?.cancel();
+          await closing;
+        },
+      );
       ref.onDispose(() {
-        if (authorityChanges != null) unawaited(authorityChanges.cancel());
         runDetached(
-          activity.close(),
+          close(),
           'close room activity',
           logName: 'RoomActivityRepository',
           category: LogCategory.system,

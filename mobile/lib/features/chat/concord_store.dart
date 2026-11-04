@@ -1,5 +1,5 @@
 // ABOUTME: Stores encrypted Concord wraps and outbox state in the app database.
-// ABOUTME: Isolates each account and relay/channel scope without storing keys.
+// ABOUTME: Isolates account and relay/channel scopes; never stores identity signing keys.
 
 import 'package:concord_repository/concord_repository.dart';
 import 'package:db_client/db_client.dart';

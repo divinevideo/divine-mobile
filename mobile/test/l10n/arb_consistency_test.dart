@@ -615,6 +615,9 @@ void main() {
 const _knownUntranslatedDebt = <String>{
   // Real public community Rooms privacy notice.
   'messagesPublicRoomsDisclosure',
+  'messagesRoomRetiredDraft',
+  'messagesRoomRestoreDraft',
+  'messagesRoomDiscardDraft',
   // Native challenge Lists presentation; awaiting the translation pass.
   'challengeOrganizerTime',
   'challengeLocalDeadline', 'challengeEnter', 'challengeEnterVideo',

@@ -1,8 +1,10 @@
+import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:openvine/features/chat/concord_session.dart';
+import 'package:openvine/features/chat/room_catalog_provider.dart';
 
 class _Signer extends Fake implements NostrSigner {
   _Signer(this.failure);
@@ -11,7 +13,32 @@ class _Signer extends Fake implements NostrSigner {
   Future<Event?> signEvent(Event event) async => throw StateError(failure);
 }
 
+class _Membership extends Fake implements ConcordCommunitySession {
+  @override
+  ConcordInviteBundle? bundle;
+}
+
 void main() {
+  test('real channel persistence scope stays stable across root epochs', () {
+    final owner = '11' * 32;
+    final salt = '22' * 32;
+    ConcordInviteBundle bundle(int epoch, String root) =>
+        ConcordInviteBundle.fromJson({
+          'community_id': deriveCommunityId(owner, salt),
+          'owner': owner,
+          'owner_salt': salt,
+          'community_root': root,
+          'root_epoch': epoch,
+          'channels': <dynamic>[],
+          'relays': <String>[],
+        }, nowMs: 0);
+    final membership = _Membership()..bundle = bundle(0, '33' * 32);
+    final catalog = ConcordRoomCatalog.real(membership);
+    final oldScope = catalog.scope;
+    membership.bundle = bundle(1, '44' * 32);
+    expect(catalog.scope, oldScope);
+    expect(catalog.epoch, 1);
+  });
   group('buildConcordRepository', () {
     test(
       'shared room uses the current signer after same-account recovery',

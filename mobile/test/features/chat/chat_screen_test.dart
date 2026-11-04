@@ -26,6 +26,79 @@ Future<void> _pumpChatWidget(WidgetTester tester, Widget widget) =>
 
 void main() {
   group(ChatScreen, () {
+    testWidgets('retired pending messages restore as drafts without retrying', (
+      tester,
+    ) async {
+      final cubit = _ChatCubit();
+      final author = '33' * 32;
+      final message = ChatMessage(
+        id: '44' * 32,
+        channelId: 'general',
+        author: author,
+        body: 'Earlier message',
+        createdAt: 1,
+      );
+      final state = ChatState(
+        pendingIds: [message.id],
+        retiredPendingIds: [message.id],
+      );
+      when(() => cubit.state).thenReturn(state);
+      whenListen(cubit, const Stream<ChatState>.empty(), initialState: state);
+      when(cubit.visibleMessages).thenReturn([message]);
+      when(() => cubit.discardPendingDraft(message.id))
+          .thenAnswer((_) async {});
+      await _pumpChatWidget(
+        tester,
+        ProviderScope(
+          overrides: [
+            fetchUserProfileProvider(author).overrideWith(
+              (ref) async => UserProfile(
+                pubkey: author,
+                displayName: 'Synthetic member',
+                rawData: const {},
+                createdAt: DateTime(2026),
+                eventId: '88' * 32,
+              ),
+            ),
+            profileIdentityResolvingProvider(author).overrideWithValue(false),
+            profileVanishedProvider(author).overrideWith((ref) => false),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<ChatCubit>.value(
+              value: cubit,
+              child: const ChatScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'Current draft');
+      await tester.tap(find.text('Restore draft'));
+      await tester.pump();
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'Current draft\nEarlier message',
+      );
+      verifyNever(() => cubit.retry(any()));
+      verifyNever(
+        () => cubit.send(
+          communityId: any(named: 'communityId'),
+          channelId: any(named: 'channelId'),
+          author: any(named: 'author'),
+          body: any(named: 'body'),
+          nowMilliseconds: any(named: 'nowMilliseconds'),
+        ),
+      );
+      await tester.tap(find.text('Discard draft'));
+      await tester.pump();
+      verify(() => cubit.discardPendingDraft(message.id)).called(1);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'Current draft\nEarlier message',
+      );
+    });
     testWidgets(
       'reports the selected real room message with signed HTTP authentication',
       (tester) async {

@@ -15643,4 +15643,14 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get messagesPublicRoomsDisclosure =>
       'These rooms are public. Anyone with access can read your messages.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

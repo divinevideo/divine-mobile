@@ -26168,6 +26168,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'These rooms are public. Anyone with access can read your messages.'**
   String get messagesPublicRoomsDisclosure;
+
+  /// Status for an unconfirmed message encrypted with an earlier room epoch. It cannot be retried as its old carrier.
+  ///
+  /// In en, this message translates to:
+  /// **'This older message wasn’t confirmed. Restore it as a draft to send again.'**
+  String get messagesRoomRetiredDraft;
+
+  /// Copies a retained earlier-epoch message into the current room composer without publishing it.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore draft'**
+  String get messagesRoomRestoreDraft;
+
+  /// Deletes only this account's retained unconfirmed local room draft.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard draft'**
+  String get messagesRoomDiscardDraft;
 }
 
 class _AppLocalizationsDelegate

@@ -31,7 +31,10 @@ root epochs and accepted-head floors across refreshed invitations. Publication
 pauses while authority is processing or the relay is catching up after reconnect.
 Dissolution closes the community; a base-rotation signal requires reopening Rooms
 with refreshed invite material. The chat timeline subscribes to the current root
-epoch; displaying chat history from retained prior epochs is not implemented.
+epoch; displaying delivered chat history from retained prior epochs is not implemented.
+Unconfirmed outbox messages retain their stable account/channel scope and can be
+restored explicitly as drafts after rotation; old signed carriers are never retried
+under the refreshed membership.
 
 Source tests cover interoperability, authority rejection, cached moderation,
 rotation/reopen, signer races and signed reports. Signed-device and production
