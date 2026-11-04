@@ -114,6 +114,16 @@ void main() {
       });
     }
 
+    /// The reuse lookup, which waits for every relay to settle before an
+    /// answer counts.
+    Future<({List<Event> events, bool timedOut, bool noRelays})> reuseLookup(
+      List<Filter> filters,
+    ) => mockNostrClient.queryEventsDetailed(
+      filters,
+      requireAllRelaysSettled: true,
+      acceptRelayClosedWhenOthersAnswered: true,
+    );
+
     int unresolvedWarningCount(String eventId) => LogCaptureService()
         .getRecentLogs(minLevel: LogLevel.warning)
         .where(
@@ -340,9 +350,7 @@ void main() {
       setUp(() {
         answerTagQuery(const []);
         when(
-          () => mockNostrClient.queryEventsDetailed(
-            any(that: isNot(isTagQuery)),
-          ),
+          () => reuseLookup(any()),
         ).thenAnswer(
           (_) async => (events: <Event>[], timedOut: false, noRelays: false),
         );
@@ -524,9 +532,7 @@ void main() {
           ),
         ]);
         when(
-          () => mockNostrClient.queryEventsDetailed(
-            any(that: isNot(isTagQuery)),
-          ),
+          () => reuseLookup(any()),
         ).thenThrow(StateError('client disposed'));
 
         await expectLater(repository.searchSounds('crowd'), throwsStateError);
@@ -575,9 +581,7 @@ void main() {
             equals([testEventId1, testEventId3]),
           );
           verifyNever(
-            () => mockNostrClient.queryEventsDetailed(
-              any(that: isNot(isTagQuery)),
-            ),
+            () => reuseLookup(any()),
           );
         }
 
@@ -1033,7 +1037,7 @@ void main() {
 
       group('withoutUnusedOriginals', () {
         test('keeps an unnamed sound another video uses', () async {
-          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          when(() => reuseLookup(any())).thenAnswer(
             (_) async => answered([
               video(
                 id: testVideoEventId,
@@ -1058,7 +1062,7 @@ void main() {
         });
 
         test('drops an unnamed sound only its source video uses', () async {
-          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          when(() => reuseLookup(any())).thenAnswer(
             (_) async => answered([
               video(
                 id: testVideoEventId,
@@ -1079,7 +1083,7 @@ void main() {
 
         test('asks only about the unnamed sounds, in one query', () async {
           when(
-            () => mockNostrClient.queryEventsDetailed(any()),
+            () => reuseLookup(any()),
           ).thenAnswer((_) async => answered([]));
 
           await repository.withoutUnusedOriginals([
@@ -1089,7 +1093,7 @@ void main() {
 
           final filters =
               verify(
-                    () => mockNostrClient.queryEventsDetailed(captureAny()),
+                    () => reuseLookup(captureAny()),
                   ).captured.single
                   as List<Filter>;
           expect(filters.single.kinds, [34236]);
@@ -1100,12 +1104,12 @@ void main() {
           final named = [sound(testEventId1, title: 'Named beat')];
 
           expect(await repository.withoutUnusedOriginals(named), named);
-          verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
+          verifyNever(() => reuseLookup(any()));
         });
 
         test('keeps every sound when the lookup fails', () async {
           when(
-            () => mockNostrClient.queryEventsDetailed(any()),
+            () => reuseLookup(any()),
           ).thenThrow(Exception('relay down'));
           final sounds = [sound(testEventId1)];
 
@@ -1114,7 +1118,7 @@ void main() {
 
         test('keeps every sound when the lookup runs out of time', () async {
           // The video reusing the sound had not arrived yet.
-          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          when(() => reuseLookup(any())).thenAnswer(
             (_) async => (events: <Event>[], timedOut: true, noRelays: false),
           );
           final sounds = [sound(testEventId1)];
@@ -1123,7 +1127,7 @@ void main() {
         });
 
         test('keeps every sound when no relay was asked', () async {
-          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          when(() => reuseLookup(any())).thenAnswer(
             (_) async => (events: <Event>[], timedOut: false, noRelays: true),
           );
           final sounds = [sound(testEventId1)];
@@ -1133,7 +1137,7 @@ void main() {
 
         test('keeps every sound when the lookup fills its limit', () async {
           // A full answer may have stopped before the video reusing it.
-          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          when(() => reuseLookup(any())).thenAnswer(
             (_) async => answered([
               for (
                 var i = 0;
@@ -1154,7 +1158,7 @@ void main() {
         });
 
         test('drops an unnamed sound only its creator uses', () async {
-          when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          when(() => reuseLookup(any())).thenAnswer(
             (_) async => answered([
               video(
                 id: testVideoEventId,
@@ -1181,7 +1185,7 @@ void main() {
         test(
           'drops a sound titled after its creator that only its creator used',
           () async {
-            when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+            when(() => reuseLookup(any())).thenAnswer(
               (_) async => answered([
                 video(
                   id: testVideoEventId,
@@ -1209,7 +1213,7 @@ void main() {
           ];
 
           expect(await repository.withoutUnusedOriginals(credited), credited);
-          verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
+          verifyNever(() => reuseLookup(any()));
         });
       });
 
@@ -1217,7 +1221,7 @@ void main() {
         test(
           'moves unnamed sounds no other account used after the rest',
           () async {
-            when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+            when(() => reuseLookup(any())).thenAnswer(
               (_) async => answered([
                 video(
                   id: testVideoEventId,
@@ -1252,7 +1256,7 @@ void main() {
 
         test('moves every unnamed sound last when the lookup fails', () async {
           when(
-            () => mockNostrClient.queryEventsDetailed(any()),
+            () => reuseLookup(any()),
           ).thenThrow(Exception('relay down'));
 
           final ordered = await repository.withUnusedOriginalsLast([
@@ -1270,7 +1274,7 @@ void main() {
           ];
 
           expect(await repository.withUnusedOriginalsLast(named), named);
-          verifyNever(() => mockNostrClient.queryEventsDetailed(any()));
+          verifyNever(() => reuseLookup(any()));
         });
       });
     });

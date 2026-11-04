@@ -380,10 +380,12 @@ class SoundsRepository {
   /// [sounds].
   ///
   /// Costs one relay query when [sounds] holds any, for the videos that
-  /// reference them. When that lookup fails, times out, reaches no relay or
-  /// fills its [maxBatchedUsageCountScan] limit, and so may have missed the
-  /// videos that reuse one, the sounds come back unchanged, since a list with
-  /// them beats no list.
+  /// reference them. When that lookup throws an [Exception], does not finish
+  /// on every relay (one timed out, stayed silent, refused it or dropped),
+  /// reaches no relay or fills its [maxBatchedUsageCountScan] limit, and so
+  /// may have missed the videos that reuse one, the sounds come back
+  /// unchanged, since a list with them beats no list. Anything that is not an
+  /// [Exception] propagates.
   Future<List<AudioEvent>> withoutUnusedOriginals(
     List<AudioEvent> sounds,
   ) async {
@@ -440,20 +442,27 @@ class SoundsRepository {
   };
 
   /// The ids of [originals] that a video by an account other than the
-  /// sound's own uses, or `null` when the lookup failed, timed out, reached
-  /// no relay or filled its limit, and so may have missed some.
+  /// sound's own uses, or `null` when the lookup failed, did not finish on
+  /// every relay, reached no relay or filled its limit, and so may have
+  /// missed some.
   Future<Set<String>?> _usedByOtherAccounts(
     Map<String, AudioEvent> originals,
   ) async {
     final ({List<Event> events, bool timedOut, bool noRelays}) read;
     try {
-      read = await _nostrClient.queryEventsDetailed([
-        Filter(
-          kinds: const [NIP71VideoKinds.addressableShortVideo],
-          e: originals.keys.toList(),
-          limit: maxBatchedUsageCountScan,
-        ),
-      ]);
+      read = await _nostrClient.queryEventsDetailed(
+        [
+          Filter(
+            kinds: const [NIP71VideoKinds.addressableShortVideo],
+            e: originals.keys.toList(),
+            limit: maxBatchedUsageCountScan,
+          ),
+        ],
+        // A sound is dropped for what the answer lacks, so an answer missing
+        // a silent, refusing or dropped relay's part has to read as unfinished.
+        requireAllRelaysSettled: true,
+        acceptRelayClosedWhenOthersAnswered: true,
+      );
     } on Exception catch (e, stackTrace) {
       Log.warning(
         'Reuse lookup for ${originals.length} unnamed sounds failed: $e',
@@ -474,7 +483,7 @@ class SoundsRepository {
     }
     if (read.timedOut) {
       Log.warning(
-        'Reuse lookup for ${originals.length} unnamed sounds timed out',
+        'Reuse lookup for ${originals.length} unnamed sounds did not finish',
         name: 'SoundsRepository',
         category: LogCategory.api,
       );
