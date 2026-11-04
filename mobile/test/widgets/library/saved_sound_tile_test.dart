@@ -105,7 +105,13 @@ void main() {
 
         expect(find.text('Morning inspiration'), findsOneWidget);
         expect(find.textContaining('00:06', findRichText: true), findsOne);
-        expect(find.textContaining('By Alice', findRichText: true), findsOne);
+        expect(
+          find.textContaining(
+            _l10n.soundCreatorBy('Alice'),
+            findRichText: true,
+          ),
+          findsOne,
+        );
         expect(find.text('#ideas #funny'), findsOneWidget);
         expect(find.byType(VineCachedImage), findsOneWidget);
       });
@@ -137,6 +143,46 @@ void main() {
         await tester.pumpWidget(_tile(sound));
 
         expect(find.text(_l10n.savedSoundFallbackTitle), findsOneWidget);
+      });
+
+      Color? titleColor(WidgetTester tester) =>
+          tester.widget<Text>(find.text('Morning inspiration')).style?.color;
+
+      testWidgets('the previewing title in green', (tester) async {
+        await tester.pumpWidget(_tile(_richSound()));
+        expect(titleColor(tester), VineTheme.darkColors.onSurface);
+
+        await tester.pumpWidget(_tile(_richSound(), isPreviewing: true));
+
+        expect(titleColor(tester), VineTheme.darkColors.accentPositive);
+      });
+
+      testWidgets('an unavailable title muted, even while previewing', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          _tile(_richSound(), cannotBeReused: true, isPreviewing: true),
+        );
+
+        expect(titleColor(tester), VineTheme.darkColors.onSurfaceVariant);
+      });
+
+      testWidgets('the playing bars beside the menu button', (tester) async {
+        Widget? trailing() =>
+            tester.widget<ListTile>(find.byType(ListTile)).trailing;
+
+        await tester.pumpWidget(_tile(_richSound()));
+        expect(trailing(), isA<DivineIconButton>());
+
+        await tester.pumpWidget(
+          _tile(_richSound(), isPreviewing: true, isPlaying: true),
+        );
+
+        final row = trailing();
+        expect(row, isA<Row>());
+        final children = (row! as Row).children;
+        expect(children, hasLength(2));
+        expect(children.last.key, const Key('saved_sound_more'));
       });
     });
 
@@ -227,7 +273,13 @@ void main() {
           );
 
           expect(find.text(reason), findsOneWidget);
-          expect(find.textContaining('By Alice'), findsNothing);
+          expect(
+            find.textContaining(
+              _l10n.soundCreatorBy('Alice'),
+              findRichText: true,
+            ),
+            findsNothing,
+          );
 
           await tester.tap(find.text('Morning inspiration'));
           // Removing it is still the user's call.
@@ -248,15 +300,23 @@ void main() {
         expect(find.text(_l10n.savedSoundReuseUnavailable), findsNothing);
       });
 
-      testWidgets('shows no progress even while previewing', (tester) async {
+      testWidgets('shows no waveform even while previewing', (tester) async {
         await tester.pumpWidget(
           _tile(_richSound(), isMissingFile: true, isPreviewing: true),
         );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('saved_sound_waveform')), findsNothing);
+      });
+
+      testWidgets('shows no progress line even while previewing', (
+        tester,
+      ) async {
         await tester.pumpWidget(
           _tile(_plainSound(), isMissingFile: true, isPreviewing: true),
         );
+        await tester.pumpAndSettle();
 
-        expect(find.byKey(const Key('saved_sound_waveform')), findsNothing);
         expect(find.byKey(const Key('saved_sound_progress')), findsNothing);
       });
     });
@@ -291,6 +351,9 @@ void main() {
         expect(_waveformProgress(tester), 0);
 
         position.add(0.42);
+        // One pump delivers the position, the next draws it; the playing
+        // bars' ticker must not be what schedules that frame.
+        await tester.pump();
         await tester.pump();
 
         expect(_waveformProgress(tester), 0.42);

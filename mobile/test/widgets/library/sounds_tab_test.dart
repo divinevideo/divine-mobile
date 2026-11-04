@@ -273,7 +273,7 @@ void main() {
 
     testWidgets('says which saved sound lost its audio file', (tester) async {
       // The real bloc probes the filesystem here, so nothing but the wiring
-      // in _SavedSoundsSection decides which card carries the notice.
+      // in _SavedSoundsSection decides which row carries the notice.
       final service = SavedSoundsService(sharedPreferences);
       await service.saveSound(
         _sound(
@@ -341,6 +341,52 @@ void main() {
       await tester.tap(find.text('Gone Sound'));
       await tester.pumpAndSettle();
       expect(audio.loadedUrls, isEmpty);
+    });
+
+    group('a sound that cannot be used', () {
+      const goneVideo = '34236:creator:gone';
+
+      for (final (name, sound, exists) in [
+        (
+          'whose source video is gone',
+          _sound(
+            id: 'gone',
+            title: 'Gone Sound',
+          ).copyWith(sourceVideoReference: goneVideo),
+          null,
+        ),
+        (
+          'whose file is gone',
+          _sound(
+            id: 'gone',
+            title: 'Gone Sound',
+          ).copyWith(url: '/imports/never-written.m4a'),
+          (String _) => false,
+        ),
+      ]) {
+        testWidgets('$name can still be removed', (tester) async {
+          await SavedSoundsService(sharedPreferences).saveSound(sound);
+
+          await pumpSoundsTab(
+            tester,
+            localFileExists: exists,
+            overrides: [
+              savedSoundSourcesProvider.overrideWith(
+                (ref, sources) async => {goneVideo: null},
+              ),
+            ],
+          );
+          final tile = _tile(tester, 'Gone Sound');
+          expect(tile.cannotBeReused || tile.isMissingFile, isTrue);
+
+          await _chooseAction(tester, _l10n.savedSoundRemoveAction);
+          expect(find.text(_l10n.savedSoundRemoveConfirmTitle), findsOneWidget);
+          await tester.tap(find.text(_l10n.soundsRemoveSavedSound));
+          await tester.pumpAndSettle();
+
+          expect(find.text('Gone Sound'), findsNothing);
+        });
+      }
     });
 
     testWidgets('keeps the last lookup answer while the next one runs', (
@@ -759,7 +805,7 @@ void main() {
       expect(find.text('add sound page'), findsOneWidget);
     });
 
-    testWidgets('filters rich cards by personal hashtag', (tester) async {
+    testWidgets('filters saved sounds by personal hashtag', (tester) async {
       final service = SavedSoundsService(sharedPreferences);
       await service.saveSavedSound(
         SavedSound(
