@@ -11,6 +11,7 @@ import 'package:models/models.dart'
     show LocalizedText, StickerData, StickerPackData;
 import 'package:openvine/blocs/video_editor/sticker/video_editor_sticker_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_kind_row.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_sheet.dart';
 
@@ -46,6 +47,9 @@ void main() {
     setUp(() {
       mockBloc = MockVideoEditorStickerBloc();
     });
+
+    // A slider's emoji loads the sticker emoji font, which outlives the test.
+    tearDown(resetStickerEmojiFontForTesting);
 
     Widget buildSubject({
       VideoEditorStickerState? state,

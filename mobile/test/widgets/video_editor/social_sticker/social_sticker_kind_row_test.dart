@@ -6,12 +6,16 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_sheet_controls.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_kind_row.dart';
 
 void main() {
   group(InteractiveStickerKindRow, () {
     final l10n = lookupAppLocalizations(const Locale('en'));
+
+    // A slider's emoji loads the sticker emoji font, which outlives the test.
+    tearDown(resetStickerEmojiFontForTesting);
 
     Future<List<Object?>> pump(
       WidgetTester tester, {

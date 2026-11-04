@@ -19,6 +19,8 @@ void main() {
     late int requests;
 
     setUp(() {
+      // Another suite in the same isolate may have loaded or failed it already.
+      resetStickerEmojiFontForTesting();
       directory = Directory.systemTemp.createTempSync('sticker_emoji_font');
       registered = [];
       requests = 0;
@@ -75,6 +77,7 @@ void main() {
   });
 
   group('loadStickerEmojiFontFor', () {
+    setUp(resetStickerEmojiFontForTesting);
     tearDown(resetStickerEmojiFontForTesting);
 
     test('loads the font only for a text with an emoji', () async {
