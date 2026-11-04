@@ -105,6 +105,7 @@ void main() {
       AudioEvent? audioOverride,
       String? viewerPubkey,
       Object? audioError,
+      bool resolvesAudio = true,
       ValueNotifier<int>? rebuilds,
       bool currentPolicyAllowsReuse = true,
     }) {
@@ -112,7 +113,7 @@ void main() {
         overrides: [
           soundByIdProvider(testAudioEventId).overrideWith((ref) async {
             if (audioError != null) throw audioError;
-            return audioOverride ?? testAudio;
+            return resolvesAudio ? audioOverride ?? testAudio : null;
           }),
           authServiceProvider.overrideWithValue(
             _mockAuth(viewerPubkey: viewerPubkey),
@@ -392,6 +393,40 @@ void main() {
           findsOneWidget,
         );
       });
+
+      for (final (name, unavailable) in [
+        ('is missing', (resolvesAudio: false, audioError: null)),
+        (
+          'fails to load',
+          (resolvesAudio: true, audioError: StateError('relay unavailable')),
+        ),
+      ]) {
+        testWidgets('credits from the content line when the sound $name', (
+          tester,
+        ) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final video = createVideoWithAudio(
+            content:
+                'Hi\n\n♪ Elevator Music – YellowTree via Freesound, CC BY 4.0 '
+                'https://creativecommons.org/licenses/by/4.0/ (edited)',
+          );
+
+          await tester.pumpWidget(
+            buildTestWidget(
+              video: video,
+              resolvesAudio: unavailable.resolvesAudio,
+              audioError: unavailable.audioError,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text('Elevator Music – YellowTree via Freesound'),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.metadataOriginalSound), findsNothing);
+        });
+      }
 
       testWidgets("does not repeat the referenced sound's own credit", (
         tester,
