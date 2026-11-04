@@ -60,13 +60,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     final savedDraft = drafts[draftKey];
     _composer = ChatComposerCubit(
       initialState: savedDraft,
-      send: (body) => chat.send(
-        communityId: chat.state.selectedCommunityId,
-        channelId: chat.state.selectedChannelId,
-        author: '',
-        body: body,
-        nowMilliseconds: DateTime.now().millisecondsSinceEpoch,
-      ),
+      send: (body) async {
+        final sentText = _composer.state.text;
+        final accepted = await chat.send(
+          communityId: chat.state.selectedCommunityId,
+          channelId: chat.state.selectedChannelId,
+          author: '',
+          body: body,
+          nowMilliseconds: DateTime.now().millisecondsSinceEpoch,
+        );
+        // A send that finishes after this screen is gone can't clear the
+        // composer, so drop the sent draft here unless it was edited since.
+        if (accepted && drafts[draftKey]?.text == sentText) {
+          drafts.remove(draftKey);
+        }
+        return accepted;
+      },
     );
     _controller.value = TextEditingValue(
       text: _composer.state.text,

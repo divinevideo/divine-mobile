@@ -455,6 +455,67 @@ void main() {
       expect(find.text('next draft'), findsOneWidget);
       expect(tester.testTextInput.isVisible, isTrue);
     });
+    testWidgets('a send that finishes after leaving the room is not restored', (
+      tester,
+    ) async {
+      final cubit = _ChatCubit();
+      whenListen(
+        cubit,
+        const Stream<ChatState>.empty(),
+        initialState: const ChatState(),
+      );
+      when(cubit.visibleMessages).thenReturn([]);
+      final sent = Completer<bool>();
+      final next = Completer<bool>();
+      final sends = [sent, next];
+      when(
+        () => cubit.send(
+          communityId: any(named: 'communityId'),
+          channelId: any(named: 'channelId'),
+          author: any(named: 'author'),
+          body: any(named: 'body'),
+          nowMilliseconds: any(named: 'nowMilliseconds'),
+        ),
+      ).thenAnswer((_) => sends.removeAt(0).future);
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      Future<void> pumpRoom({required bool open}) => tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: open
+                ? BlocProvider<ChatCubit>.value(
+                    value: cubit,
+                    child: const ChatScreen(),
+                  )
+                : const SizedBox(),
+          ),
+        ),
+      );
+      await pumpRoom(open: true);
+      await tester.enterText(find.byType(TextField), 'first message');
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      await pumpRoom(open: false);
+      sent.complete(true);
+      await tester.pump();
+      await pumpRoom(open: true);
+      expect(find.text('first message'), findsNothing);
+
+      // A draft typed while the send was in flight is still the person's.
+      await tester.enterText(find.byType(TextField), 'second message');
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'third message');
+      await tester.pump();
+      await pumpRoom(open: false);
+      next.complete(true);
+      await tester.pump();
+      await pumpRoom(open: true);
+      expect(find.text('third message'), findsOneWidget);
+    });
     for (final width in [390.0, 1400.0]) {
       for (final theme in [VineTheme.theme, VineTheme.lightTheme]) {
         testWidgets(
