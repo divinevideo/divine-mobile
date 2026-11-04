@@ -46,9 +46,10 @@ enum ReportDelivery {
   /// channel such as the moderation DM.
   refused,
 
-  /// The report was refused before anything was saved, because its moderation
-  /// DM is larger than a NIP-17 gift wrap can carry. Unlike [refused] this is
-  /// a failure the reporter can act on, by sending less (#7340).
+  /// The report was refused before anything was saved, because the message
+  /// the reporter included makes its moderation DM larger than a NIP-17 gift
+  /// wrap can carry. Unlike [refused] this is a failure the reporter can act
+  /// on, by leaving the message out (#7340).
   tooLong,
 }
 

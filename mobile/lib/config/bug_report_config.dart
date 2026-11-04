@@ -162,13 +162,13 @@ class BugReportConfig {
   /// device info, steps to reproduce, etc. 32KB leaves headroom.
   static const int maxLogSummaryLength = 32 * 1024;
 
-  /// Sensitive data patterns to sanitize
   /// Nostr private keys: bech32 `nsec` and NIP-49 `ncryptsec`.
   static final List<RegExp> nostrPrivateKeyPatterns = [
     RegExp('nsec1[a-z0-9]{58}', caseSensitive: false),
     RegExp('ncryptsec1[a-z0-9]+', caseSensitive: false),
   ];
 
+  /// Sensitive data patterns to sanitize
   static final List<RegExp> sensitivePatterns = [
     ...nostrPrivateKeyPatterns,
     // Note: we do not redact 64-char hex strings because that would also

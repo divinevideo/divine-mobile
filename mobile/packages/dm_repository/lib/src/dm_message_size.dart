@@ -1,5 +1,6 @@
 // ABOUTME: Size ceiling for a NIP-17 rumor, derived from the NIP-44 u16 length
-// ABOUTME: prefix and the double encryption NIP-17 performs.
+// ABOUTME: prefix and the double encryption NIP-17 performs, and how to measure
+// ABOUTME: a rumor against it.
 
 import 'dart:convert';
 
