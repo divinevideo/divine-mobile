@@ -30,6 +30,7 @@ void main() {
     testWidgets('retired pending messages restore as drafts without retrying', (
       tester,
     ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
       final cubit = _ChatCubit();
       final author = '33' * 32;
       final message = ChatMessage(
@@ -76,7 +77,7 @@ void main() {
       );
       await tester.pump();
       await tester.enterText(find.byType(TextField), 'Current draft');
-      await tester.tap(find.text('Restore draft'));
+      await tester.tap(find.text(l10n.messagesRoomRestoreDraft));
       await tester.pump();
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller!.text,
@@ -92,7 +93,7 @@ void main() {
           nowMilliseconds: any(named: 'nowMilliseconds'),
         ),
       );
-      await tester.tap(find.text('Discard draft'));
+      await tester.tap(find.text(l10n.messagesRoomDiscardDraft));
       await tester.pump();
       verify(() => cubit.discardPendingDraft(message.id)).called(1);
       expect(
@@ -103,6 +104,7 @@ void main() {
     testWidgets(
       'reports the selected real room message with signed HTTP authentication',
       (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
         final cubit = _ChatCubit();
         final community = '11' * 32;
         final channel = '22' * 32;
@@ -173,9 +175,9 @@ void main() {
           ),
         );
         await tester.pump();
-        await tester.tap(find.text('Report'));
+        await tester.tap(find.text(l10n.reportSubmit));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Spam or Unwanted Content'));
+        await tester.tap(find.text(l10n.reportReasonSpam));
         await tester.pumpAndSettle();
         expect(submitted!['target'] as Map, {
           'communityId': community,
@@ -184,7 +186,7 @@ void main() {
         });
         expect(submitted!['reason'], 'NS-spam');
         expect(
-          find.text('Thank you for helping keep Divine safe.'),
+          find.text(l10n.reportReceivedThankYou),
           findsOneWidget,
         );
       },
