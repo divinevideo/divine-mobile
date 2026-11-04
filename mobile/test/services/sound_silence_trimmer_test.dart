@@ -40,8 +40,8 @@ Duration _seconds(double seconds) =>
 
 class _FakeProVideoEditor extends ProVideoEditor {
   WaveformData? waveform;
-  Exception? waveformError;
-  Exception? extractError;
+  Object? waveformError;
+  Object? extractError;
   Duration? writtenDuration;
   final extractions = <(String, AudioExtractConfigs)>[];
 
@@ -199,6 +199,75 @@ void main() {
         expect((result as AudibleSound).path, source.path);
       });
 
+      test('publishes uncut when the measurement throws an error', () async {
+        editor.waveformError = ArgumentError(
+          'Failed to generate waveform data',
+        );
+
+        final result = await trim();
+
+        expect(result, isA<AudibleSound>());
+        expect((result as AudibleSound).path, source.path);
+      });
+
+      test(
+        'publishes uncut and leaves no copy when the cut throws an error',
+        () async {
+          editor
+            ..waveform = _waveform(10, loud: [(2, 5)])
+            ..extractError = ArgumentError('extract');
+
+          final result = await trim() as AudibleSound;
+
+          expect(result.path, source.path);
+          expect(result.isTrimmed, isFalse);
+          expect(File(editor.extractions.single.$1).existsSync(), isFalse);
+        },
+      );
+
+      test('publishes uncut when there is nowhere to write the cut', () async {
+        editor.waveform = _waveform(10, loud: [(2, 5)]);
+        trimmer = SoundSilenceTrimmer(
+          editor: editor,
+          temporaryDirectory: () async =>
+              throw const FileSystemException('no temporary directory'),
+        );
+
+        final result = await trim() as AudibleSound;
+
+        expect(result.path, source.path);
+        expect(result.isTrimmed, isFalse);
+        expect(editor.extractions, isEmpty);
+      });
+
+      test('publishes uncut when the measurement has no block rate', () async {
+        editor.waveform = WaveformData(
+          leftChannel: Float32List(400),
+          sampleRate: 48000,
+          duration: _seconds(2),
+          samplesPerSecond: 0,
+        );
+
+        final result = await trim();
+
+        expect(result, isA<AudibleSound>());
+        expect((result as AudibleSound).path, source.path);
+      });
+
+      test('publishes uncut when the measurement has no length', () async {
+        editor.waveform = WaveformData(
+          leftChannel: Float32List(400),
+          sampleRate: 48000,
+          duration: Duration.zero,
+          samplesPerSecond: _blocksPerSecond,
+        );
+
+        final result = await trim();
+
+        expect(result, isA<AudibleSound>());
+        expect((result as AudibleSound).path, source.path);
+      });
+
       test('publishes uncut when the measurement comes back empty', () async {
         editor.waveform = WaveformData(
           leftChannel: Float32List(0),
@@ -248,6 +317,14 @@ void main() {
 
       test('is false when the sound cannot be measured', () async {
         editor.waveformError = PlatformException(code: 'decode');
+
+        expect(await trimmer.isSilent(source.path), isFalse);
+      });
+
+      test('is false when the measurement throws an error', () async {
+        editor.waveformError = ArgumentError(
+          'Failed to generate waveform data',
+        );
 
         expect(await trimmer.isSilent(source.path), isFalse);
       });
