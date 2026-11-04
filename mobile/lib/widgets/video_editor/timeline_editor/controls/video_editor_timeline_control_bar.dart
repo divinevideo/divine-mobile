@@ -12,8 +12,7 @@ import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_edi
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_multi_select_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_overlay_controls.dart';
 
-/// The context-specific controls [TimelineControlsBar] can show, in the order
-/// it picks them when more than one mode is active.
+/// The context-specific controls [TimelineControlsBar] can show.
 enum _TimelineControls { marker, multiSelect, layerMultiSelect, clip, overlay }
 
 /// Shows context-specific controls at the bottom of the timeline based on
