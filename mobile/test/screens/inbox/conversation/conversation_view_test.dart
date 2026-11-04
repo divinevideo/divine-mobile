@@ -546,6 +546,49 @@ void main() {
         expect(find.text(l10n.reportIncludeMessageTitle), findsOneWidget);
       });
 
+      // A file message's content is the encrypted file's URL, not words the
+      // sender wrote, so there is nothing readable to include.
+      testWidgets('reporting a received file message offers nothing to '
+          'include', (tester) async {
+        const fileUrl = 'https://media.example/encrypted';
+        useTallSurface(tester);
+        await tester.pumpWidget(
+          buildSubject(
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              messages: [
+                DmMessage(
+                  id: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+                  conversationId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+                  senderPubkey: otherPubkey,
+                  content: fileUrl,
+                  createdAt: now.millisecondsSinceEpoch ~/ 1000,
+                  giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+                  messageKind: 15,
+                  fileMetadata: DmFileMetadata(
+                    fileType: 'image/jpeg',
+                    encryptionAlgorithm: 'aes-gcm',
+                    decryptionKey: '00' * 32,
+                    decryptionNonce: '00' * 12,
+                    fileHash: 'ab' * 32,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.longPress(find.text(fileUrl));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.dmMessageActionReport));
+        await tester.pumpAndSettle();
+
+        // The sheet did open as a private message report.
+        expect(find.text(l10n.reportPrivateNotice), findsOneWidget);
+        expect(find.text(l10n.reportIncludeMessageTitle), findsNothing);
+      });
+
       testWidgets('reporting the account from the options sheet opens a '
           'private report', (tester) async {
         useTallSurface(tester);
