@@ -273,7 +273,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);
-      return _fail(VerifyConnectError.oauthFailed);
+      return _fail(VerifyConnectError.oauthFailed, signInFailedToStart: true);
     }
     if (isClosed) return;
     if (authorizationUrl == null) {
@@ -301,7 +301,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);
-      return _fail(VerifyConnectError.oauthFailed);
+      return _fail(VerifyConnectError.oauthFailed, signInFailedToStart: true);
     }
     if (isClosed) return;
     if (callback == null) {
@@ -591,7 +591,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   );
 
   // Back to editing, so any sign-in waiting for approval goes too.
-  void _fail(VerifyConnectError error) {
+  void _fail(VerifyConnectError error, {bool signInFailedToStart = false}) {
     if (isClosed) return;
     _pending = null;
     emit(
@@ -600,6 +600,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
         error: error,
         errorAttempt: state.errorAttempt + 1,
         clearSignedInAccount: true,
+        signInFailedToStart: signInFailedToStart ? true : null,
       ),
     );
   }

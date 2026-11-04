@@ -797,6 +797,40 @@ void main() {
       expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
     });
 
+    testWidgets('brings the proof form back when sign-in fails to start', (
+      tester,
+    ) async {
+      // Not a 503, so the verifier still says sign-in is on: the button stays
+      // for a retry, and the proof post is the way forward if it keeps failing.
+      final repository = _MockIdentityClaimsRepository();
+      when(
+        () => repository.startSignIn(
+          platform: any(named: 'platform'),
+          pubkey: any(named: 'pubkey'),
+          returnUrl: any(named: 'returnUrl'),
+          startCheck: any(named: 'startCheck'),
+          handle: any(named: 'handle'),
+        ),
+      ).thenThrow(const VerifierApiException(500, 'returned 500'));
+      final l10n = await pump(
+        tester,
+        platform: twitterOAuth,
+        oauthAvailable: true,
+        replacingIdentity: 'jack',
+        repository: repository,
+      );
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsNothing);
+
+      await tester.tap(find.text(l10n.verifyConnectOauthCta('Twitter / X')));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.verifyErrorOauthFailed), findsOneWidget);
+      expect(find.text(l10n.verifyConnectOauthCta('Twitter / X')), findsOne);
+      expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
+    });
+
     testWidgets('keeps the proof form when not signing in again', (
       tester,
     ) async {

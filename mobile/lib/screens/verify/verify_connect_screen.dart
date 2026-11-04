@@ -349,8 +349,9 @@ class _ConnectForm extends StatelessWidget {
         ],
         // Signing in again is the sign-in alone; the proof post adds nothing to
         // it. Kept when sign-in cannot run here (iOS below 17.4, a platform
-        // without it, or the list still loading), else the page is empty.
-        if (!(state.isReplacing && showOAuth)) ...[
+        // without it, the list still loading, or a sign-in that failed to
+        // start), else the page leaves nothing that can work.
+        if (!(state.renewsBySignInOnly && showOAuth)) ...[
           _SectionLabel(l10n.verifyConnectProofTitle),
           // Bluesky's note says a sign-in above is all it takes, which reads
           // wrong while the card above still asks to link the account.

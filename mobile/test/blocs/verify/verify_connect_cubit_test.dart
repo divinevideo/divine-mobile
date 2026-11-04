@@ -1406,6 +1406,8 @@ void main() {
         verify: (cubit) {
           expect(cubit.state.error, VerifyConnectError.verifierUnreachable);
           expect(launched, isEmpty);
+          // A proof post needs the verifier too, so it is not offered instead.
+          expect(cubit.state.signInFailedToStart, isFalse);
         },
         errors: () => [isA<VerifierNetworkException>()],
       );
@@ -1447,6 +1449,7 @@ void main() {
           expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
           expect(cubit.state.status, equals(VerifyConnectStatus.editing));
           expect(launched, isEmpty);
+          expect(cubit.state.signInFailedToStart, isTrue);
         },
         errors: () => [isA<VerifierApiException>()],
       );
@@ -1460,6 +1463,7 @@ void main() {
         act: (cubit) => cubit.connectWithOAuth(),
         verify: (cubit) {
           expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
+          expect(cubit.state.signInFailedToStart, isTrue);
         },
         errors: () => [isA<FormatException>()],
       );

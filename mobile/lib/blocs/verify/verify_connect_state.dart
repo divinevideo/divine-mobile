@@ -105,6 +105,7 @@ class VerifyConnectState extends Equatable {
     this.replacedIdentity,
     this.replacingIdentity,
     this.signedInAccount,
+    this.signInFailedToStart = false,
   });
 
   /// The platform being linked.
@@ -143,6 +144,16 @@ class VerifyConnectState extends Equatable {
 
   /// Whether this flow renews a sign-in link rather than adding a new one.
   bool get isReplacing => replacingIdentity != null;
+
+  /// Whether a sign-in in this flow failed before reaching the platform.
+  ///
+  /// Stays set for the rest of the flow, so a renewal that cannot start a
+  /// sign-in keeps the proof post on offer while the sign-in can be retried.
+  final bool signInFailedToStart;
+
+  /// Whether this flow renews by signing in alone, so the proof post is not
+  /// offered beside a sign-in that can run.
+  bool get renewsBySignInOnly => isReplacing && !signInFailedToStart;
 
   /// The account a sign-in returned, shown for the person to approve.
   final String? signedInAccount;
@@ -222,6 +233,7 @@ class VerifyConnectState extends Equatable {
     String? replacedIdentity,
     String? replacingIdentity,
     String? signedInAccount,
+    bool? signInFailedToStart,
     bool clearError = false,
     bool clearSignedInAccount = false,
   }) {
@@ -238,6 +250,7 @@ class VerifyConnectState extends Equatable {
       signedInAccount: clearSignedInAccount
           ? null
           : (signedInAccount ?? this.signedInAccount),
+      signInFailedToStart: signInFailedToStart ?? this.signInFailedToStart,
     );
   }
 
@@ -253,5 +266,6 @@ class VerifyConnectState extends Equatable {
     replacedIdentity,
     replacingIdentity,
     signedInAccount,
+    signInFailedToStart,
   ];
 }
