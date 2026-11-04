@@ -452,7 +452,7 @@ Future<ConcordInviteBundle> openInviteBundle({
 /// Opens a CORD-02 Control wrap with the held split signer address and the
 /// community-root-derived read key. The inner plaintext seal proves authority
 /// independently of whoever knows the stream read material.
-Future<Map<String, dynamic>> openControlWrap({
+Future<Map<String, dynamic>> openVerifiedStreamWrap({
   required Map<String, dynamic> wrap,
   required GroupKey readKey,
   required String streamPubkey,
@@ -470,14 +470,20 @@ Future<Map<String, dynamic>> openControlWrap({
     ),
   );
   final sealTags = _validateEvent(seal, signed: true);
-  if (seal['kind'] != 20014) {
-    throw const FormatException('Control editions require plaintext seals');
+  if (seal['kind'] != 20014 && seal['kind'] != 20013) {
+    throw const FormatException('Invalid Concord stream seal');
   }
   _verifyEvent(seal, sealTags, 'control-seal');
-  final rumor = _decodeEvent(seal['content'] as String);
+  final rumor = _decodeEvent(
+    seal['kind'] == 20013
+        ? await nip44Decrypt(
+            seal['content'] as String,
+            conversationKey(readKey.seedHex, readKey.pubkey),
+          )
+        : seal['content'] as String,
+  );
   final rumorTags = _validateEvent(rumor, signed: false);
-  if (rumor['kind'] != 3308 ||
-      rumor['pubkey'] != seal['pubkey'] ||
+  if (rumor['pubkey'] != seal['pubkey'] ||
       rumor['id'] !=
           computeEventId(
             pubkey: rumor['pubkey'] as String,
@@ -504,4 +510,24 @@ Future<Map<String, dynamic>> openControlWrap({
     'createdAt': rumor['created_at'],
     'sealKind': seal['kind'],
   };
+}
+
+/// Control-plane specialization: only plaintext kind-3308 editions survive
+/// rewrapping across community epochs.
+Future<Map<String, dynamic>> openControlWrap({
+  required Map<String, dynamic> wrap,
+  required GroupKey readKey,
+  required String streamPubkey,
+}) async {
+  final opened = await openVerifiedStreamWrap(
+    wrap: wrap,
+    readKey: readKey,
+    streamPubkey: streamPubkey,
+  );
+  if (opened['kind'] != 3308 || opened['sealKind'] != 20014) {
+    throw const FormatException(
+      'Control editions require plaintext kind3308 seals',
+    );
+  }
+  return opened;
 }
