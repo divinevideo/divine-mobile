@@ -451,7 +451,7 @@ class SoundsRepository {
       ]);
     } on Exception catch (e, stackTrace) {
       Log.warning(
-        'Could not tell which unnamed sounds are reused: $e',
+        'Reuse lookup for ${originals.length} unnamed sounds failed: $e',
         name: 'SoundsRepository',
         category: LogCategory.api,
         error: e,
@@ -459,9 +459,17 @@ class SoundsRepository {
       );
       return null;
     }
-    if (read.timedOut || read.noRelays) {
+    if (read.noRelays) {
       Log.warning(
-        'Could not tell in time which unnamed sounds are reused',
+        'Reuse lookup for ${originals.length} unnamed sounds reached no relay',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+      return null;
+    }
+    if (read.timedOut) {
+      Log.warning(
+        'Reuse lookup for ${originals.length} unnamed sounds timed out',
         name: 'SoundsRepository',
         category: LogCategory.api,
       );
