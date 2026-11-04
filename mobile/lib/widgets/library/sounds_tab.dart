@@ -804,7 +804,7 @@ typedef _OpenMore = Future<void> Function(
 ///
 /// The rows look like the sound picker's and take their covers from the same
 /// lookup of the sounds' source videos.
-class _SavedSoundsSection extends ConsumerStatefulWidget {
+class _SavedSoundsSection extends ConsumerWidget {
   const _SavedSoundsSection({
     required this.state,
     required this.playingSoundId,
@@ -829,55 +829,31 @@ class _SavedSoundsSection extends ConsumerStatefulWidget {
   final _OpenMore onOpenMore;
 
   @override
-  ConsumerState<_SavedSoundsSection> createState() =>
-      _SavedSoundsSectionState();
-}
-
-class _SavedSoundsSectionState extends ConsumerState<_SavedSoundsSection> {
-  /// The last answer the source lookup gave, and for which viewer.
-  ///
-  /// Saving or removing a sound changes the lookup's key, and the new lookup
-  /// starts with no value. Until it answers, the rows keep this one instead
-  /// of forgetting which sources are gone or behind a content warning.
-  ({String? viewer, Map<String, SoundCover?> covers})? _lastAnswer;
-
-  @override
-  Widget build(BuildContext context) {
-    final sounds = widget.state.visibleSounds;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sounds = state.visibleSounds;
     final hashtags =
-        widget.state.sounds
-            .expand((sound) => sound.personalHashtags)
-            .toSet()
-            .toList()
+        state.sounds.expand((sound) => sound.personalHashtags).toSet().toList()
           ..sort();
     final sourcesProvider = savedSoundSourcesProvider(
-      SoundSourceReferences(widget.state.sounds.map((sound) => sound.audio)),
+      SoundSourceReferences(state.sounds.map((sound) => sound.audio)),
     );
     final sourcesLookup = ref.watch(sourcesProvider);
+    // Nothing to go on while the lookup runs or when it failed: rows then
+    // keep the frame stored with them, and none is marked gone.
+    final sourceCovers = sourcesLookup.hasError ? null : sourcesLookup.value;
     // Whose own sounds stay usable follows account changes, as in the picker.
     final viewer = ref.watch(currentAccountIdProvider);
-    final answer = sourcesLookup.hasError ? null : sourcesLookup.value;
-    if (answer != null) _lastAnswer = (viewer: viewer, covers: answer);
-    final last = _lastAnswer;
-    // A failed lookup gives nothing to go on: rows then keep the frame
-    // stored with them, and none is marked gone. One still running keeps the
-    // last answer this viewer got.
-    final sourceCovers =
-        answer ??
-        (sourcesLookup.isLoading && last?.viewer == viewer
-            ? last?.covers
-            : null);
     ref.listen(sourcesProvider, (_, next) {
-      final playing = widget.playingSoundId;
+      final playing = playingSoundId;
       if (playing == null || next.hasError) return;
-      for (final sound in widget.state.sounds) {
+      for (final sound in state.sounds) {
         if (sound.id == playing &&
             SoundCover.cannotBeReused(
               sound.audio,
               next.value,
               viewerPubkeyHex: viewer,
             )) {
-          widget.onPreviewUnavailable();
+          onPreviewUnavailable();
         }
       }
     });
@@ -887,14 +863,14 @@ class _SavedSoundsSectionState extends ConsumerState<_SavedSoundsSection> {
           SliverToBoxAdapter(
             child: _HashtagFilters(
               hashtags: hashtags,
-              selectedHashtag: widget.state.selectedHashtag,
+              selectedHashtag: state.selectedHashtag,
             ),
           ),
         SliverList.builder(
           itemCount: sounds.length,
           itemBuilder: (context, index) {
             final sound = sounds[index];
-            final isPreviewing = widget.playingSoundId == sound.id;
+            final isPreviewing = playingSoundId == sound.id;
             final cover = SoundCover.forSavedSound(
               sound,
               sourceCovers: sourceCovers,
@@ -902,7 +878,7 @@ class _SavedSoundsSectionState extends ConsumerState<_SavedSoundsSection> {
             final reference = sound.audio.sourceVideoReference;
             final view = (
               cover: cover,
-              isMissingFile: widget.state.isMissingFile(sound),
+              isMissingFile: state.isMissingFile(sound),
               cannotBeReused: SoundCover.cannotBeReused(
                 sound.audio,
                 sourceCovers,
@@ -922,11 +898,11 @@ class _SavedSoundsSectionState extends ConsumerState<_SavedSoundsSection> {
               isMissingFile: view.isMissingFile,
               cannotBeReused: view.cannotBeReused,
               isPreviewing: isPreviewing,
-              isPlaying: isPreviewing && !widget.playingPaused,
-              progress: isPreviewing ? widget.playingProgress : null,
-              progressValue: isPreviewing ? widget.playingProgressValue : 0,
-              onPreview: () => widget.onPreview(sound),
-              onOpenMore: () => widget.onOpenMore(sound, view),
+              isPlaying: isPreviewing && !playingPaused,
+              progress: isPreviewing ? playingProgress : null,
+              progressValue: isPreviewing ? playingProgressValue : 0,
+              onPreview: () => onPreview(sound),
+              onOpenMore: () => onOpenMore(sound, view),
             );
           },
         ),
