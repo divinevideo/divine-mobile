@@ -49,6 +49,7 @@ class VerifyCubit extends Cubit<VerifyState> {
           claims: claims.claims,
           verifiedKeys: claims.verifiedKeys,
           verifierReachable: claims.verifierReachable,
+          signInCodes: claims.signInCodes,
           platforms: platforms,
         ),
       );
@@ -75,7 +76,8 @@ class VerifyCubit extends Cubit<VerifyState> {
   /// verifier had already confirmed. The next [load] reconciles.
   ///
   /// [replacing] is the link a sign-in again renewed: the connect flow
-  /// published the new claim in its place, so its row goes too.
+  /// published the new claim in its place, so its row goes too. Both keys
+  /// lose any reason the verifier gave for a lapsed sign-in.
   void claimLinked(IdentityClaim claim, {IdentityClaim? replacing}) {
     final key = VerifyState.keyOf(claim);
     final dropped = {key, if (replacing != null) VerifyState.keyOf(replacing)};
@@ -88,6 +90,8 @@ class VerifyCubit extends Cubit<VerifyState> {
           claim,
         ],
         verifiedKeys: {...state.verifiedKeys, key},
+        signInCodes: {...state.signInCodes}
+          ..removeWhere((lapsedKey, _) => dropped.contains(lapsedKey)),
         clearError: true,
       ),
     );
@@ -112,6 +116,7 @@ class VerifyCubit extends Cubit<VerifyState> {
               if (VerifyState.keyOf(existing) != key) existing,
           ],
           verifiedKeys: {...state.verifiedKeys}..remove(key),
+          signInCodes: {...state.signInCodes}..remove(key),
           clearRemoving: true,
         ),
       );

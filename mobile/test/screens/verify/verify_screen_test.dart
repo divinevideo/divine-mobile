@@ -181,6 +181,10 @@ void main() {
         VerifierPlatform(key: 'mastodon', label: 'Mastodon', supported: true),
       ],
       bool verifierReachable = true,
+      // The verifier's reason the sign-in link stopped counting.
+      Map<String, SignInLapse> signInCodes = const {
+        'twitter:jack': SignInLapse.expired,
+      },
       String? removingKey,
     }) {
       return VerifyState(
@@ -189,6 +193,7 @@ void main() {
         verifiedKeys: verifiedKeys,
         platforms: platforms,
         verifierReachable: verifierReachable,
+        signInCodes: signInCodes,
         removingKey: removingKey,
       );
     }
@@ -570,6 +575,34 @@ void main() {
         expect(find.text(l10n.verifySignInAgain), findsOneWidget);
       });
 
+      testWidgets('is offered while another link could not be checked', (
+        tester,
+      ) async {
+        // GitHub's check was inconclusive; the sign-in's lapse still stands.
+        await pump(
+          tester,
+          ready(verifiedKeys: const {}, verifierReachable: false),
+          oauthUsable: true,
+        );
+
+        expect(find.text(l10n.verifyVerifierUnreachable), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(
+            l10n.verifySignInAgainSemanticLabel('Twitter / X', 'jack'),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('is not offered when the verifier gave no sign-in reason', (
+        tester,
+      ) async {
+        await pump(tester, ready(signInCodes: const {}), oauthUsable: true);
+
+        expect(find.text('jack'), findsOneWidget);
+        expect(find.text(l10n.verifySignInAgain), findsNothing);
+      });
+
       testWidgets('is not offered where this device cannot sign in', (
         tester,
       ) async {
@@ -687,7 +720,8 @@ void main() {
     });
 
     group('sign in again', () {
-      // A sign-in link that no longer verifies, on a platform with sign-in on.
+      // A sign-in link the verifier says expired, on a platform with sign-in
+      // on.
       setUp(() {
         when(repository.supportedPlatforms).thenAnswer(
           (_) async => const [
@@ -703,6 +737,7 @@ void main() {
             claims: [_twitter],
             verifiedKeys: {},
             verifierReachable: true,
+            signInCodes: {'twitter:jack': SignInLapse.expired},
           ),
         );
       });

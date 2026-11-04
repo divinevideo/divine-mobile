@@ -65,6 +65,24 @@ void main() {
     registerFallbackValue(<IdentityClaim>[]);
   });
 
+  group('signInLapseFromCode', () {
+    const cases = <String?, SignInLapse?>{
+      'signin_expired': SignInLapse.expired,
+      'signin_account_changed': SignInLapse.accountChanged,
+      // Only the verifier's exact strings count.
+      'SIGNIN_EXPIRED': null,
+      'proof_not_found': null,
+      'temporarily_unavailable': null,
+      '': null,
+      null: null,
+    };
+    for (final MapEntry(key: code, value: lapse) in cases.entries) {
+      test('reads ${code == null ? 'no code' : "'$code'"} as $lapse', () {
+        expect(signInLapseFromCode(code), equals(lapse));
+      });
+    }
+  });
+
   group('IdentityClaimsRepository.parseClaims', () {
     test('extracts well-formed i tags', () {
       final tags = [
@@ -1540,6 +1558,168 @@ void main() {
 
         expect(status.isVerified(status.claims.first), isTrue);
         expect(status.verifierReachable, isTrue);
+      });
+
+      group('reports why a sign-in stopped counting', () {
+        test('records a sign-in the verifier says expired', () async {
+          when(() => client.verifyBatch(any())).thenAnswer(
+            (_) async => const [
+              VerificationResult(
+                platform: 'github',
+                identity: 'octocat',
+                verified: true,
+                checkedAt: 100,
+                cached: false,
+              ),
+              VerificationResult(
+                platform: 'twitter',
+                identity: 'jack',
+                verified: false,
+                checkedAt: 100,
+                cached: false,
+                error: 'No current sign-in verifies this account.',
+                code: 'signin_expired',
+              ),
+            ],
+          );
+
+          final status = await repo.claimsWithVerdicts(_pubkey);
+
+          expect(
+            status.signInCodes,
+            equals({'twitter:jack': SignInLapse.expired}),
+          );
+        });
+
+        test(
+          'records a sign-in whose handle moved to another account',
+          () async {
+            stubIdentityEvents([
+              _event(
+                id: _eventId(11),
+                kind: 10011,
+                tags: [
+                  ['i', 'bluesky:Alice.bsky.social', 'oauth'],
+                ],
+              ),
+            ]);
+            when(() => client.verifyBatch(any())).thenAnswer(
+              (_) async => const [
+                VerificationResult(
+                  platform: 'bluesky',
+                  identity: 'Alice.bsky.social',
+                  verified: false,
+                  checkedAt: 100,
+                  cached: false,
+                  code: 'signin_account_changed',
+                ),
+              ],
+            );
+
+            final status = await repo.claimsWithVerdicts(_pubkey);
+
+            // Keyed the same way as the verified keys, lowercased.
+            expect(
+              status.signInCodes,
+              equals({'bluesky:alice.bsky.social': SignInLapse.accountChanged}),
+            );
+          },
+        );
+
+        test(
+          'records nothing for a failure that is not about a sign-in',
+          () async {
+            when(() => client.verifyBatch(any())).thenAnswer(
+              (_) async => const [
+                VerificationResult(
+                  platform: 'github',
+                  identity: 'octocat',
+                  verified: false,
+                  checkedAt: 100,
+                  cached: false,
+                  code: 'proof_not_found',
+                ),
+                // An older verifier gives no code at all.
+                VerificationResult(
+                  platform: 'twitter',
+                  identity: 'jack',
+                  verified: false,
+                  checkedAt: 100,
+                  cached: false,
+                ),
+              ],
+            );
+
+            final status = await repo.claimsWithVerdicts(_pubkey);
+
+            expect(status.verifiedKeys, isEmpty);
+            expect(status.signInCodes, isEmpty);
+          },
+        );
+
+        test('records nothing for a claim that verified', () async {
+          // Not a shape the verifier sends today; a verified answer wins over
+          // any code that rides along with it.
+          when(() => client.verifyBatch(any())).thenAnswer(
+            (_) async => const [
+              VerificationResult(
+                platform: 'github',
+                identity: 'octocat',
+                verified: true,
+                checkedAt: 100,
+                cached: false,
+              ),
+              VerificationResult(
+                platform: 'twitter',
+                identity: 'jack',
+                verified: true,
+                checkedAt: 100,
+                cached: false,
+                code: 'signin_expired',
+              ),
+            ],
+          );
+
+          final status = await repo.claimsWithVerdicts(_pubkey);
+
+          expect(status.isVerified(status.claims.last), isTrue);
+          expect(status.signInCodes, isEmpty);
+        });
+
+        test(
+          'still records it when another claim could not be checked',
+          () async {
+            when(() => client.verifyBatch(any())).thenAnswer(
+              (_) async => const [
+                VerificationResult(
+                  platform: 'github',
+                  identity: 'octocat',
+                  verified: false,
+                  checkedAt: 100,
+                  cached: false,
+                  error: "GitHub couldn't be checked right now.",
+                  code: 'temporarily_unavailable',
+                ),
+                VerificationResult(
+                  platform: 'twitter',
+                  identity: 'jack',
+                  verified: false,
+                  checkedAt: 100,
+                  cached: false,
+                  code: 'signin_expired',
+                ),
+              ],
+            );
+
+            final status = await repo.claimsWithVerdicts(_pubkey);
+
+            expect(status.verifierReachable, isFalse);
+            expect(
+              status.signInCodes,
+              equals({'twitter:jack': SignInLapse.expired}),
+            );
+          },
+        );
       });
     });
 

@@ -92,6 +92,29 @@ void main() {
       );
 
       blocTest<VerifyCubit, VerifyState>(
+        'carries why a sign-in stopped counting',
+        build: build,
+        setUp: () {
+          when(() => repository.claimsWithVerdicts(any())).thenAnswer(
+            (_) async => const IdentityClaimStatus(
+              claims: [_github, _twitter],
+              verifiedKeys: {'github:octocat'},
+              verifierReachable: true,
+              signInCodes: {'twitter:jack': SignInLapse.expired},
+            ),
+          );
+        },
+        act: (cubit) => cubit.load(),
+        verify: (cubit) {
+          expect(
+            cubit.state.signInLapse(_twitter),
+            equals(SignInLapse.expired),
+          );
+          expect(cubit.state.signInLapse(_github), isNull);
+        },
+      );
+
+      blocTest<VerifyCubit, VerifyState>(
         'offers only the platforms that have no link yet',
         build: build,
         act: (cubit) => cubit.load(),
@@ -376,6 +399,67 @@ void main() {
       );
     });
 
+    group('claimLinked after a sign-in lapsed', () {
+      const bluesky = IdentityClaim(
+        pubkey: _pubkey,
+        platform: 'bluesky',
+        identity: 'alice.bsky.social',
+        proof: IdentityClaim.oauthProof,
+      );
+
+      setUp(() {
+        when(() => repository.claimsWithVerdicts(any())).thenAnswer(
+          (_) async => const IdentityClaimStatus(
+            claims: [_github, _twitter, bluesky],
+            verifiedKeys: {'github:octocat'},
+            verifierReachable: true,
+            signInCodes: {
+              'twitter:jack': SignInLapse.expired,
+              'bluesky:alice.bsky.social': SignInLapse.accountChanged,
+            },
+          ),
+        );
+      });
+
+      blocTest<VerifyCubit, VerifyState>(
+        'clears the lapse of the link a sign-in again renewed',
+        build: build,
+        act: (cubit) async {
+          await cubit.load();
+          cubit.claimLinked(_twitter, replacing: _twitter);
+        },
+        verify: (cubit) {
+          expect(
+            cubit.state.signInCodes,
+            equals({'bluesky:alice.bsky.social': SignInLapse.accountChanged}),
+          );
+        },
+      );
+
+      blocTest<VerifyCubit, VerifyState>(
+        'clears the lapse of the account it replaced under another handle',
+        build: build,
+        act: (cubit) async {
+          await cubit.load();
+          cubit.claimLinked(
+            const IdentityClaim(
+              pubkey: _pubkey,
+              platform: 'twitter',
+              identity: 'jack_renamed',
+              proof: IdentityClaim.oauthProof,
+            ),
+            replacing: _twitter,
+          );
+        },
+        verify: (cubit) {
+          expect(
+            cubit.state.signInCodes,
+            equals({'bluesky:alice.bsky.social': SignInLapse.accountChanged}),
+          );
+        },
+      );
+    });
+
     group('removeClaim', () {
       blocTest<VerifyCubit, VerifyState>(
         'drops the row without waiting on a relay reread',
@@ -399,6 +483,28 @@ void main() {
         },
         verify: (cubit) {
           expect(cubit.state.verifiedKeys, isEmpty);
+        },
+      );
+
+      blocTest<VerifyCubit, VerifyState>(
+        'drops why its sign-in stopped counting along with the claim',
+        build: build,
+        setUp: () {
+          when(() => repository.claimsWithVerdicts(any())).thenAnswer(
+            (_) async => const IdentityClaimStatus(
+              claims: [_github, _twitter],
+              verifiedKeys: {'github:octocat'},
+              verifierReachable: true,
+              signInCodes: {'twitter:jack': SignInLapse.expired},
+            ),
+          );
+        },
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.removeClaim(_twitter);
+        },
+        verify: (cubit) {
+          expect(cubit.state.signInCodes, isEmpty);
         },
       );
 
@@ -500,16 +606,38 @@ void main() {
         Set<String> verifiedKeys = const {'github:octocat'},
         List<VerifierPlatform> platforms = _platforms,
         bool verifierReachable = true,
+        Map<String, SignInLapse> signInCodes = const {
+          'twitter:jack': SignInLapse.expired,
+        },
       }) => VerifyState(
         status: VerifyStatus.ready,
         claims: const [_github, _twitter],
         verifiedKeys: verifiedKeys,
         platforms: platforms,
         verifierReachable: verifierReachable,
+        signInCodes: signInCodes,
       );
 
-      test('offers it on a sign-in link that no longer verifies', () {
+      test('offers it on a sign-in link the verifier says expired', () {
         expect(state().canSignInAgain(_twitter), isTrue);
+      });
+
+      test('offers it on a sign-in link whose handle changed account', () {
+        expect(
+          state(
+            signInCodes: const {'twitter:jack': SignInLapse.accountChanged},
+          ).canSignInAgain(_twitter),
+          isTrue,
+        );
+      });
+
+      test('does not offer it when the verifier gave no sign-in reason', () {
+        // Unverified for some other reason, or by a verifier older than the
+        // reason codes: signing in again is not known to help.
+        expect(
+          state(signInCodes: const {}).canSignInAgain(_twitter),
+          isFalse,
+        );
       });
 
       test('does not offer it on a link that verifies', () {
@@ -522,7 +650,8 @@ void main() {
       });
 
       test('does not offer it on a proof-post link', () {
-        // On a platform with sign-in on, so only the proof tells it apart.
+        // On a platform with sign-in on, and under the key of a lapsed
+        // sign-in, so only the proof tells it apart.
         const proofPost = IdentityClaim(
           pubkey: _pubkey,
           platform: 'twitter',
@@ -555,11 +684,32 @@ void main() {
         );
       });
 
-      test('does not offer it while the verdicts are unknown', () {
-        // The verifier could not check the link, so it may still be good.
+      test('offers it while another link could not be checked', () {
+        // The lapse is the verifier's answer about this link alone, so an
+        // outage on some other platform does not make it unknown.
         expect(
           state(verifierReachable: false).canSignInAgain(_twitter),
-          isFalse,
+          isTrue,
+        );
+      });
+    });
+
+    group('signInLapse', () {
+      test('finds the lapse whatever the case of the handle', () {
+        const mixedCase = IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'Twitter',
+          identity: 'Jack',
+          proof: IdentityClaim.oauthProof,
+        );
+        final state = VerifyState(
+          claims: const [mixedCase],
+          signInCodes: const {'twitter:jack': SignInLapse.accountChanged},
+        );
+
+        expect(
+          state.signInLapse(mixedCase),
+          equals(SignInLapse.accountChanged),
         );
       });
     });

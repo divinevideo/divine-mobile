@@ -64,11 +64,13 @@ class VerifyState extends Equatable {
     Set<String> verifiedKeys = const {},
     List<VerifierPlatform> platforms = const [],
     this.verifierReachable = true,
+    Map<String, SignInLapse> signInCodes = const {},
     this.removingKey,
     this.error,
     this.errorAttempt = 0,
   }) : claims = List.unmodifiable(claims),
        verifiedKeys = Set.unmodifiable(verifiedKeys),
+       signInCodes = Map.unmodifiable(signInCodes),
        platforms = List.unmodifiable(platforms);
 
   /// Load state of the dashboard.
@@ -87,6 +89,11 @@ class VerifyState extends Equatable {
   /// that therefore shows without a verdict. An unverified row may then mean
   /// "could not check" rather than "did not verify".
   final bool verifierReachable;
+
+  /// Why the verifier stopped counting a sign-in link, by the same key as
+  /// [verifiedKeys]. Holds only claims it judged negative with a sign-in
+  /// reason code.
+  final Map<String, SignInLapse> signInCodes;
 
   /// Key of the claim currently being unlinked, if any.
   final String? removingKey;
@@ -109,16 +116,22 @@ class VerifyState extends Equatable {
   bool get showsUncheckedNote =>
       !verifierReachable && claims.any((claim) => !isVerified(claim));
 
+  /// Why the verifier stopped counting [claim] as a sign-in, if it said.
+  SignInLapse? signInLapse(IdentityClaim claim) => signInCodes[keyOf(claim)];
+
   /// Whether [claim] is the one currently being unlinked.
   bool isRemoving(IdentityClaim claim) => removingKey == keyOf(claim);
 
-  /// Whether [claim] is a sign-in link that no longer verifies on a platform
-  /// whose sign-in is still on, so it can be renewed without unlinking it.
+  /// Whether [claim] is a sign-in link the verifier stopped counting, on a
+  /// platform whose sign-in is still on, so it can be renewed without
+  /// unlinking it.
   ///
-  /// Not while the verifier could not be reached: the link may still be good.
+  /// Keyed on the verifier's own reason, which answers for this link alone:
+  /// another link the verifier could not check does not hide it, and a link
+  /// unverified for any other reason does not get it.
   bool canSignInAgain(IdentityClaim claim) {
     if (claim.proof != IdentityClaim.oauthProof) return false;
-    if (!verifierReachable || isVerified(claim)) return false;
+    if (signInLapse(claim) == null || isVerified(claim)) return false;
     final platform = claim.platform.toLowerCase();
     return platforms.any(
       (offered) =>
@@ -165,6 +178,7 @@ class VerifyState extends Equatable {
     Set<String>? verifiedKeys,
     List<VerifierPlatform>? platforms,
     bool? verifierReachable,
+    Map<String, SignInLapse>? signInCodes,
     String? removingKey,
     VerifyError? error,
     int? errorAttempt,
@@ -177,6 +191,7 @@ class VerifyState extends Equatable {
       verifiedKeys: verifiedKeys ?? this.verifiedKeys,
       platforms: platforms ?? this.platforms,
       verifierReachable: verifierReachable ?? this.verifierReachable,
+      signInCodes: signInCodes ?? this.signInCodes,
       removingKey: clearRemoving ? null : (removingKey ?? this.removingKey),
       error: clearError ? null : (error ?? this.error),
       errorAttempt: errorAttempt ?? this.errorAttempt,
@@ -190,6 +205,7 @@ class VerifyState extends Equatable {
     verifiedKeys,
     platforms,
     verifierReachable,
+    signInCodes,
     removingKey,
     error,
     errorAttempt,
