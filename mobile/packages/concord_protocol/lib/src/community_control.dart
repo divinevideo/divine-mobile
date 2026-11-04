@@ -233,7 +233,10 @@ List<ConcordEdition> _candidates(
       head = next;
     }
   }
-  if (gap) incomplete.add(eligible.first.entityId);
+  if (gap &&
+      (floor != null || eligible.any((e) => e.version > head!.version))) {
+    incomplete.add(eligible.first.entityId);
+  }
   final heldGap = gap && floor != null;
   final rest =
       eligible
@@ -260,17 +263,26 @@ ConcordControlState foldCommunityControl(
   required String communityId,
   required String owner,
   Map<String, ConcordEdition> priorHeads = const {},
-  bool snapshot = false,
+  Set<String> snapshotIds = const {},
 }) {
-  final first = _foldOnce(editions, communityId, owner, priorHeads, snapshot);
+  final first = _foldOnce(
+    editions,
+    communityId,
+    owner,
+    priorHeads,
+    snapshotIds,
+  );
   if (!editions.any((e) => first.banned.contains(e.author))) return first;
   final clean = _foldOnce(
     editions.where((e) => !first.banned.contains(e.author)).toList(),
     communityId,
     owner,
     priorHeads,
-    snapshot,
+    snapshotIds,
   );
+  clean.incomplete
+    ..clear()
+    ..addAll(first.incomplete);
   clean.banned
     ..clear()
     ..addAll(first.banned);
@@ -282,7 +294,7 @@ ConcordControlState _foldOnce(
   String cid,
   String owner,
   Map<String, ConcordEdition> prior,
-  bool snapshot,
+  Set<String> snapshotIds,
 ) {
   final state = ConcordControlState(communityId: cid, owner: owner);
   final groups = <String, Map<String, List<ConcordEdition>>>{};
@@ -297,7 +309,7 @@ ConcordControlState _foldOnce(
       entry.key: _candidates(
         entry.value,
         prior[entry.key],
-        snapshot,
+        entry.value.any((e) => snapshotIds.contains(e.rumorId)),
         state.incomplete,
       ),
   };

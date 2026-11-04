@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:test/test.dart';
 
@@ -205,4 +206,127 @@ void main() {
     );
     expect(state.banned, isEmpty);
   });
+  test(
+    'fresh singleton dangling edition has no hidden-middle incompleteness',
+    () {
+      final only = edition(
+        owner,
+        '2',
+        channel,
+        {'name': 'compacted'},
+        version: 3,
+        prev: 'aa' * 32,
+      );
+      final state = foldCommunityControl(
+        [only],
+        communityId: cid,
+        owner: owner,
+      );
+      expect(state.channels[channel]!.name, 'compacted');
+      expect(state.incomplete, isEmpty);
+    },
+  );
+  test(
+    'current epoch snapshots bootstrap only entities actually rewrapped',
+    () {
+      final first = edition(owner, '2', channel, {'name': 'first'});
+      final third = edition(
+        owner,
+        '2',
+        channel,
+        {'name': 'third'},
+        version: 3,
+        prev: 'aa' * 32,
+      );
+      final metadata = edition(
+        owner,
+        '0',
+        cid,
+        {'name': 'metadata'},
+        version: 3,
+        prev: 'bb' * 32,
+      );
+      final state = foldCommunityControl(
+        [first, third, metadata],
+        communityId: cid,
+        owner: owner,
+        snapshotIds: {metadata.rumorId},
+      );
+      expect(state.channels[channel]!.name, 'first');
+      expect(state.incomplete, {channel});
+      expect(state.name, 'metadata');
+    },
+  );
+
+  test(
+    'banned-author second pass preserves the first pass completeness result',
+    () {
+      final role = edition(owner, '1', roleId, {
+        'role_id': roleId,
+        'position': 1,
+        'permissions': '63',
+      });
+      final grant = edition(owner, '3', grantLocator(cid, admin), {
+        'member': admin,
+        'role_ids': [roleId],
+      });
+      final room = edition(admin, '2', channel, {
+        'name': 'removed authority',
+      }, grant: grant);
+      final ban = edition(owner, '4', banlistLocator(cid), [admin]);
+      final state = foldCommunityControl(
+        [role, grant, room, ban],
+        communityId: cid,
+        owner: owner,
+        priorHeads: {channel: room},
+      );
+      expect(state.incomplete, isEmpty);
+      expect(state.channels, isEmpty);
+      expect(state.banned, {admin});
+    },
+  );
+  test(
+    'matches shared kernel projections for compacted, mixed and banned histories',
+    () {
+      final fixture =
+          jsonDecode(
+                File('test/fixtures/control-parity.json').readAsStringSync(),
+              )
+              as Map<String, dynamic>;
+      for (final raw in fixture['cases'] as List) {
+        final c = raw as Map<String, dynamic>;
+        final editions = (c['opened'] as List)
+            .map((e) => ConcordEdition.parse(e as Map<String, dynamic>))
+            .toList();
+        final prior = <String, ConcordEdition>{};
+        for (final entry in (c['priorHeads'] as Map).entries) {
+          prior[entry.key as String] = editions.firstWhere(
+            (e) =>
+                e.entityId == entry.key &&
+                '${e.version}' == (entry.value as Map)['version'] &&
+                e.hash == (entry.value as Map)['hash'],
+          );
+        }
+        final state = foldCommunityControl(
+          editions,
+          communityId: fixture['communityId'] as String,
+          owner: fixture['owner'] as String,
+          priorHeads: prior,
+          snapshotIds: (c['snapshotRumorIds'] as List).cast<String>().toSet(),
+        );
+        final actual = <String, dynamic>{
+          'heads': {
+            for (final entry in state.heads.entries)
+              entry.key: {
+                'version': '${entry.value.version}',
+                'hash': entry.value.hash,
+              },
+          },
+          'incomplete': state.incomplete.toList()..sort(),
+          'banned': state.banned.toList()..sort(),
+        };
+        expect(actual, c['expected'], reason: c['name'] as String);
+      }
+    },
+  );
 }
