@@ -15842,4 +15842,8 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'Гледай видеото';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages.';
 }

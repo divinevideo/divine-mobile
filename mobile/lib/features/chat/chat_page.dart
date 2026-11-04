@@ -13,6 +13,7 @@ import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/features/chat/concord_session.dart';
 import 'package:openvine/features/chat/concord_store.dart';
 import 'package:openvine/features/chat/room_activity_provider.dart';
+import 'package:openvine/features/chat/room_catalog_provider.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -77,18 +78,33 @@ class ChatPage extends ConsumerWidget {
     if (repositoryBuilder == null && shared == null) {
       return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
     }
-    final channel = channelId ?? pocChatDefaultChannel;
+    final catalogState = ref.watch(concordRoomCatalogProvider);
+    final catalog =
+        catalogState.asData?.value ??
+        (concordInviteUrl.isEmpty ? ConcordRoomCatalog.poc() : null);
+    if (catalog == null || !catalog.ready) {
+      if (catalogState.isLoading) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      return RouteErrorScreen(message: context.l10n.dmConversationLoadError);
+    }
+    final communities = catalog.communities;
+    if (communities.isEmpty) {
+      return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
+    }
+    final selectedCommunity = communityId ?? communities.first.id;
+    final channel = channelId ?? communities.first.channels.first;
     // repositoryFor throws for a room outside the catalog and runs before
     // selectChatRoom could reject the URL, so validate the room here.
-    if (!const ChatState().communities.any(
+    if (!communities.any(
           (community) =>
-              community.id == (communityId ?? pocChatCommunityId) &&
+              community.id == selectedCommunity &&
               community.channels.contains(channel),
         ) ||
         (communityId == null) != (channelId == null)) {
       return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
     }
-    final effectiveChannel = pocChannelIdFor(channel);
+    final effectiveChannel = catalog.channelId(channel);
     final database = shared == null ? ref.watch(databaseProvider) : null;
     return BlocProvider(
       key: ValueKey((pubkey, signer, communityId, channelId, shared)),
@@ -100,12 +116,23 @@ class ChatPage extends ConsumerWidget {
               store: DriftConcordStore(
                 dao: database!.concordStoreDao,
                 account: pubkey,
-                scope: '$concordRelayUrl/${channelId ?? pocChatDefaultChannel}',
+                scope: '${catalog.scope}/$channel',
               ),
             ),
-        pocStreamForChannel: pocStreamKeyFor,
+        pocStreamForChannel: catalog.stream,
+        epoch: catalog.epoch,
+        canSend: () =>
+            catalog.canSend &&
+            catalog.communities.any((c) => c.channels.contains(channel)),
+        initialState: ChatState(
+          account: pubkey,
+          isTestCommunity: !catalog.isReal,
+          communities: communities,
+          selectedCommunityId: selectedCommunity,
+          selectedChannelId: channel,
+        ),
         sealedAuthor: pubkey,
-        channelIdFor: pocChannelIdFor,
+        channelIdFor: catalog.channelId,
         ownsRepository: shared == null,
         initialize: shared == null
             ? null

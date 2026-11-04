@@ -15316,4 +15316,8 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'ቪዲዮውን ይመልከቱ';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages.';
 }

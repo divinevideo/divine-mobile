@@ -12768,5 +12768,7 @@
   "creatorHighlightWatch": "Watch video",
   "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "messagesPublicRoomsDisclosure": "These rooms are public. Anyone with access can read your messages.",
+  "@messagesPublicRoomsDisclosure": {"description": "Privacy notice for the real public community rooms."}
 }

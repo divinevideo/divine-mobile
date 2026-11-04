@@ -14771,4 +14771,8 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => '观看视频';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages.';
 }

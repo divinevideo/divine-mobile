@@ -26162,6 +26162,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Watch video'**
   String get creatorHighlightWatch;
+
+  /// Privacy notice for the real public community rooms.
+  ///
+  /// In en, this message translates to:
+  /// **'These rooms are public. Anyone with access can read your messages.'**
+  String get messagesPublicRoomsDisclosure;
 }
 
 class _AppLocalizationsDelegate

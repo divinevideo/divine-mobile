@@ -15880,4 +15880,8 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'Video ansehen';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages.';
 }

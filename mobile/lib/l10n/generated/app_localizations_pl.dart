@@ -16033,4 +16033,8 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'Obejrzyj film';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages.';
 }

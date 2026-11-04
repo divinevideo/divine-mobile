@@ -15713,4 +15713,8 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'Titta på videon';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages.';
 }

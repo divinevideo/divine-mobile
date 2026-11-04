@@ -6,6 +6,26 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 
 void main() {
   group(ChatComposerCubit, () {
+    test('restores a room draft and explicit mention bindings after a catalog refresh', () async {
+      final original = ChatComposerCubit(send: (_) async => false);
+      original.updateDraft('@Al', 3);
+      original.selectMention(cursor: 3, pubkey: 'a' * 64, display: 'Alice');
+      final snapshot = original.state;
+      await original.close();
+      final bodies = <String>[];
+      final restored = ChatComposerCubit(
+        initialState: snapshot,
+        send: (body) async {
+          bodies.add(body);
+          return true;
+        },
+      );
+      expect(restored.state.text, snapshot.text);
+      expect(restored.state.mentions, snapshot.mentions);
+      expect(await restored.submit(), isTrue);
+      expect(bodies.single, contains('nostr:'));
+      await restored.close();
+    });
     group('submit', () {
       test('deleting a pick leaves a pasted identical name plain', () async {
         final bodies = <String>[];

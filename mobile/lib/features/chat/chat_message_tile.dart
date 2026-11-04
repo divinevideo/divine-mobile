@@ -25,6 +25,7 @@ class ChatMessageTile extends ConsumerWidget {
     required this.pending,
     required this.sending,
     required this.onRetry,
+    this.onReport,
     super.key,
   });
 
@@ -33,6 +34,7 @@ class ChatMessageTile extends ConsumerWidget {
   final bool pending;
   final bool sending;
   final VoidCallback onRetry;
+  final VoidCallback? onReport;
 
   void _openProfile(BuildContext context) {
     FocusScope.of(context).unfocus();
@@ -145,6 +147,11 @@ class ChatMessageTile extends ConsumerWidget {
                           ),
                       ],
                     ),
+                  ),
+                if (onReport != null)
+                  TextButton(
+                    onPressed: onReport,
+                    child: Text(context.l10n.reportSubmit),
                   ),
                 if (pending)
                   Wrap(

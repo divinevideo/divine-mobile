@@ -12,7 +12,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/caption_mentions/caption_mentions_cubit.dart';
 import 'package:openvine/blocs/chat/chat_composer_cubit.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/features/chat/chat_draft_cache.dart';
 import 'package:openvine/features/chat/chat_message_tile.dart';
+import 'package:openvine/features/chat/concord_reports_provider.dart';
 import 'package:openvine/features/chat/public_room_notice.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mentions/mention_text_editing.dart';
@@ -39,6 +41,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   List<ChatMessage> _readSnapshot = const [];
   late final ChatComposerCubit _composer;
   late final CaptionMentionsCubit _mentions;
+  late final StreamSubscription<ChatComposerState> _draftSubscription;
 
   @override
   void initState() {
@@ -46,7 +49,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_scheduleCurrentRead);
     final chat = context.read<ChatCubit>();
+    final drafts = ref.read(chatDraftCacheProvider);
+    final draftKey = (
+      chat.state.account,
+      chat.state.selectedCommunityId,
+      chat.state.selectedChannelId,
+    );
+    final savedDraft = drafts[draftKey];
     _composer = ChatComposerCubit(
+      initialState: savedDraft,
       send: (body) => chat.send(
         communityId: chat.state.selectedCommunityId,
         channelId: chat.state.selectedChannelId,
@@ -55,6 +66,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
         nowMilliseconds: DateTime.now().millisecondsSinceEpoch,
       ),
     );
+    _controller.value = TextEditingValue(
+      text: _composer.state.text,
+      selection: TextSelection.collapsed(
+        offset: _composer.state.selectionEnd ?? _composer.state.text.length,
+      ),
+    );
+    _draftSubscription = _composer.stream.listen((state) {
+      drafts[draftKey] = state;
+    });
     _mentions = CaptionMentionsCubit(
       profileRepositoryOf: () => ref.read(profileRepositoryProvider),
       candidatePubkeys: () => {
@@ -63,6 +83,48 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       },
     );
     _controller.addListener(_searchMentions);
+  }
+
+  Future<void> _report(ChatMessage message) async {
+    final reports = ref.read(concordReportsProvider);
+    if (reports == null) return;
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(context.l10n.reportWhyReporting),
+        children: [
+          for (final reason in [
+            context.l10n.reportReasonSpam,
+            context.l10n.reportReasonHarassment,
+            context.l10n.reportReasonViolence,
+            context.l10n.reportReasonSexualContent,
+          ])
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, reason),
+              child: Text(reason),
+            ),
+        ],
+      ),
+    );
+    if (reason == null || !mounted) return;
+    try {
+      await reports.submit(
+        communityId: context.read<ChatCubit>().state.selectedCommunityId,
+        channelId: message.channelId,
+        rumorId: message.id,
+        reason: reason,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.reportReceivedThankYou)),
+        );
+      }
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(context.l10n.reportFailed)));
+      }
+    }
   }
 
   @override
@@ -142,6 +204,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     _scrollController.dispose();
     _controller.removeListener(_searchMentions);
     unawaited(_mentions.close());
+    unawaited(_draftSubscription.cancel());
     unawaited(_composer.close());
     _controller.dispose();
     super.dispose();
@@ -199,7 +262,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '#${state.selectedChannelId}',
+                '#${community?.channelName(state.selectedChannelId) ?? state.selectedChannelId}',
                 style: VineTheme.titleMediumFont(
                   color: context.vineColors.primaryText,
                 ),
@@ -229,7 +292,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             constraints: const BoxConstraints(maxWidth: 720),
             child: Column(
               children: [
-                const PublicRoomNotice(),
+                PublicRoomNotice(isTest: state.isTestCommunity),
                 if (state.loading) const DivineLinearProgressIndicator(),
                 if (state.loadFailed) ...[
                   Text(context.l10n.dmConversationLoadError),
@@ -252,7 +315,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     fit: StackFit.expand,
                     children: [
                       if (messages.isEmpty)
-                        _EmptyRoom(channel: state.selectedChannelId)
+                        _EmptyRoom(
+                          channel:
+                              community?.channelName(state.selectedChannelId) ??
+                              state.selectedChannelId,
+                        )
                       else
                         ListView.builder(
                           controller: _scrollController,
@@ -271,6 +338,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                                 message.id,
                               ),
                               sending: state.sending,
+                              onReport:
+                                  ref.watch(concordReportsProvider) == null
+                                  ? null
+                                  : () => unawaited(_report(message)),
                               onRetry: () => runDetached(
                                 cubit.retry(message.id),
                                 'retry room message',

@@ -53,6 +53,8 @@ ConcordRepository buildConcordRepository({
   required NostrSigner? signer,
   required AccountScopedStore store,
   NostrSigner? Function()? signerForSend,
+  ConcordControlState? Function()? controlState,
+  bool Function()? canPublish,
 }) {
   final relay = WebSocketRelayGateway(concordRelayUrl);
   final sealed = signer != null && pubkey != null
@@ -88,6 +90,8 @@ ConcordRepository buildConcordRepository({
     relay: relay,
     store: store,
     cipher: _UnavailableCipher(),
+    controlState: controlState,
+    canPublish: canPublish,
     sealedTransport: sealed,
   );
 }

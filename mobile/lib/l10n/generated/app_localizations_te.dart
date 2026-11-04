@@ -16066,4 +16066,8 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'వీడియో చూడండి';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages.';
 }

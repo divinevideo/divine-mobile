@@ -15639,4 +15639,8 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'Xem video';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages.';
 }

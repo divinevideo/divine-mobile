@@ -613,6 +613,8 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
+  // Real public community Rooms privacy notice.
+  'messagesPublicRoomsDisclosure',
   // Native challenge Lists presentation; awaiting the translation pass.
   'challengeOrganizerTime',
   'challengeLocalDeadline', 'challengeEnter', 'challengeEnterVideo',
