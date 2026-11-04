@@ -122,14 +122,17 @@ class GhLedgerStoreTests(unittest.TestCase):
         store, run = self.store(conflict, conflict, done())
         self.assertTrue(store.create_json("p.json", {}, "m"))
         self.assertEqual(len(run.calls), 3)
-        self.assertTrue(all("PUT" in call for call in run.calls))
+        self.assertEqual(run.calls[0][:4], ["gh", "api", "--method", "PUT"])
+        self.assertEqual(run.calls[0], run.calls[1])
+        self.assertEqual(run.calls[1], run.calls[2])
 
     def test_create_gives_up_after_five_conflicts(self):
         conflict = done(1, stderr="gh: Conflict (HTTP 409)")
         store, run = self.store(*[conflict] * 6)
         with self.assertRaises(ledger.LedgerError):
             store.create_json("p.json", {}, "m")
-        self.assertLessEqual(len(run.calls), 6)
+        self.assertEqual(len(run.calls), 6)
+        self.assertTrue(all("PUT" in call for call in run.calls))
 
     def test_create_raises_on_other_errors(self):
         store, _ = self.store(done(1, stderr="gh: Forbidden (HTTP 403)"))
@@ -143,6 +146,23 @@ class GhLedgerStoreTests(unittest.TestCase):
         self.assertEqual(
             run.calls, [["gh", "api", f"repos/{REPO}/contents/p.json?ref=main"]]
         )
+
+    def test_read_json_unreadable_bodies_raise_ledger_error(self):
+        for body in (
+            json.dumps([{"name": "a.json"}]),
+            json.dumps({"content": ""}),
+            json.dumps({"content": "!!!notbase64"}),
+            "not json at all",
+        ):
+            store, _ = self.store(done(stdout=body))
+            with self.assertRaisesRegex(ledger.LedgerError, "p.json"):
+                store.read_json("p.json")
+
+    def test_paths_garbled_body_raises_ledger_error(self):
+        for body in ("garbled", json.dumps([]), json.dumps({"truncated": False})):
+            store, _ = self.store(done(stdout=body))
+            with self.assertRaises(ledger.LedgerError):
+                store.paths()
 
     def test_read_json_missing_raises(self):
         store, _ = self.store(done(1, stderr="gh: Not Found (HTTP 404)"))

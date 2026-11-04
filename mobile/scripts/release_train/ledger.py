@@ -54,10 +54,17 @@ class GhLedgerStore:
             )
             if result.returncode != 0:
                 raise LedgerError(f"gh tree listing failed: {result.stderr.strip()}")
-            tree = json.loads(result.stdout)
-            if tree.get("truncated"):
+            try:
+                tree = json.loads(result.stdout)
+                truncated = tree.get("truncated")
+                found = frozenset(entry["path"] for entry in tree["tree"])
+            except (ValueError, KeyError, TypeError, AttributeError) as error:
+                raise LedgerError(
+                    f"unreadable tree listing from gh: {error!r}"
+                ) from error
+            if truncated:
                 raise LedgerError("ledger tree listing was truncated")
-            self._paths = frozenset(entry["path"] for entry in tree["tree"])
+            self._paths = found
         return self._paths
 
     def read_json(self, path: str) -> dict:
@@ -66,8 +73,14 @@ class GhLedgerStore:
         )
         if result.returncode != 0:
             raise LedgerError(f"cannot read {path}: {result.stderr.strip()}")
-        content = json.loads(result.stdout)["content"]
-        return json.loads(base64.b64decode(content).decode("utf-8"))
+        try:
+            content = json.loads(result.stdout)["content"]
+            record = json.loads(base64.b64decode(content, validate=True).decode("utf-8"))
+        except (ValueError, KeyError, TypeError) as error:
+            raise LedgerError(f"unreadable content for {path}: {error!r}") from error
+        if not isinstance(record, dict):
+            raise LedgerError(f"content of {path} is not a JSON object")
+        return record
 
     def create_json(self, path: str, record: dict, message: str) -> bool:
         body = json.dumps(record, sort_keys=True, indent=2) + "\n"
