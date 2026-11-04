@@ -533,7 +533,7 @@ void main() {
         ]);
         when(
           () => reuseLookup(any()),
-        ).thenThrow(StateError('client disposed'));
+        ).thenThrow(StateError('unexpected client state'));
 
         await expectLater(repository.searchSounds('crowd'), throwsStateError);
       });
