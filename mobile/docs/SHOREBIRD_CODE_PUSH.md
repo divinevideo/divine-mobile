@@ -77,7 +77,9 @@ Because the Play AAB and direct-download APKs use different Flutter engines,
 engine-specific behavior can differ even when both artifacts come from the same
 Codemagic run. Their build numbers can differ too: the APK uses
 `PROJECT_BUILD_NUMBER`, while the AAB uses the higher of that value and the next
-available Play build number.
+available Play build number. If Google Play can't report its latest build
+number, the build stops before signing instead of guessing, as the iOS lookup
+does.
 
 Shorebird's native `auto_update` is disabled because it always checks `stable`
 and would race the staged-patch validation relaunch. The app replaces it during
