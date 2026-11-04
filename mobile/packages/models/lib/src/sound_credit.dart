@@ -134,19 +134,22 @@ SoundCredit _parseCredit(String line) {
   );
 }
 
-/// [url] when it is an HTTPS link to a Creative Commons licence, else null.
+/// [url] as an HTTPS link when it points at a Creative Commons licence, else
+/// null. Older licence links use http, so those are upgraded.
 ///
 /// The link comes from the sound's event, written by whoever published the
 /// sound, and is signed into the poster's video without them seeing it, so
 /// any other link is left out.
 String? _creativeCommonsLink(String? url) {
   final uri = Uri.tryParse(url?.trim() ?? '');
-  if (uri == null || uri.scheme != 'https') return null;
+  if (uri == null || !const {'https', 'http'}.contains(uri.scheme)) {
+    return null;
+  }
   return const {
         'creativecommons.org',
         'www.creativecommons.org',
       }.contains(uri.host)
-      ? uri.toString()
+      ? uri.replace(scheme: 'https', port: 443).toString()
       : null;
 }
 

@@ -87,7 +87,6 @@ void main() {
     test('writes only a Creative Commons licence link', () {
       for (final link in [
         'https://phish.example/licenses/by/4.0/',
-        'http://creativecommons.org/licenses/by/4.0/',
         'https://creativecommons.org.phish.example/licenses/by/4.0/',
         'javascript:alert(1)',
       ]) {
@@ -109,6 +108,16 @@ void main() {
         endsWith(
           'CC BY 4.0 https://www.creativecommons.org/licenses/by/3.0/ '
           '(edited)',
+        ),
+      );
+      // Older licence links use http; the credit links the same page over
+      // https rather than dropping it.
+      expect(
+        soundCreditLine(
+          _sound(licenseUrl: 'http://creativecommons.org/licenses/by/3.0/'),
+        ),
+        endsWith(
+          'CC BY 4.0 https://creativecommons.org/licenses/by/3.0/ (edited)',
         ),
       );
     });
