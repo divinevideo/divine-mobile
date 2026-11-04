@@ -39,7 +39,10 @@ class VerifyRouteData extends GoRouteData with $VerifyRouteData {
 /// Links one NIP-39 platform; pops with a [VerifyConnectResult] once linked,
 /// if any.
 class VerifyConnectRouteData extends GoRouteData with $VerifyConnectRouteData {
-  const VerifyConnectRouteData({required this.platform, this.replacing});
+  const VerifyConnectRouteData({
+    required this.platform,
+    @TypedQueryParameter(name: 'replacing') this.replacing,
+  });
 
   /// The platform key, as `VerifierPlatform.key`.
   final String platform;
