@@ -25,6 +25,10 @@ void main() {
           dmDeletionDrainSubscriptionId(_pubkey, page),
           dmCatchUpDebtSubscriptionId(_pubkey, page),
           dmDeletionsSubscriptionId(dmCatchUpDebtSubscriptionId(_pubkey, page)),
+          dmBelowWindowRequerySubscriptionId(_pubkey, page),
+          dmDeletionsSubscriptionId(
+            dmBelowWindowRequerySubscriptionId(_pubkey, page),
+          ),
         ],
       ];
 

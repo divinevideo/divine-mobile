@@ -638,6 +638,36 @@ void main() {
       });
     });
 
+    group('belowWindowRequeryAt (#8439)', () {
+      test('is null until a re-query below the window has finished', () {
+        expect(state.belowWindowRequeryAt(pkA), isNull);
+      });
+
+      test('returns the time it was recorded at', () async {
+        await state.setBelowWindowRequeryAt(pkA, tsMid);
+
+        expect(state.belowWindowRequeryAt(pkA), equals(tsMid));
+      });
+
+      test('is per pubkey', () async {
+        await state.setBelowWindowRequeryAt(pkA, tsMid);
+
+        expect(state.belowWindowRequeryAt(pkB), isNull);
+      });
+
+      test('clear and clearAll reset it', () async {
+        await state.setBelowWindowRequeryAt(pkA, tsMid);
+        await state.setBelowWindowRequeryAt(pkB, tsNewer);
+
+        await state.clear(pkA);
+        expect(state.belowWindowRequeryAt(pkA), isNull);
+        expect(state.belowWindowRequeryAt(pkB), equals(tsNewer));
+
+        await state.clearAll();
+        expect(state.belowWindowRequeryAt(pkB), isNull);
+      });
+    });
+
     group('dmRelayListPublished (#4974)', () {
       test('defaults to false and flips to true after marking', () async {
         expect(state.dmRelayListPublished(pkA), isFalse);

@@ -108,6 +108,7 @@ class DmSyncState {
   static const _drainInboxCoveredPrefix = 'dm.drainCoveredOwnInbox.';
   static const _drainCompletedBeforePrefix = 'dm.historyDrainCompletedBefore.';
   static const _catchUpDebtPrefix = 'dm.catchUpDebt.';
+  static const _belowWindowRequeryPrefix = 'dm.belowWindowRequeryAt.';
   static const _drainCompletionMigrationPrefix =
       'dm.historyDrainCompletionMigration.';
 
@@ -545,6 +546,18 @@ class DmSyncState {
     await _prefs.setInt('$_groupRecoveryVersionPrefix$pubkey', version);
   }
 
+  /// When the re-query below the live window last finished for [pubkey], in
+  /// unix seconds, with every page answered by every relay it asked; `null`
+  /// if it never has. `DmRepository` asks again only once a day (#8439).
+  int? belowWindowRequeryAt(String pubkey) =>
+      _prefs.getInt('$_belowWindowRequeryPrefix$pubkey');
+
+  /// Records that the re-query below the live window for [pubkey] finished at
+  /// [at] (unix seconds). See [belowWindowRequeryAt].
+  Future<void> setBelowWindowRequeryAt(String pubkey, int at) async {
+    await _prefs.setInt('$_belowWindowRequeryPrefix$pubkey', at);
+  }
+
   /// The parts of past catch-up windows, for [pubkey], that relays may have
   /// withheld at their result cap and that have not been read yet, one
   /// entry per relay. A malformed record reads as empty.
@@ -848,6 +861,7 @@ class DmSyncState {
     await _prefs.remove('$_drainCompletedBeforePrefix$pubkey');
     await _prefs.remove('$_drainCompletionMigrationPrefix$pubkey');
     await _prefs.remove('$_catchUpDebtPrefix$pubkey');
+    await _prefs.remove('$_belowWindowRequeryPrefix$pubkey');
   }
 
   /// Removes all DM sync state entries for every pubkey.
@@ -870,7 +884,8 @@ class DmSyncState {
               key.startsWith(_drainInboxCoveredPrefix) ||
               key.startsWith(_drainCompletedBeforePrefix) ||
               key.startsWith(_drainCompletionMigrationPrefix) ||
-              key.startsWith(_catchUpDebtPrefix),
+              key.startsWith(_catchUpDebtPrefix) ||
+              key.startsWith(_belowWindowRequeryPrefix),
         )
         .toList();
     for (final key in keysToRemove) {

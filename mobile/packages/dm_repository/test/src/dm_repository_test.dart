@@ -551,6 +551,7 @@ class _FakeDmSyncState implements DmSyncState {
   final List<({String pubkey, int createdAt})> recordedWire =
       <({String pubkey, int createdAt})>[];
   bool drainCoveredOwnInboxOverride = false;
+  int? belowWindowRequeryAtOverride;
   bool completedBeforeOverride = false;
   final List<String> inboxCoveredPubkeys = <String>[];
   final List<String> rearmedForInboxPubkeys = <String>[];
@@ -591,6 +592,14 @@ class _FakeDmSyncState implements DmSyncState {
   Future<void> setDrainCoveredOwnInbox(String pubkey) async {
     inboxCoveredPubkeys.add(pubkey);
     drainCoveredOwnInboxOverride = true;
+  }
+
+  @override
+  int? belowWindowRequeryAt(String pubkey) => belowWindowRequeryAtOverride;
+
+  @override
+  Future<void> setBelowWindowRequeryAt(String pubkey, int at) async {
+    belowWindowRequeryAtOverride = at;
   }
 
   @override
