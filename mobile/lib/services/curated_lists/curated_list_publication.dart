@@ -4,6 +4,59 @@
 part of '../curated_list_service.dart';
 
 extension CuratedListPublication on CuratedListService {
+  /// Reads inside the mutation queue, before the operation builds its delta.
+  /// Background sync alone cannot protect edits made from another device.
+  Future<bool> _reconcileListBeforeMutation(
+    String listId,
+    String? owner, {
+    required bool recovering,
+  }) async {
+    final list = getListById(listId);
+    // Creating a new coordinate has no cached replacement to reconcile.
+    // Signed-out drafts stay local and never publish over relay data.
+    if (list == null || owner == null) return true;
+    if (list.pubkey != null && list.pubkey != owner) return false;
+    if (!recovering && !_defaultAuthority.canMutate(list)) return false;
+
+    final cancel = Completer<void>();
+    _relaySyncCancels.add(cancel);
+    try {
+      final snapshot = await _relayGateway.readOwnedListForMutation(
+        owner,
+        list.id,
+        timeout: _relaySyncTimeout,
+        cancelled: cancel.future,
+      );
+      if (!snapshot.completedNormally ||
+          cancel.isCompleted ||
+          !_isCurrent(owner)) {
+        return false;
+      }
+      final events = snapshot.events;
+      if (events.isNotEmpty &&
+          !await _processReceivedListEvents(
+            events,
+            isCurrentRead: () => !cancel.isCompleted && _isCurrent(owner),
+          )) {
+        return false;
+      }
+      final current = getListById(listId);
+      return !cancel.isCompleted &&
+          _isCurrent(owner) &&
+          current != null &&
+          _relayEvidence.allows(current);
+    } on Object catch (error) {
+      Log.warning(
+        'Not changing list $listId: relay read failed (${error.runtimeType})',
+        name: 'CuratedListService',
+        category: LogCategory.system,
+      );
+      return false;
+    } finally {
+      _relaySyncCancels.remove(cancel);
+    }
+  }
+
   Future<bool> _publishListToNostr(
     CuratedList sourceList, {
     Event? signedRetry,
