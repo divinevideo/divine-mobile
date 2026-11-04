@@ -185,6 +185,24 @@ void main() {
         expect(find.text(AudioEvent.originalSoundTitle), findsNothing);
       });
 
+      testWidgets('names the creator in place of the published default title', (
+        tester,
+      ) async {
+        const publishedTitle = '${AudioEvent.originalSoundTitle} - @retrashhh';
+        final audio = _createTestAudioEvent(
+          title: publishedTitle,
+        ).copyWith(creatorName: 'retrashhh');
+        await tester.pumpWidget(buildWidget(audio: audio));
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(l10n.originalSoundByCreator('retrashhh')),
+          findsOneWidget,
+        );
+        expect(find.text(publishedTitle), findsNothing);
+      });
+
       testWidgets('keeps the title a publisher gave the sound', (
         tester,
       ) async {
