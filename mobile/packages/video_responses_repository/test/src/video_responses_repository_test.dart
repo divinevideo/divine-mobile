@@ -1118,6 +1118,122 @@ void main() {
         },
       );
 
+      for (final hidePriorPin in [false, true]) {
+        test('clearing a prior pin preserves a different remote pin '
+            '(hide: $hidePriorPin)', () async {
+          curationAnswers([
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(201), 'wss://relay.example', 'pinned'],
+                ['e', _hex(203), 'wss://other.example', 'hidden'],
+              ],
+            ),
+          ]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+          final previous = RepliesCuration(pinnedId: _hex(202));
+
+          final reconciled = await repository().saveCuration(
+            hidePriorPin ? previous.hidden(_hex(202)) : previous.pinned(null),
+            videoAddress: _rootAddress,
+            previous: previous,
+          );
+
+          expect(
+            reconciled,
+            RepliesCuration(
+              pinnedId: _hex(201),
+              hiddenIds: {_hex(203), if (hidePriorPin) _hex(202)},
+            ),
+          );
+          expect(
+            signed.single.tags,
+            anyElement(
+              equals([
+                'e',
+                _hex(201),
+                'wss://relay.example',
+                'pinned',
+              ]),
+            ),
+          );
+        });
+      }
+
+      test(
+        'explicitly pinning a remotely hidden reply also shows it',
+        () async {
+          curationAnswers([
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(201), 'wss://relay.example', 'pinned'],
+                ['e', _hex(202), 'wss://relay.example', 'hidden'],
+                ['e', _hex(203), 'wss://other.example', 'hidden'],
+              ],
+            ),
+          ]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          final reconciled = await repository().saveCuration(
+            RepliesCuration(pinnedId: _hex(202)),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+
+          expect(
+            reconciled,
+            RepliesCuration(
+              pinnedId: _hex(202),
+              hiddenIds: {_hex(203)},
+            ),
+          );
+          expect(signed.single.tags, [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['e', _hex(203), 'wss://other.example', 'hidden'],
+            ['e', _hex(202), '', 'pinned'],
+          ]);
+        },
+      );
+
+      test(
+        'an unchanged prior pin does not undo a remote hide of that reply',
+        () async {
+          curationAnswers([
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(201), '', 'pinned'],
+                ['e', _hex(202), '', 'hidden'],
+                ['e', _hex(203), '', 'hidden'],
+              ],
+            ),
+          ]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+          final previous = RepliesCuration(pinnedId: _hex(202));
+
+          final reconciled = await repository().saveCuration(
+            previous.hidden(_hex(204)),
+            videoAddress: _rootAddress,
+            previous: previous,
+          );
+
+          expect(
+            reconciled,
+            RepliesCuration(
+              pinnedId: _hex(201),
+              hiddenIds: {_hex(202), _hex(203), _hex(204)},
+            ),
+          );
+        },
+      );
+
       test('refuses a signature belonging to a different account', () async {
         signedEvent = _curationEvent(createdAt: 1000, pubkey: _viewer);
 

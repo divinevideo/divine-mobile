@@ -484,9 +484,19 @@ class VideoResponsesRepository {
     final hidden = {...latest.hiddenIds}
       ..addAll(curation.hiddenIds.difference(previous.hiddenIds))
       ..removeAll(previous.hiddenIds.difference(curation.hiddenIds));
-    final pinned = curation.pinnedId == previous.pinnedId
-        ? latest.pinnedId
-        : curation.pinnedId;
+    final pinChanged = curation.pinnedId != previous.pinnedId;
+    var pinned = latest.pinnedId;
+    if (pinChanged) {
+      final requestedPin = curation.pinnedId;
+      if (requestedPin != null) {
+        // Pinning also shows this reply, including a hide learned in this read.
+        hidden.remove(requestedPin);
+        pinned = requestedPin;
+      } else if (latest.pinnedId == previous.pinnedId) {
+        // Clearing the old pin must not clear another device's different pin.
+        pinned = null;
+      }
+    }
     final replacement = RepliesCuration(
       pinnedId: hidden.contains(pinned) ? null : pinned,
       hiddenIds: hidden,
