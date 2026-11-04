@@ -37,6 +37,18 @@ class _MockTimelineOverlayBloc
     extends MockBloc<TimelineOverlayEvent, TimelineOverlayState>
     implements TimelineOverlayBloc {}
 
+const _sound = TimelineOverlayItem(
+  id: 'sound-1',
+  type: TimelineOverlayType.sound,
+  startTime: Duration.zero,
+  endTime: Duration(seconds: 1),
+);
+
+const _soundSelected = TimelineOverlayState(
+  items: [_sound],
+  selectedItemId: 'sound-1',
+);
+
 void main() {
   group(TimelineControlsBar, () {
     late _MockVideoEditorMainBloc mainBloc;
@@ -316,23 +328,28 @@ void main() {
     });
 
     testWidgets('deselects the selected overlay item', (tester) async {
-      when(() => overlayBloc.state).thenReturn(
-        const TimelineOverlayState(
-          items: [
-            TimelineOverlayItem(
-              id: 'sound-1',
-              type: TimelineOverlayType.sound,
-              startTime: Duration.zero,
-              endTime: Duration(seconds: 1),
-            ),
-          ],
-          selectedItemId: 'sound-1',
-        ),
-      );
+      when(() => overlayBloc.state).thenReturn(_soundSelected);
 
       expect(await dismiss(tester), isTrue);
       verify(() => overlayBloc.add(const TimelineOverlayItemSelected(null)))
           .called(1);
+    });
+
+    testWidgets('cancels the clip multi-select before deselecting an item', (
+      tester,
+    ) async {
+      // Tapping an overlay strip selects it without leaving the multi-select,
+      // whose bar stays on screen.
+      when(
+        () => clipBloc.state,
+      ).thenReturn(const ClipEditorState(isMultiSelectMode: true));
+      when(() => overlayBloc.state).thenReturn(_soundSelected);
+
+      expect(await dismiss(tester), isTrue);
+      verify(() => clipBloc.add(const ClipEditorMultiSelectCancelled()))
+          .called(1);
+      verifyNever(() => overlayBloc.add(any()));
+      verifyNever(() => mainBloc.add(any()));
     });
 
     testWidgets('leaves the back press to the editor without controls', (
