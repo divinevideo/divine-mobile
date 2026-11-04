@@ -312,7 +312,7 @@ void main() {
           when(() => mockBloc.state).thenReturn(
             const VideoEditorDrawState(
               selectedTool: DrawToolType.marker,
-              selectedColor: VineTheme.vineGreen,
+              selectedColor: VineTheme.accentPink,
               strokeWidths: {DrawToolType.marker: 20.0},
             ),
           );
@@ -338,7 +338,7 @@ void main() {
           );
           expect(
             previewDecoration(tester).color,
-            VineTheme.vineGreen.withValues(alpha: 0.7),
+            VineTheme.accentPink.withValues(alpha: 0.7),
           );
           await gesture.up();
         },

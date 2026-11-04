@@ -8486,10 +8486,12 @@
   "@videoEditorAudioFilterEffects": {
     "description": "Filter chip in the sound picker that narrows the lists to sound effects (booms, laughs, meme lines), as opposed to music. Translate as sound effects, not visual effects."
   },
-  "videoEditorDrawToolArrowSemanticLabel": "Arrow tool",
   "videoEditorDrawToolEraserSemanticLabel": "Eraser tool",
   "videoEditorDrawToolMarkerSemanticLabel": "Marker tool",
   "videoEditorDrawToolPencilSemanticLabel": "Pencil tool",
+  "videoEditorDrawToolNeonSemanticLabel": "Neon tool",
+  "videoEditorDrawToolRainbowSemanticLabel": "Rainbow tool",
+  "videoEditorDrawToolCalligraphySemanticLabel": "Calligraphy tool",
   "videoEditorShowTimelineSemanticLabel": "Show timeline",
   "videoEditorHideTimelineSemanticLabel": "Hide timeline",
   "videoEditorFeedPreviewContent": "Avoid placing content behind these areas.",

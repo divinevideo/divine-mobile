@@ -15,6 +15,7 @@ import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
+import 'package:openvine/utils/editor_draw_brushes.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_strip_thumbnails.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_censor_tools.dart';
@@ -328,7 +329,11 @@ class _PaintPreview extends StatelessWidget {
           for (final item in layer.items)
             CustomPaint(
               size: layer.size,
-              painter: DrawPaintItem(item: item, scale: layer.scale),
+              painter: DrawPaintItem(
+                item: item,
+                scale: layer.scale,
+                paintEditorConfigs: EditorDrawBrushes.paintEditorConfigs,
+              ),
             ),
         ],
       ),

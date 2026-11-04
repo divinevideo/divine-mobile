@@ -10605,9 +10605,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorAudioFilterEffects => '効果音';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => '矢印ツール';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => '消しゴムツール';
 
   @override
@@ -10615,6 +10612,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => '鉛筆ツール';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'ネオンツール';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'レインボーツール';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'カリグラフィーツール';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'タイムラインを表示';

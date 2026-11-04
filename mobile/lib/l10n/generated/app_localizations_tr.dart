@@ -11058,9 +11058,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorAudioFilterEffects => 'Efektler';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Ok aracı';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Silgi aracı';
 
   @override
@@ -11068,6 +11065,15 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Kalem aracı';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Neon aracı';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Gökkuşağı aracı';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'Kaligrafi aracı';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Zaman çizelgesini göster';

@@ -11196,9 +11196,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorAudioFilterEffects => 'Effecten';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Pijlgereedschap';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Gumgereedschap';
 
   @override
@@ -11206,6 +11203,16 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Potloodgereedschap';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Neongereedschap';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Regenbooggereedschap';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel =>
+      'Kalligrafiegereedschap';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Tijdlijn tonen';

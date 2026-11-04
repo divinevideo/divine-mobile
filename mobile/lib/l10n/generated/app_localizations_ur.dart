@@ -11145,9 +11145,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorAudioFilterEffects => 'صوتی اثرات';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'تیر ٹول';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => 'ایریزر ٹول';
 
   @override
@@ -11155,6 +11152,15 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'پنسل ٹول';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'نیون ٹول';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'قوس قزح ٹول';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'خطاطی ٹول';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'ٹائم لائن دکھائیں';

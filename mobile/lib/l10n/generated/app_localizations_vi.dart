@@ -11096,9 +11096,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorAudioFilterEffects => 'Hiệu ứng âm thanh';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Công cụ mũi tên';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Công cụ tẩy';
 
   @override
@@ -11106,6 +11103,15 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Công cụ bút chì';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Công cụ neon';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Công cụ cầu vồng';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'Công cụ thư pháp';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Hiện timeline';

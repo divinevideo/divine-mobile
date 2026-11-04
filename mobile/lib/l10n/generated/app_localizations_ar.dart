@@ -11150,9 +11150,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorAudioFilterEffects => 'مؤثرات صوتية';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'أداة السهم';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => 'أداة الممحاة';
 
   @override
@@ -11160,6 +11157,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'أداة القلم';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'أداة النيون';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'أداة قوس قزح';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'أداة فن الخط';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'إظهار الجدول الزمني';

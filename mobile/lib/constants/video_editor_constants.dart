@@ -366,6 +366,9 @@ class VideoEditorConstants {
   /// The color a new audio visualizer draws in; it can pick any of [colors].
   static const Color audioVisualizerDefaultColor = VineTheme.vineGreen;
 
+  /// The color the draw editor starts in; it can pick any of [colors].
+  static const Color drawDefaultColor = VineTheme.vineGreen;
+
   /// How many frequency bands an audio visualizer of [style] shows: enough
   /// for the shape to read as the sound, few enough that the bars stay wide
   /// on a phone.

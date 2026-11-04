@@ -10498,9 +10498,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorAudioFilterEffects => '音效';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => '箭头工具';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => '橡皮擦工具';
 
   @override
@@ -10508,6 +10505,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => '铅笔工具';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => '霓虹工具';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => '彩虹工具';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => '书法工具';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => '显示时间线';

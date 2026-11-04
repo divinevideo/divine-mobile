@@ -11051,9 +11051,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorAudioFilterEffects => 'Efek suara';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Alat panah';
-
-  @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Alat penghapus';
 
   @override
@@ -11061,6 +11058,15 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Alat pensil';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Alat neon';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Alat pelangi';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'Alat kaligrafi';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Tampilkan timeline';

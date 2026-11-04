@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/utils/editor_draw_brushes.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -17,7 +18,7 @@ part 'video_editor_draw_state.dart';
 /// in the UI.
 ///
 /// Handles:
-/// - Tool selection state (pencil, marker, arrow, eraser, and blur and
+/// - Tool selection state (the [DrawToolType.drawingTools], and blur and
 ///   pixelate, which hide an area instead)
 /// - Color selection state
 /// - Brush size state, per drawing tool
@@ -64,7 +65,7 @@ class VideoEditorDrawBloc
         emit(state.copyWith(blurIntensity: intensity));
       case .pixelate:
         emit(state.copyWith(pixelateIntensity: intensity));
-      case .pencil || .marker || .arrow || .eraser:
+      case .pencil || .marker || .neon || .calligraphy || .rainbow || .eraser:
         // Intentional no-op: only the censor tools have an intensity.
         break;
     }
