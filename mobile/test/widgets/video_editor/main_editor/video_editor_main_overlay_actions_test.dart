@@ -665,6 +665,28 @@ void main() {
         ).called(1);
         verifyNever(() => mockGoRouter.pop<Object?>(any()));
       });
+
+      testWidgets('leaves an open bar alone while a sub-editor takes back', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            state: const VideoEditorMainState(
+              openSubEditor: SubEditorType.music,
+              isMarkerMode: true,
+            ),
+          ),
+        );
+
+        await tester.binding.handlePopRoute();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        verifyNever(
+          () =>
+              mockBloc.add(const VideoEditorMarkerModeChanged(isActive: false)),
+        );
+        verifyNever(() => mockGoRouter.pop<Object?>(any()));
+      });
     });
 
     group('stop-motion minimum length gate', () {
