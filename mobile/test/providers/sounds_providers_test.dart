@@ -1438,6 +1438,12 @@ void main() {
       setUp(() {
         videosRepository = _MockVideosRepository();
         when(
+          () => videosRepository.getVideosByAddressableIds(
+            any(),
+            includeFeedShape: false,
+          ),
+        ).thenAnswer((_) async => <VideoEvent>[]);
+        when(
           () => videosRepository.refreshAudioReusePolicies(any()),
         ).thenAnswer((_) async => const {});
       });
@@ -1619,6 +1625,59 @@ void main() {
           [normalReference],
         ]);
       });
+
+      test(
+        'keeps a source the action-time fallback finds after relays miss it',
+        () async {
+          when(
+            () => videosRepository.getVideosFromRelaysByAddressableIds(
+              any(),
+              includeFeedShape: any(named: 'includeFeedShape'),
+            ),
+          ).thenAnswer((_) async => (videos: <VideoEvent>[], complete: true));
+          when(
+            () => videosRepository.getVideosByAddressableIds(
+              any(),
+              includeFeedShape: false,
+            ),
+          ).thenAnswer((_) async => [sourceVideo(authorA, 'clip-a')]);
+          final container = buildContainer(soundsFrom([verticalReference]));
+
+          final covers = await container.read(
+            trendingSoundCoversProvider.future,
+          );
+
+          expect(
+            covers[verticalReference]?.imageUrl,
+            'https://example.com/clip-a.jpg',
+          );
+        },
+      );
+
+      test(
+        'does not mark a relay-missing source gone when fallback fails',
+        () async {
+          when(
+            () => videosRepository.getVideosFromRelaysByAddressableIds(
+              any(),
+              includeFeedShape: any(named: 'includeFeedShape'),
+            ),
+          ).thenAnswer((_) async => (videos: <VideoEvent>[], complete: true));
+          when(
+            () => videosRepository.getVideosByAddressableIds(
+              any(),
+              includeFeedShape: false,
+            ),
+          ).thenThrow(Exception('fallback unavailable'));
+          final container = buildContainer(soundsFrom([verticalReference]));
+
+          final covers = await container.read(
+            trendingSoundCoversProvider.future,
+          );
+
+          expect(covers.containsKey(verticalReference), isFalse);
+        },
+      );
 
       test('leaves sounds out when the lookup fails, to ask again', () async {
         var lookups = 0;

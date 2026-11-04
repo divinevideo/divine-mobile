@@ -20,6 +20,7 @@ import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/models/paged_sounds.dart';
 import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/models/sound_cover.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
@@ -315,6 +316,10 @@ class _AudioSelectionBottomSheetState
     AudioEvent sound,
     AsyncValue<Map<String, SoundCover?>>? lookup,
   ) {
+    final viewer = ref.read(authServiceProvider).currentPublicKeyHex;
+    if (viewer != null && viewer.isNotEmpty && viewer == sound.pubkey) {
+      return false;
+    }
     final reference = sound.sourceVideoReference;
     final looked = lookup == null || lookup.hasError ? null : lookup.value;
     return reference != null &&
@@ -620,6 +625,8 @@ class _AudioSelectionBottomSheetState
 
   @override
   Widget build(BuildContext context) {
+    // The owner exemption follows account changes just as the tap check does.
+    ref.watch(currentAuthStateProvider);
     final bundledSoundsAsync = ref.watch(soundLibraryServiceProvider);
     // Batched like the counts below and just as supplementary: a row waits on
     // a plain tile while its list's covers load, then shows its cover, or its

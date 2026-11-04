@@ -2194,6 +2194,32 @@ void main() {
     });
 
     group('Initial state', () {
+      testWidgets('keeps the viewer own saved sound after its video is gone', (
+        tester,
+      ) async {
+        final reference = '34236:${'a' * 64}:deleted';
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: const AsyncValue.data([]),
+            viewerPubkey: 'a' * 64,
+            savedSounds: [
+              _createTestAudioEvent(
+                id: 'own-sound',
+                pubkey: 'a' * 64,
+                title: 'My own sound',
+              ).copyWith(sourceVideoReference: reference),
+            ],
+            savedSources: {reference: null},
+          ),
+        );
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.videoEditorAudioCategoryMySounds));
+        await tester.pumpAndSettle();
+
+        expect(find.text('My own sound'), findsOneWidget);
+      });
+
       testWidgets('hides blocked standalone sounds in My Sounds', (
         tester,
       ) async {
