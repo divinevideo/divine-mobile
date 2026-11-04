@@ -16,6 +16,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/comments/comments.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:provider/provider.dart' as inherited_provider;
@@ -285,12 +286,7 @@ class _TopCommentContent extends StatelessWidget {
           children: [
             _TopCommentAuthor(authorPubkey: comment.authorPubkey),
             const SizedBox(height: 8),
-            Text(
-              comment.content.trim(),
-              style: VineTheme.headlineLargeFont(color: VineTheme.whiteText),
-              maxLines: FeedReactionsOverlayLayout.commentMaxLines,
-              overflow: TextOverflow.ellipsis,
-            ),
+            _TopCommentText(content: comment.content.trim()),
           ],
         ),
       ),
@@ -319,6 +315,43 @@ class _TopCommentContent extends StatelessWidget {
       'present comments screen from reaction',
       logName: 'FeedReactionsOverlay',
       category: LogCategory.ui,
+    );
+  }
+}
+
+/// The top comment's text, with mentions, links and hashtags rendered as
+/// the comments sheet renders them, at headline size.
+///
+/// Tapping a mention or link follows it, as in the sheet; a tap anywhere else
+/// reaches the surrounding detector and opens the sheet.
+class _TopCommentText extends StatelessWidget {
+  const _TopCommentText({required this.content});
+
+  final String content;
+
+  @override
+  Widget build(BuildContext context) {
+    final baseStyle = VineTheme.headlineLargeFont(color: VineTheme.whiteText);
+    // Drawn over video, so the sheet's dark-appearance link colour is fixed
+    // rather than adaptive.
+    final linkColor = VineTheme.darkColors.link;
+    return LinkifiedText(
+      text: content,
+      style: baseStyle,
+      linkStyle: baseStyle.copyWith(
+        color: linkColor,
+        fontWeight: FontWeight.w500,
+        decoration: TextDecoration.underline,
+        decorationColor: linkColor,
+      ),
+      mentionStyle: baseStyle.copyWith(
+        color: linkColor,
+        fontWeight: FontWeight.w600,
+        decoration: TextDecoration.underline,
+        decorationColor: linkColor,
+      ),
+      maxLines: FeedReactionsOverlayLayout.commentMaxLines,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }

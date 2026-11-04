@@ -15,8 +15,11 @@ import 'package:openvine/blocs/feed_top_comment/feed_top_comment_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/video_feed_item/feed_reactions_overlay.dart';
+import 'package:riverpod/misc.dart' show Override;
 
 class _MockFeedTopCommentCubit extends MockCubit<FeedTopCommentState>
     implements FeedTopCommentCubit {}
@@ -86,8 +89,12 @@ void main() {
       cubit = _MockFeedTopCommentCubit();
     });
 
-    Widget buildSubject({bool reducedMotion = false}) => ProviderScope(
+    Widget buildSubject({
+      bool reducedMotion = false,
+      List<Override> extraOverrides = const [],
+    }) => ProviderScope(
       overrides: [
+        ...extraOverrides,
         userProfileReactiveProvider(
           _commenter,
         ).overrideWith((ref) => Stream<UserProfile?>.value(null)),
@@ -129,6 +136,54 @@ void main() {
           find.text(UserProfile.generatedNameFor(_commenter)),
           findsOneWidget,
         );
+      });
+
+      testWidgets('a mention as the comments sheet does, by display name', (
+        tester,
+      ) async {
+        const mentionedHex =
+            '6666666666666666666666666666666666666666666666666666666666666666';
+        final npub = NostrKeyUtils.encodePubKey(mentionedHex);
+        when(() => cubit.state).thenReturn(
+          _visibleState.copyWith(
+            topComment: Comment(
+              id: _topComment.id,
+              content: 'yesss nostr:$npub 👏',
+              authorPubkey: _commenter,
+              createdAt: DateTime(2026, 10, 28),
+              rootEventId: _video.id,
+              rootAuthorPubkey: _creator,
+            ),
+          ),
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            extraOverrides: [
+              userProfileReactiveProvider(mentionedHex).overrideWith(
+                (ref) => Stream<UserProfile?>.value(
+                  UserProfile(
+                    pubkey: mentionedHex,
+                    rawData: const {},
+                    createdAt: DateTime(2026),
+                    eventId: _topComment.id,
+                    displayName: 'Ryohei Nakatake',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        expect(
+          find.textContaining('@Ryohei Nakatake', findRichText: true),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('nostr:npub', findRichText: true),
+          findsNothing,
+        );
+        expect(find.byType(LinkifiedText), findsOneWidget);
       });
 
       testWidgets(
