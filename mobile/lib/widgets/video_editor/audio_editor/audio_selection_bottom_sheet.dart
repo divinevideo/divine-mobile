@@ -322,7 +322,7 @@ class _AudioSelectionBottomSheetState
   ) => SoundCover.cannotBeReused(
     sound,
     lookup == null || lookup.hasError ? null : lookup.value,
-    viewer: ref.read(authServiceProvider).currentPublicKeyHex,
+    viewerPubkeyHex: ref.read(authServiceProvider).currentPublicKeyHex,
   );
 
   /// Loads [sound] into the preview player, stopping whatever played, and

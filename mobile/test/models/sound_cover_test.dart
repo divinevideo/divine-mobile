@@ -186,7 +186,9 @@ void main() {
 
       test('is true for a video the lookup found gone', () {
         expect(
-          SoundCover.cannotBeReused(sound, const {video: null}, viewer: 'me'),
+          SoundCover.cannotBeReused(sound, const {
+            video: null,
+          }, viewerPubkeyHex: 'me'),
           isTrue,
         );
       });
@@ -196,15 +198,18 @@ void main() {
           SoundCover.cannotBeReused(
             sound,
             const {video: SoundCover()},
-            viewer: 'me',
+            viewerPubkeyHex: 'me',
           ),
           isFalse,
         );
         expect(
-          SoundCover.cannotBeReused(sound, const {}, viewer: 'me'),
+          SoundCover.cannotBeReused(sound, const {}, viewerPubkeyHex: 'me'),
           isFalse,
         );
-        expect(SoundCover.cannotBeReused(sound, null, viewer: 'me'), isFalse);
+        expect(
+          SoundCover.cannotBeReused(sound, null, viewerPubkeyHex: 'me'),
+          isFalse,
+        );
       });
 
       test('is false for a sound taken from no video', () {
@@ -214,7 +219,7 @@ void main() {
           SoundCover.cannotBeReused(
             imported,
             const {video: null},
-            viewer: 'someone',
+            viewerPubkeyHex: 'someone',
           ),
           isFalse,
         );
@@ -225,7 +230,7 @@ void main() {
           SoundCover.cannotBeReused(
             sound,
             const {video: null},
-            viewer: 'creator',
+            viewerPubkeyHex: 'creator',
           ),
           isFalse,
         );

@@ -57,17 +57,20 @@ class SoundCover {
   /// hidden from this viewer, or from a creator who lets no one else reuse
   /// its sound. A video the lookup has not reached is not.
   ///
-  /// Never true for a sound [viewer] published: its creator may always reuse
-  /// it, as the reuse check also allows.
+  /// Never true for a sound the viewer published, [viewerPubkeyHex] in hex
+  /// like [AudioEvent.pubkey]: its creator may always reuse it, as the reuse
+  /// check also allows.
   ///
   /// [sourceCovers] is keyed by [AudioEvent.sourceVideoReference], `null` for
   /// a video found gone, as the sound providers' cover lookups return it.
   static bool cannotBeReused(
     AudioEvent audio,
     Map<String, SoundCover?>? sourceCovers, {
-    required String? viewer,
+    required String? viewerPubkeyHex,
   }) {
-    if (viewer != null && viewer.isNotEmpty && viewer == audio.pubkey) {
+    if (viewerPubkeyHex != null &&
+        viewerPubkeyHex.isNotEmpty &&
+        viewerPubkeyHex == audio.pubkey) {
       return false;
     }
     final reference = audio.sourceVideoReference;

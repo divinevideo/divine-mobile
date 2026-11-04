@@ -875,7 +875,7 @@ class _SavedSoundsSectionState extends ConsumerState<_SavedSoundsSection> {
             SoundCover.cannotBeReused(
               sound.audio,
               next.value,
-              viewer: viewer,
+              viewerPubkeyHex: viewer,
             )) {
           widget.onPreviewUnavailable();
         }
@@ -906,7 +906,7 @@ class _SavedSoundsSectionState extends ConsumerState<_SavedSoundsSection> {
               cannotBeReused: SoundCover.cannotBeReused(
                 sound.audio,
                 sourceCovers,
-                viewer: viewer,
+                viewerPubkeyHex: viewer,
               ),
             );
             return SavedSoundTile(
