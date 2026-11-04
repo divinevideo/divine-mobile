@@ -356,27 +356,31 @@ typedef _RecoveryPageAnswer = ({
 });
 
 /// One page of history read from relays and handled: what the relays sent,
-/// whether every relay asked answered, whether a relay may have stopped at
-/// its result cap, the stamp to resume below, and how many of its gift wraps
-/// had not been handled before.
-/// What one relay's walk of the band below the live window found:
-/// whether the relay answered every page, the pages and events read, how many
-/// new gift wraps were decrypted, and the stamp reached if the page budget ran
-/// out before the floor.
+/// whether every relay asked answered, whether the one relay asked refused it
+/// for good, whether a relay may have stopped at its result cap, the oldest
+/// stamp it held (where the next page starts, inclusive), and how many new
+/// gift wraps it decrypted in a batch (a remote signer decrypts each one on
+/// its own, outside this count).
+typedef _HistoryPage = ({
+  List<Event> events,
+  bool authoritative,
+  bool refusedForGood,
+  bool possiblyCapped,
+  int? resumeAt,
+  int newGiftWraps,
+});
+
+/// What one relay's walk of the band below the live window found: whether
+/// the relay answered every page or refused for good, the pages and events
+/// read, how many new gift wraps were decrypted in a batch, and the stamp
+/// reached if the page budget ran out before the floor.
 typedef _BandWalk = ({
   bool answered,
+  bool refused,
   int pages,
   int events,
   int newGiftWraps,
   int? budgetStoppedAt,
-});
-
-typedef _HistoryPage = ({
-  List<Event> events,
-  bool authoritative,
-  bool possiblyCapped,
-  int? resumeAt,
-  int newGiftWraps,
 });
 
 /// A signed legacy kind-4 copy, and what a retry re-checks before
@@ -2086,6 +2090,9 @@ class DmRepository {
     if (_ingestSessionEnded(pubkey, generation)) return null;
     final events = [for (final read in reads) ...read.events];
     final authoritative = reads.every((read) => read.authoritative);
+    final refusedForGood =
+        reads.any((read) => read.refusedForGood) &&
+        reads.every((read) => read.authoritative || read.refusedForGood);
     final ends = [
       for (final read in reads)
         (
@@ -2161,6 +2168,7 @@ class DmRepository {
     return (
       events: events,
       authoritative: authoritative,
+      refusedForGood: refusedForGood,
       possiblyCapped: possiblyCapped,
       resumeAt: resumeAt,
       newGiftWraps: preDecrypted.length,
@@ -2179,7 +2187,14 @@ class DmRepository {
   /// and the drain reads it as exhaustion. `requireAllRelaysSettled` is what
   /// makes a relay's `CLOSED` refusal and a partial fan-out surface as
   /// `timedOut` rather than completing on whichever relays did answer. #8209.
-  Future<({List<Event> events, bool authoritative, bool possiblyCapped})>
+  Future<
+    ({
+      List<Event> events,
+      bool authoritative,
+      bool refusedForGood,
+      bool possiblyCapped,
+    })
+  >
   _readHistoryKinds(
     List<int> kinds, {
     required String pubkey,
@@ -2213,6 +2228,7 @@ class DmRepository {
       return (
         events: result.events,
         authoritative: !result.noRelays && !result.timedOut,
+        refusedForGood: false,
         // The drain judges its pages by their size; this read keeps no cap
         // evidence, so a cap is never ruled out.
         possiblyCapped: true,
@@ -2231,6 +2247,16 @@ class DmRepository {
     return (
       events: result.events,
       authoritative: result.isComplete,
+      // As a pool read settles on it beside a relay that answered (#9468).
+      // A refusal that may be transient or asks for AUTH, and a rate limit,
+      // say nothing about what the relay holds.
+      refusedForGood:
+          result.endedBy == QueryEnd.relayClosed &&
+          result.rateLimitedRelayCount == 0 &&
+          result.closedRelayReasons.isNotEmpty &&
+          !result.closedRelayReasons.values.any(
+            _unconfirmedRefusalCategories.contains,
+          ),
       possiblyCapped: result.possiblyCapped,
     );
   }
@@ -2407,8 +2433,8 @@ class DmRepository {
         if (walk == null) return;
         deletions.add(walk);
       }
-      final messagesAnswered = messages.every((walk) => walk.answered);
-      final deletionsAnswered = deletions.every((walk) => walk.answered);
+      final messagesAnswered = _bandAnswered(messages);
+      final deletionsAnswered = _bandAnswered(deletions);
       final answered =
           inbox.conclusive && messagesAnswered && deletionsAnswered;
       if (answered && !_ingestSessionEnded(pubkey, generation)) {
@@ -2458,10 +2484,17 @@ class DmRepository {
     }
   }
 
+  /// Whether a pass of [walks] read the whole band: every relay answered or
+  /// refused for good, and at least one answered, as a pool read settles on
+  /// refusals only beside a relay that answered.
+  static bool _bandAnswered(List<_BandWalk> walks) =>
+      walks.every((walk) => walk.answered || walk.refused) &&
+      walks.any((walk) => walk.answered);
+
   /// Walks one relay with [readPage] from [from] down to [floor], each page
   /// starting at or below the oldest stamp of the page before. Stops when the
   /// relay sends nothing more, sends fewer than its cap, leaves a page
-  /// unanswered, the next page would start below [floor], or
+  /// unanswered or refuses it, the next page would start below [floor], or
   /// [DmHistoryDrainConfig.maxPages] is reached. Returns null when the ingest
   /// session ended.
   Future<_BandWalk?> _pageBelowWindow(
@@ -2475,8 +2508,13 @@ class DmRepository {
     var pages = 0;
     var events = 0;
     var newGiftWraps = 0;
-    _BandWalk walked({bool answered = true, int? budgetStoppedAt}) => (
+    _BandWalk walked({
+      bool answered = true,
+      bool refused = false,
+      int? budgetStoppedAt,
+    }) => (
       answered: answered,
+      refused: refused,
       pages: pages,
       events: events,
       newGiftWraps: newGiftWraps,
@@ -2490,7 +2528,9 @@ class DmRepository {
       events += result.events.length;
       newGiftWraps += result.newGiftWraps;
       // What an unanswered page carried is stored; the run is not recorded.
-      if (!result.authoritative) return walked(answered: false);
+      if (!result.authoritative) {
+        return walked(answered: false, refused: result.refusedForGood);
+      }
       final resumeAt = result.resumeAt;
       if (resumeAt == null || !result.possiblyCapped) return walked();
       // `until` is inclusive, so the oldest second is read again; dedup
@@ -2533,6 +2573,7 @@ class DmRepository {
     return (
       events: read.events,
       authoritative: read.authoritative,
+      refusedForGood: read.refusedForGood,
       possiblyCapped: read.possiblyCapped,
       resumeAt: read.events.isEmpty
           ? null

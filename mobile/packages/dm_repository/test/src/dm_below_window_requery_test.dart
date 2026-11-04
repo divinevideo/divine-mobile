@@ -38,6 +38,7 @@ final String _alice = getPublicKey(_aliceSecret);
 const _day = 86400;
 const _settleTimeout = Duration(seconds: 20);
 const _inboxUrl = 'wss://inbox.example.com';
+const _refusingUrl = 'wss://refuses.example.com';
 
 /// Whether a gift wrap left a message row or a processed-wrap ledger entry.
 const _storedSql = '''
@@ -81,6 +82,10 @@ class _Relay {
 
   /// The most events one answer from a relay carries, by URL.
   final Map<String, int> capFor = {};
+
+  /// The `CLOSED` category a relay answers every read below the window
+  /// with, by URL.
+  final Map<String, String> refusesBelowWindow = {};
 
   static const poolUrl = 'wss://r';
 
@@ -275,6 +280,14 @@ void main() {
               );
       }
       final url = tempRelays!.single.replaceFirst(RegExp(r'/$'), '');
+      final refusal = relay.refusesBelowWindow[url];
+      if (refusal != null && filters.single.since != null) {
+        return QueryResult(
+          events: const [],
+          endedBy: QueryEnd.relayClosed,
+          closedRelayReasons: {url: refusal},
+        );
+      }
       return relay.relayAnswer(url, filters.single);
     });
     when(() => client.unsubscribe(any())).thenAnswer((_) async {});
@@ -650,6 +663,40 @@ void main() {
       relayWorks = true;
       await openInbox(relay);
       expect(await isStored(late), isTrue);
+    });
+
+    test('records a run when a relay refuses for good', () async {
+      final late = await wrapAt(wire: windowStart - 1, content: 'late');
+      final relay = _Relay([inWindow, late])
+        ..others[_refusingUrl] = const []
+        ..refusesBelowWindow[_refusingUrl] = 'restricted';
+
+      await openInbox(relay);
+
+      expect(await isStored(late), isTrue);
+      expect(DmSyncState(prefs).belowWindowRequeryAt(_owner), isNotNull);
+    });
+
+    test('does not record a run when a relay asks to authenticate', () async {
+      final late = await wrapAt(wire: windowStart - 1, content: 'late');
+      final relay = _Relay([inWindow, late])
+        ..others[_refusingUrl] = const []
+        ..refusesBelowWindow[_refusingUrl] = 'auth-required';
+
+      await openInbox(relay);
+
+      expect(await isStored(late), isTrue);
+      expect(DmSyncState(prefs).belowWindowRequeryAt(_owner), isNull);
+    });
+
+    test('does not record a run that every relay refused', () async {
+      final relay = _Relay([inWindow])
+        ..refusesBelowWindow[_Relay.poolUrl] = 'restricted';
+
+      await openInbox(relay);
+
+      expect(relay.queryFilters.where(belowWindow), isNotEmpty);
+      expect(DmSyncState(prefs).belowWindowRequeryAt(_owner), isNull);
     });
 
     test('reports a read that fails with a programming error', () async {
