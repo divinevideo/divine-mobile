@@ -1,10 +1,10 @@
 # Scheduled Divine beta builds and store submissions
 
-Status: approved design, revision 5 (2026-11-04), checked against
+Status: approved design, revision 6 (2026-11-05), checked against
 `divine-mobile` main at `dbdfe110beb018e27d085cad43b9951753b49027`. Nothing is
-enabled. Rabble settled the open decisions on 2026-11-04 (see Decisions). This
-revision brings Google Play into the first version and gives both platforms
-one version allocator.
+enabled. Rabble settled the open decisions on 2026-11-04 and 2026-11-05 (see
+Decisions). Google Play is in the first version, and both platforms share one
+version allocator.
 
 ## Requirements
 
@@ -69,6 +69,12 @@ authorize canceling a pending review or treating a failed check as successful.
   platforms, for manual builds, and for direct distribution. It replaces
   revision 3's iOS-only rule, which derived the version from App Store state,
   and its `RELEASE_TRAIN_VERSION` override. Rabble's decisions are recorded.
+- **Revision 6** (2026-11-05): review fixes from hm21 and Daniel Cadenas. A
+  build that reached `shorebird release` has spent its number. A refused Play
+  upload is retried with the same signed AAB, and new Android builds pause
+  behind it. Each internal Android build keeps its full six-hour availability
+  period, and missing production claims are repaired. Rabble decided that Play
+  rejections are handled by email and the Android kill switch.
 
 ## What constrains the design
 
@@ -427,11 +433,15 @@ where a review starts between the status read and commit.
   its deployment too. Because Play supplies no promotion timestamp, that time
   conservatively starts a new 24-hour wait, rather than treating a manual
   promotion as permission to submit another release immediately.
-- **Rejections.** The Publishing API doesn't report review outcomes. Any commit
-  error other than changes-in-review stops the Play production queue until a
-  person acknowledges it. A rejection notice arrives from Play by email.
-  Whoever gets it acknowledges it, or sets the Android level to `build`, until
-  the problem is fixed.
+- **Rejections.** The Publishing API doesn't report review outcomes, so the
+  coordinator can't see a Play rejection. Rabble chose email-only handling on
+  2026-11-05 as an explicit limitation, which means the automated rejection
+  hold covers Apple's queues only. Play sends the rejection by email. Whoever
+  receives it sets `RELEASE_TRAIN_ANDROID` to `build` until the problem is
+  fixed. Until someone does, the coordinator keeps promoting at most one
+  candidate a day, so a missed email means rejected updates are resubmitted
+  daily. Any commit error other than changes-in-review still stops the Play
+  production queue until a person acknowledges it.
 - **Settings.** Read the managed-publishing state and never change it. If it
   holds approved changes for a manual publish step, stop the production queue
   and name the console step that remains.
@@ -643,6 +653,8 @@ Cases to test with fakes:
   - A deferred artifact is missing or has a different digest; the queue stops.
   - A review starts between the status read and the commit.
   - Any other commit error stops the queue until acknowledged.
+  - Setting `RELEASE_TRAIN_ANDROID` to `build` stops production promotion on
+    the next tick. This is the documented response to a Play rejection email.
   - No promotion happened in the trailing 24 hours.
 - **Eligibility and soak**:
   - No candidate has soaked, or the soak is measured from observed
@@ -657,7 +669,7 @@ Cases to test with fakes:
   - No submission or review is ever cancelled.
   - Throttling or an unknown store state fails that queue closed.
 
-## Decisions (resolved 2026-11-04)
+## Decisions (resolved 2026-11-04 and 2026-11-05)
 
 1. **Cadence.** Build iOS hourly for internal testers, and send the newest
    build to public TestFlight at most every four hours, within Apple's
@@ -671,6 +683,11 @@ Cases to test with fakes:
 4. **Spend.** Divine is on the fixed-price Codemagic plan, so the cost is
    build concurrency, not minutes: scheduled builds hold about one of three
    concurrent slots on a busy day. Measure queue waits before activation.
+5. **Play rejections (2026-11-05): email plus the kill switch.** The automated
+   rejection hold covers Apple only. A Play rejection arrives by email, and
+   whoever receives it sets `RELEASE_TRAIN_ANDROID` to `build` until it is
+   fixed. Rabble chose this over a per-release confirmation click and over
+   waiting for Play vitals to show users on each release.
 
 These defaults stand unless Rabble changes them:
 
@@ -680,7 +697,8 @@ These defaults stand unless Rabble changes them:
 - Phased release off, and a full rollout on Play.
 - The generic store notes.
 - Android builds at most every four hours.
-- A rejection holds its queue until someone acknowledges it.
+- An Apple rejection holds its queue until someone acknowledges it. A Play
+  rejection is handled by email (decision 5).
 
 These need a person with access:
 
