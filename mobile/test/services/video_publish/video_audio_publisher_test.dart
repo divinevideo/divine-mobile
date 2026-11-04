@@ -769,7 +769,7 @@ void main() {
         });
 
         test(
-          'shares the rendered audio as the creator\'s own when the imported '
+          "shares the rendered audio as the creator's own when the imported "
           'sound is silent',
           () async {
             final take = File('${tempDir.path}/take-1.m4a')
