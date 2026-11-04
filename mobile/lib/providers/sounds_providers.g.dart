@@ -8,6 +8,64 @@ part of 'sounds_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// The current author policy for every picker row, including saved sounds
+/// and cached search results that did not come from the paged lists.
+/// Re-evaluated on a block or mute without reloading those lists.
+
+@ProviderFor(soundAuthorFilter)
+final soundAuthorFilterProvider = SoundAuthorFilterProvider._();
+
+/// The current author policy for every picker row, including saved sounds
+/// and cached search results that did not come from the paged lists.
+/// Re-evaluated on a block or mute without reloading those lists.
+
+final class SoundAuthorFilterProvider
+    extends
+        $FunctionalProvider<
+          BlockedVideoFilter,
+          BlockedVideoFilter,
+          BlockedVideoFilter
+        >
+    with $Provider<BlockedVideoFilter> {
+  /// The current author policy for every picker row, including saved sounds
+  /// and cached search results that did not come from the paged lists.
+  /// Re-evaluated on a block or mute without reloading those lists.
+  SoundAuthorFilterProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'soundAuthorFilterProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$soundAuthorFilterHash();
+
+  @$internal
+  @override
+  $ProviderElement<BlockedVideoFilter> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  BlockedVideoFilter create(Ref ref) {
+    return soundAuthorFilter(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(BlockedVideoFilter value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<BlockedVideoFilter>(value),
+    );
+  }
+}
+
+String _$soundAuthorFilterHash() => r'd94589557439192f2cd43a20af0c27295349939c';
+
 /// Provider for SoundsRepository singleton.
 ///
 /// The repository manages Kind 1063 audio events for the audio reuse feature.

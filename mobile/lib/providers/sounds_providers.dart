@@ -25,9 +25,19 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sounds_repository/sounds_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
-import 'package:videos_repository/videos_repository.dart' show VideosRepository;
+import 'package:videos_repository/videos_repository.dart'
+    show BlockedVideoFilter, VideosRepository;
 
 part 'sounds_providers.g.dart';
+
+/// The current author policy for every picker row, including saved sounds
+/// and cached search results that did not come from the paged lists.
+/// Re-evaluated on a block or mute without reloading those lists.
+@riverpod
+BlockedVideoFilter soundAuthorFilter(Ref ref) {
+  ref.watch(blocklistVersionProvider);
+  return createBlockedAuthorFilter(ref);
+}
 
 /// Provider for SoundsRepository singleton.
 ///
@@ -750,8 +760,8 @@ _sourceVideoCovers(
   // The feed's shape preference decides what the feed plays, not where a
   // sound came from, so it does not hide a cover. Every other visibility
   // rule — blocks, deletions, content filters — still applies.
-  // Relays only: a cover needs nothing the Funnelcake fallback and stats add,
-  // and with them 48 covers took 1.0-3.5 s against 0.65 s without.
+  // Keep the common path relay-only; missing sources need the same fallback
+  // as the tap check before their sounds can be hidden.
   final (:videos, :complete) = await repository
       .getVideosFromRelaysByAddressableIds(
         references.toList(),
@@ -771,6 +781,34 @@ _sourceVideoCovers(
         : videosByAuthorAndDTag['${address.pubkey}:${address.dTag}'];
   }
 
+  final confirmedMissing = <String>{};
+  final missing = [
+    for (final reference in references)
+      if (sourceOf(reference) == null) reference,
+  ];
+  if (complete && missing.isNotEmpty) {
+    try {
+      final fallback = await repository.getVideosByAddressableIds(
+        missing,
+        includeFeedShape: false,
+      );
+      for (final video in fallback) {
+        if (video.addressableDTag case final dTag?) {
+          videosByAuthorAndDTag['${video.pubkey}:$dTag'] = video;
+        }
+      }
+      confirmedMissing.addAll(
+        missing.where((reference) => sourceOf(reference) == null),
+      );
+    } on Object catch (e) {
+      Log.warning(
+        'Could not verify missing sound sources: $e',
+        name: 'SoundsProviders',
+        category: LogCategory.api,
+      );
+    }
+  }
+
   final sources = {
     for (final reference in references) reference: ?sourceOf(reference),
   };
@@ -782,7 +820,7 @@ _sourceVideoCovers(
         // A video missing from a read some relay did not finish may only be
         // late, and is asked about again; marked gone, its sound would be
         // hidden from every list.
-        else if (complete)
+        else if (confirmedMissing.contains(reference))
           reference: null,
     },
     sources: sources,

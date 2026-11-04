@@ -20,6 +20,7 @@ import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/models/paged_sounds.dart';
 import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/models/sound_cover.dart';
+import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/sound_library_service_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
@@ -318,10 +319,18 @@ class _AudioSelectionBottomSheetState
   bool _cannotBeReused(
     AudioEvent sound,
     AsyncValue<Map<String, SoundCover?>>? lookup,
-  ) => SoundCover.isSourceGone(
-    sound,
-    lookup == null || lookup.hasError ? null : lookup.value,
-  );
+  ) {
+    final viewer = ref.read(authServiceProvider).currentPublicKeyHex;
+    if (viewer != null && viewer.isNotEmpty && viewer == sound.pubkey) {
+      return false;
+    }
+    final reference = sound.sourceVideoReference;
+    final looked = lookup == null || lookup.hasError ? null : lookup.value;
+    return reference != null &&
+        looked != null &&
+        looked.containsKey(reference) &&
+        looked[reference] == null;
+  }
 
   /// Loads [sound] into the preview player, stopping whatever played, and
   /// returns it with the duration the file reports when the event carried
@@ -620,6 +629,8 @@ class _AudioSelectionBottomSheetState
 
   @override
   Widget build(BuildContext context) {
+    // The owner exemption follows account changes just as the tap check does.
+    ref.watch(currentAuthStateProvider);
     final bundledSoundsAsync = ref.watch(soundLibraryServiceProvider);
     // Batched like the counts below and just as supplementary: a row waits on
     // a plain tile while its list's covers load, then shows its cover, or its
@@ -1085,7 +1096,7 @@ class _PickerSearchInput extends StatelessWidget {
   }
 }
 
-class _SoundsContent extends StatelessWidget {
+class _SoundsContent extends ConsumerWidget {
   const _SoundsContent({
     required this.scrollController,
     required this.sounds,
@@ -1180,7 +1191,11 @@ class _SoundsContent extends StatelessWidget {
   static const _bottomSpace = 120.0;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isBlocked = ref.watch(soundAuthorFilterProvider);
+    final sounds = this.sounds
+        .where((sound) => !isBlocked(sound.pubkey))
+        .toList(growable: false);
     final leading = this.leading;
     final paging = this.paging;
     final onLoadMore = this.onLoadMore;
@@ -1195,17 +1210,11 @@ class _SoundsContent extends StatelessWidget {
       controller: scrollController,
       slivers: [
         if (leading != null) SliverToBoxAdapter(child: leading),
-        SliverToBoxAdapter(
-          child: Divider(height: 1, color: context.vineColors.outlineDisabled),
-        ),
-
-        SliverList.separated(
+        SliverList.builder(
           // While more can load, one row after the sounds asks for them. A
           // list builds its rows only as they near the screen, so it asks
           // once the list is scrolled to its end.
           itemCount: sounds.length + (loadsMore ? 1 : 0),
-          separatorBuilder: (context, index) =>
-              Divider(height: 1, color: context.vineColors.outlineDisabled),
           itemBuilder: (context, index) {
             if (index == sounds.length) {
               return _LoadMoreRow(
