@@ -282,6 +282,7 @@ class _ConnectForm extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               l10n.verifyConnectSignInLifetime(days),
+              key: const ValueKey('verify-signin-lifetime'),
               style: VineTheme.bodySmallFont(
                 color: context.vineColors.mutedText,
               ),

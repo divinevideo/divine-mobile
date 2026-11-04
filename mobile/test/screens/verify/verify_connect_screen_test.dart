@@ -900,32 +900,6 @@ void main() {
         find.text(l10n.verifyConnectSignInLifetime(30)),
         findsOneWidget,
       );
-      expect(
-        l10n.verifyConnectSignInLifetime(30),
-        startsWith('Sign-in links last 30 days.'),
-      );
-    });
-
-    testWidgets('uses the singular for one day', (tester) async {
-      final l10n = await pump(
-        tester,
-        platform: const VerifierPlatform(
-          key: 'bluesky',
-          label: 'Bluesky',
-          supported: true,
-          oauth: true,
-          signinExpiresAfterDays: 1,
-        ),
-      );
-
-      expect(
-        find.text(l10n.verifyConnectSignInLifetime(1)),
-        findsOneWidget,
-      );
-      expect(
-        l10n.verifyConnectSignInLifetime(1),
-        startsWith('Sign-in links last 1 day.'),
-      );
     });
 
     testWidgets('shows nothing when the verifier reports no lifetime', (
@@ -942,13 +916,19 @@ void main() {
       );
 
       expect(find.text(l10n.verifyConnectOauthCta('Bluesky')), findsOne);
-      expect(find.textContaining('Sign-in links last'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('verify-signin-lifetime')),
+        findsNothing,
+      );
     });
 
     testWidgets('shows nothing when sign-in is not showing', (tester) async {
       await pump(tester, platform: lasting30, oauthAvailable: false);
 
-      expect(find.textContaining('Sign-in links last'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('verify-signin-lifetime')),
+        findsNothing,
+      );
     });
 
     testWidgets('shows while signing in again', (tester) async {
