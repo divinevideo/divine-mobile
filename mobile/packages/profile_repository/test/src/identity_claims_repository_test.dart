@@ -2624,6 +2624,28 @@ void main() {
         });
 
         test(
+          'keeps a proof-post link that sits beside a sign-in link under it',
+          () async {
+            // Another client can write both tags for one handle; replacing
+            // the key would drop the post along with the sign-in.
+            final signed = await renew([
+              ['i', 'twitter:jack', 'oauth'],
+              ['i', 'twitter:jack', 'https://x.com/jack/status/1'],
+            ]);
+
+            expect(
+              signedTags,
+              equals([
+                ['i', 'twitter:jack', 'oauth'],
+                ['i', 'twitter:jack', 'https://x.com/jack/status/1'],
+                ['i', 'twitter:jack_renamed', 'oauth', 'b'],
+              ]),
+            );
+            expect(signed.replacedKey, isNull);
+          },
+        );
+
+        test(
           'replaces nothing when the earlier handle is not linked',
           () async {
             final signed = await renew([

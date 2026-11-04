@@ -610,10 +610,10 @@ class IdentityClaimsRepository {
   /// value, for a sign-in the verifier confirms before it is published
   /// (#10119). [replacingIdentity] is as for [publishClaim].
   ///
-  /// With [replaceOnlySignIn], [replacingIdentity] is replaced only when its
-  /// tag on the event is a sign-in link: renewing a sign-in must not drop a
-  /// proof-post link it was pointed at. Otherwise the claim is added beside
-  /// it, and [SignedIdentityClaim.replacedKey] is null.
+  /// With [replaceOnlySignIn], [replacingIdentity] is replaced only when every
+  /// tag under it on the event is a sign-in link: renewing a sign-in must not
+  /// drop a proof-post link it was pointed at. Otherwise the claim is added
+  /// beside it, and [SignedIdentityClaim.replacedKey] is null.
   ///
   /// Throws:
   ///
@@ -641,7 +641,7 @@ class IdentityClaimsRepository {
           );
     final replacedKey =
         namedKey != null &&
-            (!replaceOnlySignIn || _hasSignInTag(base.tags, namedKey))
+            (!replaceOnlySignIn || _linksOnlyBySignIn(base.tags, namedKey))
         ? namedKey
         : null;
     final droppedKeys = {key, ?replacedKey};
@@ -670,11 +670,16 @@ class IdentityClaimsRepository {
     );
   }
 
-  // Whether [tags] link the account under [key] by signing in, not by a post.
-  static bool _hasSignInTag(List<List<String>> tags, String key) => tags.any(
-    (tag) =>
-        _tagIdentityKeyOrNull(tag) == key && tag[2] == IdentityClaim.oauthProof,
-  );
+  // Whether [tags] link the account under [key] by signing in and by nothing
+  // else: dropping the key drops every tag under it, a proof post included.
+  static bool _linksOnlyBySignIn(List<List<String>> tags, String key) {
+    final proofs = [
+      for (final tag in tags)
+        if (_tagIdentityKeyOrNull(tag) == key) tag[2],
+    ];
+    return proofs.isNotEmpty &&
+        proofs.every((proof) => proof == IdentityClaim.oauthProof);
+  }
 
   /// Publishes an identity event [signClaim] signed, and returns its `i` tags.
   ///
