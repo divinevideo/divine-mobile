@@ -26,15 +26,8 @@ class RepliesCuration extends Equatable {
     String? pinnedId;
     final hiddenIds = <String>{};
     for (final tag in event.tags) {
-      if (tag.length < 4) continue;
-      final String id;
-      if (tag[0] == 'e' && NostrHexUtils.isValidEventId(tag[1].toLowerCase())) {
-        id = tag[1].toLowerCase();
-      } else if (tag[0] == 'a' && isAddress(tag[1])) {
-        id = tag[1];
-      } else {
-        continue;
-      }
+      final id = _keyIn(tag);
+      if (id == null) continue;
       switch (tag[3]) {
         case _pinnedMarker:
           pinnedId ??= id;
@@ -113,14 +106,52 @@ class RepliesCuration extends Equatable {
     return [shown.removeAt(pinnedIndex), ...shown];
   }
 
-  /// The tags this curation is published with for the replies to the video
-  /// at [videoAddress].
-  List<List<String>> toTags(String videoAddress) => [
-    ['d', dTagFor(videoAddress)],
-    ['a', videoAddress],
-    if (pinnedId case final id?) _replyTag(id, _pinnedMarker),
-    for (final id in hiddenIds) _replyTag(id, _hiddenMarker),
-  ];
+  /// The tags for [videoAddress], preserving untouched [sourceTags] when
+  /// replacing an existing curation, including extra member positions.
+  List<List<String>> toTags(
+    String videoAddress, {
+    List<List<String>>? sourceTags,
+  }) {
+    if (sourceTags == null) {
+      return [
+        ['d', dTagFor(videoAddress)],
+        ['a', videoAddress],
+        if (pinnedId case final id?) _replyTag(id, _pinnedMarker),
+        for (final id in hiddenIds) _replyTag(id, _hiddenMarker),
+      ];
+    }
+    final tags = <List<String>>[];
+    final sourcedHidden = <String>{};
+    var sourcedPin = false;
+    for (final tag in sourceTags) {
+      final key = _keyIn(tag);
+      if (key == null || (tag[3] != _pinnedMarker && tag[3] != _hiddenMarker)) {
+        tags.add(List.of(tag));
+      } else if (tag[3] == _pinnedMarker && key == pinnedId) {
+        tags.add(List.of(tag));
+        sourcedPin = true;
+      } else if (tag[3] == _hiddenMarker && hiddenIds.contains(key)) {
+        tags.add(List.of(tag));
+        sourcedHidden.add(key);
+      }
+    }
+    if (pinnedId case final id? when !sourcedPin) {
+      tags.add(_replyTag(id, _pinnedMarker));
+    }
+    for (final id in hiddenIds.difference(sourcedHidden)) {
+      tags.add(_replyTag(id, _hiddenMarker));
+    }
+    return tags;
+  }
+
+  static String? _keyIn(List<String> tag) {
+    if (tag.length < 4) return null;
+    if (tag[0] == 'e' && NostrHexUtils.isValidEventId(tag[1].toLowerCase())) {
+      return tag[1].toLowerCase();
+    }
+    if (tag[0] == 'a' && isAddress(tag[1])) return tag[1];
+    return null;
+  }
 
   static List<String> _replyTag(String key, String marker) =>
       isAddress(key) ? ['a', key, '', marker] : ['e', key, '', marker];

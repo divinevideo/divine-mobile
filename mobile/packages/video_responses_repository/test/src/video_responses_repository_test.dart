@@ -1,6 +1,8 @@
 // ABOUTME: Tests reading a video's video replies and the answers to its Add
 // ABOUTME: yours, from Funnelcake or the relays, and its creator's curation.
 
+import 'dart:async';
+
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -140,7 +142,10 @@ VideoStats _stats(
 void main() {
   late _MockNostrClient nostrClient;
   late _MockFunnelcakeApiClient funnelcake;
-  late List<({int kind, List<List<String>> tags, int? createdAt})> signed;
+  late List<
+    ({int kind, String content, List<List<String>> tags, int? createdAt})
+  >
+  signed;
   late Event? signedEvent;
 
   setUpAll(() {
@@ -151,6 +156,8 @@ void main() {
 
   setUp(() {
     nostrClient = _MockNostrClient();
+    when(() => nostrClient.publicKey).thenReturn(_creator);
+    when(() => nostrClient.isDisposed).thenReturn(false);
     funnelcake = _MockFunnelcakeApiClient();
     signed = [];
     signedEvent = _curationEvent(createdAt: 9000);
@@ -166,7 +173,12 @@ void main() {
               required tags,
               createdAt,
             }) async {
-              signed.add((kind: kind, tags: tags, createdAt: createdAt));
+              signed.add((
+                kind: kind,
+                content: content,
+                tags: tags,
+                createdAt: createdAt,
+              ));
               return signedEvent;
             },
         funnelcakeApiClient: withFunnelcake ? funnelcake : null,
@@ -193,7 +205,11 @@ void main() {
     bool noRelays = false,
   }) =>
       when(
-        () => nostrClient.queryEventsDetailed(any()),
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
       ).thenAnswer(
         (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
       );
@@ -898,6 +914,255 @@ void main() {
     });
 
     group('saveCuration', () {
+      setUp(() => curationAnswers(const []));
+      test(
+        'reconciles remote hidden replies and preserves the complete source',
+        () async {
+          final remote = Event.fromJson({
+            ..._curationEvent(createdAt: 1000).toJson(),
+            'tags': [
+              ['d', RepliesCuration.dTagFor(_rootAddress)],
+              ['a', _rootAddress],
+              ['e', _hex(201), 'wss://relay.example', 'hidden', 'extra'],
+              ['e', _hex(202), 'wss://relay.example', 'pinned'],
+              ['alt', 'Keep me'],
+              ['e', _hex(205), '', 'foreign-marker'],
+            ],
+            'content': 'opaque-private-content',
+          });
+          curationAnswers([remote]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          final reconciled = await repository().saveCuration(
+            RepliesCuration(hiddenIds: {_hex(203)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+
+          expect(
+            reconciled,
+            RepliesCuration(
+              pinnedId: _hex(202),
+              hiddenIds: {_hex(201), _hex(203)},
+            ),
+          );
+          expect(signed.single.content, 'opaque-private-content');
+          expect(signed.single.tags, [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['a', _rootAddress],
+            ['e', _hex(201), 'wss://relay.example', 'hidden', 'extra'],
+            ['e', _hex(202), 'wss://relay.example', 'pinned'],
+            ['alt', 'Keep me'],
+            ['e', _hex(205), '', 'foreign-marker'],
+            ['e', _hex(203), '', 'hidden'],
+          ]);
+        },
+      );
+
+      for (final noRelays in [false, true]) {
+        test(
+          'refuses an incomplete nonempty read (noRelays: $noRelays)',
+          () async {
+            curationAnswers(
+              [
+                _curationEvent(
+                  createdAt: 1000,
+                  tags: [
+                    ['e', _hex(201), '', 'hidden'],
+                  ],
+                ),
+              ],
+              noRelays: noRelays,
+              timedOut: !noRelays,
+            );
+            when(
+              () => nostrClient.publishEventAwaitOk(any()),
+            ).thenAnswer((_) async => _outcome(accepted: true));
+
+            await expectLater(
+              repository().saveCuration(
+                RepliesCuration(hiddenIds: {_hex(203)}),
+                videoAddress: _rootAddress,
+                previous: const RepliesCuration(),
+              ),
+              throwsA(isA<RepliesCurationUnavailableException>()),
+            );
+            expect(signed, isEmpty);
+            verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+          },
+        );
+      }
+
+      test(
+        'waits for every relay and excludes cached curation events',
+        () async {
+          curationAnswers(const []);
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: [
+                _curationEvent(
+                  createdAt: 1000,
+                  tags: [
+                    ['e', _hex(201), '', 'hidden'],
+                  ],
+                ),
+              ],
+              timedOut: false,
+              noRelays: false,
+            ),
+          );
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          await repository().saveCuration(
+            RepliesCuration(pinnedId: _hex(202)),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+
+          expect(
+            signed.single.tags,
+            anyElement(equals(['e', _hex(201), '', 'hidden'])),
+          );
+        },
+      );
+
+      test(
+        'serializes the relay read through publication for concurrent edits',
+        () async {
+          curationAnswers(const []);
+          final publishing = Completer<void>();
+          final release = Completer<void>();
+          final published = <Event>[];
+          when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
+            call,
+          ) async {
+            published.add(call.positionalArguments.single as Event);
+            if (published.length == 1) {
+              publishing.complete();
+              await release.future;
+            }
+            return _outcome(accepted: true);
+          });
+          final responses = VideoResponsesRepository(
+            nostrClient: nostrClient,
+            signEvent:
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async =>
+                    Event(_creator, kind, tags, content, createdAt: createdAt),
+          );
+          final first = responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+          await publishing.future;
+          final second = responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(202)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+          await Future<void>.delayed(Duration.zero);
+          final overlapped = published.length > 1;
+          release.complete();
+          await Future.wait([first, second]);
+
+          expect(overlapped, isFalse);
+          expect(RepliesCuration.fromEvent(published.last)?.hiddenIds, {
+            _hex(201),
+            _hex(202),
+          });
+        },
+      );
+
+      test(
+        'shows only the requested reply while keeping remote hidden replies',
+        () async {
+          curationAnswers([
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(201), 'wss://relay.example', 'hidden'],
+                ['e', _hex(202), 'wss://other.example', 'hidden'],
+              ],
+            ),
+          ]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          final reconciled = await repository().saveCuration(
+            const RepliesCuration(),
+            videoAddress: _rootAddress,
+            previous: RepliesCuration(hiddenIds: {_hex(201)}),
+          );
+
+          expect(reconciled.hiddenIds, {_hex(202)});
+          expect(signed.single.tags, [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['e', _hex(202), 'wss://other.example', 'hidden'],
+          ]);
+        },
+      );
+
+      test('refuses a signature belonging to a different account', () async {
+        signedEvent = _curationEvent(createdAt: 1000, pubkey: _viewer);
+
+        await expectLater(
+          repository().saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          ),
+          throwsA(isA<RepliesCurationException>()),
+        );
+
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test(
+        'refuses an account switch while the latest curation is loading',
+        () async {
+          var currentOwner = _creator;
+          when(() => nostrClient.publicKey).thenAnswer((_) => currentOwner);
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((_) async {
+            currentOwner = _viewer;
+            return (events: <Event>[], timedOut: false, noRelays: false);
+          });
+
+          await expectLater(
+            repository().saveCuration(
+              RepliesCuration(hiddenIds: {_hex(201)}),
+              videoAddress: _rootAddress,
+              previous: const RepliesCuration(),
+            ),
+            throwsA(isA<RepliesCurationException>()),
+          );
+
+          expect(signed, isEmpty);
+          verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        },
+      );
+
       test('signs and publishes the curation', () async {
         when(
           () => nostrClient.publishEventAwaitOk(any()),
@@ -906,6 +1171,7 @@ void main() {
         await repository().saveCuration(
           RepliesCuration(pinnedId: _hex(202)),
           videoAddress: _rootAddress,
+          previous: const RepliesCuration(),
         );
 
         expect(signed.single.kind, equals(RepliesCuration.kind));
@@ -932,6 +1198,7 @@ void main() {
         await responses.saveCuration(
           const RepliesCuration(),
           videoAddress: _rootAddress,
+          previous: const RepliesCuration(),
         );
 
         expect(signed.single.createdAt, equals(ahead + 1));
@@ -948,11 +1215,13 @@ void main() {
         await responses.saveCuration(
           RepliesCuration(pinnedId: _hex(202)),
           videoAddress: _rootAddress,
+          previous: const RepliesCuration(),
         );
 
         await responses.saveCuration(
           const RepliesCuration(),
           videoAddress: _rootAddress,
+          previous: const RepliesCuration(),
         );
 
         expect(signed.last.createdAt, equals(signedEvent!.createdAt + 1));
@@ -965,6 +1234,7 @@ void main() {
           repository().saveCuration(
             const RepliesCuration(),
             videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
           ),
           throwsA(isA<RepliesCurationException>()),
         );
@@ -980,6 +1250,7 @@ void main() {
           repository().saveCuration(
             const RepliesCuration(),
             videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
           ),
           throwsA(
             isA<RepliesCurationException>()
