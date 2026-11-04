@@ -20,6 +20,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_text_wrap_hint.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_commands.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_control_bar.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar_chip.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -109,13 +110,15 @@ class _TopActions extends ConsumerWidget {
 
     // The editor route never pops itself (see `VideoEditorScreen.build`), so
     // Android's system back lands here and leaves the way the close button
-    // does. An open sub-editor takes that back press itself
-    // (`VideoEditorCanvas`), so it must not also close the editor.
+    // does, unless an open sub-editor takes the press (`VideoEditorCanvas`)
+    // or the timeline is showing context-specific controls, which close
+    // instead (`TimelineControlsBar.dismissControls`).
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         if (context.read<VideoEditorMainBloc>().state.isSubEditorOpen) return;
+        if (TimelineControlsBar.dismissControls(context)) return;
         close();
       },
       child: VideoEditorToolbar(

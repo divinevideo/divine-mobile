@@ -15,12 +15,16 @@ import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubi
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_clip_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_control_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_editing_tools_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_layer_multi_select_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_marker_controls.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_multi_select_controls.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_overlay_controls.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 import '../../../../helpers/video_editor/loop_repair.dart';
@@ -35,6 +39,18 @@ class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
 class _MockTimelineOverlayBloc
     extends MockBloc<TimelineOverlayEvent, TimelineOverlayState>
     implements TimelineOverlayBloc {}
+
+const _sound = TimelineOverlayItem(
+  id: 'sound-1',
+  type: TimelineOverlayType.sound,
+  startTime: Duration.zero,
+  endTime: Duration(seconds: 1),
+);
+
+const _soundSelected = TimelineOverlayState(
+  items: [_sound],
+  selectedItemId: 'sound-1',
+);
 
 void main() {
   group(TimelineControlsBar, () {
@@ -230,5 +246,185 @@ void main() {
         expect(find.byType(TimelineClipControls), findsNothing);
       },
     );
+
+    testWidgets('shows clip multi-select controls when that mode is active', (
+      tester,
+    ) async {
+      when(
+        () => clipBloc.state,
+      ).thenReturn(const ClipEditorState(isMultiSelectMode: true));
+
+      await tester.pumpWidget(build(isEditing: false));
+
+      expect(find.byType(TimelineMultiSelectControls), findsOneWidget);
+      expect(find.byType(TimelineFrameMultiSelectControls), findsNothing);
+    });
+
+    testWidgets('shows frame multi-select controls on a stop-motion clip', (
+      tester,
+    ) async {
+      when(() => clipBloc.state).thenReturn(
+        ClipEditorState(
+          isMultiSelectMode: true,
+          clips: [
+            DivineVideoClip(
+              id: 'stop-motion',
+              duration: const Duration(seconds: 1),
+              recordedAt: DateTime(2026),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+              stopMotionFrames: const [
+                StopMotionClipFrame(
+                  path: '/documents/frame-0.png',
+                  duration: Duration(milliseconds: 500),
+                ),
+                StopMotionClipFrame(
+                  path: '/documents/frame-1.png',
+                  duration: Duration(milliseconds: 500),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(build(isEditing: false));
+
+      expect(find.byType(TimelineFrameMultiSelectControls), findsOneWidget);
+      expect(find.byType(TimelineMultiSelectControls), findsNothing);
+    });
+
+    testWidgets('shows overlay controls for the selected item', (
+      tester,
+    ) async {
+      when(() => overlayBloc.state).thenReturn(_soundSelected);
+
+      await tester.pumpWidget(build(isEditing: false));
+
+      expect(find.byType(TimelineOverlayControls), findsOneWidget);
+      expect(find.byType(TimelineClipControls), findsNothing);
+    });
+  });
+
+  group('$TimelineControlsBar.dismissControls', () {
+    late _MockVideoEditorMainBloc mainBloc;
+    late _MockClipEditorBloc clipBloc;
+    late _MockTimelineOverlayBloc overlayBloc;
+
+    setUpAll(() {
+      registerFallbackValue(
+        const VideoEditorMarkerModeChanged(isActive: false),
+      );
+      registerFallbackValue(const ClipEditorEditingStopped());
+      registerFallbackValue(const TimelineOverlayItemSelected(null));
+    });
+
+    // No controls are showing unless a test turns some on.
+    setUp(() {
+      mainBloc = _MockVideoEditorMainBloc();
+      clipBloc = _MockClipEditorBloc();
+      overlayBloc = _MockTimelineOverlayBloc();
+
+      when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+      when(() => clipBloc.state).thenReturn(const ClipEditorState());
+      when(() => overlayBloc.state).thenReturn(const TimelineOverlayState());
+    });
+
+    Future<bool> dismiss(WidgetTester tester) async {
+      late BuildContext context;
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
+            BlocProvider<ClipEditorBloc>.value(value: clipBloc),
+            BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
+          ],
+          child: Builder(
+            builder: (c) {
+              context = c;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      return TimelineControlsBar.dismissControls(context);
+    }
+
+    testWidgets('leaves marker mode', (tester) async {
+      when(() => mainBloc.state)
+          .thenReturn(const VideoEditorMainState(isMarkerMode: true));
+
+      expect(await dismiss(tester), isTrue);
+      verify(
+        () => mainBloc.add(const VideoEditorMarkerModeChanged(isActive: false)),
+      ).called(1);
+    });
+
+    testWidgets('cancels the clip multi-select', (tester) async {
+      when(() => clipBloc.state)
+          .thenReturn(const ClipEditorState(isMultiSelectMode: true));
+
+      expect(await dismiss(tester), isTrue);
+      verify(() => clipBloc.add(const ClipEditorMultiSelectCancelled()))
+          .called(1);
+    });
+
+    testWidgets('cancels the layer multi-select', (tester) async {
+      when(
+        () => overlayBloc.state,
+      ).thenReturn(const TimelineOverlayState(isLayerMultiSelectMode: true));
+
+      expect(await dismiss(tester), isTrue);
+      verify(
+        () => overlayBloc.add(const TimelineOverlayLayerMultiSelectCancelled()),
+      ).called(1);
+    });
+
+    testWidgets('stops editing the clip', (tester) async {
+      when(() => clipBloc.state)
+          .thenReturn(const ClipEditorState(isEditing: true));
+
+      expect(await dismiss(tester), isTrue);
+      verify(() => clipBloc.add(const ClipEditorEditingStopped())).called(1);
+    });
+
+    testWidgets('deselects the selected overlay item', (tester) async {
+      when(() => overlayBloc.state).thenReturn(_soundSelected);
+
+      expect(await dismiss(tester), isTrue);
+      verify(() => overlayBloc.add(const TimelineOverlayItemSelected(null)))
+          .called(1);
+    });
+
+    testWidgets('cancels the clip multi-select before deselecting an item', (
+      tester,
+    ) async {
+      // Tapping an overlay strip selects it without leaving the multi-select,
+      // whose bar stays on screen.
+      when(
+        () => clipBloc.state,
+      ).thenReturn(const ClipEditorState(isMultiSelectMode: true));
+      when(() => overlayBloc.state).thenReturn(_soundSelected);
+
+      expect(await dismiss(tester), isTrue);
+      verify(() => clipBloc.add(const ClipEditorMultiSelectCancelled()))
+          .called(1);
+      verifyNever(() => overlayBloc.add(any()));
+      verifyNever(() => mainBloc.add(any()));
+    });
+
+    testWidgets('leaves the back press to the editor without controls', (
+      tester,
+    ) async {
+      // An item on the timeline is not a selection.
+      when(
+        () => overlayBloc.state,
+      ).thenReturn(const TimelineOverlayState(items: [_sound]));
+
+      expect(await dismiss(tester), isFalse);
+      verifyNever(() => mainBloc.add(any()));
+      verifyNever(() => clipBloc.add(any()));
+      verifyNever(() => overlayBloc.add(any()));
+    });
   });
 }
