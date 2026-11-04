@@ -2522,6 +2522,7 @@
   "soundsSavedToLibrary": "సౌండ్‌లకు సేవ్ చేయబడింది",
   "soundsAlreadySavedToLibrary": "ఇప్పటికే సౌండ్స్‌లో ఉన్నాయి",
   "soundsAddSound": "సౌండ్ జోడించండి",
+  "soundsAddSoundHint": "ఫైల్‌ను దిగుమతి చేయండి లేదా రికార్డ్ చేయండి",
   "soundsAddSharePublicly": "బహిరంగంగా పంచుకోండి",
   "soundsAddPromptDescription": "ఒక ఆడియో ఫైల్‌ను ఎంచుకోండి లేదా ఒక సౌండ్‌ను రికార్డ్ చేయండి. దాన్ని నా సౌండ్స్‌లో ప్రైవేట్‌గా ఉంచండి లేదా Divine లో ఎవరైనా వాడేలా పంచుకోండి.",
   "soundsRecordAction": "సౌండ్‌ను రికార్డ్ చేయండి",
@@ -2540,7 +2541,6 @@
   "soundsImportUnreadable": "ఆ ఆడియో ఫైల్‌ను చదవడం సాధ్యపడలేదు.",
   "soundsAddSilent": "ఈ సౌండ్‌లో ఏమీ వినిపించదు, కాబట్టి దీన్ని జోడించడం సాధ్యం కాదు.",
   "soundsImportAccountChanged": "మీరు ఖాతా మార్చారు, కాబట్టి ఈ సౌండ్ జోడించబడలేదు.",
-  "soundsSavedLibraryTitle": "నా సౌండ్స్",
   "soundsSavedEmptyTitle": "ఇంకా సేవ్ చేయబడిన శబ్దాలు లేవు",
   "soundsSavedEmptyDescription": "వీడియోను ఇక్కడ సేవ్ చేయడానికి సౌండ్ ఉపయోగించండి నొక్కండి.",
   "soundsRemoveSavedSound": "ధ్వనిని తీసివేయండి",
@@ -2576,14 +2576,6 @@
   "soundsRemoveFailed": "ఆ ధ్వనిని తీసివేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.",
   "@soundsRemoveFailed": {
     "description": "Snackbar shown when removing a sound from the local library fails to persist."
-  },
-  "soundSyncStatusSyncing": "మీ శబ్దాలను సమకాలీకరిస్తోంది...",
-  "@soundSyncStatusSyncing": {
-    "description": "Shown while a saved-sound library sync pass with other devices is in progress."
-  },
-  "soundSyncStatusSynced": "తాజాగా వినిపిస్తోంది",
-  "@soundSyncStatusSynced": {
-    "description": "Shown after a saved-sound library sync pass completes successfully; the local library matches other devices."
   },
   "soundSyncStatusFailed": "మీ సౌండ్‌లను సింక్ చేయడం సాధ్యపడలేదు. మేము మళ్లీ ప్రయత్నిస్తాము.",
   "@soundSyncStatusFailed": {
@@ -7980,7 +7972,8 @@
   "savedSoundPreviewAction": "ప్రివ్యూ సౌండ్",
   "savedSoundEditAction": "ధ్వని వివరాలను సవరించండి",
   "savedSoundRemoveAction": "సేవ్ చేయబడిన ధ్వనిని తీసివేయండి",
-  "savedSoundFileMissing": "ఈ సౌండ్ ఆడియో ఫైల్ ఈ పరికరంలో లేదు, కాబట్టి ఇది ప్లే కాదు.",
+  "savedSoundOpenAction": "ధ్వనిని తెరవండి",
+  "savedSoundReuseUnavailable": "ఇకపై కొత్త వీడియోలలో ఉపయోగించలేరు",
   "savedSoundClearHashtagFilter": "హ్యాష్‌ట్యాగ్ ఫిల్టర్‌ను క్లియర్ చేయండి",
   "soundAllowRemix": "ఈ ధ్వనిని రీమిక్స్ చేయడానికి ఇతరులను అనుమతించండి",
   "soundReuseUnavailable": "ఈ ధ్వనిని ప్రస్తుతం రీమిక్స్ చేయడం సాధ్యం కాదు.",

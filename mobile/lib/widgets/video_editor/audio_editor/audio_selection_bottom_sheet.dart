@@ -27,6 +27,7 @@ import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/audio/sound_list_tile.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/private_key_search_warning.dart';
 import 'package:openvine/widgets/video_editor/audio_editor/audio_category_bar.dart';
@@ -284,9 +285,10 @@ class _AudioSelectionBottomSheetState
   }
 
   /// The cover the picked sound's row shows: the one it was published with,
-  /// the frame its saved record keeps, or the frame of its source video.
+  /// a saved sound's cover, or the frame of its source video.
   SoundCover? _selectedCover({
     required List<SavedSound> savedSounds,
+    required Map<String, SoundCover?>? savedSourceCovers,
     required List<Map<String, SoundCover?>?> coversBySourceVideo,
   }) {
     final selected = _selectedItem;
@@ -294,9 +296,11 @@ class _AudioSelectionBottomSheetState
     if (SoundCover.publishedWith(selected) case final cover?) return cover;
     for (final saved in savedSounds) {
       if (saved.id != selected.id) continue;
-      if (saved.sourceContext?.thumbnailUrl case final thumbnailUrl?) {
-        return SoundCover(imageUrl: thumbnailUrl);
-      }
+      final cover = SoundCover.forSavedSound(
+        saved,
+        sourceCovers: savedSourceCovers,
+      );
+      if (cover != null) return cover;
     }
     final reference = selected.sourceVideoReference;
     if (reference == null) return null;
@@ -315,18 +319,11 @@ class _AudioSelectionBottomSheetState
   bool _cannotBeReused(
     AudioEvent sound,
     AsyncValue<Map<String, SoundCover?>>? lookup,
-  ) {
-    final viewer = ref.read(authServiceProvider).currentPublicKeyHex;
-    if (viewer != null && viewer.isNotEmpty && viewer == sound.pubkey) {
-      return false;
-    }
-    final reference = sound.sourceVideoReference;
-    final looked = lookup == null || lookup.hasError ? null : lookup.value;
-    return reference != null &&
-        looked != null &&
-        looked.containsKey(reference) &&
-        looked[reference] == null;
-  }
+  ) => SoundCover.cannotBeReused(
+    sound,
+    lookup == null || lookup.hasError ? null : lookup.value,
+    viewerPubkeyHex: ref.read(authServiceProvider).currentPublicKeyHex,
+  );
 
   /// Loads [sound] into the preview player, stopping whatever played, and
   /// returns it with the duration the file reports when the event carried
@@ -630,9 +627,10 @@ class _AudioSelectionBottomSheetState
     final bundledSoundsAsync = ref.watch(soundLibraryServiceProvider);
     // Batched like the counts below and just as supplementary: a row waits on
     // a plain tile while its list's covers load, then shows its cover, or its
-    // waveform if it has none. Every list keeps its own covers, so a tab that
-    // swipes in shows the ones it already has. A failed lookup settles as no
-    // covers, so its rows fall back to their waveforms instead of waiting.
+    // colour tile if it has none. Every list keeps its own covers, so a tab
+    // that swipes in shows the ones it already has. A failed lookup settles as
+    // no covers, so its rows fall back to their colour tiles instead of
+    // waiting.
     Map<String, SoundCover?>? settled(
       AsyncValue<Map<String, SoundCover?>> covers,
     ) => covers.hasError ? const {} : covers.value;
@@ -689,6 +687,10 @@ class _AudioSelectionBottomSheetState
             ),
           )
         : null;
+    final savedSourceCovers =
+        savedSourcesLookup == null || savedSourcesLookup.hasError
+        ? null
+        : savedSourcesLookup.value;
     // Searched as whole records, not as their bare audio: the label and
     // hashtags the user filed a sound under live on the record, and they are
     // the words they will reach for here.
@@ -890,12 +892,13 @@ class _AudioSelectionBottomSheetState
               for (final sound in matchingSavedSounds)
                 sound.id: ?sound.personalLabel,
             },
-            // Saved sounds keep the frame of the video they were saved from, so
-            // their covers need no lookup.
+            // The same covers My Sounds in the Library shows.
             covers: {
               for (final sound in matchingSavedSounds)
-                if (sound.sourceContext?.thumbnailUrl case final thumbnailUrl?)
-                  sound.id: SoundCover(imageUrl: thumbnailUrl),
+                sound.id: ?SoundCover.forSavedSound(
+                  sound,
+                  sourceCovers: savedSourceCovers,
+                ),
             },
             selectedSound: _selectedItem,
             audioService: _audioService,
@@ -972,6 +975,7 @@ class _AudioSelectionBottomSheetState
                     audio: _selectedItem!,
                     cover: _selectedCover(
                       savedSounds: savedSoundsState.sounds,
+                      savedSourceCovers: savedSourceCovers,
                       coversBySourceVideo: [
                         forYouCovers,
                         popularCovers,
@@ -1001,37 +1005,12 @@ class _ImportAudioAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.vineColors;
-    return Padding(
-      padding: const .symmetric(vertical: 4),
-      child: ListTile(
-        key: const Key('audio_import_action'),
-        onTap: onTap,
-        minTileHeight: 48,
-        leading: SizedBox.square(
-          dimension: 48,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: colors.surfaceContainer,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: DivineIcon(
-                icon: DivineIconName.folderOpen,
-                color: colors.accentPositive,
-              ),
-            ),
-          ),
-        ),
-        title: Text(
-          context.l10n.videoEditorAudioImportAudio,
-          style: VineTheme.titleMediumFont(color: colors.accentPositive),
-        ),
-        subtitle: Text(
-          context.l10n.soundUploadSupportedFormats,
-          style: VineTheme.bodyMediumFont(color: colors.onSurfaceVariant),
-        ),
-      ),
+    return SoundListActionTile(
+      key: const Key('audio_import_action'),
+      icon: DivineIconName.folderOpen,
+      title: context.l10n.videoEditorAudioImportAudio,
+      subtitle: context.l10n.soundUploadSupportedFormats,
+      onTap: onTap,
     );
   }
 }
@@ -1192,7 +1171,7 @@ class _SoundsContent extends ConsumerWidget {
   }
 
   /// Whether [audio]'s cover is still being looked up, so its row waits on a
-  /// plain tile rather than showing a waveform it may not keep.
+  /// plain tile rather than showing a colour it may not keep.
   bool _isCoverPending(AudioEvent audio) {
     final reference = audio.sourceVideoReference;
     if (reference == null || SoundCover.publishedWith(audio) != null) {

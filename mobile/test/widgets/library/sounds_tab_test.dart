@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:creator_sync/creator_sync.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -18,17 +19,19 @@ import 'package:openvine/blocs/saved_sounds/saved_sound_media_probe.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/saved_sound.dart';
+import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/providers/documents_path_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/screens/sounds/add_sound_page.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
-import 'package:openvine/widgets/library/saved_sound_card.dart';
+import 'package:openvine/widgets/library/saved_sound_tile.dart';
 import 'package:openvine/widgets/library/sounds_tab.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sound_service/sound_service.dart';
@@ -137,9 +140,45 @@ AudioEvent _sound({
   );
 }
 
-DivineIconName? _previewIcon(WidgetTester tester) => tester
-    .widget<DivineIconButton>(find.byKey(const Key('saved_sound_preview')))
-    .icon;
+final AppLocalizations _l10n = lookupAppLocalizations(const Locale('en'));
+
+SavedSoundTile _tile(WidgetTester tester, String title) =>
+    tester.widget<SavedSoundTile>(
+      find.ancestor(
+        of: find.text(title),
+        matching: find.byType(SavedSoundTile),
+      ),
+    );
+
+/// Whether the row titled [title] previews, and whether that preview plays.
+({bool previewing, bool playing}) _preview(WidgetTester tester, String title) {
+  final tile = _tile(tester, title);
+  return (previewing: tile.isPreviewing, playing: tile.isPlaying);
+}
+
+/// Opens the actions of the row titled [title], or of the only row, and
+/// chooses [action].
+Future<void> _chooseAction(
+  WidgetTester tester,
+  String action, {
+  String? title,
+}) async {
+  final more = find.byKey(const Key('saved_sound_more'));
+  await tester.tap(
+    title == null
+        ? more
+        : find.descendant(
+            of: find.ancestor(
+              of: find.text(title),
+              matching: find.byType(SavedSoundTile),
+            ),
+            matching: more,
+          ),
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(action));
+  await tester.pumpAndSettle();
+}
 
 void main() {
   group(SoundsTab, () {
@@ -159,6 +198,10 @@ void main() {
     setUp(() {
       authService = _MockAuthService();
       when(() => authService.currentPublicKeyHex).thenReturn(_viewerPubkey);
+      when(() => authService.authState).thenReturn(AuthState.authenticated);
+      when(
+        () => authService.authStateStream,
+      ).thenAnswer((_) => const Stream.empty());
       deletionService = _MockContentDeletionService();
       evictedSoundIds = [];
     });
@@ -167,6 +210,7 @@ void main() {
       WidgetTester tester, {
       AudioPlaybackService? audioService,
       FutureOr<bool> Function(String path)? localFileExists,
+      List<Override> overrides = const [],
     }) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -176,6 +220,7 @@ void main() {
             authServiceProvider.overrideWithValue(authService),
             if (audioService != null)
               audioPlaybackServiceProvider.overrideWithValue(audioService),
+            ...overrides,
           ],
           child: SavedSoundsScope(
             service: SavedSoundsService(sharedPreferences),
@@ -228,7 +273,7 @@ void main() {
 
     testWidgets('says which saved sound lost its audio file', (tester) async {
       // The real bloc probes the filesystem here, so nothing but the wiring
-      // in _SavedSoundsSection decides which card carries the notice.
+      // in _SavedSoundsSection decides which row carries the notice.
       final service = SavedSoundsService(sharedPreferences);
       await service.saveSound(
         _sound(
@@ -243,29 +288,214 @@ void main() {
         localFileExists: (path) => !path.endsWith('never-written.m4a'),
       );
 
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(find.text('Gone Sound'), findsOneWidget);
-      expect(find.text('Here Sound'), findsOneWidget);
-      expect(find.text(l10n.savedSoundFileMissing), findsOneWidget);
+      expect(find.text(_l10n.videoEditorAudioFileMissing), findsOneWidget);
+      expect(_tile(tester, 'Gone Sound').isMissingFile, isTrue);
       expect(
-        find.byKey(const Key('saved_sound_preview')),
-        findsOneWidget,
+        _tile(tester, 'Here Sound').isMissingFile,
+        isFalse,
         reason:
-            'Only the card whose file is gone loses its preview — a wiring '
-            'hardcoded either way would give both cards the same answer.',
+            'Only the row whose file is gone loses its preview — a wiring '
+            'hardcoded either way would give both rows the same answer.',
       );
     });
 
-    testWidgets('opens saved sound details from the card', (tester) async {
+    testWidgets('says which saved sound can no longer be reused', (
+      tester,
+    ) async {
+      const goneVideo = '34236:creator:gone';
+      const hereVideo = '34236:creator:here';
+      final service = SavedSoundsService(sharedPreferences);
+      await service.saveSound(
+        _sound(
+          id: 'gone',
+          title: 'Gone Sound',
+        ).copyWith(sourceVideoReference: goneVideo),
+      );
+      await service.saveSound(
+        _sound(
+          id: 'here',
+          title: 'Here Sound',
+        ).copyWith(sourceVideoReference: hereVideo),
+      );
+      final audio = _FakeAudioPlaybackService();
+      addTearDown(audio.positions.close);
+
+      await pumpSoundsTab(
+        tester,
+        audioService: audio,
+        overrides: [
+          savedSoundSourcesProvider.overrideWith(
+            (ref, sources) async => {
+              goneVideo: null,
+              hereVideo: const SoundCover(imageUrl: 'https://x.test/a.jpg'),
+            },
+          ),
+        ],
+      );
+
+      expect(find.text(_l10n.savedSoundReuseUnavailable), findsOneWidget);
+      expect(_tile(tester, 'Gone Sound').cannotBeReused, isTrue);
+      expect(_tile(tester, 'Here Sound').cannotBeReused, isFalse);
+
+      // Listed, so it can be removed, but not played.
+      await tester.tap(find.text('Gone Sound'));
+      await tester.pumpAndSettle();
+      expect(audio.loadedUrls, isEmpty);
+    });
+
+    group('a sound that cannot be used', () {
+      const goneVideo = '34236:creator:gone';
+
+      for (final (name, sound, exists) in [
+        (
+          'whose source video is gone',
+          _sound(
+            id: 'gone',
+            title: 'Gone Sound',
+          ).copyWith(sourceVideoReference: goneVideo),
+          null,
+        ),
+        (
+          'whose file is gone',
+          _sound(
+            id: 'gone',
+            title: 'Gone Sound',
+          ).copyWith(url: '/imports/never-written.m4a'),
+          (String _) => false,
+        ),
+      ]) {
+        testWidgets('$name can still be removed', (tester) async {
+          await SavedSoundsService(sharedPreferences).saveSound(sound);
+
+          await pumpSoundsTab(
+            tester,
+            localFileExists: exists,
+            overrides: [
+              savedSoundSourcesProvider.overrideWith(
+                (ref, sources) async => {goneVideo: null},
+              ),
+            ],
+          );
+          final tile = _tile(tester, 'Gone Sound');
+          expect(tile.cannotBeReused || tile.isMissingFile, isTrue);
+
+          await _chooseAction(tester, _l10n.savedSoundRemoveAction);
+          expect(find.text(_l10n.savedSoundRemoveConfirmTitle), findsOneWidget);
+          await tester.tap(find.text(_l10n.soundsRemoveSavedSound));
+          await tester.pumpAndSettle();
+
+          expect(find.text('Gone Sound'), findsNothing);
+        });
+      }
+    });
+
+    group('covers', () {
+      const video = '34236:creator:clip';
+      const storedFrame = 'https://example.com/stored-frame.jpg';
+
+      Future<void> saveClip() =>
+          SavedSoundsService(sharedPreferences).saveSavedSound(
+            SavedSound(
+              audio: _sound(
+                id: 'clip',
+                title: 'Clip Sound',
+              ).copyWith(sourceVideoReference: video),
+              personalHashtags: const [],
+              catalogTags: const [],
+              waveformSamples: const [],
+              sourceContext: const SavedSoundSourceContext(
+                thumbnailUrl: storedFrame,
+              ),
+            ),
+          );
+
+      testWidgets('shows what the source video shows now, not the stored '
+          'frame', (tester) async {
+        // A source now behind a content warning answers with its blurhash.
+        const warned = SoundCover(blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj');
+        await saveClip();
+
+        await pumpSoundsTab(
+          tester,
+          overrides: [
+            savedSoundSourcesProvider.overrideWith(
+              (ref, sources) async => {video: warned},
+            ),
+          ],
+        );
+
+        expect(_tile(tester, 'Clip Sound').cover, warned);
+      });
+
+      testWidgets('shows no frame for a source video found gone', (
+        tester,
+      ) async {
+        await saveClip();
+
+        await pumpSoundsTab(
+          tester,
+          overrides: [
+            savedSoundSourcesProvider.overrideWith(
+              (ref, sources) async => {video: null},
+            ),
+          ],
+        );
+
+        expect(_tile(tester, 'Clip Sound').cover, isNull);
+      });
+    });
+
+    testWidgets('keeps a sound the viewer published usable', (tester) async {
+      const goneVideo = '34236:creator:gone';
+      await SavedSoundsService(sharedPreferences).saveSound(
+        _sound(
+          id: 'own',
+          title: 'My Beat',
+          pubkey: _viewerPubkey,
+        ).copyWith(sourceVideoReference: goneVideo),
+      );
+
+      await pumpSoundsTab(
+        tester,
+        overrides: [
+          savedSoundSourcesProvider.overrideWith(
+            (ref, sources) async => {goneVideo: null},
+          ),
+        ],
+      );
+
+      // Its creator may always reuse it, so the picker offers it too.
+      expect(find.text(_l10n.savedSoundReuseUnavailable), findsNothing);
+      expect(_tile(tester, 'My Beat').cannotBeReused, isFalse);
+    });
+
+    testWidgets('opens saved sound details from its menu', (tester) async {
       await SavedSoundsService(
         sharedPreferences,
       ).saveSound(_sound(id: 'sound1', title: 'Original sound - rabble'));
 
       await pumpSoundsTab(tester);
-      await tester.tap(find.text('Original sound - rabble'));
-      await tester.pumpAndSettle();
+      await _chooseAction(tester, _l10n.savedSoundOpenAction);
 
       expect(find.text('sound detail sound1'), findsOneWidget);
+    });
+
+    testWidgets('keeps the page of a sound whose file is gone closed', (
+      tester,
+    ) async {
+      await SavedSoundsService(sharedPreferences).saveSound(
+        _sound(
+          id: 'gone',
+          title: 'Gone Sound',
+        ).copyWith(url: '/imports/never-written.m4a'),
+      );
+
+      await pumpSoundsTab(tester, localFileExists: (_) => false);
+      await _chooseAction(tester, _l10n.savedSoundOpenAction);
+
+      expect(find.text('sound detail gone'), findsNothing);
+      // The disabled action leaves the menu open, with the other actions.
+      expect(find.text(_l10n.savedSoundRemoveAction), findsOneWidget);
     });
 
     testWidgets('filters saved sounds by search query', (tester) async {
@@ -309,23 +539,24 @@ void main() {
       addTearDown(audio.positions.close);
 
       await pumpSoundsTab(tester, audioService: audio);
-      final preview = find.byKey(const Key('saved_sound_preview'));
+      const title = 'Original sound - rabble';
+      final preview = find.text(title);
 
       await tester.tap(preview);
-      await tester.pumpAndSettle();
-      expect(_previewIcon(tester), DivineIconName.pause);
+      await tester.pump();
+      expect(_preview(tester, title), (previewing: true, playing: true));
       expect(audio.playCalls, 1);
 
       await tester.tap(preview);
       await tester.pumpAndSettle();
       expect(audio.pauseCalls, 1);
-      expect(_previewIcon(tester), DivineIconName.play);
       // Still the active preview — a pause must not reload the sound.
+      expect(_preview(tester, title), (previewing: true, playing: false));
       expect(audio.playCalls, 1);
 
       await tester.tap(preview);
-      await tester.pumpAndSettle();
-      expect(_previewIcon(tester), DivineIconName.pause);
+      await tester.pump();
+      expect(_preview(tester, title), (previewing: true, playing: true));
       expect(audio.playCalls, 2);
     });
 
@@ -337,14 +568,15 @@ void main() {
       addTearDown(audio.positions.close);
 
       await pumpSoundsTab(tester, audioService: audio);
-      await tester.tap(find.byKey(const Key('saved_sound_preview')));
-      await tester.pumpAndSettle();
-      expect(_previewIcon(tester), DivineIconName.pause);
+      const title = 'Original sound - rabble';
+      await tester.tap(find.text(title));
+      await tester.pump();
+      expect(_preview(tester, title), (previewing: true, playing: true));
 
       audio.finishPlayback();
       await tester.pumpAndSettle();
 
-      expect(_previewIcon(tester), DivineIconName.play);
+      expect(_preview(tester, title), (previewing: false, playing: false));
     });
 
     testWidgets('rapid pause then resume keeps the preview active', (
@@ -357,30 +589,23 @@ void main() {
       addTearDown(audio.positions.close);
 
       await pumpSoundsTab(tester, audioService: audio);
-      final preview = find.byKey(const Key('saved_sound_preview'));
+      const title = 'Original sound - rabble';
+      final preview = find.text(title);
 
       await tester.tap(preview);
-      await tester.pumpAndSettle();
-      expect(_previewIcon(tester), DivineIconName.pause);
+      await tester.pump();
+      expect(_preview(tester, title), (previewing: true, playing: true));
 
       // Pause, then resume before the pause path's microtasks fully settle —
       // the resolving play() must not wipe the resumed preview.
       await tester.tap(preview);
       await tester.tap(preview);
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       expect(audio.pauseCalls, 1);
       expect(audio.playCalls, 2);
-      expect(_previewIcon(tester), DivineIconName.pause);
+      expect(_preview(tester, title), (previewing: true, playing: true));
     });
-
-    Finder previewOnCard(String title) => find.descendant(
-      of: find.ancestor(
-        of: find.text(title),
-        matching: find.byType(SavedSoundCard),
-      ),
-      matching: find.byKey(const Key('saved_sound_preview')),
-    );
 
     testWidgets(
       'switching sounds does not let the first play clear the second',
@@ -393,26 +618,30 @@ void main() {
 
         await pumpSoundsTab(tester, audioService: audio);
 
-        await tester.tap(previewOnCard('Loop One'));
-        await tester.pumpAndSettle();
+        await tester.tap(find.text('Loop One'));
+        await tester.pump();
         expect(audio.playCalls, 1);
         expect(audio.loadedUrls.single, contains('sound1'));
 
-        await tester.tap(previewOnCard('Loop Two'));
-        await tester.pumpAndSettle();
+        await tester.tap(find.text('Loop Two'));
+        await tester.pump();
         expect(audio.loadedUrls.last, contains('sound2'));
         expect(audio.playCalls, 2);
         expect(
-          tester.widget<DivineIconButton>(previewOnCard('Loop Two')).icon,
-          DivineIconName.pause,
+          _preview(tester, 'Loop Two'),
+          (previewing: true, playing: true),
+        );
+        expect(
+          _preview(tester, 'Loop One'),
+          (previewing: false, playing: false),
         );
 
         // Natural end of the second preview — not a wipe from the first.
         audio.finishPlayback();
         await tester.pumpAndSettle();
         expect(
-          tester.widget<DivineIconButton>(previewOnCard('Loop Two')).icon,
-          DivineIconName.play,
+          _preview(tester, 'Loop Two'),
+          (previewing: false, playing: false),
         );
       },
     );
@@ -431,22 +660,19 @@ void main() {
 
       await pumpSoundsTab(tester, audioService: audio);
 
-      await tester.tap(previewOnCard('Loop One'));
+      await tester.tap(find.text('Loop One'));
       await tester.pump();
-      await tester.tap(previewOnCard('Loop Two'));
+      await tester.tap(find.text('Loop Two'));
       await tester.pump();
 
       audio.releaseLoad(sound1Url);
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       // sound1's load must finish (and be discarded) before sound2's load
       // starts — never the reverse interleave on the shared player.
       expect(audio.loadedUrls, [sound1Url, sound2Url]);
       expect(audio.playCalls, 1);
-      expect(
-        tester.widget<DivineIconButton>(previewOnCard('Loop Two')).icon,
-        DivineIconName.pause,
-      );
+      expect(_preview(tester, 'Loop Two'), (previewing: true, playing: true));
     });
 
     testWidgets('shows the Add sound action in an empty library', (
@@ -469,6 +695,70 @@ void main() {
 
       expect(find.text('Loop One'), findsOneWidget);
       expect(find.byKey(const Key('sounds_add_sound')), findsOneWidget);
+      // Like the picker's import row, it says what it does under its title.
+      expect(find.text(_l10n.soundsAddSoundHint), findsOneWidget);
+    });
+
+    testWidgets('waits on a plain cover only for a sound the lookup decides', (
+      tester,
+    ) async {
+      const video = '34236:creator:clip';
+      final service = SavedSoundsService(sharedPreferences);
+      await service.saveSound(
+        _sound(
+          id: 'clip',
+          title: 'Clip Sound',
+        ).copyWith(sourceVideoReference: video),
+      );
+      await service.saveSound(_sound(id: 'file', title: 'File Sound'));
+      final lookup = Completer<Map<String, SoundCover?>>();
+      addTearDown(() => lookup.complete(const {}));
+
+      await pumpSoundsTab(
+        tester,
+        overrides: [
+          savedSoundSourcesProvider.overrideWith(
+            (ref, sources) => lookup.future,
+          ),
+        ],
+      );
+
+      expect(_tile(tester, 'Clip Sound').isCoverPending, isTrue);
+      expect(_tile(tester, 'File Sound').isCoverPending, isFalse);
+    });
+
+    testWidgets('repeats why a sound cannot be used above its actions', (
+      tester,
+    ) async {
+      const goneVideo = '34236:creator:gone';
+      await SavedSoundsService(sharedPreferences).saveSound(
+        _sound(
+          id: 'gone',
+          title: 'Gone Sound',
+        ).copyWith(sourceVideoReference: goneVideo),
+      );
+
+      await pumpSoundsTab(
+        tester,
+        overrides: [
+          savedSoundSourcesProvider.overrideWith(
+            (ref, sources) async => {goneVideo: null},
+          ),
+        ],
+      );
+      expect(find.text(_l10n.savedSoundReuseUnavailable), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('saved_sound_more')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SavedSoundMenuHeader), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SavedSoundMenuHeader),
+          matching: find.text(_l10n.savedSoundReuseUnavailable),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('Add sound opens the add flow, not the editor picker', (
@@ -484,7 +774,7 @@ void main() {
       expect(find.text('add sound page'), findsOneWidget);
     });
 
-    testWidgets('filters rich cards by personal hashtag', (tester) async {
+    testWidgets('filters saved sounds by personal hashtag', (tester) async {
       final service = SavedSoundsService(sharedPreferences);
       await service.saveSavedSound(
         SavedSound(
@@ -532,8 +822,7 @@ void main() {
       final l10n = lookupAppLocalizations(const Locale('en'));
 
       await pumpSoundsTab(tester);
-      await tester.tap(find.byKey(const Key('saved_sound_remove')));
-      await tester.pumpAndSettle();
+      await _chooseAction(tester, _l10n.savedSoundRemoveAction);
 
       expect(find.text(l10n.savedSoundRemoveConfirmTitle), findsOneWidget);
       expect(find.text('Original sound - rabble'), findsOneWidget);
@@ -554,8 +843,7 @@ void main() {
       final l10n = lookupAppLocalizations(const Locale('en'));
 
       await pumpSoundsTab(tester);
-      await tester.tap(find.byKey(const Key('saved_sound_remove')));
-      await tester.pumpAndSettle();
+      await _chooseAction(tester, _l10n.savedSoundRemoveAction);
       await tester.tap(find.text(l10n.commonCancel));
       await tester.pumpAndSettle();
 
@@ -568,7 +856,6 @@ void main() {
       await SavedSoundsService(
         sharedPreferences,
       ).saveSound(_sound(id: 'sound1', title: 'Original sound - rabble'));
-      final l10n = lookupAppLocalizations(const Locale('en'));
       await pumpSoundsTab(tester);
       expect(
         tester.getSize(find.byKey(const Key('sounds_add_sound'))).height,
@@ -582,9 +869,10 @@ void main() {
       expect(find.text('Original sound - rabble'), findsOneWidget);
 
       // Tapping anywhere outside the field drops focus and brings them back
-      // (the list header, so no card handles the tap).
+      // (the empty space under the list, so no row handles the tap).
       await tester.tapAt(
-        tester.getCenter(find.text(l10n.soundsSavedLibraryTitle)),
+        tester.getBottomRight(find.byType(CustomScrollView)) -
+            const Offset(20, 20),
       );
       await tester.pumpAndSettle();
 
@@ -651,8 +939,7 @@ void main() {
         final l10n = lookupAppLocalizations(const Locale('en'));
 
         await pumpSoundsTab(tester);
-        await tester.tap(find.byKey(const Key('saved_sound_remove')));
-        await tester.pumpAndSettle();
+        await _chooseAction(tester, _l10n.savedSoundRemoveAction);
 
         expect(find.text(l10n.savedSoundDeleteConfirmTitle), findsOneWidget);
         expect(find.text(l10n.savedSoundRemoveConfirmTitle), findsNothing);
@@ -681,8 +968,7 @@ void main() {
         final l10n = lookupAppLocalizations(const Locale('en'));
 
         await pumpSoundsTab(tester);
-        await tester.tap(find.byKey(const Key('saved_sound_remove')));
-        await tester.pumpAndSettle();
+        await _chooseAction(tester, _l10n.savedSoundRemoveAction);
         await tester.tap(find.text(l10n.savedSoundRemoveLocallyOnly));
         await tester.pumpAndSettle();
 
@@ -713,8 +999,7 @@ void main() {
         final l10n = lookupAppLocalizations(const Locale('en'));
 
         await pumpSoundsTab(tester);
-        await tester.tap(find.byKey(const Key('saved_sound_remove')));
-        await tester.pumpAndSettle();
+        await _chooseAction(tester, _l10n.savedSoundRemoveAction);
         await tester.tap(find.text(l10n.savedSoundDeleteForEveryone));
         await tester.pumpAndSettle();
 
@@ -738,8 +1023,7 @@ void main() {
       addTearDown(tester.view.resetViewInsets);
 
       await pumpSoundsTab(tester);
-      await tester.tap(find.byKey(const Key('saved_sound_edit')));
-      await tester.pumpAndSettle();
+      await _chooseAction(tester, _l10n.savedSoundEditAction);
 
       final keyboardTop = tester.view.physicalSize.height / 3.0 - 100;
       final fields = find.byType(DivineTextField);
@@ -758,8 +1042,7 @@ void main() {
       await pumpSoundsTab(tester);
       expect(find.byKey(const Key('saved_sound_label_field')), findsNothing);
 
-      await tester.tap(find.byKey(const Key('saved_sound_edit')));
-      await tester.pumpAndSettle();
+      await _chooseAction(tester, _l10n.savedSoundEditAction);
 
       expect(find.text(l10n.savedSoundDetailsSheetTitle), findsOneWidget);
       await tester.enterText(
@@ -843,15 +1126,17 @@ void main() {
         await tester.pumpAndSettle();
       });
 
-      testWidgets('shows syncing then synced status', (tester) async {
+      testWidgets('says nothing while it syncs or once it has', (
+        tester,
+      ) async {
         final completer = Completer<SoundSyncOutcome>();
         when(syncRepository.reconcile).thenAnswer((_) => completer.future);
-        final l10n = lookupAppLocalizations(const Locale('en'));
+        final status = find.byKey(const Key('sound_sync_status'));
 
         await pumpSyncedSoundsTab(tester);
-
-        expect(find.text(l10n.soundSyncStatusSyncing), findsOneWidget);
-        expect(find.text(l10n.soundSyncStatusSynced), findsNothing);
+        // The tab syncs whenever it opens, so a status line would only make
+        // the list jump.
+        expect(status, findsNothing);
 
         completer.complete(
           const SoundSyncOutcome(
@@ -863,8 +1148,21 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.soundSyncStatusSyncing), findsNothing);
-        expect(find.text(l10n.soundSyncStatusSynced), findsOneWidget);
+        expect(status, findsNothing);
+      });
+
+      testWidgets('says when sync failed', (tester) async {
+        when(
+          syncRepository.reconcile,
+        ).thenAnswer((_) async => throw SyncIndexException('relay down'));
+
+        await pumpSyncedSoundsTab(tester);
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.widget<Text>(find.byKey(const Key('sound_sync_status'))).data,
+          _l10n.soundSyncStatusFailed,
+        );
       });
 
       testWidgets('shows locked status when the vault key is unavailable', (
@@ -939,8 +1237,6 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(find.text(l10n.soundSyncStatusLocked), findsOneWidget);
-          expect(find.text(l10n.soundSyncStatusSyncing), findsNothing);
-          expect(find.text(l10n.soundSyncStatusSynced), findsNothing);
         },
       );
     });

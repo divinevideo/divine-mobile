@@ -4517,9 +4517,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Nasa Sounds na';
 
   @override
-  String get soundsSavedLibraryTitle => 'Mga Sound Ko';
-
-  @override
   String get soundsSavedEmptyTitle => 'Wala pang naka-save na sound';
 
   @override
@@ -4528,6 +4525,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Magdagdag ng sound';
+
+  @override
+  String get soundsAddSoundHint => 'Mag-import ng file o mag-record';
 
   @override
   String get soundsAddSharePublicly => 'I-share sa publiko';
@@ -4624,12 +4624,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'Hindi natanggal ang sound na iyon. Subukan ulit.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Sini-sync ang iyong mga tunog…';
-
-  @override
-  String get soundSyncStatusSynced => 'Napapanahon na ang mga tunog';
 
   @override
   String get soundSyncStatusFailed =>
@@ -14051,8 +14045,11 @@ class AppLocalizationsFil extends AppLocalizations {
   String get savedSoundRemoveAction => 'Alisin ang naka-save na sound';
 
   @override
-  String get savedSoundFileMissing =>
-      'Wala na sa device ang audio file ng sound na ito, kaya hindi ito matutugtog.';
+  String get savedSoundOpenAction => 'Buksan ang sound';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Hindi na pwedeng gamitin sa mga bagong video';
 
   @override
   String get savedSoundClearHashtagFilter => 'I-clear ang hashtag filter';

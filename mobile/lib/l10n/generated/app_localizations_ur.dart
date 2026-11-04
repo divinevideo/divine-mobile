@@ -4498,9 +4498,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'پہلے سے آوازوں میں ہے';
 
   @override
-  String get soundsSavedLibraryTitle => 'میری آوازیں';
-
-  @override
   String get soundsSavedEmptyTitle => 'ابھی کوئی محفوظ آواز نہیں';
 
   @override
@@ -4509,6 +4506,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'ساؤنڈ شامل کریں';
+
+  @override
+  String get soundsAddSoundHint => 'فائل درآمد کریں یا خود ریکارڈ کریں';
 
   @override
   String get soundsAddSharePublicly => 'عوامی طور پر شیئر کریں';
@@ -4605,12 +4605,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'وہ ساؤنڈ ہٹایا نہیں جا سکا۔ دوبارہ کوشش کریں۔';
-
-  @override
-  String get soundSyncStatusSyncing => 'آپ کی آوازیں ہم آہنگ ہو رہی ہیں…';
-
-  @override
-  String get soundSyncStatusSynced => 'آوازیں تازہ ترین ہیں';
 
   @override
   String get soundSyncStatusFailed =>
@@ -13923,8 +13917,11 @@ class AppLocalizationsUr extends AppLocalizations {
   String get savedSoundRemoveAction => 'محفوظ شدہ ساؤنڈ ہٹائیں';
 
   @override
-  String get savedSoundFileMissing =>
-      'اس ساؤنڈ کی آڈیو فائل اب اس ڈیوائس پر نہیں ہے، اس لیے یہ چل نہیں سکتی۔';
+  String get savedSoundOpenAction => 'ساؤنڈ کھولیں';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'اب نئی ویڈیوز میں استعمال نہیں ہو سکتا';
 
   @override
   String get savedSoundClearHashtagFilter => 'ہیش ٹیگ فلٹر صاف کریں';

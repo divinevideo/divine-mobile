@@ -4453,9 +4453,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Đã có trong Âm thanh';
 
   @override
-  String get soundsSavedLibraryTitle => 'Âm thanh của tôi';
-
-  @override
   String get soundsSavedEmptyTitle => 'Chưa có âm thanh đã lưu';
 
   @override
@@ -4464,6 +4461,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Thêm âm thanh';
+
+  @override
+  String get soundsAddSoundHint => 'Nhập tệp hoặc tự ghi âm';
 
   @override
   String get soundsAddSharePublicly => 'Chia sẻ công khai';
@@ -4557,12 +4557,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => 'Không gỡ được âm thanh đó. Thử lại nhé.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Đang đồng bộ âm thanh của bạn…';
-
-  @override
-  String get soundSyncStatusSynced => 'Âm thanh đã được cập nhật';
 
   @override
   String get soundSyncStatusFailed =>
@@ -13875,8 +13869,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get savedSoundRemoveAction => 'Gỡ âm thanh đã lưu';
 
   @override
-  String get savedSoundFileMissing =>
-      'Tệp âm thanh của bản nhạc này không còn trên thiết bị nên không phát được.';
+  String get savedSoundOpenAction => 'Mở âm thanh';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Không còn dùng được trong video mới';
 
   @override
   String get savedSoundClearHashtagFilter => 'Xóa bộ lọc hashtag';

@@ -2998,12 +2998,15 @@
   "soundsNoSoundsFoundDescription": "Try a different search term",
   "soundsSavedToLibrary": "Saved to Sounds",
   "soundsAlreadySavedToLibrary": "Already in Sounds",
-  "soundsSavedLibraryTitle": "My Sounds",
   "soundsSavedEmptyTitle": "No saved sounds yet",
   "soundsSavedEmptyDescription": "Tap Use Sound on a video to save it here.",
   "soundsAddSound": "Add sound",
   "@soundsAddSound": {
-    "description": "Label of the button above the My Sounds list that adds a sound, picked from the device or recorded, and the title of the screen it opens."
+    "description": "Label of the row at the top of the My Sounds list that adds a sound, picked from the device or recorded, and the title of the screen it opens."
+  },
+  "soundsAddSoundHint": "Import a file or record one",
+  "@soundsAddSoundHint": {
+    "description": "Under the Add sound row at the top of My Sounds in the Library, which opens a page to pick an audio file or record one."
   },
   "soundsAddSharePublicly": "Share publicly",
   "@soundsAddSharePublicly": {
@@ -3113,14 +3116,6 @@
   "soundsRemoveFailed": "Couldn't remove that sound. Try again.",
   "@soundsRemoveFailed": {
     "description": "Snackbar shown when removing a sound from the local library fails to persist."
-  },
-  "soundSyncStatusSyncing": "Syncing your sounds…",
-  "@soundSyncStatusSyncing": {
-    "description": "Shown while a saved-sound library sync pass with other devices is in progress."
-  },
-  "soundSyncStatusSynced": "Sounds up to date",
-  "@soundSyncStatusSynced": {
-    "description": "Shown after a saved-sound library sync pass completes successfully; the local library matches other devices."
   },
   "soundSyncStatusFailed": "Couldn't sync your sounds. We'll try again.",
   "@soundSyncStatusFailed": {
@@ -8472,7 +8467,7 @@
   },
   "videoEditorAudioFileMissing": "Audio file is gone from this device",
   "@videoEditorAudioFileMissing": {
-    "description": "Subtitle on a saved sound in the video editor's sound picker whose imported audio file is no longer on the device. The entry stays listed but cannot be selected, because attaching it would put a dead source on the draft."
+    "description": "Subtitle on a saved sound whose imported audio file is no longer on the device, in the video editor's sound picker and in My Sounds in the Library. The entry stays listed but cannot be selected or played, because attaching it would put a dead source on the draft. It deliberately stops short of telling the user to remove the entry: removal publishes a tombstone that deletes it on every synced device, where the file may still be present."
   },
   "videoEditorAudioUntitled": "Untitled",
   "videoEditorAudioAddAudio": "Add audio",
@@ -10834,9 +10829,13 @@
   "savedSoundPreviewAction": "Preview sound",
   "savedSoundEditAction": "Edit sound details",
   "savedSoundRemoveAction": "Remove saved sound",
-  "savedSoundFileMissing": "This sound's audio file is gone from this device, so it can't play.",
-  "@savedSoundFileMissing": {
-    "description": "Shown on a My Sounds entry whose imported audio file is no longer on the device. The entry keeps the label and hashtags the user wrote, so it is not silently dropped. It deliberately stops short of telling the user to remove the entry: removal publishes a tombstone that deletes it on every synced device, where the file may still be present."
+  "savedSoundOpenAction": "Open sound",
+  "@savedSoundOpenAction": {
+    "description": "Action in the menu of a My Sounds entry that opens the sound's own page."
+  },
+  "savedSoundReuseUnavailable": "Can't be used in new videos anymore",
+  "@savedSoundReuseUnavailable": {
+    "description": "Shown in place of the details of a My Sounds entry whose source video was deleted or is hidden from the viewer, or whose creator no longer lets others reuse its sound. The sound picker leaves such a sound out; My Sounds keeps it listed so the user can still remove it."
   },
   "savedSoundClearHashtagFilter": "Clear hashtag filter",
   "soundAllowRemix": "Allow others to remix this sound",

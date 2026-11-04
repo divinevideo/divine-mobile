@@ -4429,9 +4429,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Zaten Seslerde';
 
   @override
-  String get soundsSavedLibraryTitle => 'Seslerim';
-
-  @override
   String get soundsSavedEmptyTitle => 'Henüz kaydedilmiş ses yok';
 
   @override
@@ -4440,6 +4437,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Ses ekle';
+
+  @override
+  String get soundsAddSoundHint => 'Bir dosya içe aktar ya da kendin kaydet';
 
   @override
   String get soundsAddSharePublicly => 'Herkese açık paylaş';
@@ -4534,12 +4534,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => 'O ses kaldırılamadı. Tekrar dene.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Sesleriniz eşitleniyor…';
-
-  @override
-  String get soundSyncStatusSynced => 'Sesler güncel';
 
   @override
   String get soundSyncStatusFailed =>
@@ -13858,8 +13852,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get savedSoundRemoveAction => 'Kaydedilen sesi kaldır';
 
   @override
-  String get savedSoundFileMissing =>
-      'Bu sesin ses dosyası artık cihazda yok, o yüzden çalmıyor.';
+  String get savedSoundOpenAction => 'Sesi aç';
+
+  @override
+  String get savedSoundReuseUnavailable => 'Artık yeni videolarda kullanılamaz';
 
   @override
   String get savedSoundClearHashtagFilter => 'Hashtag filtresini temizle';

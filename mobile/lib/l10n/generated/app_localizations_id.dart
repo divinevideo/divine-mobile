@@ -4412,9 +4412,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Sudah ada di Suara';
 
   @override
-  String get soundsSavedLibraryTitle => 'Suara Saya';
-
-  @override
   String get soundsSavedEmptyTitle => 'Belum ada suara yang tersimpan';
 
   @override
@@ -4423,6 +4420,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Tambah suara';
+
+  @override
+  String get soundsAddSoundHint => 'Impor file atau rekam sendiri';
 
   @override
   String get soundsAddSharePublicly => 'Bagikan ke publik';
@@ -4517,12 +4517,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => 'Suara itu gagal dihapus. Coba lagi.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Menyinkronkan suaramu…';
-
-  @override
-  String get soundSyncStatusSynced => 'Suara sudah terbaru';
 
   @override
   String get soundSyncStatusFailed =>
@@ -13827,8 +13821,11 @@ class AppLocalizationsId extends AppLocalizations {
   String get savedSoundRemoveAction => 'Hapus suara tersimpan';
 
   @override
-  String get savedSoundFileMissing =>
-      'File audio dari suara ini sudah tidak ada di perangkat, jadi tidak bisa diputar.';
+  String get savedSoundOpenAction => 'Buka suara';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Sudah tidak bisa dipakai di video baru';
 
   @override
   String get savedSoundClearHashtagFilter => 'Bersihkan filter tagar';

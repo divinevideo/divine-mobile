@@ -4626,9 +4626,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Już w Dźwiękach';
 
   @override
-  String get soundsSavedLibraryTitle => 'Moje dźwięki';
-
-  @override
   String get soundsSavedEmptyTitle => 'Brak zapisanych dźwięków';
 
   @override
@@ -4637,6 +4634,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Dodaj dźwięk';
+
+  @override
+  String get soundsAddSoundHint => 'Zaimportuj plik lub nagraj własny';
 
   @override
   String get soundsAddSharePublicly => 'Udostępnij publicznie';
@@ -4734,12 +4734,6 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'Nie udało się usunąć tego dźwięku. Spróbuj ponownie.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Synchronizowanie twoich dźwięków…';
-
-  @override
-  String get soundSyncStatusSynced => 'Dźwięki są aktualne';
 
   @override
   String get soundSyncStatusFailed =>
@@ -14225,8 +14219,11 @@ class AppLocalizationsPl extends AppLocalizations {
   String get savedSoundRemoveAction => 'Usuń zapisany dźwięk';
 
   @override
-  String get savedSoundFileMissing =>
-      'Pliku audio tego dźwięku już nie ma na tym urządzeniu, więc nie da się go odtworzyć.';
+  String get savedSoundOpenAction => 'Otwórz dźwięk';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Nie można go już używać w nowych filmach';
 
   @override
   String get savedSoundClearHashtagFilter => 'Wyczyść filtr hashtagów';

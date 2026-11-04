@@ -4650,9 +4650,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'ఇప్పటికే సౌండ్స్‌లో ఉన్నాయి';
 
   @override
-  String get soundsSavedLibraryTitle => 'నా సౌండ్స్';
-
-  @override
   String get soundsSavedEmptyTitle => 'ఇంకా సేవ్ చేయబడిన శబ్దాలు లేవు';
 
   @override
@@ -4661,6 +4658,10 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'సౌండ్ జోడించండి';
+
+  @override
+  String get soundsAddSoundHint =>
+      'ఫైల్‌ను దిగుమతి చేయండి లేదా రికార్డ్ చేయండి';
 
   @override
   String get soundsAddSharePublicly => 'బహిరంగంగా పంచుకోండి';
@@ -4758,12 +4759,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'ఆ ధ్వనిని తీసివేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
-
-  @override
-  String get soundSyncStatusSyncing => 'మీ శబ్దాలను సమకాలీకరిస్తోంది...';
-
-  @override
-  String get soundSyncStatusSynced => 'తాజాగా వినిపిస్తోంది';
 
   @override
   String get soundSyncStatusFailed =>
@@ -14280,8 +14275,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get savedSoundRemoveAction => 'సేవ్ చేయబడిన ధ్వనిని తీసివేయండి';
 
   @override
-  String get savedSoundFileMissing =>
-      'ఈ సౌండ్ ఆడియో ఫైల్ ఈ పరికరంలో లేదు, కాబట్టి ఇది ప్లే కాదు.';
+  String get savedSoundOpenAction => 'ధ్వనిని తెరవండి';
+
+  @override
+  String get savedSoundReuseUnavailable => 'ఇకపై కొత్త వీడియోలలో ఉపయోగించలేరు';
 
   @override
   String get savedSoundClearHashtagFilter =>

@@ -4486,9 +4486,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Finns redan i Ljud';
 
   @override
-  String get soundsSavedLibraryTitle => 'Mina ljud';
-
-  @override
   String get soundsSavedEmptyTitle => 'Inga sparade ljud ännu';
 
   @override
@@ -4497,6 +4494,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Lägg till ljud';
+
+  @override
+  String get soundsAddSoundHint => 'Importera en fil eller spela in ett eget';
 
   @override
   String get soundsAddSharePublicly => 'Dela offentligt';
@@ -4592,12 +4592,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'Kunde inte ta bort det ljudet. Försök igen.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Synkar dina ljud…';
-
-  @override
-  String get soundSyncStatusSynced => 'Ljuden är uppdaterade';
 
   @override
   String get soundSyncStatusFailed =>
@@ -13942,8 +13936,11 @@ class AppLocalizationsSv extends AppLocalizations {
   String get savedSoundRemoveAction => 'Ta bort sparat ljud';
 
   @override
-  String get savedSoundFileMissing =>
-      'Ljudfilen för det här ljudet finns inte kvar på enheten, så det går inte att spela upp.';
+  String get savedSoundOpenAction => 'Öppna ljudet';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Kan inte längre användas i nya videor';
 
   @override
   String get savedSoundClearHashtagFilter => 'Rensa hashtaggfiltret';

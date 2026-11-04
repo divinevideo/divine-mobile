@@ -4194,9 +4194,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => '已在声音库中';
 
   @override
-  String get soundsSavedLibraryTitle => '我的声音';
-
-  @override
   String get soundsSavedEmptyTitle => '还没有保存的声音';
 
   @override
@@ -4204,6 +4201,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get soundsAddSound => '添加声音';
+
+  @override
+  String get soundsAddSoundHint => '导入文件或自己录制';
 
   @override
   String get soundsAddSharePublicly => '公开分享';
@@ -4291,12 +4291,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => '无法移除该声音。请重试。';
-
-  @override
-  String get soundSyncStatusSyncing => '正在同步你的声音…';
-
-  @override
-  String get soundSyncStatusSynced => '声音已是最新';
 
   @override
   String get soundSyncStatusFailed => '无法同步你的声音，我们会再试一次。';
@@ -13085,7 +13079,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get savedSoundRemoveAction => '移除已保存的声音';
 
   @override
-  String get savedSoundFileMissing => '这个声音的音频文件已经不在这台设备上了，没法播放。';
+  String get savedSoundOpenAction => '打开声音';
+
+  @override
+  String get savedSoundReuseUnavailable => '已无法在新视频中使用';
 
   @override
   String get savedSoundClearHashtagFilter => '清除话题标签筛选';
