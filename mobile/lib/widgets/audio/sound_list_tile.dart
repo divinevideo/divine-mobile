@@ -1,5 +1,6 @@
 // ABOUTME: One sound in a list (cover, title, details, the bars of the one
-// ABOUTME: playing) and the action row heading such a list. Picker and My Sounds.
+// ABOUTME: playing) and the action row heading such a list, in the picker and
+// ABOUTME: My Sounds.
 
 import 'dart:math';
 

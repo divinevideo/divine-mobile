@@ -7555,7 +7555,7 @@ abstract class AppLocalizations {
   /// **'Tap Use Sound on a video to save it here.'**
   String get soundsSavedEmptyDescription;
 
-  /// Label of the button above the My Sounds list that adds a sound, picked from the device or recorded, and the title of the screen it opens.
+  /// Label of the row at the top of the My Sounds list that adds a sound, picked from the device or recorded, and the title of the screen it opens.
   ///
   /// In en, this message translates to:
   /// **'Add sound'**
@@ -18815,7 +18815,7 @@ abstract class AppLocalizations {
   /// **'Use'**
   String get videoEditorAudioUseSound;
 
-  /// Subtitle on a saved sound in the video editor's sound picker whose imported audio file is no longer on the device. The entry stays listed but cannot be selected, because attaching it would put a dead source on the draft.
+  /// Subtitle on a saved sound whose imported audio file is no longer on the device, in the video editor's sound picker and in My Sounds in the Library. The entry stays listed but cannot be selected or played, because attaching it would put a dead source on the draft. It deliberately stops short of telling the user to remove the entry: removal publishes a tombstone that deletes it on every synced device, where the file may still be present.
   ///
   /// In en, this message translates to:
   /// **'Audio file is gone from this device'**

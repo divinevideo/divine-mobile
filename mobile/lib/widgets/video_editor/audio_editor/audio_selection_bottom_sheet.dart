@@ -627,9 +627,10 @@ class _AudioSelectionBottomSheetState
     final bundledSoundsAsync = ref.watch(soundLibraryServiceProvider);
     // Batched like the counts below and just as supplementary: a row waits on
     // a plain tile while its list's covers load, then shows its cover, or its
-    // waveform if it has none. Every list keeps its own covers, so a tab that
-    // swipes in shows the ones it already has. A failed lookup settles as no
-    // covers, so its rows fall back to their waveforms instead of waiting.
+    // colour tile if it has none. Every list keeps its own covers, so a tab
+    // that swipes in shows the ones it already has. A failed lookup settles as
+    // no covers, so its rows fall back to their colour tiles instead of
+    // waiting.
     Map<String, SoundCover?>? settled(
       AsyncValue<Map<String, SoundCover?>> covers,
     ) => covers.hasError ? const {} : covers.value;
@@ -1170,7 +1171,7 @@ class _SoundsContent extends ConsumerWidget {
   }
 
   /// Whether [audio]'s cover is still being looked up, so its row waits on a
-  /// plain tile rather than showing a waveform it may not keep.
+  /// plain tile rather than showing a colour it may not keep.
   bool _isCoverPending(AudioEvent audio) {
     final reference = audio.sourceVideoReference;
     if (reference == null || SoundCover.publishedWith(audio) != null) {

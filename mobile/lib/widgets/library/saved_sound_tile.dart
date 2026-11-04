@@ -77,7 +77,7 @@ class SavedSoundTile extends StatelessWidget {
   /// [isPreviewing].
   final Stream<double>? progress;
 
-  /// Last known [progress] fraction, used when the waveform remounts while a
+  /// Last known [progress] fraction, used when the progress remounts while a
   /// preview is still active and the position stream is quiet (e.g. paused).
   final double progressValue;
 

@@ -626,8 +626,8 @@ Future<Map<String, SoundCover?>> _coversFor(
 }
 
 /// What My sounds' saved sounds' source videos left: their covers, keyed and
-/// marked like [trendingSoundCovers], so the tab can leave out the sounds that
-/// can no longer be reused.
+/// marked like [trendingSoundCovers]. The picker leaves out the sounds that can
+/// no longer be reused; My Sounds in the Library keeps them listed, marked.
 @riverpod
 Future<Map<String, SoundCover?>> savedSoundSources(
   Ref ref,

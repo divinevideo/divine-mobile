@@ -35,11 +35,10 @@ class AudioListTile extends StatelessWidget {
   /// gets credited.
   final String? displayTitle;
 
-  /// Artwork leading the row, or `null` for the waveform placeholder.
+  /// See [SoundListTile.cover].
   final SoundCover? cover;
 
-  /// Whether [cover] is still being looked up; the row then waits on a plain
-  /// tile instead of a waveform.
+  /// See [SoundListTile.isCoverPending].
   final bool isCoverPending;
 
   /// Whether this sound cannot be attached because its device-local audio

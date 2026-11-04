@@ -61,18 +61,18 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
 
   /// Whether the preview named by [_previewingSoundId] is paused.
   ///
-  /// A paused preview keeps its row's waveform and fill — it is still the
-  /// active preview, just not advancing.
+  /// A paused preview keeps its row's progress — it is still the active
+  /// preview, just not advancing.
   bool _previewPaused = false;
 
   /// Playback position of the running preview as a 0–1 fraction, so the
-  /// previewing row can fill its waveform as the sound plays.
+  /// previewing row can fill its progress as the sound plays.
   Stream<double>? _previewProgress;
 
   /// Last fraction observed on [_previewProgress].
   ///
   /// Seeded into the row so a list rebuild or off-screen remount does not
-  /// flash the waveform back to empty while a preview is still active
+  /// flash the progress back to empty while a preview is still active
   /// (including while paused, when the position stream is quiet).
   double _previewProgressValue = 0;
 
@@ -437,8 +437,7 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
         VineBottomSheetActionData(
           iconPath: DivineIconName.musicNotes.assetPath,
           label: context.l10n.savedSoundOpenAction,
-          // As before the menu: a sound whose file is gone has no page to
-          // play it on.
+          // A sound whose file is gone has no page to play it on.
           onTap: view.isMissingFile ? null : () => _onOpenDetails(sound),
         ),
         VineBottomSheetActionData(
@@ -640,9 +639,9 @@ class _NoResultsState extends StatelessWidget {
   }
 }
 
-/// Says when sync failed. A sync that runs or succeeds says nothing: the tab
-/// syncs each time it opens, so a running or done line would only flicker
-/// above the list.
+/// Says when sync failed or found the vault locked. A sync that runs or
+/// succeeds says nothing: the tab syncs each time it opens, so a running or
+/// done line would only flicker above the list.
 class _SyncStatusBanner extends StatelessWidget {
   const _SyncStatusBanner();
 

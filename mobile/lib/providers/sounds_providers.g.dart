@@ -1459,15 +1459,15 @@ final class SoundSearchCoversFamily extends $Family
 }
 
 /// What My sounds' saved sounds' source videos left: their covers, keyed and
-/// marked like [trendingSoundCovers], so the tab can leave out the sounds that
-/// can no longer be reused.
+/// marked like [trendingSoundCovers]. The picker leaves out the sounds that can
+/// no longer be reused; My Sounds in the Library keeps them listed, marked.
 
 @ProviderFor(savedSoundSources)
 final savedSoundSourcesProvider = SavedSoundSourcesFamily._();
 
 /// What My sounds' saved sounds' source videos left: their covers, keyed and
-/// marked like [trendingSoundCovers], so the tab can leave out the sounds that
-/// can no longer be reused.
+/// marked like [trendingSoundCovers]. The picker leaves out the sounds that can
+/// no longer be reused; My Sounds in the Library keeps them listed, marked.
 
 final class SavedSoundSourcesProvider
     extends
@@ -1480,8 +1480,8 @@ final class SavedSoundSourcesProvider
         $FutureModifier<Map<String, SoundCover?>>,
         $FutureProvider<Map<String, SoundCover?>> {
   /// What My sounds' saved sounds' source videos left: their covers, keyed and
-  /// marked like [trendingSoundCovers], so the tab can leave out the sounds that
-  /// can no longer be reused.
+  /// marked like [trendingSoundCovers]. The picker leaves out the sounds that can
+  /// no longer be reused; My Sounds in the Library keeps them listed, marked.
   SavedSoundSourcesProvider._({
     required SavedSoundSourcesFamily super.from,
     required SoundSourceReferences super.argument,
@@ -1529,8 +1529,8 @@ final class SavedSoundSourcesProvider
 String _$savedSoundSourcesHash() => r'07756bea37ab7d70229d56768596c43a85770cca';
 
 /// What My sounds' saved sounds' source videos left: their covers, keyed and
-/// marked like [trendingSoundCovers], so the tab can leave out the sounds that
-/// can no longer be reused.
+/// marked like [trendingSoundCovers]. The picker leaves out the sounds that can
+/// no longer be reused; My Sounds in the Library keeps them listed, marked.
 
 final class SavedSoundSourcesFamily extends $Family
     with
@@ -1548,8 +1548,8 @@ final class SavedSoundSourcesFamily extends $Family
       );
 
   /// What My sounds' saved sounds' source videos left: their covers, keyed and
-  /// marked like [trendingSoundCovers], so the tab can leave out the sounds that
-  /// can no longer be reused.
+  /// marked like [trendingSoundCovers]. The picker leaves out the sounds that can
+  /// no longer be reused; My Sounds in the Library keeps them listed, marked.
 
   SavedSoundSourcesProvider call(SoundSourceReferences sources) =>
       SavedSoundSourcesProvider._(argument: sources, from: this);

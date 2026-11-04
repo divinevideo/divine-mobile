@@ -1,5 +1,5 @@
-// ABOUTME: Artwork shown beside a sound: the cover it was published with, or
-// ABOUTME: the frame of its source video, kept out when the feed would hide it.
+// ABOUTME: Artwork shown beside a sound (the cover it was published with, or the
+// ABOUTME: frame of its source video) and whether a saved sound can be reused.
 
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:meta/meta.dart';
@@ -34,10 +34,11 @@ class SoundCover {
 
   /// The cover of [sound], a sound saved to My Sounds.
   ///
-  /// [sourceCovers] is what a lookup of the saved sounds' source videos
-  /// found. A video it found gives the frame it shows now, kept out when the
-  /// feed would hide it, and one it found gone gives none. Until it answers,
-  /// the frame stored with the sound stands in.
+  /// The cover it was published with wins. Otherwise [sourceCovers], a lookup
+  /// of the saved sounds' source videos, decides: a video it found gives the
+  /// frame it shows now, kept out when the feed would hide it, and one it
+  /// found gone gives none. Until it answers, the frame stored with the sound
+  /// stands in.
   static SoundCover? forSavedSound(
     SavedSound sound, {
     required Map<String, SoundCover?>? sourceCovers,
@@ -56,8 +57,8 @@ class SoundCover {
   /// hidden from this viewer, or from a creator who lets no one else reuse
   /// its sound. A video the lookup has not reached is not.
   ///
-  /// A sound [viewer] published is never, as its creator may always reuse
-  /// it, which the reuse check allows too.
+  /// Never true for a sound [viewer] published: its creator may always reuse
+  /// it, as the reuse check also allows.
   ///
   /// [sourceCovers] is keyed by [AudioEvent.sourceVideoReference], `null` for
   /// a video found gone, as the sound providers' cover lookups return it.
