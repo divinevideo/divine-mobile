@@ -128,15 +128,11 @@ class SoundSilenceTrimmer {
           resolution: WaveformResolution.high,
         ),
       );
-    } catch (error, stackTrace) {
-      // Not only Exceptions: the plugin reports an empty native result or a
-      // malformed payload as an ArgumentError.
+    } on Exception catch (error) {
       Log.warning(
         'Could not measure the sound, treating it as audible: $error',
         name: _logName,
         category: LogCategory.video,
-        error: error,
-        stackTrace: stackTrace,
       );
       return null;
     }
@@ -176,14 +172,13 @@ class SoundSilenceTrimmer {
     AudibleRange range,
     AudioFormat format,
   ) async {
-    String? output;
+    final directory = await _temporaryDirectory();
+    final output = p.join(
+      directory.path,
+      'trimmed_sound_${DateTime.now().microsecondsSinceEpoch}.'
+      '${format == AudioFormat.wav ? 'wav' : 'm4a'}',
+    );
     try {
-      final directory = await _temporaryDirectory();
-      output = p.join(
-        directory.path,
-        'trimmed_sound_${DateTime.now().microsecondsSinceEpoch}.'
-        '${format == AudioFormat.wav ? 'wav' : 'm4a'}',
-      );
       await _videoEditor.extractAudioToFile(
         output,
         AudioExtractConfigs(
@@ -193,15 +188,13 @@ class SoundSilenceTrimmer {
           endTime: range.end,
         ),
       );
-    } catch (error, stackTrace) {
+    } on Exception catch (error) {
       Log.warning(
         'Could not cut the silence off the sound, publishing it uncut: $error',
         name: _logName,
         category: LogCategory.video,
-        error: error,
-        stackTrace: stackTrace,
       );
-      if (output != null) await _deleteQuietly(output);
+      await _deleteQuietly(output);
       return null;
     }
     Log.info(
@@ -225,14 +218,7 @@ class SoundSilenceTrimmer {
       final duration = (await _videoEditor.getMetadata(EditorVideo.file(path)))
           .duration;
       return duration > Duration.zero ? duration : null;
-    } catch (error, stackTrace) {
-      Log.warning(
-        'Could not read back the cut sound, using the cut length: $error',
-        name: _logName,
-        category: LogCategory.video,
-        error: error,
-        stackTrace: stackTrace,
-      );
+    } on Exception {
       return null;
     }
   }
