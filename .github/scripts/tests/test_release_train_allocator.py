@@ -10,6 +10,8 @@ from release_train_fakes import MemoryLedgerStore  # noqa: E402
 
 from release_train.allocator import (  # noqa: E402
     AllocationError,
+    allocate,
+    bootstrap,
     claimed_versions,
     derive_version,
     map_play_version_codes,
@@ -18,6 +20,7 @@ from release_train.allocator import (  # noqa: E402
     validate_reservation_key,
 )
 from release_train.ledger import (  # noqa: E402
+    BOOTSTRAP_PATH,
     LedgerError,
     key_path,
     provenance_path,
@@ -464,3 +467,157 @@ class ValidateReservationKeyTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+SHA = "a" * 40
+BOOT = {BOOTSTRAP_PATH: {"schema": 1}}
+
+
+def run_allocate(ledger, platform="ios", **kw):
+    args = dict(
+        ledger=ledger,
+        pubspec=v("1.0.28"),
+        source_sha=SHA,
+        reservation_key=f"scheduled/{platform}/{SHA}",
+        codemagic_build_id="cm1",
+        store_latest=0,
+        shorebird_versions=frozenset(),
+        stable_tags=[],
+        now=NOW,
+    )
+    args.update(kw)
+    return allocate(platform, **args)
+
+
+class AllocateTest(unittest.TestCase):
+    def test_allocate_refuses_an_unbootstrapped_ledger(self) -> None:
+        ledger = MemoryLedgerStore()
+        with self.assertRaisesRegex(AllocationError, "not bootstrapped"):
+            run_allocate(ledger)
+        self.assertEqual(ledger.creates, [])
+
+    def test_allocate_reconciles_before_deriving(self) -> None:
+        ledger = MemoryLedgerStore(dict(BOOT))
+        result = run_allocate(ledger, store_versions=[v("1.0.29")])
+        self.assertEqual(result.version, v("1.0.30"))
+        self.assertIn("allocations/claims/1.0.29/app-store.json", ledger.creates)
+        self.assertEqual(result.release_version, "1.0.30+1")
+        self.assertFalse(result.reused)
+
+    def test_allocate_counts_stable_tags_as_claims(self) -> None:
+        ledger = MemoryLedgerStore(dict(BOOT))
+        result = run_allocate(ledger, stable_tags=[v("1.0.40")])
+        self.assertEqual(result.version, v("1.0.41"))
+
+    def test_manual_build_after_ios_ran_ahead_of_pubspec_gets_the_train_version(
+        self,
+    ) -> None:
+        ledger = MemoryLedgerStore(
+            {**BOOT, "allocations/claims/1.0.31/app-store.json": {}}
+        )
+        result = run_allocate(
+            ledger, "android", reservation_key="manual/abc123", pubspec=v("1.0.28")
+        )
+        self.assertEqual(result.version, v("1.0.32"))
+
+    def test_two_android_internal_builds_share_a_version_with_increasing_codes(
+        self,
+    ) -> None:
+        ledger = MemoryLedgerStore(dict(BOOT))
+        first = run_allocate(ledger, "android", reservation_key="manual/one")
+        second = run_allocate(ledger, "android", reservation_key="manual/two")
+        self.assertEqual(first.version, second.version)
+        self.assertEqual(second.build_number, first.build_number + 1)
+
+    def test_android_production_version_is_claimed_and_exceeded(self) -> None:
+        ledger = MemoryLedgerStore(
+            {**BOOT, "releases/android/1.0.50+300.json": {}}
+        )
+        result = run_allocate(
+            ledger,
+            "android",
+            store_version_codes=[300],
+            reservation_key="manual/abc",
+        )
+        self.assertEqual(result.version, v("1.0.51"))
+        self.assertIn(
+            "allocations/claims/1.0.50/play-production.json", ledger.creates
+        )
+
+    def test_android_unmappable_code_raises_before_reserving(self) -> None:
+        ledger = MemoryLedgerStore(dict(BOOT))
+        with self.assertRaises(AllocationError):
+            run_allocate(
+                ledger, "android", store_version_codes=[9], reservation_key="manual/a"
+            )
+        self.assertEqual(ledger.creates, [])
+
+    def test_android_without_codes_skips_the_floor_check(self) -> None:
+        ledger = MemoryLedgerStore(dict(BOOT))
+        result = run_allocate(ledger, "android", reservation_key="manual/abc")
+        self.assertEqual(result.version, v("1.0.28"))
+
+
+class BootstrapTest(unittest.TestCase):
+    def test_bootstrap_dry_run_writes_nothing(self) -> None:
+        ledger = MemoryLedgerStore()
+        paths = bootstrap(
+            ledger=ledger,
+            ios_store_versions=[v("1.0.27")],
+            android_version_codes=[],
+            now=NOW,
+            dry_run=True,
+        )
+        self.assertEqual(ledger.creates, [])
+        self.assertEqual(
+            paths, ["allocations/claims/1.0.27/app-store.json", BOOTSTRAP_PATH]
+        )
+
+    def test_bootstrap_reports_every_unmappable_identity(self) -> None:
+        ledger = MemoryLedgerStore()
+        with self.assertRaises(AllocationError) as caught:
+            bootstrap(
+                ledger=ledger,
+                ios_store_versions=[v("1.0.27")],
+                android_version_codes=[7, 8],
+                now=NOW,
+                dry_run=False,
+            )
+        self.assertIn("7", str(caught.exception))
+        self.assertIn("8", str(caught.exception))
+        self.assertEqual(ledger.creates, [])
+
+    def test_bootstrap_writes_claims_then_the_marker(self) -> None:
+        ledger = MemoryLedgerStore({"releases/android/1.0.26+190.json": {}})
+        paths = bootstrap(
+            ledger=ledger,
+            ios_store_versions=[v("1.0.27")],
+            android_version_codes=[190],
+            now=NOW,
+            dry_run=False,
+        )
+        self.assertEqual(ledger.creates[-1], BOOTSTRAP_PATH)
+        self.assertEqual(paths, ledger.creates)
+        self.assertEqual(
+            ledger.files[BOOTSTRAP_PATH],
+            {
+                "schema": 1,
+                "bootstrapped_at": NOW.isoformat(),
+                "claims": [
+                    "allocations/claims/1.0.26/play-production.json",
+                    "allocations/claims/1.0.27/app-store.json",
+                ],
+            },
+        )
+
+    def test_bootstrap_with_marker_present_repairs_claims_only(self) -> None:
+        ledger = MemoryLedgerStore(dict(BOOT))
+        paths = bootstrap(
+            ledger=ledger,
+            ios_store_versions=[v("1.0.27")],
+            android_version_codes=[],
+            now=NOW,
+            dry_run=False,
+        )
+        self.assertEqual(paths, ["allocations/claims/1.0.27/app-store.json"])
+        self.assertNotIn(BOOTSTRAP_PATH, ledger.creates)

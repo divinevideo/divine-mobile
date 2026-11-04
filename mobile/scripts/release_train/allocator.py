@@ -1,8 +1,10 @@
 import re
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import datetime
 
 from release_train.ledger import (
+    BOOTSTRAP_PATH,
     LedgerError,
     LedgerStore,
     claim_path,
@@ -215,3 +217,105 @@ def reserve_build_number(
             return n, False
         n += 1
     raise AllocationError(f"no free build number after {attempts} attempts")
+
+
+@dataclass(frozen=True)
+class Allocation:
+    platform: str
+    version: Version
+    build_number: int
+    reservation_key: str
+    reused: bool
+
+    @property
+    def release_version(self) -> str:
+        return f"{self.version}+{self.build_number}"
+
+
+def allocate(
+    platform: str,
+    *,
+    ledger: LedgerStore,
+    pubspec: Version,
+    source_sha: str,
+    reservation_key: str,
+    codemagic_build_id: str,
+    store_latest: int,
+    shorebird_versions: frozenset[str],
+    stable_tags: list[Version],
+    store_versions: Iterable[Version] = (),
+    store_version_codes: Iterable[int] = (),
+    now: datetime,
+) -> Allocation:
+    if BOOTSTRAP_PATH not in ledger.paths():
+        raise AllocationError(
+            "the release ledger is not bootstrapped; run the "
+            "release-identity-bootstrap workflow in Codemagic"
+        )
+    codes = list(store_version_codes)
+    reconcile(
+        platform,
+        ledger=ledger,
+        store_versions=store_versions,
+        store_version_codes=codes,
+        now=now,
+    )
+    version = derive_version(
+        pubspec, claimed_versions(ledger.paths()) + list(stable_tags)
+    )
+    if platform == "android" and codes:
+        mapped = map_play_version_codes(ledger, codes)
+        highest = max(mapped.values(), default=None)
+        if highest is not None and version < highest:
+            raise AllocationError(
+                f"derived version {version} is below the highest Play "
+                f"production version {highest}"
+            )
+    number, reused = reserve_build_number(
+        platform,
+        version,
+        ledger=ledger,
+        source_sha=source_sha,
+        reservation_key=reservation_key,
+        codemagic_build_id=codemagic_build_id,
+        store_latest=store_latest,
+        shorebird_versions=shorebird_versions,
+        now=now,
+    )
+    return Allocation(platform, version, number, reservation_key, reused)
+
+
+def bootstrap(
+    *,
+    ledger: LedgerStore,
+    ios_store_versions: list[Version],
+    android_version_codes: list[int],
+    now: datetime,
+    dry_run: bool,
+) -> list[str]:
+    # Raises before any write if an Android code cannot be mapped.
+    map_play_version_codes(ledger, android_version_codes)
+    created = reconcile(
+        "ios",
+        ledger=ledger,
+        store_versions=ios_store_versions,
+        now=now,
+        dry_run=dry_run,
+    )
+    created += reconcile(
+        "android",
+        ledger=ledger,
+        store_version_codes=android_version_codes,
+        now=now,
+        dry_run=dry_run,
+    )
+    if BOOTSTRAP_PATH in ledger.paths():
+        return created
+    if not dry_run:
+        record = {
+            "schema": 1,
+            "bootstrapped_at": now.isoformat(),
+            "claims": sorted(created),
+        }
+        ledger.create_json(BOOTSTRAP_PATH, record, "bootstrap the release ledger")
+    return created + [BOOTSTRAP_PATH]
