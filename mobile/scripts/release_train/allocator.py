@@ -2,13 +2,22 @@ import re
 from collections.abc import Iterable
 from datetime import datetime
 
-from release_train.ledger import LedgerError, LedgerStore, claim_path, reservation_path
+from release_train.ledger import (
+    LedgerError,
+    LedgerStore,
+    claim_path,
+    key_path,
+    provenance_path,
+    reservation_path,
+)
 from release_train.versions import Version, bump_patch, parse_version
 
 CHANNEL = {"ios": "app-store", "android": "play-production"}
 
 _CLAIM_RE = re.compile(r"^allocations/claims/([^/]+)/[^/]+\.json$")
 _PROVENANCE_RE = re.compile(r"^releases/android/(\d+\.\d+\.\d+)\+(\d+)\.json$")
+_BUILD_RE = re.compile(r"^allocations/builds/([^/]+)/(\d+)\.json$")
+_MANUAL_KEY_RE = re.compile(r"[A-Za-z0-9]+")
 
 
 class AllocationError(RuntimeError):
@@ -114,3 +123,94 @@ def derive_version(floor: Version, claimed: Iterable[Version]) -> Version:
     if not claimed:
         return floor
     return max(floor, bump_patch(max(claimed)))
+
+
+def validate_reservation_key(key: str, platform: str, source_sha: str) -> None:
+    if key == f"scheduled/{platform}/{source_sha}":
+        return
+    if key.startswith("manual/") and _MANUAL_KEY_RE.fullmatch(key[len("manual/") :]):
+        return
+    raise AllocationError(
+        f"invalid reservation key {key!r}: expected manual/<alphanumeric> "
+        f"or scheduled/{platform}/{source_sha}"
+    )
+
+
+def _numbers(paths: frozenset[str], platform: str) -> list[int]:
+    found = []
+    for path in paths:
+        match = _BUILD_RE.match(path)
+        if match and match.group(1) == platform:
+            found.append(int(match.group(2)))
+    return found
+
+
+def _key_numbers(paths: frozenset[str], platform: str, key: str) -> list[int]:
+    prefix = key_path(platform, key, 0)[: -len("0.json")]
+    found = []
+    for path in paths:
+        if path.startswith(prefix) and path.endswith(".json"):
+            number = path[len(prefix) : -len(".json")]
+            if number.isdigit():
+                found.append(int(number))
+    return found
+
+
+def reserve_build_number(
+    platform: str,
+    version: Version,
+    *,
+    ledger: LedgerStore,
+    source_sha: str,
+    reservation_key: str,
+    codemagic_build_id: str,
+    store_latest: int,
+    shorebird_versions: frozenset[str],
+    now: datetime,
+    attempts: int = 20,
+) -> tuple[int, bool]:
+    validate_reservation_key(reservation_key, platform, source_sha)
+    paths = ledger.paths()
+    mine = _key_numbers(paths, platform, reservation_key)
+    if mine:
+        n = max(mine)
+        record = ledger.read_json(reservation_path(platform, n))
+        spent = (
+            store_latest >= n
+            or f"{version}+{n}" in shorebird_versions
+            or provenance_path(platform, version, n) in paths
+        )
+        if record.get("version") == str(version) and not spent:
+            return n, True
+    n = max(store_latest, max(_numbers(paths, platform), default=0)) + 1
+    origin = "manual" if reservation_key.startswith("manual/") else "scheduled"
+    message = f"chore(release): reserve {platform} build {{}} for {version}"
+    for _ in range(attempts):
+        record = {
+            "schema": 1,
+            "platform": platform,
+            "build_number": n,
+            "version": str(version),
+            "source_sha": source_sha,
+            "origin": origin,
+            "reservation_key": reservation_key,
+            "codemagic_build_id": codemagic_build_id,
+            "reserved_at": now.isoformat(),
+        }
+        if ledger.create_json(
+            reservation_path(platform, n), record, message.format(n)
+        ):
+            index = key_path(platform, reservation_key, n)
+            created = ledger.create_json(
+                index,
+                {"schema": 1, "reservation_key": reservation_key, "build_number": n},
+                message.format(n),
+            )
+            if not created:
+                raise AllocationError(
+                    f"ledger inconsistent: key index {index} already exists "
+                    f"after reserving build {n}"
+                )
+            return n, False
+        n += 1
+    raise AllocationError(f"no free build number after {attempts} attempts")

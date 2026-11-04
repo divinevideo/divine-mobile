@@ -14,8 +14,15 @@ from release_train.allocator import (  # noqa: E402
     derive_version,
     map_play_version_codes,
     reconcile,
+    reserve_build_number,
+    validate_reservation_key,
 )
-from release_train.ledger import LedgerError  # noqa: E402
+from release_train.ledger import (  # noqa: E402
+    LedgerError,
+    key_path,
+    provenance_path,
+    reservation_path,
+)
 from release_train.versions import Version  # noqa: E402
 
 NOW = datetime(2026, 11, 5, 12, 0, tzinfo=timezone.utc)
@@ -250,6 +257,172 @@ class DeriveVersionTest(unittest.TestCase):
         self.assertEqual(
             derive_version(v("1.0.28"), [v("1.0.29"), v("1.0.27")]), v("1.0.30")
         )
+
+
+SHA = "a" * 40
+SCHED = f"scheduled/ios/{SHA}"
+
+
+def reserve(ledger, key=SCHED, version="1.0.28", store_latest=906, shorebird=(), platform="ios"):
+    return reserve_build_number(
+        platform,
+        v(version),
+        ledger=ledger,
+        source_sha=SHA,
+        reservation_key=key,
+        codemagic_build_id="cm-1",
+        store_latest=store_latest,
+        shorebird_versions=frozenset(shorebird),
+        now=NOW,
+    )
+
+
+def reserved(n, version="1.0.28", key=SCHED, platform="ios"):
+    return {
+        reservation_path(platform, n): {"version": version, "reservation_key": key},
+        key_path(platform, key, n): {"schema": 1},
+    }
+
+
+class RacingStore(MemoryLedgerStore):
+    def __init__(self, files=None, race=None):
+        super().__init__(files)
+        self.race = race
+        self.raced = False
+
+    def create_json(self, path, record, message):
+        if path == self.race and not self.raced:
+            self.raced = True
+            self.files[path] = {"winner": True}
+            return False
+        return super().create_json(path, record, message)
+
+
+class ReserveBuildNumberTest(unittest.TestCase):
+    def test_first_reservation_is_above_store_and_ledger(self) -> None:
+        ledger = MemoryLedgerStore(
+            {reservation_path("ios", 908): {"version": "1.0.27"},
+             reservation_path("android", 990): {"version": "1.0.27"}}
+        )
+        self.assertEqual(reserve(ledger), (909, False))
+        record = ledger.files[reservation_path("ios", 909)]
+        self.assertEqual(
+            record,
+            {
+                "schema": 1,
+                "platform": "ios",
+                "build_number": 909,
+                "version": "1.0.28",
+                "source_sha": SHA,
+                "origin": "scheduled",
+                "reservation_key": SCHED,
+                "codemagic_build_id": "cm-1",
+                "reserved_at": NOW.isoformat(),
+            },
+        )
+        self.assertEqual(
+            ledger.files[key_path("ios", SCHED, 909)],
+            {"schema": 1, "reservation_key": SCHED, "build_number": 909},
+        )
+
+    def test_store_latest_above_ledger_wins(self) -> None:
+        ledger = MemoryLedgerStore({reservation_path("ios", 5): {}})
+        self.assertEqual(reserve(ledger, store_latest=906), (907, False))
+
+    def test_manual_origin(self) -> None:
+        ledger = MemoryLedgerStore()
+        reserve(ledger, key="manual/abc123")
+        self.assertEqual(
+            ledger.files[reservation_path("ios", 907)]["origin"], "manual"
+        )
+
+    def test_racing_reservation_takes_the_next_number(self) -> None:
+        ledger = RacingStore(race=reservation_path("ios", 907))
+        self.assertEqual(reserve(ledger), (908, False))
+        self.assertEqual(ledger.files[reservation_path("ios", 907)], {"winner": True})
+        self.assertIn(reservation_path("ios", 908), ledger.files)
+
+    def test_exhausted_attempts_raise(self) -> None:
+        ledger = MemoryLedgerStore()
+
+        class Always(MemoryLedgerStore):
+            def create_json(self, path, record, message):
+                return False
+
+        with self.assertRaisesRegex(AllocationError, "no free build number after 3"):
+            reserve_build_number(
+                "ios", v("1.0.28"), ledger=Always(), source_sha=SHA,
+                reservation_key=SCHED, codemagic_build_id="c", store_latest=1,
+                shorebird_versions=frozenset(), now=NOW, attempts=3,
+            )
+        del ledger
+
+    def test_key_index_conflict_raises(self) -> None:
+        class Conflict(MemoryLedgerStore):
+            def create_json(self, path, record, message):
+                if path.startswith("allocations/keys/"):
+                    return False
+                return super().create_json(path, record, message)
+
+        with self.assertRaisesRegex(AllocationError, "allocations/keys/ios"):
+            reserve(Conflict())
+
+    def test_retry_reuses_an_unspent_reservation(self) -> None:
+        ledger = MemoryLedgerStore(reserved(909))
+        self.assertEqual(reserve(ledger), (909, True))
+        self.assertEqual(ledger.creates, [])
+
+    def test_retry_after_shorebird_release_reserves_a_new_number(self) -> None:
+        ledger = MemoryLedgerStore(reserved(909))
+        self.assertEqual(reserve(ledger, shorebird={"1.0.28+909"}), (910, False))
+
+    def test_retry_after_provenance_reserves_a_new_number(self) -> None:
+        files = reserved(909)
+        files[provenance_path("ios", v("1.0.28"), 909)] = {}
+        self.assertEqual(reserve(MemoryLedgerStore(files)), (910, False))
+
+    def test_retry_after_store_upload_reserves_a_new_number(self) -> None:
+        ledger = MemoryLedgerStore(reserved(909))
+        self.assertEqual(reserve(ledger, store_latest=909), (910, False))
+
+    def test_retry_after_the_train_moved_reserves_a_new_number(self) -> None:
+        ledger = MemoryLedgerStore(reserved(909, version="1.0.27"))
+        self.assertEqual(reserve(ledger), (910, False))
+
+    def test_manual_builds_never_share_a_number_with_a_scheduled_build(self) -> None:
+        ledger = MemoryLedgerStore()
+        first = reserve(ledger)
+        second = reserve(ledger, key="manual/run42")
+        self.assertNotEqual(first[0], second[0])
+
+    def test_other_paths_are_ignored(self) -> None:
+        ledger = MemoryLedgerStore(
+            {
+                "allocations/builds/ios/9999.txt": {},
+                "allocations/builds/ios/abc.json": {},
+                "allocations/builds/ios/12/13.json": {},
+            }
+        )
+        self.assertEqual(reserve(ledger), (907, False))
+
+
+class ValidateReservationKeyTest(unittest.TestCase):
+    def test_accepts_manual_and_scheduled(self) -> None:
+        validate_reservation_key("manual/Abc123", "ios", SHA)
+        validate_reservation_key(SCHED, "ios", SHA)
+
+    def test_scheduled_key_must_match_the_source_sha(self) -> None:
+        with self.assertRaises(AllocationError):
+            validate_reservation_key(f"scheduled/ios/{'b' * 40}", "ios", SHA)
+
+    def test_scheduled_key_must_match_the_platform(self) -> None:
+        with self.assertRaises(AllocationError):
+            validate_reservation_key(SCHED, "android", SHA)
+
+    def test_rejects_malformed_keys(self) -> None:
+        for key in ("manual/", "manual/a/b", "manual/a-b", "other/x", "", "manual/x\n"):
+            with self.assertRaises(AllocationError, msg=key):
+                validate_reservation_key(key, "ios", SHA)
 
 
 if __name__ == "__main__":
