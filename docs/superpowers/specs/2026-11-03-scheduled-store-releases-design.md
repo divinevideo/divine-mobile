@@ -135,7 +135,7 @@ replays the ticks it missed.
 | iOS build | App-affecting changes merged since the last iOS candidate, and no `ios-build` is queued or running | Divine Internal, automatically |
 | Public TestFlight | The newest processed iOS build isn't public, no beta review is waiting, the last beta submission was at least 4 h ago, and there were fewer than 6 in the trailing 24 h | Public group, after beta review |
 | App Store | No App Store submission is waiting or approved but not live, none in the trailing 24 h, and a candidate has had 6 h in public TestFlight | App Store review, released automatically on approval |
-| Android build | App-affecting changes merged since the last Android candidate, the last Android build started at least 4 h ago, and no `android-build` is queued or running | Play internal testing |
+| Android build | App-affecting changes merged since the last Android candidate, the last Android build started at least 4 h ago, no `android-build` is queued or running, no upload is deferred, and replacing the current internal build would not interrupt its six-hour availability period | Play internal testing |
 | Play production | No Play production promotion in the trailing 24 h, a candidate has had 6 h on the internal track, and Play accepts the commit without cancelling a review in progress | Play review, then full rollout |
 
 Internal iOS testers get every hourly build. Public iOS testers get the newest
@@ -148,7 +148,9 @@ Play's own review gates their production promotion. A four-hour minimum spacing
 gives Play internal testers several builds a day for about half the build-slot
 time of hourly builds, but only while no production review is pending. During
 one, Play refuses internal-track commits as well (see Google Play), so internal
-testers get the deferred build only after the review ends.
+testers get the deferred build only after the review ends. Once an upload is
+deferred, the coordinator pauses new Android builds until that upload succeeds
+or a person clears the failure. It does not accumulate a backlog of AABs.
 `mobile/docs/ANDROID_DEPLOYMENT.md` puts production review at one to seven
 days. The interval is configuration. Scheduled Android builds skip
 `build_apk`, because they never publish direct downloads.
@@ -162,7 +164,9 @@ cost a Mac build. The path list lives beside the coordinator with its own tests.
 the candidate's reservation only if the first attempt failed before
 `shorebird release` (see Build identifiers). After a second failure for the
 same candidate and platform, the coordinator waits for a newer candidate, and
-the run summary reports the failure.
+the run summary reports the failure. A completed Android build whose upload is
+refused only because a review is pending is deferred publishing, not a failed
+build attempt; it does not consume this rebuild retry.
 
 ## Source pinning
 
@@ -227,8 +231,13 @@ allocation, or a provenance record. A Play track's release name is not an
 authoritative manifest `versionName`, so a production `versionCode` is mapped
 to its version through `allocations/builds/android/` or
 `releases/android/*+<versionCode>.json`. An unrecorded identity that maps
-cleanly is written as a claim. One that can't be reconciled fails the build
-closed, naming the identity.
+cleanly is written as a claim. Specifically, every observed production identity
+missing its channel's claim gets that claim even if an allocation or provenance
+record already exists. This repairs a run interrupted after the store accepted
+a submission but before the claim write. One that can't be reconciled fails the
+build closed, naming the identity. Reconciliation finishes before allocating a
+new version; observing a matching allocation alone never substitutes for the
+production claim.
 
 Versions only move forward. Once any channel claims a version, later builds use
 the next one, even if that submission is rejected. Builds between claims share
@@ -379,6 +388,26 @@ where a review starts between the status read and commit.
   another review is in progress, the upload is deferred and retried with the
   same AAB. It is never rebuilt: the build has already created the Shorebird
   release and provenance record for its `versionCode`.
+  The coordinator owns this retry. The build retains the signed AAB as a
+  Codemagic artifact, and the coordinator records its build ID, artifact identity,
+  digest and versionCode in the private ledger when it observes the publishing
+  deferral, before attempting a retry.
+  On a later tick it retrieves those bytes through Codemagic's authenticated
+  artifacts API, verifies their digest and release identity, and uploads them
+  with its Play service account through a fresh guarded edit. An expired or
+  conflicting edit does not require a rebuild. Missing or expired artifact
+  storage stops the queue for a person; it never falls back to rebuilding a
+  spent identity. Artifact access links and credentials never enter public
+  deployment payloads. Retention must cover the pending-review interval, and
+  the deferred record survives coordinator restarts.
+- **Internal availability.** A new internal release replaces the build offered
+  to testers. Do not upload its replacement until the current candidate has
+  completed six continuous hours as the offered internal build. The four-hour
+  build interval is a minimum, not permission to interrupt that period.
+  If a manual upload replaces it sooner, its unfinished period is discarded;
+  measure the replacement from when it is first observed. Promotion selects a
+  build with a recorded completed period, never one that merely reached six
+  hours of age after being superseded.
 - **Production promotion** checks every tick and promotes only when all of these
   hold:
   - The Android level is `production`.
@@ -392,6 +421,10 @@ where a review starts between the status read and commit.
   It never rebuilds. A `CHANGES_ALREADY_IN_REVIEW` refusal is recorded as
   "waiting on previous review" and retried on later ticks. After a successful
   commit the coordinator writes the `play-production` claim.
+  Reconciliation records a manual production release's first-observed time in
+  its deployment too. Because Play supplies no promotion timestamp, that time
+  conservatively starts a new 24-hour wait, rather than treating a manual
+  promotion as permission to submit another release immediately.
 - **Rejections.** The Publishing API doesn't report review outcomes. Any commit
   error other than changes-in-review stops the Play production queue until a
   person acknowledges it. A rejection notice arrives from Play by email.
@@ -570,6 +603,9 @@ Cases to test with fakes:
   - A retry whose number already reached the store fails closed.
 - **Allocation**:
   - Concurrent manual and scheduled allocation get distinct numbers.
+  - A run stops after the store accepts a submission but before its claim is
+    written; reconciliation creates the missing channel claim despite the
+    existing allocation, before deriving the next version.
   - Two internal Android builds with the same marketing version and different
     increasing build identifiers, followed by promotion of those exact tested
     bytes.
@@ -597,12 +633,20 @@ Cases to test with fakes:
 - **Play**:
   - `CHANGES_ALREADY_IN_REVIEW` on an internal upload and on promotion.
   - A refused internal upload is retried with the same AAB, not rebuilt.
+  - A deferred upload prevents new Android builds, survives a coordinator
+    restart and does not consume the failed-build retry.
+  - The original edit expires; a new guarded edit uploads the retained bytes.
+  - A deferred artifact is missing or has a different digest; the queue stops.
   - A review starts between the status read and the commit.
   - Any other commit error stops the queue until acknowledged.
   - No promotion happened in the trailing 24 hours.
 - **Eligibility and soak**:
   - No candidate has soaked, or the soak is measured from observed
     availability.
+  - App changes arrive every four hours; an Android candidate remains offered
+    for six hours before another internal upload can replace it.
+  - A manual internal upload supersedes an Android candidate before six hours;
+    the old candidate never becomes eligible merely by getting older.
   - Passing CI and build checks plus the required availability period permit
     submission without a separate runtime-smoke or manual-QA result.
 - **Safety**:
@@ -649,6 +693,7 @@ These need a person with access:
 - https://developer.apple.com/help/app-store-connect/test-a-beta-version/invite-external-testers/
 - https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/overview-of-submitting-for-review/
 - https://docs.codemagic.io/rest-api/builds/ (branch or tag only; no commit SHA)
+- https://docs.codemagic.io/rest-api/artifacts/ (authenticated retained-artifact retrieval)
 - https://docs.codemagic.io/yaml-running-builds/scheduling/
 - https://docs.codemagic.io/yaml-publishing/app-store-connect/
 - https://docs.codemagic.io/yaml-publishing/google-play/
