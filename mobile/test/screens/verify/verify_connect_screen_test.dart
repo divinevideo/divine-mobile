@@ -648,9 +648,10 @@ void main() {
       required VerifierPlatform platform,
       required bool oauthAvailable,
       String? replacingIdentity,
+      IdentityClaimsRepository? repository,
     }) async {
       cubit = VerifyConnectCubit(
-        repository: _MockIdentityClaimsRepository(),
+        repository: repository ?? _MockIdentityClaimsRepository(),
         pubkey: _pubkey,
         platform: platform,
         oauthReturnUrl: _returnUrl,
@@ -722,7 +723,6 @@ void main() {
     testWidgets('keeps the proof form where the platform has no sign-in', (
       tester,
     ) async {
-      // Also what a platform still loading from /platforms reports.
       final l10n = await pump(
         tester,
         platform: _telegram,
@@ -730,6 +730,69 @@ void main() {
         replacingIdentity: 'jack',
       );
 
+      expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
+    });
+
+    testWidgets('keeps the proof form where sign-in is turned off', (
+      tester,
+    ) async {
+      // What the verifier reports with sign-in off, and what a platform
+      // still loading from /platforms reports.
+      const twitterOff = VerifierPlatform(
+        key: 'twitter',
+        label: 'Twitter / X',
+        supported: true,
+        oauth: false,
+      );
+      final l10n = await pump(
+        tester,
+        platform: twitterOff,
+        oauthAvailable: true,
+        replacingIdentity: 'jack',
+      );
+
+      expect(
+        find.text(l10n.verifyConnectOauthCta('Twitter / X')),
+        findsNothing,
+      );
+      expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
+    });
+
+    testWidgets('brings the proof form back when sign-in turns out to be off', (
+      tester,
+    ) async {
+      // Sign-in was on when the list was read; the verifier answers 503
+      // from the start request, so the sign-in button can only keep failing.
+      final repository = _MockIdentityClaimsRepository();
+      when(
+        () => repository.startSignIn(
+          platform: any(named: 'platform'),
+          pubkey: any(named: 'pubkey'),
+          returnUrl: any(named: 'returnUrl'),
+          startCheck: any(named: 'startCheck'),
+          handle: any(named: 'handle'),
+        ),
+      ).thenAnswer((_) async => null);
+      final l10n = await pump(
+        tester,
+        platform: twitterOAuth,
+        oauthAvailable: true,
+        replacingIdentity: 'jack',
+        repository: repository,
+      );
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsNothing);
+
+      await tester.tap(find.text(l10n.verifyConnectOauthCta('Twitter / X')));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.verifyErrorOauthUnavailable), findsOneWidget);
+      expect(
+        find.text(l10n.verifyConnectOauthCta('Twitter / X')),
+        findsNothing,
+      );
       expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
       expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
     });

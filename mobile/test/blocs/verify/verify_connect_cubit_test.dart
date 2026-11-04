@@ -1370,6 +1370,27 @@ void main() {
       );
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'treats sign-in as off for the platform once the verifier says so',
+        build: () => build(_twitter),
+        setUp: () => when(
+          () => repository.startSignIn(
+            platform: any(named: 'platform'),
+            pubkey: any(named: 'pubkey'),
+            returnUrl: any(named: 'returnUrl'),
+            startCheck: any(named: 'startCheck'),
+            handle: any(named: 'handle'),
+          ),
+        ).thenAnswer((_) async => null),
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.error, VerifyConnectError.oauthUnavailable);
+          expect(cubit.state.platform.oauth, isFalse);
+          expect(cubit.state.platform.supportsOAuth, isFalse);
+          expect(cubit.state.platform.key, _twitter.key);
+        },
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
         'says the verifier is unreachable when the start request cannot get through',
         build: () => build(_twitter),
         setUp: () => when(

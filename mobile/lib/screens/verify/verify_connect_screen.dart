@@ -277,8 +277,7 @@ class _ConnectForm extends StatelessWidget {
           ),
           // Shown only when the verifier reports a lifetime for this
           // platform. Platforms whose links last until unlinked omit the
-          // field (Bluesky, once divine-identify-verification-service#90
-          // lands), so the notice goes away there without an app change.
+          // field, and then no notice shows.
           if (state.platform.signinExpiresAfterDays case final days?) ...[
             const SizedBox(height: 8),
             Text(
@@ -378,11 +377,11 @@ class _ConnectForm extends StatelessWidget {
             ),
             const SizedBox(height: 12),
           ],
-          // Keyed because the account field above is inserted and removed as the
-          // typed proof starts and stops parsing. Without a key the list matches
-          // these children by position, so the shift hands this slot to a
-          // different widget, the field is rebuilt from scratch, and the text and
-          // the keyboard go with it.
+          // Keyed because the account field above is inserted and removed as
+          // the typed proof starts and stops parsing. Without a key the list
+          // matches these children by position, so the shift hands this slot
+          // to a different widget, the field is rebuilt from scratch, and the
+          // text and the keyboard go with it.
           DivineTextField(
             key: const ValueKey('verify-proof-field'),
             labelText: l10n.verifyProofLabel,

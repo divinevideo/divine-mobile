@@ -277,6 +277,21 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     }
     if (isClosed) return;
     if (authorizationUrl == null) {
+      // The verifier has sign-in off (it can change after the list was
+      // read). Say so in the platform too, so the screen drops the button
+      // that can only fail again and offers the proof post instead.
+      final platform = state.platform;
+      emit(
+        state.copyWith(
+          platform: VerifierPlatform(
+            key: platform.key,
+            label: platform.label,
+            supported: platform.supported,
+            oauth: false,
+            signinExpiresAfterDays: platform.signinExpiresAfterDays,
+          ),
+        ),
+      );
       return _fail(VerifyConnectError.oauthUnavailable);
     }
 
