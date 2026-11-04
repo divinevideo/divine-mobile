@@ -295,6 +295,49 @@ void main() {
         expect(audioFile.existsSync(), isTrue);
       });
 
+      test("names an AAC import's cut copy by the copy's own type", () async {
+        final copy = File('${tempDir.path}/trimmed.m4a')
+          ..writeAsBytesSync(const [1, 2]);
+        final cut = AudibleSound(
+          path: copy.path,
+          mimeType: 'audio/mp4',
+          trimmedDuration: const Duration(milliseconds: 2500),
+        );
+        when(
+          () => trimmer.trim(
+            path: any(named: 'path'),
+            mimeType: any(named: 'mimeType'),
+          ),
+        ).thenAnswer((_) async => cut);
+        final aacImport = AudioEvent.fromLocalImport(
+          id: '${AudioEvent.localImportMarker}_2',
+          filePath: audioFile.path,
+          createdAt: 1,
+          title: 'beat',
+          mimeType: 'audio/aac',
+          duration: 6.2,
+        );
+
+        await publisher().publish(
+          audio: aacImport,
+          attribution: _ownWork,
+          allowAudioReuse: true,
+        );
+
+        verify(
+          () => trimmer.trim(path: audioFile.path, mimeType: 'audio/aac'),
+        ).called(1);
+        verify(
+          () => blossom.uploadAudio(
+            audioFile: any(named: 'audioFile'),
+            mimeType: 'audio/mp4',
+          ),
+        ).called(1);
+        final tags = signedTags();
+        expect(tags, anyElement(equals(['m', 'audio/mp4'])));
+        expect(tags, isNot(anyElement(equals(['m', 'audio/aac']))));
+      });
+
       test('deletes the cut copy when the upload fails', () async {
         final cut = AudibleSound(
           path: '${tempDir.path}/trimmed.m4a',

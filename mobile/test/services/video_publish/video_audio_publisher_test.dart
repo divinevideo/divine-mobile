@@ -393,10 +393,11 @@ void main() {
         verifyNever(() => relayPublisher.publishViaWebSocket(any()));
       });
 
-      // These two share a fixture where the import would otherwise publish, so
-      // the only difference between them is whether the attribution is valid.
-      // Without that, both outcomes collapse to VideoAudioBlocked for unrelated
-      // reasons (no Blossom service, no file) and the gate goes untested.
+      // These share a fixture where the import would otherwise publish. That
+      // leaves the attribution as the only difference between the two gate
+      // tests; without it, both outcomes collapse to VideoAudioBlocked for
+      // unrelated reasons (no Blossom service, no file) and the gate goes
+      // untested. The silent-import test leans on it the same way.
       group('imported-sound attribution gate', () {
         late Directory tempDir;
         late File audioFile;
@@ -733,6 +734,39 @@ void main() {
             verify(() => extraction.cleanupAudioFile(wavPath)).called(1);
           },
         );
+
+        test('deletes the cut copy when its upload fails', () async {
+          final cut = AudibleSound(
+            path: '${tempDir.path}/trimmed.wav',
+            mimeType: 'audio/wav',
+            trimmedDuration: const Duration(milliseconds: 2400),
+          );
+          File(cut.path).writeAsBytesSync(const [1, 2, 3]);
+          stubTrim(wavPath, cut);
+          when(
+            () => blossom.uploadAudio(
+              audioFile: any(named: 'audioFile'),
+              mimeType: any(named: 'mimeType'),
+            ),
+          ).thenAnswer((_) async => const BlossomUploadResult(success: false));
+
+          final resolution = await renderedPublisher().resolveForPublish(
+            upload: upload.copyWith(localVideoPath: videoPath),
+            videoDTag: 'vine-1',
+            allowAudioReuse: true,
+          );
+
+          expect(
+            resolution,
+            isA<VideoAudioResolved>().having(
+              (r) => r.reuseDegraded,
+              'reuseDegraded',
+              isTrue,
+            ),
+          );
+          verify(() => trimmer.deleteTrimmedCopy(cut)).called(1);
+          verify(() => extraction.cleanupAudioFile(wavPath)).called(1);
+        });
 
         test(
           'shares the rendered audio when the imported sound is silent',
