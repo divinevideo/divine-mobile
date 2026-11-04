@@ -13,7 +13,13 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+import 'support/live_dm_reads.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+}
 
 const _owner =
     'a4f5c1b2d3e4f5061728394a5b6c7d8e9f0a1b2c3d4e5f60718293a4b5c6d7e8';
@@ -86,7 +92,7 @@ void main() {
       when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});
       when(
         () => nostrClient.subscribe(
-          any(),
+          any(that: isLiveDmRead),
           subscriptionId: any(named: 'subscriptionId'),
           tempRelays: any(named: 'tempRelays'),
           targetRelays: any(named: 'targetRelays'),
@@ -280,7 +286,10 @@ void main() {
 
       expect(await storedCount(), 1, reason: 'the kind-4 is the twin');
       expect(
-        await processedDao.hasGiftWrap(suppressed),
+        await processedDao.hasGiftWrapForOwner(
+          giftWrapId: suppressed,
+          ownerPubkey: _owner,
+        ),
         isTrue,
         reason: 'the suppression must be remembered across replays (#8211)',
       );

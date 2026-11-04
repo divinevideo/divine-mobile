@@ -1,8 +1,11 @@
 // ABOUTME: Tests for HashtagSearchBloc - hashtag search via HashtagRepository.
 // ABOUTME: Tests loading states, error handling, debouncing, and API delegation.
 
+import 'dart:async';
+
 import 'package:analytics/analytics.dart';
 import 'package:bloc_test/bloc_test.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
@@ -598,6 +601,147 @@ void main() {
         act: (bloc) => bloc.add(const HashtagSearchCleared()),
         expect: () => [const HashtagSearchState()],
       );
+
+      // #10017: a clear has to win over a search started before it.
+      group('with a search under way', () {
+        late Map<String, Completer<List<String>>> responses;
+        late List<String> searched;
+
+        setUp(() {
+          responses = {};
+          searched = [];
+          when(
+            () => mockHashtagRepository.searchHashtags(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+            ),
+          ).thenAnswer((invocation) {
+            final query = invocation.namedArguments[#query] as String;
+            searched.add(query);
+            return (responses[query] = Completer<List<String>>()).future;
+          });
+        });
+
+        test('drops a result that arrives after the clear', () {
+          fakeAsync((async) {
+            final bloc = createBloc();
+            bloc.add(const HashtagSearchQueryChanged('zz'));
+            async.elapse(const Duration(milliseconds: 400));
+            expect(searched, ['zz']);
+
+            bloc.add(const HashtagSearchCleared());
+            async.flushMicrotasks();
+            responses['zz']!.complete(['zztop']);
+            async.flushMicrotasks();
+
+            expect(bloc.state, const HashtagSearchState());
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+
+        test('drops a failure that arrives after the clear', () {
+          fakeAsync((async) {
+            final bloc = createBloc();
+            bloc.add(const HashtagSearchQueryChanged('zz'));
+            async.elapse(const Duration(milliseconds: 400));
+            expect(searched, ['zz']);
+
+            bloc.add(const HashtagSearchCleared());
+            async.flushMicrotasks();
+            responses['zz']!.completeError(Exception('offline'));
+            async.flushMicrotasks();
+
+            expect(bloc.state, const HashtagSearchState());
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+
+        test('drops a page of more results that arrives after the query is '
+            'emptied', () {
+          fakeAsync((async) {
+            final bloc = createBloc();
+            bloc.add(const HashtagSearchQueryChanged('zz'));
+            async.elapse(const Duration(milliseconds: 400));
+            responses['zz']!.complete(
+              List.filled(
+                50,
+                'zz',
+              ).indexed.map((entry) => '${entry.$2}${entry.$1}').toList(),
+            );
+            async.flushMicrotasks();
+            expect(bloc.state.hasMore, isTrue);
+
+            bloc.add(const HashtagSearchLoadMore());
+            async.flushMicrotasks();
+            expect(searched, ['zz', 'zz']);
+            bloc.add(const HashtagSearchQueryChanged(''));
+            async.elapse(const Duration(milliseconds: 400));
+            expect(bloc.state, const HashtagSearchState());
+
+            responses['zz']!.complete(['zztop']);
+            async.flushMicrotasks();
+
+            expect(bloc.state, const HashtagSearchState());
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+
+        test('resets paging when the query changes under a page of more '
+            'results', () {
+          fakeAsync((async) {
+            final bloc = createBloc();
+            bloc.add(const HashtagSearchQueryChanged('zz'));
+            async.elapse(const Duration(milliseconds: 400));
+            responses['zz']!.complete([
+              for (var index = 0; index < 50; index++) 'zz$index',
+            ]);
+            async.flushMicrotasks();
+
+            bloc.add(const HashtagSearchLoadMore());
+            async.flushMicrotasks();
+            expect(bloc.state.isLoadingMore, isTrue);
+            bloc.add(const HashtagSearchQueryChanged('yy'));
+            async.elapse(const Duration(milliseconds: 400));
+            responses['zz']!.complete(['zztop']);
+            async.flushMicrotasks();
+
+            // Nothing may ask for a page of 'yy' before its first page lands.
+            expect(bloc.state.hasMore, isFalse);
+            expect(bloc.state.isLoadingMore, isFalse);
+            bloc.add(const HashtagSearchLoadMore());
+            async.flushMicrotasks();
+            expect(searched, ['zz', 'zz', 'yy']);
+
+            responses['yy']!.completeError(Exception('offline'));
+            async.flushMicrotasks();
+
+            expect(bloc.state.status, HashtagSearchStatus.failure);
+            expect(bloc.state.results, isNot(contains('zztop')));
+            expect(bloc.state.isLoadingMore, isFalse);
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+
+        test('starts no search when cleared before the debounce ends', () {
+          fakeAsync((async) {
+            final bloc = createBloc();
+            bloc.add(const HashtagSearchQueryChanged('zz'));
+            async.elapse(const Duration(milliseconds: 100));
+            bloc.add(const HashtagSearchCleared());
+            async.elapse(const Duration(milliseconds: 400));
+
+            expect(searched, isEmpty);
+            expect(bloc.state, const HashtagSearchState());
+            unawaited(bloc.close());
+            async.flushMicrotasks();
+          });
+        });
+      });
     });
 
     group('HashtagSearchState', () {

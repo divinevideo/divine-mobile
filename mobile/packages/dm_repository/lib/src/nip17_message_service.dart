@@ -225,6 +225,35 @@ class NIP17MessageService {
     return null;
   }
 
+  /// What a retry returns before it keeps or settles on a wrap that a relay
+  /// already holds for [recipientPubkey], instead of sending them another
+  /// (#10012): [preSendRefusal]'s refusal, a failure when the send policy
+  /// throws, as [sendRumor] reports one, or, with no relay connected, the
+  /// outcome of an attempt that reached none (#8516). `null` when it may go
+  /// on.
+  Future<NIP17SendResult?> heldRetryRefusal(String recipientPubkey) async {
+    final NIP17SendResult? refusal;
+    try {
+      refusal = await preSendRefusal(recipientPubkey);
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Send policy check failed for ${pubkeyForLogs(recipientPubkey)}: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return NIP17SendResult.failure('Failed to send message: $e');
+    }
+    if (refusal != null) return refusal;
+    if (_nostrService.connectedRelayCount == 0) {
+      return const NIP17SendResult.failure(
+        'Not sent: no relay connected',
+        reachedNoRelay: true,
+      );
+    }
+    return null;
+  }
+
   /// Builds a single NIP-17 gift wrap for [receiverPublicKey] from
   /// [rumorEvent].
   ///
@@ -612,6 +641,30 @@ class NIP17MessageService {
     );
   }
 
+  /// Build the unsigned NIP-09 kind-5 rumor that retracts [targetEventId], a
+  /// rumor of [targetKind] this account sent. NIP-17 lets a client send it
+  /// gift-wrapped to the recipient as part of the conversation (`17.md:87`);
+  /// Divine wraps it to every member.
+  ///
+  /// It carries the deleted event and its kind (`09.md:9`) and no `p` tag:
+  /// NIP-09 asks for none, and naming one member would make the rumor read,
+  /// by its `pubkey` + `p` tags, as the one-to-one of the sender and that
+  /// member rather than the room it was sent to (#9774).
+  Event buildDeletionRumor({
+    required String targetEventId,
+    required int targetKind,
+  }) {
+    return Event(
+      _senderPublicKey,
+      EventKind.eventDeletion,
+      <List<String>>[
+        ['e', targetEventId],
+        ['k', '$targetKind'],
+      ],
+      '',
+    );
+  }
+
   /// OK-confirmation window for the recipient wrap when [sendRumor] runs
   /// with `awaitRecipientOk: true` (reaction sends and message sends). Kept
   /// well under the caller's outer publish cap so the confirmation resolves
@@ -853,10 +906,9 @@ class NIP17MessageService {
         // A wrapped kind-5 is a DELETION of something, and which noun it takes
         // depends on what it deletes — a reaction removal and a message
         // delete-for-everyone both arrive here as kind 5. NIP-09's `k` tag
-        // names the deleted kind, and both builders set it
-        // (`DmReactionsRepository._durablyDeleteReaction` writes 7,
-        // `DmRepository._driveDeleteForEveryone` writes the row's message
-        // kind), so read it rather than guessing. Without this a reaction
+        // names the deleted kind, and [buildDeletionRumor] sets it for both
+        // (7 for a reaction removal, the row's message kind for a delete for
+        // everyone), so read it rather than guessing. Without this a reaction
         // removal logs as "message" and sends field debugging to the wrong
         // send path.
         final deletesReaction =

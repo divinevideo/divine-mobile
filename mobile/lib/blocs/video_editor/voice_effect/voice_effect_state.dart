@@ -78,6 +78,11 @@ class VoiceEffectState extends Equatable {
     return current?.playbackSpeed == null ? track.playbackSpeed : 1;
   }
 
+  /// Whether the sound keeps playing along [track]'s speed ramp: no preset
+  /// picked a speed of its own.
+  bool get keepsSpeedRamp =>
+      track.speedRamp != null && playbackSpeed == track.playbackSpeed;
+
   /// Whether the pick differs from what [track] already plays.
   bool get hasChanges =>
       effect != track.voiceEffect ||

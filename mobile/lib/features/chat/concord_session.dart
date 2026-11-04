@@ -52,12 +52,21 @@ ConcordRepository buildConcordRepository({
   required String? pubkey,
   required NostrSigner? signer,
   required AccountScopedStore store,
+  NostrSigner? Function()? signerForSend,
 }) {
   final relay = WebSocketRelayGateway(concordRelayUrl);
   final sealed = signer != null && pubkey != null
       ? SealedChatTransport(
           relay: relay,
           signer: (template) async {
+            // A restored account can gain its live RPC signer without its auth
+            // enum changing. Resolve it per send rather than pinning the stub.
+            final activeSigner = signerForSend == null
+                ? signer
+                : signerForSend();
+            if (activeSigner == null) {
+              throw StateError('chat session is no longer active');
+            }
             final event = Event(
               pubkey,
               template['kind'] as int,
@@ -67,7 +76,7 @@ ConcordRepository buildConcordRepository({
               template['content'] as String,
               createdAt: template['created_at'] as int,
             );
-            final signed = await signer.signEvent(event);
+            final signed = await activeSigner.signEvent(event);
             if (signed == null) {
               throw StateError('session signer refused to sign chat seal');
             }

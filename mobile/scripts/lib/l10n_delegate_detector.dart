@@ -158,10 +158,10 @@ class _Visitor extends RecursiveAstVisitor<void> {
 
   bool _registersAppDelegates(ArgumentList args) {
     for (final argument in args.arguments) {
-      if (argument is! NamedExpression) continue;
-      if (argument.name.label.name != _delegatesArg) continue;
+      if (argument is! NamedArgument) continue;
+      if (argument.name.lexeme != _delegatesArg) continue;
       final visitor = _DelegateReferenceVisitor();
-      argument.expression.accept(visitor);
+      argument.argumentExpression.accept(visitor);
       return visitor.namesAppDelegates && !visitor.namesGeneratedDelegate;
     }
     return false;

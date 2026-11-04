@@ -85,12 +85,14 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
   TagsPickerBloc({
     required HashtagRepository hashtagRepository,
     required Set<String> initialTags,
+    Set<String> stickerTags = const {},
   }) : _hashtagRepository = hashtagRepository,
        super(
          TagsPickerState(
            selectedTags: HashtagExtractor.normalizeVideoHashtags(
              initialTags,
            ).toSet(),
+           stickerTags: stickerTags,
          ),
        ) {
     on<TagsPickerTagsAdded>(_onTagsAdded);
@@ -178,14 +180,17 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
   }
 
   /// Adds every valid token that still fits under
-  /// [HashtagExtractor.maxHashtagsPerVideo]. A token over
-  /// [HashtagExtractor.maxHashtagLength] is dropped and flagged with
-  /// [TagsPickerNotice.tagTooLong] rather than truncated.
+  /// [HashtagExtractor.maxHashtagsPerVideo], counting the sticker tags. A
+  /// token over [HashtagExtractor.maxHashtagLength] is dropped and flagged
+  /// with [TagsPickerNotice.tagTooLong] rather than truncated.
   TagsPickerState _withAddedTags(List<String> rawTokens) {
     final updated = Set<String>.of(state.selectedTags);
     var notice = TagsPickerNotice.none;
     for (final raw in rawTokens) {
-      if (updated.length >= HashtagExtractor.maxHashtagsPerVideo) break;
+      if ({...state.stickerTags, ...updated}.length >=
+          HashtagExtractor.maxHashtagsPerVideo) {
+        break;
+      }
       final tag = HashtagExtractor.normalizeVideoHashtag(raw);
       if (tag == null) {
         if (raw.length > HashtagExtractor.maxHashtagLength) {
@@ -193,7 +198,8 @@ class TagsPickerBloc extends Bloc<TagsPickerEvent, TagsPickerState> {
         }
         continue;
       }
-      updated.add(tag);
+      // A sticker's hashtag is on the video already.
+      if (!state.stickerTags.contains(tag)) updated.add(tag);
     }
     return state.copyWith(selectedTags: updated, notice: notice);
   }

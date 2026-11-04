@@ -21,6 +21,8 @@ extension CommentSyntheticVideoEventX on Comment {
       duration: videoDuration,
       dimensions: videoDimensions,
       blurhash: videoBlurhash,
+      // The video reply's own stickers, so a viewer can tap them here too.
+      stickerRegions: VideoStickerRegion.fromTags(stickerTags),
       // Synthetic tags for navigation only. Thread semantics still come from
       // the comment model, not from these placeholder kind values.
       rawTags: {

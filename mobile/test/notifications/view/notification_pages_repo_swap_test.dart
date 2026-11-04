@@ -30,6 +30,7 @@ import 'package:openvine/notifications/view/notifications_view.dart';
 import 'package:openvine/providers/app_providers.dart';
 
 import '../../helpers/badge_fixtures.dart';
+import '../../helpers/test_provider_overrides.dart';
 
 class _MockNotificationRepository extends Mock
     implements NotificationRepository {}
@@ -309,6 +310,7 @@ void main() {
       (tester) async {
         final container = ProviderContainer(
           overrides: [
+            authServiceProvider.overrideWithValue(createMockAuthService()),
             badgeRepositoryProvider.overrideWithValue(_stubBadgeRepository()),
             notificationRepositoryProvider.overrideWith((ref) {
               final v = ref.watch(_notificationRepoSwap);
@@ -351,6 +353,7 @@ void main() {
       (tester) async {
         final container = ProviderContainer(
           overrides: [
+            authServiceProvider.overrideWithValue(createMockAuthService()),
             badgeRepositoryProvider.overrideWithValue(_stubBadgeRepository()),
             notificationRepositoryProvider.overrideWithValue(
               mockNotificationRepoA,
@@ -396,6 +399,7 @@ void main() {
         final rebuildKey = GlobalKey<_RebuildHostState>();
         final container = ProviderContainer(
           overrides: [
+            authServiceProvider.overrideWithValue(createMockAuthService()),
             badgeRepositoryProvider.overrideWithValue(_stubBadgeRepository()),
             notificationRepositoryProvider.overrideWithValue(
               mockNotificationRepoA,
@@ -432,6 +436,7 @@ void main() {
       (tester) async {
         final container = ProviderContainer(
           overrides: [
+            authServiceProvider.overrideWithValue(createMockAuthService()),
             badgeRepositoryProvider.overrideWithValue(_stubBadgeRepository()),
             notificationRepositoryProvider.overrideWith((ref) {
               final v = ref.watch(_notificationRepoSwap);
@@ -486,6 +491,7 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
+            authServiceProvider.overrideWithValue(createMockAuthService()),
             badgeRepositoryProvider.overrideWith((ref) {
               final v = ref.watch(_badgeRepoSwap);
               return v == 0 ? badgeRepoA : badgeRepoB;

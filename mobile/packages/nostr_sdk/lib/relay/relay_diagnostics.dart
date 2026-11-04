@@ -164,8 +164,23 @@ const Set<String> relayRefusalPrefixes = {
 /// attempts` is not an auth problem, and sends triage after NIP-42 when the
 /// account is blocked. Only the fixed prefixes above are ever returned, so
 /// relay-supplied text still cannot reach a support export.
+///
+/// A known prefix right after a leading `error:` is the refusal's category:
+/// strfry prefixes `ERROR: ` to every `CLOSED` reason, so its NIP-42 refusal
+/// arrives as `ERROR: auth-required: …` (#9467). Read as `error`, it was never
+/// replayed after AUTH. Only that position counts, never free text.
 String relayRefusalCategoryForDiagnostics(String message) {
   final normalized = message.trim().toLowerCase();
+  final category = _leadingRefusalPrefix(normalized);
+  const wrapper = 'error:';
+  if (category != 'error' || !normalized.startsWith(wrapper)) return category;
+  final inner = _leadingRefusalPrefix(
+    normalized.substring(wrapper.length).trimLeft(),
+  );
+  return inner == 'other' ? category : inner;
+}
+
+String _leadingRefusalPrefix(String normalized) {
   for (final prefix in relayRefusalPrefixes) {
     if (!normalized.startsWith(prefix)) continue;
     final rest = normalized.substring(prefix.length);

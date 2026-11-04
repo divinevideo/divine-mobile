@@ -32,9 +32,15 @@ class CommunitySuggestSheet {
       minChildSize: VineTheme.bottomSheetDismissFloor,
       showHeader: false,
       showDragHandle: false,
-      // Preserves the pre-pause-integration presentation: the sheet stays in
-      // the shell navigator rather than covering the tab bar.
-      useRootNavigator: false,
+      // The sheet's own messenger: the failure snackbar would otherwise land
+      // on the shell's scaffold, underneath the sheet.
+      contentWrapper: (_, sheet) => ScaffoldMessenger(
+        child: Scaffold(
+          backgroundColor: VineTheme.transparent,
+          resizeToAvoidBottomInset: false,
+          body: sheet,
+        ),
+      ),
       buildScrollBody: (scrollController) => BlocProvider(
         create: (_) {
           final cubit = CommunitySuggestCubit(

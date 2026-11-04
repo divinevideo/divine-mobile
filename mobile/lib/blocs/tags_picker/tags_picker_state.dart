@@ -29,6 +29,7 @@ enum TagsPickerNotice {
 final class TagsPickerState extends Equatable {
   const TagsPickerState({
     this.selectedTags = const <String>{},
+    this.stickerTags = const <String>{},
     this.query = '',
     this.searchResults = const <String>[],
     this.status = TagsPickerStatus.initial,
@@ -37,6 +38,13 @@ final class TagsPickerState extends Equatable {
 
   /// Tags the user has committed in this session.
   final Set<String> selectedTags;
+
+  /// The hashtags of the hashtag stickers on the video. They count toward
+  /// the limit and cannot be removed here, only with their sticker.
+  final Set<String> stickerTags;
+
+  /// Every tag the video will carry: [stickerTags] and [selectedTags].
+  Set<String> get allTags => {...stickerTags, ...selectedTags};
 
   /// Current (trimmed) query driving the suggestion list.
   final String query;
@@ -53,7 +61,7 @@ final class TagsPickerState extends Equatable {
   /// Whether the video already carries [HashtagExtractor.maxHashtagsPerVideo]
   /// tags, so nothing more can be added.
   bool get isAtTagLimit =>
-      selectedTags.length >= HashtagExtractor.maxHashtagsPerVideo;
+      allTags.length >= HashtagExtractor.maxHashtagsPerVideo;
 
   /// Search results in the form they would be added — normalized and
   /// deduplicated — minus anything already selected or not addable.
@@ -63,7 +71,7 @@ final class TagsPickerState extends Equatable {
         .map(HashtagExtractor.normalizeVideoHashtag)
         .nonNulls
         .toSet()
-        .where((s) => !selectedTags.contains(s))
+        .where((s) => !allTags.contains(s))
         .toList();
   }
 
@@ -76,7 +84,7 @@ final class TagsPickerState extends Equatable {
   bool get canAddQuery {
     final s = sanitizedQuery;
     if (s.isEmpty || isAtTagLimit) return false;
-    return !selectedTags.contains(s);
+    return !allTags.contains(s);
   }
 
   TagsPickerState copyWith({
@@ -88,6 +96,7 @@ final class TagsPickerState extends Equatable {
   }) {
     return TagsPickerState(
       selectedTags: selectedTags ?? this.selectedTags,
+      stickerTags: stickerTags,
       query: query ?? this.query,
       searchResults: searchResults ?? this.searchResults,
       status: status ?? this.status,
@@ -98,6 +107,7 @@ final class TagsPickerState extends Equatable {
   @override
   List<Object?> get props => [
     selectedTags,
+    stickerTags,
     query,
     searchResults,
     status,

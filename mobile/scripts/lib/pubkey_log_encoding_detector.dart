@@ -354,9 +354,8 @@ class _SiteCollector extends RecursiveAstVisitor<void> {
 
   void _scanRelayDiagnostic(ArgumentList args) {
     for (final argument in args.arguments) {
-      if (argument is NamedExpression &&
-          argument.name.label.name == 'message') {
-        _scan(argument.expression, 'RelayDiagnostic.message');
+      if (argument is NamedArgument && argument.name.lexeme == 'message') {
+        _scan(argument.argumentExpression, 'RelayDiagnostic.message');
       }
     }
   }

@@ -97,9 +97,11 @@ void main() {
     late Directory markers;
     late _RecordingCrashReporter reporter;
     late int? footprintBytes;
+    late RenderMemoryLedgers? ledgers;
 
     final originalDirectory = InterruptedRenderMonitor.markerDirectory;
     final originalFootprint = InterruptedRenderMonitor.readFootprintBytes;
+    final originalLedgers = InterruptedRenderMonitor.readMemoryLedgers;
     final originalLifecycle = InterruptedRenderMonitor.readLifecycleState;
     final originalInterval = InterruptedRenderMonitor.sampleInterval;
     final originalReporter = InterruptedRenderMonitor.crashReporter;
@@ -133,11 +135,16 @@ void main() {
     }
 
     setUp(() async {
+      // Another suite in the same isolate may have noted a draft or editor
+      // steps already.
+      InterruptedRenderMonitor.resetForTesting();
       markers = Directory.systemTemp.createTempSync('render_markers_');
       reporter = _RecordingCrashReporter();
       footprintBytes = 900 * _mb;
       InterruptedRenderMonitor.markerDirectory = () async => markers;
       InterruptedRenderMonitor.readFootprintBytes = () async => footprintBytes;
+      ledgers = null;
+      InterruptedRenderMonitor.readMemoryLedgers = () async => ledgers;
       InterruptedRenderMonitor.readLifecycleState = () => 'resumed';
       // Long enough that the periodic refresh never fires on its own, so each
       // test decides when a sample is taken.
@@ -150,6 +157,7 @@ void main() {
       InterruptedRenderMonitor.resetForTesting();
       InterruptedRenderMonitor.markerDirectory = originalDirectory;
       InterruptedRenderMonitor.readFootprintBytes = originalFootprint;
+      InterruptedRenderMonitor.readMemoryLedgers = originalLedgers;
       InterruptedRenderMonitor.readLifecycleState = originalLifecycle;
       InterruptedRenderMonitor.sampleInterval = originalInterval;
       InterruptedRenderMonitor.crashReporter = originalReporter;
@@ -194,6 +202,20 @@ void main() {
         await render;
       });
 
+      test('names the draft noted last in the marker', () async {
+        InterruptedRenderMonitor.noteLastDraft('draft_a: data 3 KB, clips 2');
+        final finish = Completer<String>();
+        final render = await startRender(finish);
+
+        expect(
+          readOnlyMarker()['lastDraft'],
+          equals('draft_a: data 3 KB, clips 2'),
+        );
+
+        finish.complete('out.mp4');
+        await render;
+      });
+
       test('deletes the marker once the render completes', () async {
         final finish = Completer<String>();
         final render = await startRender(finish);
@@ -214,6 +236,50 @@ void main() {
 
         await expectLater(render, throwsStateError);
         expect(markerFiles(), isEmpty);
+      });
+
+      test(
+        'records what GPU and media memory held and the room left',
+        () async {
+          ledgers = (
+            graphics: 1200 * _mb,
+            media: 300 * _mb,
+            limitRemaining: 900 * _mb,
+          );
+          final finish = Completer<String>();
+          final render = await startRender(finish);
+
+          ledgers = (
+            graphics: 1500 * _mb,
+            media: 200 * _mb,
+            limitRemaining: 400 * _mb,
+          );
+          await InterruptedRenderMonitor.sampleActiveRendersForTesting();
+
+          final marker = readOnlyMarker();
+          expect(marker['startGraphicsMb'], equals(1200));
+          expect(marker['peakGraphicsMb'], equals(1500));
+          expect(marker['startMediaMb'], equals(300));
+          expect(marker['peakMediaMb'], equals(300));
+          expect(marker['minLimitRemainingMb'], equals(400));
+
+          finish.complete('out.mp4');
+          await render;
+        },
+      );
+
+      test('leaves out the parts of memory the platform cannot tell', () async {
+        ledgers = (graphics: null, media: 80 * _mb, limitRemaining: null);
+        final finish = Completer<String>();
+        final render = await startRender(finish);
+
+        final marker = readOnlyMarker();
+        expect(marker['peakMediaMb'], equals(80));
+        expect(marker.keys, isNot(contains('peakGraphicsMb')));
+        expect(marker.keys, isNot(contains('minLimitRemainingMb')));
+
+        finish.complete('out.mp4');
+        await render;
       });
 
       test('records the footprint the render climbs to', () async {
@@ -627,6 +693,96 @@ void main() {
       });
     });
 
+    group('editor phases', () {
+      List<Object?> phasesIn(Map<String, Object?> marker) =>
+          marker['editorPhases']! as List<Object?>;
+
+      test('notes each step with its footprint in a running marker', () async {
+        final finish = Completer<String>();
+        final render = await startRender(finish);
+
+        InterruptedRenderMonitor.noteEditorPhase('editorOpen', restart: true);
+        footprintBytes = 2300 * _mb;
+        InterruptedRenderMonitor.noteEditorPhase('playerReady');
+        await pumpEventQueue();
+
+        final phases = phasesIn(readOnlyMarker());
+        expect(phases, hasLength(2));
+        expect(phases[0], matches(RegExp(r'^editorOpen@\d+:900$')));
+        expect(phases[1], matches(RegExp(r'^playerReady@\d+:2300$')));
+
+        finish.complete('out.mp4');
+        await render;
+      });
+
+      test('carries the steps into a marker opened later', () async {
+        InterruptedRenderMonitor.noteEditorPhase('editorOpen', restart: true);
+        await pumpEventQueue();
+
+        final finish = Completer<String>();
+        final render = await startRender(finish);
+
+        expect(phasesIn(readOnlyMarker()), [
+          matches(RegExp(r'^editorOpen@\d+:900$')),
+        ]);
+
+        finish.complete('out.mp4');
+        await render;
+      });
+
+      test('starts a new list when the editor opens again', () async {
+        InterruptedRenderMonitor.noteEditorPhase('editorOpen', restart: true);
+        InterruptedRenderMonitor.noteEditorPhase('editorClosed');
+        InterruptedRenderMonitor.noteEditorPhase('editorOpen', restart: true);
+        await pumpEventQueue();
+
+        final finish = Completer<String>();
+        final render = await startRender(finish);
+
+        expect(phasesIn(readOnlyMarker()), hasLength(1));
+
+        finish.complete('out.mp4');
+        await render;
+      });
+
+      test('keeps the last ten steps', () async {
+        InterruptedRenderMonitor.noteEditorPhase('step0', restart: true);
+        for (var i = 1; i < 12; i++) {
+          InterruptedRenderMonitor.noteEditorPhase('step$i');
+        }
+        await pumpEventQueue();
+
+        final finish = Completer<String>();
+        final render = await startRender(finish);
+
+        final phases = phasesIn(readOnlyMarker());
+        expect(phases, hasLength(10));
+        expect(phases.first, startsWith('step2@'));
+
+        finish.complete('out.mp4');
+        await render;
+      });
+
+      test('marks a step whose footprint could not be read', () async {
+        InterruptedRenderMonitor.readFootprintBytes = () async =>
+            throw StateError('no footprint');
+        InterruptedRenderMonitor.noteEditorPhase('editorOpen', restart: true);
+        await pumpEventQueue();
+        InterruptedRenderMonitor.readFootprintBytes = () async =>
+            footprintBytes;
+
+        final finish = Completer<String>();
+        final render = await startRender(finish);
+
+        expect(phasesIn(readOnlyMarker()), [
+          matches(RegExp(r'^editorOpen@\d+:\?$')),
+        ]);
+
+        finish.complete('out.mp4');
+        await render;
+      });
+    });
+
     group('initialize', () {
       test('reports and deletes a marker a previous session left', () async {
         File('${markers.path}/1_draft_autosave.json').writeAsStringSync(
@@ -783,6 +939,63 @@ void main() {
           'lifecycleHistory=resumed@0,inactive@2140,resumed@2610 '
           'watchdogFiredAtMs=119750 '
           'cancelRequestedAtMs=119751 segments=2',
+        ),
+      );
+    });
+
+    test('names what GPU and media memory held and the room left', () {
+      final summary = summarizeMarker(const {
+        'kind': 'video',
+        'elapsedMs': 7503,
+        'peakFootprintMb': 3370,
+        'startGraphicsMb': 1200,
+        'peakGraphicsMb': 1500,
+        'startMediaMb': 300,
+        'peakMediaMb': 310,
+        'minLimitRemainingMb': 12,
+        'details': {'segments': 1},
+      });
+
+      expect(
+        summary,
+        equals(
+          'kind=video elapsedMs=7503 peakFootprintMb=3370 '
+          'startGraphicsMb=1200 peakGraphicsMb=1500 startMediaMb=300 '
+          'peakMediaMb=310 minLimitRemainingMb=12 segments=1',
+        ),
+      );
+    });
+
+    test('lists the editor steps in order', () {
+      final summary = summarizeMarker(const {
+        'kind': 'video',
+        'elapsedMs': 7503,
+        'editorPhases': ['editorOpen@0:356', 'playerReady@8000:2300'],
+        'details': {'segments': 1},
+      });
+
+      expect(
+        summary,
+        equals(
+          'kind=video elapsedMs=7503 '
+          'editorPhases=editorOpen@0:356,playerReady@8000:2300 segments=1',
+        ),
+      );
+    });
+
+    test('puts the last draft after the render details', () {
+      final summary = summarizeMarker(const {
+        'kind': 'video',
+        'elapsedMs': 7508,
+        'lastDraft': 'draft_a: data 3 KB, clips 2',
+        'details': {'segments': 1},
+      });
+
+      expect(
+        summary,
+        equals(
+          'kind=video elapsedMs=7508 segments=1 '
+          'lastDraft=draft_a: data 3 KB, clips 2',
         ),
       );
     });

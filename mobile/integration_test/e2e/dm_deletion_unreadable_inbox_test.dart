@@ -1,8 +1,10 @@
 // ABOUTME: E2E regression for #8515 — a delete-for-everyone published while the
 // ABOUTME: recipient's kind-10050 inbox is UNREADABLE falls back to the default
 // ABOUTME: pool and must stay `deletion_pending` with its rumor retained, never
-// ABOUTME: be scored as `deletion_sent`. Drives a real DmRepository + NostrClient
-// ABOUTME: over real sockets, wired as repository_providers.dart wires them.
+// ABOUTME: be scored as `deletion_sent`; and for #10012 — once the retry sweep's
+// ABOUTME: attempts run out it shows as failed, with one more try per launch.
+// ABOUTME: Drives a real DmRepository + NostrClient over real sockets, wired as
+// ABOUTME: repository_providers.dart wires them.
 // ABOUTME: Requires: NO Docker stack — every dependency here is local.
 
 @Tags(['service'])
@@ -15,6 +17,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
@@ -24,6 +27,7 @@ import 'package:nostr_sdk/relay/relay_base.dart';
 import 'package:nostr_sdk/relay/relay_status.dart';
 import 'package:nostr_sdk/relay/web_socket_connection_manager.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
+import 'package:openvine/services/outgoing_dm_retry_service.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../helpers/fake_relay.dart';
@@ -44,6 +48,30 @@ class _RedirectFactory implements WebSocketChannelFactory {
     return WebSocketChannel.connect(
       Uri.parse('ws://127.0.0.1:$port${uri.path}'),
     );
+  }
+}
+
+/// The real repository, counting the retry sweep's deletion attempts.
+class _CountingDmRepository extends DmRepository {
+  _CountingDmRepository({
+    required super.nostrClient,
+    required super.directMessagesDao,
+    required super.conversationsDao,
+    required super.outgoingDmsDao,
+    required super.userPubkey,
+    required super.signer,
+    required super.messageService,
+  });
+
+  int deletionRetries = 0;
+
+  @override
+  Future<DmMessageDeletionOutcome> retryMessageDeletion({
+    required String rumorId,
+    bool automatic = false,
+  }) {
+    deletionRetries++;
+    return super.retryMessageDeletion(rumorId: rumorId, automatic: automatic);
   }
 }
 
@@ -80,9 +108,8 @@ void main() {
   /// deletion path resolves inboxes inside `DmRepository` itself, so unlike the
   /// reaction sibling (#8443) there is no resolver port to inject — the wiring
   /// under test is entirely internal to `_fanOutDeletion`.
-  Future<({DmRepository repository, AppDatabase db, Nostr nostr})> buildStack(
-    FakeRelay relay,
-  ) async {
+  Future<({_CountingDmRepository repository, AppDatabase db, Nostr nostr})>
+  buildStack(FakeRelay relay) async {
     final factory = _RedirectFactory(relay.port);
     final signer = LocalNostrSigner(senderKey);
 
@@ -114,7 +141,7 @@ void main() {
     // `outgoingDmsDao` is wired deliberately: production never builds this
     // repository without the queue, and a repository built without it can pin
     // behaviour that cannot occur (learned on #8519's e2e control).
-    final repository = DmRepository(
+    final repository = _CountingDmRepository(
       nostrClient: client,
       directMessagesDao: db.directMessagesDao,
       conversationsDao: db.conversationsDao,
@@ -160,14 +187,12 @@ void main() {
     return rumorId;
   }
 
-  /// `deleteMessageForEveryone` writes `deletion_pending` at its durability
-  /// boundary BEFORE any wire attempt, then drives the first attempt
-  /// unawaited. So "has a status" is true immediately and says nothing —
-  /// this waits for a TERMINAL status instead, and returns the row still
-  /// pending when the window elapses, which is itself the outcome under test.
-  Future<DirectMessageRow?> settledDeletionRow(
+  /// Reads the row of [rumorId] until [reached] holds for it or [window]
+  /// elapses, and returns it as last read.
+  Future<DirectMessageRow?> deletionRowWhen(
     AppDatabase db,
-    String rumorId, {
+    String rumorId,
+    bool Function(DirectMessageRow? row) reached, {
     Duration window = const Duration(seconds: 20),
   }) async {
     final deadline = DateTime.now().add(window);
@@ -177,12 +202,24 @@ void main() {
         rumorId,
         ownerPubkey: senderPubkey,
       );
-      final status = row?.deletionPublishStatus;
-      if (status != null && status != 'deletion_pending') return row;
+      if (reached(row)) return row;
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
     return row;
   }
+
+  /// `deleteMessageForEveryone` writes `deletion_pending` at its durability
+  /// boundary BEFORE any wire attempt, then drives the first attempt
+  /// unawaited. So "has a status" is true immediately and says nothing —
+  /// this waits for a TERMINAL status instead, and returns the row still
+  /// pending when the window elapses, which is itself the outcome under test.
+  Future<DirectMessageRow?> settledDeletionRow(
+    AppDatabase db,
+    String rumorId,
+  ) => deletionRowWhen(db, rumorId, (row) {
+    final status = row?.deletionPublishStatus;
+    return status != null && status != 'deletion_pending';
+  });
 
   /// Restores the production budget after a test shortens it.
   setUp(() {
@@ -383,6 +420,170 @@ void main() {
 
         expect(row?.deletionPublishStatus, 'deletion_pending');
         expect(row?.deletionRumorJson, isNotNull);
+      },
+      timeout: const Timeout(Duration(minutes: 3)),
+    );
+  });
+
+  group('#10012 a held delete-for-everyone whose retries run out', () {
+    /// A launch: a fresh retry sweep over the same repository and store.
+    /// [clockOffset] is read on every call, so a test steps past the backoff
+    /// between passes instead of waiting it out.
+    OutgoingDmRetryService launch(
+      DmRepository repository,
+      AppDatabase db,
+      Duration Function() clockOffset,
+    ) => OutgoingDmRetryService(
+      dmRepository: repository,
+      outgoingDmsDao: db.outgoingDmsDao,
+      userPubkey: senderPubkey,
+      appForegroundStream: const Stream<bool>.empty(),
+      now: () => DateTime.now().add(clockOffset()),
+    );
+
+    /// Every gift wrap the relay received addressed to [pubkey].
+    int wrapsTo(FakeRelay relay, String pubkey) => relay.receivedFrames
+        .where(
+          (frame) =>
+              frame.length >= 2 &&
+              frame[0] == 'EVENT' &&
+              frame[1] is Map &&
+              (frame[1] as Map)['kind'] == EventKind.giftWrap &&
+              ((frame[1] as Map)['tags'] as List).any(
+                (tag) =>
+                    (tag as List).length >= 2 &&
+                    tag[0] == 'p' &&
+                    tag[1] == pubkey,
+              ),
+        )
+        .length;
+
+    Future<DmRetractionStatus?> retractionOf(
+      DmRepository repository,
+      String rumorId,
+    ) async {
+      for (final message
+          in await repository.watchMessages(conversationId).first) {
+        if (message.id == rumorId) return message.retractionStatus;
+      }
+      return null;
+    }
+
+    /// Deletes an own message for everyone while the recipient's inbox
+    /// cannot be read, and returns once the first attempt is held.
+    Future<
+      ({
+        _CountingDmRepository repository,
+        AppDatabase db,
+        FakeRelay relay,
+        String rumorId,
+      })
+    >
+    heldDeletion(String rumorId) async {
+      final relay = await FakeRelay.start(
+        stallReqForKinds: const {EventKind.dmRelaysList},
+      );
+      addTearDown(relay.stop);
+      final stack = await buildStack(relay);
+      // Each attempt waits this long on the stalled inbox lookup.
+      DmRepository.inboxResolutionBudget = const Duration(milliseconds: 300);
+      await seedOwnMessage(stack.db, rumorId);
+      await stack.repository.deleteMessageForEveryone(rumorId);
+      final held = await deletionRowWhen(
+        stack.db,
+        rumorId,
+        (row) => row?.heldDeletionWraps != null,
+      );
+      expect(
+        held?.heldDeletionWraps,
+        isNotNull,
+        reason: 'precondition: the first attempt is held',
+      );
+      return (
+        repository: stack.repository,
+        db: stack.db,
+        relay: relay,
+        rumorId: rumorId,
+      );
+    }
+
+    testWidgets(
+      'ARM E: once the sweep has spent its attempts the retraction reads '
+      'failed, not pending, and the held wrap is all the recipient got',
+      (tester) async {
+        final held = await heldDeletion(
+          'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+        );
+        expect(
+          await retractionOf(held.repository, held.rumorId),
+          DmRetractionStatus.pending,
+          reason: 'precondition: the bubble shows progress while held',
+        );
+        var offset = Duration.zero;
+        final sweep = launch(held.repository, held.db, () => offset);
+
+        // Ten minutes apart outlasts every backoff, so each pass attempts it.
+        for (var pass = 0; pass < 5; pass++) {
+          offset += const Duration(minutes: 10);
+          await sweep.sweep();
+        }
+
+        expect(held.repository.deletionRetries, 5);
+        final row = await held.db.directMessagesDao.getMessageById(
+          held.rumorId,
+          ownerPubkey: senderPubkey,
+        );
+        expect(
+          row?.deletionPublishStatus,
+          DirectMessagesDao.deletionUnconfirmed,
+        );
+        expect(row?.deletionRumorJson, isNotNull);
+        expect(
+          await retractionOf(held.repository, held.rumorId),
+          DmRetractionStatus.failed,
+        );
+        expect(wrapsTo(held.relay, recipientPubkey), 1);
+
+        for (var pass = 0; pass < 3; pass++) {
+          offset += const Duration(minutes: 10);
+          await sweep.sweep();
+        }
+        expect(
+          held.repository.deletionRetries,
+          5,
+          reason: 'the same launch tries it no more',
+        );
+      },
+      timeout: const Timeout(Duration(minutes: 3)),
+    );
+
+    testWidgets(
+      'ARM F: a later launch gives it exactly one more attempt, and it reads '
+      'failed again after it',
+      (tester) async {
+        final held = await heldDeletion(
+          'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+        );
+        var offset = Duration.zero;
+        final first = launch(held.repository, held.db, () => offset);
+        for (var pass = 0; pass < 8; pass++) {
+          offset += const Duration(minutes: 10);
+          await first.sweep();
+        }
+        expect(held.repository.deletionRetries, 5, reason: 'precondition');
+
+        final second = launch(held.repository, held.db, () => offset);
+        for (var pass = 0; pass < 8; pass++) {
+          offset += const Duration(minutes: 10);
+          await second.sweep();
+        }
+
+        expect(held.repository.deletionRetries, 6);
+        expect(
+          await retractionOf(held.repository, held.rumorId),
+          DmRetractionStatus.failed,
+        );
+        expect(wrapsTo(held.relay, recipientPubkey), 1);
       },
       timeout: const Timeout(Duration(minutes: 3)),
     );

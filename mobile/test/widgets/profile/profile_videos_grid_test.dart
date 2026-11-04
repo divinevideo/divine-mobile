@@ -27,6 +27,8 @@ import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart'
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
+import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid_skeleton.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -70,17 +72,21 @@ const _ownPubkey =
 const _otherPubkey =
     'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
-DivineVideoDraft _createTestDraft({String title = 'Test Draft'}) {
+DivineVideoDraft _createTestDraft({
+  String title = 'Test Draft',
+  model.AspectRatio? aspectRatio = model.AspectRatio.vertical,
+}) {
   return DivineVideoDraft.create(
     clips: [
-      DivineVideoClip(
-        id: 'clip-1',
-        video: EditorVideo.file('/path/to/video.mp4'),
-        duration: const Duration(seconds: 3),
-        recordedAt: DateTime(2025, 12, 13),
-        targetAspectRatio: model.AspectRatio.vertical,
-        originalAspectRatio: 9 / 16,
-      ),
+      if (aspectRatio != null)
+        DivineVideoClip(
+          id: 'clip-1',
+          video: EditorVideo.file('/path/to/video.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime(2025, 12, 13),
+          targetAspectRatio: aspectRatio,
+          originalAspectRatio: aspectRatio.value,
+        ),
     ],
     title: title,
     description: 'Test description',
@@ -236,7 +242,28 @@ void main() {
           buildSubject(userIdHex: _otherPubkey, videos: videos),
         );
 
-        expect(find.byType(SliverGrid), findsOneWidget);
+        expect(find.byType(ProfileMasonryGrid), findsOneWidget);
+      });
+
+      testWidgets('sizes each tile from its video dimensions', (tester) async {
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+        final videos = _createTestVideos(pubkey: _otherPubkey);
+
+        await tester.pumpWidget(
+          buildSubject(
+            userIdHex: _otherPubkey,
+            videos: [
+              videos[0].copyWith(dimensions: '480x480'),
+              videos[1].copyWith(dimensions: '1080x1920'),
+            ],
+          ),
+        );
+
+        final tiles = find.byType(ProfileTabThumbnail);
+        final square = tester.getSize(tiles.at(0));
+        final vertical = tester.getSize(tiles.at(1));
+        expect(square.height, moreOrLessEquals(square.width));
+        expect(vertical.height, moreOrLessEquals(vertical.width * 3 / 2));
       });
 
       testWidgets(
@@ -1449,8 +1476,62 @@ void main() {
           buildSubject(userIdHex: _ownPubkey, videos: videos),
         );
 
-        expect(find.byType(SliverGrid), findsOneWidget);
+        expect(find.byType(ProfileMasonryGrid), findsOneWidget);
         expect(find.byType(PartialCircleSpinner), findsOneWidget);
+      });
+
+      group('uploading tile shape', () {
+        Future<Size> pumpUploadingTile(
+          WidgetTester tester,
+          model.AspectRatio? aspectRatio,
+        ) async {
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+          final draft = _createTestDraft(aspectRatio: aspectRatio);
+          when(() => mockBloc.state).thenReturn(
+            BackgroundPublishState(
+              uploads: [
+                BackgroundUpload(draft: draft, result: null, progress: 0.5),
+              ],
+            ),
+          );
+
+          await tester.pumpWidget(
+            buildSubject(userIdHex: _ownPubkey),
+          );
+
+          return tester.getSize(
+            find
+                .ancestor(
+                  of: find.byType(PartialCircleSpinner),
+                  matching: find.byType(ClipRRect),
+                )
+                .first,
+          );
+        }
+
+        testWidgets('gives a square draft a square tile', (tester) async {
+          final size = await pumpUploadingTile(
+            tester,
+            model.AspectRatio.square,
+          );
+
+          expect(size.height, moreOrLessEquals(size.width));
+        });
+
+        testWidgets('gives a vertical draft a 2:3 tile', (tester) async {
+          final size = await pumpUploadingTile(
+            tester,
+            model.AspectRatio.vertical,
+          );
+
+          expect(size.height, moreOrLessEquals(size.width * 3 / 2));
+        });
+
+        testWidgets('gives a draft without clips a 2:3 tile', (tester) async {
+          final size = await pumpUploadingTile(tester, null);
+
+          expect(size.height, moreOrLessEquals(size.width * 3 / 2));
+        });
       });
 
       testWidgets('does not show uploading tile when viewing '
@@ -1474,7 +1555,7 @@ void main() {
           buildSubject(userIdHex: _otherPubkey, videos: videos),
         );
 
-        expect(find.byType(SliverGrid), findsOneWidget);
+        expect(find.byType(ProfileMasonryGrid), findsOneWidget);
         expect(find.byType(PartialCircleSpinner), findsNothing);
       });
 
@@ -1859,7 +1940,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 250));
 
         // Shape changed (a new upload appeared) → grid must rebuild
-        // so the new tile is added to the SliverGrid.
+        // so the new tile is added to the ProfileMasonryGrid.
         expect(
           debugProfileVideosGridBuildCount,
           greaterThan(baselineBuildCount),
@@ -1903,7 +1984,7 @@ void main() {
           );
 
           expect(find.byType(ProfileVideosGrid), findsOneWidget);
-          expect(find.byType(SliverGrid), findsOneWidget);
+          expect(find.byType(ProfileMasonryGrid), findsOneWidget);
 
           final customScrollView = tester.widget<CustomScrollView>(
             find.byType(CustomScrollView).last,

@@ -129,6 +129,7 @@ void main() {
             await tester.pump();
             expect(find.text('Room member'), findsOneWidget);
             expect(find.text('Hello room'), findsOneWidget);
+            expect(find.byType(SelectableText), findsOneWidget);
             expect(find.text(author), findsNothing);
             expect(find.byType(UserAvatar), findsOneWidget);
             expect(

@@ -1,0 +1,552 @@
+// ABOUTME: Tests where a rendered video's tappable stickers stand: placed on
+// ABOUTME: the kept frame from the export's capture, and timed on the output.
+
+import 'dart:math' show pi;
+import 'dart:typed_data';
+import 'dart:ui';
+
+import 'package:flutter/widgets.dart' show SizedBox;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart' show VideoStickerKind, VideoStickerRegion;
+import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/services/video_editor/sticker_regions.dart';
+import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+
+const _link = SocialStickerData(
+  kind: SocialStickerKind.link,
+  url: 'https://divine.video/about',
+);
+
+const List<InfoStickerStyle> _solidPills = [
+  InfoStickerStyle.light,
+  InfoStickerStyle.brand,
+  InfoStickerStyle.highlight,
+];
+
+const List<InfoStickerStyle> _seeThroughPills = [
+  InfoStickerStyle.dark,
+  InfoStickerStyle.glass,
+  InfoStickerStyle.neon,
+  InfoStickerStyle.plain,
+  InfoStickerStyle.outline,
+];
+
+/// The capture of a sticker carrying [data], standing [offset] from the
+/// body's centre, [box] big before it is turned by [rotation].
+ExportedLayer _captured(
+  SocialStickerData data, {
+  Offset offset = Offset.zero,
+  Size box = const Size(144, 32),
+  double rotation = 0,
+  Duration? startTime,
+  Duration? endTime,
+  List<LayerAnimation> animations = const [],
+  double opacity = 1,
+  BlendMode blendMode = BlendMode.srcOver,
+  LayerMask? mask,
+}) {
+  final meta = data.toMeta();
+  return ExportedLayer(
+    layer: WidgetLayer(
+      id: 'sticker',
+      widget: const SizedBox(),
+      offset: offset,
+      rotation: rotation,
+      startTime: startTime,
+      endTime: endTime,
+      animations: animations,
+      opacity: opacity,
+      blendMode: blendMode,
+      mask: mask,
+      meta: meta,
+      exportConfigs: WidgetLayerExportConfigs(id: 'sticker', meta: meta),
+    ),
+    bytes: Uint8List(0),
+    logicalSize: box,
+    boxSize: box,
+  );
+}
+
+/// The capture of an info sticker carrying [data] in the body's centre.
+ExportedLayer _capturedInfo(InfoStickerData data) {
+  final meta = data.toMeta();
+  return ExportedLayer(
+    layer: WidgetLayer(
+      id: 'info',
+      widget: const SizedBox(),
+      meta: meta,
+      exportConfigs: WidgetLayerExportConfigs(id: 'info', meta: meta),
+    ),
+    bytes: Uint8List(0),
+    logicalSize: const Size(144, 32),
+    boxSize: const Size(144, 32),
+  );
+}
+
+/// The capture of a layer that is no social sticker, such as an emoji,
+/// standing [offset] from the body's centre, [box] big.
+ExportedLayer _other({
+  Offset offset = Offset.zero,
+  Size box = const Size(40, 40),
+  Size? captured,
+  double rotation = 0,
+  Duration? startTime,
+  Duration? endTime,
+  List<LayerAnimation> animations = const [],
+}) => ExportedLayer(
+  layer: WidgetLayer(
+    id: 'emoji',
+    widget: const SizedBox(),
+    offset: offset,
+    rotation: rotation,
+    startTime: startTime,
+    endTime: endTime,
+    animations: animations,
+  ),
+  bytes: Uint8List(0),
+  logicalSize: captured ?? box,
+  boxSize: box,
+);
+
+/// The editor timeline of one clip lasting [duration].
+TransitionTimelineMap _timeline(Duration duration) =>
+    TransitionTimelineMap.fromClips([
+      DivineVideoClip(
+        id: 'clip',
+        video: EditorVideo.file('/clip.mp4'),
+        duration: duration,
+        recordedAt: DateTime(2026),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+      ),
+    ]);
+
+List<VideoStickerRegion> _regions(
+  List<ExportedLayer> layers, {
+  Size bodySize = const Size(360, 640),
+  bool emojiFontLoaded = false,
+}) => stickerRegionsFor(
+  capturedLayers: layers,
+  bodySize: bodySize,
+  targetAspectRatio: 9 / 16,
+  timelineMap: _timeline(const Duration(seconds: 6)),
+  emojiFontLoaded: emojiFontLoaded,
+);
+
+void main() {
+  group('stickerRegionsFor', () {
+    test('places a link sticker as a fraction of the frame', () {
+      final regions = _regions([
+        _captured(
+          _link,
+          offset: const Offset(0, -160),
+          rotation: 0.3,
+          startTime: const Duration(seconds: 1),
+          endTime: const Duration(seconds: 3),
+        ),
+      ]);
+
+      expect(
+        regions,
+        equals([
+          const VideoStickerRegion(
+            kind: VideoStickerKind.link,
+            target: 'https://divine.video/about',
+            centerX: 0.5,
+            centerY: 0.25,
+            width: 0.4,
+            height: 0.05,
+            rotation: 0.3,
+            start: Duration(seconds: 1),
+            end: Duration(seconds: 3),
+            style: 'light',
+            label: 'divine.video',
+          ),
+        ]),
+      );
+    });
+
+    test('opens a location sticker by its full name, without a look', () {
+      final regions = _regions([
+        _capturedInfo(
+          const InfoStickerData(
+            kind: InfoStickerKind.location,
+            localeName: 'de_CH',
+            placeName: 'Zermatt',
+            placeAddress: 'Zermatt, Wallis, Schweiz',
+          ),
+        ),
+        // Placed before the full name was kept.
+        _capturedInfo(
+          const InfoStickerData(
+            kind: InfoStickerKind.location,
+            localeName: 'en',
+            placeName: 'Bern',
+          ),
+        ),
+        _capturedInfo(
+          const InfoStickerData(
+            kind: InfoStickerKind.battery,
+            localeName: 'en',
+          ),
+        ),
+      ]);
+
+      expect(
+        regions.map((region) => (region.kind, region.target, region.label)),
+        equals([
+          (VideoStickerKind.place, 'Zermatt, Wallis, Schweiz', 'Zermatt'),
+          (VideoStickerKind.place, 'Bern', 'Bern'),
+        ]),
+      );
+      expect(regions.map((region) => region.style), everyElement(isNull));
+    });
+
+    test('gives a countdown its look and a reply none', () {
+      final regions = _regions([
+        _captured(
+          SocialStickerData(
+            kind: SocialStickerKind.countdown,
+            countdownTitle: 'Summer',
+            countdownEnd: DateTime.utc(2027, 6, 21, 18),
+          ),
+        ),
+        _captured(
+          const SocialStickerData(
+            kind: SocialStickerKind.reply,
+            pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            name: 'alice',
+            replyEventId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            replyText: 'Which one?',
+          ),
+          offset: const Offset(0, 200),
+        ),
+      ]);
+
+      expect(
+        regions.map((region) => (region.kind, region.target, region.style)),
+        equals([
+          (VideoStickerKind.countdown, '1813600800', 'light'),
+          (
+            VideoStickerKind.reply,
+            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            null,
+          ),
+        ]),
+      );
+    });
+
+    test('places a poll with its look, question and answers, and no poll id '
+        'until it is published', () {
+      final regions = _regions([
+        _captured(
+          const SocialStickerData(
+            kind: SocialStickerKind.poll,
+            pollQuestion: 'Which one?',
+            pollOptions: ['Red', 'Blue'],
+          ),
+          box: const Size(240, 160),
+        ),
+      ]);
+
+      expect(
+        regions.map(
+          (region) => (region.kind, region.target, region.style, region.label),
+        ),
+        equals([
+          (VideoStickerKind.poll, '', 'light', 'Which one?\nRed\nBlue'),
+        ]),
+      );
+    });
+
+    test('measures against the part of the body the export keeps', () {
+      // A 400 by 800 body keeps 400 by 711.1 of a 9:16 export, from 44.4
+      // down, so the body's centre is still the frame's.
+      final region = _regions([
+        _captured(_link),
+      ], bodySize: const Size(400, 800)).single;
+
+      expect(region.centerY, closeTo(0.5, 1e-9));
+      expect(region.height, closeTo(32 / (400 * 16 / 9), 1e-9));
+      expect(region.width, closeTo(144 / 400, 1e-9));
+    });
+
+    test('opens a hashtag and a mention by what they point to', () {
+      final regions = _regions([
+        _captured(
+          const SocialStickerData(
+            kind: SocialStickerKind.hashtag,
+            hashtag: 'Summer',
+          ),
+        ),
+        _captured(
+          SocialStickerData(
+            kind: SocialStickerKind.mention,
+            pubkey: 'A' * 64,
+            name: 'alice',
+          ),
+        ),
+      ]);
+
+      expect(
+        regions.map((region) => (region.kind, region.target)),
+        equals([
+          (VideoStickerKind.hashtag, 'summer'),
+          (VideoStickerKind.mention, 'a' * 64),
+        ]),
+      );
+    });
+
+    test('gives a sound credit a look only as the still note', () {
+      final regions = _regions([
+        _captured(
+          const SocialStickerData(
+            kind: SocialStickerKind.soundCredit,
+            soundTitle: 'Song',
+            soundArtist: 'Artist',
+          ),
+        ),
+        _captured(
+          const SocialStickerData(
+            kind: SocialStickerKind.soundCredit,
+            soundTitle: 'Song',
+            soundId: 'bundled_song',
+            soundDesign: SocialStickerSoundDesign.vinyl,
+          ),
+          offset: const Offset(0, 100),
+        ),
+      ]);
+
+      expect(
+        regions.map((region) => (region.kind, region.style, region.label)),
+        equals([
+          (VideoStickerKind.sound, 'light', 'Song\nArtist'),
+          (VideoStickerKind.sound, null, 'Song'),
+        ]),
+      );
+      expect(
+        regions.map((region) => region.target),
+        equals(['', 'bundled_song']),
+      );
+    });
+
+    test('gives a faded, blended or masked sticker no look', () {
+      // Apart, so no sticker lies on another.
+      final regions = _regions([
+        _captured(_link, opacity: 0.5, offset: const Offset(0, -150)),
+        _captured(
+          _link,
+          blendMode: BlendMode.multiply,
+          offset: const Offset(0, -50),
+        ),
+        _captured(
+          _link,
+          mask: const LayerMask(shape: LayerMaskShape.ellipse),
+          offset: const Offset(0, 50),
+        ),
+        _captured(_link, offset: const Offset(0, 150)),
+      ]);
+
+      expect(
+        regions.map((region) => region.style),
+        equals([null, null, null, 'light']),
+      );
+    });
+
+    test('gives a sticker no look where a layer above lies on it', () {
+      String? styleWith(ExportedLayer upper, {double rotation = 0}) =>
+          _regions([_captured(_link, rotation: rotation), upper]).single.style;
+
+      expect(styleWith(_other()), isNull);
+      expect(styleWith(_other(offset: const Offset(0, -60))), equals('light'));
+      expect(
+        styleWith(_other(offset: const Offset(0, -60)), rotation: pi / 2),
+        isNull,
+      );
+      // Turned an eighth clockwise, the sticker runs down to the right.
+      expect(
+        styleWith(_other(offset: const Offset(50, 50)), rotation: pi / 4),
+        isNull,
+      );
+      expect(
+        styleWith(_other(offset: const Offset(50, 50)), rotation: -pi / 4),
+        equals('light'),
+      );
+      expect(
+        styleWith(
+          _other(
+            offset: const Offset(0, -200),
+            animations: const [
+              LayerAnimation(
+                type: LayerAnimationType.slide,
+                phase: AnimationPhase.animateIn,
+                duration: Duration(milliseconds: 300),
+                slideDirection: SlideDirection.left,
+              ),
+            ],
+          ),
+        ),
+        isNull,
+        reason: 'a moving layer may cross the sticker on its way',
+      );
+      expect(
+        styleWith(
+          _other(
+            startTime: const Duration(seconds: 1),
+            endTime: const Duration(seconds: 2),
+          ),
+        ),
+        isNull,
+        reason: 'the sticker shows the whole video, so the two meet',
+      );
+      expect(
+        _regions([
+          _captured(_link, endTime: const Duration(seconds: 1)),
+          _other(startTime: const Duration(seconds: 1)),
+        ]).single.style,
+        equals('light'),
+      );
+      expect(
+        _regions([
+          _captured(_link, startTime: const Duration(seconds: 1)),
+          _other(endTime: const Duration(seconds: 1)),
+        ]).single.style,
+        equals('light'),
+      );
+      expect(
+        _regions([_other(), _captured(_link)]).single.style,
+        equals('light'),
+      );
+      // A thin layer turned an eighth, captured as the square around it,
+      // passes the sticker by: only its box before turning counts.
+      expect(
+        _regions([
+          _captured(
+            _link,
+            box: const Size(20, 20),
+            offset: const Offset(50, -50),
+          ),
+          _other(
+            box: const Size(200, 10),
+            captured: const Size(148.5, 148.5),
+            rotation: pi / 4,
+          ),
+        ]).single.style,
+        equals('light'),
+      );
+    });
+
+    test('leaves out a sticker no one can see', () {
+      expect(_regions([_captured(_link, opacity: 0)]), isEmpty);
+    });
+
+    test('gives a see-through look only to text every phone draws alike', () {
+      String? styleOf(
+        String name,
+        InfoStickerStyle style, {
+        bool emojiFontLoaded = false,
+      }) => _regions(
+        [
+          _captured(
+            SocialStickerData(
+              kind: SocialStickerKind.mention,
+              pubkey: 'a' * 64,
+              name: name,
+              style: style,
+            ),
+          ),
+        ],
+        emojiFontLoaded: emojiFontLoaded,
+      ).single.style;
+
+      expect(
+        [
+          for (final style in InfoStickerStyle.pills)
+            _regions([_captured(_link.copyWith(style: style))]).single.style,
+        ],
+        equals([for (final style in InfoStickerStyle.pills) style.name]),
+      );
+      expect(styleOf('Zoë', InfoStickerStyle.dark), equals('dark'));
+      expect(styleOf('Lena 🌸', InfoStickerStyle.dark), isNull);
+      expect(
+        styleOf('Lena 🌸', InfoStickerStyle.dark, emojiFontLoaded: true),
+        equals('dark'),
+      );
+      expect(
+        styleOf('東京', InfoStickerStyle.dark, emojiFontLoaded: true),
+        isNull,
+      );
+      for (final style in _seeThroughPills) {
+        expect(styleOf('東京', style, emojiFontLoaded: true), isNull);
+        expect(styleOf('Lena 🌸', style), isNull);
+        expect(
+          styleOf('Lena 🌸', style, emojiFontLoaded: true),
+          equals(style.name),
+        );
+      }
+    });
+
+    test('gives a solid look to text in any script', () {
+      String? styleOf(String name, InfoStickerStyle style) => _regions([
+        _captured(
+          SocialStickerData(
+            kind: SocialStickerKind.mention,
+            pubkey: 'a' * 64,
+            name: name,
+            style: style,
+          ),
+        ),
+      ]).single.style;
+
+      // The solid pill hides the sticker in the frames, whatever glyphs the
+      // creator's and the viewer's phones draw.
+      for (final style in _solidPills) {
+        expect(styleOf('東京', style), equals(style.name));
+        expect(styleOf('Lena 🌸', style), equals(style.name));
+      }
+    });
+
+    test('leaves out a sticker that moves', () {
+      final regions = _regions([
+        _captured(
+          _link,
+          animations: const [
+            LayerAnimation(
+              type: LayerAnimationType.slide,
+              phase: AnimationPhase.animateIn,
+              duration: Duration(milliseconds: 300),
+              slideDirection: SlideDirection.left,
+            ),
+          ],
+        ),
+      ]);
+
+      expect(regions, isEmpty);
+    });
+
+    test('leaves out a sticker pushed off the frame', () {
+      final regions = _regions([
+        _captured(_link, offset: const Offset(0, -700)),
+      ]);
+
+      expect(regions, isEmpty);
+    });
+
+    test('places nothing without the body the offsets are measured in', () {
+      expect(
+        stickerRegionsFor(
+          capturedLayers: [_captured(_link)],
+          bodySize: null,
+          targetAspectRatio: 9 / 16,
+          timelineMap: _timeline(const Duration(seconds: 6)),
+          emojiFontLoaded: false,
+        ),
+        isEmpty,
+      );
+    });
+  });
+}

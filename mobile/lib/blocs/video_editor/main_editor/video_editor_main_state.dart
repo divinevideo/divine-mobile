@@ -46,6 +46,9 @@ class VideoEditorMainState extends Equatable {
     this.auditionOwner,
     this.pausesAfterAudition = false,
     this.isAuditionSeekPending = false,
+    this.isFinishing = false,
+    this.finishCounter = 0,
+    this.handOverCounter = 0,
   });
 
   /// Whether the undo action is available.
@@ -163,6 +166,19 @@ class VideoEditorMainState extends Equatable {
   /// player has not reported yet, so it is not asked for again meanwhile.
   final bool isAuditionSeekPending;
 
+  /// Whether Done was tapped and the edit is being handed to the export,
+  /// which first waits for the fonts its stickers draw in; Done is off
+  /// meanwhile, so the edit is handed over once.
+  final bool isFinishing;
+
+  /// Counts Done requests, so one that was cancelled and replaced while its
+  /// fonts loaded does not hand over.
+  final int finishCounter;
+
+  /// Incremented when the edit is ready to be handed over to the export; the
+  /// editor listens and finishes.
+  final int handOverCounter;
+
   /// Whether the voice-over recorder is open over the editor.
   ///
   /// The preview keeps playing beneath its translucent route so the take can
@@ -219,6 +235,9 @@ class VideoEditorMainState extends Equatable {
     bool clearAudition = false,
     bool? pausesAfterAudition,
     bool? isAuditionSeekPending,
+    bool? isFinishing,
+    int? finishCounter,
+    int? handOverCounter,
   }) {
     return VideoEditorMainState(
       canUndo: canUndo ?? this.canUndo,
@@ -264,6 +283,9 @@ class VideoEditorMainState extends Equatable {
       pausesAfterAudition: pausesAfterAudition ?? this.pausesAfterAudition,
       isAuditionSeekPending:
           isAuditionSeekPending ?? this.isAuditionSeekPending,
+      isFinishing: isFinishing ?? this.isFinishing,
+      finishCounter: finishCounter ?? this.finishCounter,
+      handOverCounter: handOverCounter ?? this.handOverCounter,
     );
   }
 
@@ -297,5 +319,8 @@ class VideoEditorMainState extends Equatable {
     auditionOwner,
     pausesAfterAudition,
     isAuditionSeekPending,
+    isFinishing,
+    finishCounter,
+    handOverCounter,
   ];
 }

@@ -90,10 +90,20 @@ enum PublishErrorKind {
   /// not entitled. The media is up; the user picks another time or posts now.
   scheduleRejected,
 
+  /// The draft's edit history cannot be read, so the post could not carry
+  /// what its stickers show. Opening the draft in the editor rebuilds it.
+  overlaysUnavailable,
+
   /// The draft belongs to a different account than the one signed in now —
   /// the user switched accounts while the upload was in flight. Publishing
   /// would post the video under the wrong identity.
   accountChanged,
+
+  /// The draft carries a question sticker and the account may message only
+  /// Divine's own accounts, a protected minor: answers would come as private
+  /// messages it cannot receive. Removing the sticker in the editor lets it
+  /// post; retrying fails the same way.
+  questionStickerRestricted,
 
   /// Unclassified failure — generic "try again" copy.
   generic,

@@ -66,6 +66,16 @@ class AccountRollbackAuthority {
 
   String get ownerPubkey => _identity.pubkey;
 
+  /// Whether the owner signs in through the primary key slot.
+  ///
+  /// Only generated and imported accounts do. Every other account leaves the
+  /// slot alone, including a Divine OAuth account that keeps its own key in its
+  /// identity slot, so the slot can still hold another account's key.
+  bool get ownsPrimaryKeySlot => switch (_auth.authenticationSource) {
+    AuthenticationSource.automatic || AuthenticationSource.importedKeys => true,
+    _ => false,
+  };
+
   bool get isCurrent =>
       !_auth._activation.disposed &&
       _auth._activation.generation == _generation &&

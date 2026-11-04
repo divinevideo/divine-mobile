@@ -2248,6 +2248,26 @@ void main() {
       });
     });
 
+    group('buildDeletionRumor (#9774)', () {
+      const target =
+          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+
+      test('names the deleted event and its kind, and no one', () {
+        final rumor = service.buildDeletionRumor(
+          targetEventId: target,
+          targetKind: EventKind.reaction,
+        );
+
+        expect(rumor.kind, EventKind.eventDeletion);
+        expect(rumor.pubkey, _testPublicKey);
+        expect(rumor.content, isEmpty);
+        expect(rumor.tags, [
+          ['e', target],
+          ['k', '${EventKind.reaction}'],
+        ]);
+      });
+    });
+
     group('publishSelfWrap', () {
       // The recovery primitive: re-publish only the sender
       // self-addressed gift wrap for a rumor whose recipient publish

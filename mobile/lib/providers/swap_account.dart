@@ -247,7 +247,8 @@ String? accountSwitchInitialLocation({
 /// enough to fail has already restored the *target* account's signer keys over
 /// the shared slots and persisted its auth source, which the live container
 /// never re-reads but the next cold launch does. The rollback restores the
-/// leaving account's keys from the archive written above. It cannot throw:
+/// leaving account's signer credentials from the archive written above and
+/// returns the primary key slot to its pre-sign-in snapshot. It cannot throw:
 /// callers dispatch on the sign-in failure's type, so a rollback that escaped
 /// would swap out the type they match on and cost the user the recovery route.
 ///
@@ -311,11 +312,15 @@ Future<void> swapAccount({
     CuratedListService? suspendedOutgoingLists;
     try {
       // Capture only while the original identity and rendered host still own
-      // the device. A foreign cached key cannot authorize rollback storage.
+      // the device. A generated or imported account owns the primary slot, so
+      // a foreign key there means storage diverged. Every other account leaves
+      // the slot alone: another account's key there is expected, and the
+      // rollback puts it back as it was.
       previousPrimary = await keyStorage.getKeyContainer();
       ensureOutgoingCurrent();
       rollbackAuthority.ensureCurrent();
       if (previousPrimary != null &&
+          rollbackAuthority.ownsPrimaryKeySlot &&
           previousPrimary.publicKeyHex != rollbackAuthority.ownerPubkey) {
         throw const AccountStorageException(
           'Outgoing primary identity does not match its owner',

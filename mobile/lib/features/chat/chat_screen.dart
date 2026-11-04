@@ -1,58 +1,162 @@
 // ABOUTME: Full-screen mobile room conversation with Divine's shared composer.
 // ABOUTME: Keeps channel context, sender identity, and delivery state readable.
 
+import 'dart:async';
+
+import 'package:concord_protocol/concord_protocol.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/caption_mentions/caption_mentions_cubit.dart';
+import 'package:openvine/blocs/chat/chat_composer_cubit.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/features/chat/chat_message_tile.dart';
 import 'package:openvine/features/chat/public_room_notice.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/mentions/mention_text_editing.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_input_bar.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/mentions/mention_overlay.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Native conversation for the Concord POC selected from Messages.
-class ChatScreen extends StatefulWidget {
+class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
   static const String path = RoutePaths.chat;
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen>
+    with WidgetsBindingObserver {
   final _controller = TextEditingController();
+  final _scrollController = ScrollController();
+  bool _readScheduled = false;
+  List<ChatMessage> _readSnapshot = const [];
+  late final ChatComposerCubit _composer;
+  late final CaptionMentionsCubit _mentions;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _scrollController.addListener(_scheduleCurrentRead);
+    final chat = context.read<ChatCubit>();
+    _composer = ChatComposerCubit(
+      send: (body) => chat.send(
+        communityId: chat.state.selectedCommunityId,
+        channelId: chat.state.selectedChannelId,
+        author: '',
+        body: body,
+        nowMilliseconds: DateTime.now().millisecondsSinceEpoch,
+      ),
+    );
+    _mentions = CaptionMentionsCubit(
+      profileRepositoryOf: () => ref.read(profileRepositoryProvider),
+      candidatePubkeys: () => {
+        ...context.read<ChatCubit>().state.messages.map((m) => m.author),
+        ...ref.read(followRepositoryProvider).followingPubkeys,
+      },
+    );
+    _controller.addListener(_searchMentions);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _scheduleCurrentRead();
+  }
+
+  void _scheduleCurrentRead() {
+    if (mounted) _scheduleRead(context.read<ChatCubit>().visibleMessages());
+  }
+
+  void _scheduleRead(List<ChatMessage> messages) {
+    final cubit = context.read<ChatCubit>();
+    _readSnapshot = List.unmodifiable(messages);
+    if (_readScheduled || messages.isEmpty || cubit.onRead == null) return;
+    _readScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _readScheduled = false;
+      if (!mounted ||
+          !TickerMode.valuesOf(context).enabled ||
+          ModalRoute.of(context)?.isCurrent == false ||
+          cubit.state.threadRootId != null) {
+        return;
+      }
+      final lifecycle = WidgetsBinding.instance.lifecycleState;
+      if (lifecycle != null && lifecycle != AppLifecycleState.resumed) return;
+      if (_scrollController.hasClients &&
+          _scrollController.position.pixels > 1) {
+        return;
+      }
+      // The reversed list starts at the newest message. Do not acknowledge
+      // incoming messages while reading older history or another route.
+      unawaited(cubit.markRead(_readSnapshot));
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleCurrentRead();
+  }
+
+  void _searchMentions() {
+    _composer.updateDraft(
+      _controller.text,
+      _controller.selection.baseOffset,
+      selectionExtent: _controller.selection.extentOffset,
+    );
+    runDetached(
+      _mentions.search(
+        activeMentionQuery(_controller.text, _controller.selection.baseOffset),
+      ),
+      'search room mentions',
+      logName: 'ChatScreen',
+      category: LogCategory.ui,
+    );
+  }
+
+  void _selectMention(String pubkey, String display) {
+    final insertion = _composer.selectMention(
+      cursor: _controller.selection.baseOffset,
+      pubkey: pubkey,
+      display: display,
+    );
+    if (insertion == null) return;
+    _controller.value = TextEditingValue(
+      text: insertion.text,
+      selection: TextSelection.collapsed(offset: insertion.selection),
+    );
+    _mentions.clear();
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _scrollController.dispose();
+    _controller.removeListener(_searchMentions);
+    unawaited(_mentions.close());
+    unawaited(_composer.close());
     _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _send(String text) async {
-    final submittedDraft = _controller.text;
-    final cubit = context.read<ChatCubit>();
-    final state = cubit.state;
-    final accepted = await cubit.send(
-      communityId: state.selectedCommunityId,
-      channelId: state.selectedChannelId,
-      author: '',
-      body: text,
-      nowMilliseconds: DateTime.now().millisecondsSinceEpoch,
-    );
-    if (mounted && accepted && _controller.text == submittedDraft) {
-      _controller.clear();
-    }
+  Future<void> _send() async {
+    final clear = await _composer.submit();
+    if (mounted && clear) _controller.clear();
   }
 
   void _submit(String text) {
     final state = context.read<ChatCubit>().state;
     if (state.sending || state.loading || state.loadFailed) return;
-    final body = text.trim();
-    if (body.isEmpty) return;
     runDetached(
-      _send(body),
+      _send(),
       'send room message',
       logName: 'ChatScreen',
       category: LogCategory.ui,
@@ -80,6 +184,7 @@ class _ChatScreenState extends State<ChatScreen> {
     builder: (context, state) {
       final cubit = context.read<ChatCubit>();
       final messages = cubit.visibleMessages();
+      _scheduleRead(messages);
       final community = state.communities
           .where((entry) => entry.id == state.selectedCommunityId)
           .firstOrNull;
@@ -134,11 +239,23 @@ class _ChatScreenState extends State<ChatScreen> {
                     type: DivineButtonType.link,
                   ),
                 ],
-                if (state.sendFailed) Text(context.l10n.dmSendFailedMessage),
+                BlocSelector<ChatComposerCubit, ChatComposerState, bool>(
+                  bloc: _composer,
+                  selector: (composer) => composer.sendFailed,
+                  builder: (context, composerFailed) =>
+                      state.sendFailed || composerFailed
+                      ? Text(context.l10n.dmSendFailedMessage)
+                      : const SizedBox.shrink(),
+                ),
                 Expanded(
-                  child: messages.isEmpty
-                      ? _EmptyRoom(channel: state.selectedChannelId)
-                      : ListView.builder(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (messages.isEmpty)
+                        _EmptyRoom(channel: state.selectedChannelId)
+                      else
+                        ListView.builder(
+                          controller: _scrollController,
                           reverse: true,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           itemCount: messages.length,
@@ -150,7 +267,9 @@ class _ChatScreenState extends State<ChatScreen> {
                               message: message,
                               reactions:
                                   state.reactions[message.id] ?? const {},
-                              pending: state.pendingIds.contains(message.id),
+                              pending: state.pendingIds.contains(
+                                message.id,
+                              ),
                               sending: state.sending,
                               onRetry: () => runDetached(
                                 cubit.retry(message.id),
@@ -161,6 +280,22 @@ class _ChatScreenState extends State<ChatScreen> {
                             );
                           },
                         ),
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child:
+                            BlocBuilder<
+                              CaptionMentionsCubit,
+                              CaptionMentionsState
+                            >(
+                              bloc: _mentions,
+                              builder: (context, mentions) => MentionOverlay(
+                                suggestions: mentions.suggestions,
+                                onSelect: _selectMention,
+                              ),
+                            ),
+                      ),
+                    ],
+                  ),
                 ),
                 Focus(
                   canRequestFocus: false,
@@ -188,7 +323,7 @@ class _EmptyRoom extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
+    child: SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisSize: MainAxisSize.min,

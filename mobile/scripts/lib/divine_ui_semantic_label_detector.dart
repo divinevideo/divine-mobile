@@ -179,8 +179,8 @@ class _Visitor extends RecursiveAstVisitor<void> {
 
     final named = <String, Expression>{};
     for (final argument in arguments.arguments) {
-      if (argument is NamedExpression) {
-        named[argument.name.label.name] = argument.expression;
+      if (argument is NamedArgument) {
+        named[argument.name.lexeme] = argument.argumentExpression;
       }
     }
 

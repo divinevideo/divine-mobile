@@ -5,6 +5,9 @@ import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class ChatCommunity {
   const ChatCommunity(this.id, this.name, this.channels);
@@ -13,18 +16,29 @@ class ChatCommunity {
   final List<String> channels;
 }
 
+/// The proof-of-concept community the chat serves; the one room catalog that
+/// routing, mention enrollment and mention notifications all read.
+const pocChatCommunityId = 'community-test';
+
+/// The room a chat link without a channel opens.
+const pocChatDefaultChannel = 'general';
+
+/// Every room in [pocChatCommunityId].
+const List<String> pocChatChannels = [pocChatDefaultChannel, 'introductions'];
+
 class ChatState {
   const ChatState({
     this.messages = const [],
     this.reactions = const {},
     this.communities = const [
-      ChatCommunity('community-test', 'Divine test community', [
-        'general',
-        'introductions',
-      ]),
+      ChatCommunity(
+        pocChatCommunityId,
+        'Divine test community',
+        pocChatChannels,
+      ),
     ],
-    this.selectedCommunityId = 'community-test',
-    this.selectedChannelId = 'general',
+    this.selectedCommunityId = pocChatCommunityId,
+    this.selectedChannelId = pocChatDefaultChannel,
     this.threadRootId,
     this.sending = false,
     this.loading = false,
@@ -80,16 +94,36 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     this.sealedAuthor = '',
     this.channelIdFor,
     this.ownsRepository = false,
+    this.initialize,
+    this.onRead,
+    this.onRoomOpened,
   }) : super(ChatState(loading: ownsRepository));
   final ConcordRepository _repo;
+
+  /// Starts mention alerts for the room [start] opens. A failure is logged and
+  /// never blocks the room.
+  final Future<void> Function(String channel)? onRoomOpened;
   final String Function(String channel)? channelIdFor;
   final bool ownsRepository;
+
+  /// Starts the channel through its shared owner instead of
+  /// [ConcordRepository.startChannel], reusing a session already running.
+  final Future<void> Function()? initialize;
+  final Future<void> Function(List<ChatMessage> messages)? onRead;
   StreamSubscription<void>? _updates;
   bool _starting = false;
 
   Future<void> start() async {
     if (_starting || isClosed) return;
     _starting = true;
+    if (onRoomOpened case final enroll?) {
+      runDetached(
+        enroll(state.selectedChannelId),
+        'enroll room mentions',
+        logName: 'ChatCubit',
+        category: LogCategory.storage,
+      );
+    }
     emitIfOpen(state.copyWith(loading: true, loadFailed: false));
     _updates ??= _repo.changes.listen(
       (_) {
@@ -102,15 +136,19 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     );
     final stream = pocStreamForChannel?.call(state.selectedChannelId);
     try {
-      if (stream == null) throw StateError('missing channel key');
-      await _repo.startChannel(
-        channelId:
-            channelIdFor?.call(state.selectedChannelId) ??
-            state.selectedChannelId,
-        epoch: 0,
-        streamSeedHex: stream.seedHex,
-        streamPubkey: stream.pubkey,
-      );
+      if (initialize case final initialize?) {
+        await initialize();
+      } else {
+        if (stream == null) throw StateError('missing channel key');
+        await _repo.startChannel(
+          channelId:
+              channelIdFor?.call(state.selectedChannelId) ??
+              state.selectedChannelId,
+          epoch: 0,
+          streamSeedHex: stream.seedHex,
+          streamPubkey: stream.pubkey,
+        );
+      }
       refresh(now: DateTime.now().millisecondsSinceEpoch ~/ 1000);
     } on Object catch (error, stack) {
       addError(error, stack);
@@ -118,6 +156,17 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     } finally {
       _starting = false;
       emitIfOpen(state.copyWith(loading: false));
+    }
+  }
+
+  /// Forwards [messages] to [onRead]; callers pass only what the foreground
+  /// view rendered.
+  Future<void> markRead(Iterable<ChatMessage> messages) async {
+    if (isClosed || state.loading || state.loadFailed || onRead == null) return;
+    try {
+      await onRead!(List.unmodifiable(messages));
+    } on Object catch (error, stack) {
+      addError(error, stack);
     }
   }
 
@@ -199,6 +248,11 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
           channelId: channelIdFor?.call(channelId) ?? channelId,
           author: effectiveAuthor,
           body: body,
+          mentionedPubkeys: RegExp(r'nostr:(npub1[0-9a-z]+)\b')
+              .allMatches(body)
+              .map((match) => NostrKeyUtils.decode(match[1]!))
+              .where(NostrKeyUtils.isValidKey)
+              .toSet(),
           createdAt: now,
           ms: nowMilliseconds % 1000,
           streamSeedHex: stream.seedHex,

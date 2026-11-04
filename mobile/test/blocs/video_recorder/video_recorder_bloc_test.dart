@@ -286,11 +286,12 @@ void main() {
     RecordingStartedCallback? onRecordingStarted,
     CameraServiceFactory? cameraServiceFactory,
     bool liveChromaKeySupported = false,
+    ReadVideoEditorState readVideoEditorState = VideoEditorProviderState.new,
   }) {
     return VideoRecorderBloc(
       readClipManager: () => clipManager,
       readVideoEditor: () => videoEditor,
-      readVideoEditorState: VideoEditorProviderState.new,
+      readVideoEditorState: readVideoEditorState,
       readSharedPreferences: () => prefs,
       cameraService: cameraServiceFactory == null ? cameraService : null,
       cameraServiceFactory: cameraServiceFactory ?? CameraService.create,
@@ -3680,6 +3681,35 @@ void main() {
           ).called(1);
         },
       );
+
+      test('finishes resetting the editor but leaves the camera alone when '
+          'the recorder closes mid-switch', () async {
+        when(
+          () => cameraService.setVideoStabilizationMode(any()),
+        ).thenAnswer((_) async => true);
+        final clipsCleared = Completer<void>();
+        when(
+          () => clipManager.clearAll(
+            keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+          ),
+        ).thenAnswer((_) => clipsCleared.future);
+        final bloc = buildBloc();
+
+        bloc.add(const VideoRecorderRecorderModeSet(VideoRecorderMode.classic));
+        await pumpEventQueue();
+        final closing = bloc.close();
+        clipsCleared.complete();
+        await closing;
+        await pumpEventQueue();
+
+        verify(
+          () => videoEditor.resetForRecorderMode(
+            keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
+          ),
+        ).called(1);
+        verifyNever(() => cameraService.setVideoStabilizationMode(any()));
+      });
+
       group('stabilization', () {
         setUp(stubRecorderDefaults);
         setUp(() {
@@ -3989,6 +4019,46 @@ void main() {
           verifyNever(
             () => cameraService.startRecording(
               maxDuration: any(named: 'maxDuration'),
+            ),
+          );
+        });
+
+        test('leaves the camera alone when the recorder closes while remote '
+            'control resumes', () async {
+          when(
+            () => cameraService.setVolumeKeysEnabled(
+              enabled: any(named: 'enabled'),
+            ),
+          ).thenAnswer((_) async => true);
+          final sound = model.AudioEvent(
+            id: 'sound',
+            pubkey: 'a' * 64,
+            createdAt: 0,
+            url: 'https://example.com/audio.mp3',
+          );
+          final bloc = buildBloc(
+            readVideoEditorState: () =>
+                VideoEditorProviderState(selectedSound: sound),
+          );
+          bloc.add(const VideoRecorderInitializeRequested());
+          await pumpEventQueue();
+          final resumed = Completer<bool>();
+          when(
+            () => cameraService.setRemoteRecordControlEnabled(enabled: true),
+          ).thenAnswer((_) => resumed.future);
+          clearInteractions(cameraService);
+
+          // The lip-sync stack resumes remote control as it disposes, in the
+          // frame that unmounts the screen and closes the bloc.
+          bloc.add(const VideoRecorderRemoteRecordResumed());
+          await pumpEventQueue();
+          final closing = bloc.close();
+          resumed.complete(true);
+          await closing;
+
+          verifyNever(
+            () => cameraService.setVolumeKeysEnabled(
+              enabled: any(named: 'enabled'),
             ),
           );
         });

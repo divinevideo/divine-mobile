@@ -127,9 +127,14 @@ class NotificationFeedBloc
   /// let [_flushPendingEmptyPageContinuation] pick it up once the refresh
   /// handler has settled.
   void _continuePastEmptyPageIfNeeded(List<NotificationItem> notifications) {
-    // Official messages do not populate the independent social cursor page.
+    // Official messages and client-side room mentions do not populate the
+    // independent social cursor page.
     final hasSocialRows = notifications.any(
-      (notification) => notification is! AnnouncementNotification,
+      (notification) => switch (notification) {
+        AnnouncementNotification() => false,
+        ActorNotification(chatTarget: _?) => false,
+        _ => true,
+      },
     );
     if (hasSocialRows || !state.hasMore) {
       _emptyPageContinuations = 0;

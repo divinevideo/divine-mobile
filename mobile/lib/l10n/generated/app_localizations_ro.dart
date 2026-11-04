@@ -2075,6 +2075,255 @@ class AppLocalizationsRo extends AppLocalizations {
   String get metadataSoundsLabel => 'Sunete';
 
   @override
+  String get metadataLinksLabel => 'Linkuri';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Sticker cu link, deschide $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'Sticker cu menționare, deschide profilul';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Sticker cu hashtag, deschide #$hashtag';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel =>
+      'Sticker cu sunet, deschide sunetul';
+
+  @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Sticker cu locație, deschide $place pe o hartă';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Sticker cu numărătoare inversă, setează un memento';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Sticker cu răspuns, deschide la ce răspunde acest videoclip';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de zile',
+      few: '$count zile',
+      one: '$count zi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Memento setat. Te anunțăm când e momentul.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Memento șters.';
+
+  @override
+  String get videoStickerCountdownOver => 'Numărătoarea inversă s-a încheiat.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Activează notificările pentru Divine ca să primești mementoul.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'A venit momentul! Numărătoarea inversă pe care ai salvat-o tocmai s-a încheiat.';
+
+  @override
+  String get videoStickerQuizRightAnswer => 'Răspuns corect';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Răspuns greșit';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Conectează-te ca să votezi.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Încă se conectează. Încearcă din nou peste o clipă.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Votul tău nu a ajuns. Încearcă din nou.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Voturile sunt publice. Oricine poate vedea ce ai ales.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de voturi',
+      few: '$count voturi',
+      one: '1 vot',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'Atinge ca să răspunzi';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'Răspunde: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'Rândul tău';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de participări',
+      few: '$count participări',
+      one: '$count participare',
+      zero: 'Începe tu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count de participări';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'Vezi cine participă';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'Rândul tău: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de răspunsuri',
+      few: '$count răspunsuri',
+      one: '$count răspuns',
+      zero: 'Încă niciun răspuns',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count de răspunsuri';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Vezi $count de răspunsuri video',
+      few: 'Vezi $count răspunsuri video',
+      one: 'Vezi $count răspuns video',
+      zero: 'Răspunsuri video, încă niciunul',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return 'Vezi $count de răspunsuri video';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'Conectează-te ca să răspunzi.';
+
+  @override
+  String get videoStickerQuestionUnavailable =>
+      'Răspunsul la întrebări nu e disponibil pentru contul tău.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'Răspunde';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'Răspunsul tău';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'Doar $name vede răspunsul tău. L-ar putea arăta într-un videoclip, fără numele tău.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'Trimite';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'Răspuns trimis.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'Răspunsul e prea lung ca să fie trimis.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'Răspunsul tău nu a ajuns. Încearcă din nou.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'Conectează-te ca să participi.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'Răspunsuri video';
+
+  @override
+  String get videoStickerRepliesEmpty => 'Încă nu există răspunsuri video.';
+
+  @override
+  String get videoStickerRepliesLoadFailed =>
+      'Nu am putut încărca răspunsurile.';
+
+  @override
+  String get videoStickerRepliesRetry => 'Încearcă din nou';
+
+  @override
+  String get videoStickerRepliesPin => 'Fixează';
+
+  @override
+  String get videoStickerRepliesUnpin => 'Anulează fixarea';
+
+  @override
+  String get videoStickerRepliesHide => 'Ascunde';
+
+  @override
+  String get videoStickerRepliesShow => 'Arată';
+
+  @override
+  String get videoStickerRepliesPinned => 'Fixat';
+
+  @override
+  String get videoStickerRepliesHidden => 'Ascuns';
+
+  @override
+  String get videoStickerRepliesSaveFailed =>
+      'Nu am putut salva. Încearcă din nou.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'Vezi răspunsul de la $name';
+  }
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Acest link se deschide în afara Divine. Verifică adresa înainte să continui.';
+
+  @override
   String get metadataOriginalSound => 'Sunet original';
 
   @override
@@ -4503,8 +4752,19 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Serverul nu poate fi contactat. Verifică-ți conexiunea și încearcă din nou.';
+  String get profileVideosLoadFailedTitle =>
+      'Nu am putut încărca videoclipurile tale';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle =>
+      'Nu am putut încărca videoclipurile';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Verifică-ți conexiunea și încearcă din nou.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Încearcă din nou';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -4834,6 +5094,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get routeInvalidSoundId => 'ID de sunet invalid';
+
+  @override
+  String get routeInvalidQuestion => 'Link de întrebare invalid';
 
   @override
   String get routeInvalidCategory => 'Categorie invalidă';
@@ -6240,6 +6503,19 @@ class AppLocalizationsRo extends AppLocalizations {
   String get dmReelReplyComposerSemanticLabel => 'Răspunde la acest reel';
 
   @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'A răspuns la întrebarea ta: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'Ai răspuns: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'Răspunde cu un videoclip';
+
+  @override
   String get dmReelReplyViewChat => 'Vezi conversația';
 
   @override
@@ -6971,21 +7247,19 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Selectat';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Neselectat';
 
   @override
   String get videoClipSemanticHintDisabled => 'Dezactivat';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Atinge pentru a selecta, ține apăsat pentru previzualizare';
+  String get videoClipSemanticHintSelect => 'Atinge pentru a selecta';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Atinge pentru a deselecta, ține apăsat pentru previzualizare';
+  String get videoClipSemanticHintDeselect => 'Atinge pentru a deselecta';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Atinge pentru previzualizare';
 
   @override
   String get routerInvalidCreator => 'Creator invalid';
@@ -7860,6 +8134,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Textul și stickerele din această schiță nu au putut fi pregătite. Deschide-o în editor, apoi postează din nou.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Contul tău nu poate posta un sticker cu întrebare, pentru că răspunsurile vin ca mesaje private. Elimină-l, apoi postează din nou.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Dispozitivul tău nu poate exporta atâtea clipuri desprinse deodată. Pune câteva înapoi pe cronologie și încearcă din nou.';
 
@@ -8494,6 +8772,11 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName a apreciat un videoclip care te etichetează';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName au apreciat comentariul tău';
   }
@@ -8858,6 +9141,30 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de clipuri restaurate',
+      few: '$count clipuri restaurate',
+      one: 'Clip restaurat',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de clipuri șterse definitiv',
+      few: '$count clipuri șterse definitiv',
+      one: 'Clip șters definitiv',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'Închide înregistratorul video';
 
   @override
@@ -9111,13 +9418,139 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectSparkles => 'Sclipiri';
 
   @override
+  String get videoEditorEffectRain => 'Ploaie';
+
+  @override
+  String get videoEditorEffectLeaves => 'Frunze';
+
+  @override
+  String get videoEditorEffectBlossoms => 'Petale';
+
+  @override
+  String get videoEditorEffectBubbles => 'Bule';
+
+  @override
+  String get videoEditorEffectBokeh => 'Bokeh';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'Note';
+
+  @override
+  String get videoEditorEffectStars => 'Stele';
+
+  @override
+  String get videoEditorEffectFireflies => 'Licurici';
+
+  @override
+  String get videoEditorEffectEmbers => 'Jar';
+
+  @override
+  String get videoEditorEffectMoney => 'Bani';
+
+  @override
+  String get videoEditorEffectBalloons => 'Baloane';
+
+  @override
   String get videoEditorEffectTiltShift => 'Tilt-shift';
 
   @override
   String get videoEditorEffectZoomBlur => 'Estompare zoom';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Estompare rotativă';
+
+  @override
   String get videoEditorEffectComic => 'Benzi desenate';
+
+  @override
+  String get videoEditorEffectSwirl => 'Vârtej';
+
+  @override
+  String get videoEditorEffectRipple => 'Ondulații';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'Sticlă striată';
+
+  @override
+  String get videoEditorEffectEightBit => '8 biți';
+
+  @override
+  String get videoEditorEffectAnaglyph => 'Ochelari 3D';
+
+  @override
+  String get videoEditorEffectRiso => 'Risografie';
+
+  @override
+  String get videoEditorEffectTealOrange => 'Teal & Orange';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'Film cald';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'Diapozitiv';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'Film rece';
+
+  @override
+  String get videoEditorEffectMatte => 'Mat';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'Bleach bypass';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'Procesare încrucișată';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'Ora de aur';
+
+  @override
+  String get videoEditorEffectMoonlight => 'Lumina lunii';
+
+  @override
+  String get videoEditorEffectSilver => 'Argint';
+
+  @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Distorsiune';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Lumină';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Mișcare';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Particule';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'Looks';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Natural';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Intens';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Cald';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Rece';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Vintage';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Alb-negru';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Nuanțe';
 
   @override
   String get videoEditorDropsSettingsTitle => 'Ajustează picăturile';
@@ -10857,6 +11290,12 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'Înălțime';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'Lateral';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'De sus în jos';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Punct personalizat';
 
   @override
@@ -10946,6 +11385,426 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorStickerSearchHint => 'Caută stickere...';
+
+  @override
+  String get videoEditorInfoStickersTitle => 'Info';
+
+  @override
+  String get videoEditorSocialStickersTitle => 'Social';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Menționare';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Sunet';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'numeletau';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtag';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Alege pe cineva';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Persoana e menționată în postarea ta și primește o notificare.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Scrie un hashtag';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Se adaugă și la hashtagurile postării tale.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'Un vers din melodie (opțional)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Link';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Adresă web';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'Titlu (opțional)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'Adresa se adaugă la postarea ta.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => 'Încă nu e o adresă web.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Interactive';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Numărătoare inversă';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Vara';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Pentru ce faci numărătoarea inversă?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Cei care se uită văd cât timp a mai rămas și pot seta un memento.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Momentul a trecut. Alege unul nou.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Răspuns';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'Cei care se uită ating stickerul și văd la ce răspunzi.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Sondaj';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Quiz';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Glisor';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Care?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Da';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Nu';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine s-a lansat în…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'Cât de foame ți-e?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Pune o întrebare';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Răspunsul $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Elimină răspunsul $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Marchează răspunsul $number drept corect';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Adaugă un răspuns';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Cei care se uită văd rezultatele după ce votează. Voturile sunt publice.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Bifează răspunsul corect. Cei care se uită îl văd după ce aleg unul.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Cei care se uită trag emoji-ul ca să răspundă și văd unde ajunge în medie.';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'Întrebare';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'Rândul tău';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'Răspunsuri';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => 'Întreabă-mă orice';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => 'Arată-ți biroul';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample =>
+      'Răspunde cu un videoclip';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'Întrebarea ta';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      'Ce să arate oamenii?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'Titlu';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'Răspunsurile îți vin ca mesaje private.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'Cei care se uită răspund cu un videoclip al lor. Fiecare răspuns primește acest hashtag și trimite înapoi la videoclipul tău.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'Arată cine a răspuns la acest videoclip cu un videoclip. Cei care se uită îl ating ca să vadă răspunsurile.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'Stickerul rămâne în acest chenar ca să-l poată atinge cei care se uită';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Notă';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Vinil';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Casetă';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Egalizator';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Player';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Ora';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Data';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Locație';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Vremea';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Altitudine';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Baterie';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Luminos';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Întunecat';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Verde';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Contur';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Digital';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analogic';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Sticlă';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Galben';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Simplu';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Schimbă locul';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Căutarea locurilor nu este disponibilă pe acest dispozitiv.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Înregistrare · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Acum · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Azi · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Contor de zile';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Soare';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Lună';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'Cronometru REC';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Film';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Cameră video';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Ziua $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Ziua $day din $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Ziua';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Total zile (opțional)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Pin';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Steag';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Glob';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Hartă';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Lună nouă';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Semilună în creștere';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Primul pătrar';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous =>
+      'Lună gibboasă în creștere';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Lună plină';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous =>
+      'Lună gibboasă în descreștere';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Ultimul pătrar';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent =>
+      'Semilună în descreștere';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'Caută un oraș sau un loc';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Nu am găsit niciun loc';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Nu am putut căuta locuri. Încearcă din nou.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'În video ajunge doar numele locului, niciodată poziția ta exactă.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Se încarcă…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Nu am putut încărca. Încearcă din nou.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'Date de la MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Pentru videoclipurile mai vechi nu există vremea, așa că aceasta este vremea de acum.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Însorit';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Noapte senină';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Parțial noros';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Înnorat';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Ceață';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Ploaie';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Averse';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Ninsoare';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Furtună';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Orele sunt în fusul orar al telefonului tău.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Temperatură';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Unitate';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Nivelul bateriei';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Adaugă sticker';
 
   @override
   String get videoEditorSelectFontSemanticLabel => 'Selectează fontul';
@@ -12572,6 +13431,11 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Adaugă „#$tag\"';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, dintr-un sticker din videoclipul tău';
   }
 
   @override
@@ -14552,10 +15416,92 @@ class AppLocalizationsRo extends AppLocalizations {
   String get ideasDescriptionSix => 'Las asta aici.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Camere, $displayCount de mesaje necitite',
+      few: 'Camere, $displayCount mesaje necitite',
+      one: 'Camere, $displayCount mesaj necitit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Necitite: $displayCount',
+      few: 'Necitite: $displayCount',
+      one: 'Necitit: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount de mesaje necitite',
+      few: '$displayCount mesaje necitite',
+      one: '$displayCount mesaj necitit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount de persoane',
+      few: '$displayCount persoane',
+      one: '$displayCount persoană',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount de mesaje',
+      few: '$displayCount mesaje',
+      one: '$displayCount mesaj',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Ultimele 24 de ore';
+
+  @override
+  String get messagesRoomLoading => 'Se verifică activitatea…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Activitatea nu s-a putut încărca.';
+
+  @override
+  String get messagesRoomEmpty => 'Nu sunt mesaje recente. Spune salut.';
+
+  @override
   String get messagesDirect => 'Directe';
 
   @override
   String get messagesRooms => 'Camere';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Camere ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Camere publice de test';
@@ -14888,9 +15834,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14911,11 +15854,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -14949,9 +15887,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -15014,4 +15949,76 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
+
+  @override
+  String get creatorHighlightLabel => 'Momentul tău de azi';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'Videoclipuri create azi: $count.';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle =>
+      'Săptămâna asta are ceva mai mult din tine.';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'Zile de creație săptămâna asta: $count. Continuă așa.';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Vizionări totale până acum ale videoclipurilor pe care le-ai publicat săptămâna asta: $countString.';
+  }
+
+  @override
+  String get creatorHighlightTopVideo =>
+      'Cel mai vizionat dintre videoclipurile tale publicate săptămâna asta';
+
+  @override
+  String get creatorHighlightCreate => 'Creează încă unul';
+
+  @override
+  String get creatorHighlightAnalytics => 'Vezi statisticile tale';
+
+  @override
+  String get creatorHighlightWatch => 'Urmărește videoclipul';
 }

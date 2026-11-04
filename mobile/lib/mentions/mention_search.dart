@@ -19,7 +19,7 @@ typedef MentionCandidatePubkeysProvider = Iterable<String> Function();
 
 /// Tier-1 local lookup over [candidates] backed by [profileRepository]'s
 /// cache. Returns up to 5 matches whose display name contains
-/// [lowercaseQuery], along with the deduped set of seen pubkeys so the
+/// [lowercaseQuery], along with the deduped set of matched pubkeys so the
 /// caller can pass it to [mentionSearchRemote] for tier-2 backfill.
 Future<({List<MentionMatch> matches, Set<String> seen})> mentionSearchLocal({
   required String lowercaseQuery,
@@ -27,7 +27,7 @@ Future<({List<MentionMatch> matches, Set<String> seen})> mentionSearchLocal({
   required ProfileRepository? profileRepository,
 }) async {
   final candidatePubkeys = candidates.toSet().toList(growable: false);
-  final seen = candidatePubkeys.toSet();
+  final seen = <String>{};
   final matches = <MentionMatch>[];
   if (profileRepository == null || candidatePubkeys.isEmpty) {
     return (matches: matches, seen: seen);
@@ -44,6 +44,7 @@ Future<({List<MentionMatch> matches, Set<String> seen})> mentionSearchLocal({
     final displayName = profile?.displayName ?? profile?.name;
     if (displayName != null &&
         displayName.toLowerCase().contains(lowercaseQuery)) {
+      seen.add(pubkey);
       matches.add((
         pubkey: pubkey,
         // Matched on the raw value so query behaviour is unchanged, but

@@ -7,7 +7,6 @@ import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart'
     show ClipSourceCredit, VideoEvent, clipSourceCreditTagMarker;
-import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_metadata_update_error.dart';
@@ -16,6 +15,7 @@ import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_event_tag_source.dart';
+import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:openvine/utils/collaborator_tags.dart';
 import 'package:openvine/utils/inspired_by_tags.dart';
 import 'package:openvine/utils/nostr_replacement_timestamp.dart';
@@ -125,10 +125,10 @@ bool _isEditRebuiltTag(List<String> tag, {required bool isVideoReply}) {
     return true;
   }
   // Inspired-by a-tags (publish writes a 'mention' marker, edit writes
-  // 'inspired-by'). Only owned on non-reply videos; on a reply these are
-  // reply-threading metadata (or a genuine inspired-by the edit flow cannot
-  // represent) and are preserved verbatim. Unmarked reply-root a-tags are
-  // preserved either way. Match the marker case-insensitively to mirror the
+  // 'inspired-by' unless it keeps the same video). Only owned on non-reply
+  // videos; on a reply these are reply-threading metadata (or a genuine
+  // inspired-by the edit flow cannot represent) and are preserved verbatim.
+  // Unmarked reply-root a-tags are preserved either way. Match the marker case-insensitively to mirror the
   // parser and the collaborator check above.
   if (!isVideoReply &&
       name == 'a' &&
@@ -229,7 +229,7 @@ sendPostPublishCollaboratorInvites({
 /// - Extracts video URLs from the original event's imeta tags.
 /// - Optionally uploads a new thumbnail to Blossom.
 /// - Assembles the replacement NIP-71 Nostr event.
-/// - Signs and publishes the event.
+/// - Signs the event and publishes it, succeeding only once a relay accepts it.
 /// - Updates the in-process event caches.
 /// - Sends post-publish collaborator invites.
 ///
@@ -238,20 +238,20 @@ class VideoMetadataUpdateService {
   const VideoMetadataUpdateService({
     required AuthService authService,
     required BlossomUploadService blossomService,
-    required NostrClient nostrService,
+    required SignedEventRelayPublisher relayPublisher,
     required PersonalEventCacheService personalEventCache,
     required VideoEventService videoEventService,
     required CollaboratorInviteService collaboratorInviteService,
   }) : _authService = authService,
        _blossomService = blossomService,
-       _nostrService = nostrService,
+       _relayPublisher = relayPublisher,
        _personalEventCache = personalEventCache,
        _videoEventService = videoEventService,
        _collaboratorInviteService = collaboratorInviteService;
 
   final AuthService _authService;
   final BlossomUploadService _blossomService;
-  final NostrClient _nostrService;
+  final SignedEventRelayPublisher _relayPublisher;
   final PersonalEventCacheService _personalEventCache;
   final VideoEventService _videoEventService;
   final CollaboratorInviteService _collaboratorInviteService;
@@ -367,10 +367,10 @@ class VideoMetadataUpdateService {
         tags.add(['imeta', ...imetaComponents]);
       }
 
-      final title = editorState.title.trim();
-      if (title.isNotEmpty) {
-        tags.add(['title', title]);
-      }
+      // Always written, even empty: the relay rejects a video event with no
+      // `title` tag, and first publish writes `["title", ""]` for untitled
+      // videos.
+      tags.add(['title', editorState.title.trim()]);
 
       final summary = editorState.description.trim();
       if (summary.isNotEmpty) {
@@ -408,12 +408,23 @@ class VideoMetadataUpdateService {
       // The parser exposes an unmarked lowercase reply-root a-tag through
       // inspiredByVideo too. Do not turn that parent reference into creator
       // attribution when republishing a video reply.
-      if (editorState.inspiredByVideo != null && !isVideoReply) {
+      if (editorState.inspiredByVideo case final inspiredBy?
+          when !isVideoReply) {
+        // Publish marks the a-tag 'mention', and an Add yours answer counts
+        // as joining its chain only while it does, so an edit that keeps the
+        // same video keeps that marker.
+        final keepsMention = originalVideo.nostrEventTags.any(
+          (tag) =>
+              tag.length >= 4 &&
+              tag[0] == 'a' &&
+              tag[1] == inspiredBy.addressableId &&
+              tag[3].toLowerCase() == 'mention',
+        );
         tags.add([
           'a',
-          editorState.inspiredByVideo!.addressableId,
-          editorState.inspiredByVideo!.relayUrl ?? '',
-          'inspired-by',
+          inspiredBy.addressableId,
+          inspiredBy.relayUrl ?? '',
+          if (keepsMention) 'mention' else 'inspired-by',
         ]);
       }
 
@@ -472,18 +483,20 @@ class VideoMetadataUpdateService {
         );
       }
 
-      final publishResult = await _nostrService.publishEvent(event);
-      if (publishResult is! PublishSuccess) {
+      // Waits for a relay's NIP-01 `OK`: a socket write alone is not
+      // acceptance, and a rejected edit must not be reported or cached as
+      // published.
+      final outcome = await _relayPublisher.publishViaWebSocket(event);
+      if (outcome != EventPublishOutcome.published) {
         throw const _VideoUpdateException(
           VideoMetadataUpdateError.publishRejected,
-          'Failed to publish updated event',
+          'No relay accepted the updated event',
         );
       }
-      final publishedEvent = publishResult.event;
 
-      _personalEventCache.cacheUserEvent(publishedEvent);
+      _personalEventCache.cacheUserEvent(event);
 
-      final updatedVideoEvent = VideoEvent.fromNostrEvent(publishedEvent);
+      final updatedVideoEvent = VideoEvent.fromNostrEvent(event);
       _videoEventService.updateVideoEvent(updatedVideoEvent);
 
       final inviteFailureCount = await _sendCollaboratorInvites(

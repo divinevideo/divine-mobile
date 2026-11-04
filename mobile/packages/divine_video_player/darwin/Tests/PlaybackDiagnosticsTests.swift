@@ -38,7 +38,15 @@ enum PlaybackDiagnosticsTests {
         diagnostics.recordFrameDelivered()
         let frames = diagnostics.snapshot(registeredPlayers: 0)
         precondition(frames["framesDelivered"] as? Int64 == 2)
-        precondition((frames["footprintBytes"] as? Int64 ?? -1) > 0)
+        let footprint = frames["footprintBytes"] as? Int64 ?? -1
+        precondition(footprint > 0)
+
+        // The ledgers are parts of the footprint, so neither can exceed it.
+        for ledger in ["graphicsFootprintBytes", "mediaFootprintBytes"] {
+            let bytes = frames[ledger] as? Int64 ?? -2
+            precondition(bytes >= 0 && bytes <= footprint, "\(ledger) = \(bytes)")
+        }
+        precondition(frames["memoryLimitRemainingBytes"] is Int64)
         print("Playback diagnostics tests passed")
     }
 }

@@ -1,5 +1,75 @@
 {
   "@@locale": "am",
+  "videoEditorSocialStickerPoll": "ድምፅ መስጫ",
+  "videoEditorSocialStickerQuiz": "ፈተና",
+  "videoEditorSocialStickerSlider": "ተንሸራታች",
+  "videoEditorSocialStickerPollSampleQuestion": "የትኛው?",
+  "videoEditorSocialStickerPollSampleYes": "አዎ",
+  "videoEditorSocialStickerPollSampleNo": "አይ",
+  "videoEditorSocialStickerQuizSampleQuestion": "Vine የተጀመረው በ…",
+  "videoEditorSocialStickerSliderSampleQuestion": "ምን ያህል ርቦዎታል?",
+  "videoEditorSocialStickerPollQuestionHint": "ጥያቄ ይጠይቁ",
+  "videoEditorSocialStickerPollOptionHint": "መልስ {number}",
+  "videoEditorSocialStickerPollRemoveOption": "መልስ {number}ን ያስወግዱ",
+  "videoEditorSocialStickerQuizMarkRight": "መልስ {number}ን ትክክለኛ ብለው ይምረጡ",
+  "videoEditorSocialStickerPollAddOption": "መልስ ያክሉ",
+  "videoEditorSocialStickerPollNote": "ተመልካቾች ድምፅ ከሰጡ በኋላ ውጤቱን ያያሉ። ድምፆች ይፋዊ ናቸው።",
+  "videoEditorSocialStickerQuizNote": "ትክክለኛውን መልስ ምልክት ያድርጉ። ተመልካቾች መልስ ከመረጡ በኋላ ያዩታል።",
+  "videoEditorSocialStickerSliderNote": "ተመልካቾች ለመመለስ ኢሞጂውን ይጎትታሉ፣ አማካዩም የት እንደሚያርፍ ያያሉ።",
+  "videoStickerQuizRightAnswer": "ትክክለኛ መልስ",
+  "videoStickerQuizWrongAnswer": "የተሳሳተ መልስ",
+  "videoEditorSocialStickerQuestion": "ጥያቄ",
+  "videoEditorSocialStickerAddYours": "የእርስዎ ተራ",
+  "videoEditorSocialStickerReplies": "ምላሾች",
+  "videoEditorSocialStickerQuestionSample": "ማንኛውንም ነገር ይጠይቁኝ",
+  "videoEditorSocialStickerAddYoursSample": "የጠረጴዛዎን አደረጃጀት ያሳዩ",
+  "videoEditorSocialStickerRepliesSample": "በቪዲዮ ምላሽ ይስጡ",
+  "videoEditorSocialStickerQuestionHint": "የእርስዎ ጥያቄ",
+  "videoEditorSocialStickerAddYoursPromptHint": "ሰዎች ምን ያሳዩ?",
+  "videoEditorSocialStickerAddYoursHashtagHint": "ሃሽታግ",
+  "videoEditorSocialStickerRepliesTitleHint": "ርዕስ",
+  "videoEditorSocialStickerQuestionNote": "መልሶች እንደ የግል መልእክት ይደርሱዎታል።",
+  "videoEditorSocialStickerAddYoursNote": "ተመልካቾች በራሳቸው ቪዲዮ ይመልሳሉ። እያንዳንዱ መልስ ይህን ሃሽታግ ያገኛል፣ ወደ ቪዲዮዎም ይመራል።",
+  "videoEditorSocialStickerRepliesNote": "ለዚህ ቪዲዮ በቪዲዮ ምላሽ የሰጡትን ያሳያል። ተመልካቾች ምላሾቹን ለማየት ይነኩታል።",
+  "videoEditorInteractiveCardAreaHint": "ተመልካቾች መንካት እንዲችሉ ይህ ተለጣፊ በዚህ ሳጥን ውስጥ ይቆያል",
+  "videoStickerPollSignInToVote": "ድምፅ ለመስጠት ይግቡ።",
+  "videoStickerPollNotReady": "አሁንም በመገናኘት ላይ። ትንሽ ቆይተው እንደገና ይሞክሩ።",
+  "videoStickerPollVoteFailed": "ድምፅዎ አልደረሰም። እንደገና ይሞክሩ።",
+  "videoStickerPollVotesArePublic": "ድምፆች ይፋዊ ናቸው። ማንኛውም ሰው የመረጡትን ማየት ይችላል።",
+  "videoStickerPollVoteCount": "{count, plural, one{{count} ድምፅ} other{{count} ድምፆች}}",
+  "videoStickerQuestionAnswerHint": "ለመመለስ ይንኩ",
+  "videoStickerQuestionAnswerSemanticLabel": "መልስ፦ {question}",
+  "videoStickerAddYoursButton": "የእርስዎ ተራ",
+  "videoStickerAddYoursJoined": "{count, plural, =0{ቀድመው ይጀምሩ} =1{{count} ተሳታፊ} other{{count} ተሳታፊዎች}}",
+  "videoStickerAddYoursJoinedAtLeast": "{count} ተሳታፊዎች",
+  "videoStickerAddYoursOpenSemanticLabel": "ተሳታፊዎችን ይመልከቱ",
+  "videoStickerAddYoursJoinSemanticLabel": "የእርስዎ ተራ፦ {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{እስካሁን ምንም ምላሽ የለም} =1{{count} ምላሽ} other{{count} ምላሾች}}",
+  "videoStickerRepliesCountAtLeast": "{count} ምላሾች",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{የቪዲዮ ምላሾች፣ እስካሁን የሉም} =1{{count} የቪዲዮ ምላሽ ይመልከቱ} other{{count} የቪዲዮ ምላሾችን ይመልከቱ}}",
+  "videoStickerRepliesSemanticLabelAtLeast": "{count} የቪዲዮ ምላሾችን ይመልከቱ",
+  "videoStickerQuestionSignIn": "ለመመለስ ይግቡ።",
+  "videoStickerQuestionUnavailable": "ጥያቄዎችን መመለስ ለመለያዎ አይገኝም።",
+  "videoStickerQuestionAnswerTitle": "መልስ",
+  "videoStickerQuestionAnswerFieldLabel": "የእርስዎ መልስ",
+  "videoStickerQuestionAnswerPrivacyNote": "መልስዎ ለ{name} ብቻ ይታያል። ስምዎ ሳይጠቀስ በቪዲዮ ሊጋራ ይችላል።",
+  "videoStickerQuestionAnswerSend": "ይላኩ",
+  "videoStickerQuestionAnswerSent": "መልሱ ተልኳል።",
+  "videoStickerQuestionAnswerTooLong": "ያ መልስ ለመላክ በጣም ረጅም ነው።",
+  "videoStickerQuestionAnswerFailed": "መልስዎ አልደረሰም። እንደገና ይሞክሩ።",
+  "videoStickerAddYoursSignIn": "ለመሳተፍ ይግቡ።",
+  "videoStickerRepliesManageTitle": "የቪዲዮ ምላሾች",
+  "videoStickerRepliesEmpty": "እስካሁን የቪዲዮ ምላሾች የሉም።",
+  "videoStickerRepliesLoadFailed": "ምላሾቹን መጫን አልተቻለም።",
+  "videoStickerRepliesRetry": "እንደገና ይሞክሩ",
+  "videoStickerRepliesPin": "ይሰኩ",
+  "videoStickerRepliesUnpin": "ያንሱ",
+  "videoStickerRepliesHide": "ይደብቁ",
+  "videoStickerRepliesShow": "ያሳዩ",
+  "videoStickerRepliesPinned": "የተሰካ",
+  "videoStickerRepliesHidden": "የተደበቀ",
+  "videoStickerRepliesSaveFailed": "ማስቀመጥ አልተቻለም። እንደገና ይሞክሩ።",
+  "videoStickerRepliesWatchSemanticLabel": "የ{name}ን ምላሽ ይመልከቱ",
   "devOptionsClipRecovery": "የክሊፕ መልሶ ማግኛ",
   "devOptionsClipRecoveryDescription": "በሌላ መለያ ስር የተቀመጡ ቀረጻዎችን እና ማንኛውም ግቤት የማይጠቅሳቸውን የቪዲዮ ፋይሎችን ያገኛል።",
   "devOptionsClipRecoveryScan": "ቃኝ",
@@ -65,6 +135,7 @@
   "publishErrorPermissionDenied": "Divine ለመስቀል ፈቃድ የለውም። በቅንብሮችዎ ውስጥ የመተግበሪያ ፈቃዶችን ይፈትሹ እና እንደገና ይሞክሩ።",
   "publishErrorOutOfMemory": "የመሣሪያዎ ማህደረ ትውስታ እያለቀ ነው። አንዳንድ መተግበሪያዎችን ይዝጉ እና እንደገና ይሞክሩ።",
   "publishErrorOverlaysUnavailable": "የዚህ ረቂቅ ጽሑፍና ተለጣፊዎች ሊዘጋጁ አልቻሉም። በአራሚው ውስጥ ይክፈቱት፣ ከዚያ እንደገና ይለጥፉ።",
+  "publishErrorQuestionStickerRestricted": "መለያዎ የጥያቄ ተለጣፊ መለጠፍ አይችልም፣ ምክንያቱም መልሶቹ እንደ የግል መልዕክቶች ይመጣሉ። ያስወግዱት፣ ከዚያ እንደገና ይለጥፉ።",
   "publishErrorTooManyDetachedClips": "መሣሪያዎ ይህን ያህል የተነጠሉ ቅንጥቦችን በአንድ ጊዜ ወደ ውጭ መላክ አይችልም። ጥቂቶቹን ወደ ጊዜ መስመሩ ይመልሱ እና እንደገና ይሞክሩ።",
   "publishErrorDraftTooManyDetachedClips": "መሣሪያዎ ይህን ያህል የተነጠሉ ቅንጥቦችን በአንድ ጊዜ ወደ ውጭ መላክ አይችልም። ረቂቁን በአራሚው ውስጥ ይክፈቱት፣ ጥቂቶቹን ወደ ጊዜ መስመሩ ይመልሱ፣ ከዚያ እንደገና ይለጥፉ።",
   "publishErrorUnknownServer": "ያልታወቀ አገልጋይ",
@@ -74,7 +145,10 @@
   "dmReactionRetryAction": "እንደገና ሞክር",
   "dmMessageBubbleVideoReplyHint": "የተጠቀሰውን ቪዲዮ ክፈት",
   "commonSomethingWentWrong": "የሆነ ችግር ተፈጥሯል",
-  "profileFeedError": "አገልጋዩ ጋር መድረስ አልተቻለም። ግንኙነትዎን አረጋግጠው እንደገና ይሞክሩ።",
+  "profileVideosLoadFailedTitle": "ቪዲዮዎችዎን መጫን አልተቻለም",
+  "profileVideosLoadFailedOtherTitle": "ቪዲዮዎችን መጫን አልተቻለም",
+  "profileVideosLoadFailedSubtitle": "ግንኙነትዎን አረጋግጠው እንደገና ይሞክሩ።",
+  "profileVideosLoadFailedRetry": "እንደገና ይሞክሩ",
   "profileFeedLoadMoreError": "ተጨማሪ ቪዲዮዎችን መጫን አልተቻለም። ለማደስ ወደታች ሳብ።",
   "appTitle": "Divine",
   "@appTitle": {
@@ -816,6 +890,21 @@
   "metadataBadgeNotDivine": "አይደለም Divine",
   "metadataBadgeHumanMade": "ሰው ሰራሽ",
   "metadataSoundsLabel": "ይሰማል።",
+  "metadataLinksLabel": "ሊንኮች",
+  "videoStickerLinkSemanticLabel": "የሊንክ ተለጣፊ፣ {url} ይከፍታል",
+  "videoStickerMentionSemanticLabel": "የመጥቀሻ ተለጣፊ፣ መገለጫውን ይከፍታል",
+  "videoStickerHashtagSemanticLabel": "የሃሽታግ ተለጣፊ፣ #{hashtag} ይከፍታል",
+  "videoStickerSoundSemanticLabel": "የድምጽ ተለጣፊ፣ ድምጹን ይከፍታል",
+  "videoStickerPlaceSemanticLabel": "የቦታ ተለጣፊ፣ {place}ን በካርታ ይከፍታል",
+  "videoStickerCountdownSemanticLabel": "የኋሊት ቆጠራ ተለጣፊ፣ ማስታወሻ ያዘጋጃል",
+  "videoStickerReplySemanticLabel": "የምላሽ ተለጣፊ፣ ይህ ቪዲዮ የሚመልሰውን ይከፍታል",
+  "videoStickerCountdownDays": "{count, plural, =1{{count} ቀን} other{{count} ቀናት}}",
+  "videoStickerCountdownReminderSet": "ማስታወሻ ተዘጋጅቷል። ጊዜው ሲደርስ እናሳውቅዎታለን።",
+  "videoStickerCountdownReminderRemoved": "ማስታወሻው ተወግዷል።",
+  "videoStickerCountdownOver": "ይህ የኋሊት ቆጠራ አልቋል።",
+  "videoStickerCountdownNotificationsOff": "ማስታወሻውን ለማግኘት የDivine ማሳወቂያዎችን ያብሩ።",
+  "videoStickerCountdownReminderBody": "ጊዜው ደርሷል! ያስቀመጡት የኋሊት ቆጠራ አሁን አልቋል።",
+  "videoStickerLinkSheetBody": "ይህ ሊንክ ከDivine ውጭ ይከፈታል። ከመሄድዎ በፊት አድራሻውን ያረጋግጡ።",
   "metadataOriginalSound": "ኦሪጅናል ድምጽ",
   "metadataVerificationLabel": "ማረጋገጥ",
   "metadataDeviceAttestation": "የመሣሪያ ማረጋገጫ",
@@ -2066,6 +2155,7 @@
   "routeInvalidUserId": "የተሳሳተ የተጠቃሚ መታወቂያ",
   "routeInvalidVideoId": "ልክ ያልሆነ የቪዲዮ መታወቂያ",
   "routeInvalidSoundId": "ልክ ያልሆነ የድምጽ መታወቂያ",
+  "routeInvalidQuestion": "ልክ ያልሆነ የጥያቄ አገናኝ",
   "routeInvalidCategory": "ልክ ያልሆነ ምድብ",
   "routeNoVideosToDisplay": "ምንም የሚታዩ ቪዲዮዎች የሉም",
   "routeGoHome": "ወደ ቤት ሂድ",
@@ -2673,11 +2763,11 @@
   "videoClipBackupUnsignedSemanticLabel": "ያለ የይዘት መታወቂያዎች በጋለሪዎ ውስጥ አለ። {label}",
   "videoClipStopMotionSemanticLabel": "የእንቅስቃሴ-አልባ ቅንጥብ፣ {frames}",
   "videoClipSemanticValueSelectedAtPosition": "ተመርጧል፣ ቁጥር {position}",
-  "videoClipSemanticValueSelected": "ተመርጧል",
   "videoClipSemanticValueNotSelected": "አልተመረጠም",
   "videoClipSemanticHintDisabled": "ተሰናክሏል",
-  "videoClipSemanticHintSelect": "ለመምረጥ ነካ ያድርጉ፣ ቅድሚያ ለማሳየት ረዘም ያሉ ጫን",
-  "videoClipSemanticHintDeselect": "ለማቋረጥ ነካ ያድርጉ፣ ቅድሚያ ለማሳየት ረዘም ያሉ ጫን",
+  "videoClipSemanticHintSelect": "ለመምረጥ ነካ ያድርጉ",
+  "videoClipSemanticHintDeselect": "ለማቋረጥ ነካ ያድርጉ",
+  "videoClipSemanticHintPreview": "ቅድሚያ ለማሳየት ነካ ያድርጉ",
   "routerInvalidCreator": "ልክ ያልሆነ ፈጣሪ",
   "routerInvalidHashtagRoute": "ልክ ያልሆነ የሃሽታግ መስመር",
   "categoryGalleryCouldNotLoadVideos": "ቪዲዮዎችን መጫን አልተቻለም",
@@ -2989,6 +3079,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} የተጠቀስክበትን ቪዲዮ ወደውታል።",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} አስተያየትህን ወደውታል።",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",
@@ -3136,6 +3234,8 @@
   "libraryTrashDeleteConfirmMessage": "ይህ ክሊፑን ከቆሻሻ መጣያው ወዲያውኑ ያስወግደዋል።",
   "libraryTrashEmptyConfirmTitle": "ቆሻሻ መጣያውን ባዶ አድርግ?",
   "libraryTrashEmptyConfirmMessage": "{count, plural, =1{{count} ክሊፕ} other{{count} ክሊፖች}} ከቆሻሻ መጣያው ወዲያውኑ በቋሚነት ይሰረዛሉ።",
+  "libraryTrashClipsRestored": "{count, plural, =1{ክሊፑ ተመልሷል} other{{count} ክሊፖች ተመልሰዋል}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{ክሊፑ በቋሚነት ተሰርዟል} other{{count} ክሊፖች በቋሚነት ተሰርዘዋል}}",
   "videoRecorderCloseLabel": "የቪዲዮ መቅረጫ ዝጋ",
   "videoRecorderContinueToEditorLabel": "ወደ ቪዲዮ አርታዒ ይቀጥሉ",
   "videoRecorderCameraPreviewLabel": "የካሜራ ቅድመ እይታ",
@@ -3229,9 +3329,51 @@
   "videoEditorEffectConfetti": "ኮንፈቲ",
   "videoEditorEffectHearts": "ልቦች",
   "videoEditorEffectSparkles": "ብልጭታዎች",
+  "videoEditorEffectRain": "ዝናብ",
+  "videoEditorEffectLeaves": "ቅጠሎች",
+  "videoEditorEffectBlossoms": "የአበባ ቅጠሎች",
+  "videoEditorEffectBubbles": "አረፋዎች",
+  "videoEditorEffectBokeh": "ቦኬ",
+  "videoEditorEffectMusicNotes": "ኖታዎች",
+  "videoEditorEffectStars": "ኮከቦች",
+  "videoEditorEffectFireflies": "የእሳት ዝንቦች",
+  "videoEditorEffectEmbers": "ፍም",
+  "videoEditorEffectMoney": "ገንዘብ",
+  "videoEditorEffectBalloons": "ፊኛዎች",
   "videoEditorEffectTiltShift": "ቲልት-ሺፍት",
   "videoEditorEffectZoomBlur": "የማጉላት ብዥታ",
+  "videoEditorEffectSpinBlur": "የማሽከርከር ብዥታ",
   "videoEditorEffectComic": "ኮሚክ",
+  "videoEditorEffectSwirl": "ሽክርክሪት",
+  "videoEditorEffectRipple": "ክብ ሞገዶች",
+  "videoEditorEffectFlutedGlass": "ባለሸንተረር መስታወት",
+  "videoEditorEffectEightBit": "8-ቢት",
+  "videoEditorEffectAnaglyph": "3D መነጽር",
+  "videoEditorEffectRiso": "ሪሶ ህትመት",
+  "videoEditorEffectTealOrange": "ቲል እና ብርቱካናማ",
+  "videoEditorEffectWarmFilm": "ሞቃት ፊልም",
+  "videoEditorEffectSlideFilm": "ስላይድ ፊልም",
+  "videoEditorEffectCoolFilm": "ቀዝቃዛ ፊልም",
+  "videoEditorEffectMatte": "ደብዛዛ",
+  "videoEditorEffectBleachBypass": "ብሊች ባይፓስ",
+  "videoEditorEffectCrossProcess": "ክሮስ ፕሮሰስ",
+  "videoEditorEffectGoldenHour": "ወርቃማ ሰዓት",
+  "videoEditorEffectMoonlight": "የጨረቃ ብርሃን",
+  "videoEditorEffectSilver": "ብራማ",
+  "videoEditorEffectCategoryRetro": "ሬትሮ",
+  "videoEditorEffectCategoryGlitch": "ግሊች",
+  "videoEditorEffectCategoryDistort": "ማዛባት",
+  "videoEditorEffectCategoryLight": "ብርሃን",
+  "videoEditorEffectCategoryMotion": "እንቅስቃሴ",
+  "videoEditorEffectCategoryParticles": "ቅንጣቶች",
+  "videoEditorEffectCategoryLooks": "ገጽታዎች",
+  "videoEditorFilterCategoryNatural": "ተፈጥሯዊ",
+  "videoEditorFilterCategoryVibrant": "ደማቅ",
+  "videoEditorFilterCategoryWarm": "ሞቃት",
+  "videoEditorFilterCategoryCool": "ቀዝቃዛ",
+  "videoEditorFilterCategoryVintage": "ቪንቴጅ",
+  "videoEditorFilterCategoryBlackAndWhite": "ጥቁር እና ነጭ",
+  "videoEditorFilterCategoryTints": "ቀለሞች",
   "videoEditorDropsSettingsTitle": "ጠብታዎችን አስተካክል",
   "videoEditorDropsCountLabel": "ብዛት",
   "videoEditorDropsSizeLabel": "መጠን",
@@ -3654,6 +3796,8 @@
   "videoEditorLayerAnimationPulseTo": "አሳንስ እስከ",
   "videoEditorLayerAnimationWiggleAngle": "ዘንበል",
   "videoEditorLayerAnimationBounceHeight": "ቁመት",
+  "videoEditorLayerAnimationFlipSideways": "ወደ ጎን",
+  "videoEditorLayerAnimationFlipOver": "ከላይ ወደ ታች",
   "videoEditorLayerAnimationCustomPoint": "ብጁ",
   "videoEditorLayerAnimationPointEnterHint": "ይህ ከየት እንደሚገባ ቪዲዮው ላይ ይንኩ",
   "videoEditorLayerAnimationPointLeaveHint": "ይህ ወዴት እንደሚወጣ ቪዲዮው ላይ ይንኩ",
@@ -3680,6 +3824,101 @@
   "videoEditorFeedPreviewContent": "ከእነዚህ አካባቢዎች በስተጀርባ ይዘትን ከማስቀመጥ ተቆጠብ።",
   "videoEditorStickersDivineOriginals": "Divine ኦሪጅናል",
   "videoEditorStickerSearchHint": "ተለጣፊዎችን ፈልግ...",
+  "videoEditorInfoStickersTitle": "መረጃ",
+  "videoEditorSocialStickersTitle": "ማኅበራዊ",
+  "videoEditorSocialStickerMention": "መጥቀስ",
+  "videoEditorSocialStickerHashtag": "ሃሽታግ",
+  "videoEditorSocialStickerSoundCredit": "ድምፅ",
+  "videoEditorSocialStickerMentionSample": "ስምዎ",
+  "videoEditorSocialStickerHashtagSample": "ሃሽታግ",
+  "videoEditorSocialStickerChoosePerson": "ሰው ይምረጡ",
+  "videoEditorSocialStickerMentionNote": "በልጥፍዎ ውስጥ ይጠቀሳሉ፣ ማሳወቂያም ይደርሳቸዋል።",
+  "videoEditorSocialStickerHashtagHint": "ሃሽታግ ይጻፉ",
+  "videoEditorSocialStickerHashtagNote": "ወደ ልጥፍዎ ሃሽታጎችም ይታከላል።",
+  "videoEditorSocialStickerLyricHint": "የዘፈን ግጥም መስመር (አማራጭ)",
+  "videoEditorSocialStickerLink": "ሊንክ",
+  "videoEditorSocialStickerLinkUrlHint": "የድር አድራሻ",
+  "videoEditorSocialStickerLinkTitleHint": "ርዕስ (አማራጭ)",
+  "videoEditorSocialStickerLinkNote": "አድራሻው ወደ ልጥፍዎ ይታከላል።",
+  "videoEditorSocialStickerLinkInvalid": "ይህ ገና የድር አድራሻ አይደለም።",
+  "videoEditorInteractiveStickersTitle": "መስተጋብራዊ",
+  "videoEditorSocialStickerCountdown": "የኋሊት ቆጠራ",
+  "videoEditorSocialStickerCountdownSample": "በጋ",
+  "videoEditorSocialStickerCountdownTitleHint": "ወደ ምን እየቆጠሩ ነው?",
+  "videoEditorSocialStickerCountdownNote": "ተመልካቾች የቀረውን ጊዜ ያያሉ፤ ማስታወሻም ማዘጋጀት ይችላሉ።",
+  "videoEditorSocialStickerCountdownOver": "ያ ጊዜ አልፏል። አዲስ ይምረጡ።",
+  "videoEditorSocialStickerReply": "ምላሽ",
+  "videoEditorSocialStickerReplyNote": "ተመልካቾች ሲነኩት ምን ላይ ምላሽ እንደሚሰጡ ያያሉ።",
+  "videoEditorSocialStickerSoundNote": "ኖታ",
+  "videoEditorSocialStickerSoundVinyl": "የሙዚቃ ሸክላ",
+  "videoEditorSocialStickerSoundCassette": "ካሴት",
+  "videoEditorSocialStickerSoundEqualizer": "ኢኳላይዘር",
+  "videoEditorSocialStickerSoundPlayer": "ማጫወቻ",
+  "videoEditorInfoStickerTime": "ሰዓት",
+  "videoEditorInfoStickerDate": "ቀን",
+  "videoEditorInfoStickerLocation": "ቦታ",
+  "videoEditorInfoStickerWeather": "የአየር ሁኔታ",
+  "videoEditorInfoStickerAltitude": "ከፍታ",
+  "videoEditorInfoStickerBattery": "ባትሪ",
+  "videoEditorInfoStickerStyleLight": "ፈዛዛ",
+  "videoEditorInfoStickerStyleDark": "ጨለማ",
+  "videoEditorInfoStickerStyleBrand": "አረንጓዴ",
+  "videoEditorInfoStickerStyleOutline": "ዝርዝር መስመር",
+  "videoEditorInfoStickerStyleDigital": "ዲጂታል",
+  "videoEditorInfoStickerStyleAnalog": "አናሎግ",
+  "videoEditorInfoStickerStyleGlass": "መስታወት",
+  "videoEditorInfoStickerStyleHighlight": "ቢጫ",
+  "videoEditorInfoStickerStyleNeon": "ኒዮን",
+  "videoEditorInfoStickerStylePlain": "ቀላል",
+  "videoEditorInfoStickerChangePlace": "ቦታ ይቀይሩ",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "በዚህ መሣሪያ ላይ የቦታ ፍለጋ አይገኝም።",
+  "videoEditorInfoStickerRecordedValue": "የተቀረጸበት · {value}",
+  "videoEditorInfoStickerNowValue": "አሁን · {value}",
+  "videoEditorInfoStickerTodayValue": "ዛሬ · {value}",
+  "videoEditorInfoStickerDayCount": "የቀን ቆጣሪ",
+  "videoEditorInfoStickerSun": "ፀሐይ",
+  "videoEditorInfoStickerMoon": "ጨረቃ",
+  "videoEditorInfoStickerRecTimer": "REC ሰዓት ቆጣሪ",
+  "videoEditorInfoStickerStyleFilm": "ፊልም",
+  "videoEditorInfoStickerStyleCamcorder": "ካምኮርደር",
+  "videoEditorInfoStickerDayCountValue": "ቀን {day}",
+  "videoEditorInfoStickerDayCountOfValue": "ቀን {day} ከ{total}",
+  "videoEditorInfoStickerDayLabel": "ቀን",
+  "videoEditorInfoStickerDayTotalLabel": "ጠቅላላ ቀናት (አማራጭ)",
+  "videoEditorInfoStickerSymbolPin": "ፒን",
+  "videoEditorInfoStickerSymbolFlag": "ባንዲራ",
+  "videoEditorInfoStickerSymbolGlobe": "ሉል",
+  "videoEditorInfoStickerSymbolMap": "ካርታ",
+  "videoEditorInfoStickerMoonNew": "አዲስ ጨረቃ",
+  "videoEditorInfoStickerMoonWaxingCrescent": "እያደገ ያለ ቀጭን ጨረቃ",
+  "videoEditorInfoStickerMoonFirstQuarter": "የመጀመሪያ ሩብ",
+  "videoEditorInfoStickerMoonWaxingGibbous": "እያደገ ያለ ጨረቃ",
+  "videoEditorInfoStickerMoonFull": "ሙሉ ጨረቃ",
+  "videoEditorInfoStickerMoonWaningGibbous": "እየቀነሰ ያለ ጨረቃ",
+  "videoEditorInfoStickerMoonLastQuarter": "የመጨረሻ ሩብ",
+  "videoEditorInfoStickerMoonWaningCrescent": "እየቀነሰ ያለ ቀጭን ጨረቃ",
+  "videoEditorInfoStickerPlaceSearchHint": "ከተማ ወይም ቦታ ይፈልጉ",
+  "videoEditorInfoStickerPlaceNoResults": "ምንም ቦታ አልተገኘም",
+  "videoEditorInfoStickerPlaceSearchFailed": "ቦታዎችን መፈለግ አልተቻለም። እንደገና ይሞክሩ።",
+  "videoEditorInfoStickerPlacePrivacyNote": "በቪዲዮዎ ውስጥ የሚገባው የቦታው ስም ብቻ ነው፤ ትክክለኛው አካባቢዎ በጭራሽ አይገባም።",
+  "videoEditorInfoStickerLoading": "በመጫን ላይ…",
+  "videoEditorInfoStickerLoadFailed": "መጫን አልተቻለም። እንደገና ይሞክሩ።",
+  "videoEditorInfoStickerMetAttribution": "መረጃ ከ MET Norway",
+  "videoEditorInfoStickerWeatherNow": "ለቆዩ ቪዲዮዎች የአየር ሁኔታ መረጃ የለም፤ ይህ የአሁኑ የአየር ሁኔታ ነው።",
+  "videoEditorInfoStickerWeatherSunny": "ፀሐያማ",
+  "videoEditorInfoStickerWeatherClearNight": "ጥርት ያለ ሌሊት",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "በከፊል ደመናማ",
+  "videoEditorInfoStickerWeatherCloudy": "ደመናማ",
+  "videoEditorInfoStickerWeatherFog": "ጭጋግ",
+  "videoEditorInfoStickerWeatherRain": "ዝናብ",
+  "videoEditorInfoStickerWeatherShowers": "ካፊያ",
+  "videoEditorInfoStickerWeatherSnow": "በረዶ",
+  "videoEditorInfoStickerWeatherThunderstorm": "ነጎድጓድ",
+  "videoEditorInfoStickerSunTimeZoneNote": "ሰዓቶቹ በስልክዎ የሰዓት ሰቅ ናቸው።",
+  "videoEditorInfoStickerTemperatureLabel": "የሙቀት መጠን",
+  "videoEditorInfoStickerUnitLabel": "መለኪያ",
+  "videoEditorInfoStickerBatteryLevelLabel": "የባትሪ መጠን",
+  "videoEditorInfoStickerAdd": "ተለጣፊ ያክሉ",
   "videoEditorSelectFontSemanticLabel": "ቅርጸ-ቁምፊ ይምረጡ",
   "videoEditorFontUnknown": "ያልታወቀ",
   "videoEditorSplitFailed": "መከፋፈሉ አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
@@ -4131,6 +4370,7 @@
       }
     }
   },
+  "videoMetadataTagsPickerStickerTag": "{tag}፣ በቪዲዮዎ ውስጥ ካለ ስቲከር",
   "videoEditorTimelineVolumePreview": "ድምጽ {percent}%",
   "@videoEditorTimelineVolumePreview": {
     "placeholders": {
@@ -4244,6 +4484,9 @@
   "dmReelReplyComposerHint": "ለ{name} መልእክት…",
   "dmReelReplyComposerHintSelf": "ለራስዎ ይመልሱ…",
   "dmReelReplyComposerSemanticLabel": "ለዚህ ሪል ይመልሱ",
+  "dmQuestionAnswerReceivedLabel": "ለጥያቄዎ መልስ፦ {question}",
+  "dmQuestionAnswerSentLabel": "የእርስዎ መልስ፦ {question}",
+  "dmQuestionAnswerWithVideo": "በቪዲዮ ይመልሱ",
   "dmReelReplyViewChat": "ውይይት ይመልከቱ",
   "dmReelReplySentAnnouncement": "መልስ ተልኳል",
   "dmReelReactionSentAnnouncement": "በ{emoji} ምላሽ ሰጥተዋል",
@@ -5846,8 +6089,97 @@
   "ideasDescriptionFive": "ማጋራት ብቻ ፈለግሁ።",
   "ideasTitleSix": "ከዛሬ ትንሽ",
   "ideasDescriptionSix": "ይህን እዚህ እተዋለሁ።",
+  "messagesRoomsUnreadLabel": "{count, plural, one{ክፍሎች፣ {displayCount} ያልተነበበ መልእክት} other{ክፍሎች፣ {displayCount} ያልተነበቡ መልእክቶች}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{አዲስ፦ {displayCount}} other{አዳዲስ፦ {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} ያልተነበበ መልእክት} other{{displayCount} ያልተነበቡ መልእክቶች}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} ሰው} other{{displayCount} ሰዎች}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} መልእክት} other{{displayCount} መልእክቶች}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "ባለፉት 24 ሰዓታት",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "እንቅስቃሴ በመፈተሽ ላይ…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "እንቅስቃሴውን መጫን አልተቻለም።",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "የቅርብ ጊዜ መልእክቶች የሉም። ሰላም ይበሉ።",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "ቀጥታ",
   "messagesRooms": "ክፍሎች",
+  "messagesRoomsWithUnread": "ክፍሎች ({badge})",
   "messagesPublicTestRooms": "ይፋዊ የሙከራ ክፍሎች",
   "messagesPublicTestDisclosure": "እነዚህ የሙከራ ክፍሎች ይፋዊ ናቸው። መዳረሻ ያለው ማንኛውም ሰው መልዕክቶችዎን ማንበብ ይችላል።",
   "messagesNoRooms": "ገና ምንም ክፍሎች የሉም",
@@ -5956,5 +6288,57 @@
   "videoEditorLoopRepairProgress": "ዙርህን በማስተካከል ላይ…",
   "videoEditorLoopRepairTrimmed": "ሉፑ ተስተካክሏል። {seconds} ሰከንድ ተወግዷል።",
   "notificationFromDivine": "ከDivine",
-  "announcementUnavailable": "ይህ ማስታወቂያ ከእንግዲህ የለም።"
+  "announcementUnavailable": "ይህ ማስታወቂያ ከእንግዲህ የለም።",
+  "creatorHighlightLabel": "የዛሬ ድምቀትዎ",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "ዛሬ የፈጠሯቸው ቪዲዮዎች፦ {count}።",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "በዚህ ሳምንት ከእርስዎ የሆነ ነገር ትንሽ ተጨምሯል።",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "በዚህ ሳምንት የፈጠሩባቸው ቀናት፦ {count}። ይቀጥሉ።",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "በዚህ ሳምንት ያሳተሟቸው ቪዲዮዎች እስካሁን ያገኟቸው ጠቅላላ እይታዎች፦ {count}።",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "በዚህ ሳምንት ካሳተሟቸው ቪዲዮዎች በብዛት የታየው",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "ሌላ ይፍጠሩ",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "ስታቲስቲክስዎን ይመልከቱ",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "ቪዲዮውን ይመልከቱ",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

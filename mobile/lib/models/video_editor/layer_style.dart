@@ -12,6 +12,8 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
 import 'package:openvine/models/video_editor/layer_slide_point.dart';
+import 'package:openvine/models/video_editor/sticker_card_layer.dart';
+import 'package:openvine/models/video_editor/tappable_sticker_layer.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show Layer, LayerMask, TextLayer;
@@ -23,12 +25,14 @@ import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 /// A hidden area (blur, pixelate) is left out because it takes none of the
 /// parts: it cannot be see-through, blended, animated or masked. A detached clip is
 /// left out too: it is a clip as much as a layer, and its style would mix the
-/// two. A burned-in caption cue takes its look from the caption track.
+/// two. A burned-in caption cue takes its look from the caption track. A
+/// sticker card ([isStickerCardLayer]) shows as it is.
 bool canCopyLayerStyle(Layer? layer) =>
     layer != null &&
     !isCensorLayer(layer) &&
     !DetachedClipLayerData.isDetachedClipLayer(layer) &&
-    !isCaptionCueLayer(layer);
+    !isCaptionCueLayer(layer) &&
+    !isStickerCardLayer(layer);
 
 /// Everything about how an overlay layer looks and moves that is not its
 /// content or where it sits on the canvas and the timeline.
@@ -167,11 +171,14 @@ class LayerStyle extends Equatable {
 }
 
 /// [animations] without the ones [layer] cannot play: typing a text out
-/// letter by letter or word by word means nothing on a sticker or a drawing.
+/// letter by letter or word by word means nothing on a sticker or a drawing,
+/// and a sticker a viewer taps, such as a link or a location, holds still
+/// where it is tapped.
 List<pve.LayerAnimation> _playableOn(
   Layer layer,
   List<pve.LayerAnimation> animations,
 ) {
+  if (isTappableStickerLayer(layer)) return const [];
   if (layer is TextLayer) return animations;
   return [
     for (final animation in animations)

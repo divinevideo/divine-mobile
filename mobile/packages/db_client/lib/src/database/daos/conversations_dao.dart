@@ -813,10 +813,16 @@ END
       for (final pubkey in excludedSenders) pubkey.toLowerCase(),
     }.toList();
     // Numbered so every subquery binds the same values: ?1 conversation,
-    // ?2 owner, ?3 and ?4 the retraction states the owner still sees, ?5 the
-    // read cursor, then one per excluded sender.
+    // ?2 owner, one per retraction state the owner still sees, the read
+    // cursor, then one per excluded sender.
+    const retractions = DirectMessagesDao.retractionsShownToSender;
+    final retractionPlaceholders = [
+      for (var i = 0; i < retractions.length; i++) '?${i + 3}',
+    ].join(', ');
+    final readCursorPlaceholder = '?${retractions.length + 3}';
     final excludedPlaceholders = [
-      for (var i = 0; i < excluded.length; i++) '?${i + 6}',
+      for (var i = 0; i < excluded.length; i++)
+        '?${i + retractions.length + 4}',
     ].join(', ');
     final notExcluded = excluded.isEmpty
         ? ''
@@ -835,7 +841,7 @@ $table.conversation_id = ?1
            )))
   AND ($table.is_deleted = 0
        OR ($table.sender_pubkey = ?2
-           AND $table.deletion_publish_status IN (?3, ?4)))
+           AND $table.deletion_publish_status IN ($retractionPlaceholders)))
 ''';
     final shown = '${shownIn('dm')}  $notExcluded';
     final row = await customSelect(
@@ -846,7 +852,7 @@ SELECT newest.content AS content,
        EXISTS (
          SELECT 1 FROM direct_messages dm
          WHERE $shown
-           AND dm.created_at > MAX(?5, COALESCE((
+           AND dm.created_at > MAX($readCursorPlaceholder, COALESCE((
              SELECT MAX(own.created_at) FROM direct_messages own
              WHERE ${shownIn('own')}
                AND lower(own.sender_pubkey) = lower(?2)
@@ -867,8 +873,7 @@ LEFT JOIN (
       variables: [
         Variable(conversationId),
         Variable(ownerPubkey),
-        const Variable(DirectMessagesDao.deletionPending),
-        const Variable(DirectMessagesDao.deletionBlocked),
+        for (final status in retractions) Variable(status),
         Variable(readCursor),
         for (final pubkey in excluded) Variable(pubkey),
       ],

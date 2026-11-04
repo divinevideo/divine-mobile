@@ -463,6 +463,7 @@ class CommentsRepository {
         videoDimensions: videoMetadata.videoDimensions,
         videoDuration: videoMetadata.videoDuration,
         videoBlurhash: videoMetadata.videoBlurhash,
+        stickerTags: _stickerTagsOf(sentEvent.tags),
       );
 
       // Retain so a comment-sheet reopen shows the user's own comment even
@@ -1252,6 +1253,7 @@ class CommentsRepository {
         videoDimensions: videoMetadata.videoDimensions,
         videoDuration: videoMetadata.videoDuration,
         videoBlurhash: videoMetadata.videoBlurhash,
+        stickerTags: _stickerTagsOf(event.tags),
       );
     } on Exception {
       return null;
@@ -1433,11 +1435,19 @@ class CommentsRepository {
         videoDimensions: videoMetadata.videoDimensions,
         videoDuration: videoMetadata.videoDuration,
         videoBlurhash: videoMetadata.videoBlurhash,
+        stickerTags: _stickerTagsOf(restComment.tags),
       );
     } on Exception {
       return null;
     }
   }
+
+  /// The `sticker` tags among [tags], which a video reply keeps so a viewer
+  /// can tap its stickers wherever it plays.
+  static List<List<String>> _stickerTagsOf(List<List<String>> tags) => [
+    for (final tag in tags)
+      if (tag.isNotEmpty && tag.first == 'sticker') List.unmodifiable(tag),
+  ];
 
   _CommentVideoMetadata _parseVideoMetadataFromImetaTags(
     List<List<String>> tags,

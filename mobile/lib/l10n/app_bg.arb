@@ -1,5 +1,75 @@
 {
   "@@locale": "bg",
+  "videoEditorSocialStickerPoll": "Анкета",
+  "videoEditorSocialStickerQuiz": "Куиз",
+  "videoEditorSocialStickerSlider": "Плъзгач",
+  "videoEditorSocialStickerPollSampleQuestion": "Кое?",
+  "videoEditorSocialStickerPollSampleYes": "Да",
+  "videoEditorSocialStickerPollSampleNo": "Не",
+  "videoEditorSocialStickerQuizSampleQuestion": "Vine стартира през…",
+  "videoEditorSocialStickerSliderSampleQuestion": "Колко ти се яде?",
+  "videoEditorSocialStickerPollQuestionHint": "Задай въпрос",
+  "videoEditorSocialStickerPollOptionHint": "Отговор {number}",
+  "videoEditorSocialStickerPollRemoveOption": "Премахни отговор {number}",
+  "videoEditorSocialStickerQuizMarkRight": "Отбележи отговор {number} като верен",
+  "videoEditorSocialStickerPollAddOption": "Добави отговор",
+  "videoEditorSocialStickerPollNote": "Зрителите виждат резултатите, след като гласуват. Гласовете са публични.",
+  "videoEditorSocialStickerQuizNote": "Отбележи верния отговор. Зрителите го виждат, след като изберат.",
+  "videoEditorSocialStickerSliderNote": "Зрителите плъзгат емоджито, за да отговорят, и виждат къде средно попада.",
+  "videoStickerQuizRightAnswer": "Верен отговор",
+  "videoStickerQuizWrongAnswer": "Грешен отговор",
+  "videoEditorSocialStickerQuestion": "Въпрос",
+  "videoEditorSocialStickerAddYours": "Твой ред",
+  "videoEditorSocialStickerReplies": "Отговори",
+  "videoEditorSocialStickerQuestionSample": "Питай ме каквото искаш",
+  "videoEditorSocialStickerAddYoursSample": "Покажи бюрото си",
+  "videoEditorSocialStickerRepliesSample": "Отговори с видео",
+  "videoEditorSocialStickerQuestionHint": "Твоят въпрос",
+  "videoEditorSocialStickerAddYoursPromptHint": "Какво да покажат хората?",
+  "videoEditorSocialStickerAddYoursHashtagHint": "Хаштаг",
+  "videoEditorSocialStickerRepliesTitleHint": "Заглавие",
+  "videoEditorSocialStickerQuestionNote": "Отговорите идват при теб като лични съобщения.",
+  "videoEditorSocialStickerAddYoursNote": "Зрителите отговарят със свое видео. Всеки отговор получава този хаштаг и води обратно към твоето видео.",
+  "videoEditorSocialStickerRepliesNote": "Показва видео отговорите на това видео. Зрителите го докосват, за да ги гледат.",
+  "videoEditorInteractiveCardAreaHint": "Стикерът стои в тази рамка, за да могат зрителите да го докосват",
+  "videoStickerPollSignInToVote": "Влез в профила си, за да гласуваш.",
+  "videoStickerPollNotReady": "Все още се свързва. Опитай отново след малко.",
+  "videoStickerPollVoteFailed": "Гласът ти не беше изпратен. Опитай отново.",
+  "videoStickerPollVotesArePublic": "Гласовете са публични. Всеки може да види избора ти.",
+  "videoStickerPollVoteCount": "{count, plural, one{1 глас} other{{count} гласа}}",
+  "videoStickerQuestionAnswerHint": "Докосни, за да отговориш",
+  "videoStickerQuestionAnswerSemanticLabel": "Отговор: {question}",
+  "videoStickerAddYoursButton": "Твой ред",
+  "videoStickerAddYoursJoined": "{count, plural, =0{Започни ти} =1{{count} се включи} other{{count} се включиха}}",
+  "videoStickerAddYoursJoinedAtLeast": "{count} се включиха",
+  "videoStickerAddYoursOpenSemanticLabel": "Виж кой се включи",
+  "videoStickerAddYoursJoinSemanticLabel": "Твой ред: {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{Още няма отговори} =1{{count} отговор} other{{count} отговора}}",
+  "videoStickerRepliesCountAtLeast": "{count} отговора",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{Видео отговори, още няма} =1{Гледай {count} видео отговор} other{Гледай {count} видео отговора}}",
+  "videoStickerRepliesSemanticLabelAtLeast": "Гледай {count} видео отговора",
+  "videoStickerQuestionSignIn": "Влез в профила си, за да отговориш.",
+  "videoStickerQuestionUnavailable": "Отговарянето на въпроси не е достъпно за профила ти.",
+  "videoStickerQuestionAnswerTitle": "Отговор",
+  "videoStickerQuestionAnswerFieldLabel": "Твоят отговор",
+  "videoStickerQuestionAnswerPrivacyNote": "Само {name} вижда отговора ти. Може да го сподели във видео, без името ти.",
+  "videoStickerQuestionAnswerSend": "Изпрати",
+  "videoStickerQuestionAnswerSent": "Отговорът е изпратен.",
+  "videoStickerQuestionAnswerTooLong": "Този отговор е твърде дълъг, за да се изпрати.",
+  "videoStickerQuestionAnswerFailed": "Отговорът ти не беше изпратен. Опитай отново.",
+  "videoStickerAddYoursSignIn": "Влез в профила си, за да се включиш.",
+  "videoStickerRepliesManageTitle": "Видео отговори",
+  "videoStickerRepliesEmpty": "Още няма видео отговори.",
+  "videoStickerRepliesLoadFailed": "Отговорите не можаха да се заредят.",
+  "videoStickerRepliesRetry": "Опитай пак",
+  "videoStickerRepliesPin": "Закачи",
+  "videoStickerRepliesUnpin": "Откачи",
+  "videoStickerRepliesHide": "Скрий",
+  "videoStickerRepliesShow": "Покажи",
+  "videoStickerRepliesPinned": "Закачено",
+  "videoStickerRepliesHidden": "Скрито",
+  "videoStickerRepliesSaveFailed": "Не се запази. Опитай пак.",
+  "videoStickerRepliesWatchSemanticLabel": "Гледай отговора от {name}",
   "devOptionsClipRecovery": "Възстановяване на клипове",
   "devOptionsClipRecoveryDescription": "Намира записи, съхранени под друг акаунт, и видеофайлове, към които вече не сочи никакъв запис.",
   "devOptionsClipRecoveryScan": "Сканиране",
@@ -65,6 +135,7 @@
   "publishErrorPermissionDenied": "Divine няма разрешение да качва. Провери разрешенията на приложението в настройките и опитай пак.",
   "publishErrorOutOfMemory": "Устройството ти е с малко свободна памет. Затвори няколко приложения и опитай пак.",
   "publishErrorOverlaysUnavailable": "Текстът и стикерите в тази чернова не можаха да се подготвят. Отвори я в редактора и публикувай пак.",
+  "publishErrorQuestionStickerRestricted": "Профилът ти не може да публикува стикер с въпрос, защото отговорите идват като лични съобщения. Премахни го и публикувай отново.",
   "publishErrorTooManyDetachedClips": "Устройството ти не може да експортира толкова много откачени клипове наведнъж. Върни няколко на времевата линия и опитай пак.",
   "publishErrorDraftTooManyDetachedClips": "Устройството ти не може да експортира толкова много откачени клипове наведнъж. Отвори черновата в редактора, върни няколко на времевата линия и публикувай пак.",
   "publishErrorUnknownServer": "Неизвестен сървър",
@@ -74,7 +145,10 @@
   "dmReactionRetryAction": "Опитай отново",
   "dmMessageBubbleVideoReplyHint": "Отваряне на посочения видеоклип",
   "commonSomethingWentWrong": "Нещо се обърка",
-  "profileFeedError": "Сървърът е недостъпен. Провери връзката си и опитай отново.",
+  "profileVideosLoadFailedTitle": "Видеата ти не можаха да се заредят",
+  "profileVideosLoadFailedOtherTitle": "Видеата не можаха да се заредят",
+  "profileVideosLoadFailedSubtitle": "Провери връзката си и опитай отново.",
+  "profileVideosLoadFailedRetry": "Опитай пак",
   "profileFeedLoadMoreError": "Още видеа не можаха да се заредят. Дръпни надолу за обновяване.",
   "appTitle": "Divine",
   "@appTitle": {
@@ -750,6 +824,21 @@
   "metadataBadgeNotDivine": "Не е от Divine",
   "metadataBadgeHumanMade": "Направено от човек",
   "metadataSoundsLabel": "Звуци",
+  "metadataLinksLabel": "Линкове",
+  "videoStickerLinkSemanticLabel": "Стикер с линк, отваря {url}",
+  "videoStickerMentionSemanticLabel": "Стикер със споменаване, отваря профила",
+  "videoStickerHashtagSemanticLabel": "Стикер с хаштаг, отваря #{hashtag}",
+  "videoStickerSoundSemanticLabel": "Стикер със звук, отваря звука",
+  "videoStickerPlaceSemanticLabel": "Стикер с място, отваря {place} в карта",
+  "videoStickerCountdownSemanticLabel": "Стикер с обратно броене, задава напомняне",
+  "videoStickerReplySemanticLabel": "Стикер с отговор, отваря това, на което отговаря видеото",
+  "videoStickerCountdownDays": "{count, plural, =1{{count} ден} other{{count} дни}}",
+  "videoStickerCountdownReminderSet": "Напомнянето е зададено. Ще ти пишем, когато стане време.",
+  "videoStickerCountdownReminderRemoved": "Напомнянето е премахнато.",
+  "videoStickerCountdownOver": "Това обратно броене приключи.",
+  "videoStickerCountdownNotificationsOff": "Включи известията за Divine, за да получиш напомнянето.",
+  "videoStickerCountdownReminderBody": "Време е! Обратното броене, което запази, току-що приключи.",
+  "videoStickerLinkSheetBody": "Този линк се отваря извън Divine. Провери адреса, преди да продължиш.",
   "metadataOriginalSound": "Оригинален звук",
   "metadataVerificationLabel": "Проверка",
   "metadataDeviceAttestation": "Атестация на устройството",
@@ -1824,6 +1913,7 @@
   "routeInvalidUserId": "Невалиден потребителски идентификатор",
   "routeInvalidVideoId": "Невалиден идентификатор на видео",
   "routeInvalidSoundId": "Невалиден идентификатор на звука",
+  "routeInvalidQuestion": "Невалиден линк към въпрос",
   "routeInvalidCategory": "Невалидна категория",
   "routeNoVideosToDisplay": "Няма видеа за показване",
   "routeGoHome": "Към началото",
@@ -2421,11 +2511,11 @@
   "videoClipBackupUnsignedSemanticLabel": "В галерията ти без удостоверения за съдържание. {label}",
   "videoClipStopMotionSemanticLabel": "Стоп-моушън клип, {frames}",
   "videoClipSemanticValueSelectedAtPosition": "Избран, номер {position}",
-  "videoClipSemanticValueSelected": "Избран",
   "videoClipSemanticValueNotSelected": "Не е избран",
   "videoClipSemanticHintDisabled": "Деактивиран",
-  "videoClipSemanticHintSelect": "Докоснете за избор, задръжте за преглед",
-  "videoClipSemanticHintDeselect": "Докоснете за премахване на избора, задръжте за преглед",
+  "videoClipSemanticHintSelect": "Докоснете за избор",
+  "videoClipSemanticHintDeselect": "Докоснете за премахване на избора",
+  "videoClipSemanticHintPreview": "Докоснете за преглед",
   "routerInvalidCreator": "Невалиден създател",
   "routerInvalidHashtagRoute": "Невалиден маршрут на хаштаг",
   "categoryGalleryCouldNotLoadVideos": "Не успяхме да заредим видеата",
@@ -2600,6 +2690,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} хареса видео, в което си отбелязан(а)",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} харесаха коментара ти",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",
@@ -2747,6 +2845,8 @@
   "libraryTrashDeleteConfirmMessage": "Това веднага премахва клипа от кошчето.",
   "libraryTrashEmptyConfirmTitle": "Да изпразня ли кошчето?",
   "libraryTrashEmptyConfirmMessage": "Това ще изтрие окончателно {count, plural, =1{1 клип} other{{count} клипа}} от кошчето веднага.",
+  "libraryTrashClipsRestored": "{count, plural, =1{Клипът е възстановен} other{{count} клипа са възстановени}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{Клипът е изтрит окончателно} other{{count} клипа са изтрити окончателно}}",
   "videoRecorderCloseLabel": "Затворете видеорекордер",
   "videoRecorderContinueToEditorLabel": "Продължете към видеоредактора",
   "videoRecorderCameraPreviewLabel": "Преглед от камерата",
@@ -2840,9 +2940,51 @@
   "videoEditorEffectConfetti": "Конфети",
   "videoEditorEffectHearts": "Сърца",
   "videoEditorEffectSparkles": "Искри",
+  "videoEditorEffectRain": "Дъжд",
+  "videoEditorEffectLeaves": "Листа",
+  "videoEditorEffectBlossoms": "Листенца",
+  "videoEditorEffectBubbles": "Мехурчета",
+  "videoEditorEffectBokeh": "Боке",
+  "videoEditorEffectMusicNotes": "Ноти",
+  "videoEditorEffectStars": "Звезди",
+  "videoEditorEffectFireflies": "Светулки",
+  "videoEditorEffectEmbers": "Жар",
+  "videoEditorEffectMoney": "Пари",
+  "videoEditorEffectBalloons": "Балони",
   "videoEditorEffectTiltShift": "Тилт-шифт",
   "videoEditorEffectZoomBlur": "Зум размазване",
+  "videoEditorEffectSpinBlur": "Ротационно размазване",
   "videoEditorEffectComic": "Комикс",
+  "videoEditorEffectSwirl": "Вихър",
+  "videoEditorEffectRipple": "Вълнички",
+  "videoEditorEffectFlutedGlass": "Оребрено стъкло",
+  "videoEditorEffectEightBit": "8-битов",
+  "videoEditorEffectAnaglyph": "3D очила",
+  "videoEditorEffectRiso": "Ризограф",
+  "videoEditorEffectTealOrange": "Тюркоаз и оранжево",
+  "videoEditorEffectWarmFilm": "Топъл филм",
+  "videoEditorEffectSlideFilm": "Диапозитив",
+  "videoEditorEffectCoolFilm": "Студен филм",
+  "videoEditorEffectMatte": "Матово",
+  "videoEditorEffectBleachBypass": "Без избелване",
+  "videoEditorEffectCrossProcess": "Кръстосана обработка",
+  "videoEditorEffectGoldenHour": "Златен час",
+  "videoEditorEffectMoonlight": "Лунна светлина",
+  "videoEditorEffectSilver": "Сребро",
+  "videoEditorEffectCategoryRetro": "Ретро",
+  "videoEditorEffectCategoryGlitch": "Глич",
+  "videoEditorEffectCategoryDistort": "Изкривяване",
+  "videoEditorEffectCategoryLight": "Светлина",
+  "videoEditorEffectCategoryMotion": "Движение",
+  "videoEditorEffectCategoryParticles": "Частици",
+  "videoEditorEffectCategoryLooks": "Визии",
+  "videoEditorFilterCategoryNatural": "Естествени",
+  "videoEditorFilterCategoryVibrant": "Наситени",
+  "videoEditorFilterCategoryWarm": "Топли",
+  "videoEditorFilterCategoryCool": "Студени",
+  "videoEditorFilterCategoryVintage": "Винтидж",
+  "videoEditorFilterCategoryBlackAndWhite": "Черно-бели",
+  "videoEditorFilterCategoryTints": "Оттенъци",
   "videoEditorDropsSettingsTitle": "Настройка на капките",
   "videoEditorDropsCountLabel": "Брой",
   "videoEditorDropsSizeLabel": "Размер",
@@ -3265,6 +3407,8 @@
   "videoEditorLayerAnimationPulseTo": "Свиване до",
   "videoEditorLayerAnimationWiggleAngle": "Наклон",
   "videoEditorLayerAnimationBounceHeight": "Височина",
+  "videoEditorLayerAnimationFlipSideways": "Встрани",
+  "videoEditorLayerAnimationFlipOver": "Отгоре надолу",
   "videoEditorLayerAnimationCustomPoint": "По избор",
   "videoEditorLayerAnimationPointEnterHint": "Докосни видеото там, откъдето да се плъзне навътре",
   "videoEditorLayerAnimationPointLeaveHint": "Докосни видеото там, накъдето да се плъзне навън",
@@ -3291,6 +3435,101 @@
   "videoEditorFeedPreviewContent": "Избягвайте да поставяте съдържание зад тези области.",
   "videoEditorStickersDivineOriginals": "Divine Оригинали",
   "videoEditorStickerSearchHint": "Търсене на стикери...",
+  "videoEditorInfoStickersTitle": "Инфо",
+  "videoEditorSocialStickersTitle": "Социални",
+  "videoEditorSocialStickerMention": "Споменаване",
+  "videoEditorSocialStickerHashtag": "Хаштаг",
+  "videoEditorSocialStickerSoundCredit": "Звук",
+  "videoEditorSocialStickerMentionSample": "твоетоиме",
+  "videoEditorSocialStickerHashtagSample": "хаштаг",
+  "videoEditorSocialStickerChoosePerson": "Избери човек",
+  "videoEditorSocialStickerMentionNote": "Споменат е в публикацията ти и получава известие.",
+  "videoEditorSocialStickerHashtagHint": "Въведи хаштаг",
+  "videoEditorSocialStickerHashtagNote": "Добавя се и към хаштаговете на публикацията ти.",
+  "videoEditorSocialStickerLyricHint": "Ред от текста на песента (по избор)",
+  "videoEditorSocialStickerLink": "Линк",
+  "videoEditorSocialStickerLinkUrlHint": "Уеб адрес",
+  "videoEditorSocialStickerLinkTitleHint": "Заглавие (по избор)",
+  "videoEditorSocialStickerLinkNote": "Адресът се добавя към публикацията ти.",
+  "videoEditorSocialStickerLinkInvalid": "Това още не е уеб адрес.",
+  "videoEditorInteractiveStickersTitle": "Интерактивни",
+  "videoEditorSocialStickerCountdown": "Обратно броене",
+  "videoEditorSocialStickerCountdownSample": "Лято",
+  "videoEditorSocialStickerCountdownTitleHint": "До какво броиш?",
+  "videoEditorSocialStickerCountdownNote": "Зрителите виждат оставащото време и могат да си сложат напомняне.",
+  "videoEditorSocialStickerCountdownOver": "Този момент мина. Избери нов.",
+  "videoEditorSocialStickerReply": "Отговор",
+  "videoEditorSocialStickerReplyNote": "Зрителите го докосват, за да видят на какво отговаряш.",
+  "videoEditorSocialStickerSoundNote": "Нота",
+  "videoEditorSocialStickerSoundVinyl": "Плоча",
+  "videoEditorSocialStickerSoundCassette": "Касета",
+  "videoEditorSocialStickerSoundEqualizer": "Еквалайзер",
+  "videoEditorSocialStickerSoundPlayer": "Плейър",
+  "videoEditorInfoStickerTime": "Час",
+  "videoEditorInfoStickerDate": "Дата",
+  "videoEditorInfoStickerLocation": "Място",
+  "videoEditorInfoStickerWeather": "Времето",
+  "videoEditorInfoStickerAltitude": "Надморска височина",
+  "videoEditorInfoStickerBattery": "Батерия",
+  "videoEditorInfoStickerStyleLight": "Светъл",
+  "videoEditorInfoStickerStyleDark": "Тъмен",
+  "videoEditorInfoStickerStyleBrand": "Зелен",
+  "videoEditorInfoStickerStyleOutline": "Контур",
+  "videoEditorInfoStickerStyleDigital": "Цифров",
+  "videoEditorInfoStickerStyleAnalog": "Аналогов",
+  "videoEditorInfoStickerStyleGlass": "Стъкло",
+  "videoEditorInfoStickerStyleHighlight": "Жълт",
+  "videoEditorInfoStickerStyleNeon": "Неон",
+  "videoEditorInfoStickerStylePlain": "Семпъл",
+  "videoEditorInfoStickerChangePlace": "Смени мястото",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Търсенето на места не е налично на това устройство.",
+  "videoEditorInfoStickerRecordedValue": "Заснемане · {value}",
+  "videoEditorInfoStickerNowValue": "Сега · {value}",
+  "videoEditorInfoStickerTodayValue": "Днес · {value}",
+  "videoEditorInfoStickerDayCount": "Брояч на дни",
+  "videoEditorInfoStickerSun": "Слънце",
+  "videoEditorInfoStickerMoon": "Луна",
+  "videoEditorInfoStickerRecTimer": "REC таймер",
+  "videoEditorInfoStickerStyleFilm": "Филм",
+  "videoEditorInfoStickerStyleCamcorder": "Видеокамера",
+  "videoEditorInfoStickerDayCountValue": "Ден {day}",
+  "videoEditorInfoStickerDayCountOfValue": "Ден {day} от {total}",
+  "videoEditorInfoStickerDayLabel": "Ден",
+  "videoEditorInfoStickerDayTotalLabel": "Общо дни (по желание)",
+  "videoEditorInfoStickerSymbolPin": "Карфица",
+  "videoEditorInfoStickerSymbolFlag": "Знаме",
+  "videoEditorInfoStickerSymbolGlobe": "Глобус",
+  "videoEditorInfoStickerSymbolMap": "Карта",
+  "videoEditorInfoStickerMoonNew": "Новолуние",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Растящ сърп",
+  "videoEditorInfoStickerMoonFirstQuarter": "Първа четвърт",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Растяща луна",
+  "videoEditorInfoStickerMoonFull": "Пълнолуние",
+  "videoEditorInfoStickerMoonWaningGibbous": "Намаляваща луна",
+  "videoEditorInfoStickerMoonLastQuarter": "Последна четвърт",
+  "videoEditorInfoStickerMoonWaningCrescent": "Намаляващ сърп",
+  "videoEditorInfoStickerPlaceSearchHint": "Потърси град или място",
+  "videoEditorInfoStickerPlaceNoResults": "Няма намерени места",
+  "videoEditorInfoStickerPlaceSearchFailed": "Не успяхме да потърсим места. Опитай пак.",
+  "videoEditorInfoStickerPlacePrivacyNote": "Във видеото ти влиза само името на мястото, никога точното ти местоположение.",
+  "videoEditorInfoStickerLoading": "Зарежда се…",
+  "videoEditorInfoStickerLoadFailed": "Не успяхме да заредим. Опитай пак.",
+  "videoEditorInfoStickerMetAttribution": "Данни от MET Norway",
+  "videoEditorInfoStickerWeatherNow": "За по-стари видеа няма данни за времето, затова това е времето в момента.",
+  "videoEditorInfoStickerWeatherSunny": "Слънчево",
+  "videoEditorInfoStickerWeatherClearNight": "Ясна нощ",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Частична облачност",
+  "videoEditorInfoStickerWeatherCloudy": "Облачно",
+  "videoEditorInfoStickerWeatherFog": "Мъгла",
+  "videoEditorInfoStickerWeatherRain": "Дъжд",
+  "videoEditorInfoStickerWeatherShowers": "Превалявания",
+  "videoEditorInfoStickerWeatherSnow": "Сняг",
+  "videoEditorInfoStickerWeatherThunderstorm": "Гръмотевична буря",
+  "videoEditorInfoStickerSunTimeZoneNote": "Часовете са в часовата зона на телефона ти.",
+  "videoEditorInfoStickerTemperatureLabel": "Температура",
+  "videoEditorInfoStickerUnitLabel": "Мерна единица",
+  "videoEditorInfoStickerBatteryLevelLabel": "Ниво на батерията",
+  "videoEditorInfoStickerAdd": "Добави стикер",
   "videoEditorSelectFontSemanticLabel": "Избери шрифт",
   "videoEditorFontUnknown": "Неизвестен",
   "videoEditorSplitFailed": "Разделянето не бе успешно. Моля, опитайте отново.",
@@ -4161,6 +4400,7 @@
       }
     }
   },
+  "videoMetadataTagsPickerStickerTag": "{tag}, от стикер във видеото ти",
   "videoEditorTimelineVolumePreview": "Сила на звука {percent}%",
   "@videoEditorTimelineVolumePreview": {
     "placeholders": {
@@ -4274,6 +4514,9 @@
   "dmReelReplyComposerHint": "Съобщение до {name}…",
   "dmReelReplyComposerHintSelf": "Отговорете на себе си…",
   "dmReelReplyComposerSemanticLabel": "Отговор на този рийл",
+  "dmQuestionAnswerReceivedLabel": "Отговори на въпроса ти: {question}",
+  "dmQuestionAnswerSentLabel": "Ти отговори: {question}",
+  "dmQuestionAnswerWithVideo": "Отговори с видео",
   "dmReelReplyViewChat": "Виж чата",
   "dmReelReplySentAnnouncement": "Отговорът е изпратен",
   "dmReelReactionSentAnnouncement": "Реагирахте с {emoji}",
@@ -5910,8 +6153,97 @@
   "ideasDescriptionFive": "Просто исках да споделя.",
   "ideasTitleSix": "Малко от днес",
   "ideasDescriptionSix": "Оставям това тук.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{Стаи, {displayCount} непрочетено съобщение} other{Стаи, {displayCount} непрочетени съобщения}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{Ново: {displayCount}} other{Нови: {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} непрочетено съобщение} other{{displayCount} непрочетени съобщения}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} човек} other{{displayCount} души}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} съобщение} other{{displayCount} съобщения}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Последните 24 ч.",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Проверка на активността…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Активността не можа да се зареди.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Няма скорошни съобщения. Кажи здрасти.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Лични",
   "messagesRooms": "Стаи",
+  "messagesRoomsWithUnread": "Стаи ({badge})",
   "messagesPublicTestRooms": "Публични тестови стаи",
   "messagesPublicTestDisclosure": "Тези тестови стаи са публични. Всеки с достъп може да чете съобщенията ти.",
   "messagesNoRooms": "Все още няма стаи",
@@ -6020,5 +6352,57 @@
   "videoEditorLoopRepairProgress": "Подравняване на цикъла…",
   "videoEditorLoopRepairTrimmed": "Цикълът е изгладен. Премахнати са {seconds} сек.",
   "notificationFromDivine": "От Divine",
-  "announcementUnavailable": "Това съобщение вече не е налично."
+  "announcementUnavailable": "Това съобщение вече не е налично.",
+  "creatorHighlightLabel": "Твоят акцент за деня",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "Създадени видеа днес: {count}.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "В тази седмица има още малко от теб.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "Творчески дни тази седмица: {count}. Продължавай.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "Общо гледания досега на видеата, които публикува тази седмица: {count}.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "Най-гледаното от видеата ти, публикувани тази седмица",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "Създай още едно",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "Виж статистиката си",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "Гледай видеото",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

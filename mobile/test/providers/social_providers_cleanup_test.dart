@@ -2545,7 +2545,19 @@ void main() {
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
-          ).thenAnswer((_) => relay.stream);
+          ).thenAnswer((invocation) {
+            // The relay feeds gift wraps, so only the DM read gets it; the
+            // deletions read stays open and quiet, since ending it would
+            // also end the DM read.
+            final filters =
+                invocation.positionalArguments.first as List<Filter>;
+            final readsGiftWraps = filters.any(
+              (f) => f.kinds?.contains(EventKind.giftWrap) ?? false,
+            );
+            return readsGiftWraps
+                ? relay.stream
+                : StreamController<Event>().stream;
+          });
 
           final repository = DmRepository(
             nostrClient: nostrClient,
@@ -2598,7 +2610,12 @@ void main() {
             }),
           );
           for (var i = 0; i < 50; i++) {
-            if (await db.directMessagesDao.hasGiftWrap(wrapId)) return;
+            if (await db.directMessagesDao.hasGiftWrap(
+              wrapId,
+              ownerPubkey: _pubkeyA,
+            )) {
+              return;
+            }
             await pumpEventQueue();
           }
           fail('wrap $wrapId was never stored');

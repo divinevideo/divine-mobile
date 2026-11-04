@@ -7,9 +7,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/features/chat/chat_mention_providers.dart';
+import 'package:openvine/features/chat/chat_mention_repository.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/features/chat/concord_session.dart';
 import 'package:openvine/features/chat/concord_store.dart';
+import 'package:openvine/features/chat/room_activity_provider.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -36,13 +39,16 @@ class ChatPage extends ConsumerWidget {
   const ChatPage({
     this.communityId,
     this.channelId,
-    this.repositoryBuilder = buildConcordRepository,
+    this.repositoryBuilder,
     super.key,
   });
 
   final String? communityId;
   final String? channelId;
-  final ConcordRepositoryBuilder repositoryBuilder;
+
+  /// Test seam: builds an isolated repository the cubit owns, skipping the
+  /// shared room session and read tracking.
+  final ConcordRepositoryBuilder? repositoryBuilder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -65,23 +71,60 @@ class ChatPage extends ConsumerWidget {
         signer == null) {
       return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
     }
-    final database = ref.watch(databaseProvider);
+    final shared = repositoryBuilder == null
+        ? ref.watch(roomActivityRepositoryProvider)
+        : null;
+    if (repositoryBuilder == null && shared == null) {
+      return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
+    }
+    final channel = channelId ?? pocChatDefaultChannel;
+    // repositoryFor throws for a room outside the catalog and runs before
+    // selectChatRoom could reject the URL, so validate the room here.
+    if (!const ChatState().communities.any(
+          (community) =>
+              community.id == (communityId ?? pocChatCommunityId) &&
+              community.channels.contains(channel),
+        ) ||
+        (communityId == null) != (channelId == null)) {
+      return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
+    }
+    final effectiveChannel = pocChannelIdFor(channel);
+    final database = shared == null ? ref.watch(databaseProvider) : null;
     return BlocProvider(
-      key: ValueKey((pubkey, signer, communityId, channelId)),
+      key: ValueKey((pubkey, signer, communityId, channelId, shared)),
       create: (_) => ChatCubit(
-        repositoryBuilder(
-          pubkey: pubkey,
-          signer: signer,
-          store: DriftConcordStore(
-            dao: database.concordStoreDao,
-            account: pubkey,
-            scope: '$concordRelayUrl/${channelId ?? 'general'}',
-          ),
-        ),
+        shared?.repositoryFor(effectiveChannel) ??
+            repositoryBuilder!(
+              pubkey: pubkey,
+              signer: signer,
+              store: DriftConcordStore(
+                dao: database!.concordStoreDao,
+                account: pubkey,
+                scope: '$concordRelayUrl/${channelId ?? pocChatDefaultChannel}',
+              ),
+            ),
         pocStreamForChannel: pocStreamKeyFor,
         sealedAuthor: pubkey,
         channelIdFor: pocChannelIdFor,
-        ownsRepository: true,
+        ownsRepository: shared == null,
+        initialize: shared == null
+            ? null
+            : () => shared.ensureStarted(effectiveChannel),
+        onRead: shared == null
+            ? null
+            : (messages) => shared.markRead(effectiveChannel, messages),
+        // Read when the room opens, not captured, and again after each
+        // enrollment: a source rebuilt meanwhile knows only the rooms it
+        // loaded from storage.
+        onRoomOpened: (channel) async {
+          ChatMentionRepository? enrolled;
+          while (context.mounted) {
+            final mentions = ref.read(chatMentionRepositoryProvider);
+            if (mentions == null || identical(mentions, enrolled)) return;
+            await mentions.enroll(channel);
+            enrolled = mentions;
+          }
+        },
       ),
       child: _ChatSelection(communityId: communityId, channelId: channelId),
     );

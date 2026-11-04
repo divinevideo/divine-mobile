@@ -11,6 +11,15 @@ part 'app_database.g.dart';
 /// Default retention period for notifications (7 days)
 const _notificationRetentionDays = 7;
 
+/// The DM gift-wrap dedup index, unique per account rather than per device.
+///
+/// An outgoing row stores the recipient's wrap id and a kind-4 id is shared by
+/// both ends, so with both accounts on one device the id sits on two accounts'
+/// rows (#6645). Every place that creates the index uses this one definition.
+const _dmGiftWrapIndexSql =
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_dm_gift_wrap_id '
+    'ON direct_messages (gift_wrap_id, owner_pubkey)';
+
 /// Tables that legacy-v1 normalization creates and the v2 recovery probe
 /// checks.
 @visibleForTesting
@@ -54,6 +63,15 @@ const legacyV1NormalizationRepairIndexes = <String>[
   'idx_seen_videos_last_seen_at',
   'idx_clip_category_id',
   'idx_clip_category_owner_pubkey',
+];
+
+/// The columns v31 adds (#10012): for a DM reaction, its removal, or a
+/// delete-for-everyone, the members an attempt delivered it to and the wraps
+/// a fallback-pool relay accepted while a member's inbox could not be read.
+const _v31HeldWrapColumns = <(String, String)>[
+  ('dm_message_reactions', 'held_reaction_wraps'),
+  ('dm_message_reactions', 'held_removal_wraps'),
+  ('direct_messages', 'held_deletion_wraps'),
 ];
 
 /// Main application database using Drift
@@ -155,7 +173,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 30;
+  int get schemaVersion => 32;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -399,6 +417,13 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(notificationReads);
         await m.createTable(notificationReadMembers);
       }
+      if (from < 31 && to >= 31) {
+        await _repairSchemaV31();
+      }
+      if (from < 32 && to >= 32) {
+        await _migrateToV32OwnerScopedDedup(m);
+      }
+      await _withholdV31Columns(to);
     },
     beforeOpen: (details) async {
       // Salvage may preserve only one of these local-only tables. A missing
@@ -435,6 +460,7 @@ class AppDatabase extends _$AppDatabase {
         await _repairSchemaV20();
         await _repairConversationDismissals();
         await _repairSchemaV28();
+        await _withholdV31Columns(details.versionNow);
       }
 
       // Run cleanup of expired data on every app startup
@@ -502,7 +528,16 @@ class AppDatabase extends _$AppDatabase {
       'WHERE owner_pubkey IS NULL',
     );
 
-    await m.alterTable(TableMigration(directMessages));
+    final messageColumns = await _columnNames('direct_messages');
+    await m.alterTable(
+      TableMigration(
+        directMessages,
+        newColumns: [
+          if (!messageColumns.contains('held_deletion_wraps'))
+            directMessages.heldDeletionWraps,
+        ],
+      ),
+    );
     final conversationColumns = await _columnNames('conversations');
     await m.alterTable(
       TableMigration(
@@ -526,10 +561,7 @@ class AppDatabase extends _$AppDatabase {
       'CREATE INDEX IF NOT EXISTS idx_dm_conversation_created '
       'ON direct_messages (conversation_id, created_at DESC)',
     );
-    await customStatement(
-      'CREATE UNIQUE INDEX IF NOT EXISTS idx_dm_gift_wrap_id '
-      'ON direct_messages (gift_wrap_id)',
-    );
+    await customStatement(_dmGiftWrapIndexSql);
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_dm_sender '
       'ON direct_messages (sender_pubkey)',
@@ -648,6 +680,62 @@ class AppDatabase extends _$AppDatabase {
       'recipient_pubkeys',
       'TEXT NULL',
     );
+  }
+
+  /// Adds the record of the wraps relays hold of a DM reaction, its removal,
+  /// or a delete-for-everyone, per member (#10012).
+  ///
+  /// Existing rows stay NULL: an attempt before v31 recorded nothing, so its
+  /// next retry wraps the rumor again for every member, as every retry did
+  /// before. A versioned step only, outside the guarded `beforeOpen`
+  /// recovery: that path is not extended for new columns (MIGRATIONS.md).
+  Future<void> _repairSchemaV31() async {
+    for (final (table, column) in _v31HeldWrapColumns) {
+      await _addColumnIfMissing(table, column, 'TEXT NULL');
+    }
+  }
+
+  /// Makes the DM gift-wrap dedup per account instead of per device (#6645).
+  ///
+  /// v12 keyed the message rows by account but left `gift_wrap_id` unique
+  /// across the device, and the processed-wrap ledger was keyed by the id
+  /// alone. An account whose message shares a wrap id with another local
+  /// account's row (the sender's outgoing row holds the recipient's wrap id, a
+  /// kind-4 id is shared by both ends) lost its copy, or could not remember
+  /// that it had already merged a dual-sent kind 4 into its NIP-17 copy and
+  /// stored it a second time.
+  ///
+  /// Both new keys only admit rows the old ones refused, so no stored row can
+  /// violate them. The message index shares its name with the old one, so
+  /// `CREATE ... IF NOT EXISTS` alone would keep it. The ledger is rebuilt for
+  /// its new primary key: a NULL owner becomes `''` first, because the column
+  /// is NOT NULL and a NULL cannot take part in a key. A versioned step only,
+  /// outside the guarded `beforeOpen` recovery.
+  Future<void> _migrateToV32OwnerScopedDedup(Migrator m) async {
+    await customStatement('DROP INDEX IF EXISTS idx_dm_gift_wrap_id');
+    await customStatement(_dmGiftWrapIndexSql);
+
+    if (!await _tableExists('processed_gift_wraps')) {
+      await m.createTable(processedGiftWraps);
+      return;
+    }
+    await customStatement(
+      "UPDATE processed_gift_wraps SET owner_pubkey = '' "
+      'WHERE owner_pubkey IS NULL',
+    );
+    await m.alterTable(TableMigration(processedGiftWraps));
+  }
+
+  /// Drops the v31 columns again from a database opened at an earlier
+  /// [version], which only a migration test does: the v12 rebuild and the
+  /// legacy normalization create both tables from their current shape.
+  Future<void> _withholdV31Columns(int version) async {
+    if (version >= 31) return;
+    for (final (table, column) in _v31HeldWrapColumns) {
+      if ((await _columnNames(table)).contains(column)) {
+        await customStatement('ALTER TABLE $table DROP COLUMN $column');
+      }
+    }
   }
 
   Future<void> _repairSchemaV3() async {
@@ -1161,10 +1249,6 @@ class AppDatabase extends _$AppDatabase {
         ON direct_messages (conversation_id, created_at DESC)
       ''');
       await customStatement('''
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_dm_gift_wrap_id
-        ON direct_messages (gift_wrap_id)
-      ''');
-      await customStatement('''
         CREATE INDEX IF NOT EXISTS idx_dm_sender
         ON direct_messages (sender_pubkey)
       ''');
@@ -1259,13 +1343,10 @@ class AppDatabase extends _$AppDatabase {
       'is_deleted',
       'INTEGER NOT NULL DEFAULT 0',
     );
-    // Ensure the UNIQUE index on gift_wrap_id exists unconditionally.
-    // It was originally inside the "if table missing" block, so databases
-    // created by Drift's m.createAll() were missing it.
-    await customStatement('''
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_dm_gift_wrap_id
-      ON direct_messages (gift_wrap_id)
-    ''');
+    // Created only here, never with the legacy table above: that table has no
+    // owner_pubkey until the column is added, and an index made earlier would
+    // be the old device-wide one, which `IF NOT EXISTS` then keeps.
+    await customStatement(_dmGiftWrapIndexSql);
     await customStatement('''
       CREATE INDEX IF NOT EXISTS idx_dm_owner_pubkey
       ON direct_messages (owner_pubkey)
@@ -1389,6 +1470,8 @@ class AppDatabase extends _$AppDatabase {
           rumor_event_json TEXT,
           publish_status TEXT,
           recipient_pubkeys TEXT,
+          held_reaction_wraps TEXT,
+          held_removal_wraps TEXT,
           PRIMARY KEY (id, owner_pubkey)
         )
       ''');
@@ -1603,8 +1686,8 @@ class AppDatabase extends _$AppDatabase {
         CREATE TABLE processed_gift_wraps (
           gift_wrap_id TEXT NOT NULL,
           processed_at INTEGER NOT NULL,
-          owner_pubkey TEXT,
-          PRIMARY KEY (gift_wrap_id)
+          owner_pubkey TEXT NOT NULL DEFAULT '',
+          PRIMARY KEY (gift_wrap_id, owner_pubkey)
         )
       ''');
     }

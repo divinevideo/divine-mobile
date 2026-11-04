@@ -6,6 +6,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:bip340/bip340.dart' as schnorr;
+import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:test/test.dart';
 
@@ -142,6 +144,271 @@ void main() {
   });
 
   group('subscribe', () {
+    test(
+      'wire history cap warns even when duplicate wraps fold to one',
+      () async {
+        final authorSecret = '01'.padLeft(64, '0');
+        final author = schnorr.getPublicKey(authorSecret);
+        final channel = '12' * 32;
+        final stream = publicChannelKey('34' * 32, channel, 0);
+        final tags = [
+          ['channel', channel],
+          ['epoch', '0'],
+        ];
+        final rumor = {
+          'pubkey': author,
+          'created_at': 200000,
+          'kind': 9,
+          'tags': tags,
+          'content': 'A single retained message',
+          'id': computeEventId(
+            pubkey: author,
+            createdAt: 200000,
+            kind: 9,
+            tags: tags,
+            content: 'A single retained message',
+          ),
+        };
+        final wrap = await wrapSeal(
+          seal: await sealRumor(
+            rumor: rumor,
+            sealKind: 20013,
+            streamSeedHex: stream.seedHex,
+            streamPubkey: stream.pubkey,
+            authorSecretHex: authorSecret,
+          ),
+          streamSeedHex: stream.seedHex,
+          streamPubkey: stream.pubkey,
+        );
+        final store = InMemoryConcordStore(author);
+        final activity = RoomActivityRepository(
+          ownPubkey: author,
+          now: () => 200000,
+          channels: [
+            RoomActivityChannel(
+              channelId: channel,
+              repository: ConcordRepository(
+                relay: gateway,
+                store: store,
+                cipher: _UnusedCipher(),
+                historyLimit: 2,
+                sealedTransport: SealedChatTransport(
+                  relay: gateway,
+                  signer: (_) async => throw UnsupportedError('No sends'),
+                ),
+              ),
+              store: store,
+              streamSeedHex: stream.seedHex,
+              streamPubkey: stream.pubkey,
+            ),
+          ],
+        );
+        addTearDown(activity.close);
+        final request = relay.nextFrame('REQ');
+        final starting = activity.start();
+        final req = await request;
+        relay
+          ..send(['EVENT', req[1], wrap])
+          ..send(['EVENT', req[1], wrap])
+          ..send(['EOSE', req[1]]);
+        await starting;
+        final summary = activity.summaries[channel]!;
+        expect(summary.recentMessageCount, 1);
+        expect(summary.historyLimited, isTrue);
+      },
+    );
+
+    test('live events after EOSE do not fill the historical cap', () async {
+      final request = relay.nextFrame('REQ');
+      final secondMessage = Completer<void>();
+      var received = 0;
+      final subscription = gateway.subscribe({'limit': 2}).listen((_) {
+        received++;
+        if (received == 2) secondMessage.complete();
+      });
+      addTearDown(subscription.cancel);
+      final req = await request;
+      final history = gateway.historyReady;
+      relay
+        ..send(['EVENT', req[1], _event])
+        ..send(['EOSE', req[1]]);
+      await history;
+      relay.send(['EVENT', req[1], _event]);
+      await secondMessage.future;
+      expect(gateway.historyLimited, isFalse);
+    });
+
+    test(
+      'replayed REQs reset counting and preserve a discovered cap',
+      () async {
+        gateway = WebSocketRelayGateway(
+          relay.url,
+          reconnectDelay: const Duration(milliseconds: 10),
+        );
+        var received = 0;
+        var target = 1;
+        var receivedTarget = Completer<void>();
+        final subscription = gateway.subscribe({'limit': 2}).listen((_) {
+          received++;
+          if (received == target) receivedTarget.complete();
+        });
+        addTearDown(subscription.cancel);
+        final request = await relay.nextFrame('REQ');
+        final history = gateway.historyReady;
+        relay
+          ..send(['EVENT', request[1], _event])
+          ..send(['EOSE', request[1]]);
+        await history;
+        expect(gateway.historyLimited, isFalse);
+
+        final replay = relay.nextFrame('REQ');
+        await relay.sockets.last.close();
+        final secondRequest = await replay;
+        target = 2;
+        receivedTarget = Completer<void>();
+        relay
+          ..send(['EVENT', secondRequest[1], _event])
+          ..send(['EOSE', secondRequest[1]]);
+        await receivedTarget.future;
+        expect(gateway.historyLimited, isFalse);
+
+        final nextReplay = relay.nextFrame('REQ');
+        await relay.sockets.last.close();
+        final thirdRequest = await nextReplay;
+        target = 4;
+        receivedTarget = Completer<void>();
+        relay
+          ..send(['EVENT', thirdRequest[1], _event])
+          ..send(['EVENT', thirdRequest[1], _event])
+          ..send(['EOSE', thirdRequest[1]]);
+        await receivedTarget.future;
+        expect(gateway.historyLimited, isTrue);
+
+        final finalReplay = relay.nextFrame('REQ');
+        await relay.sockets.last.close();
+        await finalReplay;
+        expect(gateway.historyLimited, isTrue);
+      },
+    );
+
+    test(
+      'history readiness waits for EOSE and keeps live delivery open',
+      () async {
+        final request = relay.nextFrame('REQ');
+        final messages = <Map<String, dynamic>>[];
+        final firstMessage = Completer<void>();
+        final secondMessage = Completer<void>();
+        final subscription = gateway.subscribe({}).listen((message) {
+          messages.add(message);
+          if (messages.length == 1) firstMessage.complete();
+          if (messages.length == 2) secondMessage.complete();
+        });
+        addTearDown(subscription.cancel);
+        final req = await request;
+        var ready = false;
+        final history = gateway.historyReady.then((_) => ready = true);
+        relay.send(['EVENT', req[1], _event]);
+        await firstMessage.future;
+        expect(messages, [_event]);
+        expect(ready, isFalse);
+        relay.send(['EOSE', req[1]]);
+        await history;
+        relay.send([
+          'EVENT',
+          req[1],
+          {..._event, 'id': 'b' * 64},
+        ]);
+        await secondMessage.future;
+        expect(messages, hasLength(2));
+      },
+    );
+
+    test('missing EOSE times out', () async {
+      gateway = WebSocketRelayGateway(
+        relay.url,
+        historyTimeout: const Duration(milliseconds: 100),
+      );
+      final deadlines = _ControlledDeadlines(const Duration(milliseconds: 100));
+      await deadlines.run(() async {
+        final request = relay.nextFrame('REQ');
+        final subscription = gateway.subscribe({}).listen((_) {});
+        addTearDown(subscription.cancel);
+        final history = expectLater(
+          gateway.historyReady,
+          throwsA(isA<TimeoutException>()),
+        );
+        await request;
+        deadlines.timers.single.fire();
+        await history;
+      });
+    });
+
+    test('closing before EOSE cancels the history deadline', () async {
+      gateway = WebSocketRelayGateway(
+        relay.url,
+        historyTimeout: const Duration(milliseconds: 100),
+      );
+      final deadlines = _ControlledDeadlines(const Duration(milliseconds: 100));
+      await deadlines.run(() async {
+        final request = relay.nextFrame('REQ');
+        final subscription = gateway.subscribe({}).listen((_) {});
+        addTearDown(subscription.cancel);
+        final history = expectLater(gateway.historyReady, throwsStateError);
+        await request;
+        expect(deadlines.timers.single.isActive, isTrue);
+        await gateway.close();
+        await history;
+        expect(deadlines.timers.single.isActive, isFalse);
+      });
+    });
+
+    test('EOSE cancels the history timeout', () async {
+      gateway = WebSocketRelayGateway(
+        relay.url,
+        historyTimeout: const Duration(milliseconds: 100),
+      );
+      final deadlines = _ControlledDeadlines(const Duration(milliseconds: 100));
+      await deadlines.run(() async {
+        final request = relay.nextFrame('REQ');
+        final subscription = gateway.subscribe({}).listen((_) {});
+        addTearDown(subscription.cancel);
+        final history = gateway.historyReady;
+        final req = await request;
+        relay.send(['EOSE', req[1]]);
+        await history;
+        expect(deadlines.timers.single.isActive, isFalse);
+      });
+    });
+
+    test('relay CLOSED fails historical readiness', () async {
+      final request = relay.nextFrame('REQ');
+      final subscription = gateway
+          .subscribe({})
+          .listen(
+            (_) {},
+            onError: (Object _) {},
+          );
+      addTearDown(subscription.cancel);
+      final history = expectLater(gateway.historyReady, throwsStateError);
+      final req = await request;
+      relay.send(['CLOSED', req[1], 'restricted']);
+      await history;
+    });
+
+    test(
+      'closing releases historical readiness waiters',
+      () async {
+        final request = relay.nextFrame('REQ');
+        final subscription = gateway.subscribe({}).listen((_) {});
+        addTearDown(subscription.cancel);
+        await request;
+        final history = expectLater(gateway.historyReady, throwsStateError);
+        await gateway.close();
+        await history;
+        await expectLater(gateway.historyReady, throwsStateError);
+      },
+    );
+
     test(
       'subscription starts connection and replays its filter after disconnect',
       () async {
@@ -330,6 +597,31 @@ void main() {
         expect(relay.sockets, hasLength(3));
       },
     );
+    test('exhausted reconnects fail historical readiness', () async {
+      gateway = WebSocketRelayGateway(
+        relay.url,
+        reconnectDelay: const Duration(milliseconds: 5),
+        maxReconnectAttempts: 2,
+      );
+      final closer = relay.frames.stream.listen((frame) {
+        if (frame.first == 'REQ') unawaited(relay.sockets.last.close());
+      });
+      addTearDown(closer.cancel);
+      final subscription = gateway
+          .subscribe({})
+          .listen((_) {}, onError: (Object _) {});
+      addTearDown(subscription.cancel);
+      await expectLater(
+        gateway.historyReady,
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'Relay reconnect exhausted',
+          ),
+        ),
+      );
+    });
     test(
       'stream first listened to after close completes without connecting',
       () async {
@@ -379,6 +671,16 @@ class _LocalRelay {
     await frames.close();
     await server.close(force: true);
   }
+}
+
+class _UnusedCipher implements StreamCipher {
+  @override
+  String open(String ciphertext, String streamId) =>
+      throw UnsupportedError('No legacy envelopes');
+
+  @override
+  String seal(String plaintext, String streamId) =>
+      throw UnsupportedError('No legacy envelopes');
 }
 
 /// Controls only the operation deadline under test; real socket IO and all

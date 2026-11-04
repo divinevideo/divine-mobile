@@ -301,6 +301,13 @@ pve.LayerAnimation? _animationFromJson(Object? json) {
   if (wiggleAngle != null && wiggleAngle is! num) return null;
   final bounceHeight = json['bounceHeight'];
   if (bounceHeight != null && bounceHeight is! num) return null;
+  final turns = json['turns'];
+  if (turns != null && turns is! num) return null;
+  final axisName = json['flipAxis'];
+  final flipAxis = axisName == null
+      ? null
+      : pve.FlipAxis.values.asNameMap()[axisName];
+  if (axisName != null && flipAxis == null) return null;
 
   return pve.LayerAnimation(
     type: type,
@@ -311,6 +318,8 @@ pve.LayerAnimation? _animationFromJson(Object? json) {
     scaleFrom: (scaleFrom as num?)?.toDouble(),
     wiggleAngle: (wiggleAngle as num?)?.toDouble(),
     bounceHeight: (bounceHeight as num?)?.toDouble(),
+    turns: (turns as num?)?.toDouble(),
+    flipAxis: flipAxis,
   );
 }
 

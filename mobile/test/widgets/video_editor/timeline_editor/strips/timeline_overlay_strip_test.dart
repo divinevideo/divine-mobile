@@ -2,6 +2,7 @@
 // ABOUTME: Validates rendering, item tapping, collapse mode, and trim handles.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -9,8 +10,13 @@ import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bl
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/timeline_trim_handles.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_drop_indicator_line.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_item.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strip.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show WidgetLayer, WidgetLayerExportConfigs;
 
 void main() {
   group(TimelineOverlayStrip, () {
@@ -43,6 +49,7 @@ void main() {
       String? selectedItemId,
       ValueChanged<TimelineOverlayItem>? onItemTapped,
       OverlayMoveCallback? onItemMoved,
+      OverlayMovingCallback? onItemMoving,
       OverlayTrimCallback? onTrimChanged,
       ValueChanged<bool>? onTrimDragChanged,
       ValueChanged<TimelineOverlayItem>? onDragStarted,
@@ -68,6 +75,7 @@ void main() {
                 selectedItemId: selectedItemId,
                 onItemTapped: onItemTapped,
                 onItemMoved: onItemMoved,
+                onItemMoving: onItemMoving,
                 onTrimChanged: onTrimChanged,
                 onTrimDragChanged: onTrimDragChanged,
                 onDragStarted: onDragStarted,
@@ -144,6 +152,122 @@ void main() {
         await tester.longPress(find.text('Test Layer'));
         await tester.pumpAndSettle();
         expect(draggedItem?.id, equals('item-1'));
+      });
+
+      testWidgets('keeps a poll from being picked up', (tester) async {
+        final meta = const SocialStickerData(
+          kind: SocialStickerKind.poll,
+          pollQuestion: 'Which one?',
+          pollOptions: ['Red', 'Blue'],
+        ).toMeta();
+        final poll = TimelineOverlayItem(
+          id: 'poll',
+          type: TimelineOverlayType.layer,
+          startTime: Duration.zero,
+          endTime: const Duration(seconds: 6),
+          label: 'Poll',
+          layer: WidgetLayer(
+            id: 'poll',
+            widget: const SizedBox.shrink(),
+            meta: meta,
+            exportConfigs: WidgetLayerExportConfigs(id: 'poll', meta: meta),
+          ),
+        );
+        TimelineOverlayItem? draggedItem;
+        await tester.pumpWidget(
+          buildWidget(
+            items: [poll],
+            onDragStarted: (item) => draggedItem = item,
+          ),
+        );
+
+        await tester.longPress(find.byType(TimelineOverlayItemTile));
+        await tester.pumpAndSettle();
+        expect(draggedItem, isNull);
+      });
+
+      testWidgets('shows a layer dragged past the poll landing above it', (
+        tester,
+      ) async {
+        final meta = const SocialStickerData(
+          kind: SocialStickerKind.poll,
+          pollQuestion: 'Which one?',
+          pollOptions: ['Red', 'Blue'],
+        ).toMeta();
+        final poll = TimelineOverlayItem(
+          id: 'poll',
+          type: TimelineOverlayType.layer,
+          startTime: Duration.zero,
+          endTime: const Duration(seconds: 30),
+          row: 1,
+          label: 'Poll',
+          layer: WidgetLayer(
+            id: 'poll',
+            widget: const SizedBox.shrink(),
+            meta: meta,
+            exportConfigs: WidgetLayerExportConfigs(id: 'poll', meta: meta),
+          ),
+        );
+        await tester.pumpWidget(
+          buildWidget(items: [testItem, poll], rowCount: 2),
+        );
+
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.text('Test Layer')),
+        );
+        await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+        // Past the poll's row, into the empty row under it.
+        await gesture.moveBy(
+          const Offset(0, TimelineConstants.overlayRowHeight * 1.6),
+        );
+        await tester.pump();
+
+        expect(
+          tester
+              .widget<TimelineDropIndicatorLine>(
+                find.byType(TimelineDropIndicatorLine),
+              )
+              .lineY,
+          equals(TimelineConstants.overlayRowHeight),
+        );
+        await gesture.up();
+        await tester.pumpAndSettle();
+      });
+
+      // #10657: an overlay can be longer than the strip's total duration,
+      // and dragging it threw on `clamp(0, <negative>)`.
+      testWidgets('holds an item longer than the timeline at the start', (
+        tester,
+      ) async {
+        Duration? movingTo;
+        Duration? movedTo;
+        await tester.pumpWidget(
+          buildWidget(
+            totalDuration: const Duration(seconds: 4),
+            clipEdgesMs: const [0, 4000],
+            onItemMoved: ({
+              required item,
+              required startTime,
+              required row,
+              required insertAbove,
+            }) => movedTo = startTime,
+            onItemMoving: ({required item, required startTime}) =>
+                movingTo = startTime,
+          ),
+        );
+
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.text('Test Layer')),
+        );
+        await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+        await gesture.moveBy(const Offset(40, 0));
+        await tester.pump();
+        expect(movingTo, equals(Duration.zero));
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(movedTo, equals(Duration.zero));
       });
     });
 

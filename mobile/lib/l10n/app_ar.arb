@@ -1,5 +1,75 @@
 {
   "@@locale": "ar",
+  "videoEditorSocialStickerPoll": "استطلاع",
+  "videoEditorSocialStickerQuiz": "اختبار",
+  "videoEditorSocialStickerSlider": "شريط تمرير",
+  "videoEditorSocialStickerPollSampleQuestion": "أيّهما؟",
+  "videoEditorSocialStickerPollSampleYes": "نعم",
+  "videoEditorSocialStickerPollSampleNo": "لا",
+  "videoEditorSocialStickerQuizSampleQuestion": "انطلق Vine في عام…",
+  "videoEditorSocialStickerSliderSampleQuestion": "ما مدى الجوع؟",
+  "videoEditorSocialStickerPollQuestionHint": "السؤال",
+  "videoEditorSocialStickerPollOptionHint": "الإجابة {number}",
+  "videoEditorSocialStickerPollRemoveOption": "إزالة الإجابة {number}",
+  "videoEditorSocialStickerQuizMarkRight": "تحديد الإجابة {number} كإجابة صحيحة",
+  "videoEditorSocialStickerPollAddOption": "إضافة إجابة",
+  "videoEditorSocialStickerPollNote": "يرى المشاهدون النتائج بعد التصويت. الأصوات علنية.",
+  "videoEditorSocialStickerQuizNote": "تُحدَّد الإجابة الصحيحة بعلامة الصح. يراها المشاهدون بعد اختيار إجابة.",
+  "videoEditorSocialStickerSliderNote": "يسحب المشاهدون الرمز التعبيري للإجابة ويرون أين يستقر في المتوسط.",
+  "videoStickerQuizRightAnswer": "إجابة صحيحة",
+  "videoStickerQuizWrongAnswer": "إجابة خاطئة",
+  "videoEditorSocialStickerQuestion": "سؤال",
+  "videoEditorSocialStickerAddYours": "دورك",
+  "videoEditorSocialStickerReplies": "الردود",
+  "videoEditorSocialStickerQuestionSample": "ما سؤالك لي؟",
+  "videoEditorSocialStickerAddYoursSample": "كيف يبدو مكتبك؟",
+  "videoEditorSocialStickerRepliesSample": "الرد بفيديو",
+  "videoEditorSocialStickerQuestionHint": "سؤالك",
+  "videoEditorSocialStickerAddYoursPromptHint": "ما الذي يعرضه الناس؟",
+  "videoEditorSocialStickerAddYoursHashtagHint": "وسم",
+  "videoEditorSocialStickerRepliesTitleHint": "العنوان",
+  "videoEditorSocialStickerQuestionNote": "تصلك الإجابات في رسائل خاصة.",
+  "videoEditorSocialStickerAddYoursNote": "يجيب المشاهدون بفيديو خاص بهم. تحمل كل إجابة هذا الوسم وتُحيل إلى فيديوك.",
+  "videoEditorSocialStickerRepliesNote": "يعرض ردود الفيديو على هذا الفيديو. عند لمسه يمكن مشاهدة الردود.",
+  "videoEditorInteractiveCardAreaHint": "يبقى الملصق داخل هذا الإطار ليتمكن المشاهدون من لمسه",
+  "videoStickerPollSignInToVote": "يلزم تسجيل الدخول للتصويت.",
+  "videoStickerPollNotReady": "لا يزال الاتصال جاريًا. يُرجى المحاولة بعد لحظات.",
+  "videoStickerPollVoteFailed": "تعذّر إرسال التصويت. يُرجى المحاولة مرة أخرى.",
+  "videoStickerPollVotesArePublic": "الأصوات علنية، ويمكن لأي شخص رؤية الاختيار.",
+  "videoStickerPollVoteCount": "{count, plural, zero{لا أصوات} one{صوت واحد} two{صوتان} few{{count} أصوات} many{{count} صوتًا} other{{count} صوت}}",
+  "videoStickerQuestionAnswerHint": "اللمس للإجابة",
+  "videoStickerQuestionAnswerSemanticLabel": "الإجابة: {question}",
+  "videoStickerAddYoursButton": "دورك",
+  "videoStickerAddYoursJoined": "{count, plural, =0{بانتظار أول مشاركة} =1{مشاركة واحدة} =2{مشاركتان} few{{count} مشاركات} many{{count} مشاركة} other{{count} مشاركة}}",
+  "videoStickerAddYoursJoinedAtLeast": "{count} مشاركة",
+  "videoStickerAddYoursOpenSemanticLabel": "عرض المشاركات",
+  "videoStickerAddYoursJoinSemanticLabel": "دورك: {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{لا ردود بعد} =1{رد واحد} =2{ردّان} few{{count} ردود} many{{count} ردًا} other{{count} رد}}",
+  "videoStickerRepliesCountAtLeast": "{count} رد",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{ردود الفيديو، لا شيء بعد} =1{مشاهدة رد واحد بالفيديو} =2{مشاهدة ردّين بالفيديو} few{مشاهدة {count} ردود بالفيديو} many{مشاهدة {count} ردًا بالفيديو} other{مشاهدة {count} رد بالفيديو}}",
+  "videoStickerRepliesSemanticLabelAtLeast": "مشاهدة {count} رد بالفيديو",
+  "videoStickerQuestionSignIn": "يلزم تسجيل الدخول للإجابة.",
+  "videoStickerQuestionUnavailable": "الإجابة عن الأسئلة غير متاحة لحسابك.",
+  "videoStickerQuestionAnswerTitle": "الإجابة",
+  "videoStickerQuestionAnswerFieldLabel": "إجابتك",
+  "videoStickerQuestionAnswerPrivacyNote": "لا يرى إجابتك إلا {name}. قد تُشارَك في فيديو، دون ذكر اسمك.",
+  "videoStickerQuestionAnswerSend": "إرسال",
+  "videoStickerQuestionAnswerSent": "تم إرسال الإجابة.",
+  "videoStickerQuestionAnswerTooLong": "الإجابة طويلة جدًا ولا يمكن إرسالها.",
+  "videoStickerQuestionAnswerFailed": "تعذّر إرسال الإجابة. يُرجى المحاولة مرة أخرى.",
+  "videoStickerAddYoursSignIn": "يلزم تسجيل الدخول للمشاركة.",
+  "videoStickerRepliesManageTitle": "ردود الفيديو",
+  "videoStickerRepliesEmpty": "لا توجد ردود فيديو بعد.",
+  "videoStickerRepliesLoadFailed": "تعذّر تحميل الردود.",
+  "videoStickerRepliesRetry": "إعادة المحاولة",
+  "videoStickerRepliesPin": "تثبيت",
+  "videoStickerRepliesUnpin": "إلغاء التثبيت",
+  "videoStickerRepliesHide": "إخفاء",
+  "videoStickerRepliesShow": "إظهار",
+  "videoStickerRepliesPinned": "مثبّت",
+  "videoStickerRepliesHidden": "مخفي",
+  "videoStickerRepliesSaveFailed": "تعذّر الحفظ. يُرجى المحاولة مرة أخرى.",
+  "videoStickerRepliesWatchSemanticLabel": "مشاهدة رد {name}",
   "devOptionsClipRecovery": "استرداد المقاطع",
   "devOptionsClipRecoveryDescription": "يعثر على التسجيلات المحفوظة ضمن حساب آخر وعلى ملفات الفيديو التي لم يعد أي سجل يشير إليها.",
   "devOptionsClipRecoveryScan": "فحص",
@@ -65,6 +135,7 @@
   "publishErrorPermissionDenied": "ليست لدى Divine صلاحية الرفع. تحقّق من أذونات التطبيق في إعدادات جهازك وحاول مرّة أخرى.",
   "publishErrorOutOfMemory": "ذاكرة جهازك منخفضة. أغلق بعض التطبيقات وحاول مرّة أخرى.",
   "publishErrorOverlaysUnavailable": "تعذّر تجهيز النص والملصقات في هذه المسودة. افتحها في المحرّر ثم انشر مرّة أخرى.",
+  "publishErrorQuestionStickerRestricted": "لا يمكن لحسابك نشر ملصق سؤال، لأن إجاباته تصل كرسائل خاصة. أزله، ثم انشر مجددًا.",
   "publishErrorTooManyDetachedClips": "لا يستطيع جهازك تصدير هذا العدد من المقاطع المفصولة دفعة واحدة. يُرجى إرجاع بعضها إلى الجدول الزمني ثم المحاولة مرّة أخرى.",
   "publishErrorDraftTooManyDetachedClips": "لا يستطيع جهازك تصدير هذا العدد من المقاطع المفصولة دفعة واحدة. يُرجى فتح المسودة في المحرّر وإرجاع بعض المقاطع إلى الجدول الزمني ثم النشر مرّة أخرى.",
   "publishErrorUnknownServer": "خادم غير معروف",
@@ -74,7 +145,10 @@
   "dmReactionRetryAction": "إعادة المحاولة",
   "dmMessageBubbleVideoReplyHint": "افتح الفيديو المُشار إليه",
   "commonSomethingWentWrong": "حدث خطأ ما",
-  "profileFeedError": "تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مرة أخرى.",
+  "profileVideosLoadFailedTitle": "تعذّر تحميل فيديوهاتك",
+  "profileVideosLoadFailedOtherTitle": "تعذّر تحميل الفيديوهات",
+  "profileVideosLoadFailedSubtitle": "يرجى التحقق من اتصالك والمحاولة مرّة أخرى.",
+  "profileVideosLoadFailedRetry": "إعادة المحاولة",
   "profileFeedLoadMoreError": "تعذّر تحميل المزيد من الفيديوهات. اسحب للتحديث.",
   "appTitle": "Divine",
   "@appTitle": {
@@ -679,6 +753,21 @@
   "metadataBadgeNotDivine": "ليس Divine",
   "metadataBadgeHumanMade": "من صنع البشر",
   "metadataSoundsLabel": "أصوات",
+  "metadataLinksLabel": "الروابط",
+  "videoStickerLinkSemanticLabel": "ملصق رابط، يفتح {url}",
+  "videoStickerMentionSemanticLabel": "ملصق إشارة، يفتح الملف الشخصي",
+  "videoStickerHashtagSemanticLabel": "ملصق وسم، يفتح #{hashtag}",
+  "videoStickerSoundSemanticLabel": "ملصق صوت، يفتح الصوت",
+  "videoStickerPlaceSemanticLabel": "ملصق موقع، يفتح {place} في خريطة",
+  "videoStickerCountdownSemanticLabel": "ملصق عدّ تنازلي، يضبط تذكيرًا",
+  "videoStickerReplySemanticLabel": "ملصق رد، يفتح ما يرد عليه هذا الفيديو",
+  "videoStickerCountdownDays": "{count, plural, =0{{count} يوم} =1{{count} يوم} =2{{count} يوم} few{{count} أيام} many{{count} يومًا} other{{count} يوم}}",
+  "videoStickerCountdownReminderSet": "تم ضبط التذكير. سيصل تنبيه عند حلول الوقت.",
+  "videoStickerCountdownReminderRemoved": "تمت إزالة التذكير.",
+  "videoStickerCountdownOver": "انتهى هذا العدّ التنازلي.",
+  "videoStickerCountdownNotificationsOff": "يلزم تفعيل إشعارات Divine لتلقي التذكير.",
+  "videoStickerCountdownReminderBody": "حان الوقت! انتهى العدّ التنازلي المحفوظ للتو.",
+  "videoStickerLinkSheetBody": "يُفتح هذا الرابط خارج Divine. تحقّق من العنوان قبل أن تنتقل.",
   "metadataOriginalSound": "صوت أصلي",
   "metadataVerificationLabel": "التحقق",
   "metadataDeviceAttestation": "تصديق الجهاز",
@@ -1622,6 +1711,7 @@
   "routeInvalidUserId": "مُعرِّف مستخدم غير صالح",
   "routeInvalidVideoId": "مُعرِّف فيديو غير صالح",
   "routeInvalidSoundId": "مُعرِّف صوت غير صالح",
+  "routeInvalidQuestion": "رابط سؤال غير صالح",
   "routeInvalidCategory": "فئة غير صالحة",
   "routeNoVideosToDisplay": "لا توجد مقاطع فيديو لعرضها",
   "routeGoHome": "الذهاب إلى الرئيسية",
@@ -2187,11 +2277,11 @@
   "videoClipBackupUnsignedSemanticLabel": "في معرض الصور دون بيانات اعتماد المحتوى. {label}",
   "videoClipStopMotionSemanticLabel": "مقطع حركة إيقافية، {frames}",
   "videoClipSemanticValueSelectedAtPosition": "محدد، رقم {position}",
-  "videoClipSemanticValueSelected": "محدد",
   "videoClipSemanticValueNotSelected": "غير محدد",
   "videoClipSemanticHintDisabled": "معطل",
-  "videoClipSemanticHintSelect": "انقر للتحديد، اضغط مطولاً للمعاينة",
-  "videoClipSemanticHintDeselect": "انقر لإلغاء التحديد، اضغط مطولاً للمعاينة",
+  "videoClipSemanticHintSelect": "انقر للتحديد",
+  "videoClipSemanticHintDeselect": "انقر لإلغاء التحديد",
+  "videoClipSemanticHintPreview": "انقر للمعاينة",
   "libraryClipDuration": "{seconds} ث",
   "libraryTabClips": "مقاطع",
   "libraryTabDrafts": "مسودات",
@@ -2285,6 +2375,14 @@
   },
   "notificationLikedYourVideo": "{actorName} أعجب بفيديوك",
   "@notificationLikedYourVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLikedTaggedVideo": "{actorName} أعجب بفيديو تمت الإشارة إليك فيه",
+  "@notificationLikedTaggedVideo": {
     "placeholders": {
       "actorName": {
         "type": "String"
@@ -2572,9 +2670,51 @@
   "videoEditorEffectConfetti": "قصاصات ملوّنة",
   "videoEditorEffectHearts": "قلوب",
   "videoEditorEffectSparkles": "بريق",
+  "videoEditorEffectRain": "مطر",
+  "videoEditorEffectLeaves": "أوراق الخريف",
+  "videoEditorEffectBlossoms": "بتلات",
+  "videoEditorEffectBubbles": "فقاعات",
+  "videoEditorEffectBokeh": "بوكيه",
+  "videoEditorEffectMusicNotes": "نوتات",
+  "videoEditorEffectStars": "نجوم",
+  "videoEditorEffectFireflies": "يراعات",
+  "videoEditorEffectEmbers": "جمر",
+  "videoEditorEffectMoney": "نقود",
+  "videoEditorEffectBalloons": "بالونات",
   "videoEditorEffectTiltShift": "منظر مصغّر",
   "videoEditorEffectZoomBlur": "تمويه التكبير",
+  "videoEditorEffectSpinBlur": "تمويه الدوران",
   "videoEditorEffectComic": "رسوم مصوّرة",
+  "videoEditorEffectSwirl": "دوّامة",
+  "videoEditorEffectRipple": "تموّج",
+  "videoEditorEffectFlutedGlass": "زجاج مضلّع",
+  "videoEditorEffectEightBit": "8 بت",
+  "videoEditorEffectAnaglyph": "نظارات ثلاثية الأبعاد",
+  "videoEditorEffectRiso": "طباعة ريسو",
+  "videoEditorEffectTealOrange": "تيل وبرتقالي",
+  "videoEditorEffectWarmFilm": "فيلم دافئ",
+  "videoEditorEffectSlideFilm": "فيلم شرائح",
+  "videoEditorEffectCoolFilm": "فيلم بارد",
+  "videoEditorEffectMatte": "مطفأ",
+  "videoEditorEffectBleachBypass": "تجاوز التبييض",
+  "videoEditorEffectCrossProcess": "معالجة متقاطعة",
+  "videoEditorEffectGoldenHour": "الساعة الذهبية",
+  "videoEditorEffectMoonlight": "ضوء القمر",
+  "videoEditorEffectSilver": "فضي",
+  "videoEditorEffectCategoryRetro": "ريترو",
+  "videoEditorEffectCategoryGlitch": "تشويش",
+  "videoEditorEffectCategoryDistort": "تشويه",
+  "videoEditorEffectCategoryLight": "إضاءة",
+  "videoEditorEffectCategoryMotion": "حركة",
+  "videoEditorEffectCategoryParticles": "جزيئات",
+  "videoEditorEffectCategoryLooks": "إطلالات",
+  "videoEditorFilterCategoryNatural": "طبيعي",
+  "videoEditorFilterCategoryVibrant": "حيوي",
+  "videoEditorFilterCategoryWarm": "دافئ",
+  "videoEditorFilterCategoryCool": "بارد",
+  "videoEditorFilterCategoryVintage": "عتيق",
+  "videoEditorFilterCategoryBlackAndWhite": "أبيض وأسود",
+  "videoEditorFilterCategoryTints": "ألوان",
   "videoEditorDropsSettingsTitle": "ضبط القطرات",
   "videoEditorDropsCountLabel": "العدد",
   "videoEditorDropsSizeLabel": "الحجم",
@@ -2945,11 +3085,108 @@
   "videoEditorLayerAnimationPulseTo": "التصغير إلى",
   "videoEditorLayerAnimationWiggleAngle": "الميل",
   "videoEditorLayerAnimationBounceHeight": "الارتفاع",
+  "videoEditorLayerAnimationFlipSideways": "جانبيًا",
+  "videoEditorLayerAnimationFlipOver": "من الأعلى إلى الأسفل",
   "videoEditorLayerAnimationCustomPoint": "مخصص",
   "videoEditorLayerAnimationPointEnterHint": "النقر على الفيديو لتحديد نقطة بدء الانزلاق",
   "videoEditorLayerAnimationPointLeaveHint": "النقر على الفيديو لتحديد نقطة نهاية الانزلاق",
   "videoEditorStickersDivineOriginals": "Divine الأصلية",
   "videoEditorStickerSearchHint": "البحث في الملصقات...",
+  "videoEditorInfoStickersTitle": "معلومات",
+  "videoEditorSocialStickersTitle": "اجتماعي",
+  "videoEditorSocialStickerMention": "إشارة",
+  "videoEditorSocialStickerHashtag": "وسم",
+  "videoEditorSocialStickerSoundCredit": "الصوت",
+  "videoEditorSocialStickerMentionSample": "اسمك",
+  "videoEditorSocialStickerHashtagSample": "وسم",
+  "videoEditorSocialStickerChoosePerson": "اختيار شخص",
+  "videoEditorSocialStickerMentionNote": "تتم الإشارة إلى هذا الشخص في منشورك ويصله إشعار.",
+  "videoEditorSocialStickerHashtagHint": "كتابة وسم",
+  "videoEditorSocialStickerHashtagNote": "يُضاف أيضًا إلى وسوم منشورك.",
+  "videoEditorSocialStickerLyricHint": "سطر من كلمات الأغنية (اختياري)",
+  "videoEditorSocialStickerLink": "رابط",
+  "videoEditorSocialStickerLinkUrlHint": "عنوان الويب",
+  "videoEditorSocialStickerLinkTitleHint": "العنوان (اختياري)",
+  "videoEditorSocialStickerLinkNote": "يُضاف العنوان إلى منشورك.",
+  "videoEditorSocialStickerLinkInvalid": "هذا ليس عنوان ويب بعد.",
+  "videoEditorInteractiveStickersTitle": "تفاعلية",
+  "videoEditorSocialStickerCountdown": "العدّ التنازلي",
+  "videoEditorSocialStickerCountdownSample": "الصيف",
+  "videoEditorSocialStickerCountdownTitleHint": "العدّ التنازلي لأي مناسبة؟",
+  "videoEditorSocialStickerCountdownNote": "يرى المشاهدون الوقت المتبقي ويمكنهم ضبط تذكير.",
+  "videoEditorSocialStickerCountdownOver": "مضى هذا الوقت. اختيار وقت جديد.",
+  "videoEditorSocialStickerReply": "رد",
+  "videoEditorSocialStickerReplyNote": "عند لمسه يرى المشاهدون ما يرد عليه الفيديو.",
+  "videoEditorSocialStickerSoundNote": "نوتة",
+  "videoEditorSocialStickerSoundVinyl": "أسطوانة",
+  "videoEditorSocialStickerSoundCassette": "كاسيت",
+  "videoEditorSocialStickerSoundEqualizer": "معادل الصوت",
+  "videoEditorSocialStickerSoundPlayer": "مشغّل",
+  "videoEditorInfoStickerTime": "الوقت",
+  "videoEditorInfoStickerDate": "التاريخ",
+  "videoEditorInfoStickerLocation": "الموقع",
+  "videoEditorInfoStickerWeather": "الطقس",
+  "videoEditorInfoStickerAltitude": "الارتفاع",
+  "videoEditorInfoStickerBattery": "البطارية",
+  "videoEditorInfoStickerStyleLight": "فاتح",
+  "videoEditorInfoStickerStyleDark": "داكن",
+  "videoEditorInfoStickerStyleBrand": "أخضر",
+  "videoEditorInfoStickerStyleOutline": "إطار",
+  "videoEditorInfoStickerStyleDigital": "رقمي",
+  "videoEditorInfoStickerStyleAnalog": "تناظري",
+  "videoEditorInfoStickerStyleGlass": "زجاجي",
+  "videoEditorInfoStickerStyleHighlight": "أصفر",
+  "videoEditorInfoStickerStyleNeon": "نيون",
+  "videoEditorInfoStickerStylePlain": "بسيط",
+  "videoEditorInfoStickerChangePlace": "تغيير المكان",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "البحث عن الأماكن غير متاح على هذا الجهاز.",
+  "videoEditorInfoStickerRecordedValue": "وقت التسجيل · {value}",
+  "videoEditorInfoStickerNowValue": "الآن · {value}",
+  "videoEditorInfoStickerTodayValue": "اليوم · {value}",
+  "videoEditorInfoStickerDayCount": "عدّاد الأيام",
+  "videoEditorInfoStickerSun": "الشمس",
+  "videoEditorInfoStickerMoon": "القمر",
+  "videoEditorInfoStickerRecTimer": "مؤقّت REC",
+  "videoEditorInfoStickerStyleFilm": "فيلم",
+  "videoEditorInfoStickerStyleCamcorder": "كاميرا فيديو",
+  "videoEditorInfoStickerDayCountValue": "اليوم {day}",
+  "videoEditorInfoStickerDayCountOfValue": "اليوم {day} من {total}",
+  "videoEditorInfoStickerDayLabel": "اليوم",
+  "videoEditorInfoStickerDayTotalLabel": "إجمالي الأيام (اختياري)",
+  "videoEditorInfoStickerSymbolPin": "دبوس",
+  "videoEditorInfoStickerSymbolFlag": "علم",
+  "videoEditorInfoStickerSymbolGlobe": "كرة أرضية",
+  "videoEditorInfoStickerSymbolMap": "خريطة",
+  "videoEditorInfoStickerMoonNew": "محاق",
+  "videoEditorInfoStickerMoonWaxingCrescent": "هلال متزايد",
+  "videoEditorInfoStickerMoonFirstQuarter": "تربيع أول",
+  "videoEditorInfoStickerMoonWaxingGibbous": "أحدب متزايد",
+  "videoEditorInfoStickerMoonFull": "بدر",
+  "videoEditorInfoStickerMoonWaningGibbous": "أحدب متناقص",
+  "videoEditorInfoStickerMoonLastQuarter": "تربيع ثانٍ",
+  "videoEditorInfoStickerMoonWaningCrescent": "هلال متناقص",
+  "videoEditorInfoStickerPlaceSearchHint": "البحث عن مدينة أو مكان",
+  "videoEditorInfoStickerPlaceNoResults": "لم يتم العثور على أماكن",
+  "videoEditorInfoStickerPlaceSearchFailed": "تعذّر البحث عن الأماكن. حاول مرة أخرى.",
+  "videoEditorInfoStickerPlacePrivacyNote": "يظهر في الفيديو اسم المكان فقط، ولا يظهر موقعك الدقيق أبدًا.",
+  "videoEditorInfoStickerLoading": "جارٍ التحميل…",
+  "videoEditorInfoStickerLoadFailed": "تعذّر التحميل. حاول مرة أخرى.",
+  "videoEditorInfoStickerMetAttribution": "البيانات من MET Norway",
+  "videoEditorInfoStickerWeatherNow": "لا تتوفر بيانات الطقس للفيديوهات الأقدم، لذا هذا هو الطقس الآن.",
+  "videoEditorInfoStickerWeatherSunny": "مشمس",
+  "videoEditorInfoStickerWeatherClearNight": "ليلة صافية",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "غائم جزئيًا",
+  "videoEditorInfoStickerWeatherCloudy": "غائم",
+  "videoEditorInfoStickerWeatherFog": "ضباب",
+  "videoEditorInfoStickerWeatherRain": "مطر",
+  "videoEditorInfoStickerWeatherShowers": "زخات مطر",
+  "videoEditorInfoStickerWeatherSnow": "ثلج",
+  "videoEditorInfoStickerWeatherThunderstorm": "عاصفة رعدية",
+  "videoEditorInfoStickerSunTimeZoneNote": "الأوقات حسب المنطقة الزمنية للهاتف.",
+  "videoEditorInfoStickerTemperatureLabel": "درجة الحرارة",
+  "videoEditorInfoStickerUnitLabel": "الوحدة",
+  "videoEditorInfoStickerBatteryLevelLabel": "مستوى البطارية",
+  "videoEditorInfoStickerAdd": "إضافة الملصق",
   "videoEditorTextAlignmentSemanticLabel": "محاذاة النص",
   "videoEditorTextBackgroundSemanticLabel": "خلفية النص",
   "videoEditorTextDontWrap": "بدون التفاف",
@@ -3117,6 +3354,8 @@
   "libraryTrashDeleteConfirmMessage": "سيؤدي هذا إلى إزالة المقطع من سلة المهملات فورًا.",
   "libraryTrashEmptyConfirmTitle": "إفراغ سلة المهملات؟",
   "libraryTrashEmptyConfirmMessage": "سيؤدي هذا إلى حذف {count, plural, =1{مقطع واحد} other{{count} مقاطع}} نهائيًا من سلة المهملات فورًا.",
+  "libraryTrashClipsRestored": "{count, plural, zero{لم تتم استعادة أي مقطع} one{تمت استعادة المقطع} two{تمت استعادة مقطعين} few{تمت استعادة {count} مقاطع} many{تمت استعادة {count} مقطعًا} other{تمت استعادة {count} مقطع}}",
+  "libraryTrashClipsDeleted": "{count, plural, zero{لم يُحذف أي مقطع نهائيًا} one{تم حذف المقطع نهائيًا} two{تم حذف مقطعين نهائيًا} few{تم حذف {count} مقاطع نهائيًا} many{تم حذف {count} مقطعًا نهائيًا} other{تم حذف {count} مقطع نهائيًا}}",
   "videoRecorderCloseLabel": "إغلاق مسجل الفيديو",
   "videoRecorderContinueToEditorLabel": "المتابعة إلى محرر الفيديو",
   "videoRecorderCycleTimerLabel": "تدوير المؤقت",
@@ -4044,6 +4283,7 @@
       }
     }
   },
+  "videoMetadataTagsPickerStickerTag": "{tag}، من ملصق في الفيديو",
   "videoEditorTimelineVolumePreview": "مستوى الصوت {percent}%",
   "@videoEditorTimelineVolumePreview": {
     "placeholders": {
@@ -4157,6 +4397,9 @@
   "dmReelReplyComposerHint": "مراسلة {name}…",
   "dmReelReplyComposerHintSelf": "الرد على نفسك…",
   "dmReelReplyComposerSemanticLabel": "الرد على هذا الريل",
+  "dmQuestionAnswerReceivedLabel": "إجابة عن سؤالك: {question}",
+  "dmQuestionAnswerSentLabel": "إجابتك عن: {question}",
+  "dmQuestionAnswerWithVideo": "الرد بفيديو",
   "dmReelReplyViewChat": "عرض المحادثة",
   "dmReelReplySentAnnouncement": "تم إرسال الرد",
   "dmReelReactionSentAnnouncement": "تفاعلت بـ {emoji}",
@@ -5793,8 +6036,97 @@
   "ideasDescriptionFive": "أردت المشاركة فقط.",
   "ideasTitleSix": "القليل من اليوم",
   "ideasDescriptionSix": "أترك هذا هنا.",
+  "messagesRoomsUnreadLabel": "{count, plural, zero{الغرف، رسائل غير مقروءة: {displayCount}} one{الغرف، {displayCount} رسالة غير مقروءة} two{الغرف، الرسائل غير المقروءة: {displayCount}} few{الغرف، {displayCount} رسائل غير مقروءة} many{الغرف، {displayCount} رسالة غير مقروءة} other{الغرف، {displayCount} رسالة غير مقروءة}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, zero{الجديد: {displayCount}} one{الجديد: {displayCount}} two{الجديد: {displayCount}} few{الجديد: {displayCount}} many{الجديد: {displayCount}} other{الجديد: {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, zero{رسائل غير مقروءة: {displayCount}} one{{displayCount} رسالة غير مقروءة} two{الرسائل غير المقروءة: {displayCount}} few{{displayCount} رسائل غير مقروءة} many{{displayCount} رسالة غير مقروءة} other{{displayCount} رسالة غير مقروءة}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, zero{أشخاص: {displayCount}} one{{displayCount} شخص} two{الأشخاص: {displayCount}} few{{displayCount} أشخاص} many{{displayCount} شخصًا} other{{displayCount} شخص}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, zero{رسائل: {displayCount}} one{{displayCount} رسالة} two{الرسائل: {displayCount}} few{{displayCount} رسائل} many{{displayCount} رسالة} other{{displayCount} رسالة}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "آخر 24 ساعة",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "جارٍ التحقق من النشاط…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "تعذّر تحميل النشاط.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "لا توجد رسائل حديثة. ما رأيك بإلقاء التحية؟",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "مباشرة",
   "messagesRooms": "الغرف",
+  "messagesRoomsWithUnread": "الغرف ({badge})",
   "messagesPublicTestRooms": "غرف اختبار عامة",
   "messagesPublicTestDisclosure": "غرف الاختبار هذه عامة. يمكن لأي شخص لديه صلاحية الوصول قراءة رسائلك.",
   "messagesNoRooms": "لا توجد غرف بعد",
@@ -5903,5 +6235,57 @@
   "videoEditorLoopRepairProgress": "جارٍ محاذاة الحلقة…",
   "videoEditorLoopRepairTrimmed": "تم تنعيم التكرار. أُزيلت {seconds} ث.",
   "notificationFromDivine": "من Divine",
-  "announcementUnavailable": "لم يعد هذا الإعلان متاحًا."
+  "announcementUnavailable": "لم يعد هذا الإعلان متاحًا.",
+  "creatorHighlightLabel": "أبرز لحظات يومك",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "عدد فيديوهاتك اليوم: {count}.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "هذا الأسبوع يحمل المزيد منك.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "أيام الإبداع هذا الأسبوع: {count}. لنواصل الإبداع.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "إجمالي مشاهدات فيديوهاتك المنشورة هذا الأسبوع حتى الآن: {count}.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "الأكثر مشاهدة بين فيديوهاتك المنشورة هذا الأسبوع",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "إنشاء فيديو آخر",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "عرض إحصاءاتك",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "مشاهدة الفيديو",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

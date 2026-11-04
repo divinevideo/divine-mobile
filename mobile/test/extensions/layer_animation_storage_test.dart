@@ -164,6 +164,14 @@ void main() {
             scaleFrom: type == editor.LayerAnimationType.scale ? 0.25 : null,
             wiggleAngle: type == editor.LayerAnimationType.wiggle ? 0.3 : null,
             bounceHeight: type == editor.LayerAnimationType.bounce ? 1.5 : null,
+            turns:
+                type == editor.LayerAnimationType.spin ||
+                    type == editor.LayerAnimationType.flip
+                ? 2.5
+                : null,
+            flipAxis: type == editor.LayerAnimationType.flip
+                ? editor.FlipAxis.horizontal
+                : null,
           );
           final layer = Layer(animations: [animation].toLayerAnimations());
 

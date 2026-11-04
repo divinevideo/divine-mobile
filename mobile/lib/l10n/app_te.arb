@@ -1,5 +1,75 @@
 {
   "@@locale": "te",
+  "videoEditorSocialStickerPoll": "పోల్",
+  "videoEditorSocialStickerQuiz": "క్విజ్",
+  "videoEditorSocialStickerSlider": "స్లయిడర్",
+  "videoEditorSocialStickerPollSampleQuestion": "ఏది?",
+  "videoEditorSocialStickerPollSampleYes": "అవును",
+  "videoEditorSocialStickerPollSampleNo": "కాదు",
+  "videoEditorSocialStickerQuizSampleQuestion": "Vine ప్రారంభమైన సంవత్సరం…",
+  "videoEditorSocialStickerSliderSampleQuestion": "మీకు ఎంత ఆకలిగా ఉంది?",
+  "videoEditorSocialStickerPollQuestionHint": "ఒక ప్రశ్న అడగండి",
+  "videoEditorSocialStickerPollOptionHint": "సమాధానం {number}",
+  "videoEditorSocialStickerPollRemoveOption": "సమాధానం {number} తీసివేయండి",
+  "videoEditorSocialStickerQuizMarkRight": "సమాధానం {number}ని సరైనదిగా గుర్తించండి",
+  "videoEditorSocialStickerPollAddOption": "సమాధానం జోడించండి",
+  "videoEditorSocialStickerPollNote": "వీక్షకులు ఓటు వేసిన తర్వాత ఫలితాలు చూస్తారు. ఓట్లు పబ్లిక్‌గా ఉంటాయి.",
+  "videoEditorSocialStickerQuizNote": "సరైన సమాధానాన్ని టిక్ చేయండి. వీక్షకులు ఒకటి ఎంచుకున్న తర్వాత దాన్ని చూస్తారు.",
+  "videoEditorSocialStickerSliderNote": "వీక్షకులు సమాధానం ఇవ్వడానికి ఎమోజీని లాగుతారు, సగటున అది ఎక్కడ ఆగిందో చూస్తారు.",
+  "videoStickerQuizRightAnswer": "సరైన సమాధానం",
+  "videoStickerQuizWrongAnswer": "తప్పు సమాధానం",
+  "videoEditorSocialStickerQuestion": "ప్రశ్న",
+  "videoEditorSocialStickerAddYours": "మీ వంతు",
+  "videoEditorSocialStickerReplies": "ప్రత్యుత్తరాలు",
+  "videoEditorSocialStickerQuestionSample": "నన్ను ఏదైనా అడగండి",
+  "videoEditorSocialStickerAddYoursSample": "మీ డెస్క్ సెటప్ చూపించండి",
+  "videoEditorSocialStickerRepliesSample": "వీడియోతో ప్రత్యుత్తరం ఇవ్వండి",
+  "videoEditorSocialStickerQuestionHint": "మీ ప్రశ్న",
+  "videoEditorSocialStickerAddYoursPromptHint": "ప్రజలు ఏమి చూపించాలి?",
+  "videoEditorSocialStickerAddYoursHashtagHint": "హ్యాష్‌ట్యాగ్",
+  "videoEditorSocialStickerRepliesTitleHint": "శీర్షిక",
+  "videoEditorSocialStickerQuestionNote": "సమాధానాలు మీకు ప్రైవేట్ సందేశాలుగా వస్తాయి.",
+  "videoEditorSocialStickerAddYoursNote": "వీక్షకులు తమ సొంత వీడియోతో సమాధానం ఇస్తారు. ప్రతి సమాధానానికి ఈ హ్యాష్‌ట్యాగ్ వస్తుంది, అది మీ వీడియోకు లింక్ అవుతుంది.",
+  "videoEditorSocialStickerRepliesNote": "ఈ వీడియోకు వీడియోతో ఎవరు ప్రత్యుత్తరం ఇచ్చారో చూపిస్తుంది. వీక్షకులు దాన్ని ట్యాప్ చేసి ప్రత్యుత్తరాలను చూస్తారు.",
+  "videoEditorInteractiveCardAreaHint": "వీక్షకులు ట్యాప్ చేయగలిగేలా ఈ స్టిక్కర్ ఈ బాక్స్‌లోనే ఉంటుంది",
+  "videoStickerPollSignInToVote": "ఓటు వేయడానికి సైన్ ఇన్ చేయండి.",
+  "videoStickerPollNotReady": "ఇంకా కనెక్ట్ అవుతోంది. కొద్దిసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.",
+  "videoStickerPollVoteFailed": "మీ ఓటు చేరలేదు. మళ్లీ ప్రయత్నించండి.",
+  "videoStickerPollVotesArePublic": "ఓట్లు పబ్లిక్‌గా ఉంటాయి. మీరు ఏమి ఎంచుకున్నారో ఎవరైనా చూడగలరు.",
+  "videoStickerPollVoteCount": "{count, plural, one{1 ఓటు} other{{count} ఓట్లు}}",
+  "videoStickerQuestionAnswerHint": "సమాధానం ఇవ్వడానికి ట్యాప్ చేయండి",
+  "videoStickerQuestionAnswerSemanticLabel": "సమాధానం: {question}",
+  "videoStickerAddYoursButton": "మీ వంతు",
+  "videoStickerAddYoursJoined": "{count, plural, =0{మొదట మీరే చేరండి} =1{{count} మంది చేరారు} other{{count} మంది చేరారు}}",
+  "videoStickerAddYoursJoinedAtLeast": "{count} మంది చేరారు",
+  "videoStickerAddYoursOpenSemanticLabel": "ఎవరు చేరారో చూడండి",
+  "videoStickerAddYoursJoinSemanticLabel": "మీ వంతు: {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{ఇంకా ప్రత్యుత్తరాలు లేవు} =1{{count} ప్రత్యుత్తరం} other{{count} ప్రత్యుత్తరాలు}}",
+  "videoStickerRepliesCountAtLeast": "{count} ప్రత్యుత్తరాలు",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{వీడియో ప్రత్యుత్తరాలు, ఇంకా ఏవీ లేవు} =1{{count} వీడియో ప్రత్యుత్తరం చూడండి} other{{count} వీడియో ప్రత్యుత్తరాలు చూడండి}}",
+  "videoStickerRepliesSemanticLabelAtLeast": "{count} వీడియో ప్రత్యుత్తరాలు చూడండి",
+  "videoStickerQuestionSignIn": "సమాధానం ఇవ్వడానికి సైన్ ఇన్ చేయండి.",
+  "videoStickerQuestionUnavailable": "మీ ఖాతాకు ప్రశ్నలకు సమాధానం ఇవ్వడం అందుబాటులో లేదు.",
+  "videoStickerQuestionAnswerTitle": "సమాధానం",
+  "videoStickerQuestionAnswerFieldLabel": "మీ సమాధానం",
+  "videoStickerQuestionAnswerPrivacyNote": "మీ సమాధానం {name}కి మాత్రమే కనిపిస్తుంది. వారు దాన్ని మీ పేరు లేకుండా ఒక వీడియోలో పంచుకోవచ్చు.",
+  "videoStickerQuestionAnswerSend": "పంపండి",
+  "videoStickerQuestionAnswerSent": "సమాధానం పంపబడింది.",
+  "videoStickerQuestionAnswerTooLong": "ఆ సమాధానం పంపడానికి చాలా పొడవుగా ఉంది.",
+  "videoStickerQuestionAnswerFailed": "మీ సమాధానం చేరలేదు. మళ్లీ ప్రయత్నించండి.",
+  "videoStickerAddYoursSignIn": "పాల్గొనడానికి సైన్ ఇన్ చేయండి.",
+  "videoStickerRepliesManageTitle": "వీడియో ప్రత్యుత్తరాలు",
+  "videoStickerRepliesEmpty": "ఇంకా వీడియో ప్రత్యుత్తరాలు లేవు.",
+  "videoStickerRepliesLoadFailed": "ప్రత్యుత్తరాలను లోడ్ చేయడం సాధ్యపడలేదు.",
+  "videoStickerRepliesRetry": "మళ్లీ ప్రయత్నించండి",
+  "videoStickerRepliesPin": "పిన్ చేయండి",
+  "videoStickerRepliesUnpin": "పిన్ తీసివేయండి",
+  "videoStickerRepliesHide": "దాచండి",
+  "videoStickerRepliesShow": "చూపించండి",
+  "videoStickerRepliesPinned": "పిన్ చేయబడింది",
+  "videoStickerRepliesHidden": "దాచబడింది",
+  "videoStickerRepliesSaveFailed": "సేవ్ చేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.",
+  "videoStickerRepliesWatchSemanticLabel": "{name} ఇచ్చిన ప్రత్యుత్తరాన్ని చూడండి",
   "devOptionsClipRecovery": "క్లిప్ రికవరీ",
   "@devOptionsClipRecovery": {
     "description": "Header of the Developer Options section that recovers clips the app can no longer show."
@@ -1213,6 +1283,21 @@
   "metadataBadgeNotDivine": "కాదు Divine",
   "metadataBadgeHumanMade": "మానవ నిర్మిత",
   "metadataSoundsLabel": "శబ్దాలు",
+  "metadataLinksLabel": "లింక్‌లు",
+  "videoStickerLinkSemanticLabel": "లింక్ స్టిక్కర్, {url} తెరుస్తుంది",
+  "videoStickerMentionSemanticLabel": "ప్రస్తావన స్టిక్కర్, ప్రొఫైల్ తెరుస్తుంది",
+  "videoStickerHashtagSemanticLabel": "హ్యాష్‌ట్యాగ్ స్టిక్కర్, #{hashtag} తెరుస్తుంది",
+  "videoStickerSoundSemanticLabel": "సౌండ్ స్టిక్కర్, సౌండ్‌ను తెరుస్తుంది",
+  "videoStickerPlaceSemanticLabel": "స్థల స్టిక్కర్, {place}ని మ్యాప్‌లో తెరుస్తుంది",
+  "videoStickerCountdownSemanticLabel": "కౌంట్‌డౌన్ స్టిక్కర్, రిమైండర్ సెట్ చేస్తుంది",
+  "videoStickerReplySemanticLabel": "ప్రత్యుత్తర స్టిక్కర్, ఈ వీడియో దేనికి ప్రత్యుత్తరమో దాన్ని తెరుస్తుంది",
+  "videoStickerCountdownDays": "{count, plural, =1{{count} రోజు} other{{count} రోజులు}}",
+  "videoStickerCountdownReminderSet": "రిమైండర్ సెట్ అయింది. సమయం వచ్చినప్పుడు మీకు తెలియజేస్తాం.",
+  "videoStickerCountdownReminderRemoved": "రిమైండర్ తీసివేయబడింది.",
+  "videoStickerCountdownOver": "ఈ కౌంట్‌డౌన్ ముగిసింది.",
+  "videoStickerCountdownNotificationsOff": "రిమైండర్ పొందడానికి Divine నోటిఫికేషన్‌లను ఆన్ చేయండి.",
+  "videoStickerCountdownReminderBody": "సమయం వచ్చింది! మీరు సేవ్ చేసిన కౌంట్‌డౌన్ ఇప్పుడే ముగిసింది.",
+  "videoStickerLinkSheetBody": "ఈ లింక్ Divine వెలుపల తెరుచుకుంటుంది. వెళ్లే ముందు చిరునామాను తనిఖీ చేయండి.",
   "metadataOriginalSound": "అసలు ధ్వని",
   "metadataVerificationLabel": "ధృవీకరణ",
   "metadataDeviceAttestation": "పరికర ధృవీకరణ",
@@ -2527,10 +2612,10 @@
       }
     }
   },
-  "profileFeedError": "సర్వర్‌ని చేరుకోలేదు. మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.",
-  "@profileFeedError": {
-    "description": "Full-screen message shown when an author's profile feed fails to load. This state is only reached when the API could not be reached at all — an author with genuinely no videos gets the empty state instead — so the copy names the connection rather than implying the profile is empty. Wording deliberately matches authSignInErrorNetwork."
-  },
+  "profileVideosLoadFailedTitle": "మీ వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు",
+  "profileVideosLoadFailedOtherTitle": "వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు",
+  "profileVideosLoadFailedSubtitle": "మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.",
+  "profileVideosLoadFailedRetry": "మళ్లీ ప్రయత్నించండి",
   "profileFeedLoadMoreError": "మరిన్ని వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు. రిఫ్రెష్ చేయడానికి లాగండి.",
   "@profileFeedLoadMoreError": {
     "description": "Transient message shown when paginating an author's profile feed fails."
@@ -2740,6 +2825,7 @@
   "routeInvalidUserId": "చెల్లని వినియోగదారు ID",
   "routeInvalidVideoId": "చెల్లని వీడియో ID",
   "routeInvalidSoundId": "చెల్లని ధ్వని ID",
+  "routeInvalidQuestion": "చెల్లని ప్రశ్న లింక్",
   "routeInvalidCategory": "చెల్లని వర్గం",
   "routeNoVideosToDisplay": "ప్రదర్శించడానికి వీడియోలు లేవు",
   "routeGoHome": "ఇంటికి వెళ్లండి",
@@ -3527,6 +3613,28 @@
   "@dmReelReplyComposerSemanticLabel": {
     "description": "Screen-reader label for the in-player reel reply text field."
   },
+  "dmQuestionAnswerReceivedLabel": "మీ ప్రశ్నకు సమాధానం ఇచ్చారు: {question}",
+  "@dmQuestionAnswerReceivedLabel": {
+    "description": "Line above a message in a conversation that answers the question sticker on one of the viewer's videos. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerSentLabel": "మీరు సమాధానం ఇచ్చారు: {question}",
+  "@dmQuestionAnswerSentLabel": {
+    "description": "Line above the viewer's own message in a conversation that answers someone's question sticker. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerWithVideo": "వీడియోతో సమాధానం ఇవ్వండి",
+  "@dmQuestionAnswerWithVideo": {
+    "description": "Button above an answer to the viewer's question sticker that opens the camera to reply with a video showing the question and the answer, without who wrote it."
+  },
   "dmReelReplyViewChat": "చాట్‌ని వీక్షించండి",
   "@dmReelReplyViewChat": {
     "description": "Tappable action in the 'Sent · View chat' confirmation that opens the DM conversation."
@@ -3629,7 +3737,7 @@
   },
   "dmStatusNotSentToEveryone": "అందరికీ పంపబడలేదు",
   "@dmStatusNotSentToEveryone": {
-    "description": "Caption under a sent group DM bubble that reached some members but not all, after the sender stopped trying to reach the rest (Stop trying, or a delete for everyone that has not gone through). Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it."
+    "description": "Caption under a sent group DM bubble that reached some members but not all, after delivery to the rest stopped: the sender chose Stop trying, a delete for everyone has not gone through, or the app gave up on a member whose inbox could not be read once its retries ran out. Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it."
   },
   "inboxConversationActionsSheetLabel": "సంభాషణ చర్యలు",
   "@inboxConversationActionsSheetLabel": {
@@ -4019,11 +4127,11 @@
       }
     }
   },
-  "videoClipSemanticValueSelected": "ఎంచుకోబడింది",
   "videoClipSemanticValueNotSelected": "ఎంచుకోబడలేదు",
   "videoClipSemanticHintDisabled": "నిలిపివేయబడింది",
-  "videoClipSemanticHintSelect": "ఎంచుకోవడానికి నొక్కండి, ప్రివ్యూ చేయడానికి ఎక్కువసేపు నొక్కండి",
-  "videoClipSemanticHintDeselect": "ఎంపికను తీసివేయడానికి నొక్కండి, ప్రివ్యూ చేయడానికి ఎక్కువసేపు నొక్కండి",
+  "videoClipSemanticHintSelect": "ఎంచుకోవడానికి నొక్కండి",
+  "videoClipSemanticHintDeselect": "ఎంపికను తీసివేయడానికి నొక్కండి",
+  "videoClipSemanticHintPreview": "ప్రివ్యూ చేయడానికి నొక్కండి",
   "routerInvalidCreator": "చెల్లని సృష్టికర్త",
   "routerInvalidHashtagRoute": "హ్యాష్‌ట్యాగ్ మార్గం చెల్లదు",
   "categoryGalleryCouldNotLoadVideos": "వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు",
@@ -4507,6 +4615,7 @@
   "publishErrorPermissionDenied": "Divineకి అప్‌లోడ్ చేయడానికి అనుమతి లేదు. మీ సెట్టింగ్‌లలో యాప్ అనుమతులను తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.",
   "publishErrorOutOfMemory": "మీ పరికరంలో మెమరీ తక్కువగా ఉంది. కొన్ని యాప్‌లను మూసివేసి, మళ్లీ ప్రయత్నించండి.",
   "publishErrorOverlaysUnavailable": "ఈ డ్రాఫ్ట్‌లోని టెక్స్ట్ మరియు స్టిక్కర్‌లను సిద్ధం చేయడం సాధ్యపడలేదు. దాన్ని ఎడిటర్‌లో తెరిచి, ఆపై మళ్లీ పోస్ట్ చేయండి.",
+  "publishErrorQuestionStickerRestricted": "మీ ఖాతా ప్రశ్న స్టిక్కర్‌ను పోస్ట్ చేయలేదు, ఎందుకంటే సమాధానాలు ప్రైవేట్ సందేశాలుగా వస్తాయి. దాన్ని తీసివేసి, మళ్లీ పోస్ట్ చేయండి.",
   "publishErrorTooManyDetachedClips": "మీ పరికరం ఇన్ని వేరు చేసిన క్లిప్‌లను ఒకేసారి ఎగుమతి చేయలేదు. కొన్నింటిని తిరిగి టైమ్‌లైన్‌లో ఉంచి, మళ్లీ ప్రయత్నించండి.",
   "publishErrorDraftTooManyDetachedClips": "మీ పరికరం ఇన్ని వేరు చేసిన క్లిప్‌లను ఒకేసారి ఎగుమతి చేయలేదు. డ్రాఫ్ట్‌ని ఎడిటర్‌లో తెరిచి, కొన్నింటిని తిరిగి టైమ్‌లైన్‌లో ఉంచి, ఆపై మళ్లీ పోస్ట్ చేయండి.",
   "publishErrorUnknownServer": "తెలియని సర్వర్",
@@ -4952,6 +5061,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} మిమ్మల్ని ట్యాగ్ చేసిన వీడియోను ఇష్టపడ్డారు",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName}మీ వ్యాఖ్యను ఇష్టపడ్డారు",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",
@@ -5281,6 +5398,8 @@
     "description": "Confirmation-sheet title shown before permanently deleting every clip from trash."
   },
   "libraryTrashEmptyConfirmMessage": "ఇది శాశ్వతంగా తొలగిస్తుంది{count, plural, =1{1 క్లిప్} other{{count}క్లిప్‌లు\nవెంటనే ట్రాష్ నుండి }}.",
+  "libraryTrashClipsRestored": "{count, plural, =1{క్లిప్ పునరుద్ధరించబడింది} other{{count} క్లిప్‌లు పునరుద్ధరించబడ్డాయి}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{క్లిప్ శాశ్వతంగా తొలగించబడింది} other{{count} క్లిప్‌లు శాశ్వతంగా తొలగించబడ్డాయి}}",
   "@libraryTrashEmptyConfirmMessage": {
     "description": "Confirmation-sheet subtitle shown before permanently deleting every clip from trash.",
     "placeholders": {
@@ -5431,9 +5550,51 @@
   "videoEditorEffectConfetti": "కాన్ఫెట్టి",
   "videoEditorEffectHearts": "హృదయాలు",
   "videoEditorEffectSparkles": "మెరుపులు",
+  "videoEditorEffectRain": "వర్షం",
+  "videoEditorEffectLeaves": "ఆకులు",
+  "videoEditorEffectBlossoms": "పూరేకులు",
+  "videoEditorEffectBubbles": "బుడగలు",
+  "videoEditorEffectBokeh": "బోకే",
+  "videoEditorEffectMusicNotes": "స్వరాలు",
+  "videoEditorEffectStars": "నక్షత్రాలు",
+  "videoEditorEffectFireflies": "మిణుగురులు",
+  "videoEditorEffectEmbers": "నిప్పుకణికలు",
+  "videoEditorEffectMoney": "డబ్బు",
+  "videoEditorEffectBalloons": "బెలూన్లు",
   "videoEditorEffectTiltShift": "టిల్ట్-షిఫ్ట్",
   "videoEditorEffectZoomBlur": "జూమ్ బ్లర్",
+  "videoEditorEffectSpinBlur": "స్పిన్ బ్లర్",
   "videoEditorEffectComic": "కామిక్",
+  "videoEditorEffectSwirl": "సుడిగుండం",
+  "videoEditorEffectRipple": "అలలు",
+  "videoEditorEffectFlutedGlass": "ఫ్లూటెడ్ గ్లాస్",
+  "videoEditorEffectEightBit": "8-బిట్",
+  "videoEditorEffectAnaglyph": "3D కళ్లద్దాలు",
+  "videoEditorEffectRiso": "రిసో ప్రింట్",
+  "videoEditorEffectTealOrange": "టీల్ & ఆరెంజ్",
+  "videoEditorEffectWarmFilm": "వెచ్చని ఫిల్మ్",
+  "videoEditorEffectSlideFilm": "స్లైడ్ ఫిల్మ్",
+  "videoEditorEffectCoolFilm": "చల్లని ఫిల్మ్",
+  "videoEditorEffectMatte": "మ్యాట్",
+  "videoEditorEffectBleachBypass": "బ్లీచ్ బైపాస్",
+  "videoEditorEffectCrossProcess": "క్రాస్ ప్రాసెస్",
+  "videoEditorEffectGoldenHour": "గోల్డెన్ అవర్",
+  "videoEditorEffectMoonlight": "వెన్నెల",
+  "videoEditorEffectSilver": "వెండి",
+  "videoEditorEffectCategoryRetro": "రెట్రో",
+  "videoEditorEffectCategoryGlitch": "గ్లిచ్",
+  "videoEditorEffectCategoryDistort": "వక్రీకరణ",
+  "videoEditorEffectCategoryLight": "కాంతి",
+  "videoEditorEffectCategoryMotion": "కదలిక",
+  "videoEditorEffectCategoryParticles": "కణాలు",
+  "videoEditorEffectCategoryLooks": "లుక్స్",
+  "videoEditorFilterCategoryNatural": "సహజం",
+  "videoEditorFilterCategoryVibrant": "ప్రకాశవంతం",
+  "videoEditorFilterCategoryWarm": "వెచ్చని",
+  "videoEditorFilterCategoryCool": "చల్లని",
+  "videoEditorFilterCategoryVintage": "వింటేజ్",
+  "videoEditorFilterCategoryBlackAndWhite": "నలుపు తెలుపు",
+  "videoEditorFilterCategoryTints": "రంగులు",
   "videoEditorDropsSettingsTitle": "బిందువుల సర్దుబాటు",
   "videoEditorDropsCountLabel": "సంఖ్య",
   "videoEditorDropsSizeLabel": "పరిమాణం",
@@ -6188,6 +6349,8 @@
   "videoEditorLayerAnimationPulseTo": "ఇంతవరకు కుదించు",
   "videoEditorLayerAnimationWiggleAngle": "వంపు",
   "videoEditorLayerAnimationBounceHeight": "ఎత్తు",
+  "videoEditorLayerAnimationFlipSideways": "పక్కకు",
+  "videoEditorLayerAnimationFlipOver": "పై నుండి కిందికి",
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
@@ -6218,6 +6381,101 @@
   "videoEditorFeedPreviewContent": "ఈ ప్రాంతాల వెనుక కంటెంట్‌ను ఉంచడం మానుకోండి.",
   "videoEditorStickersDivineOriginals": "Divine ఒరిజినల్‌లు",
   "videoEditorStickerSearchHint": "స్టిక్కర్‌లను శోధించండి...",
+  "videoEditorInfoStickersTitle": "సమాచారం",
+  "videoEditorSocialStickersTitle": "సామాజిక",
+  "videoEditorSocialStickerMention": "ప్రస్తావన",
+  "videoEditorSocialStickerHashtag": "హ్యాష్‌ట్యాగ్",
+  "videoEditorSocialStickerSoundCredit": "ధ్వని",
+  "videoEditorSocialStickerMentionSample": "మీపేరు",
+  "videoEditorSocialStickerHashtagSample": "హ్యాష్‌ట్యాగ్",
+  "videoEditorSocialStickerChoosePerson": "ఒకరిని ఎంచుకోండి",
+  "videoEditorSocialStickerMentionNote": "మీ పోస్ట్‌లో వారి ప్రస్తావన ఉంటుంది, వారికి నోటిఫికేషన్ వస్తుంది.",
+  "videoEditorSocialStickerHashtagHint": "హ్యాష్‌ట్యాగ్ టైప్ చేయండి",
+  "videoEditorSocialStickerHashtagNote": "మీ పోస్ట్ హ్యాష్‌ట్యాగ్‌లకు కూడా జోడించబడుతుంది.",
+  "videoEditorSocialStickerLyricHint": "పాట సాహిత్యంలో ఒక లైన్ (ఐచ్ఛికం)",
+  "videoEditorSocialStickerLink": "లింక్",
+  "videoEditorSocialStickerLinkUrlHint": "వెబ్ చిరునామా",
+  "videoEditorSocialStickerLinkTitleHint": "శీర్షిక (ఐచ్ఛికం)",
+  "videoEditorSocialStickerLinkNote": "చిరునామా మీ పోస్ట్‌కు జోడించబడుతుంది.",
+  "videoEditorSocialStickerLinkInvalid": "ఇది ఇంకా వెబ్ చిరునామా కాదు.",
+  "videoEditorInteractiveStickersTitle": "ఇంటరాక్టివ్",
+  "videoEditorSocialStickerCountdown": "కౌంట్‌డౌన్",
+  "videoEditorSocialStickerCountdownSample": "వేసవి",
+  "videoEditorSocialStickerCountdownTitleHint": "మీరు దేనికి కౌంట్‌డౌన్ చేస్తున్నారు?",
+  "videoEditorSocialStickerCountdownNote": "వీక్షకులు మిగిలిన సమయాన్ని చూసి, రిమైండర్ పెట్టుకోవచ్చు.",
+  "videoEditorSocialStickerCountdownOver": "ఆ సమయం గడిచిపోయింది. కొత్తది ఎంచుకోండి.",
+  "videoEditorSocialStickerReply": "ప్రత్యుత్తరం",
+  "videoEditorSocialStickerReplyNote": "వీక్షకులు దాన్ని ట్యాప్ చేసి మీరు దేనికి ప్రత్యుత్తరం ఇస్తున్నారో చూస్తారు.",
+  "videoEditorSocialStickerSoundNote": "స్వరం",
+  "videoEditorSocialStickerSoundVinyl": "రికార్డ్",
+  "videoEditorSocialStickerSoundCassette": "క్యాసెట్",
+  "videoEditorSocialStickerSoundEqualizer": "ఈక్వలైజర్",
+  "videoEditorSocialStickerSoundPlayer": "ప్లేయర్",
+  "videoEditorInfoStickerTime": "సమయం",
+  "videoEditorInfoStickerDate": "తేదీ",
+  "videoEditorInfoStickerLocation": "స్థలం",
+  "videoEditorInfoStickerWeather": "వాతావరణం",
+  "videoEditorInfoStickerAltitude": "ఎత్తు",
+  "videoEditorInfoStickerBattery": "బ్యాటరీ",
+  "videoEditorInfoStickerStyleLight": "లేత",
+  "videoEditorInfoStickerStyleDark": "ముదురు",
+  "videoEditorInfoStickerStyleBrand": "ఆకుపచ్చ",
+  "videoEditorInfoStickerStyleOutline": "అవుట్‌లైన్",
+  "videoEditorInfoStickerStyleDigital": "డిజిటల్",
+  "videoEditorInfoStickerStyleAnalog": "అనలాగ్",
+  "videoEditorInfoStickerStyleGlass": "గ్లాస్",
+  "videoEditorInfoStickerStyleHighlight": "పసుపు",
+  "videoEditorInfoStickerStyleNeon": "నియాన్",
+  "videoEditorInfoStickerStylePlain": "సాదా",
+  "videoEditorInfoStickerChangePlace": "స్థలం మార్చండి",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "ఈ పరికరంలో స్థల శోధన అందుబాటులో లేదు.",
+  "videoEditorInfoStickerRecordedValue": "రికార్డింగ్ · {value}",
+  "videoEditorInfoStickerNowValue": "ఇప్పుడు · {value}",
+  "videoEditorInfoStickerTodayValue": "ఈరోజు · {value}",
+  "videoEditorInfoStickerDayCount": "రోజుల లెక్కింపు",
+  "videoEditorInfoStickerSun": "సూర్యుడు",
+  "videoEditorInfoStickerMoon": "చంద్రుడు",
+  "videoEditorInfoStickerRecTimer": "REC టైమర్",
+  "videoEditorInfoStickerStyleFilm": "ఫిల్మ్",
+  "videoEditorInfoStickerStyleCamcorder": "కామ్‌కార్డర్",
+  "videoEditorInfoStickerDayCountValue": "రోజు {day}",
+  "videoEditorInfoStickerDayCountOfValue": "{total}లో రోజు {day}",
+  "videoEditorInfoStickerDayLabel": "రోజు",
+  "videoEditorInfoStickerDayTotalLabel": "మొత్తం రోజులు (ఐచ్ఛికం)",
+  "videoEditorInfoStickerSymbolPin": "పిన్",
+  "videoEditorInfoStickerSymbolFlag": "జెండా",
+  "videoEditorInfoStickerSymbolGlobe": "గ్లోబ్",
+  "videoEditorInfoStickerSymbolMap": "మ్యాప్",
+  "videoEditorInfoStickerMoonNew": "అమావాస్య",
+  "videoEditorInfoStickerMoonWaxingCrescent": "పెరుగుతున్న నెలవంక",
+  "videoEditorInfoStickerMoonFirstQuarter": "మొదటి పావు",
+  "videoEditorInfoStickerMoonWaxingGibbous": "పెరుగుతున్న చంద్రుడు",
+  "videoEditorInfoStickerMoonFull": "పౌర్ణమి",
+  "videoEditorInfoStickerMoonWaningGibbous": "తగ్గుతున్న చంద్రుడు",
+  "videoEditorInfoStickerMoonLastQuarter": "చివరి పావు",
+  "videoEditorInfoStickerMoonWaningCrescent": "తగ్గుతున్న నెలవంక",
+  "videoEditorInfoStickerPlaceSearchHint": "నగరం లేదా స్థలం కోసం వెతకండి",
+  "videoEditorInfoStickerPlaceNoResults": "స్థలాలు ఏవీ కనుగొనబడలేదు",
+  "videoEditorInfoStickerPlaceSearchFailed": "స్థలాల కోసం వెతకడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.",
+  "videoEditorInfoStickerPlacePrivacyNote": "మీ వీడియోలో స్థలం పేరు మాత్రమే ఉంటుంది, మీ ఖచ్చితమైన స్థానం ఎప్పుడూ ఉండదు.",
+  "videoEditorInfoStickerLoading": "లోడ్ అవుతోంది…",
+  "videoEditorInfoStickerLoadFailed": "లోడ్ చేయడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.",
+  "videoEditorInfoStickerMetAttribution": "డేటా: MET Norway",
+  "videoEditorInfoStickerWeatherNow": "పాత వీడియోలకు వాతావరణ సమాచారం లేదు, కాబట్టి ఇది ఇప్పటి వాతావరణం.",
+  "videoEditorInfoStickerWeatherSunny": "ఎండ",
+  "videoEditorInfoStickerWeatherClearNight": "స్పష్టమైన రాత్రి",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "పాక్షికంగా మేఘావృతం",
+  "videoEditorInfoStickerWeatherCloudy": "మేఘావృతం",
+  "videoEditorInfoStickerWeatherFog": "పొగమంచు",
+  "videoEditorInfoStickerWeatherRain": "వర్షం",
+  "videoEditorInfoStickerWeatherShowers": "జల్లులు",
+  "videoEditorInfoStickerWeatherSnow": "మంచు",
+  "videoEditorInfoStickerWeatherThunderstorm": "ఉరుములతో వర్షం",
+  "videoEditorInfoStickerSunTimeZoneNote": "సమయాలు మీ ఫోన్ టైమ్ జోన్‌లో ఉన్నాయి.",
+  "videoEditorInfoStickerTemperatureLabel": "ఉష్ణోగ్రత",
+  "videoEditorInfoStickerUnitLabel": "యూనిట్",
+  "videoEditorInfoStickerBatteryLevelLabel": "బ్యాటరీ స్థాయి",
+  "videoEditorInfoStickerAdd": "స్టిక్కర్ జోడించండి",
   "videoEditorSelectFontSemanticLabel": "ఫాంట్‌ని ఎంచుకోండి",
   "videoEditorFontUnknown": "తెలియదు",
   "videoEditorSplitPlayheadOutsideClip": "ప్లేహెడ్ విభజించడానికి ఎంచుకున్న క్లిప్‌లో ఉండాలి.",
@@ -7008,6 +7266,7 @@
       }
     }
   },
+  "videoMetadataTagsPickerStickerTag": "{tag}, మీ వీడియోలోని స్టిక్కర్ నుండి",
   "authMinAgeNotice": "Divine గ్రీన్‌లైట్",
   "@authMinAgeNotice": {
     "description": "Welcome-screen Divine Greenlight label above the sign-in / create-account buttons."
@@ -8718,8 +8977,97 @@
   "ideasDescriptionFive": "ఊరికే పంచుకోవాలనుకున్నాను.",
   "ideasTitleSix": "ఈ రోజులో కొంత",
   "ideasDescriptionSix": "దీన్ని ఇక్కడ వదిలేస్తున్నాను.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{గదులు, {displayCount} చదవని సందేశం} other{గదులు, {displayCount} చదవని సందేశాలు}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{కొత్తది: {displayCount}} other{కొత్తవి: {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} చదవని సందేశం} other{{displayCount} చదవని సందేశాలు}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} వ్యక్తి} other{{displayCount} మంది}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} సందేశం} other{{displayCount} సందేశాలు}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "గత 24 గంటల్లో",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "చాట్‌లో చురుకుదనాన్ని చూస్తున్నాం…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "చాట్‌లో చురుకుదనాన్ని లోడ్ చేయలేకపోయాం.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "ఇటీవల సందేశాలు లేవు. పలకరించండి.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "నేరుగా",
   "messagesRooms": "గదులు",
+  "messagesRoomsWithUnread": "గదులు ({badge})",
   "messagesPublicTestRooms": "బహిరంగ పరీక్ష గదులు",
   "messagesPublicTestDisclosure": "ఈ పరీక్ష గదులు బహిరంగమైనవి. ప్రవేశం ఉన్న ఎవరైనా మీ సందేశాలను చదవగలరు.",
   "messagesNoRooms": "ఇంకా గదులు లేవు",
@@ -8823,5 +9171,57 @@
   "videoEditorLoopRepairProgress": "మీ లూప్‌ను సమలేఖనం చేస్తున్నాం…",
   "videoEditorLoopRepairTrimmed": "లూప్ సాఫీగా మారింది. {seconds} సె. తొలగించాం.",
   "notificationFromDivine": "Divine నుండి",
-  "announcementUnavailable": "ఈ ప్రకటన ఇకపై అందుబాటులో లేదు."
+  "announcementUnavailable": "ఈ ప్రకటన ఇకపై అందుబాటులో లేదు.",
+  "creatorHighlightLabel": "ఈ రోజు మీ హైలైట్",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "ఈ రోజు మీరు సృష్టించిన వీడియోలు: {count}.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "ఈ వారంలో మీ ముద్ర మరికాస్త పెరిగింది.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "ఈ వారం మీరు సృష్టించిన రోజులు: {count}. ఇలాగే కొనసాగించండి.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "ఈ వారం మీరు పోస్ట్ చేసిన వీడియోలకు ఇప్పటివరకు వచ్చిన మొత్తం వీక్షణలు: {count}.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "ఈ వారం మీరు పోస్ట్ చేసిన వీడియోల్లో అత్యధికంగా చూసిన వీడియో",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "మరొకటి సృష్టించండి",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "మీ గణాంకాలను చూడండి",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "వీడియో చూడండి",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

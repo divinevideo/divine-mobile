@@ -6,6 +6,7 @@ import 'package:caption_generator/caption_generator.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/captions_editor/captions_editor_cubit.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
@@ -31,15 +32,18 @@ void main() {
       service = _MockCaptionGenerationService();
     });
 
-    CaptionsEditorCubit build({List<CaptionCue>? initialCues}) =>
-        CaptionsEditorCubit(
-          generationService: service,
-          clips: const [],
-          totalDuration: const Duration(seconds: 6),
-          presetId: 'classic',
-          languageTag: 'en-US',
-          initialCues: initialCues,
-        );
+    CaptionsEditorCubit build({
+      List<CaptionCue>? initialCues,
+      List<AudioEvent> audioTracks = const [],
+    }) => CaptionsEditorCubit(
+      generationService: service,
+      clips: const [],
+      totalDuration: const Duration(seconds: 6),
+      presetId: 'classic',
+      languageTag: 'en-US',
+      initialCues: initialCues,
+      audioTracks: audioTracks,
+    );
 
     void stubOutcome(CaptionGenerationOutcome outcome) {
       when(
@@ -145,6 +149,27 @@ void main() {
         );
       },
     );
+
+    test('transcribes the audio tracks along with the clips', () async {
+      final take = AudioEvent(
+        id: '${AudioEvent.voiceOverIdPrefix}_1',
+        pubkey: '',
+        createdAt: 0,
+      );
+      stubOutcome(const CaptionsEmpty());
+      final cubit = build(audioTracks: [take]);
+      addTearDown(cubit.close);
+
+      await cubit.initialize();
+
+      verify(
+        () => service.generateForClips(
+          clips: any(named: 'clips'),
+          localeIdentifier: any(named: 'localeIdentifier'),
+          audioTracks: [take],
+        ),
+      ).called(1);
+    });
 
     blocTest<CaptionsEditorCubit, CaptionsEditorState>(
       'startEmpty moves a failed session to ready with one blank cue',

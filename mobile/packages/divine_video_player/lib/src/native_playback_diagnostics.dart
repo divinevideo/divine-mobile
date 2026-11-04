@@ -25,6 +25,13 @@ class NativePlaybackDiagnostics {
     'framesDelivered',
   ];
 
+  /// Memory ledgers a newer native binary adds; -1 when the OS cannot tell.
+  static const _memoryLedgers = [
+    'graphicsFootprintBytes',
+    'mediaFootprintBytes',
+    'memoryLimitRemainingBytes',
+  ];
+
   /// Parses the versioned channel response, or returns null when incompatible.
   static NativePlaybackDiagnostics? fromMap(Map<Object?, Object?> values) {
     if (values['version'] != 1) return null;
@@ -49,6 +56,13 @@ class NativePlaybackDiagnostics {
       if (value is! int || value < 0) return null;
       parsed[key] = value;
     }
+    for (final key in _memoryLedgers) {
+      final value = values[key];
+      // An older native binary sends none of them.
+      if (value == null) continue;
+      if (value is! int || value < -1) return null;
+      parsed[key] = value;
+    }
     return NativePlaybackDiagnostics._(parsed);
   }
 
@@ -69,6 +83,21 @@ class NativePlaybackDiagnostics {
 
   /// Current physical footprint in bytes, or -1 if the OS probe failed.
   int get footprintBytes => _values['footprintBytes']! as int;
+
+  /// The part of [footprintBytes] GPU resources own, -1 when the OS cannot
+  /// tell, or null from a native binary that does not report it.
+  int? get graphicsFootprintBytes => _values['graphicsFootprintBytes'] as int?;
+
+  /// The part of [footprintBytes] media buffers (decoders, encoders) own, -1
+  /// when the OS cannot tell, or null from a native binary that does not
+  /// report it.
+  int? get mediaFootprintBytes => _values['mediaFootprintBytes'] as int?;
+
+  /// How far [footprintBytes] may still grow before the OS ends the app, -1
+  /// when the OS cannot tell, or null from a native binary that does not
+  /// report it.
+  int? get memoryLimitRemainingBytes =>
+      _values['memoryLimitRemainingBytes'] as int?;
 
   /// Disposed instances still owning AVQueuePlayers.
   /// Includes instances already removed from the registry.

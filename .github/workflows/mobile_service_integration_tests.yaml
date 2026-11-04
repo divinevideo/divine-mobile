@@ -15,7 +15,8 @@ on:
 # and mobile/packages production code. A 60-PR sample found those scopes on
 # 37% and 77% of changes respectively; running every suite costs about 14
 # minutes. The changes job therefore selects either suite group (or both), and
-# one service-tests job pays setup cost once. Keep the detector and its tests in
+# one service-tests job pays setup cost once and runs the selected suites from
+# one generated entrypoint. Keep the detector and its tests in
 # sync when suite dependencies change.
 
 concurrency:
@@ -128,10 +129,20 @@ jobs:
           flutter config --enable-linux-desktop
       - name: 📦 Install dependencies
         run: flutter pub get
-      # One invocation per file. Passing the directory launches a fresh app per
-      # file inside a single run, and on the Linux desktop device the second
-      # launch never gets a debug connection ("The log reader stopped
-      # unexpectedly, or never started"). Each suite passes on its own.
+      # One app launch per `flutter test` invocation. Passing several files
+      # launches a fresh app per file inside a single run, and on the Linux
+      # desktop device the second launch never gets a debug connection ("The
+      # log reader stopped unexpectedly, or never started").
+      #
+      # Every invocation also compiles and builds the app for its own
+      # entrypoint: 43 s for a focused suite and 71 s for an app-connected one,
+      # against 3-74 s of actual testing. One file per suite therefore spent
+      # 12.5 of a full run's 18 minutes building. The selected suites are
+      # instead imported into one generated entrypoint, each under a group
+      # named after its file, so they share one build and one launch.
+      #
+      # `app_launch_suites` stay separate: they boot the real app through
+      # `main()`, whose timers and singletons no teardown undoes.
       #
       # The lists are explicit rather than a glob over integration_test/e2e/,
       # because `service` and "runnable on a Linux CI runner" are different
@@ -163,19 +174,29 @@ jobs:
           app_suites=(
             integration_test/e2e/reel_reply_retry_double_send_test.dart
             integration_test/e2e/block_leaves_kind3_follow_test.dart
+          )
+          app_launch_suites=(
             integration_test/e2e/video_creation_flow_test.dart
           )
           # SERVICE_SUITE_LIST_END
-          suites=()
+          bundled=()
+          standalone=()
           if [[ "$RUN_FOCUSED_SUITES" == "true" ]]; then
-            suites+=("${focused_suites[@]}")
+            bundled+=("${focused_suites[@]}")
           fi
           if [[ "$RUN_APP_SUITES" == "true" ]]; then
-            suites+=("${app_suites[@]}")
+            bundled+=("${app_suites[@]}")
+            standalone+=("${app_launch_suites[@]}")
           fi
-          for suite in "${suites[@]}"; do
+          # Dependencies were resolved once above; every invocation reuses them.
+          if (( ${#bundled[@]} > 0 )); then
+            bundle=integration_test/service_suites_bundle_test.dart
+            bash scripts/ci/write_service_suite_bundle.sh "$bundle" "${bundled[@]}"
+            echo "── $bundle"
+            xvfb-run -a flutter test --no-pub "$bundle" --tags service -d linux
+          fi
+          for suite in "${standalone[@]}"; do
             echo "── $suite"
-            # Dependencies were resolved once above; reuse that graph per suite.
             xvfb-run -a flutter test --no-pub "$suite" --tags service -d linux
           done
   daily-signal:

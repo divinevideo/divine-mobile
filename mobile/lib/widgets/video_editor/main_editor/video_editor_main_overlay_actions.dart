@@ -12,11 +12,13 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_text_wrap_hint.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_commands.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar_chip.dart';
@@ -60,6 +62,9 @@ class _TopActions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scope = VideoEditorScope.of(context);
+    final isFinishing = context.select(
+      (VideoEditorMainBloc b) => b.state.isFinishing,
+    );
     final hasLoopSuggestion = context.select(
       (LoopSuggestionCubit cubit) =>
           cubit.state.status == LoopSuggestionStatus.searching,
@@ -88,6 +93,9 @@ class _TopActions extends ConsumerWidget {
     });
 
     void close() {
+      context.read<VideoEditorMainBloc>().add(
+        const VideoEditorFinishCancelled(),
+      );
       if (isAutosavedDraft) {
         _onClosePressed(
           context: context,
@@ -127,7 +135,9 @@ class _TopActions extends ConsumerWidget {
                 ),
         ),
         onClose: close,
-        onDone: hasLoopSuggestion ? null : () => _onDonePressed(context, scope),
+        onDone: hasLoopSuggestion || isFinishing
+            ? null
+            : () => _onDonePressed(context, scope),
       ),
     );
   }
@@ -155,7 +165,17 @@ class _TopActions extends ConsumerWidget {
       );
       return;
     }
-    scope.editor?.doneEditing();
+    final editor = scope.editor;
+    if (editor == null) return;
+    context.read<VideoEditorMainBloc>().add(
+      VideoEditorFinishRequested(
+        stickerTexts: [
+          for (final layer in editor.activeLayers)
+            if (SocialStickerData.of(layer) case final sticker?)
+              SocialStickerView.textOf(sticker),
+        ],
+      ),
+    );
   }
 
   void _onClosePressed({

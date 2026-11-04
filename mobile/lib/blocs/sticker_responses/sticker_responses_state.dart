@@ -1,0 +1,76 @@
+part of 'sticker_responses_cubit.dart';
+
+/// Where reading a sticker's responses stands.
+enum StickerResponsesStatus {
+  /// Nothing read yet.
+  initial,
+
+  /// Being read.
+  loading,
+
+  /// Read; [StickerResponsesState.videos] holds them.
+  loaded,
+
+  /// Could not be read.
+  failure,
+}
+
+/// Who joined an Add yours or replied to a video, as its sticker shows them.
+class StickerResponsesState extends Equatable {
+  const StickerResponsesState({
+    this.status = StickerResponsesStatus.initial,
+    this.total = 0,
+    this.totalIsAtLeast = false,
+    this.videos = const [],
+    this.curation = const RepliesCuration(),
+    this.chainRoot,
+  });
+
+  final StickerResponsesStatus status;
+
+  /// How many there are in all that the viewer may see, more than [videos]
+  /// may hold.
+  final int total;
+
+  /// Whether [total] is only a floor: there may be more.
+  final bool totalIsAtLeast;
+
+  /// The latest the viewer may see, in the order they show: a replies
+  /// sticker's pinned reply first.
+  final List<VideoEvent> videos;
+
+  /// The reply the creator pinned and the ones they hid, for a replies
+  /// sticker.
+  final RepliesCuration curation;
+
+  /// The address of the first video of the chain an Add yours joins, once
+  /// read; `null` before then, for a replies sticker, or while a relay that
+  /// did not answer may hold the first video it names.
+  final String? chainRoot;
+
+  StickerResponsesState copyWith({
+    StickerResponsesStatus? status,
+    int? total,
+    bool? totalIsAtLeast,
+    List<VideoEvent>? videos,
+    RepliesCuration? curation,
+    String? chainRoot,
+  }) => StickerResponsesState(
+    status: status ?? this.status,
+    total: total ?? this.total,
+    totalIsAtLeast: totalIsAtLeast ?? this.totalIsAtLeast,
+    videos: videos ?? this.videos,
+    curation: curation ?? this.curation,
+    chainRoot: chainRoot ?? this.chainRoot,
+  );
+
+  @override
+  List<Object?> get props => [
+    status,
+    total,
+    totalIsAtLeast,
+    videos,
+    curation,
+    chainRoot,
+  ];
+}

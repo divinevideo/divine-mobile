@@ -1,5 +1,7 @@
 // ABOUTME: Unit tests for the profile/author cross-source merge policy (#3384).
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -8,7 +10,9 @@ VideoEvent _video({
   required String id,
   String pubkey = 'author',
   int createdAt = 0,
+  int? eventCreatedAt,
   DateTime? timestamp,
+  String content = '',
   String? title,
   String? videoUrl,
   String? publishedAt,
@@ -35,7 +39,8 @@ VideoEvent _video({
     id: id,
     pubkey: pubkey,
     createdAt: createdAt,
-    content: '',
+    eventCreatedAt: eventCreatedAt,
+    content: content,
     timestamp:
         timestamp ?? DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
     title: title,
@@ -61,6 +66,11 @@ VideoEvent _video({
     nostrRepostCount: nostrRepostCount,
   );
 }
+
+/// [video] as the feed's snapshot restores it.
+VideoEvent _snapshotOf(VideoEvent video) => VideoEvent.fromJson(
+  jsonDecode(jsonEncode(video.toJson())) as Map<String, dynamic>,
+);
 
 void main() {
   group('canonicalProfileFeedVideoKey', () {
@@ -160,6 +170,29 @@ void main() {
       expect(merged.title, equals('new'));
     });
 
+    test('a later edit wins although both copies share published_at', () {
+      // An edit re-emits the original published_at, so createdAt ties and
+      // only the signed created_at tells the revisions apart. The original
+      // carries the lower id, so an id tie-break would keep it.
+      final original = _video(
+        id: 'aaa',
+        createdAt: 1000,
+        eventCreatedAt: 1000,
+        publishedAt: '1000',
+        content: 'old caption',
+      );
+      final edited = _video(
+        id: 'bbb',
+        createdAt: 1000,
+        eventCreatedAt: 2000,
+        publishedAt: '1000',
+        content: 'new caption',
+      );
+
+      expect(mergeProfileFeedVideos(original, edited).content, 'new caption');
+      expect(mergeProfileFeedVideos(edited, original).content, 'new caption');
+    });
+
     test('fills addressable d tag from the secondary copy', () {
       final merged = mergeProfileFeedVideos(
         _video(id: 'rest', vineId: 'video-d-tag'),
@@ -172,6 +205,65 @@ void main() {
 
       expect(merged.addressableDTag, equals('video-d-tag'));
       expect(merged.addressableId, equals('34236:author:video-d-tag'));
+    });
+
+    test('fills link urls and sticker regions from a snapshot copy', () {
+      // The feed's snapshot keeps the two fields but not the tags they were
+      // read from, so the merge has to carry them over itself.
+      final snapshot = _snapshotOf(
+        _video(
+          id: 'nostr',
+          createdAt: 1000,
+          vineId: 'video-stickers',
+          nostrEventTags: const [
+            ['r', 'https://divine.video/about', 'link'],
+            ['sticker', 'hashtag', 'divine', '0.5 0.5 0.2 0.1', '0'],
+          ],
+        ),
+      );
+      expect(snapshot.nostrEventTags, isEmpty);
+
+      final merged = mergeProfileFeedVideos(
+        _video(id: 'rest', createdAt: 2000, vineId: 'video-stickers'),
+        snapshot,
+      );
+
+      expect(merged.linkUrls, equals(['https://divine.video/about']));
+      expect(
+        merged.stickerRegions.map((region) => region.target),
+        equals(['divine']),
+      );
+    });
+
+    test('keeps link urls and sticker regions from the primary copy', () {
+      final merged = mergeProfileFeedVideos(
+        _snapshotOf(
+          _video(
+            id: 'primary',
+            createdAt: 2000,
+            vineId: 'video-stickers',
+            nostrEventTags: const [
+              ['r', 'https://divine.video/new', 'link'],
+              ['sticker', 'hashtag', 'new', '0.5 0.5 0.2 0.1', '0'],
+            ],
+          ),
+        ),
+        _video(
+          id: 'secondary',
+          createdAt: 1000,
+          vineId: 'video-stickers',
+          nostrEventTags: const [
+            ['r', 'https://divine.video/old', 'link'],
+            ['sticker', 'hashtag', 'old', '0.5 0.5 0.2 0.1', '0'],
+          ],
+        ),
+      );
+
+      expect(merged.linkUrls, equals(['https://divine.video/new']));
+      expect(
+        merged.stickerRegions.map((region) => region.target),
+        equals(['new']),
+      );
     });
 
     test('fills plural text-track refs from the secondary copy', () {

@@ -2013,6 +2013,250 @@ class AppLocalizationsSv extends AppLocalizations {
   String get metadataSoundsLabel => 'Ljud';
 
   @override
+  String get metadataLinksLabel => 'Länkar';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Länkklistermärke, öppnar $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'Omnämnandeklistermärke, öppnar profilen';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Hashtagklistermärke, öppnar #$hashtag';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel =>
+      'Ljudklistermärke, öppnar ljudet';
+
+  @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Platsklistermärke, öppnar $place i en karta';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Nedräkningsklistermärke, ställer in en påminnelse';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Svarsklistermärke, öppnar det som videon svarar på';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dagar',
+      one: '$count dag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Påminnelse inställd. Vi hör av oss när det är dags.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Påminnelsen togs bort.';
+
+  @override
+  String get videoStickerCountdownOver => 'Den här nedräkningen är slut.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Slå på aviseringar för Divine för att få påminnelsen.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'Nu är det dags! Nedräkningen du sparade har precis tagit slut.';
+
+  @override
+  String get videoStickerQuizRightAnswer => 'Rätt svar';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Fel svar';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Logga in för att rösta.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Ansluter fortfarande. Försök igen om en stund.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Din röst gick inte fram. Försök igen.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Röster är offentliga. Alla kan se vad du valde.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count röster',
+      one: '1 röst',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'Tryck för att svara';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'Svara: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'Din tur';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count är med',
+      one: '$count är med',
+      zero: 'Bli först',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count är med';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'Se vilka som är med';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'Din tur: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count svar',
+      one: '$count svar',
+      zero: 'Inga svar än',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count svar';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Titta på $count videosvar',
+      one: 'Titta på $count videosvar',
+      zero: 'Videosvar, inga än',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return 'Titta på $count videosvar';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'Logga in för att svara.';
+
+  @override
+  String get videoStickerQuestionUnavailable =>
+      'Att svara på frågor är inte tillgängligt för ditt konto.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'Svara';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'Ditt svar';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'Bara $name ser ditt svar. Det kan delas i en video, utan ditt namn.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'Skicka';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'Svar skickat.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'Svaret är för långt för att skickas.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'Ditt svar gick inte fram. Försök igen.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'Logga in för att vara med.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'Videosvar';
+
+  @override
+  String get videoStickerRepliesEmpty => 'Inga videosvar än.';
+
+  @override
+  String get videoStickerRepliesLoadFailed =>
+      'Det gick inte att läsa in svaren.';
+
+  @override
+  String get videoStickerRepliesRetry => 'Försök igen';
+
+  @override
+  String get videoStickerRepliesPin => 'Fäst';
+
+  @override
+  String get videoStickerRepliesUnpin => 'Lossa';
+
+  @override
+  String get videoStickerRepliesHide => 'Dölj';
+
+  @override
+  String get videoStickerRepliesShow => 'Visa';
+
+  @override
+  String get videoStickerRepliesPinned => 'Fäst';
+
+  @override
+  String get videoStickerRepliesHidden => 'Dold';
+
+  @override
+  String get videoStickerRepliesSaveFailed =>
+      'Det gick inte att spara. Försök igen.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'Titta på svaret från $name';
+  }
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Länken öppnas utanför Divine. Kolla adressen innan du fortsätter.';
+
+  @override
   String get metadataOriginalSound => 'Originalljud';
 
   @override
@@ -4362,8 +4606,17 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Kan inte nå servern. Kontrollera din anslutning och försök igen.';
+  String get profileVideosLoadFailedTitle => 'Kunde inte läsa in dina videor';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'Kunde inte läsa in videor';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Kontrollera din anslutning och försök igen.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Försök igen';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -4691,6 +4944,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get routeInvalidSoundId => 'Ogiltigt ljud-ID';
+
+  @override
+  String get routeInvalidQuestion => 'Ogiltig frågelänk';
 
   @override
   String get routeInvalidCategory => 'Ogiltig kategori';
@@ -6069,6 +6325,19 @@ class AppLocalizationsSv extends AppLocalizations {
   String get dmReelReplyComposerSemanticLabel => 'Svara på den här reelen';
 
   @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'Svarade på din fråga: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'Du svarade: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'Svara med en video';
+
+  @override
   String get dmReelReplyViewChat => 'Visa chatt';
 
   @override
@@ -6792,21 +7061,19 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Valt';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Inte valt';
 
   @override
   String get videoClipSemanticHintDisabled => 'Inaktiverat';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Tryck för att välja, håll för förhandsgranskning';
+  String get videoClipSemanticHintSelect => 'Tryck för att välja';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Tryck för att avmarkera, håll för förhandsgranskning';
+  String get videoClipSemanticHintDeselect => 'Tryck för att avmarkera';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Tryck för förhandsgranskning';
 
   @override
   String get routerInvalidCreator => 'Ogiltig skapare';
@@ -7667,6 +7934,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Texten och dekalerna i det här utkastet kunde inte förberedas. Öppna det i redigeraren och posta igen.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Ditt konto kan inte publicera ett frågeklistermärke, eftersom svaren kommer som privata meddelanden. Ta bort det och publicera sedan igen.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Din enhet kan inte exportera så många lossade klipp på en gång. Lägg tillbaka några på tidslinjen och försök igen.';
 
@@ -8292,6 +8563,11 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName gillade en video som du är taggad i';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName gillade din kommentar';
   }
@@ -8654,6 +8930,28 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klipp har återställts',
+      one: 'Klippet har återställts',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klipp har raderats permanent',
+      one: 'Klippet har raderats permanent',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'Stäng videoinspelaren';
 
   @override
@@ -8902,13 +9200,139 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectSparkles => 'Gnistor';
 
   @override
+  String get videoEditorEffectRain => 'Regn';
+
+  @override
+  String get videoEditorEffectLeaves => 'Löv';
+
+  @override
+  String get videoEditorEffectBlossoms => 'Kronblad';
+
+  @override
+  String get videoEditorEffectBubbles => 'Bubblor';
+
+  @override
+  String get videoEditorEffectBokeh => 'Bokeh';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'Noter';
+
+  @override
+  String get videoEditorEffectStars => 'Stjärnor';
+
+  @override
+  String get videoEditorEffectFireflies => 'Eldflugor';
+
+  @override
+  String get videoEditorEffectEmbers => 'Eldgnistor';
+
+  @override
+  String get videoEditorEffectMoney => 'Pengar';
+
+  @override
+  String get videoEditorEffectBalloons => 'Ballonger';
+
+  @override
   String get videoEditorEffectTiltShift => 'Tilt-shift';
 
   @override
   String get videoEditorEffectZoomBlur => 'Zoomoskärpa';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Rotationsoskärpa';
+
+  @override
   String get videoEditorEffectComic => 'Serie';
+
+  @override
+  String get videoEditorEffectSwirl => 'Virvel';
+
+  @override
+  String get videoEditorEffectRipple => 'Krusning';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'Räfflat glas';
+
+  @override
+  String get videoEditorEffectEightBit => '8-bitars';
+
+  @override
+  String get videoEditorEffectAnaglyph => '3D-glasögon';
+
+  @override
+  String get videoEditorEffectRiso => 'Risotryck';
+
+  @override
+  String get videoEditorEffectTealOrange => 'Teal & Orange';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'Varm film';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'Diafilm';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'Kall film';
+
+  @override
+  String get videoEditorEffectMatte => 'Matt';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'Bleach bypass';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'Korsframkallning';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'Gyllene timmen';
+
+  @override
+  String get videoEditorEffectMoonlight => 'Månsken';
+
+  @override
+  String get videoEditorEffectSilver => 'Silver';
+
+  @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Förvrängning';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Ljus';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Rörelse';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Partiklar';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'Looks';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Naturlig';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Färgstark';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Varm';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Kall';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Vintage';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Svartvitt';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Toner';
 
   @override
   String get videoEditorDropsSettingsTitle => 'Justera droppar';
@@ -10635,6 +11059,12 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'Höjd';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'I sidled';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Uppifrån och ned';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Egen punkt';
 
   @override
@@ -10724,6 +11154,423 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorStickerSearchHint => 'Sök stickers...';
+
+  @override
+  String get videoEditorInfoStickersTitle => 'Info';
+
+  @override
+  String get videoEditorSocialStickersTitle => 'Socialt';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Omnämnande';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtagg';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Ljud';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'dittnamn';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtagg';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Välj någon';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Personen nämns i ditt inlägg och får en avisering.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Skriv en hashtagg';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Läggs också till bland ditt inläggs hashtaggar.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint => 'En rad låttext (valfritt)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Länk';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Webbadress';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'Titel (valfritt)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'Adressen läggs till i ditt inlägg.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'Det är inte en webbadress än.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Interaktiva';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Nedräkning';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Sommar';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Vad räknar du ner till?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Tittare ser hur lång tid som är kvar och kan ställa in en påminnelse.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Det ögonblicket har passerat. Välj ett nytt.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Svar';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'Tittare trycker på den för att se vad du svarar på.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Omröstning';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Quiz';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Reglage';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Vilken?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Ja';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Nej';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine lanserades år…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'Hur hungrig är du?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Ställ en fråga';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Svar $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Ta bort svar $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Markera svar $number som rätt';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Lägg till svar';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Tittarna ser resultatet när de har röstat. Röster är offentliga.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Bocka för rätt svar. Tittarna ser det när de har valt ett.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Tittarna drar emojin för att svara och ser var den hamnar i snitt.';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'Fråga';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'Din tur';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'Svar';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample =>
+      'Fråga mig vad som helst';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample =>
+      'Visa din skrivbordssetup';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'Svara med en video';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'Din fråga';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint => 'Vad ska folk visa?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'Hashtagg';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'Titel';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'Svaren kommer till dig som privata meddelanden.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'Tittarna svarar med en egen video. Varje svar får den här hashtaggen och länkar tillbaka till din video.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'Visar vilka som har svarat på den här videon med en video. Tittarna trycker på den för att se svaren.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'Klistermärket stannar i den här rutan så att tittarna kan trycka på det';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Not';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Vinylskiva';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Kassett';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Equalizer';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Spelare';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Tid';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Datum';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Plats';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Väder';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Höjd';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Batteri';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Ljus';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Mörk';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Grön';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Kontur';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Digital';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analog';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Glas';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Gul';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Enkel';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Byt plats';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Platssökning är inte tillgänglig på den här enheten.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Inspelning · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Nu · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Idag · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Dagräknare';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Sol';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Måne';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC-timer';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Film';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Videokamera';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Dag $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Dag $day av $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Dag';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Antal dagar (valfritt)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Nål';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Flagga';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Jordglob';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Karta';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Nymåne';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Tilltagande skära';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Första kvarteret';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Tilltagande måne';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Fullmåne';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Avtagande måne';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Sista kvarteret';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Avtagande skära';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'Sök efter en stad eller plats';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Inga platser hittades';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Det gick inte att söka efter platser. Försök igen.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Bara platsens namn hamnar i din video, aldrig din exakta position.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Laddar…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Det gick inte att ladda. Försök igen.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'Data från MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Det finns inget väder för äldre videor, så det här är vädret just nu.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Soligt';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Klar natt';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Halvklart';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Mulet';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Dimma';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Regn';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Skurar';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Snö';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Åska';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Tiderna visas i mobilens tidszon.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Temperatur';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Enhet';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Batterinivå';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Lägg till sticker';
 
   @override
   String get videoEditorSelectFontSemanticLabel => 'Välj typsnitt';
@@ -12317,6 +13164,11 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Lägg till ”#$tag”';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, från ett klistermärke i din video';
   }
 
   @override
@@ -14269,10 +15121,87 @@ class AppLocalizationsSv extends AppLocalizations {
   String get ideasDescriptionSix => 'Lämnar det här.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Rum, $displayCount olästa meddelanden',
+      one: 'Rum, $displayCount oläst meddelande',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Olästa: $displayCount',
+      one: 'Oläst: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount olästa meddelanden',
+      one: '$displayCount oläst meddelande',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount personer',
+      one: '$displayCount person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount meddelanden',
+      one: '$displayCount meddelande',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Senaste 24 timmarna';
+
+  @override
+  String get messagesRoomLoading => 'Kollar aktiviteten…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Det gick inte att läsa in aktiviteten.';
+
+  @override
+  String get messagesRoomEmpty => 'Inga meddelanden på sistone. Säg hej.';
+
+  @override
   String get messagesDirect => 'Direkt';
 
   @override
   String get messagesRooms => 'Rum';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Rum ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Offentliga testrum';
@@ -14605,9 +15534,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14628,11 +15554,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -14666,9 +15587,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -14731,4 +15649,76 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
+
+  @override
+  String get creatorHighlightLabel => 'Din höjdpunkt för dagen';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'Videor du har skapat i dag: $count.';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle =>
+      'Den här veckan har lite mer av dig i sig.';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'Kreativa dagar den här veckan: $count. Fortsätt så.';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Totalt antal visningar hittills för videorna du publicerade den här veckan: $countString.';
+  }
+
+  @override
+  String get creatorHighlightTopVideo =>
+      'Den mest sedda av dina videor från den här veckan';
+
+  @override
+  String get creatorHighlightCreate => 'Skapa en till';
+
+  @override
+  String get creatorHighlightAnalytics => 'Se din statistik';
+
+  @override
+  String get creatorHighlightWatch => 'Titta på videon';
 }

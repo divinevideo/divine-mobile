@@ -34,6 +34,7 @@ class Comment extends Equatable {
     this.videoDimensions,
     this.videoDuration,
     this.videoBlurhash,
+    this.stickerTags = const [],
   });
 
   /// Unique comment ID (Nostr event ID).
@@ -99,6 +100,10 @@ class Comment extends Equatable {
   /// Blurhash of the video thumbnail (NIP-92 imeta `blurhash` field).
   final String? videoBlurhash;
 
+  /// The `sticker` tags of a video reply, as it was published: where each
+  /// sticker a viewer can tap stands on the video and what it opens.
+  final List<List<String>> stickerTags;
+
   /// Whether this comment has an attached video.
   bool get hasVideo => videoUrl != null && videoUrl!.isNotEmpty;
 
@@ -120,6 +125,7 @@ class Comment extends Equatable {
     String? videoDimensions,
     int? videoDuration,
     String? videoBlurhash,
+    List<List<String>>? stickerTags,
   }) => Comment(
     id: id ?? this.id,
     content: content ?? this.content,
@@ -137,6 +143,7 @@ class Comment extends Equatable {
     videoDimensions: videoDimensions ?? this.videoDimensions,
     videoDuration: videoDuration ?? this.videoDuration,
     videoBlurhash: videoBlurhash ?? this.videoBlurhash,
+    stickerTags: stickerTags ?? this.stickerTags,
   );
 
   @override
@@ -157,5 +164,6 @@ class Comment extends Equatable {
     videoDimensions,
     videoDuration,
     videoBlurhash,
+    stickerTags,
   ];
 }

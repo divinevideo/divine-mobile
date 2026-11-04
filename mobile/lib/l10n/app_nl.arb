@@ -1,5 +1,75 @@
 {
   "@@locale": "nl",
+  "videoEditorSocialStickerPoll": "Poll",
+  "videoEditorSocialStickerQuiz": "Quiz",
+  "videoEditorSocialStickerSlider": "Slider",
+  "videoEditorSocialStickerPollSampleQuestion": "Welke?",
+  "videoEditorSocialStickerPollSampleYes": "Ja",
+  "videoEditorSocialStickerPollSampleNo": "Nee",
+  "videoEditorSocialStickerQuizSampleQuestion": "Vine startte in…",
+  "videoEditorSocialStickerSliderSampleQuestion": "Hoeveel honger heb je?",
+  "videoEditorSocialStickerPollQuestionHint": "Stel een vraag",
+  "videoEditorSocialStickerPollOptionHint": "Antwoord {number}",
+  "videoEditorSocialStickerPollRemoveOption": "Antwoord {number} verwijderen",
+  "videoEditorSocialStickerQuizMarkRight": "Antwoord {number} als juiste markeren",
+  "videoEditorSocialStickerPollAddOption": "Antwoord toevoegen",
+  "videoEditorSocialStickerPollNote": "Kijkers zien de uitslag zodra ze gestemd hebben. Stemmen zijn openbaar.",
+  "videoEditorSocialStickerQuizNote": "Vink het juiste antwoord aan. Kijkers zien het zodra ze er een kiezen.",
+  "videoEditorSocialStickerSliderNote": "Kijkers slepen de emoji om te antwoorden en zien waar die gemiddeld uitkomt.",
+  "videoStickerQuizRightAnswer": "Goed antwoord",
+  "videoStickerQuizWrongAnswer": "Fout antwoord",
+  "videoEditorSocialStickerQuestion": "Vraag",
+  "videoEditorSocialStickerAddYours": "Jouw beurt",
+  "videoEditorSocialStickerReplies": "Reacties",
+  "videoEditorSocialStickerQuestionSample": "Vraag me alles",
+  "videoEditorSocialStickerAddYoursSample": "Laat je bureausetup zien",
+  "videoEditorSocialStickerRepliesSample": "Reageer met een video",
+  "videoEditorSocialStickerQuestionHint": "Jouw vraag",
+  "videoEditorSocialStickerAddYoursPromptHint": "Wat moeten mensen laten zien?",
+  "videoEditorSocialStickerAddYoursHashtagHint": "Hashtag",
+  "videoEditorSocialStickerRepliesTitleHint": "Titel",
+  "videoEditorSocialStickerQuestionNote": "Antwoorden komen bij jou binnen als privéberichten.",
+  "videoEditorSocialStickerAddYoursNote": "Kijkers antwoorden met een eigen video. Elk antwoord krijgt deze hashtag en linkt terug naar jouw video.",
+  "videoEditorSocialStickerRepliesNote": "Laat zien wie met een video op deze video heeft gereageerd. Kijkers tikken erop om de reacties te bekijken.",
+  "videoEditorInteractiveCardAreaHint": "Deze sticker blijft in dit kader zodat kijkers erop kunnen tikken",
+  "videoStickerPollSignInToVote": "Log in om te stemmen.",
+  "videoStickerPollNotReady": "Nog aan het verbinden. Probeer het zo opnieuw.",
+  "videoStickerPollVoteFailed": "Je stem is niet aangekomen. Probeer het opnieuw.",
+  "videoStickerPollVotesArePublic": "Stemmen zijn openbaar. Iedereen kan zien wat je gekozen hebt.",
+  "videoStickerPollVoteCount": "{count, plural, one{1 stem} other{{count} stemmen}}",
+  "videoStickerQuestionAnswerHint": "Tik om te antwoorden",
+  "videoStickerQuestionAnswerSemanticLabel": "Antwoorden: {question}",
+  "videoStickerAddYoursButton": "Jouw beurt",
+  "videoStickerAddYoursJoined": "{count, plural, =0{Wees de eerste} =1{{count} doet mee} other{{count} doen mee}}",
+  "videoStickerAddYoursJoinedAtLeast": "{count} doen mee",
+  "videoStickerAddYoursOpenSemanticLabel": "Bekijk wie meedoet",
+  "videoStickerAddYoursJoinSemanticLabel": "Jouw beurt: {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{Nog geen reacties} =1{{count} reactie} other{{count} reacties}}",
+  "videoStickerRepliesCountAtLeast": "{count} reacties",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{Videoreacties, nog geen} =1{Bekijk {count} videoreactie} other{Bekijk {count} videoreacties}}",
+  "videoStickerRepliesSemanticLabelAtLeast": "Bekijk {count} videoreacties",
+  "videoStickerQuestionSignIn": "Log in om te antwoorden.",
+  "videoStickerQuestionUnavailable": "Vragen beantwoorden is niet beschikbaar voor je account.",
+  "videoStickerQuestionAnswerTitle": "Antwoorden",
+  "videoStickerQuestionAnswerFieldLabel": "Jouw antwoord",
+  "videoStickerQuestionAnswerPrivacyNote": "Alleen {name} ziet je antwoord. Misschien wordt het gedeeld in een video, zonder je naam.",
+  "videoStickerQuestionAnswerSend": "Verzenden",
+  "videoStickerQuestionAnswerSent": "Antwoord verzonden.",
+  "videoStickerQuestionAnswerTooLong": "Dat antwoord is te lang om te verzenden.",
+  "videoStickerQuestionAnswerFailed": "Je antwoord is niet aangekomen. Probeer het opnieuw.",
+  "videoStickerAddYoursSignIn": "Log in om mee te doen.",
+  "videoStickerRepliesManageTitle": "Videoreacties",
+  "videoStickerRepliesEmpty": "Nog geen videoreacties.",
+  "videoStickerRepliesLoadFailed": "De reacties konden niet worden geladen.",
+  "videoStickerRepliesRetry": "Opnieuw proberen",
+  "videoStickerRepliesPin": "Vastpinnen",
+  "videoStickerRepliesUnpin": "Losmaken",
+  "videoStickerRepliesHide": "Verbergen",
+  "videoStickerRepliesShow": "Tonen",
+  "videoStickerRepliesPinned": "Vastgepind",
+  "videoStickerRepliesHidden": "Verborgen",
+  "videoStickerRepliesSaveFailed": "Kon niet opslaan. Probeer het opnieuw.",
+  "videoStickerRepliesWatchSemanticLabel": "Bekijk de reactie van {name}",
   "devOptionsClipRecovery": "Clipherstel",
   "devOptionsClipRecoveryDescription": "Vindt opnamen die onder een ander account staan en videobestanden waarnaar geen enkel item meer verwijst.",
   "devOptionsClipRecoveryScan": "Scannen",
@@ -65,6 +135,7 @@
   "publishErrorPermissionDenied": "Divine heeft geen toestemming om te uploaden. Controleer de app-rechten in je instellingen en probeer het opnieuw.",
   "publishErrorOutOfMemory": "Je apparaat heeft weinig werkgeheugen. Sluit een paar apps en probeer het opnieuw.",
   "publishErrorOverlaysUnavailable": "De tekst en stickers van dit concept konden niet worden voorbereid. Open het in de editor en post opnieuw.",
+  "publishErrorQuestionStickerRestricted": "Je account kan geen vraagsticker plaatsen, omdat de antwoorden als privéberichten binnenkomen. Verwijder hem en plaats daarna opnieuw.",
   "publishErrorTooManyDetachedClips": "Je apparaat kan niet zoveel losgemaakte clips tegelijk exporteren. Zet er een paar terug op de tijdlijn en probeer het opnieuw.",
   "publishErrorDraftTooManyDetachedClips": "Je apparaat kan niet zoveel losgemaakte clips tegelijk exporteren. Open het concept in de editor, zet er een paar terug op de tijdlijn en post opnieuw.",
   "publishErrorUnknownServer": "Onbekende server",
@@ -74,7 +145,10 @@
   "dmReactionRetryAction": "Opnieuw proberen",
   "dmMessageBubbleVideoReplyHint": "Verwezen video openen",
   "commonSomethingWentWrong": "Er ging iets mis",
-  "profileFeedError": "Kan de server niet bereiken. Controleer je verbinding en probeer het opnieuw.",
+  "profileVideosLoadFailedTitle": "Je video's konden niet worden geladen",
+  "profileVideosLoadFailedOtherTitle": "Video's konden niet worden geladen",
+  "profileVideosLoadFailedSubtitle": "Controleer je verbinding en probeer het opnieuw.",
+  "profileVideosLoadFailedRetry": "Opnieuw proberen",
   "profileFeedLoadMoreError": "Meer video's konden niet worden geladen. Trek omlaag om te vernieuwen.",
   "appTitle": "Divine",
   "@appTitle": {
@@ -682,6 +756,21 @@
   "metadataBadgeNotDivine": "Niet Divine",
   "metadataBadgeHumanMade": "Door mensen gemaakt",
   "metadataSoundsLabel": "Geluiden",
+  "metadataLinksLabel": "Links",
+  "videoStickerLinkSemanticLabel": "Linksticker, opent {url}",
+  "videoStickerMentionSemanticLabel": "Vermeldingssticker, opent het profiel",
+  "videoStickerHashtagSemanticLabel": "Hashtagsticker, opent #{hashtag}",
+  "videoStickerSoundSemanticLabel": "Geluidssticker, opent het geluid",
+  "videoStickerPlaceSemanticLabel": "Locatiesticker, opent {place} in een kaart",
+  "videoStickerCountdownSemanticLabel": "Aftelsticker, zet een herinnering",
+  "videoStickerReplySemanticLabel": "Antwoordsticker, opent waarop deze video reageert",
+  "videoStickerCountdownDays": "{count, plural, =1{{count} dag} other{{count} dagen}}",
+  "videoStickerCountdownReminderSet": "Herinnering gezet. We laten het je weten als het zover is.",
+  "videoStickerCountdownReminderRemoved": "Herinnering verwijderd.",
+  "videoStickerCountdownOver": "Dit aftellen is voorbij.",
+  "videoStickerCountdownNotificationsOff": "Zet meldingen voor Divine aan om de herinnering te krijgen.",
+  "videoStickerCountdownReminderBody": "Het is zover! Het aftellen dat je hebt bewaard is net afgelopen.",
+  "videoStickerLinkSheetBody": "Deze link opent buiten Divine. Controleer het adres voordat je verdergaat.",
   "metadataOriginalSound": "Origineel geluid",
   "metadataVerificationLabel": "Verificatie",
   "metadataDeviceAttestation": "Apparaatattestatie",
@@ -1632,6 +1721,7 @@
   "routeInvalidUserId": "Ongeldige gebruikers-ID",
   "routeInvalidVideoId": "Ongeldige video-ID",
   "routeInvalidSoundId": "Ongeldige geluid-ID",
+  "routeInvalidQuestion": "Ongeldige vraaglink",
   "routeInvalidCategory": "Ongeldige categorie",
   "routeNoVideosToDisplay": "Geen video's om weer te geven",
   "routeGoHome": "Naar home",
@@ -2197,11 +2287,11 @@
   "videoClipBackupUnsignedSemanticLabel": "In je galerij zonder content credentials. {label}",
   "videoClipStopMotionSemanticLabel": "Stop-motionclip, {frames}",
   "videoClipSemanticValueSelectedAtPosition": "Geselecteerd, nummer {position}",
-  "videoClipSemanticValueSelected": "Geselecteerd",
   "videoClipSemanticValueNotSelected": "Niet geselecteerd",
   "videoClipSemanticHintDisabled": "Uitgeschakeld",
-  "videoClipSemanticHintSelect": "Tik om te selecteren, houd vast voor voorbeeld",
-  "videoClipSemanticHintDeselect": "Tik om te deselecteren, houd vast voor voorbeeld",
+  "videoClipSemanticHintSelect": "Tik om te selecteren",
+  "videoClipSemanticHintDeselect": "Tik om te deselecteren",
+  "videoClipSemanticHintPreview": "Tik voor voorbeeld",
   "libraryClipDuration": "{seconds}s",
   "libraryTabClips": "Clips",
   "libraryTabDrafts": "Concepten",
@@ -2295,6 +2385,14 @@
   },
   "notificationLikedYourVideo": "{actorName} vond je video leuk",
   "@notificationLikedYourVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLikedTaggedVideo": "{actorName} vond een video leuk waarin je getagd bent",
+  "@notificationLikedTaggedVideo": {
     "placeholders": {
       "actorName": {
         "type": "String"
@@ -2507,6 +2605,8 @@
   "libraryTrashDeleteConfirmMessage": "Hiermee wordt de clip meteen uit de prullenbak verwijderd.",
   "libraryTrashEmptyConfirmTitle": "Prullenbak legen?",
   "libraryTrashEmptyConfirmMessage": "Hiermee worden {count, plural, =1{1 clip} other{{count} clips}} meteen definitief uit de prullenbak verwijderd.",
+  "libraryTrashClipsRestored": "{count, plural, =1{Clip hersteld} other{{count} clips hersteld}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{Clip definitief verwijderd} other{{count} clips definitief verwijderd}}",
   "videoRecorderCloseLabel": "Videorecorder sluiten",
   "videoRecorderContinueToEditorLabel": "Doorgaan naar video-editor",
   "videoRecorderCameraPreviewLabel": "Cameravoorbeeld",
@@ -2599,9 +2699,51 @@
   "videoEditorEffectConfetti": "Confetti",
   "videoEditorEffectHearts": "Hartjes",
   "videoEditorEffectSparkles": "Glinstering",
+  "videoEditorEffectRain": "Regen",
+  "videoEditorEffectLeaves": "Bladeren",
+  "videoEditorEffectBlossoms": "Bloesem",
+  "videoEditorEffectBubbles": "Bellen",
+  "videoEditorEffectBokeh": "Bokeh",
+  "videoEditorEffectMusicNotes": "Muzieknoten",
+  "videoEditorEffectStars": "Sterren",
+  "videoEditorEffectFireflies": "Vuurvliegjes",
+  "videoEditorEffectEmbers": "Sintels",
+  "videoEditorEffectMoney": "Geld",
+  "videoEditorEffectBalloons": "Ballonnen",
   "videoEditorEffectTiltShift": "Tilt-shift",
   "videoEditorEffectZoomBlur": "Zoomvervaging",
+  "videoEditorEffectSpinBlur": "Draaivervaging",
   "videoEditorEffectComic": "Strip",
+  "videoEditorEffectSwirl": "Draaikolk",
+  "videoEditorEffectRipple": "Rimpeling",
+  "videoEditorEffectFlutedGlass": "Ribbelglas",
+  "videoEditorEffectEightBit": "8-bit",
+  "videoEditorEffectAnaglyph": "3D-bril",
+  "videoEditorEffectRiso": "Risoprint",
+  "videoEditorEffectTealOrange": "Teal & Orange",
+  "videoEditorEffectWarmFilm": "Warme film",
+  "videoEditorEffectSlideFilm": "Diafilm",
+  "videoEditorEffectCoolFilm": "Koele film",
+  "videoEditorEffectMatte": "Mat",
+  "videoEditorEffectBleachBypass": "Bleach bypass",
+  "videoEditorEffectCrossProcess": "Crossprocessing",
+  "videoEditorEffectGoldenHour": "Gouden uur",
+  "videoEditorEffectMoonlight": "Maanlicht",
+  "videoEditorEffectSilver": "Zilver",
+  "videoEditorEffectCategoryRetro": "Retro",
+  "videoEditorEffectCategoryGlitch": "Glitch",
+  "videoEditorEffectCategoryDistort": "Vervorming",
+  "videoEditorEffectCategoryLight": "Licht",
+  "videoEditorEffectCategoryMotion": "Beweging",
+  "videoEditorEffectCategoryParticles": "Deeltjes",
+  "videoEditorEffectCategoryLooks": "Looks",
+  "videoEditorFilterCategoryNatural": "Natuurlijk",
+  "videoEditorFilterCategoryVibrant": "Levendig",
+  "videoEditorFilterCategoryWarm": "Warm",
+  "videoEditorFilterCategoryCool": "Koel",
+  "videoEditorFilterCategoryVintage": "Vintage",
+  "videoEditorFilterCategoryBlackAndWhite": "Zwart-wit",
+  "videoEditorFilterCategoryTints": "Tinten",
   "videoEditorDropsSettingsTitle": "Druppels aanpassen",
   "videoEditorDropsCountLabel": "Aantal",
   "videoEditorDropsSizeLabel": "Grootte",
@@ -3025,6 +3167,8 @@
   "videoEditorLayerAnimationPulseTo": "Krimpen tot",
   "videoEditorLayerAnimationWiggleAngle": "Kanteling",
   "videoEditorLayerAnimationBounceHeight": "Hoogte",
+  "videoEditorLayerAnimationFlipSideways": "Zijwaarts",
+  "videoEditorLayerAnimationFlipOver": "Van boven naar onder",
   "videoEditorLayerAnimationCustomPoint": "Eigen punt",
   "videoEditorLayerAnimationPointEnterHint": "Tik op de video waar dit vandaan moet schuiven",
   "videoEditorLayerAnimationPointLeaveHint": "Tik op de video waar dit naartoe moet schuiven",
@@ -3050,6 +3194,101 @@
   "videoEditorFeedPreviewContent": "Plaats geen content achter deze gebieden.",
   "videoEditorStickersDivineOriginals": "Divine Originelen",
   "videoEditorStickerSearchHint": "Stickers zoeken...",
+  "videoEditorInfoStickersTitle": "Info",
+  "videoEditorSocialStickersTitle": "Sociaal",
+  "videoEditorSocialStickerMention": "Vermelding",
+  "videoEditorSocialStickerHashtag": "Hashtag",
+  "videoEditorSocialStickerSoundCredit": "Geluid",
+  "videoEditorSocialStickerMentionSample": "jouwnaam",
+  "videoEditorSocialStickerHashtagSample": "hashtag",
+  "videoEditorSocialStickerChoosePerson": "Kies iemand",
+  "videoEditorSocialStickerMentionNote": "Diegene wordt vermeld in je post en krijgt een melding.",
+  "videoEditorSocialStickerHashtagHint": "Typ een hashtag",
+  "videoEditorSocialStickerHashtagNote": "Wordt ook toegevoegd aan de hashtags van je post.",
+  "videoEditorSocialStickerLyricHint": "Een regel songtekst (optioneel)",
+  "videoEditorSocialStickerLink": "Link",
+  "videoEditorSocialStickerLinkUrlHint": "Webadres",
+  "videoEditorSocialStickerLinkTitleHint": "Titel (optioneel)",
+  "videoEditorSocialStickerLinkNote": "Het adres wordt aan je post toegevoegd.",
+  "videoEditorSocialStickerLinkInvalid": "Dat is nog geen webadres.",
+  "videoEditorInteractiveStickersTitle": "Interactief",
+  "videoEditorSocialStickerCountdown": "Aftellen",
+  "videoEditorSocialStickerCountdownSample": "Zomer",
+  "videoEditorSocialStickerCountdownTitleHint": "Waar tel je naartoe af?",
+  "videoEditorSocialStickerCountdownNote": "Kijkers zien hoeveel tijd er nog is en kunnen een herinnering zetten.",
+  "videoEditorSocialStickerCountdownOver": "Dat moment is voorbij. Kies een nieuw.",
+  "videoEditorSocialStickerReply": "Antwoord",
+  "videoEditorSocialStickerReplyNote": "Kijkers tikken erop om te zien waarop je reageert.",
+  "videoEditorSocialStickerSoundNote": "Noot",
+  "videoEditorSocialStickerSoundVinyl": "Plaat",
+  "videoEditorSocialStickerSoundCassette": "Cassette",
+  "videoEditorSocialStickerSoundEqualizer": "Equalizer",
+  "videoEditorSocialStickerSoundPlayer": "Speler",
+  "videoEditorInfoStickerTime": "Tijd",
+  "videoEditorInfoStickerDate": "Datum",
+  "videoEditorInfoStickerLocation": "Locatie",
+  "videoEditorInfoStickerWeather": "Weer",
+  "videoEditorInfoStickerAltitude": "Hoogte",
+  "videoEditorInfoStickerBattery": "Batterij",
+  "videoEditorInfoStickerStyleLight": "Licht",
+  "videoEditorInfoStickerStyleDark": "Donker",
+  "videoEditorInfoStickerStyleBrand": "Groen",
+  "videoEditorInfoStickerStyleOutline": "Omlijning",
+  "videoEditorInfoStickerStyleDigital": "Digitaal",
+  "videoEditorInfoStickerStyleAnalog": "Analoog",
+  "videoEditorInfoStickerStyleGlass": "Glas",
+  "videoEditorInfoStickerStyleHighlight": "Geel",
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "videoEditorInfoStickerStylePlain": "Simpel",
+  "videoEditorInfoStickerChangePlace": "Plek wijzigen",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Plaatsen zoeken is niet beschikbaar op dit apparaat.",
+  "videoEditorInfoStickerRecordedValue": "Opname · {value}",
+  "videoEditorInfoStickerNowValue": "Nu · {value}",
+  "videoEditorInfoStickerTodayValue": "Vandaag · {value}",
+  "videoEditorInfoStickerDayCount": "Dagteller",
+  "videoEditorInfoStickerSun": "Zon",
+  "videoEditorInfoStickerMoon": "Maan",
+  "videoEditorInfoStickerRecTimer": "REC-timer",
+  "videoEditorInfoStickerStyleFilm": "Film",
+  "videoEditorInfoStickerStyleCamcorder": "Camcorder",
+  "videoEditorInfoStickerDayCountValue": "Dag {day}",
+  "videoEditorInfoStickerDayCountOfValue": "Dag {day} van {total}",
+  "videoEditorInfoStickerDayLabel": "Dag",
+  "videoEditorInfoStickerDayTotalLabel": "Aantal dagen (optioneel)",
+  "videoEditorInfoStickerSymbolPin": "Speld",
+  "videoEditorInfoStickerSymbolFlag": "Vlag",
+  "videoEditorInfoStickerSymbolGlobe": "Wereldbol",
+  "videoEditorInfoStickerSymbolMap": "Kaart",
+  "videoEditorInfoStickerMoonNew": "Nieuwe maan",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Wassende sikkel",
+  "videoEditorInfoStickerMoonFirstQuarter": "Eerste kwartier",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Wassende maan",
+  "videoEditorInfoStickerMoonFull": "Volle maan",
+  "videoEditorInfoStickerMoonWaningGibbous": "Afnemende maan",
+  "videoEditorInfoStickerMoonLastQuarter": "Laatste kwartier",
+  "videoEditorInfoStickerMoonWaningCrescent": "Afnemende sikkel",
+  "videoEditorInfoStickerPlaceSearchHint": "Zoek een stad of plek",
+  "videoEditorInfoStickerPlaceNoResults": "Geen plekken gevonden",
+  "videoEditorInfoStickerPlaceSearchFailed": "Plekken zoeken lukte niet. Probeer het opnieuw.",
+  "videoEditorInfoStickerPlacePrivacyNote": "Alleen de naam van de plek komt in je video, nooit je exacte locatie.",
+  "videoEditorInfoStickerLoading": "Laden…",
+  "videoEditorInfoStickerLoadFailed": "Laden lukte niet. Probeer het opnieuw.",
+  "videoEditorInfoStickerMetAttribution": "Gegevens van MET Norway",
+  "videoEditorInfoStickerWeatherNow": "Voor oudere video's is er geen weer, dus dit is het weer van nu.",
+  "videoEditorInfoStickerWeatherSunny": "Zonnig",
+  "videoEditorInfoStickerWeatherClearNight": "Heldere nacht",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Half bewolkt",
+  "videoEditorInfoStickerWeatherCloudy": "Bewolkt",
+  "videoEditorInfoStickerWeatherFog": "Mist",
+  "videoEditorInfoStickerWeatherRain": "Regen",
+  "videoEditorInfoStickerWeatherShowers": "Buien",
+  "videoEditorInfoStickerWeatherSnow": "Sneeuw",
+  "videoEditorInfoStickerWeatherThunderstorm": "Onweer",
+  "videoEditorInfoStickerSunTimeZoneNote": "De tijden staan in de tijdzone van je telefoon.",
+  "videoEditorInfoStickerTemperatureLabel": "Temperatuur",
+  "videoEditorInfoStickerUnitLabel": "Eenheid",
+  "videoEditorInfoStickerBatteryLevelLabel": "Batterijniveau",
+  "videoEditorInfoStickerAdd": "Sticker toevoegen",
   "videoEditorSelectFontSemanticLabel": "Lettertype selecteren",
   "videoEditorFontUnknown": "Onbekend",
   "videoEditorSplitFailed": "Splitsen mislukt. Probeer het opnieuw.",
@@ -4044,6 +4283,7 @@
       }
     }
   },
+  "videoMetadataTagsPickerStickerTag": "{tag}, van een sticker in je video",
   "videoEditorTimelineVolumePreview": "Volume {percent}%",
   "@videoEditorTimelineVolumePreview": {
     "placeholders": {
@@ -4157,6 +4397,9 @@
   "dmReelReplyComposerHint": "Bericht aan {name}…",
   "dmReelReplyComposerHintSelf": "Jezelf beantwoorden…",
   "dmReelReplyComposerSemanticLabel": "Reageer op deze reel",
+  "dmQuestionAnswerReceivedLabel": "Heeft je vraag beantwoord: {question}",
+  "dmQuestionAnswerSentLabel": "Je hebt geantwoord: {question}",
+  "dmQuestionAnswerWithVideo": "Antwoord met een video",
   "dmReelReplyViewChat": "Chat bekijken",
   "dmReelReplySentAnnouncement": "Antwoord verzonden",
   "dmReelReactionSentAnnouncement": "Gereageerd met {emoji}",
@@ -5793,8 +6036,97 @@
   "ideasDescriptionFive": "Wilde het gewoon delen.",
   "ideasTitleSix": "Een beetje van vandaag",
   "ideasDescriptionSix": "Dit laat ik hier achter.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{Kamers, {displayCount} ongelezen bericht} other{Kamers, {displayCount} ongelezen berichten}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{{displayCount} nieuw} other{{displayCount} nieuw}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} ongelezen bericht} other{{displayCount} ongelezen berichten}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} persoon} other{{displayCount} personen}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} bericht} other{{displayCount} berichten}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Afgelopen 24 uur",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Activiteit bekijken…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "De activiteit kon niet worden geladen.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Geen recente berichten. Zeg eens hallo.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Direct",
   "messagesRooms": "Kamers",
+  "messagesRoomsWithUnread": "Kamers ({badge})",
   "messagesPublicTestRooms": "Openbare testkamers",
   "messagesPublicTestDisclosure": "Deze testkamers zijn openbaar. Iedereen met toegang kan je berichten lezen.",
   "messagesNoRooms": "Nog geen kamers",
@@ -5903,5 +6235,57 @@
   "videoEditorLoopRepairProgress": "Je loop wordt uitgelijnd…",
   "videoEditorLoopRepairTrimmed": "Loop verbeterd. {seconds} s verwijderd.",
   "notificationFromDivine": "Van Divine",
-  "announcementUnavailable": "Deze aankondiging is niet meer beschikbaar."
+  "announcementUnavailable": "Deze aankondiging is niet meer beschikbaar.",
+  "creatorHighlightLabel": "Je hoogtepunt van vandaag",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "Video’s die je vandaag hebt gemaakt: {count}.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "Deze week heeft een beetje meer van jou.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "Creatieve dagen deze week: {count}. Ga zo door.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "Totaal aantal weergaven tot nu toe van video’s die je deze week hebt geplaatst: {count}.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "De meest bekeken van je video’s die je deze week hebt geplaatst",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "Maak er nog een",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "Bekijk je statistieken",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "Bekijk video",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

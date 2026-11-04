@@ -259,5 +259,61 @@ void main() {
 
       verify(goRouter.pop).called(1);
     });
+
+    group('returning to the app', () {
+      Future<_FakeCameraPermissionBloc> pumpSettingsPrompt(
+        WidgetTester tester,
+      ) async {
+        final bloc = _FakeCameraPermissionBloc(
+          const CameraPermissionLoaded(CameraPermissionStatus.requiresSettings),
+        );
+        addTearDown(bloc.close);
+        await tester.pumpWidget(buildSubject(bloc, MockGoRouter()));
+        await tester.pump();
+        bloc.addedEvents.clear();
+        return bloc;
+      }
+
+      Future<void> moveThrough(
+        WidgetTester tester,
+        List<AppLifecycleState> states,
+      ) async {
+        states.forEach(tester.binding.handleAppLifecycleStateChanged);
+        await tester.pump();
+      }
+
+      testWidgets('checks the permission again after visiting Settings', (
+        tester,
+      ) async {
+        final bloc = await pumpSettingsPrompt(tester);
+
+        await moveThrough(tester, const [
+          AppLifecycleState.inactive,
+          AppLifecycleState.hidden,
+          AppLifecycleState.paused,
+          AppLifecycleState.hidden,
+          AppLifecycleState.inactive,
+          AppLifecycleState.resumed,
+        ]);
+
+        expect(bloc.addedEvents, [isA<CameraPermissionRefresh>()]);
+      });
+
+      testWidgets(
+        'does not check again when only a system dialog covered the app',
+        (tester) async {
+          // The native permission dialog itself makes the app inactive; a
+          // check on every such resume would race the request it answers.
+          final bloc = await pumpSettingsPrompt(tester);
+
+          await moveThrough(tester, const [
+            AppLifecycleState.inactive,
+            AppLifecycleState.resumed,
+          ]);
+
+          expect(bloc.addedEvents, isEmpty);
+        },
+      );
+    });
   });
 }

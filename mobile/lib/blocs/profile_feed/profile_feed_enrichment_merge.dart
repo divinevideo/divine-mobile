@@ -121,6 +121,12 @@ VideoEvent _mergeEnrichmentIntoCurrent(
     nostrEventTags: primary.nostrEventTags.isNotEmpty
         ? primary.nostrEventTags
         : secondary.nostrEventTags,
+    linkUrls: primary.linkUrls.isNotEmpty
+        ? primary.linkUrls
+        : secondary.linkUrls,
+    stickerRegions: primary.stickerRegions.isNotEmpty
+        ? primary.stickerRegions
+        : secondary.stickerRegions,
     authorName: primary.authorName ?? secondary.authorName,
     authorAvatar: primary.authorAvatar ?? secondary.authorAvatar,
     nostrLikeCount: mergeNullableEngagementMax(

@@ -146,6 +146,32 @@ class RelayPool {
   /// answers it would otherwise stay marked outstanding forever.
   final Map<String, DateTime> _authHandshakeStartedAt = {};
 
+  /// Relay url -> one-shot queries it refused with `auth-required` that wait
+  /// for the post-AUTH replay. Belongs to one socket, like the handshake.
+  final Map<String, Set<String>> _queriesParkedForAuth = {};
+
+  /// Relays that rejected our AUTH on their current socket. Their refusals
+  /// for missing AUTH are final until a new challenge or a new socket.
+  final Set<String> _authRejected = {};
+
+  /// Refusal categories of an AUTH rejection that do not land a relay in
+  /// [_authRejected]: being throttled, or having the event's stamp disputed,
+  /// says nothing about whether the key may read.
+  static const _inconclusiveAuthRejections = {'rate-limited', 'invalid'};
+
+  /// Relay url -> queries in [_queriesParkedForAuth] that the relay ended with
+  /// an `auth`-hinted `EOSE` rather than `CLOSED`, so their subscription is
+  /// still open on the relay and needs a `CLOSE` if they are ended.
+  final Map<String, Set<String>> _queriesHeldAfterEose = {};
+
+  /// Relay url -> the NIP-42 challenge its socket is on, counted per relay.
+  /// Moves on with every challenge and every connection transition.
+  final Map<String, int> _authEpoch = {};
+
+  /// AUTH event id -> the [_authEpoch] of the challenge it answered. Only a
+  /// verdict on the current challenge's AUTH says anything about the gate.
+  final Map<String, int> _authEventEpoch = {};
+
   /// How long an outstanding NIP-42 handshake may hold a one-shot query open
   /// past [querySettleWindow].
   ///
@@ -311,8 +337,8 @@ class RelayPool {
   ///
   /// Shares `relayRefusalPrefixes` with the `OK` refusal diagnostics, AUTH
   /// included, so they cannot disagree about what counts as a known refusal.
-  /// Matches the prefix rather than searching the whole reason, like
-  /// [_isExplicitAuthRequiredReason] and [_isRestrictedReason] already do.
+  /// Matches the prefix rather than searching the whole reason;
+  /// [_isExplicitAuthRequiredReason] and [_isRestrictedReason] read it too.
   String _closedReasonCategory(String reason) =>
       relayRefusalCategoryForDiagnostics(reason);
 
@@ -499,14 +525,13 @@ class RelayPool {
     return false;
   }
 
-  bool _isExplicitAuthRequiredReason(String message) {
-    final lower = message.trim().toLowerCase();
-    return lower.startsWith('auth-required');
-  }
+  /// Reads the reason through [relayRefusalCategoryForDiagnostics], so a
+  /// refusal strfry wraps in `ERROR: ` is replayed after AUTH too (#9467).
+  bool _isExplicitAuthRequiredReason(String message) =>
+      relayRefusalCategoryForDiagnostics(message) == 'auth-required';
 
-  bool _isRestrictedReason(String message) {
-    return message.trim().toLowerCase().startsWith('restricted');
-  }
+  bool _isRestrictedReason(String message) =>
+      relayRefusalCategoryForDiagnostics(message) == 'restricted';
 
   bool _shouldRetryPublishAfterAuth({
     required Relay relay,
@@ -1348,6 +1373,14 @@ class RelayPool {
   /// the fan-out timestamp that check needs.
   void _releaseQuery(String subId) {
     _rememberReleasedSubId(subId);
+    // Query ids repeat, a DM drain's page ids across drains among them, so a
+    // finished query must not stay parked for a later rejection to end.
+    for (final parked in _queriesParkedForAuth.values) {
+      parked.remove(subId);
+    }
+    for (final held in _queriesHeldAfterEose.values) {
+      held.remove(subId);
+    }
     _repairRelaysThatNeverAnswered(subId);
     for (final relay in [
       ..._relaysSnapshot(),
@@ -1453,6 +1486,68 @@ class RelayPool {
     _settleQueriesBlockedBy(relay);
   }
 
+  /// Ends the one-shot queries [relay] refused with `auth-required` and that
+  /// wait for the post-AUTH replay, now that it rejected our AUTH on this
+  /// connection: nothing will replay them, and a caller demanding full
+  /// settlement would otherwise wait out its deadline for a relay that has
+  /// already answered (#9468).
+  ///
+  /// Recorded as `restricted`, NIP-42's "performed AUTH but the key is not
+  /// allowed": a final refusal, not one a later AUTH may overturn. A
+  /// rejection that is not [rejectionIsFinal], one of
+  /// [_inconclusiveAuthRejections], records `auth-required` instead, so a
+  /// caller asks again rather than settling. A gate shut only because no AUTH
+  /// could be signed is not this case, since the signer may produce one
+  /// later, so [_closeAuthGate] alone does not do it.
+  void _endQueriesParkedForAuth(Relay relay, {bool rejectionIsFinal = true}) {
+    final parked = _queriesParkedForAuth.remove(relay.url);
+    final heldAfterEose = _queriesHeldAfterEose.remove(relay.url) ?? const {};
+    if (parked == null) return;
+    for (final subId in parked) {
+      if (!relay.checkQuery(subId)) continue;
+      // A `CLOSED` refusal ended the relay's subscription; an `EOSE` did not.
+      if (heldAfterEose.contains(subId)) {
+        unawaited(relay.send(['CLOSE', subId], queueIfFailed: false));
+      }
+      relay.discardQuery(subId);
+      _recordQueryClosed(
+        relay,
+        subId,
+        rejectionIsFinal ? 'restricted' : 'auth-required',
+      );
+      _fireQueryCompleteIfSettled(
+        subId,
+        afterTerminalFrame: true,
+        afterClosedWithoutAnswer: true,
+      );
+    }
+  }
+
+  /// Whether [frame] is an `EOSE` carrying NIP-42's `auth` hint (42.md:89,
+  /// NIP-67) from a relay this socket has not authenticated to, after the
+  /// challenge the hint requires: the relay may hold more for an
+  /// authenticated reader, so its answer is not complete. Without a challenge
+  /// nothing can authenticate, and the hint only marks the answer as not
+  /// exhaustive.
+  bool _eoseAsksForAuth(Relay relay, List<dynamic> frame) {
+    if (relay.relayStatus.authed) return false;
+    final hints = frame.length > 2 ? frame[2] : null;
+    if (hints is! List || !hints.contains('auth')) return false;
+    return _hasLiveAuthHandshake(relay) ||
+        _authRejected.contains(relay.url) ||
+        _authGateClosed.contains(relay.url);
+  }
+
+  /// Holds one-shot query [subId] on [relay] for the post-AUTH replay, as an
+  /// `auth-required` refusal is held, after an `EOSE` that asked for AUTH.
+  void _holdQueryForAuth(Relay relay, String subId) {
+    _recordQueryClosed(relay, subId, 'auth-required');
+    (_queriesParkedForAuth[relay.url] ??= {}).add(subId);
+    (_queriesHeldAfterEose[relay.url] ??= {}).add(subId);
+    if (!_hasLiveAuthHandshake(relay)) _closeAuthGate(relay);
+    if (_authRejected.contains(relay.url)) _endQueriesParkedForAuth(relay);
+  }
+
   /// Watches [relay]'s connection state so a dropped socket releases the
   /// one-shot queries that were still riding on it.
   ///
@@ -1473,6 +1568,10 @@ class RelayPool {
       // read as "handshake outstanding" for the rest of the session.
       _authHandshakeStartedAt.remove(relay.url);
       _authGateClosed.remove(relay.url);
+      _queriesParkedForAuth.remove(relay.url);
+      _queriesHeldAfterEose.remove(relay.url);
+      _authRejected.remove(relay.url);
+      _authEpoch[relay.url] = (_authEpoch[relay.url] ?? 0) + 1;
       _settleQueriesBlockedBy(relay);
       _recheckStoredEventsPhasesOf(relay);
     };
@@ -2213,6 +2312,10 @@ class RelayPool {
       // would otherwise find this relay gone without an answer.
       if (relay.checkQuery(subId)) {
         _queryOutcomes[subId]?.recordEose(relay, json);
+        if (_eoseAsksForAuth(relay, json)) {
+          _holdQueryForAuth(relay, subId);
+          return;
+        }
       }
       var isQuery = await relay.checkAndCompleteQuery(subId);
       if (isQuery) {
@@ -2329,10 +2432,17 @@ class RelayPool {
       // Check if this is responding to our AUTH event
       if (_pendingAuthEvents.containsKey(eventId)) {
         _pendingAuthEvents.remove(eventId);
-        _authHandshakeStartedAt.remove(relay.url);
+        // An AUTH for a challenge the relay has since replaced, or for an
+        // earlier socket, is not the handshake now in progress.
+        final isCurrent =
+            _authEventEpoch.remove(eventId) == _authEpoch[relay.url];
+        if (success || isCurrent) _authHandshakeStartedAt.remove(relay.url);
 
         if (success) {
           relay.relayStatus.authed = true;
+          _queriesParkedForAuth.remove(relay.url);
+          _queriesHeldAfterEose.remove(relay.url);
+          _authRejected.remove(relay.url);
           log('🔐 AUTH succeeded for ${relay.url}');
           _diagnose(
             RelayDiagnosticSite.authentication,
@@ -2382,6 +2492,8 @@ class RelayPool {
             relay.send(query.toJson());
           }
           await _retryAuthRequiredPublishesForRelay(relay);
+        } else if (!isCurrent) {
+          log('🔐 AUTH for a superseded challenge rejected by ${relay.url}');
         } else {
           relay.relayStatus.authed = false;
           final diagnosticReason = relayRefusalCategoryForDiagnostics(message);
@@ -2395,6 +2507,11 @@ class RelayPool {
           _rejectAuthRequiredPublishesForRelay(relay, message);
           // The gate stayed shut, so the queries parked for the post-AUTH
           // replay will never be replayed.
+          final rejectionIsFinal = !_inconclusiveAuthRejections.contains(
+            diagnosticReason,
+          );
+          if (rejectionIsFinal) _authRejected.add(relay.url);
+          _endQueriesParkedForAuth(relay, rejectionIsFinal: rejectionIsFinal);
           _closeAuthGate(relay);
         }
       }
@@ -2431,6 +2548,8 @@ class RelayPool {
         _authHandshakeStartedAt[relay.url] = DateTime.now();
         // A new challenge supersedes whatever the last one concluded.
         _authGateClosed.remove(relay.url);
+        _authRejected.remove(relay.url);
+        final epoch = _authEpoch[relay.url] = (_authEpoch[relay.url] ?? 0) + 1;
         log('🔐 Challenge: $challenge');
         var tags = [
           ["relay", relay.url],
@@ -2449,6 +2568,7 @@ class RelayPool {
 
           // Track this AUTH event to match with OK response
           _pendingAuthEvents[event.id] = relay.url;
+          _authEventEpoch[event.id] = epoch;
 
           relay.send(["AUTH", event.toJson()]);
           log('🔐 AUTH response sent, waiting for relay confirmation...');
@@ -2576,6 +2696,7 @@ class RelayPool {
         // replay draws replaces it.
         if (relay.checkQuery(subscriptionId)) {
           _recordQueryClosed(relay, subscriptionId, reason);
+          (_queriesParkedForAuth[relay.url] ??= {}).add(subscriptionId);
         }
         // It answers this REQ; the one re-sent after AUTH is answered anew.
         _storedEventsPhaseAnswered(
@@ -2591,6 +2712,7 @@ class RelayPool {
         // must stop suppressing its own refusal once it goes stale, or every
         // later query on that socket pays its full budget.
         if (!_hasLiveAuthHandshake(relay)) _closeAuthGate(relay);
+        if (_authRejected.contains(relay.url)) _endQueriesParkedForAuth(relay);
       } else if (relay.discardQuery(subscriptionId)) {
         _recordQueryClosed(relay, subscriptionId, reason);
         _fireQueryCompleteIfSettled(

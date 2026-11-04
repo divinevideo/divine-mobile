@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/event_kind.dart';
 
 class _MockNip17MessageService extends Mock implements NIP17MessageService {}
 
@@ -59,6 +60,18 @@ void main() {
           invocation.namedArguments[#content] as String,
         );
       });
+
+      when(
+        () => messageService.buildDeletionRumor(
+          targetEventId: any(named: 'targetEventId'),
+          targetKind: any(named: 'targetKind'),
+        ),
+      ).thenAnswer(
+        (invocation) => Event(_owner, EventKind.eventDeletion, [
+          ['e', invocation.namedArguments[#targetEventId] as String],
+          ['k', '${invocation.namedArguments[#targetKind]}'],
+        ], ''),
+      );
 
       reactions =
           DmReactionsRepository(

@@ -31,6 +31,8 @@ import 'package:nostr_sdk/subscription.dart';
 import 'package:nostr_sdk/utils/relay_url_policy.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+import 'support/live_dm_reads.dart';
+
 class _MockOutgoingDmsDao extends Mock implements OutgoingDmsDao {}
 
 /// A local-key signer that can decrypt in an isolate, used to drive the
@@ -170,21 +172,37 @@ class _MockRemovedConversationsDao extends Mock
 
 /// In-memory [ProcessedGiftWrapsDao] backed by a [Set] of gift-wrap ids, so a
 /// repository test can prove a re-delivered wrap is not re-decrypted without a
-/// real Drift database. Mirrors the global (owner-agnostic) dedup contract.
+/// real Drift database. Mirrors the per-account dedup contract: an id is unique
+/// per owner.
 class _InMemoryProcessedGiftWrapsDao extends Mock
     implements ProcessedGiftWrapsDao {
   final Set<String> recorded = <String>{};
 
-  @override
-  Future<bool> hasGiftWrap(String giftWrapId) async =>
-      recorded.contains(giftWrapId);
+  /// Who recorded each id. An id seeded straight into [recorded] has no owner
+  /// and counts as every account's, like an ownerless legacy ledger row.
+  final Map<String, Set<String>> _owners = <String, Set<String>>{};
 
-  /// The batch fast path probes this, not [hasGiftWrap]. Without a faithful
-  /// override it fell through to the `Mock` base and answered empty, so the
-  /// ledger half of `_alreadyProcessedBatch` was unobservable (#8170).
+  bool _heldBy(String giftWrapId, String ownerPubkey) =>
+      recorded.contains(giftWrapId) &&
+      (_owners[giftWrapId]?.contains(ownerPubkey) ?? true);
+
   @override
-  Future<Set<String>> giftWrapIdsPresent(Set<String> giftWrapIds) async =>
-      giftWrapIds.intersection(recorded);
+  Future<bool> hasGiftWrapForOwner({
+    required String giftWrapId,
+    required String ownerPubkey,
+  }) async => _heldBy(giftWrapId, ownerPubkey);
+
+  /// The batch fast path probes this, not [hasGiftWrapForOwner]. Without a
+  /// faithful override it fell through to the `Mock` base and answered empty,
+  /// so the ledger half of `_alreadyProcessedBatch` was unobservable (#8170).
+  @override
+  Future<Set<String>> giftWrapIdsPresent(
+    Set<String> giftWrapIds, {
+    required String ownerPubkey,
+  }) async => {
+    for (final id in giftWrapIds)
+      if (_heldBy(id, ownerPubkey)) id,
+  };
 
   @override
   Future<void> record({
@@ -192,6 +210,7 @@ class _InMemoryProcessedGiftWrapsDao extends Mock
     required String ownerPubkey,
   }) async {
     recorded.add(giftWrapId);
+    _owners.putIfAbsent(giftWrapId, () => <String>{}).add(ownerPubkey);
   }
 }
 
@@ -224,6 +243,10 @@ class _InMemoryRemovedConversationsDao extends Mock
 }
 
 class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+
   // An empty pool unless a test stubs one: history restore's own inbox read
   // asks which relays the pool already covers (#8528).
   @override
@@ -327,6 +350,26 @@ class _SinceEnforcingRelay {
 }) => (events: const <Event>[], timedOut: timedOut, noRelays: noRelays);
 
 class _MockNIP17MessageService extends Mock implements NIP17MessageService {}
+
+/// Mirrors NIP17MessageService.buildDeletionRumor, which is pure construction.
+void _stubBuildDeletionRumor(_MockNIP17MessageService service) {
+  when(
+    () => service.buildDeletionRumor(
+      targetEventId: any(named: 'targetEventId'),
+      targetKind: any(named: 'targetKind'),
+    ),
+  ).thenAnswer(
+    (invocation) => Event(
+      _validPubkeyA,
+      EventKind.eventDeletion,
+      [
+        ['e', invocation.namedArguments[#targetEventId] as String],
+        ['k', '${invocation.namedArguments[#targetKind]}'],
+      ],
+      '',
+    ),
+  );
+}
 
 class _MockDirectMessagesDao extends Mock implements DirectMessagesDao {}
 
@@ -508,6 +551,9 @@ class _FakeDmSyncState implements DmSyncState {
   final List<({String pubkey, int createdAt})> recordedWire =
       <({String pubkey, int createdAt})>[];
   bool drainCoveredOwnInboxOverride = false;
+  int? belowWindowRequeryAtOverride;
+  int? belowWindowRequeryTopOverride;
+  int? belowWindowRequeryAttemptAtOverride;
   bool completedBeforeOverride = false;
   final List<String> inboxCoveredPubkeys = <String>[];
   final List<String> rearmedForInboxPubkeys = <String>[];
@@ -548,6 +594,31 @@ class _FakeDmSyncState implements DmSyncState {
   Future<void> setDrainCoveredOwnInbox(String pubkey) async {
     inboxCoveredPubkeys.add(pubkey);
     drainCoveredOwnInboxOverride = true;
+  }
+
+  @override
+  int? belowWindowRequeryAt(String pubkey) => belowWindowRequeryAtOverride;
+
+  @override
+  int? belowWindowRequeryTop(String pubkey) => belowWindowRequeryTopOverride;
+
+  @override
+  Future<void> recordBelowWindowRequery(
+    String pubkey, {
+    required int at,
+    required int top,
+  }) async {
+    belowWindowRequeryTopOverride = top;
+    belowWindowRequeryAtOverride = at;
+  }
+
+  @override
+  int? belowWindowRequeryAttemptAt(String pubkey) =>
+      belowWindowRequeryAttemptAtOverride;
+
+  @override
+  Future<void> setBelowWindowRequeryAttemptAt(String pubkey, int at) async {
+    belowWindowRequeryAttemptAtOverride = at;
   }
 
   @override
@@ -784,6 +855,21 @@ T _resolve<T>(FakeAsync async, Future<T> future) {
   expect(done, isTrue, reason: 'the future did not complete with a value');
   return value;
 }
+
+/// The outgoing NIP-04 recovery read, `authors:[self]` kind 4: the only read
+/// these stubs answer. The deletion recovery pass (#9468) is answered apart.
+final Matcher _nip04RecoveryRead = isA<List<nostr_filter.Filter>>().having(
+  (filters) => filters.single.authors,
+  'authors',
+  isNotNull,
+);
+
+/// The deletion recovery read, `#p:[self]` kind 5 (#9468).
+final Matcher _deletionRecoveryRead = isA<List<nostr_filter.Filter>>().having(
+  (filters) => filters.single.kinds,
+  'kinds',
+  equals([EventKind.eventDeletion]),
+);
 
 void main() {
   group(DmRepository, () {
@@ -1137,10 +1223,9 @@ void main() {
       ),
     ).thenAnswer((_) async => answeredList(const <Event>[]));
 
-    // The outgoing-NIP-04 recovery pass (#5304) reads through `readEvents`
-    // once the gift-wrap drain reaches the end. Answered and empty: the
-    // account sent no NIP-04, so the pass lets the drain complete.
-    void stubNip04RecoveryAnsweredEmpty() =>
+    /// Answers both end-of-drain recovery reads, outgoing NIP-04 (#5304) and
+    /// deletions, as settled and empty, so they let the drain complete.
+    void stubRecoveryPassesAnsweredEmpty() =>
         when(
           () => mockNostrClient.readEvents(
             any(),
@@ -1157,7 +1242,10 @@ void main() {
         );
 
     void stubNoPersistedGiftWrapIds() => when(
-      () => mockDirectMessagesDao.giftWrapIdsPresent(any()),
+      () => mockDirectMessagesDao.giftWrapIdsPresent(
+        any(),
+        ownerPubkey: any(named: 'ownerPubkey'),
+      ),
     ).thenAnswer((_) async => const <String>{});
 
     void stubNoMessageForSendBatch() => when(
@@ -1499,6 +1587,60 @@ void main() {
           contains(equals(['q', eventId, 'wss://relay.example', author])),
         );
         expect(rumorEvent.content, contains('nostr:nevent1'));
+      });
+
+      test('sendSharedVideo carries its extra tags after the citation, or '
+          'on the plain message without one', () async {
+        stubSendRumor(
+          (rumorEvent, recipientPubkey) async =>
+              const NIP17SendResult.failure('relay unavailable'),
+        );
+
+        final repository = createRepository();
+        const author =
+            'cccccccccccccccccccccccccccccccc'
+            'cccccccccccccccccccccccccccccccc';
+        const question = ['divine:question', 'Ask me anything'];
+
+        final _ = await repository.sendSharedVideo(
+          recipientPubkey: _validPubkeyB,
+          baseContent: 'Pizza',
+          videoKind: 34236,
+          videoAuthorPubkey: author,
+          videoDTag: 'abc',
+          additionalTags: const [question],
+        );
+        // No d-tag and no id: no citation can be built.
+        final _ = await repository.sendSharedVideo(
+          recipientPubkey: _validPubkeyB,
+          baseContent: 'Pasta',
+          videoKind: 34236,
+          videoAuthorPubkey: author,
+          additionalTags: const [question],
+        );
+
+        final rumors = verify(
+          () => mockMessageService.sendRumor(
+            rumorEvent: captureAny(named: 'rumorEvent'),
+            recipientPubkey: _validPubkeyB,
+            targetRelays: any(named: 'targetRelays'),
+            awaitRecipientOk: any(named: 'awaitRecipientOk'),
+            selfWrapOnSoftUnconfirmed: any(named: 'selfWrapOnSoftUnconfirmed'),
+            onSelfWrapDue: any(named: 'onSelfWrapDue'),
+          ),
+        ).captured.cast<Event>();
+
+        expect(
+          additionalTagsFromRumor(rumors.first, _validPubkeyB),
+          containsAllInOrder([
+            ['q', '34236:$author:abc', 'wss://relay.divine.video'],
+            question,
+          ]),
+        );
+        expect(
+          additionalTagsFromRumor(rumors.last, _validPubkeyB),
+          contains(equals(question)),
+        );
       });
 
       test('persists message and conversation on success', () async {
@@ -2268,6 +2410,7 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
@@ -2275,7 +2418,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -2371,14 +2514,17 @@ void main() {
         );
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -2483,10 +2629,13 @@ void main() {
           var maxActivePersists = 0;
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
           // Track persist concurrency on the actual write inside the
           // transaction. Persists run under the event lock, so a yield here
           // would expose any overlap — there must be none.
@@ -2718,10 +2867,13 @@ void main() {
 
         setUp(() {
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
         });
 
         test(
@@ -2974,7 +3126,10 @@ void main() {
         final rumor = createRumorEvent(createdAt: rumorCreatedAt);
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
@@ -2982,7 +3137,7 @@ void main() {
         void Function(StoredEventsEnd)? storedEventsEnd;
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3032,7 +3187,10 @@ void main() {
           final rumor = createRumorEvent(createdAt: rumorCreatedAt);
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
@@ -3040,7 +3198,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3087,14 +3245,17 @@ void main() {
           final giftWrap = createGiftWrapEvent();
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => true);
 
           final controller = StreamController<Event>();
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3137,12 +3298,15 @@ void main() {
             // window from moving for the whole session.
             final giftWrap = createGiftWrapEvent();
             when(
-              () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+              () => mockDirectMessagesDao.hasGiftWrap(
+                _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
             ).thenAnswer((_) async => true);
             final controller = StreamController<Event>();
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3176,12 +3340,15 @@ void main() {
           fakeAsync((async) {
             final giftWrap = createGiftWrapEvent();
             when(
-              () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+              () => mockDirectMessagesDao.hasGiftWrap(
+                _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
             ).thenAnswer((_) async => true);
             final controller = StreamController<Event>();
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3249,7 +3416,7 @@ void main() {
             void Function(StoredEventsEnd)? storedEventsEnd;
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3337,6 +3504,10 @@ void main() {
         late _FakeDmSyncState syncState;
         Completer<void>? pageGate;
         late bool pageCapped;
+        late List<nostr_filter.Filter> deletionPages;
+        late List<Event> Function(nostr_filter.Filter filter) answerDeletions;
+        late QueryEnd deletionsEnd;
+        late bool deletionsCapped;
 
         const window = 1690000000 - 2 * 86400;
 
@@ -3345,6 +3516,10 @@ void main() {
           pageGate = null;
           pageCapped = false;
           pages = [];
+          deletionPages = [];
+          answerDeletions = (_) => const <Event>[];
+          deletionsEnd = QueryEnd.complete;
+          deletionsCapped = false;
           poolRelays = ['wss://a.example', 'wss://b.example'];
           answerPage = (_) =>
               (events: <Event>[], timedOut: true, noRelays: false);
@@ -3356,7 +3531,7 @@ void main() {
           ).thenAnswer((_) => poolRelays);
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3397,6 +3572,16 @@ void main() {
                 (invocation.positionalArguments.first
                         as List<nostr_filter.Filter>)
                     .single;
+            // The kind-5 read paired with each page (#9468) is answered and
+            // recorded apart: most of these tests are about the DM reads.
+            if (filter.kinds!.contains(EventKind.eventDeletion)) {
+              deletionPages.add(filter);
+              return QueryResult(
+                events: answerDeletions(filter),
+                endedBy: deletionsEnd,
+                possiblyCapped: deletionsCapped,
+              );
+            }
             pages.add((
               filter: filter,
               relays: invocation.namedArguments[#tempRelays] as List<String>?,
@@ -3453,6 +3638,243 @@ void main() {
           await repository.stopListening();
         });
 
+        test('resumes where the DMs stopped when the deletions reach further '
+            'back', () async {
+          when(
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
+          when(
+            () => mockDirectMessagesDao.getMessageById(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => null);
+          // A relay returning two events per read, holding three DMs and one
+          // deletion far below them.
+          final dms = [
+            for (final (i, at) in [1700000100, 1700000090, 1700000080].indexed)
+              createGiftWrapEvent(id: '${i + 1}' * 64, createdAt: at),
+          ];
+          final deletion = Event.fromJson({
+            'id': 'd' * 64,
+            'pubkey': 'b' * 64,
+            'created_at': 1699990000,
+            'kind': EventKind.eventDeletion,
+            'tags': [
+              ['e', 'e' * 64],
+              ['p', _validPubkeyA],
+            ],
+            'content': '',
+            'sig': '',
+          });
+          bool within(nostr_filter.Filter filter, Event event) =>
+              event.createdAt <= filter.until! &&
+              event.createdAt >= (filter.since ?? 0);
+          answerPage = (filter) => (
+            events: dms.where((e) => within(filter, e)).take(2).toList(),
+            timedOut: false,
+            noRelays: false,
+          );
+          answerDeletions = (filter) =>
+              [deletion].where((e) => within(filter, e)).toList();
+          syncState.debt.add(
+            const DmCatchUpDebt(
+              relay: 'wss://a.example',
+              floor: window,
+              until: 1700000100,
+            ),
+          );
+          final repository = await start();
+
+          final untils = pages.map((page) => page.filter.until).toList();
+          expect(
+            untils.take(3),
+            [1700000100, 1700000090, 1700000080],
+            reason: 'the second page stepped past a DM the relay still held',
+          );
+          expect(deletionPages, isNotEmpty);
+          expect(syncState.debt, isEmpty);
+          await repository.stopListening();
+        });
+
+        group('with a deletions read beside the DMs', () {
+          bool within(nostr_filter.Filter filter, Event event) =>
+              event.createdAt <= filter.until! &&
+              event.createdAt >= (filter.since ?? 0);
+
+          Event deletionAt(int createdAt) => Event.fromJson({
+            'id': 'd' * 64,
+            'pubkey': 'b' * 64,
+            'created_at': createdAt,
+            'kind': EventKind.eventDeletion,
+            'tags': [
+              ['e', 'e' * 64],
+              ['p', _validPubkeyA],
+            ],
+            'content': '',
+            'sig': '',
+          });
+
+          setUp(() {
+            when(
+              () => mockDirectMessagesDao.hasGiftWrap(
+                any(),
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).thenAnswer((_) async => true);
+            when(
+              () => mockDirectMessagesDao.getMessageById(
+                any(),
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).thenAnswer((_) async => null);
+          });
+
+          test('clears the debt when a deletion above the oldest DM pins a '
+              'page at its top', () async {
+            // Two DMs per read, the relay saying it may hold more when it
+            // sends two, and one deletion between the newest two DMs: the
+            // second page resumes at the deletion and ends at its own top.
+            final dms = [
+              for (final (i, at) in [
+                1700000100,
+                1700000090,
+                1700000080,
+              ].indexed)
+                createGiftWrapEvent(id: '${i + 1}' * 64, createdAt: at),
+            ];
+            answerPage = (filter) {
+              final events = dms.where((e) => within(filter, e)).take(2);
+              pageCapped = events.length == 2;
+              return (
+                events: events.toList(),
+                timedOut: false,
+                noRelays: false,
+              );
+            };
+            final deletion = deletionAt(1700000095);
+            answerDeletions = (filter) =>
+                [deletion].where((e) => within(filter, e)).toList();
+            syncState.debt.add(
+              const DmCatchUpDebt(
+                relay: 'wss://a.example',
+                floor: window,
+                until: 1700000100,
+              ),
+            );
+            final repository = await start();
+
+            expect(
+              syncState.debt,
+              isEmpty,
+              reason:
+                  'the DMs read past the second the deletion pinned, yet it '
+                  'was kept as one they may have left unsent',
+            );
+            await repository.stopListening();
+          });
+
+          test('keeps the debt when the DM read may have more and sent '
+              'nothing beside a deletion', () async {
+            pageCapped = true;
+            answerPage = (_) =>
+                (events: <Event>[], timedOut: false, noRelays: false);
+            final deletion = deletionAt(1700000050);
+            answerDeletions = (filter) =>
+                [deletion].where((e) => within(filter, e)).toList();
+            syncState.debt.add(
+              const DmCatchUpDebt(
+                relay: 'wss://a.example',
+                floor: window,
+                until: 1700000100,
+              ),
+            );
+            final repository = await start();
+
+            expect(pages, hasLength(1));
+            expect(
+              syncState.debt,
+              const [
+                DmCatchUpDebt(
+                  relay: 'wss://a.example',
+                  floor: window,
+                  until: 1700000100,
+                ),
+              ],
+              reason: 'the walk moved past DMs the relay may still hold',
+            );
+            await repository.stopListening();
+          });
+
+          test('keeps the debt when the deletions read may have more and sent '
+              'nothing beside DMs', () async {
+            // The DMs alone would reach below the floor and clear the debt.
+            answerPage = (_) => (
+              events: [createGiftWrapEvent(createdAt: window - 5)],
+              timedOut: false,
+              noRelays: false,
+            );
+            deletionsCapped = true;
+            syncState.debt.add(
+              const DmCatchUpDebt(
+                relay: 'wss://a.example',
+                floor: window,
+                until: 1700000100,
+              ),
+            );
+            final repository = await start();
+
+            expect(deletionPages, hasLength(1));
+            expect(
+              syncState.debt,
+              const [
+                DmCatchUpDebt(
+                  relay: 'wss://a.example',
+                  floor: window,
+                  until: 1700000100,
+                ),
+              ],
+              reason: 'the walk moved past deletions the relay may still hold',
+            );
+            await repository.stopListening();
+          });
+
+          test('keeps the debt when the deletions read does not '
+              'settle', () async {
+            answerPage = (_) => (
+              events: [createGiftWrapEvent(createdAt: window - 5)],
+              timedOut: false,
+              noRelays: false,
+            );
+            deletionsEnd = QueryEnd.deadline;
+            syncState.debt.add(
+              const DmCatchUpDebt(
+                relay: 'wss://a.example',
+                floor: window,
+                until: 1700000100,
+              ),
+            );
+            final repository = await start();
+
+            expect(deletionPages, hasLength(1));
+            expect(
+              syncState.debt,
+              const [
+                DmCatchUpDebt(
+                  relay: 'wss://a.example',
+                  floor: window,
+                  until: 1700000100,
+                ),
+              ],
+              reason: 'an unsettled deletions read cleared the debt',
+            );
+            await repository.stopListening();
+          });
+        });
+
         test('reads each relay from its own stamp down to its floor', () async {
           answerPage = (_) =>
               (events: <Event>[], timedOut: false, noRelays: false);
@@ -3497,7 +3919,10 @@ void main() {
 
         test('forgets a relay once a page reaches below its floor', () async {
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => true);
           answerPage = (_) => (
             events: [createGiftWrapEvent(createdAt: window - 5)],
@@ -3615,7 +4040,10 @@ void main() {
         test('stops reading, without saving the page, once its subscription '
             'fails', () async {
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => true);
           final gate = Completer<void>();
           pageGate = gate;
@@ -3648,7 +4076,10 @@ void main() {
 
         test('stops asking a relay removed while its debt is read', () async {
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => true);
           final gate = Completer<void>();
           pageGate = gate;
@@ -3780,7 +4211,10 @@ void main() {
 
         test('reads at most one page budget per walk', () async {
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => true);
           var serial = 0;
           answerPage = (filter) => (
@@ -3823,14 +4257,17 @@ void main() {
               createdAt: 1699900000,
             );
             when(
-              () => mockDirectMessagesDao.hasGiftWrap(any()),
+              () => mockDirectMessagesDao.hasGiftWrap(
+                any(),
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
             ).thenAnswer((_) async => true);
             final controller = StreamController<Event>();
             void Function()? storedEventsStart;
             void Function(StoredEventsEnd)? storedEventsEnd;
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3881,7 +4318,7 @@ void main() {
             void Function(StoredEventsEnd)? storedEventsEnd;
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3921,7 +4358,7 @@ void main() {
             final live = StreamController<Event>();
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -3953,12 +4390,15 @@ void main() {
           fakeAsync((async) {
             final giftWrap = createGiftWrapEvent();
             when(
-              () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+              () => mockDirectMessagesDao.hasGiftWrap(
+                _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
             ).thenAnswer((_) async => true);
             final streams = <StreamController<Event>>[];
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4004,12 +4444,15 @@ void main() {
           fakeAsync((async) {
             final giftWrap = createGiftWrapEvent();
             when(
-              () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+              () => mockDirectMessagesDao.hasGiftWrap(
+                _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
             ).thenAnswer((_) async => true);
             final streams = <StreamController<Event>>[];
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4063,14 +4506,17 @@ void main() {
             createdAt: 1699990000,
           );
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
           final controller = StreamController<Event>();
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4120,7 +4566,7 @@ void main() {
             void Function()? storedEventsStart;
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4155,7 +4601,7 @@ void main() {
           fakeAsync((async) {
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4192,12 +4638,15 @@ void main() {
             final giftWrap = createGiftWrapEvent();
             final dedup = Completer<bool>();
             when(
-              () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+              () => mockDirectMessagesDao.hasGiftWrap(
+                _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
             ).thenAnswer((_) => dedup.future);
             final streams = <StreamController<Event>>[];
             when(
               () => mockNostrClient.subscribe(
-                any(),
+                any(that: isLiveDmRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 onStoredEventsStart: any(named: 'onStoredEventsStart'),
                 onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4268,14 +4717,17 @@ void main() {
             ),
           ).thenAnswer((_) async {});
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
           final controller = StreamController<Event>();
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4328,7 +4780,10 @@ void main() {
         });
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
@@ -4336,7 +4791,7 @@ void main() {
         void Function(StoredEventsEnd)? storedEventsEnd;
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4383,6 +4838,7 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
@@ -4390,7 +4846,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4448,7 +4904,10 @@ void main() {
           // ingest wrote.
           final persisted = <({String id, String? batchId})>[];
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
           when(
@@ -4580,7 +5039,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4640,14 +5099,17 @@ void main() {
             ],
           );
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4710,14 +5172,17 @@ void main() {
             ],
           );
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4771,13 +5236,14 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => true);
 
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4829,13 +5295,14 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
 
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4897,13 +5364,16 @@ void main() {
           ).thenAnswer((_) async {});
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -4971,7 +5441,10 @@ void main() {
           ).thenAnswer((_) async {});
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
@@ -5039,13 +5512,16 @@ void main() {
             ),
           ).thenAnswer((_) async {});
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5171,7 +5647,10 @@ void main() {
             ),
           ).thenAnswer((_) async {});
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final repository = createRepository(pendingGiftWrapsDao: pendingDao);
@@ -5216,7 +5695,10 @@ void main() {
             ),
           ).thenAnswer((_) async {});
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
         });
 
@@ -5224,7 +5706,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5338,13 +5820,14 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
 
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5398,13 +5881,14 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
 
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5463,6 +5947,7 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
@@ -5470,7 +5955,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5531,6 +6016,7 @@ void main() {
           when(
             () => mockDirectMessagesDao.hasGiftWrap(
               _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
             ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
@@ -5546,7 +6032,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5606,11 +6092,13 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId2,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
@@ -5619,7 +6107,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5677,6 +6165,7 @@ void main() {
         when(
           () => mockDirectMessagesDao.hasGiftWrap(
             _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => false);
         when(
@@ -5709,7 +6198,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5739,7 +6228,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5754,7 +6243,7 @@ void main() {
 
         verify(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5769,7 +6258,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5785,7 +6274,7 @@ void main() {
 
         verify(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5796,11 +6285,175 @@ void main() {
         await controller.close();
       });
 
+      test(
+        'opens the deletions REQ once the hold limit passes without the DMs '
+        'stored events ending',
+        () {
+          fakeAsync((async) {
+            when(
+              () => mockNostrClient.storedEventsPossiblyCapped(any()),
+            ).thenReturn(const <String, int?>{});
+            // A relay that never ends the DMs' stored events, such as one that
+            // never answers our AUTH, must not keep deletions unread all
+            // session.
+            final dms = StreamController<Event>();
+            final deletions = <StreamController<Event>>[];
+            when(
+              () => mockNostrClient.subscribe(
+                any(that: isLiveDmRead),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer((_) => dms.stream);
+            when(
+              () => mockNostrClient.subscribe(
+                any(that: isLiveDeletionsRead),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+              ),
+            ).thenAnswer(
+              (_) => (deletions..add(StreamController<Event>())).last.stream,
+            );
+            when(
+              () => mockNostrClient.unsubscribe(any()),
+            ).thenAnswer((_) async {});
+            final repository = createRepository();
+
+            unawaited(repository.startListening());
+            async
+              ..flushMicrotasks()
+              ..elapse(const Duration(minutes: 1, seconds: 59));
+            expect(deletions, isEmpty);
+
+            async.elapse(const Duration(seconds: 1));
+            expect(deletions, hasLength(1));
+            expect(deletions.single.hasListener, isTrue);
+
+            unawaited(repository.stopListening());
+            async.flushMicrotasks();
+          });
+        },
+      );
+
+      test('ends the DM REQ with its deletions REQ and re-opens both', () {
+        fakeAsync((async) {
+          final dms = <StreamController<Event>>[];
+          final deletions = <StreamController<Event>>[];
+          when(
+            () => mockNostrClient.subscribe(
+              any(that: isLiveDmRead),
+              subscriptionId: any(named: 'subscriptionId'),
+              tempRelays: any(named: 'tempRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer(
+            (invocation) => _openLiveDmRead(invocation, dms),
+          );
+          when(
+            () => mockNostrClient.subscribe(
+              any(that: isLiveDeletionsRead),
+              subscriptionId: any(named: 'subscriptionId'),
+              tempRelays: any(named: 'tempRelays'),
+            ),
+          ).thenAnswer(
+            (_) => (deletions..add(StreamController<Event>())).last.stream,
+          );
+          when(
+            () => mockNostrClient.unsubscribe(any()),
+          ).thenAnswer((_) async {});
+          final repository = createRepository();
+
+          unawaited(repository.startListening());
+          async.flushMicrotasks();
+          expect(dms, hasLength(1));
+          expect(deletions, hasLength(1));
+
+          unawaited(deletions.single.close());
+          async.flushMicrotasks();
+          expect(
+            dms.single.hasListener,
+            isFalse,
+            reason: 'the DM REQ outlived the deletions REQ it opened with',
+          );
+
+          async
+            ..elapse(const Duration(seconds: 3))
+            ..flushMicrotasks();
+          expect(dms, hasLength(2));
+          expect(deletions, hasLength(2));
+
+          unawaited(repository.stopListening());
+          async.flushMicrotasks();
+        });
+      });
+
+      for (final (how, end)
+          in <(String, void Function(StreamController<Event>))>[
+            ('closes', (dms) => unawaited(dms.close())),
+            ('fails', (dms) => dms.addError(Exception('relay refused'))),
+          ]) {
+        test('ends the deletions REQ when the DM REQ $how and re-opens '
+            'both', () {
+          fakeAsync((async) {
+            final dms = <StreamController<Event>>[];
+            final deletions = <StreamController<Event>>[];
+            when(
+              () => mockNostrClient.subscribe(
+                any(that: isLiveDmRead),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+                onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+              ),
+            ).thenAnswer(
+              (invocation) => _openLiveDmRead(invocation, dms),
+            );
+            when(
+              () => mockNostrClient.subscribe(
+                any(that: isLiveDeletionsRead),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+              ),
+            ).thenAnswer(
+              (_) => (deletions..add(StreamController<Event>())).last.stream,
+            );
+            when(
+              () => mockNostrClient.unsubscribe(any()),
+            ).thenAnswer((_) async {});
+            final repository = createRepository();
+
+            unawaited(repository.startListening());
+            async.flushMicrotasks();
+            expect(deletions.single.hasListener, isTrue);
+
+            end(dms.single);
+            async.flushMicrotasks();
+            expect(
+              deletions.single.hasListener,
+              isFalse,
+              reason: 'the deletions REQ outlived the DM REQ it opened with',
+            );
+
+            async
+              ..elapse(const Duration(seconds: 3))
+              ..flushMicrotasks();
+            expect(dms, hasLength(2));
+            expect(deletions, hasLength(2));
+
+            unawaited(repository.stopListening());
+            async.flushMicrotasks();
+          });
+        });
+      }
+
       test('stopListening unsubscribes', () async {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5814,9 +6467,12 @@ void main() {
         await repository.startListening();
         await repository.stopListening();
 
-        verify(
-          () => mockNostrClient.unsubscribe(any()),
-        ).called(1);
+        // Both live REQs: the DMs and their deletions (#9468).
+        final inbox = dmInboxSubscriptionId(_validPubkeyA);
+        expect(
+          verify(() => mockNostrClient.unsubscribe(captureAny())).captured,
+          [inbox, dmDeletionsSubscriptionId(inbox)],
+        );
 
         await controller.close();
       });
@@ -5827,7 +6483,7 @@ void main() {
         final controllers = <StreamController<Event>>[];
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5850,7 +6506,7 @@ void main() {
         // Both opens should have produced a subscribe call on the client.
         verify(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5885,7 +6541,7 @@ void main() {
         // The relay client must not have been asked to subscribe.
         verifyNever(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5926,7 +6582,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5976,7 +6632,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -5990,7 +6646,7 @@ void main() {
           final captured =
               verify(
                     () => mockNostrClient.subscribe(
-                      captureAny(),
+                      captureAny(that: isLiveDmRead),
                       subscriptionId: any(named: 'subscriptionId'),
                       onStoredEventsStart: any(named: 'onStoredEventsStart'),
                       onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6013,7 +6669,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6027,7 +6683,7 @@ void main() {
           final captured =
               verify(
                     () => mockNostrClient.subscribe(
-                      captureAny(),
+                      captureAny(that: isLiveDmRead),
                       subscriptionId: any(named: 'subscriptionId'),
                       onStoredEventsStart: any(named: 'onStoredEventsStart'),
                       onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6056,7 +6712,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6072,7 +6728,7 @@ void main() {
           final captured =
               verify(
                     () => mockNostrClient.subscribe(
-                      captureAny(),
+                      captureAny(that: isLiveDmRead),
                       subscriptionId: any(named: 'subscriptionId'),
                       onStoredEventsStart: any(named: 'onStoredEventsStart'),
                       onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6106,7 +6762,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6122,7 +6778,7 @@ void main() {
           final captured =
               verify(
                     () => mockNostrClient.subscribe(
-                      captureAny(),
+                      captureAny(that: isLiveDmRead),
                       subscriptionId: any(named: 'subscriptionId'),
                       onStoredEventsStart: any(named: 'onStoredEventsStart'),
                       onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6151,9 +6807,9 @@ void main() {
           //
           // Scope: this pins the window and what the relay does with it. The
           // receive pipeline downstream has its own tests, and
-          // `recordWireSeen`'s monotonicity is pinned in dm_sync_state_test —
-          // together they are what make the loss permanent rather than merely
-          // late.
+          // `recordWireSeen`'s monotonicity is pinned in dm_sync_state_test.
+          // The live window never asks for the victim again; the re-query
+          // below the window does, in dm_below_window_requery_test (#8439).
           const wireNewest = 1700000000;
           const since = wireNewest - 2 * 86400;
           // Published earlier than our newest processed wrap and delivered
@@ -6181,7 +6837,7 @@ void main() {
 
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -6192,7 +6848,10 @@ void main() {
             ),
           );
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final syncState = _FakeDmSyncState()
@@ -7265,7 +7924,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -7309,7 +7968,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -7323,7 +7982,7 @@ void main() {
 
           final captured = verify(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: captureAny(named: 'tempRelays'),
               targetRelays: captureAny(named: 'targetRelays'),
@@ -7353,7 +8012,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -7367,7 +8026,7 @@ void main() {
 
           final captured = verify(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: captureAny(named: 'tempRelays'),
               targetRelays: captureAny(named: 'targetRelays'),
@@ -7386,7 +8045,7 @@ void main() {
         'history drain targets the own kind-10050 inbox relays as tempRelays',
         () async {
           final capturedDrainTempRelays = <List<String>?>[];
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
           // The own kind-10050 resolve (#8212) and the drain pages (#8209)
           // both read through queryEventsDetailed, so one stub serves both and
           // branches on the filter.
@@ -7443,10 +8102,10 @@ void main() {
           var memoReads = 0;
           final drainLegs = <List<String>?>[];
           final controller = StreamController<Event>();
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -7511,10 +8170,10 @@ void main() {
           var resolveQueries = 0;
           final capturedDrainTempRelays = <List<String>?>[];
           final controller = StreamController<Event>();
-          stubNip04RecoveryAnsweredEmpty();
+          stubRecoveryPassesAnsweredEmpty();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -7610,7 +8269,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -7650,7 +8309,7 @@ void main() {
           // A's continuation bailed — no subscription opened under A's id.
           verifyNever(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: dmInboxSubscriptionId(_validPubkeyA),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -7664,7 +8323,7 @@ void main() {
           final filter =
               verify(
                     () => mockNostrClient.subscribe(
-                      captureAny(),
+                      captureAny(that: isLiveDmRead),
                       subscriptionId: dmInboxSubscriptionId(_validPubkeyB),
                       tempRelays: any(named: 'tempRelays'),
                       targetRelays: any(named: 'targetRelays'),
@@ -8140,7 +8799,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -8781,7 +9440,7 @@ void main() {
 
     group('backfillHistoryIfNeeded', () {
       setUp(stubReadCursorRowMatched);
-      setUp(stubNip04RecoveryAnsweredEmpty);
+      setUp(stubRecoveryPassesAnsweredEmpty);
       // A deferred drain arms a relay-status listener (#8550). Default to a
       // pool with nothing connected and a stream that never speaks, so the
       // deferral tests below exercise the deferral itself; the resume tests
@@ -8950,12 +9609,15 @@ void main() {
             giftWrapPages.add((captured[i + 1], captured[i + 2]));
           }
           expect(giftWrapPages, isNotEmpty);
-          // Every gift-wrap page demands settlement, and none settles on a
-          // relay's refusal: only the NIP-04 pass below may weigh refusals.
-          expect(giftWrapPages, everyElement(equals((true, false))));
+          // Every gift-wrap page demands settlement, and settles beside a
+          // relay's refusal only when the refusal is final: the client leaves
+          // auth-required, error and other unanswered. A relay that refuses
+          // DMs for good (relay.damus.io once it rejects AUTH) would otherwise
+          // hold restore open forever (#9468).
+          expect(giftWrapPages, everyElement(equals((true, true))));
           verify(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: true,
@@ -9207,7 +9869,7 @@ void main() {
           final capturedFilters = <nostr_filter.Filter>[];
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -9405,7 +10067,7 @@ void main() {
           var nip04Pages = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -9437,7 +10099,10 @@ void main() {
           ).thenAnswer((_) async => answeredPage(const <Event>[]));
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -9552,7 +10217,7 @@ void main() {
           // "nothing to recover" and the drain must NOT be marked complete.
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -9620,7 +10285,7 @@ void main() {
           var nip04Pages = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -9648,7 +10313,10 @@ void main() {
             ),
           ).thenAnswer((_) async => answeredPage(const <Event>[]));
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(partialNip04.id),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              partialNip04.id,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => true);
 
           final syncState = _FakeDmSyncState()
@@ -9764,6 +10432,34 @@ void main() {
             ..newestOverride = nowSec - 3600
             ..oldestOverride = oldestRumor
             ..drainVersionOverride = 3;
+          final repository = createRepository(syncState: syncState);
+
+          await repository.backfillHistoryIfNeeded();
+
+          expect(syncState.upgradedPubkeys, isNotEmpty);
+          expect(capturedUntil, isNotEmpty);
+          expect(capturedUntil.first, greaterThan(oldestRumor));
+          expect(syncState.drainCompleteOverride, isTrue);
+        },
+      );
+
+      test(
+        're-arms an install whose drain completed while a relay hid gift '
+        'wraps from the mixed request — #9468',
+        () async {
+          final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          final oldestRumor = nowSec - 90 * 86400;
+          final capturedUntil = <int?>[];
+          stubFiniteHistory(const <Event>[], capturedUntil);
+
+          // 6 is the last version to read kinds 1059 and 4 in one REQ with the
+          // deletions, which a NIP-42-gated relay answered without them.
+          // Hardcoded so this fails if #9468 ships without a bump.
+          final syncState = _FakeDmSyncState()
+            ..drainCompleteOverride = true
+            ..newestOverride = nowSec - 3600
+            ..oldestOverride = oldestRumor
+            ..drainVersionOverride = 6;
           final repository = createRepository(syncState: syncState);
 
           await repository.backfillHistoryIfNeeded();
@@ -10302,7 +10998,7 @@ void main() {
           final error = StateError('bad recovery state');
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -10329,7 +11025,7 @@ void main() {
         () async {
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11111,7 +11807,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11144,6 +11840,46 @@ void main() {
         });
       });
 
+      test('confirms an ambiguous refusal of the deletion pass on a deferred '
+          'retry', () {
+        fakeAsync((async) {
+          stubRelayStatus(
+            connectedNow: connected(['wss://answering.example']),
+          );
+          var deletionReads = 0;
+          when(
+            () => mockNostrClient.readEvents(
+              any(that: _deletionRecoveryRead),
+              subscriptionId: any(named: 'subscriptionId'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
+            deletionReads++;
+            return const QueryResult(
+              events: [],
+              endedBy: QueryEnd.relayClosed,
+              answeredNetworkRelayCount: 1,
+              closedRelayReasons: {'wss://unavailable.example': 'error'},
+            );
+          });
+          final syncState = armedSyncState();
+          final repository = createRepository(syncState: syncState);
+
+          unawaited(repository.backfillHistoryIfNeeded());
+          async.flushMicrotasks();
+          expect(deletionReads, 1);
+          expect(syncState.markedCompletePubkeys, isEmpty);
+
+          async
+            ..elapse(DmHistoryDrainConfig.deferredRetryDelays.first)
+            ..flushMicrotasks();
+
+          expect(deletionReads, 2);
+          expect(syncState.markedCompletePubkeys, [_validPubkeyA]);
+        });
+      });
+
       test('settles a terminal NIP-04 refusal on first sight', () {
         fakeAsync((async) {
           stubRelayStatus(
@@ -11152,7 +11888,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11191,7 +11927,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11267,7 +12003,7 @@ void main() {
             var nip04Reads = 0;
             when(
               () => mockNostrClient.readEvents(
-                any(),
+                any(that: _nip04RecoveryRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: any(named: 'useCache'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11303,7 +12039,7 @@ void main() {
         await LogCaptureService().clearAllLogs();
         when(
           () => mockNostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11353,7 +12089,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11413,7 +12149,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11461,7 +12197,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11517,7 +12253,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11561,7 +12297,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11609,7 +12345,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11656,7 +12392,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11722,7 +12458,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11804,7 +12540,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11869,7 +12605,7 @@ void main() {
           final subscription = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
               targetRelays: any(named: 'targetRelays'),
@@ -11910,7 +12646,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -11989,7 +12725,7 @@ void main() {
             );
             when(
               () => mockNostrClient.readEvents(
-                any(),
+                any(that: _nip04RecoveryRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 useCache: any(named: 'useCache'),
                 requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12062,7 +12798,7 @@ void main() {
           );
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12111,7 +12847,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12156,7 +12892,7 @@ void main() {
           var nip04Reads = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12216,7 +12952,7 @@ void main() {
           var giftWrapPages = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12478,7 +13214,7 @@ void main() {
           var nip04Pages = 0;
           when(
             () => mockNostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -12567,7 +13303,7 @@ void main() {
 
     group('history drain batch decryption (#5391)', () {
       setUp(stubNoCrossProtocolTwinAvailable);
-      setUp(stubNip04RecoveryAnsweredEmpty);
+      setUp(stubRecoveryPassesAnsweredEmpty);
 
       // A new recipient keypair per test so the real NIP-44 unwrap in the
       // batched decrypt worker succeeds (the shared _validPubkey* constants
@@ -12589,7 +13325,10 @@ void main() {
         // insertMessage has persisted, so the inclusive `until` boundary
         // re-request is deduped instead of re-inserted.
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer(
           (inv) async =>
               persistedGiftWrapIds.contains(inv.positionalArguments[0]),
@@ -12598,7 +13337,10 @@ void main() {
         // hasGiftWrap, so the inclusive-`until` boundary re-request is deduped
         // before decryption instead of re-decrypted.
         when(
-          () => mockDirectMessagesDao.giftWrapIdsPresent(any()),
+          () => mockDirectMessagesDao.giftWrapIdsPresent(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer(
           (inv) async => (inv.positionalArguments[0] as Set<String>)
               .intersection(persistedGiftWrapIds),
@@ -12808,7 +13550,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -12880,7 +13622,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -12934,7 +13676,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -12977,7 +13719,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -13028,7 +13770,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -13087,14 +13829,17 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(giftWrap.id),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              giftWrap.id,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final decryptStarted = Completer<void>();
@@ -13150,19 +13895,25 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer((_) => controller.stream);
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(giftWrap.id),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              giftWrap.id,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final ledger = _MockProcessedGiftWrapsDao();
           when(
-            () => ledger.hasGiftWrap(giftWrap.id),
+            () => ledger.hasGiftWrapForOwner(
+              giftWrapId: giftWrap.id,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           final recordStarted = Completer<void>();
           final recordGate = Completer<void>();
@@ -13519,7 +14270,10 @@ void main() {
           // The first dedup probe carries BOTH wrap ids in one query — proving
           // the page is probed in a single batch, not one hasGiftWrap per wrap.
           final probed = verify(
-            () => mockDirectMessagesDao.giftWrapIdsPresent(captureAny()),
+            () => mockDirectMessagesDao.giftWrapIdsPresent(
+              captureAny(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).captured;
           expect(probed, isNotEmpty);
           expect(probed.first, equals({wrap1.id, wrap2.id}));
@@ -14061,6 +14815,43 @@ void main() {
         );
       });
 
+      test('maps a retraction whose retries ran out to failed bubble state '
+          '(#10012)', () async {
+        final convId = DmRepository.computeConversationId(
+          [_validPubkeyA, _validPubkeyB],
+        );
+        when(
+          () => mockDirectMessagesDao.watchMessagesForConversation(
+            convId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer(
+          (_) => Stream.value([
+            DirectMessageRow(
+              ownerPubkey: '',
+              id: _rumorEventId,
+              conversationId: convId,
+              senderPubkey: _validPubkeyA,
+              content: 'Hello!',
+              createdAt: 1700000000,
+              giftWrapId: _giftWrapEventId,
+              messageKind: 14,
+              isDeleted: true,
+              twinCollapsed: false,
+              deletionRumorJson: '{"kind":5}',
+              deletionPublishStatus: DirectMessagesDao.deletionUnconfirmed,
+            ),
+          ]),
+        );
+
+        final messages = await createRepository().watchMessages(convId).first;
+
+        expect(
+          messages.single.retractionStatus,
+          DmRetractionStatus.failed,
+        );
+      });
+
       test('maps an ordinary message to no retraction state', () async {
         final convId = DmRepository.computeConversationId(
           [_validPubkeyA, _validPubkeyB],
@@ -14515,12 +15306,15 @@ void main() {
           });
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -14715,12 +15509,15 @@ void main() {
             'sig': '',
           });
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -14769,12 +15566,15 @@ void main() {
       ) async {
         final ledger = _InMemoryProcessedGiftWrapsDao();
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -14937,13 +15737,16 @@ void main() {
         final wrap = built!;
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         final controller = StreamController<Event>();
         addTearDown(controller.close);
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -15516,7 +16319,10 @@ void main() {
           });
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           stubDaoInserts();
@@ -15548,7 +16354,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -15701,14 +16507,17 @@ void main() {
         });
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -15796,14 +16605,17 @@ void main() {
         });
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -16685,14 +17497,17 @@ void main() {
           });
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -16966,7 +17781,10 @@ void main() {
         final nip04Event = createNip04Event();
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.claimCrossProtocolTwin(
@@ -16982,7 +17800,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17034,7 +17852,10 @@ void main() {
         final removedConversationsDao = _MockRemovedConversationsDao();
         final ledger = _InMemoryProcessedGiftWrapsDao();
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.hasMatchingMessage(
@@ -17056,7 +17877,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17134,7 +17955,10 @@ void main() {
           final ledger = _InMemoryProcessedGiftWrapsDao();
           var decryptCalls = 0;
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -17156,7 +17980,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17201,7 +18025,10 @@ void main() {
           final ledger = _InMemoryProcessedGiftWrapsDao();
           var decryptCalls = 0;
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -17243,7 +18070,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17281,14 +18108,17 @@ void main() {
         final nip04Event = createNip04Event();
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17348,14 +18178,17 @@ void main() {
         );
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17396,7 +18229,10 @@ void main() {
           final nip04Event = createNip04Event();
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -17447,7 +18283,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17497,7 +18333,10 @@ void main() {
 
           var hasGiftWrapCalls = 0;
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => hasGiftWrapCalls++ > 0);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -17513,7 +18352,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17592,14 +18431,17 @@ void main() {
         );
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17635,32 +18477,38 @@ void main() {
         await repository.stopListening();
       });
 
-      // A kind-1059 id belongs to one recipient, so "some account processed
-      // this" and "we processed this" are the same fact. A kind 4 has no
-      // envelope: sender and recipient share one event id, so when both are
-      // accounts on this device the dedup tables hold one id for two accounts.
+      // A kind-1059 id belongs to one recipient. A kind 4 has no envelope:
+      // sender and recipient share one event id, so when both are accounts on
+      // this device one id sits on two accounts' rows, and what the other
+      // account handled must not stand in for this one's (#6645).
       group('a kind-4 another local account processed', () {
         late _MockProcessedGiftWrapsDao ledger;
 
         setUp(() {
           ledger = _MockProcessedGiftWrapsDao();
+          // Only the OTHER account holds the event.
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _rumorEventId,
+              ownerPubkey: _validPubkeyB,
+            ),
           ).thenAnswer((_) async => true);
           when(
-            () => mockDirectMessagesDao.getMessageById(
+            () => mockDirectMessagesDao.hasGiftWrap(
               _rumorEventId,
-              ownerPubkey: any(named: 'ownerPubkey'),
+              ownerPubkey: _validPubkeyA,
             ),
-          ).thenAnswer((_) async => null);
+          ).thenAnswer((_) async => false);
         });
 
-        Future<_FakeDmSyncState> deliverDuplicate() async {
+        Future<_FakeDmSyncState> deliver({
+          required Future<String> Function(String, String) nip04Decryptor,
+        }) async {
           final controller = StreamController<Event>();
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17673,7 +18521,7 @@ void main() {
           });
           final syncState = _FakeDmSyncState();
           final repository = createRepository(
-            nip04Decryptor: (_, _) async => 'should not reach',
+            nip04Decryptor: nip04Decryptor,
             syncState: syncState,
             processedGiftWrapsDao: ledger,
           );
@@ -17686,7 +18534,8 @@ void main() {
           return syncState;
         }
 
-        test("does not advance this account's wire boundary", () async {
+        test('is decrypted and stored for this account as well', () async {
+          stubDaoInserts();
           when(
             () => ledger.hasGiftWrapForOwner(
               giftWrapId: any(named: 'giftWrapId'),
@@ -17694,15 +18543,31 @@ void main() {
             ),
           ).thenAnswer((_) async => false);
 
-          final syncState = await deliverDuplicate();
+          await deliver(
+            nip04Decryptor: (_, _) async => 'Decrypted NIP-04 text',
+          );
 
-          // The boundary only ever rises, so raising it over a message this
-          // account never stored puts every future window above it.
-          expect(syncState.recordedWire, isEmpty);
+          // Skipping it would drop this account's copy, and moving its
+          // boundary past a message it never stored would raise the floor of
+          // every future window over it (#8209).
+          verify(
+            () => mockDirectMessagesDao.insertMessage(
+              id: _rumorEventId,
+              conversationId: any(named: 'conversationId'),
+              senderPubkey: _validPubkeyB,
+              content: 'Decrypted NIP-04 text',
+              createdAt: 1700000000,
+              giftWrapId: _rumorEventId,
+              messageKind: EventKind.directMessage,
+              ownerPubkey: _validPubkeyA,
+              tagsJson: any(named: 'tagsJson'),
+              sendBatchId: any(named: 'sendBatchId'),
+            ),
+          ).called(1);
         });
 
-        test('still advances it when this account ledgered the event '
-            'itself', () async {
+        test('advances its wire boundary when this account ledgered the '
+            'event itself', () async {
           when(
             () => ledger.hasGiftWrapForOwner(
               giftWrapId: any(named: 'giftWrapId'),
@@ -17710,7 +18575,9 @@ void main() {
             ),
           ).thenAnswer((_) async => true);
 
-          final syncState = await deliverDuplicate();
+          final syncState = await deliver(
+            nip04Decryptor: (_, _) async => 'should not reach',
+          );
 
           // Mutation guard: "never advance on a dedup hit" would regress the
           // account's own suppressed history, which the 2-day overlap
@@ -17724,37 +18591,20 @@ void main() {
           'wire boundary', () async {
         final nip04Event = createNip04Event();
 
-        when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
-        ).thenAnswer((_) async => true);
-
         // This account's OWN duplicate: the row is in direct_messages under
         // this owner, which is what entitles it to move its boundary.
         when(
-          () => mockDirectMessagesDao.getMessageById(
+          () => mockDirectMessagesDao.hasGiftWrap(
             _rumorEventId,
-            ownerPubkey: any(named: 'ownerPubkey'),
-          ),
-        ).thenAnswer(
-          (_) async => const DirectMessageRow(
-            id: _rumorEventId,
-            conversationId: 'own-duplicate',
-            senderPubkey: _validPubkeyB,
-            content: 'duplicate',
-            createdAt: 1700000000,
-            giftWrapId: _rumorEventId,
-            messageKind: 4,
             ownerPubkey: _validPubkeyA,
-            isDeleted: false,
-            twinCollapsed: false,
           ),
-        );
+        ).thenAnswer((_) async => true);
 
         final controller = StreamController<Event>();
         void Function(StoredEventsEnd)? storedEventsEnd;
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17820,7 +18670,10 @@ void main() {
           final dedupStarted = Completer<void>();
           final dedupResult = Completer<bool>();
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) {
             dedupStarted.complete();
             return dedupResult.future;
@@ -17849,7 +18702,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17908,7 +18761,10 @@ void main() {
           final dedupStarted = Completer<void>();
           final dedupResult = Completer<bool>();
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) {
             dedupStarted.complete();
             return dedupResult.future;
@@ -17937,7 +18793,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -17994,7 +18850,10 @@ void main() {
           final decryptResult = Completer<String?>();
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
@@ -18002,7 +18861,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -18060,7 +18919,10 @@ void main() {
           final decryptResult = Completer<String?>();
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           stubDaoInserts();
 
@@ -18068,7 +18930,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -18120,13 +18982,16 @@ void main() {
         final nip04Event = createNip04Event(tags: []);
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
 
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -18178,13 +19043,16 @@ void main() {
         var decryptCalls = 0;
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
 
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -18274,14 +19142,17 @@ void main() {
         });
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         stubDaoInserts();
 
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -18393,7 +19264,10 @@ void main() {
         final convId = DmRepository.computeConversationId(participants);
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_rumorEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.hasMatchingMessage(
@@ -18475,7 +19349,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -19114,6 +19988,8 @@ void main() {
     // -----------------------------------------------------------------
 
     group('deleteMessageForEveryone', () {
+      setUp(() => _stubBuildDeletionRumor(mockMessageService));
+
       final conversationId = DmRepository.computeConversationId(
         [_validPubkeyA, _validPubkeyB],
       );
@@ -19288,31 +20164,26 @@ void main() {
           // `p` tag on a relay that retains deletion requests indefinitely.
           verifyNever(() => mockNostrClient.publishEvent(any()));
 
-          final captured =
-              verify(
-                    () => mockMessageService.sendRumor(
-                      rumorEvent: captureAny(named: 'rumorEvent'),
-                      recipientPubkey: any(named: 'recipientPubkey'),
-                      targetRelays: any(named: 'targetRelays'),
-                      awaitRecipientOk: any(named: 'awaitRecipientOk'),
-                      selfWrapOnSoftUnconfirmed: any(
-                        named: 'selfWrapOnSoftUnconfirmed',
-                      ),
-                      onSelfWrapDue: any(named: 'onSelfWrapDue'),
-                    ),
-                  ).captured.single
-                  as Event;
-          expect(captured.kind, equals(EventKind.eventDeletion));
-          // `p` now names the wrap recipient rather than advertising the
-          // counterparty publicly — same tag, opposite meaning.
-          expect(
-            captured.tags,
-            containsAll([
-              ['e', _rumorEventId],
-              ['k', '14'],
-              ['p', _validPubkeyB],
-            ]),
-          );
+          verify(
+            () => mockMessageService.sendRumor(
+              rumorEvent: any(named: 'rumorEvent'),
+              recipientPubkey: any(named: 'recipientPubkey'),
+              targetRelays: any(named: 'targetRelays'),
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              selfWrapOnSoftUnconfirmed: any(
+                named: 'selfWrapOnSoftUnconfirmed',
+              ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
+            ),
+          ).called(1);
+          // The rumor names the deleted message and its kind, and no one
+          // (#9774); buildDeletionRumor's own tests pin that shape.
+          verify(
+            () => mockMessageService.buildDeletionRumor(
+              targetEventId: _rumorEventId,
+              targetKind: EventKind.privateDirectMessage,
+            ),
+          ).called(1);
 
           // Durable first, delivered second.
           verify(
@@ -19679,13 +20550,8 @@ void main() {
             participants: [_validPubkeyA.toUpperCase(), _validPubkeyB],
           );
           final recipients = <String>[];
-          final addressedTo = <String>[];
           stubSendRumor((rumorEvent, recipientPubkey) {
             recipients.add(recipientPubkey);
-            addressedTo.addAll([
-              for (final tag in rumorEvent.tags)
-                if (tag.length >= 2 && tag[0] == 'p') tag[1],
-            ]);
             return NIP17SendResult.success(
               rumorEventId: rumorEvent.id,
               messageEventId: _giftWrapEventId,
@@ -19698,7 +20564,6 @@ void main() {
           await pumpEventQueue();
 
           expect(recipients, equals([_validPubkeyB]));
-          expect(addressedTo, equals([_validPubkeyB]));
         },
       );
 
@@ -19949,30 +20814,18 @@ void main() {
         await repo.deleteMessageForEveryone(_rumorEventId);
         await Future<void>.delayed(Duration.zero);
 
-        final captured =
-            verify(
-                  () => mockMessageService.sendRumor(
-                    rumorEvent: captureAny(named: 'rumorEvent'),
-                    recipientPubkey: any(named: 'recipientPubkey'),
-                    targetRelays: any(named: 'targetRelays'),
-                    awaitRecipientOk: any(named: 'awaitRecipientOk'),
-                    selfWrapOnSoftUnconfirmed: any(
-                      named: 'selfWrapOnSoftUnconfirmed',
-                    ),
-                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
-                  ),
-                ).captured.single
-                as Event;
-        expect(
-          captured.tags,
-          containsAll([
-            ['k', EventKind.fileMessage.toString()],
-          ]),
-        );
+        verify(
+          () => mockMessageService.buildDeletionRumor(
+            targetEventId: _rumorEventId,
+            targetKind: EventKind.fileMessage,
+          ),
+        ).called(1);
       });
     });
 
     group('retryMessageDeletion', () {
+      setUp(() => _stubBuildDeletionRumor(mockMessageService));
+
       final conversationId = DmRepository.computeConversationId(
         [_validPubkeyA, _validPubkeyB],
       );
@@ -20028,6 +20881,13 @@ void main() {
             ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => true);
+        // The row is pending, so a Try again's compare-and-set moves nothing.
+        when(
+          () => mockDirectMessagesDao.markUnconfirmedMessageDeletionPending(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.markMessageDeletionBlocked(
             _rumorEventId,
@@ -20130,7 +20990,10 @@ void main() {
           ),
         ).thenAnswer((_) => publish.future);
 
-        final first = repo.retryMessageDeletion(rumorId: _rumorEventId);
+        final first = repo.retryMessageDeletion(
+          rumorId: _rumorEventId,
+          automatic: true,
+        );
         final second = repo.retryMessageDeletion(rumorId: _rumorEventId);
         await Future<void>.delayed(Duration.zero);
 
@@ -20152,6 +21015,85 @@ void main() {
 
         expect(await first, DmMessageDeletionOutcome.sent);
         expect(await second, DmMessageDeletionOutcome.sent);
+      });
+
+      group('markMessageDeletionUnconfirmed (#10012)', () {
+        setUp(() {
+          when(
+            () => mockDirectMessagesDao.markMessageDeletionUnconfirmed(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
+        });
+
+        test(
+          'records the retraction as unconfirmed for this account',
+          () async {
+            final repo = createRepository();
+
+            await repo.markMessageDeletionUnconfirmed(rumorId: _rumorEventId);
+
+            verify(
+              () => mockDirectMessagesDao.markMessageDeletionUnconfirmed(
+                _rumorEventId,
+                ownerPubkey: _validPubkeyA,
+              ),
+            ).called(1);
+          },
+        );
+
+        test('leaves a retraction being retried to that retry', () async {
+          // A Try again moved it back to pending and is still running: it
+          // records its own result, and a mark now would show the warning
+          // while it still runs.
+          final repo = createRepository();
+          stubPendingDeletion();
+          final publish = Completer<NIP17SendResult>();
+          when(
+            () => mockMessageService.sendRumor(
+              rumorEvent: any(named: 'rumorEvent'),
+              recipientPubkey: any(named: 'recipientPubkey'),
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
+            ),
+          ).thenAnswer((_) => publish.future);
+          final retry = repo.retryMessageDeletion(rumorId: _rumorEventId);
+          await pumpEventQueue();
+
+          await repo.markMessageDeletionUnconfirmed(rumorId: _rumorEventId);
+
+          verifyNever(
+            () => mockDirectMessagesDao.markMessageDeletionUnconfirmed(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          );
+          publish.complete(const NIP17SendResult.failure('no relay'));
+          expect(await retry, DmMessageDeletionOutcome.unconfirmed);
+          await repo.markMessageDeletionUnconfirmed(rumorId: _rumorEventId);
+          verify(
+            () => mockDirectMessagesDao.markMessageDeletionUnconfirmed(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).called(1);
+        });
+
+        test('throws what the database throws', () async {
+          final repo = createRepository();
+          when(
+            () => mockDirectMessagesDao.markMessageDeletionUnconfirmed(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenThrow(StateError('database is closed'));
+
+          await expectLater(
+            repo.markMessageDeletionUnconfirmed(rumorId: _rumorEventId),
+            throwsStateError,
+          );
+        });
       });
 
       test('requires a relay OK before settling the row', () async {
@@ -20308,6 +21250,13 @@ void main() {
               onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer((_) async => const NIP17SendResult.blocked('blocked'));
+          when(
+            () => mockDirectMessagesDao.recordDeliveredDeletionWraps(
+              any(),
+              wraps: any(named: 'wraps'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
 
           final outcome = await repo.retryMessageDeletion(
             rumorId: _rumorEventId,
@@ -20318,6 +21267,15 @@ void main() {
             () => mockDirectMessagesDao.markMessageDeletionBlocked(
               _rumorEventId,
               restoreToThread: true,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).called(1);
+          // The blocked retraction keeps its kind-5 and the record that B has
+          // it, so a Try again sends B nothing (#10012).
+          verify(
+            () => mockDirectMessagesDao.recordDeliveredDeletionWraps(
+              _rumorEventId,
+              wraps: {_validPubkeyB: _giftWrapEventId},
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           ).called(1);
@@ -20451,6 +21409,27 @@ void main() {
           ).thenAnswer((_) async => answer);
         }
 
+        /// The retraction records the wrap the fallback pool holds, and the
+        /// members a partly delivered attempt reached (#10012), so these tests
+        /// do not run the record's error branch against an unstubbed DAO.
+        void stubHeldDeletionWrapRecords() {
+          when(
+            () => mockDirectMessagesDao.recordHeldDeletionWrap(
+              any(),
+              recipientPubkey: any(named: 'recipientPubkey'),
+              wrapEventId: any(named: 'wrapEventId'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
+          when(
+            () => mockDirectMessagesDao.recordDeliveredDeletionWraps(
+              any(),
+              wraps: any(named: 'wraps'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
+        }
+
         void stubDeletionWrapConfirmed() {
           when(
             () => mockMessageService.sendRumor(
@@ -20483,6 +21462,7 @@ void main() {
             stubPendingDeletion();
             stubInboxLookup(unansweredList(noRelays: true));
             stubDeletionWrapConfirmed();
+            stubHeldDeletionWrapRecords();
             final repo = createRepository();
 
             final outcome = await repo.retryMessageDeletion(
@@ -20496,6 +21476,16 @@ void main() {
                 ownerPubkey: any(named: 'ownerPubkey'),
               ),
             );
+            // The retraction records the wrap the pool holds, so a retry
+            // while the inbox stays unreadable sends no other (#10012).
+            verify(
+              () => mockDirectMessagesDao.recordHeldDeletionWrap(
+                _rumorEventId,
+                recipientPubkey: _validPubkeyB,
+                wrapEventId: _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).called(1);
           },
         );
 
@@ -20506,6 +21496,7 @@ void main() {
             stubPendingDeletion();
             stubInboxLookup(unansweredList(timedOut: true));
             stubDeletionWrapConfirmed();
+            stubHeldDeletionWrapRecords();
             final repo = createRepository();
 
             await repo.retryMessageDeletion(rumorId: _rumorEventId);
@@ -20558,8 +21549,8 @@ void main() {
         );
 
         test(
-          'one unreadable member holds the whole GROUP retraction pending - '
-          'one row cannot record a partial fan-out',
+          'one unreadable member holds the whole GROUP retraction pending, '
+          'and the row records the member it reached',
           () async {
             stubPendingDeletion();
             when(
@@ -20604,6 +21595,7 @@ void main() {
                   : answeredList(const <Event>[]);
             });
             stubDeletionWrapConfirmed();
+            stubHeldDeletionWrapRecords();
             final repo = createRepository();
 
             final outcome = await repo.retryMessageDeletion(
@@ -20617,6 +21609,31 @@ void main() {
                 ownerPubkey: any(named: 'ownerPubkey'),
               ),
             );
+            // Only the member whose inbox we could not read is held (#10012).
+            verify(
+              () => mockDirectMessagesDao.recordHeldDeletionWrap(
+                _rumorEventId,
+                recipientPubkey: _validPubkeyC,
+                wrapEventId: _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).called(1);
+            verifyNever(
+              () => mockDirectMessagesDao.recordHeldDeletionWrap(
+                _rumorEventId,
+                recipientPubkey: _validPubkeyB,
+                wrapEventId: any(named: 'wrapEventId'),
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            );
+            // B has it, so a retry sends them nothing again (#10012).
+            verify(
+              () => mockDirectMessagesDao.recordDeliveredDeletionWraps(
+                _rumorEventId,
+                wraps: {_validPubkeyB: _giftWrapEventId},
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).called(1);
           },
         );
       });
@@ -20654,6 +21671,42 @@ void main() {
         expect(targets.single.rumorId, equals(_rumorEventId));
         expect(targets.single.conversationId, equals('conv_1'));
         expect(targets.single.createdAt, equals(1700000000));
+      });
+
+      test('marks a row whose retries ran out, and only that row '
+          '(#10012)', () async {
+        final repo = createRepository();
+        DirectMessageRow row(String id, String status) => DirectMessageRow(
+          ownerPubkey: '',
+          id: id,
+          conversationId: 'conv_1',
+          senderPubkey: _validPubkeyA,
+          content: 'Hello',
+          createdAt: 1700000000,
+          giftWrapId: 'wrap-$id',
+          messageKind: 14,
+          isDeleted: true,
+          twinCollapsed: false,
+          deletionRumorJson: '{"kind":5}',
+          deletionPublishStatus: status,
+        );
+        when(
+          () => mockDirectMessagesDao.getRetryableOwnMessageDeletions(
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            row('pending', DirectMessagesDao.deletionPending),
+            row('ran-out', DirectMessagesDao.deletionUnconfirmed),
+          ],
+        );
+
+        final targets = await repo.retryableMessageDeletions();
+
+        expect(
+          {for (final t in targets) t.rumorId: t.retriesRanOut},
+          equals({'pending': false, 'ran-out': true}),
+        );
       });
 
       test('returns empty without credentials', () async {
@@ -20733,7 +21786,10 @@ void main() {
           );
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -20844,7 +21900,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -20924,7 +21980,10 @@ void main() {
           );
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -20997,7 +22056,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -21081,7 +22140,10 @@ void main() {
           );
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -21177,7 +22239,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -21254,7 +22316,10 @@ void main() {
           );
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -21319,7 +22384,7 @@ void main() {
           final controller = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -21421,7 +22486,10 @@ void main() {
         final rumor = createRumorEvent();
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.hasMatchingMessage(
@@ -21486,7 +22554,7 @@ void main() {
         final controller = StreamController<Event>();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -22645,7 +23713,7 @@ void main() {
       void stubSubscription(StreamController<Event> controller) {
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -22734,7 +23802,10 @@ void main() {
 
         // Stub hasGiftWrap to ensure deletion event is not treated as duplicate
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
 
         final repository = createRepository(
@@ -22812,7 +23883,10 @@ void main() {
             ),
           ).thenAnswer((_) async => null);
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final repository = createRepository(
@@ -22889,7 +23963,10 @@ void main() {
             );
           });
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(any()),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
 
           final repository = createRepository(
@@ -22937,7 +24014,10 @@ void main() {
         );
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
 
         final repository = createRepository(
@@ -22990,7 +24070,10 @@ void main() {
         );
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
 
         final repository = createRepository(
@@ -23029,7 +24112,10 @@ void main() {
         ).thenAnswer((_) async => null);
 
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(any()),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
 
         final repository = createRepository(
@@ -23075,7 +24161,7 @@ void main() {
       void stubWrappedDeleteSubscription(StreamController<Event> controller) {
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -23091,7 +24177,10 @@ void main() {
           stubWrappedDeleteSubscription(controller);
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockReactionsRepository.applyDeletion(
@@ -23168,7 +24257,10 @@ void main() {
           stubWrappedDeleteSubscription(controller);
 
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.getMessageById(
@@ -23232,7 +24324,7 @@ void main() {
         ledger = _InMemoryProcessedGiftWrapsDao();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -23240,7 +24332,10 @@ void main() {
         ).thenAnswer((_) => controller.stream);
         when(() => mockNostrClient.unsubscribe(any())).thenAnswer((_) async {});
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.markMessageDeleted(
@@ -23600,7 +24695,7 @@ void main() {
         ledger = _InMemoryProcessedGiftWrapsDao();
         when(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -23610,7 +24705,10 @@ void main() {
         // Reactions/deletions never leave a directMessages dedup row, so the
         // message-table check is always false for these wraps.
         when(
-          () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+          () => mockDirectMessagesDao.hasGiftWrap(
+            _giftWrapEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => false);
       });
 
@@ -23878,7 +24976,10 @@ void main() {
         () async {
           var hasGiftWrapCalls = 0;
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => hasGiftWrapCalls++ > 0);
 
           final syncState = _FakeDmSyncState();
@@ -24250,7 +25351,10 @@ void main() {
 
           const newMessageAt = 1700000001;
           when(
-            () => mockDirectMessagesDao.hasGiftWrap(_giftWrapEventId2),
+            () => mockDirectMessagesDao.hasGiftWrap(
+              _giftWrapEventId2,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
           ).thenAnswer((_) async => false);
           when(
             () => mockDirectMessagesDao.hasMatchingMessage(
@@ -24464,7 +25568,7 @@ void main() {
           void Function(StoredEventsEnd)? storedEventsEnd;
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -24574,6 +25678,8 @@ void main() {
     });
 
     group('_refreshConversationPreview', () {
+      setUp(() => _stubBuildDeletionRumor(mockMessageService));
+
       final participants = [_validPubkeyA, _validPubkeyB]..sort();
       final convId = DmRepository.computeConversationId(participants);
 
@@ -25804,7 +26910,7 @@ void main() {
 
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -25837,7 +26943,7 @@ void main() {
           final controller2 = StreamController<Event>();
           when(
             () => mockNostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -32125,6 +33231,22 @@ void main() {
       );
     });
 
+    group('stopHeldMemberDelivery', () {
+      test(
+        'throws StateError when the outgoing_dms DAO is not wired in',
+        () async {
+          final repository = createRepository();
+          await expectLater(
+            () => repository.stopHeldMemberDelivery(
+              rumorId: _rumorEventId,
+              maxRetries: 5,
+            ),
+            throwsStateError,
+          );
+        },
+      );
+    });
+
     group('cancelOutgoingBatch', () {
       late _MockOutgoingDmsDao mockOutgoingDmsDao;
 
@@ -32632,4 +33754,19 @@ void main() {
       });
     });
   });
+}
+
+/// Opens a live DM read on [dms] whose stored events end straight after, as
+/// a relay's do: the deletions REQ is opened only once they have.
+Stream<Event> _openLiveDmRead(
+  Invocation invocation,
+  List<StreamController<Event>> dms,
+) {
+  final onEnd =
+      invocation.namedArguments[#onStoredEventsEnd]
+          as void Function(StoredEventsEnd)?;
+  scheduleMicrotask(
+    () => onEnd?.call(const StoredEventsEnd(deliveredEventCount: 0)),
+  );
+  return (dms..add(StreamController<Event>())).last.stream;
 }

@@ -7,6 +7,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
+import 'package:dm_repository/src/dm_held_pool_wraps.dart';
 import 'package:dm_repository/src/dm_reactions_repository_reportable_sites.dart';
 import 'package:dm_repository/src/dm_repository.dart';
 import 'package:dm_repository/src/group_conversation_recovery.dart';
@@ -556,10 +557,15 @@ class DmReactionsRepository {
       );
     }
 
+    final targetKind = await _targetMessageKind(
+      targetMessageId,
+      ownerPubkey: ownerPubkey,
+    );
+    // buildRumor already tags the author, the one `p` NIP-25 asks for
+    // (25.md:25); repeating it here put the author in twice (#9774).
     final additionalTags = <List<String>>[
       ['e', targetMessageId],
-      ['p', targetMessageAuthor],
-      ['k', EventKind.privateDirectMessage.toString()],
+      ['k', '$targetKind'],
     ];
     final rumor = messageService.buildRumor(
       recipientPubkey: targetMessageAuthor,
@@ -582,6 +588,35 @@ class DmReactionsRepository {
         messageService: messageService,
       ),
     );
+  }
+
+  /// The kind of the stored message [messageId], for a reaction's `k` tag
+  /// (25.md:31), so a reaction to a kind-15 file message says so. A message
+  /// that is not stored, or cannot be read, is taken as a kind-14 text
+  /// message, which every reaction was tagged as before #9774.
+  Future<int> _targetMessageKind(
+    String messageId, {
+    required String ownerPubkey,
+  }) async {
+    try {
+      final message = await _directMessagesDao?.getMessageById(
+        messageId,
+        ownerPubkey: ownerPubkey,
+      );
+      return message?.messageKind ?? EventKind.privateDirectMessage;
+    } on Object catch (e, st) {
+      Log.warning(
+        'DM reaction to $messageId: its kind cannot be read '
+        '(${e.runtimeType}), so it is tagged as a text message',
+        category: LogCategory.system,
+      );
+      _errorReporter?.call(
+        e,
+        st,
+        site: DmReactionsRepositoryReportableSites.publishTargetKindRead,
+      );
+      return EventKind.privateDirectMessage;
+    }
   }
 
   Future<DmReactionPublishResult> _publishRumor({
@@ -661,7 +696,6 @@ class DmReactionsRepository {
     final inboxes = _inboxesForTap(recipients, priors.values);
     await _removeSuperseded(
       priors,
-      targetMessageAuthor: targetMessageAuthor,
       ownerPubkey: ownerPubkey,
       messageService: messageService,
       inboxes: inboxes,
@@ -676,6 +710,16 @@ class DmReactionsRepository {
         recipients: recipients,
         inboxByRecipient: inboxByRecipient,
         awaitRecipientOk: true,
+        recordHeldWrap: _heldWrapRecorder(
+          _reactionsDao.recordHeldReactionWrap,
+          id: rumorId,
+          ownerPubkey: ownerPubkey,
+        ),
+        recordDeliveredWraps: _deliveredWrapsRecorder(
+          _reactionsDao.recordDeliveredReactionWraps,
+          id: rumorId,
+          ownerPubkey: ownerPubkey,
+        ),
       );
       try {
         switch (fanOut.result) {
@@ -785,6 +829,11 @@ class DmReactionsRepository {
   /// 4. When an attempt for this rumor is already running — the original
   ///    [publish] of a group reaction, or an earlier retry — nothing is sent
   ///    again: the call joins that attempt and returns its outcome.
+  /// 5. A recipient an earlier attempt delivered to is sent nothing again. One
+  ///    whose earlier wrap the fallback pool accepted on an unreadable inbox
+  ///    is sent nothing more while it stays unreadable, is settled on that
+  ///    wrap once they advertise no inbox, and is wrapped again only once
+  ///    their inbox is found (#10012).
   Future<DmReactionPublishResult> retry({
     required String rumorId,
     required String targetMessageAuthor,
@@ -852,6 +901,17 @@ class DmReactionsRepository {
         rumor: rumor,
         recipients: recipients,
         awaitRecipientOk: true,
+        heldWraps: decodeHeldWraps(row.heldReactionWraps),
+        recordHeldWrap: _heldWrapRecorder(
+          _reactionsDao.recordHeldReactionWrap,
+          id: rumorId,
+          ownerPubkey: ownerPubkey,
+        ),
+        recordDeliveredWraps: _deliveredWrapsRecorder(
+          _reactionsDao.recordDeliveredReactionWraps,
+          id: rumorId,
+          ownerPubkey: ownerPubkey,
+        ),
       );
       try {
         switch (fanOut.result) {
@@ -1044,7 +1104,6 @@ class DmReactionsRepository {
     await _durablyDeleteReaction(
       rumorId: rumorId,
       recipients: recipients,
-      targetMessageAuthor: targetMessageAuthor,
       ownerPubkey: ownerPubkey,
       messageService: messageService,
       reportSite: DmReactionsRepositoryReportableSites.removeOwnSoftDelete,
@@ -1069,13 +1128,13 @@ class DmReactionsRepository {
   /// the sweep to deliver.
   ///
   /// An empty [recipients] means they could not be established. The removal
-  /// is recorded all the same, tagged with [targetMessageAuthor] like the
-  /// reaction it removes, and left for the retry sweep: dropping it would
-  /// leave the reaction live while the UI shows it removed.
+  /// is recorded all the same and left for the retry sweep: dropping it would
+  /// leave the reaction live while the UI shows it removed. It names no one
+  /// either way, so what it says does not depend on who was known when it was
+  /// recorded (#9774).
   Future<void> _durablyDeleteReaction({
     required String rumorId,
     required List<String> recipients,
-    required String targetMessageAuthor,
     required String ownerPubkey,
     required NIP17MessageService messageService,
     required String reportSite,
@@ -1083,14 +1142,9 @@ class DmReactionsRepository {
   }) async {
     final Event deletion;
     try {
-      deletion = messageService.buildRumor(
-        recipientPubkey: recipients.firstOrNull ?? targetMessageAuthor,
-        content: '',
-        eventKind: EventKind.eventDeletion,
-        additionalTags: [
-          ['e', rumorId],
-          ['k', EventKind.reaction.toString()],
-        ],
+      deletion = messageService.buildDeletionRumor(
+        targetEventId: rumorId,
+        targetKind: EventKind.reaction,
       );
       await _reactionsDao.markOwnDeletionPending(
         id: rumorId,
@@ -1150,7 +1204,9 @@ class DmReactionsRepository {
   /// Marks the row `deletion_sent` on a confirmed publish and
   /// `deletion_refused` when send policy blocks it — off the sweep's
   /// worklist, rumor retained for a user-driven retry; leaves its status
-  /// unchanged otherwise, so the sweep tries again.
+  /// unchanged otherwise, so the sweep tries again. A recipient an earlier
+  /// attempt delivered to, or the fallback pool holds an earlier wrap for, is
+  /// handled as [retry] handles one (#10012).
   Future<DmReactionDeletionOutcome> retryDeletion({
     required String rumorId,
     required String targetMessageAuthor,
@@ -1233,6 +1289,17 @@ class DmReactionsRepository {
         rumor: deletion,
         recipients: recipients,
         awaitRecipientOk: true,
+        heldWraps: decodeHeldWraps(row.heldRemovalWraps),
+        recordHeldWrap: _heldWrapRecorder(
+          _reactionsDao.recordHeldRemovalWrap,
+          id: rumorId,
+          ownerPubkey: ownerPubkey,
+        ),
+        recordDeliveredWraps: _deliveredWrapsRecorder(
+          _reactionsDao.recordDeliveredRemovalWraps,
+          id: rumorId,
+          ownerPubkey: ownerPubkey,
+        ),
       );
       try {
         switch (fanOut.result) {
@@ -1292,6 +1359,16 @@ class DmReactionsRepository {
         recipients: recipients,
         inboxByRecipient: inboxByRecipient,
         awaitRecipientOk: true,
+        recordHeldWrap: _heldWrapRecorder(
+          _reactionsDao.recordHeldRemovalWrap,
+          id: rumorId,
+          ownerPubkey: ownerPubkey,
+        ),
+        recordDeliveredWraps: _deliveredWrapsRecorder(
+          _reactionsDao.recordDeliveredRemovalWraps,
+          id: rumorId,
+          ownerPubkey: ownerPubkey,
+        ),
       );
       try {
         switch (fanOut.result) {
@@ -1893,7 +1970,6 @@ class DmReactionsRepository {
   /// re-driving) the new emoji.
   Future<void> _removeSuperseded(
     Map<String, List<String>> priors, {
-    required String targetMessageAuthor,
     required String ownerPubkey,
     required NIP17MessageService messageService,
     required Future<Map<String, DmInboxLookup>> inboxes,
@@ -1904,7 +1980,6 @@ class DmReactionsRepository {
         await _durablyDeleteReaction(
           rumorId: priorId,
           recipients: priorRecipients,
-          targetMessageAuthor: targetMessageAuthor,
           ownerPubkey: ownerPubkey,
           messageService: messageService,
           reportSite:
@@ -1971,7 +2046,8 @@ class DmReactionsRepository {
   /// recipient, so a three-member group reaction leaves one copy, not three
   /// (#8446). It is due when at least one recipient's send reached the point
   /// where `sendRumor` would have published it — the wrap landed, or went
-  /// out without an `OK` — and its outcome never changes the result: the
+  /// out without an `OK` — or a recipient counts as delivered with no send
+  /// (#10012), and its outcome never changes the result: the
   /// recipients are what the result reports. So it is not published here:
   /// the caller records the result first and then awaits
   /// `publishOwnCopy`, and the chip does not wait on a relay the recipient
@@ -1979,14 +2055,15 @@ class DmReactionsRepository {
   /// [_publishTimeout]. A copy handed over only after this returns, by a send
   /// that outlived its cap, is published detached.
   ///
-  /// A group reaction persists as one row that can't track per-recipient
-  /// delivery, so a partial fan-out (one member confirmed, another timed
-  /// out/rejected) must NOT report success — the caller would mark the row
-  /// `sent` and clear its stored rumor, leaving the missed member's wrap
-  /// unrecoverable. Instead any non-confirming recipient makes the whole
-  /// fan-out a retryable failure; the sweep re-drives the full rumor and the
-  /// receiver-side dedup on rumor id makes re-delivery to already-confirmed
-  /// members idempotent.
+  /// A group reaction persists as one row, so a partial fan-out (one member
+  /// confirmed, another timed out/rejected) must NOT report success — the
+  /// caller would mark the row `sent` and clear its stored rumor, leaving the
+  /// missed member's wrap unrecoverable. Instead any non-confirming recipient
+  /// makes the whole fan-out a retryable failure, and the attempt hands the
+  /// members it delivered to [recordDeliveredWraps]. A later attempt passes
+  /// them back in [heldWraps] and sends them nothing, counting them as
+  /// delivered, so the sweep re-drives the rumor only to the members it
+  /// missed (#10012).
   ///
   /// [awaitRecipientOk] requires the relay's NIP-20 `OK true` for each
   /// recipient wrap before it counts as landed (see
@@ -2004,6 +2081,17 @@ class DmReactionsRepository {
   /// unrecoverable. A recipient with no lookup at all (no resolver wired)
   /// keeps the pre-#7321 contract, where a pool `OK` is delivery.
   ///
+  /// The wrap the pool held is handed to [recordHeldWrap], and a later
+  /// attempt passes it back in [heldWraps], keyed by recipient: while that
+  /// recipient's inbox stays unreadable nothing more is sent to them, once
+  /// they advertise no inbox the held wrap is their delivery, and only once
+  /// their inbox is found are they wrapped again (#10012), as a held message
+  /// is. An attempt in which any recipient's
+  /// inbox is unreadable is held whatever the others come to, so it
+  /// publishes no own copy either, even for a lost `OK` the default
+  /// `selfWrapOnSoftUnconfirmed` would cover: the copy shows the reaction as
+  /// sent on the sender's other devices.
+  ///
   /// An empty [recipients] is a hard failure with nothing sent;
   /// [_recipientsOrHold] relies on that to hold a row.
   ///
@@ -2020,6 +2108,11 @@ class DmReactionsRepository {
     required String ownerPubkey,
     required Event rumor,
     required List<String> recipients,
+    required Future<void> Function(String recipientPubkey, String wrapEventId)
+    recordHeldWrap,
+    required Future<void> Function(Map<String, String> wraps)
+    recordDeliveredWraps,
+    Map<String, HeldWrap> heldWraps = const {},
     Map<String, DmInboxLookup>? inboxByRecipient,
     bool awaitRecipientOk = false,
   }) async {
@@ -2030,9 +2123,15 @@ class DmReactionsRepository {
       );
     }
     final inboxes = inboxByRecipient ?? await _resolveInboxes(recipients);
+    final held = recipients.any(
+      (recipient) =>
+          heldWraps[recipient]?.delivered != true &&
+          inboxes[recipient]?.state == DmInboxResolution.unreadable,
+    );
     NIP17SendSuccess? lastSuccess;
     final failures = <NIP17SendFailure>[];
     var ownCopyDue = false;
+    var withheldOwnCopy = false;
     var returned = false;
     Event? prebuiltOwnCopy;
     Future<void> publishOwnCopy() => _publishOwnCopy(
@@ -2042,6 +2141,18 @@ class DmReactionsRepository {
       ownerPubkey: ownerPubkey,
     );
     void onOwnCopyDue(Event? prebuiltSelfWrap) {
+      if (held) {
+        if (!withheldOwnCopy) {
+          withheldOwnCopy = true;
+          Log.info(
+            'Withholding the own copy of rumor ${rumor.id}: a recipient '
+            'inbox is unreadable, so this attempt is held, not delivered '
+            '(#10012)',
+            category: LogCategory.system,
+          );
+        }
+        return;
+      }
       prebuiltOwnCopy ??= prebuiltSelfWrap;
       if (ownCopyDue) return;
       ownCopyDue = true;
@@ -2051,28 +2162,59 @@ class DmReactionsRepository {
       if (returned) unawaited(publishOwnCopy());
     }
 
+    // The members this attempt delivered to, and the wrap each has (#10012).
+    final deliveredWraps = <String, String>{};
     for (final recipient in recipients) {
       final inbox = inboxes[recipient];
-      final published = await _sendRumorWithTimeout(
+      final heldWrap = heldWraps[recipient];
+      final NIP17SendResult result;
+      final unsent = await resolveHeldWrap(
         messageService: messageService,
         rumor: rumor,
         recipientPubkey: recipient,
-        targetRelays: inbox?.relays,
-        awaitRecipientOk: awaitRecipientOk,
-        onSelfWrapDue: onOwnCopyDue,
+        heldWrap: heldWrap,
+        inboxState: inbox?.state,
       );
-      final result = inbox == null
-          ? published
-          : downgradeFallbackPoolDelivery(published, inbox.state);
+      if (unsent != null) {
+        result = unsent;
+        // Settled on the held wrap, or delivered by an earlier attempt: no
+        // send ran to hand the own copy over.
+        if (unsent.success) onOwnCopyDue(null);
+      } else {
+        final published = await _sendRumorWithTimeout(
+          messageService: messageService,
+          rumor: rumor,
+          recipientPubkey: recipient,
+          targetRelays: inbox?.relays,
+          awaitRecipientOk: awaitRecipientOk,
+          onSelfWrapDue: onOwnCopyDue,
+        );
+        result = inbox == null
+            ? published
+            : downgradeFallbackPoolDelivery(published, inbox.state);
+        final heldWrapId = heldPoolWrapOf(published, result);
+        if (heldWrapId != null) await recordHeldWrap(recipient, heldWrapId);
+      }
       switch (result) {
-        case NIP17SendSuccess():
+        case NIP17SendSuccess(:final messageEventId):
           lastSuccess = result;
+          if (heldWrap?.delivered != true) {
+            deliveredWraps[recipient] = messageEventId;
+          }
         case NIP17SendFailure():
           failures.add(result);
       }
     }
+    // Only an attempt that leaves the row to be retried needs the record.
+    if (failures.isNotEmpty && deliveredWraps.isNotEmpty) {
+      await recordDeliveredWraps(deliveredWraps);
+    }
     final fanOut = (
-      result: _aggregateFanOut(lastSuccess, failures),
+      result: _aggregateFanOut(
+        lastSuccess,
+        failures,
+        deliveredNow: deliveredWraps.isNotEmpty,
+      ),
       publishOwnCopy: ownCopyDue ? publishOwnCopy : _noOwnCopy,
     );
     returned = true;
@@ -2081,8 +2223,9 @@ class DmReactionsRepository {
 
   static NIP17SendResult _aggregateFanOut(
     NIP17SendSuccess? lastSuccess,
-    List<NIP17SendFailure> failures,
-  ) {
+    List<NIP17SendFailure> failures, {
+    required bool deliveredNow,
+  }) {
     if (failures.isEmpty) {
       // Every recipient confirmed — terminal success.
       return lastSuccess ??
@@ -2095,15 +2238,87 @@ class DmReactionsRepository {
     return NIP17SendResult.failure(
       summary,
       retryablePending: failures.every((f) => f.retryablePending),
-      // A recipient whose wrap a relay took means the fan-out reached one.
-      reachedNoRelay:
-          lastSuccess == null && failures.every((f) => f.reachedNoRelay),
+      // A recipient this attempt delivered to means it reached a relay; one
+      // an earlier attempt delivered to does not (#10012).
+      reachedNoRelay: !deliveredNow && failures.every((f) => f.reachedNoRelay),
     );
   }
 
   static Future<void> _noOwnCopy() async {
     // Intentional no-op: no recipient's send reached the point where the
     // sender's own copy is due.
+  }
+
+  /// Records on row [id], through [record], a `DmReactionsDao` method, each
+  /// wrap the fallback pool holds for a recipient whose inbox could not be
+  /// read (#10012).
+  Future<void> Function(String recipientPubkey, String wrapEventId)
+  _heldWrapRecorder(
+    Future<bool> Function({
+      required String id,
+      required String ownerPubkey,
+      required String recipientPubkey,
+      required String wrapEventId,
+    })
+    record, {
+    required String id,
+    required String ownerPubkey,
+  }) =>
+      (recipientPubkey, wrapEventId) => _recordOnRow(
+        id,
+        what:
+            'wrap $wrapEventId the fallback pool holds for '
+            '${pubkeyForLogs(recipientPubkey)}',
+        write: () => record(
+          id: id,
+          ownerPubkey: ownerPubkey,
+          recipientPubkey: recipientPubkey,
+          wrapEventId: wrapEventId,
+        ),
+      );
+
+  /// Records on row [id], through [record], a `DmReactionsDao` method, the
+  /// members an attempt that was not delivery reached, with the wrap each has
+  /// (#10012).
+  Future<void> Function(Map<String, String> wraps) _deliveredWrapsRecorder(
+    Future<bool> Function({
+      required String id,
+      required String ownerPubkey,
+      required Map<String, String> wraps,
+    })
+    record, {
+    required String id,
+    required String ownerPubkey,
+  }) =>
+      (wraps) => _recordOnRow(
+        id,
+        what: 'that ${wraps.keys.map(pubkeyForLogs).join(', ')} have it',
+        write: () => record(id: id, ownerPubkey: ownerPubkey, wraps: wraps),
+      );
+
+  /// Runs [write], which records [what] on the row of the reaction [id]
+  /// (#10012). Never throws: without the record the next attempt wraps the
+  /// rumor again for those members, as every attempt did before, so a
+  /// failure is reported and left at that.
+  Future<void> _recordOnRow(
+    String id, {
+    required String what,
+    required Future<bool> Function() write,
+  }) async {
+    try {
+      await write();
+    } on Object catch (e, st) {
+      Log.warning(
+        'DM reaction $id: could not record $what (${e.runtimeType}), so the '
+        'next attempt wraps the rumor again for them',
+        category: LogCategory.system,
+      );
+      _errorReporter?.call(
+        e,
+        st,
+        site: DmReactionsRepositoryReportableSites.recordHeldPoolWrap,
+      );
+    }
   }
 
   /// Publish the sender's own copy of [rumor] for [_fanOutRumor], to

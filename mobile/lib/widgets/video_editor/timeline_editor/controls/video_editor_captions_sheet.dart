@@ -8,6 +8,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/rendering.dart' show OverflowBoxFit;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/captions_editor/captions_editor_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -45,8 +46,9 @@ class CaptionsDeleted extends CaptionsEditorResult {
 /// Shows the captions editor as a [VineBottomSheet] — the editor's standard
 /// surface for focused tools (speed, transitions, presets).
 ///
-/// A fresh session (no [initialCues]) transcribes the clips on-device first;
-/// an existing session starts with its cues. Resolves to a
+/// A fresh session (no [initialCues]) transcribes the clips, and the
+/// voice-over takes and extracted clip sound among [audioTracks], first; an
+/// existing session starts with its cues. Resolves to a
 /// [CaptionsEditorResult], `null` when dismissed.
 Future<CaptionsEditorResult?> showCaptionsEditorSheet(
   BuildContext context, {
@@ -57,6 +59,7 @@ Future<CaptionsEditorResult?> showCaptionsEditorSheet(
   bool burnIn = false,
   CaptionCustomStyle? customStyle,
   List<CaptionCue>? initialCues,
+  List<AudioEvent> audioTracks = const [],
   bool canDeleteTrack = false,
   BlossomUploadService? blossomUploadService,
   @visibleForTesting CaptionsEditorCubit? cubit,
@@ -72,6 +75,7 @@ Future<CaptionsEditorResult?> showCaptionsEditorSheet(
         customStyle: customStyle,
         languageTag: languageTag,
         initialCues: initialCues,
+        audioTracks: audioTracks,
         blossomUploadService: blossomUploadService,
       );
   unawaited(sessionCubit.initialize());

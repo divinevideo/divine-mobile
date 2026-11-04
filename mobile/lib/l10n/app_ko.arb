@@ -1,5 +1,75 @@
 {
   "@@locale": "ko",
+  "videoEditorSocialStickerPoll": "투표",
+  "videoEditorSocialStickerQuiz": "퀴즈",
+  "videoEditorSocialStickerSlider": "슬라이더",
+  "videoEditorSocialStickerPollSampleQuestion": "어떤 게 좋아요?",
+  "videoEditorSocialStickerPollSampleYes": "네",
+  "videoEditorSocialStickerPollSampleNo": "아니요",
+  "videoEditorSocialStickerQuizSampleQuestion": "Vine이 출시된 해는…",
+  "videoEditorSocialStickerSliderSampleQuestion": "얼마나 배고파요?",
+  "videoEditorSocialStickerPollQuestionHint": "질문하기",
+  "videoEditorSocialStickerPollOptionHint": "{number}번 답변",
+  "videoEditorSocialStickerPollRemoveOption": "{number}번 답변 삭제",
+  "videoEditorSocialStickerQuizMarkRight": "{number}번 답변을 정답으로 표시",
+  "videoEditorSocialStickerPollAddOption": "답변 추가",
+  "videoEditorSocialStickerPollNote": "시청자는 투표한 뒤 결과를 볼 수 있어요. 투표는 공개돼요.",
+  "videoEditorSocialStickerQuizNote": "정답에 체크해 주세요. 시청자는 답을 고른 뒤 정답을 볼 수 있어요.",
+  "videoEditorSocialStickerSliderNote": "시청자는 이모지를 끌어서 답하고 평균 위치를 볼 수 있어요.",
+  "videoStickerQuizRightAnswer": "정답",
+  "videoStickerQuizWrongAnswer": "오답",
+  "videoEditorSocialStickerQuestion": "질문",
+  "videoEditorSocialStickerAddYours": "나도 참여",
+  "videoEditorSocialStickerReplies": "답글",
+  "videoEditorSocialStickerQuestionSample": "무엇이든 물어보세요",
+  "videoEditorSocialStickerAddYoursSample": "책상 셋업을 보여 주세요",
+  "videoEditorSocialStickerRepliesSample": "영상으로 답글 달기",
+  "videoEditorSocialStickerQuestionHint": "내 질문",
+  "videoEditorSocialStickerAddYoursPromptHint": "사람들이 무엇을 보여 주면 좋을까요?",
+  "videoEditorSocialStickerAddYoursHashtagHint": "해시태그",
+  "videoEditorSocialStickerRepliesTitleHint": "제목",
+  "videoEditorSocialStickerQuestionNote": "답변은 비공개 메시지로 받아요.",
+  "videoEditorSocialStickerAddYoursNote": "시청자는 자기 영상으로 답해요. 모든 답변에 이 해시태그가 붙고 내 영상으로 연결돼요.",
+  "videoEditorSocialStickerRepliesNote": "이 영상에 영상으로 답글을 단 사람을 보여 줘요. 시청자가 탭하면 답글을 볼 수 있어요.",
+  "videoEditorInteractiveCardAreaHint": "시청자가 탭할 수 있도록 이 스티커는 이 상자 안에 있어요",
+  "videoStickerPollSignInToVote": "로그인해야 투표할 수 있어요.",
+  "videoStickerPollNotReady": "아직 연결 중이에요. 잠시 후 다시 시도해 주세요.",
+  "videoStickerPollVoteFailed": "투표가 전송되지 않았어요. 다시 시도해 주세요.",
+  "videoStickerPollVotesArePublic": "투표는 공개돼요. 누구나 내가 고른 답을 볼 수 있어요.",
+  "videoStickerPollVoteCount": "{count, plural, other{{count}표}}",
+  "videoStickerQuestionAnswerHint": "탭해서 답하기",
+  "videoStickerQuestionAnswerSemanticLabel": "답하기: {question}",
+  "videoStickerAddYoursButton": "나도 참여",
+  "videoStickerAddYoursJoined": "{count, plural, =0{첫 번째로 참여해 보세요} =1{{count}명 참여} other{{count}명 참여}}",
+  "videoStickerAddYoursJoinedAtLeast": "{count}명 참여",
+  "videoStickerAddYoursOpenSemanticLabel": "참여한 사람 보기",
+  "videoStickerAddYoursJoinSemanticLabel": "나도 참여: {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{아직 답글이 없어요} =1{답글 {count}개} other{답글 {count}개}}",
+  "videoStickerRepliesCountAtLeast": "답글 {count}개",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{영상 답글, 아직 없음} =1{영상 답글 {count}개 보기} other{영상 답글 {count}개 보기}}",
+  "videoStickerRepliesSemanticLabelAtLeast": "영상 답글 {count}개 보기",
+  "videoStickerQuestionSignIn": "로그인해야 답할 수 있어요.",
+  "videoStickerQuestionUnavailable": "이 계정에서는 질문에 답할 수 없어요.",
+  "videoStickerQuestionAnswerTitle": "답하기",
+  "videoStickerQuestionAnswerFieldLabel": "내 답변",
+  "videoStickerQuestionAnswerPrivacyNote": "{name}님만 내 답변을 볼 수 있어요. 내 이름 없이 영상에서 공유될 수도 있어요.",
+  "videoStickerQuestionAnswerSend": "보내기",
+  "videoStickerQuestionAnswerSent": "답변을 보냈어요.",
+  "videoStickerQuestionAnswerTooLong": "답변이 너무 길어서 보낼 수 없어요.",
+  "videoStickerQuestionAnswerFailed": "답변이 전송되지 않았어요. 다시 시도해 주세요.",
+  "videoStickerAddYoursSignIn": "로그인해야 참여할 수 있어요.",
+  "videoStickerRepliesManageTitle": "영상 답글",
+  "videoStickerRepliesEmpty": "아직 영상 답글이 없어요.",
+  "videoStickerRepliesLoadFailed": "답글을 불러오지 못했어요.",
+  "videoStickerRepliesRetry": "다시 시도",
+  "videoStickerRepliesPin": "고정",
+  "videoStickerRepliesUnpin": "고정 해제",
+  "videoStickerRepliesHide": "숨기기",
+  "videoStickerRepliesShow": "보이기",
+  "videoStickerRepliesPinned": "고정됨",
+  "videoStickerRepliesHidden": "숨김",
+  "videoStickerRepliesSaveFailed": "저장하지 못했어요. 다시 시도해 주세요.",
+  "videoStickerRepliesWatchSemanticLabel": "{name}님의 답글 보기",
   "devOptionsClipRecovery": "클립 복구",
   "devOptionsClipRecoveryDescription": "다른 계정에 저장된 녹화본과 어떤 항목도 참조하지 않는 동영상 파일을 찾습니다.",
   "devOptionsClipRecoveryScan": "검사",
@@ -65,6 +135,7 @@
   "publishErrorPermissionDenied": "Divine에 업로드 권한이 없어요. 설정에서 앱 권한을 확인하고 다시 시도해주세요.",
   "publishErrorOutOfMemory": "기기 메모리가 부족해요. 앱을 몇 개 닫고 다시 시도해주세요.",
   "publishErrorOverlaysUnavailable": "이 초안의 텍스트와 스티커를 준비하지 못했어요. 편집기에서 연 다음 다시 게시해주세요.",
+  "publishErrorQuestionStickerRestricted": "이 계정은 질문 스티커를 올릴 수 없어요. 답변이 비공개 메시지로 오기 때문이에요. 스티커를 지운 뒤 다시 올려 주세요.",
   "publishErrorTooManyDetachedClips": "이 기기에서는 분리한 클립을 한 번에 이만큼 내보낼 수 없어요. 몇 개를 타임라인으로 되돌린 뒤 다시 시도해 주세요.",
   "publishErrorDraftTooManyDetachedClips": "이 기기에서는 분리한 클립을 한 번에 이만큼 내보낼 수 없어요. 편집기에서 초안을 열고 몇 개를 타임라인으로 되돌린 뒤 다시 게시해 주세요.",
   "publishErrorUnknownServer": "알 수 없는 서버",
@@ -74,7 +145,10 @@
   "dmReactionRetryAction": "다시 시도",
   "dmMessageBubbleVideoReplyHint": "참조된 동영상 열기",
   "commonSomethingWentWrong": "문제가 생겼어요",
-  "profileFeedError": "서버에 연결할 수 없습니다. 연결을 확인하고 다시 시도해 주세요.",
+  "profileVideosLoadFailedTitle": "내 영상을 불러오지 못했어요",
+  "profileVideosLoadFailedOtherTitle": "영상을 불러오지 못했어요",
+  "profileVideosLoadFailedSubtitle": "연결을 확인하고 다시 시도해 주세요.",
+  "profileVideosLoadFailedRetry": "다시 시도",
   "profileFeedLoadMoreError": "영상을 더 불러오지 못했어요. 당겨서 새로고침하세요.",
   "appTitle": "Divine",
   "settingsTitle": "설정",
@@ -488,6 +562,21 @@
   "metadataBadgeNotDivine": "Divine 아님",
   "metadataBadgeHumanMade": "사람 제작",
   "metadataSoundsLabel": "사운드",
+  "metadataLinksLabel": "링크",
+  "videoStickerLinkSemanticLabel": "링크 스티커, {url} 열기",
+  "videoStickerMentionSemanticLabel": "멘션 스티커, 프로필 열기",
+  "videoStickerHashtagSemanticLabel": "해시태그 스티커, #{hashtag} 열기",
+  "videoStickerSoundSemanticLabel": "사운드 스티커, 사운드 열기",
+  "videoStickerPlaceSemanticLabel": "위치 스티커, 지도에서 {place} 열기",
+  "videoStickerCountdownSemanticLabel": "카운트다운 스티커, 알림 설정",
+  "videoStickerReplySemanticLabel": "답글 스티커, 이 동영상이 답하는 대상 열기",
+  "videoStickerCountdownDays": "{count, plural, other{{count}일}}",
+  "videoStickerCountdownReminderSet": "알림을 설정했어요. 때가 되면 알려 드릴게요.",
+  "videoStickerCountdownReminderRemoved": "알림을 삭제했어요.",
+  "videoStickerCountdownOver": "이 카운트다운은 끝났어요.",
+  "videoStickerCountdownNotificationsOff": "알림을 받으려면 Divine 알림을 켜 주세요.",
+  "videoStickerCountdownReminderBody": "시간이 됐어요! 저장한 카운트다운이 방금 끝났어요.",
+  "videoStickerLinkSheetBody": "이 링크는 Divine 밖에서 열려요. 이동하기 전에 주소를 확인하세요.",
   "metadataOriginalSound": "오리지널 사운드",
   "metadataVerificationLabel": "인증",
   "metadataDeviceAttestation": "기기 증명",
@@ -1168,6 +1257,7 @@
   "routeInvalidUserId": "잘못된 사용자 ID예요",
   "routeInvalidVideoId": "잘못된 영상 ID예요",
   "routeInvalidSoundId": "잘못된 사운드 ID예요",
+  "routeInvalidQuestion": "잘못된 질문 링크예요",
   "routeInvalidCategory": "잘못된 카테고리예요",
   "routeNoVideosToDisplay": "표시할 영상이 없어요",
   "routeGoHome": "홈으로 가기",
@@ -1733,11 +1823,11 @@
   "videoClipBackupUnsignedSemanticLabel": "콘텐츠 자격 증명 없이 갤러리에 있어요. {label}",
   "videoClipStopMotionSemanticLabel": "스톱모션 클립, {frames}",
   "videoClipSemanticValueSelectedAtPosition": "선택됨, {position}번",
-  "videoClipSemanticValueSelected": "선택됨",
   "videoClipSemanticValueNotSelected": "선택 안 됨",
   "videoClipSemanticHintDisabled": "비활성화됨",
-  "videoClipSemanticHintSelect": "탭하여 선택, 길게 눌러 미리보기",
-  "videoClipSemanticHintDeselect": "탭하여 선택 해제, 길게 눌러 미리보기",
+  "videoClipSemanticHintSelect": "탭하여 선택",
+  "videoClipSemanticHintDeselect": "탭하여 선택 해제",
+  "videoClipSemanticHintPreview": "탭하여 미리보기",
   "libraryClipDuration": "{seconds}초",
   "libraryTabClips": "클립",
   "libraryTabDrafts": "임시 저장",
@@ -1831,6 +1921,14 @@
   },
   "notificationLikedYourVideo": "{actorName}님이 회원님의 동영상을 좋아해요",
   "@notificationLikedYourVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLikedTaggedVideo": "{actorName}님이 회원님이 태그된 동영상을 좋아해요",
+  "@notificationLikedTaggedVideo": {
     "placeholders": {
       "actorName": {
         "type": "String"
@@ -2118,9 +2216,51 @@
   "videoEditorEffectConfetti": "색종이",
   "videoEditorEffectHearts": "하트",
   "videoEditorEffectSparkles": "반짝이",
+  "videoEditorEffectRain": "비",
+  "videoEditorEffectLeaves": "낙엽",
+  "videoEditorEffectBlossoms": "벚꽃",
+  "videoEditorEffectBubbles": "비눗방울",
+  "videoEditorEffectBokeh": "보케",
+  "videoEditorEffectMusicNotes": "음표",
+  "videoEditorEffectStars": "별",
+  "videoEditorEffectFireflies": "반딧불이",
+  "videoEditorEffectEmbers": "불씨",
+  "videoEditorEffectMoney": "돈",
+  "videoEditorEffectBalloons": "풍선",
   "videoEditorEffectTiltShift": "틸트 시프트",
   "videoEditorEffectZoomBlur": "줌 블러",
+  "videoEditorEffectSpinBlur": "스핀 블러",
   "videoEditorEffectComic": "만화",
+  "videoEditorEffectSwirl": "소용돌이",
+  "videoEditorEffectRipple": "물결",
+  "videoEditorEffectFlutedGlass": "플루티드 글라스",
+  "videoEditorEffectEightBit": "8비트",
+  "videoEditorEffectAnaglyph": "3D 안경",
+  "videoEditorEffectRiso": "리소 인쇄",
+  "videoEditorEffectTealOrange": "틸 & 오렌지",
+  "videoEditorEffectWarmFilm": "웜 필름",
+  "videoEditorEffectSlideFilm": "슬라이드 필름",
+  "videoEditorEffectCoolFilm": "쿨 필름",
+  "videoEditorEffectMatte": "매트",
+  "videoEditorEffectBleachBypass": "블리치 바이패스",
+  "videoEditorEffectCrossProcess": "크로스 프로세스",
+  "videoEditorEffectGoldenHour": "골든 아워",
+  "videoEditorEffectMoonlight": "달빛",
+  "videoEditorEffectSilver": "실버",
+  "videoEditorEffectCategoryRetro": "레트로",
+  "videoEditorEffectCategoryGlitch": "글리치",
+  "videoEditorEffectCategoryDistort": "왜곡",
+  "videoEditorEffectCategoryLight": "빛",
+  "videoEditorEffectCategoryMotion": "모션",
+  "videoEditorEffectCategoryParticles": "파티클",
+  "videoEditorEffectCategoryLooks": "룩",
+  "videoEditorFilterCategoryNatural": "내추럴",
+  "videoEditorFilterCategoryVibrant": "비비드",
+  "videoEditorFilterCategoryWarm": "웜",
+  "videoEditorFilterCategoryCool": "쿨",
+  "videoEditorFilterCategoryVintage": "빈티지",
+  "videoEditorFilterCategoryBlackAndWhite": "흑백",
+  "videoEditorFilterCategoryTints": "틴트",
   "videoEditorDropsSettingsTitle": "물방울 조정",
   "videoEditorDropsCountLabel": "개수",
   "videoEditorDropsSizeLabel": "크기",
@@ -2491,11 +2631,108 @@
   "videoEditorLayerAnimationPulseTo": "축소 크기",
   "videoEditorLayerAnimationWiggleAngle": "기울기",
   "videoEditorLayerAnimationBounceHeight": "높이",
+  "videoEditorLayerAnimationFlipSideways": "좌우",
+  "videoEditorLayerAnimationFlipOver": "상하",
   "videoEditorLayerAnimationCustomPoint": "사용자 지정",
   "videoEditorLayerAnimationPointEnterHint": "슬라이드가 시작될 위치를 영상에서 탭하세요",
   "videoEditorLayerAnimationPointLeaveHint": "슬라이드가 끝날 위치를 영상에서 탭하세요",
   "videoEditorStickersDivineOriginals": "Divine 오리지널",
   "videoEditorStickerSearchHint": "스티커 검색...",
+  "videoEditorInfoStickersTitle": "정보",
+  "videoEditorSocialStickersTitle": "소셜",
+  "videoEditorSocialStickerMention": "멘션",
+  "videoEditorSocialStickerHashtag": "해시태그",
+  "videoEditorSocialStickerSoundCredit": "사운드",
+  "videoEditorSocialStickerMentionSample": "이름",
+  "videoEditorSocialStickerHashtagSample": "해시태그",
+  "videoEditorSocialStickerChoosePerson": "사람 선택",
+  "videoEditorSocialStickerMentionNote": "게시물에서 멘션되고 알림을 받아요.",
+  "videoEditorSocialStickerHashtagHint": "해시태그 입력",
+  "videoEditorSocialStickerHashtagNote": "게시물 해시태그에도 추가돼요.",
+  "videoEditorSocialStickerLyricHint": "가사 한 줄 (선택)",
+  "videoEditorSocialStickerLink": "링크",
+  "videoEditorSocialStickerLinkUrlHint": "웹 주소",
+  "videoEditorSocialStickerLinkTitleHint": "제목 (선택)",
+  "videoEditorSocialStickerLinkNote": "주소가 게시물에 추가돼요.",
+  "videoEditorSocialStickerLinkInvalid": "아직 웹 주소가 아니에요.",
+  "videoEditorInteractiveStickersTitle": "인터랙티브",
+  "videoEditorSocialStickerCountdown": "카운트다운",
+  "videoEditorSocialStickerCountdownSample": "여름",
+  "videoEditorSocialStickerCountdownTitleHint": "무엇을 향해 카운트다운하나요?",
+  "videoEditorSocialStickerCountdownNote": "시청자는 남은 시간을 보고 알림을 설정할 수 있어요.",
+  "videoEditorSocialStickerCountdownOver": "이미 지난 시간이에요. 새로 골라 주세요.",
+  "videoEditorSocialStickerReply": "답글",
+  "videoEditorSocialStickerReplyNote": "시청자가 탭하면 무엇에 답하는지 볼 수 있어요.",
+  "videoEditorSocialStickerSoundNote": "음표",
+  "videoEditorSocialStickerSoundVinyl": "레코드",
+  "videoEditorSocialStickerSoundCassette": "카세트",
+  "videoEditorSocialStickerSoundEqualizer": "이퀄라이저",
+  "videoEditorSocialStickerSoundPlayer": "플레이어",
+  "videoEditorInfoStickerTime": "시간",
+  "videoEditorInfoStickerDate": "날짜",
+  "videoEditorInfoStickerLocation": "위치",
+  "videoEditorInfoStickerWeather": "날씨",
+  "videoEditorInfoStickerAltitude": "고도",
+  "videoEditorInfoStickerBattery": "배터리",
+  "videoEditorInfoStickerStyleLight": "라이트",
+  "videoEditorInfoStickerStyleDark": "다크",
+  "videoEditorInfoStickerStyleBrand": "그린",
+  "videoEditorInfoStickerStyleOutline": "윤곽선",
+  "videoEditorInfoStickerStyleDigital": "디지털",
+  "videoEditorInfoStickerStyleAnalog": "아날로그",
+  "videoEditorInfoStickerStyleGlass": "글래스",
+  "videoEditorInfoStickerStyleHighlight": "옐로",
+  "videoEditorInfoStickerStyleNeon": "네온",
+  "videoEditorInfoStickerStylePlain": "심플",
+  "videoEditorInfoStickerChangePlace": "장소 변경",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "이 기기에서는 장소 검색을 사용할 수 없어요.",
+  "videoEditorInfoStickerRecordedValue": "촬영 시각 · {value}",
+  "videoEditorInfoStickerNowValue": "지금 · {value}",
+  "videoEditorInfoStickerTodayValue": "오늘 · {value}",
+  "videoEditorInfoStickerDayCount": "일수 카운터",
+  "videoEditorInfoStickerSun": "태양",
+  "videoEditorInfoStickerMoon": "달",
+  "videoEditorInfoStickerRecTimer": "REC 타이머",
+  "videoEditorInfoStickerStyleFilm": "필름",
+  "videoEditorInfoStickerStyleCamcorder": "캠코더",
+  "videoEditorInfoStickerDayCountValue": "{day}일째",
+  "videoEditorInfoStickerDayCountOfValue": "{total}일 중 {day}일째",
+  "videoEditorInfoStickerDayLabel": "일차",
+  "videoEditorInfoStickerDayTotalLabel": "전체 일수(선택)",
+  "videoEditorInfoStickerSymbolPin": "핀",
+  "videoEditorInfoStickerSymbolFlag": "국기",
+  "videoEditorInfoStickerSymbolGlobe": "지구본",
+  "videoEditorInfoStickerSymbolMap": "지도",
+  "videoEditorInfoStickerMoonNew": "삭",
+  "videoEditorInfoStickerMoonWaxingCrescent": "초승달",
+  "videoEditorInfoStickerMoonFirstQuarter": "상현달",
+  "videoEditorInfoStickerMoonWaxingGibbous": "차가는 달",
+  "videoEditorInfoStickerMoonFull": "보름달",
+  "videoEditorInfoStickerMoonWaningGibbous": "기우는 달",
+  "videoEditorInfoStickerMoonLastQuarter": "하현달",
+  "videoEditorInfoStickerMoonWaningCrescent": "그믐달",
+  "videoEditorInfoStickerPlaceSearchHint": "도시나 장소를 검색해요",
+  "videoEditorInfoStickerPlaceNoResults": "장소를 찾지 못했어요",
+  "videoEditorInfoStickerPlaceSearchFailed": "장소를 검색하지 못했어요. 다시 시도해 주세요.",
+  "videoEditorInfoStickerPlacePrivacyNote": "영상에는 장소 이름만 들어가고, 정확한 위치는 절대 들어가지 않아요.",
+  "videoEditorInfoStickerLoading": "불러오는 중…",
+  "videoEditorInfoStickerLoadFailed": "불러오지 못했어요. 다시 시도해 주세요.",
+  "videoEditorInfoStickerMetAttribution": "데이터 제공: MET Norway",
+  "videoEditorInfoStickerWeatherNow": "오래된 동영상의 날씨는 없어서 지금 날씨를 보여 줘요.",
+  "videoEditorInfoStickerWeatherSunny": "맑음",
+  "videoEditorInfoStickerWeatherClearNight": "맑은 밤",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "구름 조금",
+  "videoEditorInfoStickerWeatherCloudy": "흐림",
+  "videoEditorInfoStickerWeatherFog": "안개",
+  "videoEditorInfoStickerWeatherRain": "비",
+  "videoEditorInfoStickerWeatherShowers": "소나기",
+  "videoEditorInfoStickerWeatherSnow": "눈",
+  "videoEditorInfoStickerWeatherThunderstorm": "뇌우",
+  "videoEditorInfoStickerSunTimeZoneNote": "시간은 휴대폰의 시간대로 표시돼요.",
+  "videoEditorInfoStickerTemperatureLabel": "기온",
+  "videoEditorInfoStickerUnitLabel": "단위",
+  "videoEditorInfoStickerBatteryLevelLabel": "배터리 잔량",
+  "videoEditorInfoStickerAdd": "스티커 추가",
   "videoEditorTextAlignmentSemanticLabel": "텍스트 정렬",
   "videoEditorTextBackgroundSemanticLabel": "텍스트 배경",
   "videoEditorTextDontWrap": "줄 바꿈 안 함",
@@ -2663,6 +2900,8 @@
   "libraryTrashDeleteConfirmMessage": "이 작업은 클립을 휴지통에서 바로 삭제합니다.",
   "libraryTrashEmptyConfirmTitle": "휴지통을 비울까요?",
   "libraryTrashEmptyConfirmMessage": "이 작업은 휴지통에서 {count, plural, =1{클립 1개} other{클립 {count}개}}를 바로 영구 삭제합니다.",
+  "libraryTrashClipsRestored": "{count, plural, =1{클립을 복원했어요} other{클립 {count}개를 복원했어요}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{클립을 영구 삭제했어요} other{클립 {count}개를 영구 삭제했어요}}",
   "videoRecorderCloseLabel": "동영상 녹화기 닫기",
   "videoRecorderContinueToEditorLabel": "동영상 편집기로 계속",
   "videoRecorderCycleTimerLabel": "타이머 전환",
@@ -3590,6 +3829,7 @@
       }
     }
   },
+  "videoMetadataTagsPickerStickerTag": "{tag}, 동영상 속 스티커에서",
   "videoEditorTimelineVolumePreview": "볼륨 {percent}%",
   "@videoEditorTimelineVolumePreview": {
     "placeholders": {
@@ -3703,6 +3943,9 @@
   "dmReelReplyComposerHint": "{name}님에게 메시지…",
   "dmReelReplyComposerHintSelf": "나에게 답장…",
   "dmReelReplyComposerSemanticLabel": "이 릴스에 답장",
+  "dmQuestionAnswerReceivedLabel": "내 질문에 답했어요: {question}",
+  "dmQuestionAnswerSentLabel": "내가 답한 질문: {question}",
+  "dmQuestionAnswerWithVideo": "영상으로 답하기",
   "dmReelReplyViewChat": "채팅 보기",
   "dmReelReplySentAnnouncement": "답장을 보냈습니다",
   "dmReelReactionSentAnnouncement": "{emoji} 반응함",
@@ -5339,8 +5582,97 @@
   "ideasDescriptionFive": "그냥 나누고 싶었어요.",
   "ideasTitleSix": "오늘의 한 조각",
   "ideasDescriptionSix": "여기에 남겨 둘게요.",
+  "messagesRoomsUnreadLabel": "{count, plural, other{채팅방, 읽지 않은 메시지 {displayCount}개}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, other{새 메시지 {displayCount}개}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, other{읽지 않은 메시지 {displayCount}개}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, other{{displayCount}명}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, other{메시지 {displayCount}개}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "최근 24시간",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "활동을 확인하고 있어요…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "활동을 불러오지 못했어요.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "최근 메시지가 없어요. 인사를 건네 보세요.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "다이렉트",
   "messagesRooms": "채팅방",
+  "messagesRoomsWithUnread": "채팅방 ({badge})",
   "messagesPublicTestRooms": "공개 테스트 채팅방",
   "messagesPublicTestDisclosure": "이 테스트 채팅방은 공개되어 있어요. 접근할 수 있는 사람은 누구나 메시지를 읽을 수 있어요.",
   "messagesNoRooms": "아직 채팅방이 없어요",
@@ -5449,5 +5781,57 @@
   "videoEditorLoopRepairProgress": "루프를 정렬하는 중…",
   "videoEditorLoopRepairTrimmed": "루프를 다듬었어요. {seconds}초를 잘라냈어요.",
   "notificationFromDivine": "Divine의 소식",
-  "announcementUnavailable": "이 공지는 더 이상 볼 수 없습니다."
+  "announcementUnavailable": "이 공지는 더 이상 볼 수 없습니다.",
+  "creatorHighlightLabel": "오늘의 하이라이트",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "오늘 만든 동영상: {count}개.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "이번 주에 나만의 색깔을 조금 더했어요.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "이번 주에 창작한 날: {count}일. 계속 만들어 봐요.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "이번 주에 올린 동영상의 지금까지 누적 조회수: {count}회.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "이번 주에 올린 동영상 중 가장 많이 시청된 영상",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "하나 더 만들기",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "내 통계 보기",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "동영상 보기",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

@@ -2,11 +2,13 @@ package com.divinevideo.divine_video_player
 
 import android.content.Context
 import android.graphics.SurfaceTexture
+import android.media.MediaFormat
 import android.net.Uri
 import android.os.Handler
 import android.os.SystemClock
 import android.view.Surface
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
@@ -432,6 +434,152 @@ class DivineVideoPlayerInstanceTest {
             assertEquals(480, sized["videoHeight"])
             assertEquals(1.0, sized["pixelWidthHeightRatio"])
         }
+    }
+
+    // -- decoder crop --
+
+    private val paddedCrop = listOf(0.0, 0.0, 1080.0 / 1088, 1.0)
+
+    /** A codec output format for 1080 columns decoded into 1088-wide buffers. */
+    private fun paddedFormat(): MediaFormat = mediaFormat(
+        MediaFormat.KEY_WIDTH to 1088,
+        MediaFormat.KEY_HEIGHT to 1920,
+        "crop-left" to 0,
+        "crop-top" to 0,
+        "crop-right" to 1079,
+        "crop-bottom" to 1919,
+    )
+
+    private fun mediaFormat(vararg values: Pair<String, Int>): MediaFormat {
+        val map = values.toMap()
+        val format = mockk<MediaFormat>()
+        every { format.containsKey(any()) } answers { firstArg<String>() in map }
+        every { format.getInteger(any()) } answers { map.getValue(firstArg()) }
+        return format
+    }
+
+    /**
+     * Materializes the player, listens for its states and returns the frame
+     * listener plus every state map sent to Dart.
+     */
+    private fun listenForFrames(): Pair<VideoFrameMetadataListener, List<Map<*, *>>> {
+        every { mockHandler.post(any()) } answers {
+            firstArg<Runnable>().run()
+            true
+        }
+        val frameListener = slot<VideoFrameMetadataListener>()
+        every { mockPlayer.setVideoFrameMetadataListener(capture(frameListener)) } just runs
+        materializePlayer()
+        val states = mutableListOf<Any>()
+        val sink = mockk<EventChannel.EventSink>(relaxed = true)
+        every { sink.success(capture(states)) } just runs
+        instance.onListen(null, sink)
+        @Suppress("UNCHECKED_CAST")
+        return frameListener.captured to (states as List<Map<*, *>>)
+    }
+
+    private fun VideoFrameMetadataListener.render(format: MediaFormat?) =
+        onVideoFrameAboutToBeRendered(0L, 0L, mockk(relaxed = true), format)
+
+    @Test
+    fun `SurfaceProducer sends the picture's part of a padded decoder buffer`() {
+        every { mockProducer.surface } returns mockSurface
+        instance.enableTextureOutput(mockRegistry)
+        val (frames, states) = listenForFrames()
+
+        frames.render(paddedFormat())
+
+        assertEquals(paddedCrop, states.last()["textureCrop"])
+    }
+
+    @Test
+    fun `decoder crop is read once per output format`() {
+        every { mockProducer.surface } returns mockSurface
+        instance.enableTextureOutput(mockRegistry)
+        val (frames, states) = listenForFrames()
+        val format = paddedFormat()
+        frames.render(format)
+        val sent = states.size
+        clearMocks(mockHandler, answers = false, recordedCalls = true)
+
+        frames.render(format)
+        frames.render(null)
+
+        verify(exactly = 0) { mockHandler.post(any()) }
+        assertEquals(sent, states.size)
+    }
+
+    @Test
+    fun `decoder crop is dropped when the next output format fills its buffer`() {
+        every { mockProducer.surface } returns mockSurface
+        instance.enableTextureOutput(mockRegistry)
+        val (frames, states) = listenForFrames()
+        frames.render(paddedFormat())
+        assertEquals(paddedCrop, states.last()["textureCrop"])
+
+        frames.render(mediaFormat(MediaFormat.KEY_WIDTH to 720, MediaFormat.KEY_HEIGHT to 1280))
+
+        assertEquals(false, states.last().containsKey("textureCrop"))
+    }
+
+    @Test
+    fun `SurfaceProducer that handles crop sends no decoder crop`() {
+        every { mockProducer.surface } returns mockSurface
+        every { mockProducer.handlesCropAndRotation() } returns true
+        instance.enableTextureOutput(mockRegistry)
+        val (frames, states) = listenForFrames()
+
+        frames.render(paddedFormat())
+
+        assertEquals(false, states.last().containsKey("textureCrop"))
+    }
+
+    @Test
+    fun `legacy SurfaceTexture sends no decoder crop`() {
+        mockkConstructor(Surface::class)
+        try {
+            instance.enableTextureOutput(mockRegistry, useLegacySurface = true)
+            val (frames, states) = listenForFrames()
+
+            frames.render(paddedFormat())
+
+            assertEquals(false, states.last().containsKey("textureCrop"))
+        } finally {
+            unmockkConstructor(Surface::class)
+        }
+    }
+
+    // -- frame-effect stage install --
+
+    @Test
+    fun `installing frame effects keeps the decoder's layout until the stage draws`() {
+        every { mockProducer.surface } returns mockSurface
+        every { mockPlayer.videoFormat } returns Format.Builder().setRotationDegrees(90).build()
+        instance.enableTextureOutput(mockRegistry)
+        val playerListener = slot<Player.Listener>()
+        every { mockPlayer.addListener(capture(playerListener)) } just runs
+        val (frames, states) = listenForFrames()
+        val listener = playerListener.captured
+        listener.onVideoSizeChanged(VideoSize(1080, 1920))
+        frames.render(paddedFormat())
+
+        instance.onMethodCall(
+            MethodCall("setFrameEffects", mapOf("effects" to listOf(mapOf("id" to "comic")))),
+            mockk(relaxed = true),
+        )
+        // The re-prepare resets the size before the stage has drawn anything.
+        listener.onVideoSizeChanged(VideoSize.UNKNOWN)
+
+        // The texture still holds the decoder's sideways, padded buffer.
+        assertEquals(90, states.last()["rotationDegrees"])
+        assertEquals(paddedCrop, states.last()["textureCrop"])
+
+        listener.onRenderedFirstFrame()
+
+        assertEquals(0, states.last()["rotationDegrees"])
+        assertEquals(false, states.last().containsKey("textureCrop"))
+        assertEquals(1080, states.last()["videoWidth"])
+        assertEquals(1920, states.last()["videoHeight"])
     }
 
     @Test

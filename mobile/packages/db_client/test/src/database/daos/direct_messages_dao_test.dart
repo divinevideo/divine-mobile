@@ -438,6 +438,107 @@ void main() {
       });
     });
 
+    group('owner-scoped gift-wrap ids', () {
+      // A gift-wrap id is unique to one recipient only for an INBOUND NIP-17
+      // wrap. An outgoing row stores the recipient's wrap id, and a kind-4
+      // event has one public id shared by sender and recipient, so when both
+      // ends are accounts on this device one `gift_wrap_id` names two owners.
+      // #6645.
+      final ownerA = 'a' * 64;
+      final ownerB = 'b' * 64;
+
+      test(
+        "the recipient account keeps its copy when the sender's outgoing row "
+        'already holds the wrap addressed to it',
+        () async {
+          const rumorId = 'rumor_a_to_b';
+          const wrapForB = 'wrap_addressed_to_b';
+          final sentByA = await dao.insertMessage(
+            id: rumorId,
+            conversationId: conversationId1,
+            senderPubkey: ownerA,
+            content: 'hello b',
+            createdAt: 1700000000,
+            giftWrapId: wrapForB,
+            ownerPubkey: ownerA,
+          );
+          final receivedByB = await dao.insertMessage(
+            id: rumorId,
+            conversationId: conversationId2,
+            senderPubkey: ownerA,
+            content: 'hello b',
+            createdAt: 1700000000,
+            giftWrapId: wrapForB,
+            ownerPubkey: ownerB,
+          );
+
+          expect(sentByA, isTrue);
+          expect(receivedByB, isTrue);
+          expect(
+            await dao.getMessagesForConversation(
+              conversationId2,
+              ownerPubkey: ownerB,
+            ),
+            hasLength(1),
+          );
+        },
+      );
+
+      test(
+        'both ends of a kind-4 event hold their own row when both are local',
+        () async {
+          const eventId = 'kind4_event_id';
+          final sentByA = await dao.insertMessage(
+            id: eventId,
+            conversationId: conversationId1,
+            senderPubkey: ownerA,
+            content: 'hello b',
+            createdAt: 1700000000,
+            giftWrapId: eventId,
+            ownerPubkey: ownerA,
+          );
+          final receivedByB = await dao.insertMessage(
+            id: eventId,
+            conversationId: conversationId2,
+            senderPubkey: ownerA,
+            content: 'hello b',
+            createdAt: 1700000000,
+            giftWrapId: eventId,
+            ownerPubkey: ownerB,
+          );
+
+          expect(sentByA, isTrue);
+          expect(receivedByB, isTrue);
+        },
+      );
+
+      test('a relay redelivery of the same wrap to the same owner is still '
+          'ignored', () async {
+        const wrapId = 'wrap_redelivered';
+        final first = await dao.insertMessage(
+          id: 'rumor_redelivered',
+          conversationId: conversationId1,
+          senderPubkey: 'pubkey_peer',
+          content: 'once',
+          createdAt: 1700000000,
+          giftWrapId: wrapId,
+          ownerPubkey: ownerA,
+        );
+        final redelivered = await dao.insertMessage(
+          id: 'rumor_redelivered',
+          conversationId: conversationId1,
+          senderPubkey: 'pubkey_peer',
+          content: 'once',
+          createdAt: 1700000000,
+          giftWrapId: wrapId,
+          ownerPubkey: ownerA,
+        );
+
+        expect(first, isTrue);
+        expect(redelivered, isFalse);
+      });
+    });
+
     group('getMessagesForConversation', () {
       test(
         'returns messages sorted by createdAt desc (newest first)',
@@ -1088,6 +1189,452 @@ void main() {
           expect(row.deletionRumorJson, isNotNull);
         });
       });
+
+      group('markMessageDeletionUnconfirmed (#10012)', () {
+        const rumor = '{"kind":5,"tags":[["e","msg_del"],["k","14"]]}';
+
+        Future<void> markPending() => dao.markMessageDeletionPending(
+          'msg_del',
+          deletionRumorJson: rumor,
+          ownerPubkey: 'pubkey_alice',
+        );
+
+        Future<bool> markUnconfirmed({String ownerPubkey = 'pubkey_alice'}) =>
+            dao.markMessageDeletionUnconfirmed(
+              'msg_del',
+              ownerPubkey: ownerPubkey,
+            );
+
+        Future<DirectMessageRow> row() async => (await dao.getMessageById(
+          'msg_del',
+          ownerPubkey: 'pubkey_alice',
+        ))!;
+
+        test('records a pending retraction whose retries ran out', () async {
+          await insertOwnMessage();
+          await markPending();
+          await dao.recordHeldDeletionWrap(
+            'msg_del',
+            recipientPubkey: 'pubkey_bob',
+            wrapEventId: 'gw_held',
+            ownerPubkey: 'pubkey_alice',
+          );
+          final heldBefore = (await row()).heldDeletionWraps;
+          expect(heldBefore, isNotNull);
+
+          expect(await markUnconfirmed(), isTrue);
+
+          final unconfirmed = await row();
+          expect(
+            unconfirmed.deletionPublishStatus,
+            equals(DirectMessagesDao.deletionUnconfirmed),
+          );
+          expect(unconfirmed.deletionRumorJson, equals(rumor));
+          expect(unconfirmed.heldDeletionWraps, equals(heldBefore));
+          expect(unconfirmed.isDeleted, isTrue);
+        });
+
+        test("keeps the bubble in its sender's thread", () async {
+          await insertOwnMessage();
+          await markPending();
+          await markUnconfirmed();
+
+          final live = await dao.getMessagesForConversation(
+            conversationId1,
+            ownerPubkey: 'pubkey_alice',
+          );
+          final watched = await dao
+              .watchMessagesForConversation(
+                conversationId1,
+                ownerPubkey: 'pubkey_alice',
+              )
+              .first;
+
+          expect(live.map((m) => m.id), equals(['msg_del']));
+          expect(watched.map((m) => m.id), equals(['msg_del']));
+          expect(
+            await dao.isRetracted('msg_del', ownerPubkey: 'pubkey_alice'),
+            isFalse,
+          );
+        });
+
+        test('stays on the retry worklist', () async {
+          await insertOwnMessage();
+          await markPending();
+          await markUnconfirmed();
+
+          final retryable = await dao.getRetryableOwnMessageDeletions(
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(retryable.map((r) => r.id), equals(['msg_del']));
+        });
+
+        test('never overwrites a confirmed retraction', () async {
+          await insertOwnMessage();
+          await markPending();
+          await dao.markMessageDeletionSent(
+            'msg_del',
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await markUnconfirmed(), isFalse);
+
+          expect(
+            (await row()).deletionPublishStatus,
+            equals('deletion_sent'),
+          );
+        });
+
+        test('never overwrites a blocked retraction', () async {
+          await insertOwnMessage();
+          await markPending();
+          await dao.markMessageDeletionBlocked(
+            'msg_del',
+            restoreToThread: true,
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await markUnconfirmed(), isFalse);
+
+          expect(
+            (await row()).deletionPublishStatus,
+            equals(DirectMessagesDao.deletionBlocked),
+          );
+        });
+
+        test("leaves another account's retraction untouched", () async {
+          await insertOwnMessage();
+          await markPending();
+
+          expect(await markUnconfirmed(ownerPubkey: 'pubkey_bob'), isFalse);
+
+          expect(
+            (await row()).deletionPublishStatus,
+            equals(DirectMessagesDao.deletionPending),
+          );
+        });
+
+        test(
+          'a retry moving it back to pending keeps its held wraps',
+          () async {
+            await insertOwnMessage();
+            await markPending();
+            await dao.recordHeldDeletionWrap(
+              'msg_del',
+              recipientPubkey: 'pubkey_bob',
+              wrapEventId: 'gw_held',
+              ownerPubkey: 'pubkey_alice',
+            );
+            await markUnconfirmed();
+            final heldBefore = (await row()).heldDeletionWraps;
+            expect(heldBefore, isNotNull);
+
+            await markPending();
+
+            final retried = await row();
+            expect(
+              retried.deletionPublishStatus,
+              equals(DirectMessagesDao.deletionPending),
+            );
+            expect(retried.heldDeletionWraps, equals(heldBefore));
+          },
+        );
+      });
+
+      group('markUnconfirmedMessageDeletionPending (#10012)', () {
+        const rumor = '{"kind":5,"tags":[["e","msg_del"],["k","14"]]}';
+
+        Future<void> unconfirmedRetraction() async {
+          await insertOwnMessage();
+          await dao.markMessageDeletionPending(
+            'msg_del',
+            deletionRumorJson: rumor,
+            ownerPubkey: 'pubkey_alice',
+          );
+          await dao.recordHeldDeletionWrap(
+            'msg_del',
+            recipientPubkey: 'pubkey_bob',
+            wrapEventId: 'gw_held',
+            ownerPubkey: 'pubkey_alice',
+          );
+          await dao.markMessageDeletionUnconfirmed(
+            'msg_del',
+            ownerPubkey: 'pubkey_alice',
+          );
+        }
+
+        Future<bool> move({String ownerPubkey = 'pubkey_alice'}) =>
+            dao.markUnconfirmedMessageDeletionPending(
+              'msg_del',
+              ownerPubkey: ownerPubkey,
+            );
+
+        Future<DirectMessageRow> row() async => (await dao.getMessageById(
+          'msg_del',
+          ownerPubkey: 'pubkey_alice',
+        ))!;
+
+        test('moves it back to pending, keeping its kind-5 and held '
+            'wraps', () async {
+          await unconfirmedRetraction();
+          final heldBefore = (await row()).heldDeletionWraps;
+          expect(heldBefore, isNotNull);
+
+          expect(await move(), isTrue);
+
+          final moved = await row();
+          expect(
+            moved.deletionPublishStatus,
+            equals(DirectMessagesDao.deletionPending),
+          );
+          expect(moved.deletionRumorJson, equals(rumor));
+          expect(moved.heldDeletionWraps, equals(heldBefore));
+          expect(moved.isDeleted, isTrue);
+        });
+
+        test('leaves a retraction that settled as sent', () async {
+          await unconfirmedRetraction();
+          await dao.markMessageDeletionSent(
+            'msg_del',
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await move(), isFalse);
+
+          final settled = await row();
+          expect(settled.deletionPublishStatus, equals('deletion_sent'));
+          expect(settled.deletionRumorJson, isNull);
+        });
+
+        test('leaves a retraction that settled as blocked', () async {
+          await unconfirmedRetraction();
+          await dao.markMessageDeletionBlocked(
+            'msg_del',
+            restoreToThread: true,
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await move(), isFalse);
+
+          expect(
+            (await row()).deletionPublishStatus,
+            equals(DirectMessagesDao.deletionBlocked),
+          );
+        });
+
+        test("leaves another account's retraction", () async {
+          await unconfirmedRetraction();
+
+          expect(await move(ownerPubkey: 'pubkey_bob'), isFalse);
+
+          expect(
+            (await row()).deletionPublishStatus,
+            equals(DirectMessagesDao.deletionUnconfirmed),
+          );
+        });
+      });
+
+      group('held deletion wraps (#10012)', () {
+        const recipient = 'pubkey_bob';
+        const otherRecipient = 'pubkey_carol';
+
+        Future<bool> recordWrap({
+          String to = recipient,
+          String wrap = 'gw_held',
+          String ownerPubkey = 'pubkey_alice',
+        }) => dao.recordHeldDeletionWrap(
+          'msg_del',
+          recipientPubkey: to,
+          wrapEventId: wrap,
+          ownerPubkey: ownerPubkey,
+        );
+
+        Future<void> markPending({String rumor = '{"kind":5}'}) =>
+            dao.markMessageDeletionPending(
+              'msg_del',
+              deletionRumorJson: rumor,
+              ownerPubkey: 'pubkey_alice',
+            );
+
+        Future<bool> recordDelivered(
+          Map<String, String> wraps, {
+          String ownerPubkey = 'pubkey_alice',
+        }) => dao.recordDeliveredDeletionWraps(
+          'msg_del',
+          wraps: wraps,
+          ownerPubkey: ownerPubkey,
+        );
+
+        /// A record's entry for a recipient the fallback pool holds [wrap]
+        /// for.
+        Map<String, Object> held(String wrap) => {
+          'wrap': wrap,
+          'delivered': false,
+        };
+
+        /// A record's entry for a recipient who has the retraction through
+        /// [wrap].
+        Map<String, Object> delivered(String wrap) => {
+          'wrap': wrap,
+          'delivered': true,
+        };
+
+        Future<Map<String, dynamic>?> heldWraps() async {
+          final row = await dao.getMessageById(
+            'msg_del',
+            ownerPubkey: 'pubkey_alice',
+          );
+          final json = row!.heldDeletionWraps;
+          return json == null ? null : jsonDecode(json) as Map<String, dynamic>;
+        }
+
+        test('records the wrap held for each recipient', () async {
+          await insertOwnMessage();
+          await markPending();
+
+          expect(await recordWrap(), isTrue);
+          expect(await recordWrap(to: otherRecipient, wrap: 'gw_c'), isTrue);
+
+          expect(await heldWraps(), {
+            recipient: held('gw_held'),
+            otherRecipient: held('gw_c'),
+          });
+        });
+
+        test('records each recipient a retraction reached', () async {
+          await insertOwnMessage();
+          await markPending();
+          await recordWrap();
+
+          expect(await recordDelivered({otherRecipient: 'gw_c'}), isTrue);
+
+          expect(await heldWraps(), {
+            recipient: held('gw_held'),
+            otherRecipient: delivered('gw_c'),
+          });
+        });
+
+        test(
+          'records no recipient on a message with no pending retraction',
+          () async {
+            await insertOwnMessage();
+
+            expect(await recordDelivered({recipient: 'gw_b'}), isFalse);
+
+            expect(await heldWraps(), isNull);
+          },
+        );
+
+        test(
+          'records nothing on a message with no pending retraction',
+          () async {
+            await insertOwnMessage();
+
+            expect(await recordWrap(), isFalse);
+
+            expect(await heldWraps(), isNull);
+          },
+        );
+
+        test("records nothing on another account's message", () async {
+          await insertOwnMessage();
+          await markPending();
+
+          expect(await recordWrap(ownerPubkey: 'pubkey_bob'), isFalse);
+
+          expect(await heldWraps(), isNull);
+        });
+
+        test('records on a retraction whose retries ran out, which an '
+            'automatic retry leaves as it is', () async {
+          await insertOwnMessage();
+          await markPending();
+          await dao.markMessageDeletionUnconfirmed(
+            'msg_del',
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await recordWrap(), isTrue);
+          expect(await recordDelivered({otherRecipient: 'gw_c'}), isTrue);
+
+          expect(await heldWraps(), {
+            recipient: held('gw_held'),
+            otherRecipient: delivered('gw_c'),
+          });
+        });
+
+        test('records nothing on a blocked retraction', () async {
+          await insertOwnMessage();
+          await markPending();
+          await dao.markMessageDeletionBlocked(
+            'msg_del',
+            restoreToThread: true,
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await recordWrap(), isFalse);
+
+          expect(await heldWraps(), isNull);
+        });
+
+        test('go when the retraction is confirmed', () async {
+          await insertOwnMessage();
+          await markPending();
+          await recordWrap();
+
+          await dao.markMessageDeletionSent(
+            'msg_del',
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await heldWraps(), isNull);
+          expect(await recordWrap(), isFalse);
+        });
+
+        test('stay, with the kind-5, when the retraction is blocked', () async {
+          await insertOwnMessage();
+          await markPending();
+          await recordWrap();
+
+          await dao.markMessageDeletionBlocked(
+            'msg_del',
+            restoreToThread: true,
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await heldWraps(), {recipient: held('gw_held')});
+        });
+
+        test('stay when a retry records the same kind-5 again', () async {
+          await insertOwnMessage();
+          await markPending();
+          await recordWrap();
+          await recordDelivered({otherRecipient: 'gw_c'});
+          await dao.markMessageDeletionBlocked(
+            'msg_del',
+            restoreToThread: true,
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          await markPending();
+
+          expect(await heldWraps(), {
+            recipient: held('gw_held'),
+            otherRecipient: delivered('gw_c'),
+          });
+        });
+
+        test('go when a different kind-5 replaces it', () async {
+          await insertOwnMessage();
+          await markPending();
+          await recordWrap();
+
+          await markPending(rumor: '{"kind":5,"created_at":2}');
+
+          expect(await heldWraps(), isNull);
+        });
+      });
     });
 
     group('isRetracted', () {
@@ -1446,7 +1993,10 @@ void main() {
     });
 
     group('hasGiftWrap', () {
-      test('returns true when gift wrap ID exists', () async {
+      final ownerA = 'a' * 64;
+      final ownerB = 'b' * 64;
+
+      test('returns true when the owner holds the gift wrap ID', () async {
         await dao.insertMessage(
           id: 'msg_1',
           conversationId: conversationId1,
@@ -1454,24 +2004,66 @@ void main() {
           content: 'Hello!',
           createdAt: 1700000000,
           giftWrapId: 'gw_unique_123',
+          ownerPubkey: ownerA,
         );
 
-        final exists = await dao.hasGiftWrap('gw_unique_123');
+        final exists = await dao.hasGiftWrap(
+          'gw_unique_123',
+          ownerPubkey: ownerA,
+        );
+        expect(exists, isTrue);
+      });
+
+      test('returns false when only another account holds it', () async {
+        await dao.insertMessage(
+          id: 'msg_1',
+          conversationId: conversationId1,
+          senderPubkey: 'pubkey_alice',
+          content: 'Hello!',
+          createdAt: 1700000000,
+          giftWrapId: 'gw_unique_123',
+          ownerPubkey: ownerA,
+        );
+
+        final exists = await dao.hasGiftWrap(
+          'gw_unique_123',
+          ownerPubkey: ownerB,
+        );
+        expect(exists, isFalse);
+      });
+
+      test("counts a legacy unowned row as the account's own", () async {
+        await dao.insertMessage(
+          id: 'msg_legacy',
+          conversationId: conversationId1,
+          senderPubkey: 'pubkey_alice',
+          content: 'Hello!',
+          createdAt: 1700000000,
+          giftWrapId: 'gw_legacy',
+        );
+
+        final exists = await dao.hasGiftWrap('gw_legacy', ownerPubkey: ownerB);
         expect(exists, isTrue);
       });
 
       test('returns false when gift wrap ID does not exist', () async {
-        final exists = await dao.hasGiftWrap('gw_nonexistent');
+        final exists = await dao.hasGiftWrap(
+          'gw_nonexistent',
+          ownerPubkey: ownerA,
+        );
         expect(exists, isFalse);
       });
 
       test('returns false when table is empty', () async {
-        final exists = await dao.hasGiftWrap('gw_any');
+        final exists = await dao.hasGiftWrap('gw_any', ownerPubkey: ownerA);
         expect(exists, isFalse);
       });
     });
 
     group('giftWrapIdsPresent', () {
+      final ownerA = 'a' * 64;
+      final ownerB = 'b' * 64;
+
       test('returns only the subset of ids that have a message row', () async {
         await dao.insertMessage(
           id: 'msg_present',
@@ -1480,13 +2072,41 @@ void main() {
           content: 'Hello!',
           createdAt: 1700000000,
           giftWrapId: 'gw_present',
+          ownerPubkey: ownerA,
         );
 
         final present = await dao.giftWrapIdsPresent({
           'gw_present',
           'gw_absent',
-        });
+        }, ownerPubkey: ownerA);
         expect(present, equals({'gw_present'}));
+      });
+
+      test('leaves out ids only another account holds', () async {
+        await dao.insertMessage(
+          id: 'msg_a',
+          conversationId: conversationId1,
+          senderPubkey: 'pubkey_alice',
+          content: 'for a',
+          createdAt: 1700000000,
+          giftWrapId: 'gw_a',
+          ownerPubkey: ownerA,
+        );
+        await dao.insertMessage(
+          id: 'msg_b',
+          conversationId: conversationId2,
+          senderPubkey: 'pubkey_alice',
+          content: 'for b',
+          createdAt: 1700000000,
+          giftWrapId: 'gw_b',
+          ownerPubkey: ownerB,
+        );
+
+        final present = await dao.giftWrapIdsPresent({
+          'gw_a',
+          'gw_b',
+        }, ownerPubkey: ownerB);
+        expect(present, equals({'gw_b'}));
       });
 
       test('returns an empty set for empty input', () async {
@@ -1497,9 +2117,13 @@ void main() {
           content: 'Hi',
           createdAt: 1700000000,
           giftWrapId: 'gw_x',
+          ownerPubkey: ownerA,
         );
 
-        expect(await dao.giftWrapIdsPresent(const <String>{}), isEmpty);
+        expect(
+          await dao.giftWrapIdsPresent(const <String>{}, ownerPubkey: ownerA),
+          isEmpty,
+        );
       });
     });
 

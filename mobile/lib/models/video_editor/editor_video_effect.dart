@@ -31,18 +31,122 @@ const snowVideoEffectId = 'divine.snow';
 const confettiVideoEffectId = 'divine.confetti';
 const heartsVideoEffectId = 'divine.hearts';
 const sparklesVideoEffectId = 'divine.sparkles';
+const rainVideoEffectId = 'divine.rain';
+const leavesVideoEffectId = 'divine.leaves';
+const blossomsVideoEffectId = 'divine.blossoms';
+const bubblesVideoEffectId = 'divine.bubbles';
+const bokehVideoEffectId = 'divine.bokeh';
+const notesVideoEffectId = 'divine.notes';
+const starsVideoEffectId = 'divine.stars';
+const firefliesVideoEffectId = 'divine.fireflies';
+const embersVideoEffectId = 'divine.embers';
+const moneyVideoEffectId = 'divine.money';
+const balloonsVideoEffectId = 'divine.balloons';
 
 /// The id Divine's tilt-shift is registered under with pro_video_editor, by
 /// the native `TiltShiftVideoEffect` on Android, iOS and macOS.
 const tiltShiftVideoEffectId = 'divine.tiltShift';
 
+/// The id Divine's swirl is registered under with pro_video_editor, by the
+/// native `SwirlVideoEffect` on Android, iOS and macOS.
+const swirlVideoEffectId = 'divine.swirl';
+
+/// The id Divine's ripple is registered under with pro_video_editor, by the
+/// native `RippleVideoEffect` on Android, iOS and macOS.
+const rippleVideoEffectId = 'divine.ripple';
+
+/// The id Divine's fluted glass is registered under with pro_video_editor, by
+/// the native `FlutedGlassVideoEffect` on Android, iOS and macOS.
+const flutedGlassVideoEffectId = 'divine.flutedGlass';
+
 /// The id Divine's zoom blur is registered under with pro_video_editor, by
 /// the native `ZoomBlurVideoEffect` on Android, iOS and macOS.
 const zoomBlurVideoEffectId = 'divine.zoomBlur';
 
+/// The id Divine's spin blur is registered under with pro_video_editor, by
+/// the native `SpinBlurVideoEffect` on Android, iOS and macOS.
+const spinBlurVideoEffectId = 'divine.spinBlur';
+
 /// The id Divine's comic look is registered under with pro_video_editor, by
 /// the native `ComicVideoEffect` on Android, iOS and macOS.
 const comicVideoEffectId = 'divine.comic';
+
+/// The id Divine's 8-bit look is registered under with pro_video_editor, by
+/// the native `EightBitVideoEffect` on Android, iOS and macOS.
+const eightBitVideoEffectId = 'divine.eightBit';
+
+/// The id Divine's red-cyan 3D look is registered under with
+/// pro_video_editor, by the native `AnaglyphVideoEffect` on Android, iOS and
+/// macOS.
+const anaglyphVideoEffectId = 'divine.anaglyph';
+
+/// The id Divine's two-ink print look is registered under with
+/// pro_video_editor, by the native `RisoVideoEffect` on Android, iOS and
+/// macOS.
+const risoVideoEffectId = 'divine.riso';
+
+/// The ids Divine's colour-graded looks are registered under with
+/// pro_video_editor, one per look, all drawn by the native `LookVideoEffect`
+/// on Android, iOS and macOS from the look's table in [lookTableAssets].
+const tealOrangeLookId = 'divine.look.tealOrange';
+const warmFilmLookId = 'divine.look.warmFilm';
+const slideFilmLookId = 'divine.look.slideFilm';
+const coolFilmLookId = 'divine.look.coolFilm';
+const matteLookId = 'divine.look.matte';
+const bleachBypassLookId = 'divine.look.bleachBypass';
+const crossProcessLookId = 'divine.look.crossProcess';
+const goldenHourLookId = 'divine.look.goldenHour';
+const moonlightLookId = 'divine.look.moonlight';
+const silverLookId = 'divine.look.silver';
+
+/// The 33x33x33 lookup table each look maps colours through, by look id.
+///
+/// `tools/generate_looks.dart` writes them. The native `LookVideoEffect`
+/// loads the same files under the same names, and the picker tile hands them
+/// to `shaders/look.frag`.
+const Map<String, String> lookTableAssets = {
+  tealOrangeLookId: 'assets/looks/teal_orange.png',
+  warmFilmLookId: 'assets/looks/warm_film.png',
+  slideFilmLookId: 'assets/looks/slide_film.png',
+  coolFilmLookId: 'assets/looks/cool_film.png',
+  matteLookId: 'assets/looks/matte.png',
+  bleachBypassLookId: 'assets/looks/bleach_bypass.png',
+  crossProcessLookId: 'assets/looks/cross_process.png',
+  goldenHourLookId: 'assets/looks/golden_hour.png',
+  moonlightLookId: 'assets/looks/moonlight.png',
+  silverLookId: 'assets/looks/silver.png',
+};
+
+/// A group of effects the effects picker lists together, by what they do to
+/// the picture; see [EditorEffectType.category]. In picker order.
+enum EditorEffectCategory {
+  /// Old media: tape, film, old screens, print.
+  retro,
+
+  /// The picture breaks up digitally.
+  glitch,
+
+  /// The picture is bent, mirrored, split or seen through a lens.
+  distort,
+
+  /// Light is added, taken away or flashed.
+  light,
+
+  /// The picture shakes, pulses or leaves a trail.
+  motion,
+
+  /// Things fall or float over the picture.
+  particles,
+
+  /// The colours are graded, as by a film stock or a colourist.
+  looks;
+
+  /// The types listed under this category, in picker order.
+  List<EditorEffectType> get types => [
+    for (final type in EditorEffectType.values)
+      if (type.category == this) type,
+  ];
+}
 
 /// What an editor effect looks like: one of pro_video_editor's built-in
 /// effects, or one Divine implements natively and registers with it.
@@ -91,16 +195,109 @@ class EditorEffectType {
   /// Sparkles: four-pointed glints twinkle over the picture.
   static const sparkles = EditorEffectType.custom(sparklesVideoEffectId);
 
+  /// Rain: drops streak down at a slant.
+  static const rain = EditorEffectType.custom(rainVideoEffectId);
+
+  /// Leaves: autumn leaves rock and turn over as they fall.
+  static const leaves = EditorEffectType.custom(leavesVideoEffectId);
+
+  /// Blossoms: cherry blossom petals flutter down on the wind.
+  static const blossoms = EditorEffectType.custom(blossomsVideoEffectId);
+
+  /// Bubbles: shimmering soap bubbles float up.
+  static const bubbles = EditorEffectType.custom(bubblesVideoEffectId);
+
+  /// Bokeh: soft discs of out-of-focus light drift and glow.
+  static const bokeh = EditorEffectType.custom(bokehVideoEffectId);
+
+  /// Notes: music notes rock as they rise.
+  static const notes = EditorEffectType.custom(notesVideoEffectId);
+
+  /// Stars: gold and silver stars spin as they fall.
+  static const stars = EditorEffectType.custom(starsVideoEffectId);
+
+  /// Fireflies: small lights wander about, glowing up and fading.
+  static const fireflies = EditorEffectType.custom(firefliesVideoEffectId);
+
+  /// Embers: flickering sparks rise and die away.
+  static const embers = EditorEffectType.custom(embersVideoEffectId);
+
+  /// Money: banknotes tumble down.
+  static const money = EditorEffectType.custom(moneyVideoEffectId);
+
+  /// Balloons: balloons on strings swing as they rise.
+  static const balloons = EditorEffectType.custom(balloonsVideoEffectId);
+
   /// Tilt-shift: the top and bottom of the picture blur, so the scene looks
   /// like a miniature.
   static const tiltShift = EditorEffectType.custom(tiltShiftVideoEffectId);
+
+  /// Swirl: the picture twists around its centre, most in the middle and not
+  /// at all from half its shorter side out.
+  static const swirl = EditorEffectType.custom(swirlVideoEffectId);
+
+  /// Ripple: rings spread out from the centre, as on water after a stone
+  /// drops in.
+  static const ripple = EditorEffectType.custom(rippleVideoEffectId);
+
+  /// Fluted glass: the picture is seen through ribbed glass, each rib showing
+  /// a squeezed slice of it.
+  static const flutedGlass = EditorEffectType.custom(flutedGlassVideoEffectId);
 
   /// Zoom blur: the picture streaks outward from its centre, all the time or
   /// on the beat.
   static const zoomBlur = EditorEffectType.custom(zoomBlurVideoEffectId);
 
+  /// Spin blur: the picture streaks around its centre, all the time or on
+  /// the beat.
+  static const spinBlur = EditorEffectType.custom(spinBlurVideoEffectId);
+
   /// Comic: flat poster colours, halftone dots and ink outlines.
   static const comic = EditorEffectType.custom(comicVideoEffectId);
+
+  /// 8-bit: the picture as early console pixel art, in chunky pixels and 256
+  /// colours.
+  static const eightBit = EditorEffectType.custom(eightBitVideoEffectId);
+
+  /// 3D glasses: a red and a cyan copy of the picture laid over each other,
+  /// slightly apart, as in a 3D film for red-cyan glasses.
+  static const anaglyph = EditorEffectType.custom(anaglyphVideoEffectId);
+
+  /// Riso print: the picture printed in pink and blue ink on paper, grainy
+  /// and slightly out of register.
+  static const riso = EditorEffectType.custom(risoVideoEffectId);
+
+  /// Teal and orange: the blockbuster grade, teal shadows and greens, warm
+  /// skin and highlights.
+  static const tealOrange = EditorEffectType.custom(tealOrangeLookId);
+
+  /// Warm film: a soft, warm portrait film with muted greens.
+  static const warmFilm = EditorEffectType.custom(warmFilmLookId);
+
+  /// Slide film: a vivid, contrasty slide film with deep blues.
+  static const slideFilm = EditorEffectType.custom(slideFilmLookId);
+
+  /// Cool film: a clean, cool everyday film with emerald greens.
+  static const coolFilm = EditorEffectType.custom(coolFilmLookId);
+
+  /// Matte: faded, with lifted blacks and muted colours.
+  static const matte = EditorEffectType.custom(matteLookId);
+
+  /// Bleach bypass: cold, hard and silvery, with most colour drained.
+  static const bleachBypass = EditorEffectType.custom(bleachBypassLookId);
+
+  /// Cross process: blue shadows and yellow highlights, as slide film
+  /// developed as a negative.
+  static const crossProcess = EditorEffectType.custom(crossProcessLookId);
+
+  /// Golden hour: late warm sun, with golden highlights.
+  static const goldenHour = EditorEffectType.custom(goldenHourLookId);
+
+  /// Moonlight: day for night, dark and blue.
+  static const moonlight = EditorEffectType.custom(moonlightLookId);
+
+  /// Silver: black-and-white film with deep blacks and darker skies.
+  static const silver = EditorEffectType.custom(silverLookId);
 
   /// Every type the effects editor offers, in picker order.
   static final List<EditorEffectType> values = List.unmodifiable([
@@ -110,12 +307,40 @@ class EditorEffectType {
     drops,
     lightLeak,
     snow,
+    rain,
+    leaves,
+    blossoms,
     confetti,
+    money,
+    stars,
+    balloons,
     hearts,
+    bubbles,
+    notes,
     sparkles,
+    bokeh,
+    fireflies,
+    embers,
     tiltShift,
+    swirl,
+    ripple,
+    flutedGlass,
     zoomBlur,
+    spinBlur,
     comic,
+    eightBit,
+    anaglyph,
+    riso,
+    tealOrange,
+    warmFilm,
+    slideFilm,
+    coolFilm,
+    matte,
+    bleachBypass,
+    crossProcess,
+    goldenHour,
+    moonlight,
+    silver,
   ]);
 
   /// The built-in effect, or `null` for a custom one.
@@ -131,11 +356,54 @@ class EditorEffectType {
   bool get isFlashing => builtIn != null && isFlashingVideoEffect(builtIn!);
 
   /// Whether this type can fire on the beat; see [canFireOnBeat]. Of the
-  /// custom effects only the zoom blur has a hit; the others play all through
-  /// their window.
+  /// custom effects only the zoom blur and the spin blur have a hit; the
+  /// others play all through their window.
   bool get supportsOnBeat => builtIn != null
       ? canFireOnBeat(builtIn!)
-      : customId == zoomBlurVideoEffectId;
+      : customId == zoomBlurVideoEffectId || customId == spinBlurVideoEffectId;
+
+  /// The category the effects picker lists this type under.
+  ///
+  /// A built-in effect without one does not compile. Throws a [StateError]
+  /// for a custom type without one, which the model test listing every type
+  /// in [values] catches.
+  EditorEffectCategory get category => switch (builtIn) {
+    final builtIn? => _builtInVideoEffectCategory(builtIn),
+    null => switch (customId) {
+      comicVideoEffectId ||
+      eightBitVideoEffectId ||
+      anaglyphVideoEffectId ||
+      risoVideoEffectId => EditorEffectCategory.retro,
+      fisheyeVideoEffectId ||
+      dropsVideoEffectId ||
+      tiltShiftVideoEffectId ||
+      swirlVideoEffectId ||
+      rippleVideoEffectId ||
+      flutedGlassVideoEffectId => EditorEffectCategory.distort,
+      lightLeakVideoEffectId => EditorEffectCategory.light,
+      echoVideoEffectId ||
+      zoomBlurVideoEffectId ||
+      spinBlurVideoEffectId => EditorEffectCategory.motion,
+      snowVideoEffectId ||
+      rainVideoEffectId ||
+      leavesVideoEffectId ||
+      blossomsVideoEffectId ||
+      confettiVideoEffectId ||
+      moneyVideoEffectId ||
+      starsVideoEffectId ||
+      balloonsVideoEffectId ||
+      heartsVideoEffectId ||
+      bubblesVideoEffectId ||
+      notesVideoEffectId ||
+      sparklesVideoEffectId ||
+      bokehVideoEffectId ||
+      firefliesVideoEffectId ||
+      embersVideoEffectId => EditorEffectCategory.particles,
+      final id? when lookTableAssets.containsKey(id) =>
+        EditorEffectCategory.looks,
+      _ => throw StateError('$this has no picker category'),
+    },
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -360,6 +628,48 @@ bool canFireOnBeat(VideoEffectType type) => switch (type) {
   VideoEffectType.negativeFlash => true,
   _ => false,
 };
+
+/// The picker category of the built-in effect [type]; exhaustive, so an
+/// effect pro_video_editor adds cannot be left out.
+EditorEffectCategory _builtInVideoEffectCategory(VideoEffectType type) =>
+    switch (type) {
+      VideoEffectType.vhs ||
+      VideoEffectType.tvStatic ||
+      VideoEffectType.oldFilm ||
+      VideoEffectType.filmGrain ||
+      VideoEffectType.signalInterference ||
+      VideoEffectType.crt => EditorEffectCategory.retro,
+      VideoEffectType.glitch ||
+      VideoEffectType.rgbSplit ||
+      VideoEffectType.pixelate ||
+      VideoEffectType.pixelPulse ||
+      VideoEffectType.blockGlitch => EditorEffectCategory.glitch,
+      VideoEffectType.mirror ||
+      VideoEffectType.kaleidoscope ||
+      VideoEffectType.splitScreen ||
+      VideoEffectType.wave => EditorEffectCategory.distort,
+      VideoEffectType.strobe ||
+      VideoEffectType.negativeFlash ||
+      VideoEffectType.vignette ||
+      VideoEffectType.glow => EditorEffectCategory.light,
+      VideoEffectType.shake ||
+      VideoEffectType.zoomPulse => EditorEffectCategory.motion,
+    };
+
+/// [effects] with the looks after the other effects, each in its own order.
+///
+/// A look grades the finished picture, like a colour filter. It also keeps
+/// the grade out of the earlier frames an effect like Echo reads: those come
+/// unprocessed in the preview and in the iOS export, but in the Android
+/// export from the effect before it in the chain, so a look ahead of Echo
+/// would grade its trail on Android only. The preview and the export both
+/// order them this way; see `adjustVideoEffectsOf` for the same reasoning.
+List<CustomVideoEffect> looksLast(Iterable<CustomVideoEffect> effects) => [
+  for (final effect in effects)
+    if (!lookTableAssets.containsKey(effect.id)) effect,
+  for (final effect in effects)
+    if (lookTableAssets.containsKey(effect.id)) effect,
+];
 
 /// [effects] with their windows moved from the editor timeline onto the
 /// exported video, like [videoEffectsOnOutput] for built-in effects.

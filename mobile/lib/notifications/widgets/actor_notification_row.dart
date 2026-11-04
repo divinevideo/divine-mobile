@@ -97,8 +97,13 @@ class _NotificationContent extends StatelessWidget {
       notification.type == NotificationKind.follow &&
       !notification.isFollowingBack;
 
-  bool get _hasComment =>
-      notification.commentText != null && notification.commentText!.isNotEmpty;
+  /// A room mention shows its room where a comment shows its text.
+  String? get _quote => switch (notification.chatTarget) {
+    final target? => '#${target.channelId}',
+    null => notification.commentText,
+  };
+
+  bool get _hasComment => _quote?.isNotEmpty ?? false;
 
   bool _shouldStackFollowBackButton(BuildContext context) {
     return MediaQuery.textScalerOf(context).scale(1) >
@@ -195,7 +200,7 @@ class _NotificationContent extends StatelessWidget {
         if (_hasComment) ...[
           const SizedBox(height: 4),
           NotificationCommentQuote(
-            text: notification.commentText!,
+            text: _quote!,
             timestamp: relativeTime,
           ),
         ],
@@ -239,7 +244,7 @@ class _MessageText extends StatelessWidget {
                 type == NotificationKind.likeComment &&
                     notification.additionalActors.isNotEmpty
                 ? l10n.notificationGroupLikedYourComment(actorName)
-                : _messageFor(l10n, type, actorName),
+                : _messageFor(l10n, notification, actorName),
             actorName: actorName,
             colors: context.vineColors,
           );
@@ -265,12 +270,15 @@ class _MessageText extends StatelessWidget {
 
 String _messageFor(
   AppLocalizations l10n,
-  NotificationKind type,
+  ActorNotification notification,
   String actorName,
 ) {
-  return switch (type) {
+  return switch (notification.type) {
     NotificationKind.follow => l10n.notificationStartedFollowing(actorName),
-    NotificationKind.like => l10n.notificationLikedYourVideo(actorName),
+    NotificationKind.like =>
+      notification.isTaggedVideo
+          ? l10n.notificationLikedTaggedVideo(actorName)
+          : l10n.notificationLikedYourVideo(actorName),
     NotificationKind.mention => l10n.notificationMentionedYou(actorName),
     NotificationKind.likeComment => l10n.notificationLikedYourComment(
       actorName,

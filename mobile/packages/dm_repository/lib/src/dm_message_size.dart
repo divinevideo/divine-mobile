@@ -29,4 +29,11 @@
 /// The remaining 969 bytes of headroom cover rounding rather than growth:
 /// the guard measures the exact rumor that is handed to the wrap builder, and
 /// nothing adds tags between the two.
+///
+/// ## Not every inbox relay stores a rumor this large
+///
+/// nos.lol, one of the app's default DM inbox relays
+/// (`IndexerRelayConfig.dmInboxTaggedRelays`), refuses the gift wrap once the
+/// rumor passes about 28.7 KB. That costs one stored copy, not delivery, so
+/// this bound deliberately stays at the NIP-44 ceiling (#10317).
 const int maxDmRumorBytes = 40000;

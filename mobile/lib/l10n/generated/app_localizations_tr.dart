@@ -1954,6 +1954,248 @@ class AppLocalizationsTr extends AppLocalizations {
   String get metadataSoundsLabel => 'Sesler';
 
   @override
+  String get metadataLinksLabel => 'Bağlantılar';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Bağlantı çıkartması, $url adresini açar';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'Bahsetme çıkartması, profili açar';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Hashtag çıkartması, #$hashtag etiketini açar';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => 'Ses çıkartması, sesi açar';
+
+  @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Konum çıkartması, $place yerini haritada açar';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Geri sayım çıkartması, hatırlatıcı kurar';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Yanıt çıkartması, bu videonun yanıt verdiği şeyi açar';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count gün',
+      one: '$count gün',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Hatırlatıcı kuruldu. Zamanı gelince haber veririz.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Hatırlatıcı kaldırıldı.';
+
+  @override
+  String get videoStickerCountdownOver => 'Bu geri sayım sona erdi.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Hatırlatıcıyı almak için Divine bildirimlerini aç.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'Zamanı geldi! Kaydettiğin geri sayım az önce bitti.';
+
+  @override
+  String get videoStickerQuizRightAnswer => 'Doğru cevap';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Yanlış cevap';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Oy vermek için giriş yap.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Hâlâ bağlanıyor. Birazdan tekrar dene.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Verdiğin oy gönderilemedi. Tekrar dene.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Oylar herkese açık. Herkes neyi seçtiğini görebilir.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count oy',
+      one: '1 oy',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'Yanıtlamak için dokun';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'Yanıtla: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'Sıra sende';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kişi katıldı',
+      one: '$count kişi katıldı',
+      zero: 'İlk sen ol',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count kişi katıldı';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel =>
+      'Kimlerin katıldığını gör';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'Sıra sende: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count yanıt',
+      one: '$count yanıt',
+      zero: 'Henüz yanıt yok',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count yanıt';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count video yanıtını izle',
+      one: '$count video yanıtını izle',
+      zero: 'Video yanıtları, henüz yok',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return '$count video yanıtını izle';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'Yanıtlamak için giriş yap.';
+
+  @override
+  String get videoStickerQuestionUnavailable =>
+      'Hesabın için soruları yanıtlama kullanılamıyor.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'Yanıtla';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'Yanıtın';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'Yanıtını yalnızca $name görür. Bunu bir videoda, adın olmadan paylaşabilir.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'Gönder';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'Yanıt gönderildi.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'Bu yanıt göndermek için çok uzun.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'Yanıtın gönderilemedi. Tekrar dene.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'Katılmak için giriş yap.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'Video yanıtları';
+
+  @override
+  String get videoStickerRepliesEmpty => 'Henüz video yanıtı yok.';
+
+  @override
+  String get videoStickerRepliesLoadFailed => 'Yanıtlar yüklenemedi.';
+
+  @override
+  String get videoStickerRepliesRetry => 'Tekrar dene';
+
+  @override
+  String get videoStickerRepliesPin => 'Sabitle';
+
+  @override
+  String get videoStickerRepliesUnpin => 'Sabitlemeyi kaldır';
+
+  @override
+  String get videoStickerRepliesHide => 'Gizle';
+
+  @override
+  String get videoStickerRepliesShow => 'Göster';
+
+  @override
+  String get videoStickerRepliesPinned => 'Sabitlenmiş';
+
+  @override
+  String get videoStickerRepliesHidden => 'Gizlenmiş';
+
+  @override
+  String get videoStickerRepliesSaveFailed => 'Kaydedilemedi. Tekrar dene.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return '$name kişisinin yanıtını izle';
+  }
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Bu bağlantı Divine dışında açılır. Devam etmeden önce adresi kontrol et.';
+
+  @override
   String get metadataOriginalSound => 'Orijinal ses';
 
   @override
@@ -4306,8 +4548,17 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Sunucuya ulaşılamıyor. Bağlantını kontrol edip tekrar dene.';
+  String get profileVideosLoadFailedTitle => 'Videoların yüklenemedi';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'Videolar yüklenemedi';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Bağlantını kontrol edip tekrar dene.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Tekrar dene';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -4638,6 +4889,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get routeInvalidSoundId => 'Geçersiz ses kimliği';
+
+  @override
+  String get routeInvalidQuestion => 'Geçersiz soru bağlantısı';
 
   @override
   String get routeInvalidCategory => 'Geçersiz kategori';
@@ -6011,6 +6265,19 @@ class AppLocalizationsTr extends AppLocalizations {
   String get dmReelReplyComposerSemanticLabel => 'Bu reel\'e yanıt ver';
 
   @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'Sorduğun soruyu yanıtladı: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'Yanıtladın: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'Videoyla yanıtla';
+
+  @override
   String get dmReelReplyViewChat => 'Sohbeti gör';
 
   @override
@@ -6726,21 +6993,19 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Seçildi';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Seçilmedi';
 
   @override
   String get videoClipSemanticHintDisabled => 'Devre dışı';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Seçmek için dokun, önizlemek için uzun bas';
+  String get videoClipSemanticHintSelect => 'Seçmek için dokun';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Seçimi kaldırmak için dokun, önizlemek için uzun bas';
+  String get videoClipSemanticHintDeselect => 'Seçimi kaldırmak için dokun';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Önizlemek için dokun';
 
   @override
   String get routerInvalidCreator => 'Geçersiz içerik üretici';
@@ -7597,6 +7862,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu taslaktaki yazı ve çıkartmalar hazırlanamadı. Düzenleyicide aç ve tekrar paylaş.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Hesabın soru çıkartması paylaşamaz, çünkü yanıtlar özel mesaj olarak gelir. Çıkartmayı kaldır, sonra yeniden paylaş.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Cihazın bu kadar çok ayrılmış klibi aynı anda dışa aktaramıyor. Birkaçını zaman çizelgesine geri koyup tekrar dene.';
 
@@ -8219,6 +8488,11 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName etiketlendiğin bir videoyu beğendi';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName yorumunu beğendi';
   }
@@ -8577,6 +8851,28 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klip geri yüklendi',
+      one: 'Klip geri yüklendi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count klip kalıcı olarak silindi',
+      one: 'Klip kalıcı olarak silindi',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'Video kaydediciyi kapat';
 
   @override
@@ -8824,13 +9120,139 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectSparkles => 'Pırıltılar';
 
   @override
+  String get videoEditorEffectRain => 'Yağmur';
+
+  @override
+  String get videoEditorEffectLeaves => 'Yapraklar';
+
+  @override
+  String get videoEditorEffectBlossoms => 'Kiraz çiçeği';
+
+  @override
+  String get videoEditorEffectBubbles => 'Baloncuklar';
+
+  @override
+  String get videoEditorEffectBokeh => 'Bokeh';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'Notalar';
+
+  @override
+  String get videoEditorEffectStars => 'Yıldızlar';
+
+  @override
+  String get videoEditorEffectFireflies => 'Ateş böcekleri';
+
+  @override
+  String get videoEditorEffectEmbers => 'Kor';
+
+  @override
+  String get videoEditorEffectMoney => 'Para';
+
+  @override
+  String get videoEditorEffectBalloons => 'Balonlar';
+
+  @override
   String get videoEditorEffectTiltShift => 'Tilt-Shift';
 
   @override
   String get videoEditorEffectZoomBlur => 'Zoom Bulanıklığı';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Dönme Bulanıklığı';
+
+  @override
   String get videoEditorEffectComic => 'Çizgi Roman';
+
+  @override
+  String get videoEditorEffectSwirl => 'Girdap';
+
+  @override
+  String get videoEditorEffectRipple => 'Dalgacık';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'Yivli Cam';
+
+  @override
+  String get videoEditorEffectEightBit => '8-Bit';
+
+  @override
+  String get videoEditorEffectAnaglyph => '3D Gözlük';
+
+  @override
+  String get videoEditorEffectRiso => 'Riso Baskı';
+
+  @override
+  String get videoEditorEffectTealOrange => 'Turkuaz ve Turuncu';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'Sıcak Film';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'Slayt Filmi';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'Soğuk Film';
+
+  @override
+  String get videoEditorEffectMatte => 'Mat';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'Bleach Bypass';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'Çapraz İşlem';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'Altın Saat';
+
+  @override
+  String get videoEditorEffectMoonlight => 'Ay Işığı';
+
+  @override
+  String get videoEditorEffectSilver => 'Gümüş';
+
+  @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Bozulma';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Işık';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Hareket';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Parçacıklar';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'Görünümler';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Doğal';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Canlı';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Sıcak';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Soğuk';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Vintage';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Siyah beyaz';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Tonlar';
 
   @override
   String get videoEditorDropsSettingsTitle => 'Damlaları ayarla';
@@ -10548,6 +10970,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'Yükseklik';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'Yana doğru';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Yukarıdan aşağı';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Özel nokta';
 
   @override
@@ -10633,6 +11061,420 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorStickerSearchHint => 'Çıkartma ara...';
+
+  @override
+  String get videoEditorInfoStickersTitle => 'Bilgi';
+
+  @override
+  String get videoEditorSocialStickersTitle => 'Sosyal';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Bahsetme';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Ses';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'adın';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtag';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Birini seç';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Gönderinde bu kişiden bahsedilir ve bildirim alır.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Hashtag yaz';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Gönderinin hashtag\'lerine de eklenir.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'Şarkı sözünden bir satır (isteğe bağlı)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Bağlantı';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Web adresi';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'Başlık (isteğe bağlı)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => 'Adres gönderine eklenir.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'Bu henüz bir web adresi değil.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Etkileşimli';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Geri sayım';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Yaz';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Neye geri sayıyorsun?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'İzleyenler kalan süreyi görür ve hatırlatıcı kurabilir.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'O an geçti. Yenisini seç.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Yanıt';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'İzleyenler dokunup neye yanıt verdiğini görür.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Anket';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Test';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Kaydırıcı';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Hangisi?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Evet';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Hayır';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine hangi yıl çıktı?';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => 'Ne kadar açsın?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Bir soru sor';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return '$number. yanıt';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return '$number. yanıtı kaldır';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return '$number. yanıtı doğru olarak işaretle';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Yanıt ekle';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'İzleyenler oy verince sonuçları görür. Oylar herkese açıktır.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Doğru yanıtı işaretle. İzleyenler bir yanıt seçince onu görür.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'İzleyenler yanıt vermek için emojiyi sürükler ve ortalamada nereye düştüğünü görür.';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'Soru';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'Sıra sende';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'Yanıtlar';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => 'Bana her şeyi sor';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => 'Masa düzenini göster';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'Videoyla yanıt ver';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'Sorduğun soru';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      'İnsanlar ne göstersin?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'Başlık';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'Yanıtlar sana özel mesaj olarak gelir.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'İzleyenler kendi videolarıyla yanıt verir. Her yanıt bu hashtag\'i alır ve senin videona bağlanır.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'Bu videoya videoyla yanıt verenleri gösterir. İzleyenler dokunup yanıtları izler.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'Bu çıkartma, izleyenler dokunabilsin diye bu kutuda kalır';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Nota';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Plak';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Kaset';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Ekolayzer';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Oynatıcı';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Saat';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Tarih';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Konum';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Hava durumu';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Rakım';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Pil';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Açık';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Koyu';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Yeşil';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Kontur';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Dijital';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analog';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Cam';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Sarı';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Sade';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Yeri değiştir';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Bu cihazda yer arama kullanılamıyor.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Kayıt · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Şimdi · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Bugün · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Gün sayacı';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Güneş';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Ay';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC sayacı';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Film';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Kamera';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return '$day. gün';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return '$day. gün / $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Gün';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Toplam gün (isteğe bağlı)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'İğne';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Bayrak';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Küre';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Harita';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Yeni ay';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Büyüyen hilal';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'İlk dördün';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Büyüyen şişkin ay';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Dolunay';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Küçülen şişkin ay';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Son dördün';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Küçülen hilal';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => 'Şehir veya yer ara';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Yer bulunamadı';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Yer aranamadı. Tekrar dene.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Videona yalnızca yerin adı girer, asla tam konumun değil.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Yükleniyor…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed => 'Yüklenemedi. Tekrar dene.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'Veriler: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Eski videolar için hava durumu yok, bu yüzden şu anki hava durumu gösteriliyor.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Güneşli';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Açık gece';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Parçalı bulutlu';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Bulutlu';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Sis';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Yağmur';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Sağanak';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Kar';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm =>
+      'Gök gürültülü fırtına';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Saatler telefonunun saat diliminde.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Sıcaklık';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Birim';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Pil seviyesi';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Çıkartma ekle';
 
   @override
   String get videoEditorSelectFontSemanticLabel => 'Yazı tipi seç';
@@ -12229,6 +13071,11 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" ekle';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, videondaki bir çıkartmadan';
   }
 
   @override
@@ -14185,10 +15032,87 @@ class AppLocalizationsTr extends AppLocalizations {
   String get ideasDescriptionSix => 'Bunu buraya bırakıyorum.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Odalar, $displayCount okunmamış mesaj',
+      one: 'Odalar, $displayCount okunmamış mesaj',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount yeni',
+      one: '$displayCount yeni',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount okunmamış mesaj',
+      one: '$displayCount okunmamış mesaj',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount kişi',
+      one: '$displayCount kişi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount mesaj',
+      one: '$displayCount mesaj',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Son 24 saat';
+
+  @override
+  String get messagesRoomLoading => 'Hareketlilik kontrol ediliyor…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Hareketlilik yüklenemedi.';
+
+  @override
+  String get messagesRoomEmpty => 'Son zamanlarda mesaj yok. Bir merhaba de.';
+
+  @override
   String get messagesDirect => 'Doğrudan';
 
   @override
   String get messagesRooms => 'Odalar';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Odalar ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Herkese açık test odaları';
@@ -14521,9 +15445,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14544,11 +15465,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -14582,9 +15498,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -14647,4 +15560,76 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
+
+  @override
+  String get creatorHighlightLabel => 'Günün öne çıkan anı';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'Bugün oluşturduğun videolar: $count.';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle =>
+      'Bu hafta biraz daha senin izini taşıyor.';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'Bu hafta ürettiğin gün sayısı: $count. Devam et.';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Bu hafta paylaştığın videoların şu ana kadarki toplam izlenme sayısı: $countString.';
+  }
+
+  @override
+  String get creatorHighlightTopVideo =>
+      'Bu hafta paylaştığın videolar arasında en çok izlenen';
+
+  @override
+  String get creatorHighlightCreate => 'Bir tane daha yap';
+
+  @override
+  String get creatorHighlightAnalytics => 'İstatistiklerine bak';
+
+  @override
+  String get creatorHighlightWatch => 'Videoyu izle';
 }

@@ -12,7 +12,13 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+import 'support/live_dm_reads.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+}
 
 class _MockNIP17MessageService extends Mock implements NIP17MessageService {}
 
@@ -77,7 +83,7 @@ void main() {
         // No relay subscription should have been opened.
         verifyNever(
           () => mockNostrClient.subscribe(
-            any(),
+            any(that: isLiveDmRead),
             subscriptionId: any(named: 'subscriptionId'),
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -114,7 +120,12 @@ void main() {
         );
 
         // No DB reads checking for existing gift wraps.
-        verifyNever(() => mockDirectMessagesDao.hasGiftWrap(any()));
+        verifyNever(
+          () => mockDirectMessagesDao.hasGiftWrap(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        );
 
         // No DB writes persisting messages.
         verifyNever(

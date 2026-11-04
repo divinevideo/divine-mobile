@@ -183,9 +183,12 @@ void main() {
           videoDimensions: '1080x1920',
           videoDuration: 30,
           videoBlurhash: 'LEHV6nWB2y',
+          stickerTags: const [
+            ['sticker', 'reply', 'root', '0.5 0.5 0.5 0.1', '0'],
+          ],
         );
 
-        expect(comment.props, hasLength(16));
+        expect(comment.props, hasLength(17));
         expect(
           comment.props,
           equals([
@@ -205,6 +208,9 @@ void main() {
             '1080x1920',
             30,
             'LEHV6nWB2y',
+            [
+              ['sticker', 'reply', 'root', '0.5 0.5 0.5 0.1', '0'],
+            ],
           ]),
         );
       });

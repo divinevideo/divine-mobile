@@ -12,6 +12,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -178,6 +179,22 @@ void main() {
           ],
           invocation.namedArguments[#content] as String,
           createdAt: invocation.namedArguments[#createdAt] as int?,
+        ),
+      );
+      when(
+        () => messageService.buildDeletionRumor(
+          targetEventId: any(named: 'targetEventId'),
+          targetKind: any(named: 'targetKind'),
+        ),
+      ).thenAnswer(
+        (invocation) => Event(
+          _owner,
+          EventKind.eventDeletion,
+          [
+            ['e', invocation.namedArguments[#targetEventId] as String],
+            ['k', '${invocation.namedArguments[#targetKind]}'],
+          ],
+          '',
         ),
       );
       when(

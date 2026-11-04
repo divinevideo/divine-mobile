@@ -17,6 +17,7 @@ import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_tab_bottom_inset_sliver.dart';
 import 'package:openvine/widgets/profile/profile_tab_empty_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_error_state.dart';
@@ -171,24 +172,15 @@ class _ProfileCollabsGridState extends ConsumerState<ProfileCollabsGrid>
           slivers: [
             SliverPadding(
               padding: const EdgeInsets.all(2),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 2,
-                  mainAxisSpacing: 2,
+              sliver: ProfileMasonryGrid(
+                childCount: collabVideos.length,
+                aspectRatioOf: (index) =>
+                    profileTileAspectRatioForVideo(collabVideos[index]),
+                itemBuilder: (context, index) => _CollabGridTile(
+                  videoEvent: collabVideos[index],
+                  index: index,
+                  onTap: () => _onVideoTapped(index, collabVideos),
                 ),
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  if (index >= collabVideos.length) {
-                    return const SizedBox.shrink();
-                  }
-
-                  final videoEvent = collabVideos[index];
-                  return _CollabGridTile(
-                    videoEvent: videoEvent,
-                    index: index,
-                    onTap: () => _onVideoTapped(index, collabVideos),
-                  );
-                }, childCount: collabVideos.length),
               ),
             ),
             if (state.isLoadingMore)

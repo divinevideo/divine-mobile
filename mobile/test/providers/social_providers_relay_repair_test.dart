@@ -140,6 +140,13 @@ void main() {
           environment: any(named: 'environment'),
         ),
       ).thenAnswer((_) async => []);
+      when(
+        () => dao.getExhaustedHeldForOwner(
+          ownerPubkey: any(named: 'ownerPubkey'),
+          maxRetries: any(named: 'maxRetries'),
+          environment: any(named: 'environment'),
+        ),
+      ).thenAnswer((_) async => []);
       final database = _MockAppDatabase();
       when(() => database.outgoingDmsDao).thenReturn(dao);
 

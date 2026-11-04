@@ -251,6 +251,10 @@ Future<List<VideoEvent>> enrichVideosWithNostrTags(
           nostrEventTags: video.nostrEventTags.isEmpty
               ? parsed.nostrEventTags
               : video.nostrEventTags,
+          linkUrls: video.linkUrls.isEmpty ? parsed.linkUrls : video.linkUrls,
+          stickerRegions: video.stickerRegions.isEmpty
+              ? parsed.stickerRegions
+              : video.stickerRegions,
           nostrLikeCount: mergeNullableEngagementMax(
             parsed.nostrLikeCount,
             video.nostrLikeCount,

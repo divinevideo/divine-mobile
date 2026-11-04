@@ -2075,6 +2075,261 @@ class AppLocalizationsPl extends AppLocalizations {
   String get metadataSoundsLabel => 'Dźwięki';
 
   @override
+  String get metadataLinksLabel => 'Linki';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Naklejka z linkiem, otwiera $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'Naklejka ze wzmianką, otwiera profil';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Naklejka z hashtagiem, otwiera #$hashtag';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel =>
+      'Naklejka z dźwiękiem, otwiera dźwięk';
+
+  @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Naklejka z miejscem, otwiera $place na mapie';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Naklejka z odliczaniem, ustawia przypomnienie';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Naklejka z odpowiedzią, otwiera to, na co odpowiada ten film';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dnia',
+      many: '$count dni',
+      few: '$count dni',
+      one: '$count dzień',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Przypomnienie ustawione. Damy znać, gdy nadejdzie czas.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Przypomnienie usunięte.';
+
+  @override
+  String get videoStickerCountdownOver => 'To odliczanie już się skończyło.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Włącz powiadomienia dla Divine, żeby dostać przypomnienie.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'Już czas! Zapisane odliczanie właśnie się skończyło.';
+
+  @override
+  String get videoStickerQuizRightAnswer => 'Poprawna odpowiedź';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Błędna odpowiedź';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Zaloguj się, aby głosować.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Wciąż się łączymy. Spróbuj ponownie za chwilę.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Twój głos nie dotarł. Spróbuj ponownie.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Głosy są publiczne. Każdy może zobaczyć twój wybór.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count głosu',
+      many: '$count głosów',
+      few: '$count głosy',
+      one: '1 głos',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'Stuknij, aby odpowiedzieć';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'Odpowiedz: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'Twoja kolej';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count osoby dołączyło',
+      many: '$count osób dołączyło',
+      few: '$count osoby dołączyły',
+      one: '$count osoba dołączyła',
+      zero: 'Ty zaczynasz',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count osób dołączyło';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel =>
+      'Zobacz, kto bierze udział';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'Twoja kolej: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count odpowiedzi',
+      many: '$count odpowiedzi',
+      few: '$count odpowiedzi',
+      one: '$count odpowiedź',
+      zero: 'Nie ma jeszcze odpowiedzi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count odpowiedzi';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Obejrzyj $count odpowiedzi wideo',
+      many: 'Obejrzyj $count odpowiedzi wideo',
+      few: 'Obejrzyj $count odpowiedzi wideo',
+      one: 'Obejrzyj $count odpowiedź wideo',
+      zero: 'Odpowiedzi wideo, jeszcze żadnej',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return 'Obejrzyj $count odpowiedzi wideo';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'Zaloguj się, aby odpowiedzieć.';
+
+  @override
+  String get videoStickerQuestionUnavailable =>
+      'Odpowiadanie na pytania nie jest dostępne na twoim koncie.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'Odpowiedz';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'Twoja odpowiedź';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'Tylko $name widzi twoją odpowiedź. Może ją pokazać w filmie, bez twojego imienia.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'Wyślij';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'Odpowiedź wysłana.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'Ta odpowiedź jest za długa, żeby ją wysłać.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'Twoja odpowiedź nie dotarła. Spróbuj ponownie.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'Zaloguj się, aby dołączyć.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'Odpowiedzi wideo';
+
+  @override
+  String get videoStickerRepliesEmpty => 'Nie ma jeszcze odpowiedzi wideo.';
+
+  @override
+  String get videoStickerRepliesLoadFailed =>
+      'Nie udało się wczytać odpowiedzi.';
+
+  @override
+  String get videoStickerRepliesRetry => 'Spróbuj ponownie';
+
+  @override
+  String get videoStickerRepliesPin => 'Przypnij';
+
+  @override
+  String get videoStickerRepliesUnpin => 'Odepnij';
+
+  @override
+  String get videoStickerRepliesHide => 'Ukryj';
+
+  @override
+  String get videoStickerRepliesShow => 'Pokaż';
+
+  @override
+  String get videoStickerRepliesPinned => 'Przypięta';
+
+  @override
+  String get videoStickerRepliesHidden => 'Ukryta';
+
+  @override
+  String get videoStickerRepliesSaveFailed =>
+      'Nie udało się zapisać. Spróbuj ponownie.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'Obejrzyj odpowiedź od $name';
+  }
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Ten link otwiera się poza Divine. Sprawdź adres, zanim przejdziesz dalej.';
+
+  @override
   String get metadataOriginalSound => 'Oryginalny dźwięk';
 
   @override
@@ -4493,8 +4748,19 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Nie można połączyć się z serwerem. Sprawdź połączenie i spróbuj ponownie.';
+  String get profileVideosLoadFailedTitle =>
+      'Nie udało się wczytać twoich filmów';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle =>
+      'Nie udało się wczytać filmów';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Sprawdź połączenie i spróbuj ponownie.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Spróbuj ponownie';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -4824,6 +5090,9 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get routeInvalidSoundId => 'Nieprawidłowy ID dźwięku';
+
+  @override
+  String get routeInvalidQuestion => 'Nieprawidłowy link do pytania';
 
   @override
   String get routeInvalidCategory => 'Nieprawidłowa kategoria';
@@ -6235,6 +6504,19 @@ class AppLocalizationsPl extends AppLocalizations {
   String get dmReelReplyComposerSemanticLabel => 'Odpowiedz na ten reel';
 
   @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'Odpowiedź na twoje pytanie: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'Twoja odpowiedź na: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'Odpowiedz filmem';
+
+  @override
   String get dmReelReplyViewChat => 'Zobacz czat';
 
   @override
@@ -6976,21 +7258,19 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Zaznaczono';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Niezaznaczono';
 
   @override
   String get videoClipSemanticHintDisabled => 'Wyłączono';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Dotknij, aby wybrać, przytrzymaj, aby podejrzeć';
+  String get videoClipSemanticHintSelect => 'Dotknij, aby wybrać';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Dotknij, aby odznaczyć, przytrzymaj, aby podejrzeć';
+  String get videoClipSemanticHintDeselect => 'Dotknij, aby odznaczyć';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Dotknij, aby podejrzeć';
 
   @override
   String get routerInvalidCreator => 'Nieprawidłowy twórca';
@@ -7861,6 +8141,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się przygotować tekstu i naklejek z tej wersji roboczej. Otwórz ją w edytorze i opublikuj ponownie.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Twoje konto nie może opublikować naklejki z pytaniem, bo odpowiedzi przychodzą jako prywatne wiadomości. Usuń ją i opublikuj ponownie.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Twoje urządzenie nie może wyeksportować naraz tylu odłączonych klipów. Przywróć kilka na oś czasu i spróbuj ponownie.';
 
@@ -8494,6 +8778,11 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName polubił(a) wideo, na którym Cię oznaczono';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName polubili Twój komentarz';
   }
@@ -8859,6 +9148,32 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Przywrócono $count klipu',
+      many: 'Przywrócono $count klipów',
+      few: 'Przywrócono $count klipy',
+      one: 'Przywrócono klip',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Trwale usunięto $count klipu',
+      many: 'Trwale usunięto $count klipów',
+      few: 'Trwale usunięto $count klipy',
+      one: 'Trwale usunięto klip',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'Zamknij rejestrator wideo';
 
   @override
@@ -9110,13 +9425,139 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorEffectSparkles => 'Iskierki';
 
   @override
+  String get videoEditorEffectRain => 'Deszcz';
+
+  @override
+  String get videoEditorEffectLeaves => 'Liście';
+
+  @override
+  String get videoEditorEffectBlossoms => 'Płatki wiśni';
+
+  @override
+  String get videoEditorEffectBubbles => 'Bańki';
+
+  @override
+  String get videoEditorEffectBokeh => 'Bokeh';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'Nuty';
+
+  @override
+  String get videoEditorEffectStars => 'Gwiazdy';
+
+  @override
+  String get videoEditorEffectFireflies => 'Świetliki';
+
+  @override
+  String get videoEditorEffectEmbers => 'Żar';
+
+  @override
+  String get videoEditorEffectMoney => 'Pieniądze';
+
+  @override
+  String get videoEditorEffectBalloons => 'Balony';
+
+  @override
   String get videoEditorEffectTiltShift => 'Tilt-shift';
 
   @override
   String get videoEditorEffectZoomBlur => 'Rozmycie zoomu';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Rozmycie obrotowe';
+
+  @override
   String get videoEditorEffectComic => 'Komiks';
+
+  @override
+  String get videoEditorEffectSwirl => 'Wir';
+
+  @override
+  String get videoEditorEffectRipple => 'Zmarszczki';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'Szkło ryflowane';
+
+  @override
+  String get videoEditorEffectEightBit => '8-bit';
+
+  @override
+  String get videoEditorEffectAnaglyph => 'Okulary 3D';
+
+  @override
+  String get videoEditorEffectRiso => 'Risograf';
+
+  @override
+  String get videoEditorEffectTealOrange => 'Teal & Orange';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'Ciepły film';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'Diapozytyw';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'Chłodny film';
+
+  @override
+  String get videoEditorEffectMatte => 'Mat';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'Bleach bypass';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'Cross process';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'Złota godzina';
+
+  @override
+  String get videoEditorEffectMoonlight => 'Światło księżyca';
+
+  @override
+  String get videoEditorEffectSilver => 'Srebro';
+
+  @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Zniekształcenia';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Światło';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Ruch';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Cząsteczki';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'Looki';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Naturalne';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Żywe';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Ciepłe';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Zimne';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Vintage';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Czarno-białe';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Odcienie';
 
   @override
   String get videoEditorDropsSettingsTitle => 'Dostosuj krople';
@@ -10844,6 +11285,12 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'Wysokość';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'Na boki';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Z góry na dół';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Własny punkt';
 
   @override
@@ -10932,6 +11379,425 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoEditorStickerSearchHint => 'Szukaj naklejek...';
+
+  @override
+  String get videoEditorInfoStickersTitle => 'Info';
+
+  @override
+  String get videoEditorSocialStickersTitle => 'Społecznościowe';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Wzmianka';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Dźwięk';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'twojeimie';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtag';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Wybierz osobę';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Ta osoba zostanie wspomniana w twoim poście i dostanie powiadomienie.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Wpisz hashtag';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Zostanie też dodany do hashtagów twojego posta.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'Wers tekstu piosenki (opcjonalnie)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Link';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Adres strony';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'Tytuł (opcjonalnie)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'Adres zostanie dodany do twojego posta.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'To jeszcze nie jest adres strony.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Interaktywne';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Odliczanie';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Lato';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Do czego odliczasz?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Widzowie widzą, ile czasu zostało, i mogą ustawić przypomnienie.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Ten moment już minął. Wybierz nowy.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Odpowiedź';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'Widzowie stukają w nią, żeby zobaczyć, na co odpowiadasz.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Ankieta';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Quiz';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Suwak';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Które?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Tak';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Nie';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine wystartował w…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'Jak bardzo chce ci się jeść?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Zadaj pytanie';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Odpowiedź $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Usuń odpowiedź $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Oznacz odpowiedź $number jako poprawną';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Dodaj odpowiedź';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Widzowie zobaczą wyniki po oddaniu głosu. Głosy są publiczne.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Zaznacz poprawną odpowiedź. Widzowie zobaczą ją po udzieleniu odpowiedzi.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Widzowie przeciągają emoji, aby odpowiedzieć, i widzą, gdzie średnio ląduje.';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'Pytanie';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'Twoja kolej';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'Odpowiedzi';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample =>
+      'Zapytaj mnie o cokolwiek';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => 'Pokaż swoje biurko';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'Odpowiedz filmem';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'Twoje pytanie';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      'Co mają pokazać inni?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'Tytuł';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'Odpowiedzi trafiają do ciebie jako prywatne wiadomości.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'Widzowie odpowiadają własnym filmem. Każda odpowiedź dostaje ten hashtag i prowadzi z powrotem do twojego filmu.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'Pokazuje odpowiedzi wideo na ten film. Stuknięcie otwiera odpowiedzi.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'Ta naklejka zostaje w tej ramce, żeby widzowie mogli w nią stuknąć';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Nuta';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Płyta';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Kaseta';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Korektor';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Odtwarzacz';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Godzina';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Data';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Miejsce';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Pogoda';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Wysokość';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Bateria';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Jasny';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Ciemny';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Zielony';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Kontur';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Cyfrowy';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analogowy';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Szkło';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Żółty';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Prosty';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Zmień miejsce';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Wyszukiwanie miejsc nie jest dostępne na tym urządzeniu.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Nagranie · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Teraz · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Dziś · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Licznik dni';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Słońce';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Księżyc';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'Licznik REC';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Klisza';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Kamera';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Dzień $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Dzień $day z $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Dzień';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Liczba dni (opcjonalnie)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Pinezka';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Flaga';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Globus';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Mapa';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Nów';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Przybywający sierp';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Pierwsza kwadra';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Przybywający garb';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Pełnia';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Ubywający garb';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Ostatnia kwadra';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Ubywający sierp';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'Szukaj miasta lub miejsca';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Nie znaleziono miejsc';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Nie udało się wyszukać miejsc. Spróbuj ponownie.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Do twojego filmu trafia tylko nazwa miejsca, nigdy twoja dokładna lokalizacja.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Wczytywanie…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Nie udało się wczytać. Spróbuj ponownie.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'Dane: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Dla starszych filmów nie ma danych o pogodzie, więc to pogoda w tej chwili.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Słonecznie';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Bezchmurna noc';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy =>
+      'Częściowe zachmurzenie';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Pochmurno';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Mgła';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Deszcz';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Przelotne opady';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Śnieg';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Burza';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Godziny są w strefie czasowej twojego telefonu.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Temperatura';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Jednostka';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Poziom baterii';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Dodaj naklejkę';
 
   @override
   String get videoEditorSelectFontSemanticLabel => 'Wybierz czcionkę';
@@ -12560,6 +13426,11 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Dodaj „#$tag\"';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, z naklejki w twoim filmie';
   }
 
   @override
@@ -14559,10 +15430,98 @@ class AppLocalizationsPl extends AppLocalizations {
   String get ideasDescriptionSix => 'Zostawiam to tutaj.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Pokoje, $displayCount nieprzeczytanej wiadomości',
+      many: 'Pokoje, $displayCount nieprzeczytanych wiadomości',
+      few: 'Pokoje, $displayCount nieprzeczytane wiadomości',
+      one: 'Pokoje, $displayCount nieprzeczytana wiadomość',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nieprzeczytane: $displayCount',
+      many: 'Nieprzeczytane: $displayCount',
+      few: 'Nieprzeczytane: $displayCount',
+      one: 'Nieprzeczytane: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount nieprzeczytanej wiadomości',
+      many: '$displayCount nieprzeczytanych wiadomości',
+      few: '$displayCount nieprzeczytane wiadomości',
+      one: '$displayCount nieprzeczytana wiadomość',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount osoby',
+      many: '$displayCount osób',
+      few: '$displayCount osoby',
+      one: '$displayCount osoba',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount wiadomości',
+      many: '$displayCount wiadomości',
+      few: '$displayCount wiadomości',
+      one: '$displayCount wiadomość',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Ostatnie 24 godz.';
+
+  @override
+  String get messagesRoomLoading => 'Sprawdzanie aktywności…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Nie udało się wczytać aktywności.';
+
+  @override
+  String get messagesRoomEmpty =>
+      'Ostatnio nie było wiadomości. Przywitaj się.';
+
+  @override
   String get messagesDirect => 'Bezpośrednie';
 
   @override
   String get messagesRooms => 'Pokoje';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Pokoje ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Publiczne pokoje testowe';
@@ -14895,9 +15854,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14918,11 +15874,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -14956,9 +15907,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -15021,4 +15969,76 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
+
+  @override
+  String get creatorHighlightLabel => 'Twój moment dnia';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'Twoje dzisiejsze filmy: $count.';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle =>
+      'W tym tygodniu jest trochę więcej ciebie.';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'Dni twórczości w tym tygodniu: $count. Twórz dalej.';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Łączna liczba wyświetleń do tej pory filmów opublikowanych przez ciebie w tym tygodniu: $countString.';
+  }
+
+  @override
+  String get creatorHighlightTopVideo =>
+      'Najczęściej oglądany z twoich filmów opublikowanych w tym tygodniu';
+
+  @override
+  String get creatorHighlightCreate => 'Stwórz kolejny';
+
+  @override
+  String get creatorHighlightAnalytics => 'Zobacz swoje statystyki';
+
+  @override
+  String get creatorHighlightWatch => 'Obejrzyj film';
 }

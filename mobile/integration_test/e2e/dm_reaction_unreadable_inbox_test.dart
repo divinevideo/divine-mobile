@@ -19,6 +19,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/nostr.dart';
 import 'package:nostr_sdk/relay/relay_base.dart';
 import 'package:nostr_sdk/relay/relay_status.dart';
@@ -178,10 +179,16 @@ void main() {
       'ARM A: a reaction whose inbox lookup exceeded its budget stays pending '
       'and keeps its rumor, even though the pool confirmed the wrap',
       (tester) async {
-        // The relay serves the inbox, but resolution is abandoned before it
-        // can answer — the `on TimeoutException` exit in `_queryOwnDmInbox`,
-        // which is documented as "Deliberately `failed`, never `absent`".
-        final relay = await FakeRelay.start(reply: recipientInbox());
+        // The relay holds the inbox but never settles the kind-10050 REQ, so
+        // the 1ms budget expires into the `on TimeoutException` exit in
+        // `_queryOwnDmInbox`, documented as "Deliberately `failed`, never
+        // `absent`". Without the stall the budget races a relay that can
+        // still answer: when the answer wins, the inbox resolves `found`, the
+        // reaction is scored delivered, and this arm fails at random (#10642).
+        final relay = await FakeRelay.start(
+          reply: recipientInbox(),
+          stallReqForKinds: const {EventKind.dmRelaysList},
+        );
         addTearDown(relay.stop);
         final stack = await buildStack(relay);
         DmRepository.inboxResolutionBudget = const Duration(milliseconds: 1);
@@ -219,7 +226,13 @@ void main() {
       'ARM B (control): the MESSAGE path on the same unreadable inbox does '
       'not report delivery either (#7317, PR #8436)',
       (tester) async {
-        final relay = await FakeRelay.start(reply: recipientInbox());
+        // The same unreadable inbox as ARM A, stalled for the same reason:
+        // with only the 1ms budget, a relay answer that wins routes the
+        // message to the advertised inbox and this control reports delivery.
+        final relay = await FakeRelay.start(
+          reply: recipientInbox(),
+          stallReqForKinds: const {EventKind.dmRelaysList},
+        );
         addTearDown(relay.stop);
         final stack = await buildStack(relay);
         DmRepository.inboxResolutionBudget = const Duration(milliseconds: 1);
@@ -275,7 +288,7 @@ void main() {
         // it to `unreadable`.
         final relay = await FakeRelay.start(
           reply: recipientInbox(),
-          stallReqForKinds: const {10050},
+          stallReqForKinds: const {EventKind.dmRelaysList},
         );
         addTearDown(relay.stop);
         final stack = await buildStack(relay);

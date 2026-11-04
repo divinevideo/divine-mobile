@@ -166,11 +166,15 @@ abstract final class CommentsScreen {
   /// [CommentReactionsBloc]) via [MultiBlocProvider] and adds [BlocListener]s
   /// that bridge composer and reactions outbox signals into list-bloc store
   /// mutations.
+  ///
+  /// [focusCommentId] names a comment the sheet scrolls to once it is
+  /// loaded, such as the one a tapped reply sticker replies to.
   static Future<void> show(
     BuildContext context,
     VideoEvent video, {
     int? initialCommentCount,
     ValueChanged<int>? onCommentCountChanged,
+    String? focusCommentId,
   }) {
     final container = ProviderScope.containerOf(context, listen: false);
     final draggableController = DraggableScrollableController();
@@ -225,6 +229,7 @@ abstract final class CommentsScreen {
                   rootAddressableId: video.addressableId,
                   initialTotalCount: seedCommentCount,
                   includeVideoReplies: showVideoReplies,
+                  focusCommentId: focusCommentId,
                 )..add(const CommentsLoadRequested()),
               ),
               BlocProvider<CommentComposerBloc>(
@@ -307,7 +312,10 @@ abstract final class CommentsScreen {
           // starts dismissing (drag / scrim / back), otherwise iOS leaves it
           // stranded over the feed below (#5604).
           bottomInput: UnfocusOnSheetDismiss(
-            child: MainCommentInput(draggableController: draggableController),
+            child: MainCommentInput(
+              draggableController: draggableController,
+              video: video,
+            ),
           ),
           buildScrollBody: (scrollController) {
             activeScrollController = scrollController;
@@ -813,9 +821,17 @@ class _CommentsScreenBody extends StatelessWidget {
 /// Public-by-test only: production callers should use [CommentsScreen.show].
 @visibleForTesting
 class MainCommentInput extends ConsumerStatefulWidget {
-  const MainCommentInput({required this.draggableController, super.key});
+  const MainCommentInput({
+    required this.draggableController,
+    this.video,
+    super.key,
+  });
 
   final DraggableScrollableController draggableController;
+
+  /// The video the comments are on, whose thumbnail and creator a video
+  /// reply to it shows on its reply sticker.
+  final VideoEvent? video;
 
   @override
   ConsumerState<MainCommentInput> createState() => _MainCommentInputState();
@@ -1042,6 +1058,20 @@ class _MainCommentInputState extends ConsumerState<MainCommentInput> {
   ) {
     final listState = context.read<CommentsListBloc>().state;
     final replyContextNotifier = ref.read(videoReplyContextProvider.notifier);
+    // What the reply answers, as it is now: the editor shows it on the reply
+    // sticker, and an edited comment keeps the text it had here. A comment
+    // no longer in the list leaves the sticker out.
+    final repliesToComment = state.activeReplyCommentId != null;
+    final parent = repliesToComment
+        ? listState.commentsById[state.activeReplyCommentId]
+        : null;
+    final replyToPubkey = repliesToComment
+        ? parent?.authorPubkey
+        : listState.rootAuthorPubkey;
+    final profile = replyToPubkey == null
+        ? null
+        : ref.read(userProfileReactiveProvider(replyToPubkey)).value;
+    final video = widget.video;
     replyContextNotifier.set(
       VideoReplyContext(
         rootEventId: listState.rootEventId,
@@ -1050,6 +1080,15 @@ class _MainCommentInputState extends ConsumerState<MainCommentInput> {
         rootAddressableId: listState.rootAddressableId,
         parentCommentId: state.activeReplyCommentId,
         parentAuthorPubkey: replyToAuthorPubkey,
+        replyToName: replyToPubkey == null
+            ? null
+            : profile?.bestDisplayName ??
+                  (repliesToComment ? null : video?.displayAuthorName) ??
+                  UserProfile.generatedNameFor(replyToPubkey),
+        replyToText: parent?.content,
+        replyToImageUrl: repliesToComment
+            ? profile?.picture
+            : video?.thumbnailUrl,
       ),
     );
     unawaited(

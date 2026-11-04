@@ -133,6 +133,22 @@ void main() {
         );
       });
       when(
+        () => messageService.buildDeletionRumor(
+          targetEventId: any(named: 'targetEventId'),
+          targetKind: any(named: 'targetKind'),
+        ),
+      ).thenAnswer(
+        (invocation) => Event(
+          _owner,
+          EventKind.eventDeletion,
+          [
+            ['e', invocation.namedArguments[#targetEventId] as String],
+            ['k', '${invocation.namedArguments[#targetKind]}'],
+          ],
+          '',
+        ),
+      );
+      when(
         () => messageService.buildGroupRumor(
           recipientPubkeys: any(named: 'recipientPubkeys'),
           content: any(named: 'content'),

@@ -1987,6 +1987,244 @@ class AppLocalizationsVi extends AppLocalizations {
   String get metadataSoundsLabel => 'Âm thanh';
 
   @override
+  String get metadataLinksLabel => 'Liên kết';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Nhãn dán liên kết, mở $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel => 'Nhãn dán nhắc đến, mở hồ sơ';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Nhãn dán hashtag, mở #$hashtag';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => 'Nhãn dán âm thanh, mở âm thanh';
+
+  @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Nhãn dán địa điểm, mở $place trên bản đồ';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Nhãn dán đếm ngược, đặt lời nhắc';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Nhãn dán trả lời, mở nội dung video này trả lời';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ngày',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Đã đặt lời nhắc. Chúng mình sẽ báo khi đến giờ.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Đã xóa lời nhắc.';
+
+  @override
+  String get videoStickerCountdownOver => 'Đếm ngược này đã kết thúc.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Bật thông báo cho Divine để nhận lời nhắc.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'Đến giờ rồi! Đếm ngược bạn đã lưu vừa kết thúc.';
+
+  @override
+  String get videoStickerQuizRightAnswer => 'Đáp án đúng';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Đáp án sai';
+
+  @override
+  String get videoStickerPollSignInToVote => 'Đăng nhập để bình chọn.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Vẫn đang kết nối. Thử lại sau giây lát.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Phiếu bầu của bạn chưa được gửi. Hãy thử lại.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Phiếu bầu là công khai. Ai cũng có thể thấy bạn đã chọn gì.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count phiếu bầu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'Chạm để trả lời';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'Trả lời: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'Đến lượt bạn';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count người đã tham gia',
+      one: '$count người đã tham gia',
+      zero: 'Hãy là người đầu tiên',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count người đã tham gia';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'Xem ai đã tham gia';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'Đến lượt bạn: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count phản hồi',
+      one: '$count phản hồi',
+      zero: 'Chưa có phản hồi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count phản hồi';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Xem $count video phản hồi',
+      one: 'Xem $count video phản hồi',
+      zero: 'Video phản hồi, chưa có',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return 'Xem $count video phản hồi';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'Đăng nhập để trả lời.';
+
+  @override
+  String get videoStickerQuestionUnavailable =>
+      'Tài khoản của bạn không thể trả lời câu hỏi.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'Trả lời';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'Câu trả lời của bạn';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'Chỉ $name thấy câu trả lời của bạn. Họ có thể chia sẻ nó trong một video, không kèm tên bạn.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'Gửi';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'Đã gửi câu trả lời.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'Câu trả lời này quá dài để gửi.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'Câu trả lời của bạn chưa được gửi. Hãy thử lại.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'Đăng nhập để tham gia.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'Video phản hồi';
+
+  @override
+  String get videoStickerRepliesEmpty => 'Chưa có video phản hồi nào.';
+
+  @override
+  String get videoStickerRepliesLoadFailed => 'Không tải được các phản hồi.';
+
+  @override
+  String get videoStickerRepliesRetry => 'Thử lại';
+
+  @override
+  String get videoStickerRepliesPin => 'Ghim';
+
+  @override
+  String get videoStickerRepliesUnpin => 'Bỏ ghim';
+
+  @override
+  String get videoStickerRepliesHide => 'Ẩn';
+
+  @override
+  String get videoStickerRepliesShow => 'Hiện';
+
+  @override
+  String get videoStickerRepliesPinned => 'Đã ghim';
+
+  @override
+  String get videoStickerRepliesHidden => 'Đã ẩn';
+
+  @override
+  String get videoStickerRepliesSaveFailed => 'Không lưu được. Thử lại nhé.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'Xem phản hồi của $name';
+  }
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Liên kết này mở bên ngoài Divine. Hãy kiểm tra địa chỉ trước khi tiếp tục.';
+
+  @override
   String get metadataOriginalSound => 'Âm thanh gốc';
 
   @override
@@ -4333,8 +4571,17 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Không kết nối được với máy chủ. Kiểm tra kết nối của bạn rồi thử lại nhé.';
+  String get profileVideosLoadFailedTitle => 'Không tải được video của bạn';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'Không tải được video';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Kiểm tra kết nối của bạn rồi thử lại nhé.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Thử lại';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -4663,6 +4910,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get routeInvalidSoundId => 'ID âm thanh không hợp lệ';
+
+  @override
+  String get routeInvalidQuestion => 'Liên kết câu hỏi không hợp lệ';
 
   @override
   String get routeInvalidCategory => 'Danh mục không hợp lệ';
@@ -6040,6 +6290,19 @@ class AppLocalizationsVi extends AppLocalizations {
   String get dmReelReplyComposerSemanticLabel => 'Trả lời reel này';
 
   @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'Đã trả lời câu hỏi của bạn: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'Bạn đã trả lời: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'Trả lời bằng video';
+
+  @override
   String get dmReelReplyViewChat => 'Xem trò chuyện';
 
   @override
@@ -6762,20 +7025,19 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Đã chọn';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Chưa chọn';
 
   @override
   String get videoClipSemanticHintDisabled => 'Đã tắt';
 
   @override
-  String get videoClipSemanticHintSelect => 'Chạm để chọn, nhấn giữ để xem thử';
+  String get videoClipSemanticHintSelect => 'Chạm để chọn';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'Chạm để bỏ chọn, nhấn giữ để xem thử';
+  String get videoClipSemanticHintDeselect => 'Chạm để bỏ chọn';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Chạm để xem thử';
 
   @override
   String get routerInvalidCreator => 'Nhà sáng tạo không hợp lệ';
@@ -7637,6 +7899,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không chuẩn bị được chữ và nhãn dán trên bản nháp này. Mở nó trong trình chỉnh sửa rồi đăng lại.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Tài khoản của bạn không thể đăng nhãn dán câu hỏi, vì câu trả lời đến dưới dạng tin nhắn riêng. Hãy gỡ nó ra rồi đăng lại.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Thiết bị của bạn không thể xuất cùng lúc nhiều clip đã tách rời như vậy. Đưa vài clip trở lại timeline rồi thử lại nhé.';
 
@@ -8260,6 +8526,11 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName đã thích một video có gắn thẻ bạn';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName đã thích bình luận của bạn';
   }
@@ -8618,6 +8889,28 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Đã khôi phục $count clip',
+      one: 'Đã khôi phục clip',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Đã xóa vĩnh viễn $count clip',
+      one: 'Đã xóa vĩnh viễn clip',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'Đóng máy quay';
 
   @override
@@ -8866,13 +9159,139 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectSparkles => 'Lấp lánh';
 
   @override
+  String get videoEditorEffectRain => 'Mưa';
+
+  @override
+  String get videoEditorEffectLeaves => 'Lá rơi';
+
+  @override
+  String get videoEditorEffectBlossoms => 'Hoa anh đào';
+
+  @override
+  String get videoEditorEffectBubbles => 'Bong bóng';
+
+  @override
+  String get videoEditorEffectBokeh => 'Bokeh';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'Nốt nhạc';
+
+  @override
+  String get videoEditorEffectStars => 'Ngôi sao';
+
+  @override
+  String get videoEditorEffectFireflies => 'Đom đóm';
+
+  @override
+  String get videoEditorEffectEmbers => 'Than hồng';
+
+  @override
+  String get videoEditorEffectMoney => 'Tiền';
+
+  @override
+  String get videoEditorEffectBalloons => 'Bóng bay';
+
+  @override
   String get videoEditorEffectTiltShift => 'Tilt-shift';
 
   @override
   String get videoEditorEffectZoomBlur => 'Mờ phóng to';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Mờ xoay';
+
+  @override
   String get videoEditorEffectComic => 'Truyện tranh';
+
+  @override
+  String get videoEditorEffectSwirl => 'Xoáy';
+
+  @override
+  String get videoEditorEffectRipple => 'Gợn sóng';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'Kính gân';
+
+  @override
+  String get videoEditorEffectEightBit => '8-bit';
+
+  @override
+  String get videoEditorEffectAnaglyph => 'Kính 3D';
+
+  @override
+  String get videoEditorEffectRiso => 'In Riso';
+
+  @override
+  String get videoEditorEffectTealOrange => 'Xanh ngọc & Cam';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'Phim ấm';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'Phim dương bản';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'Phim lạnh';
+
+  @override
+  String get videoEditorEffectMatte => 'Mờ';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'Bleach bypass';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'Tráng chéo';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'Giờ vàng';
+
+  @override
+  String get videoEditorEffectMoonlight => 'Ánh trăng';
+
+  @override
+  String get videoEditorEffectSilver => 'Bạc';
+
+  @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Biến dạng';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Ánh sáng';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Chuyển động';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Hạt';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'Tông màu';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Tự nhiên';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Rực rỡ';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Ấm';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Lạnh';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Cổ điển';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Đen trắng';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Tông màu';
 
   @override
   String get videoEditorDropsSettingsTitle => 'Điều chỉnh giọt nước';
@@ -10588,6 +11007,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'Độ cao';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'Sang ngang';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Từ trên xuống';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Tùy chỉnh';
 
   @override
@@ -10674,6 +11099,429 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorStickerSearchHint => 'Tìm nhãn dán...';
+
+  @override
+  String get videoEditorInfoStickersTitle => 'Thông tin';
+
+  @override
+  String get videoEditorSocialStickersTitle => 'Xã hội';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Nhắc đến';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Âm thanh';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'tencuaban';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtag';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Chọn một người';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Người này được nhắc đến trong bài đăng của bạn và nhận thông báo.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Nhập hashtag';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Cũng được thêm vào hashtag của bài đăng.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'Một dòng lời bài hát (không bắt buộc)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Liên kết';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Địa chỉ web';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint =>
+      'Tiêu đề (không bắt buộc)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'Địa chỉ được thêm vào bài đăng của bạn.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'Đây chưa phải là địa chỉ web.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Tương tác';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Đếm ngược';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Mùa hè';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Bạn đang đếm ngược đến điều gì?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Người xem thấy thời gian còn lại và có thể đặt lời nhắc.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Thời điểm đó đã qua. Chọn thời điểm mới nhé.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Trả lời';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'Người xem chạm vào để thấy bạn đang trả lời điều gì.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Bình chọn';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Đố vui';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Thanh trượt';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Cái nào?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Có';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Không';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine ra mắt năm…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => 'Bạn đói cỡ nào?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Đặt câu hỏi';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Câu trả lời $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Xóa câu trả lời $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Đánh dấu câu trả lời $number là đúng';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Thêm câu trả lời';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Người xem thấy kết quả sau khi bình chọn. Phiếu bầu là công khai.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Đánh dấu câu trả lời đúng. Người xem sẽ thấy sau khi chọn một đáp án.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Người xem kéo biểu tượng cảm xúc để trả lời và thấy mức trung bình.';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'Câu hỏi';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'Đến lượt bạn';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'Phản hồi';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample =>
+      'Hỏi mình bất cứ điều gì';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample =>
+      'Khoe góc làm việc của bạn';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'Phản hồi bằng video';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'Câu hỏi của bạn';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      'Mọi người nên khoe gì?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'Tiêu đề';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'Câu trả lời sẽ đến với bạn dưới dạng tin nhắn riêng.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'Người xem trả lời bằng video của riêng họ. Mỗi câu trả lời đều có hashtag này và liên kết về video của bạn.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'Hiển thị những ai đã phản hồi video này bằng video. Người xem chạm vào để xem các phản hồi.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'Nhãn dán này nằm trong khung này để người xem có thể chạm vào';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Nốt nhạc';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Đĩa than';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Băng cassette';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Bộ chỉnh âm';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Trình phát';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Giờ';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Ngày';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Địa điểm';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Thời tiết';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Độ cao';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Pin';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Sáng';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Tối';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Xanh lá';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Viền';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Kỹ thuật số';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Kim';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Kính';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Vàng';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Đơn giản';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Đổi địa điểm';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Tìm kiếm địa điểm không khả dụng trên thiết bị này.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Lúc quay · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Bây giờ · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Hôm nay · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Đếm ngày';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Mặt trời';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Mặt trăng';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'Bộ đếm REC';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Phim';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Máy quay';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Ngày $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Ngày $day/$total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Ngày';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel =>
+      'Tổng số ngày (không bắt buộc)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Ghim';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Cờ';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Quả địa cầu';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Bản đồ';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Trăng non';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent =>
+      'Trăng lưỡi liềm đầu tháng';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Bán nguyệt đầu tháng';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous =>
+      'Trăng khuyết đầu tháng';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Trăng tròn';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous =>
+      'Trăng khuyết cuối tháng';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Bán nguyệt cuối tháng';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent =>
+      'Trăng lưỡi liềm cuối tháng';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'Tìm thành phố hoặc địa điểm';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults =>
+      'Không tìm thấy địa điểm nào';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Không tìm được địa điểm. Thử lại nhé.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Video của bạn chỉ có tên địa điểm, không bao giờ có vị trí chính xác của bạn.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Đang tải…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed => 'Không tải được. Thử lại nhé.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'Dữ liệu từ MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Không có thời tiết cho video cũ hơn, nên đây là thời tiết hiện tại.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Nắng';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Đêm quang';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Ít mây';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Nhiều mây';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Sương mù';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Mưa';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Mưa rào';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Tuyết';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Dông';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Thời gian theo múi giờ trên điện thoại của bạn.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Nhiệt độ';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Đơn vị';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Mức pin';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Thêm nhãn dán';
 
   @override
   String get videoEditorSelectFontSemanticLabel => 'Chọn phông chữ';
@@ -12259,6 +13107,11 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Thêm \"#$tag\"';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, từ một sticker trong video của bạn';
   }
 
   @override
@@ -14196,10 +15049,83 @@ class AppLocalizationsVi extends AppLocalizations {
   String get ideasDescriptionSix => 'Để điều này ở đây.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Phòng, $displayCount tin nhắn chưa đọc',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount mới',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount tin nhắn chưa đọc',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount người',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount tin nhắn',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => '24 giờ qua';
+
+  @override
+  String get messagesRoomLoading => 'Đang kiểm tra hoạt động…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Không tải được hoạt động.';
+
+  @override
+  String get messagesRoomEmpty =>
+      'Gần đây chưa có tin nhắn. Chào mọi người nào.';
+
+  @override
   String get messagesDirect => 'Trực tiếp';
 
   @override
   String get messagesRooms => 'Phòng';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Phòng ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Phòng thử nghiệm công khai';
@@ -14534,9 +15460,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14557,11 +15480,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -14595,9 +15513,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -14660,4 +15575,76 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
+
+  @override
+  String get creatorHighlightLabel => 'Điểm nhấn hôm nay của bạn';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'Video bạn đã tạo hôm nay: $count.';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle =>
+      'Tuần này có thêm một chút dấu ấn của bạn.';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'Số ngày sáng tạo trong tuần này: $count. Cứ tiếp tục nhé.';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Tổng lượt xem tính đến hiện tại của các video bạn đăng trong tuần này: $countString.';
+  }
+
+  @override
+  String get creatorHighlightTopVideo =>
+      'Video được xem nhiều nhất trong số video bạn đăng tuần này';
+
+  @override
+  String get creatorHighlightCreate => 'Tạo thêm video';
+
+  @override
+  String get creatorHighlightAnalytics => 'Xem số liệu của bạn';
+
+  @override
+  String get creatorHighlightWatch => 'Xem video';
 }

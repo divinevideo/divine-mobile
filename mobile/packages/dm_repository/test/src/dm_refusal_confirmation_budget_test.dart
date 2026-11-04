@@ -11,12 +11,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+import 'support/live_dm_reads.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+}
 
 class _MockDirectMessagesDao extends Mock implements DirectMessagesDao {}
 
@@ -32,6 +39,14 @@ const _privateKey =
     'd4e5f6789012345678901234567890abcdef1234567890123456789012ab12c3';
 const _peerPubkey =
     'b1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012';
+
+/// The outgoing NIP-04 recovery read, `authors:[self]` kind 4: the only read
+/// these stubs answer. The deletion recovery pass (#9468) is answered apart.
+final Matcher _nip04RecoveryRead = isA<List<nostr_filter.Filter>>().having(
+  (filters) => filters.single.authors,
+  'authors',
+  isNotNull,
+);
 
 void main() {
   late _MockNostrClient nostrClient;
@@ -88,7 +103,10 @@ void main() {
       ),
     ).thenAnswer((_) async => <String, int>{});
     when(
-      () => directMessagesDao.hasGiftWrap(any()),
+      () => directMessagesDao.hasGiftWrap(
+        any(),
+        ownerPubkey: any(named: 'ownerPubkey'),
+      ),
     ).thenAnswer((_) async => false);
   });
 
@@ -108,6 +126,22 @@ void main() {
   );
 
   void stubAnsweredHistory() {
+    // The deletion recovery pass (#9468) settles empty: these tests are about
+    // the NIP-04 pass's refusals, which the stubs below answer.
+    when(
+      () => nostrClient.readEvents(
+        any(that: isNot(_nip04RecoveryRead)),
+        subscriptionId: any(named: 'subscriptionId'),
+        useCache: any(named: 'useCache'),
+        requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+      ),
+    ).thenAnswer(
+      (_) async => const QueryResult(
+        events: [],
+        endedBy: QueryEnd.complete,
+        answeredNetworkRelayCount: 1,
+      ),
+    );
     when(
       () => nostrClient.queryEventsDetailed(
         any(),
@@ -160,7 +194,7 @@ void main() {
         var reads = 0;
         when(
           () => nostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -195,7 +229,7 @@ void main() {
         var reads = 0;
         when(
           () => nostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -232,7 +266,7 @@ void main() {
         var reads = 0;
         when(
           () => nostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -279,7 +313,7 @@ void main() {
           var reads = 0;
           when(
             () => nostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -328,7 +362,7 @@ void main() {
         var reads = 0;
         when(
           () => nostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -371,7 +405,7 @@ void main() {
           var reads = 0;
           when(
             () => nostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -420,7 +454,7 @@ void main() {
           var reads = 0;
           when(
             () => nostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -461,7 +495,7 @@ void main() {
           var reads = 0;
           when(
             () => nostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -496,7 +530,7 @@ void main() {
           stubAnsweredHistory();
           when(
             () => nostrClient.subscribe(
-              any(),
+              any(that: isLiveDmRead),
               subscriptionId: any(named: 'subscriptionId'),
               onStoredEventsStart: any(named: 'onStoredEventsStart'),
               onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -506,7 +540,7 @@ void main() {
           var reads = 0;
           when(
             () => nostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -561,7 +595,10 @@ void main() {
         // quiet duplicate skip instead of a persist that fails on unstubbed
         // DAO calls and is swallowed.
         when(
-          () => directMessagesDao.hasGiftWrap(outgoing.id),
+          () => directMessagesDao.hasGiftWrap(
+            outgoing.id,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
         ).thenAnswer((_) async => true);
         when(
           () => directMessagesDao.getMessageById(
@@ -586,7 +623,7 @@ void main() {
         var reads = 0;
         when(
           () => nostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -629,7 +666,7 @@ void main() {
           var reads = 0;
           when(
             () => nostrClient.readEvents(
-              any(),
+              any(that: _nip04RecoveryRead),
               subscriptionId: any(named: 'subscriptionId'),
               useCache: any(named: 'useCache'),
               requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -662,7 +699,7 @@ void main() {
         var reads = 0;
         when(
           () => nostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -700,7 +737,7 @@ void main() {
         var reads = 0;
         when(
           () => nostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -730,7 +767,7 @@ void main() {
         var reads = 0;
         when(
           () => nostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -778,7 +815,7 @@ void main() {
         var reads = 0;
         when(
           () => nostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -815,7 +852,7 @@ void main() {
         var reads = 0;
         when(
           () => nostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -853,7 +890,7 @@ void main() {
         var reads = 0;
         when(
           () => nostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -897,7 +934,7 @@ void main() {
         stubAnsweredHistory();
         when(
           () => nostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -926,7 +963,7 @@ void main() {
         var reads = 0;
         when(
           () => nostrClient.readEvents(
-            any(),
+            any(that: _nip04RecoveryRead),
             subscriptionId: any(named: 'subscriptionId'),
             useCache: any(named: 'useCache'),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
@@ -966,7 +1003,7 @@ void main() {
       var reads = 0;
       when(
         () => nostrClient.readEvents(
-          any(),
+          any(that: _nip04RecoveryRead),
           subscriptionId: any(named: 'subscriptionId'),
           useCache: any(named: 'useCache'),
           requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),

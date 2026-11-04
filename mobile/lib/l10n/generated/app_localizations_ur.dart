@@ -2019,6 +2019,248 @@ class AppLocalizationsUr extends AppLocalizations {
   String get metadataSoundsLabel => 'آوازیں';
 
   @override
+  String get metadataLinksLabel => 'لنکس';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'لنک اسٹیکر، $url کھولتا ہے';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'ذکر اسٹیکر، پروفائل کھولتا ہے';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'ہیش ٹیگ اسٹیکر، #$hashtag کھولتا ہے';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => 'ساؤنڈ اسٹیکر، ساؤنڈ کھولتا ہے';
+
+  @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'مقام اسٹیکر، $place کو نقشے میں کھولتا ہے';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'الٹی گنتی اسٹیکر، یاد دہانی لگاتا ہے';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'جواب اسٹیکر، وہ کھولتا ہے جس کا یہ ویڈیو جواب ہے';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count دن',
+      one: '$count دن',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'یاد دہانی لگ گئی۔ وقت آنے پر ہم آپ کو بتائیں گے۔';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'یاد دہانی ہٹا دی گئی۔';
+
+  @override
+  String get videoStickerCountdownOver => 'یہ الٹی گنتی ختم ہو گئی۔';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'یاد دہانی پانے کے لیے Divine کی اطلاعات آن کریں۔';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'وقت آ گیا! آپ کی محفوظ کی ہوئی الٹی گنتی ابھی ختم ہوئی۔';
+
+  @override
+  String get videoStickerQuizRightAnswer => 'درست جواب';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'غلط جواب';
+
+  @override
+  String get videoStickerPollSignInToVote => 'ووٹ دینے کے لیے سائن ان کریں۔';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'ابھی کنیکٹ ہو رہا ہے۔ تھوڑی دیر میں دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'آپ کا ووٹ نہیں پہنچا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'ووٹ عوامی ہوتے ہیں۔ کوئی بھی دیکھ سکتا ہے کہ آپ نے کیا چنا۔';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ووٹ',
+      one: '1 ووٹ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'جواب دینے کے لیے ٹیپ کریں';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'جواب: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'آپ کی باری';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count نے حصہ لیا',
+      one: '$count نے حصہ لیا',
+      zero: 'پہلے آپ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count نے حصہ لیا';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'دیکھیں کس نے حصہ لیا';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'آپ کی باری: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count جوابات',
+      one: '$count جواب',
+      zero: 'ابھی کوئی جواب نہیں',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count جوابات';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ویڈیو جوابات دیکھیں',
+      one: '$count ویڈیو جواب دیکھیں',
+      zero: 'ویڈیو جوابات، ابھی کوئی نہیں',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return '$count ویڈیو جوابات دیکھیں';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'جواب دینے کے لیے سائن ان کریں۔';
+
+  @override
+  String get videoStickerQuestionUnavailable =>
+      'آپ کے اکاؤنٹ کے لیے سوالوں کے جواب دینا دستیاب نہیں ہے۔';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'جواب دیں';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'آپ کا جواب';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'آپ کا جواب صرف $name دیکھ سکتے ہیں۔ وہ اسے کسی ویڈیو میں، آپ کے نام کے بغیر، شیئر کر سکتے ہیں۔';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'بھیجیں';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'جواب بھیج دیا گیا۔';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'یہ جواب بھیجنے کے لیے بہت لمبا ہے۔';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'آپ کا جواب نہیں پہنچا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'حصہ لینے کے لیے سائن ان کریں۔';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'ویڈیو جوابات';
+
+  @override
+  String get videoStickerRepliesEmpty => 'ابھی کوئی ویڈیو جواب نہیں۔';
+
+  @override
+  String get videoStickerRepliesLoadFailed => 'جوابات لوڈ نہیں ہو سکے۔';
+
+  @override
+  String get videoStickerRepliesRetry => 'دوبارہ کوشش کریں';
+
+  @override
+  String get videoStickerRepliesPin => 'پن کریں';
+
+  @override
+  String get videoStickerRepliesUnpin => 'پن ہٹائیں';
+
+  @override
+  String get videoStickerRepliesHide => 'چھپائیں';
+
+  @override
+  String get videoStickerRepliesShow => 'دکھائیں';
+
+  @override
+  String get videoStickerRepliesPinned => 'پن شدہ';
+
+  @override
+  String get videoStickerRepliesHidden => 'چھپا ہوا';
+
+  @override
+  String get videoStickerRepliesSaveFailed =>
+      'محفوظ نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return '$name کا جواب دیکھیں';
+  }
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'یہ لنک Divine سے باہر کھلتا ہے۔ آگے جانے سے پہلے ایڈریس دیکھ لیں۔';
+
+  @override
   String get metadataOriginalSound => 'اصل آواز';
 
   @override
@@ -4377,8 +4619,17 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'سرور تک رسائی نہیں ہو رہی۔ اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔';
+  String get profileVideosLoadFailedTitle => 'آپ کی ویڈیوز لوڈ نہیں ہو سکیں';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'ویڈیوز لوڈ نہیں ہو سکیں';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'دوبارہ کوشش کریں';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -4709,6 +4960,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get routeInvalidSoundId => 'غلط آواز ID';
+
+  @override
+  String get routeInvalidQuestion => 'سوال کا لنک غلط ہے';
 
   @override
   String get routeInvalidCategory => 'غلط زمرہ';
@@ -6083,6 +6337,19 @@ class AppLocalizationsUr extends AppLocalizations {
   String get dmReelReplyComposerSemanticLabel => 'اس ریل کو جواب دیں';
 
   @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'آپ کے سوال کا جواب دیا: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'آپ نے جواب دیا: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'ویڈیو سے جواب دیں';
+
+  @override
   String get dmReelReplyViewChat => 'چیٹ دیکھیں';
 
   @override
@@ -6806,21 +7073,19 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'منتخب';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'منتخب نہیں';
 
   @override
   String get videoClipSemanticHintDisabled => 'غیر فعال';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'منتخب کرنے کے لیے ٹیپ کریں، پیش منظر کے لیے دیر تک دبائیں';
+  String get videoClipSemanticHintSelect => 'منتخب کرنے کے لیے ٹیپ کریں';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'انتخاب ختم کرنے کے لیے ٹیپ کریں، پیش منظر کے لیے دیر تک دبائیں';
+  String get videoClipSemanticHintDeselect => 'انتخاب ختم کرنے کے لیے ٹیپ کریں';
+
+  @override
+  String get videoClipSemanticHintPreview => 'پیش منظر کے لیے ٹیپ کریں';
 
   @override
   String get routerInvalidCreator => 'غلط کریئیٹر';
@@ -7678,6 +7943,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'اس مسودے کا ٹیکسٹ اور اسٹیکرز تیار نہیں ہو سکے۔ اسے ایڈیٹر میں کھولیں، پھر دوبارہ پوسٹ کریں۔';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'آپ کا اکاؤنٹ سوال والا اسٹیکر پوسٹ نہیں کر سکتا، کیونکہ اس کے جواب نجی پیغامات کے طور پر آتے ہیں۔ اسے ہٹائیں، پھر دوبارہ پوسٹ کریں۔';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'آپ کی ڈیوائس ایک ساتھ اتنے زیادہ الگ کیے گئے کلپس ایکسپورٹ نہیں کر سکتی۔ کچھ کلپس واپس ٹائم لائن پر رکھیں اور دوبارہ کوشش کریں۔';
 
@@ -8303,6 +8572,11 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName نے ایک ایسی ویڈیو پسند کی جس میں آپ ٹیگ ہیں';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName نے آپ کا تبصرہ پسند کیا';
   }
@@ -8661,6 +8935,28 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count کلپس بحال ہو گئیں',
+      one: 'کلپ بحال ہو گئی',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count کلپس مستقل طور پر حذف ہو گئیں',
+      one: 'کلپ مستقل طور پر حذف ہو گئی',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'ویڈیو ریکارڈر بند کریں';
 
   @override
@@ -8907,13 +9203,139 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectSparkles => 'چمک';
 
   @override
+  String get videoEditorEffectRain => 'بارش';
+
+  @override
+  String get videoEditorEffectLeaves => 'پتے';
+
+  @override
+  String get videoEditorEffectBlossoms => 'پنکھڑیاں';
+
+  @override
+  String get videoEditorEffectBubbles => 'بلبلے';
+
+  @override
+  String get videoEditorEffectBokeh => 'بوکے';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'سُر';
+
+  @override
+  String get videoEditorEffectStars => 'ستارے';
+
+  @override
+  String get videoEditorEffectFireflies => 'جگنو';
+
+  @override
+  String get videoEditorEffectEmbers => 'انگارے';
+
+  @override
+  String get videoEditorEffectMoney => 'پیسے';
+
+  @override
+  String get videoEditorEffectBalloons => 'غبارے';
+
+  @override
   String get videoEditorEffectTiltShift => 'ٹلٹ شفٹ';
 
   @override
   String get videoEditorEffectZoomBlur => 'زوم بلر';
 
   @override
+  String get videoEditorEffectSpinBlur => 'اسپن بلر';
+
+  @override
   String get videoEditorEffectComic => 'کامک';
+
+  @override
+  String get videoEditorEffectSwirl => 'بھنور';
+
+  @override
+  String get videoEditorEffectRipple => 'دائروی لہریں';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'دھاری دار شیشہ';
+
+  @override
+  String get videoEditorEffectEightBit => '8 بٹ';
+
+  @override
+  String get videoEditorEffectAnaglyph => 'تھری ڈی عینک';
+
+  @override
+  String get videoEditorEffectRiso => 'ریسو پرنٹ';
+
+  @override
+  String get videoEditorEffectTealOrange => 'ٹیل اور نارنجی';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'گرم فلم';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'سلائیڈ فلم';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'ٹھنڈی فلم';
+
+  @override
+  String get videoEditorEffectMatte => 'میٹ';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'بلیچ بائی پاس';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'کراس پروسیس';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'سنہری وقت';
+
+  @override
+  String get videoEditorEffectMoonlight => 'چاندنی';
+
+  @override
+  String get videoEditorEffectSilver => 'چاندی';
+
+  @override
+  String get videoEditorEffectCategoryRetro => 'ریٹرو';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'گلچ';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'بگاڑ';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'روشنی';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'حرکت';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'ذرات';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'انداز';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'قدرتی';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'شوخ';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'گرم';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'ٹھنڈا';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'ونٹیج';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'سیاہ و سفید';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'رنگ';
 
   @override
   String get videoEditorDropsSettingsTitle => 'قطرے ایڈجسٹ کریں';
@@ -10635,6 +11057,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'اونچائی';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'پہلو کی طرف';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'اوپر سے نیچے';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'اپنی مرضی کا';
 
   @override
@@ -10720,6 +11148,422 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorStickerSearchHint => 'اسٹیکرز تلاش کریں...';
+
+  @override
+  String get videoEditorInfoStickersTitle => 'معلومات';
+
+  @override
+  String get videoEditorSocialStickersTitle => 'سماجی';
+
+  @override
+  String get videoEditorSocialStickerMention => 'ذکر';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'ہیش ٹیگ';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'آواز';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'آپکانام';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'ہیش_ٹیگ';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'کسی کو منتخب کریں';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'آپ کی پوسٹ میں ان کا ذکر ہوگا اور انہیں اطلاع ملے گی۔';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'ہیش ٹیگ لکھیں';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'آپ کی پوسٹ کے ہیش ٹیگز میں بھی شامل ہو جاتا ہے۔';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'گانے کے بولوں کی ایک سطر (اختیاری)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'لنک';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'ویب ایڈریس';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'عنوان (اختیاری)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'ایڈریس آپ کی پوسٹ میں شامل ہو جاتا ہے۔';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'یہ ابھی ویب ایڈریس نہیں ہے۔';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'انٹرایکٹو';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'الٹی گنتی';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'گرمیاں';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'آپ کس چیز کی الٹی گنتی کر رہے ہیں؟';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'دیکھنے والے باقی وقت دیکھ سکتے ہیں اور یاد دہانی لگا سکتے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'وہ وقت گزر چکا ہے۔ نیا وقت منتخب کریں۔';
+
+  @override
+  String get videoEditorSocialStickerReply => 'جواب';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'دیکھنے والے اسے ٹیپ کر کے دیکھتے ہیں کہ آپ کس کا جواب دے رہے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'پول';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'کوئز';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'سلائیڈر';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'کون سا؟';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'ہاں';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'نہیں';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine کب شروع ہوا؟';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'آپ کو کتنی بھوک لگی ہے؟';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'سوال پوچھیں';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'جواب $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'جواب $number ہٹائیں';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'جواب $number کو درست قرار دیں';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'جواب شامل کریں';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'ناظرین ووٹ دینے کے بعد نتائج دیکھتے ہیں۔ ووٹ عوامی ہوتے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'درست جواب پر نشان لگائیں۔ ناظرین جواب چننے کے بعد اسے دیکھتے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'ناظرین جواب دینے کے لیے ایموجی کو گھسیٹتے ہیں اور اوسط دیکھتے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'سوال';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'آپ کی باری';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'جوابات';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => 'مجھ سے کچھ بھی پوچھیں';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample =>
+      'اپنا ڈیسک سیٹ اپ دکھائیں';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'ویڈیو سے جواب دیں';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'آپ کا سوال';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint => 'لوگ کیا دکھائیں؟';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'ہیش ٹیگ';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'عنوان';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'جوابات آپ کو نجی پیغامات کے طور پر ملتے ہیں۔';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'ناظرین اپنی ویڈیو کے ساتھ جواب دیتے ہیں۔ ہر جواب کو یہ ہیش ٹیگ ملتا ہے اور وہ آپ کی ویڈیو سے لنک ہوتا ہے۔';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'دکھاتا ہے کہ کس نے اس ویڈیو کا جواب ویڈیو سے دیا۔ ناظرین جوابات دیکھنے کے لیے اسے ٹیپ کرتے ہیں۔';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'یہ اسٹیکر اسی خانے میں رہتا ہے تاکہ ناظرین اسے ٹیپ کر سکیں';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'سُر';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'ریکارڈ';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'کیسٹ';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'ایکولائزر';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'پلیئر';
+
+  @override
+  String get videoEditorInfoStickerTime => 'وقت';
+
+  @override
+  String get videoEditorInfoStickerDate => 'تاریخ';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'مقام';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'موسم';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'بلندی';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'بیٹری';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'ہلکا';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'گہرا';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'سبز';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'خاکہ';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'ڈیجیٹل';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'اینالاگ';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'شیشہ';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'پیلا';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'نیون';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'سادہ';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'جگہ تبدیل کریں';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'اس ڈیوائس پر جگہ کی تلاش دستیاب نہیں ہے۔';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'ریکارڈنگ · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'ابھی · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'آج · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'دنوں کا شمار';
+
+  @override
+  String get videoEditorInfoStickerSun => 'سورج';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'چاند';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC ٹائمر';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'فلم';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'کیم کورڈر';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'دن $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'دن $day از $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'دن';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'کل دن (اختیاری)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'پن';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'جھنڈا';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'گلوب';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'نقشہ';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'نیا چاند';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'بڑھتا ہلال';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'پہلی چوتھائی';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'بڑھتا چاند';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'پورا چاند';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'گھٹتا چاند';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'آخری چوتھائی';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'گھٹتا ہلال';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => 'شہر یا جگہ تلاش کریں';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'کوئی جگہ نہیں ملی';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'جگہیں تلاش نہیں ہو سکیں۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'آپ کی ویڈیو میں صرف جگہ کا نام جاتا ہے، آپ کا درست مقام کبھی نہیں۔';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'لوڈ ہو رہا ہے…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'ڈیٹا: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'پرانی ویڈیوز کے لیے موسم دستیاب نہیں، اس لیے یہ ابھی کا موسم ہے۔';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'دھوپ';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'صاف رات';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'جزوی ابر آلود';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'ابر آلود';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'دھند';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'بارش';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'بوچھاڑ';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'برف';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm =>
+      'گرج چمک کے ساتھ طوفان';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'اوقات آپ کے فون کے ٹائم زون میں ہیں۔';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'درجہ حرارت';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'اکائی';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'بیٹری لیول';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'اسٹیکر شامل کریں';
 
   @override
   String get videoEditorSelectFontSemanticLabel => 'فانٹ منتخب کریں';
@@ -12313,6 +13157,11 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" شامل کریں';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag، آپ کی ویڈیو کے ایک اسٹیکر سے';
   }
 
   @override
@@ -14255,10 +15104,87 @@ class AppLocalizationsUr extends AppLocalizations {
   String get ideasDescriptionSix => 'یہ یہاں چھوڑ رہا ہوں۔';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'کمرے، $displayCount غیر پڑھے پیغامات',
+      one: 'کمرے، $displayCount غیر پڑھا پیغام',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'نئے: $displayCount',
+      one: 'نیا: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount غیر پڑھے پیغامات',
+      one: '$displayCount غیر پڑھا پیغام',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount لوگ',
+      one: '$displayCount شخص',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount پیغامات',
+      one: '$displayCount پیغام',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'پچھلے 24 گھنٹے';
+
+  @override
+  String get messagesRoomLoading => 'سرگرمی دیکھی جا رہی ہے…';
+
+  @override
+  String get messagesRoomLoadFailed => 'سرگرمی لوڈ نہیں ہو سکی۔';
+
+  @override
+  String get messagesRoomEmpty => 'حال ہی میں کوئی پیغام نہیں آیا۔ سلام کہیں۔';
+
+  @override
   String get messagesDirect => 'براہ راست';
 
   @override
   String get messagesRooms => 'کمرے';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'کمرے ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'عوامی آزمائشی کمرے';
@@ -14590,9 +15516,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14613,11 +15536,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -14651,9 +15569,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -14716,4 +15631,76 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
+
+  @override
+  String get creatorHighlightLabel => 'آج کی آپ کی خاص جھلک';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'آج آپ کی بنائی ہوئی ویڈیوز: $count۔';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle =>
+      'اس ہفتے میں آپ کا رنگ کچھ اور بڑھ گیا ہے۔';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'اس ہفتے تخلیق کے دن: $count۔ بناتے رہیے۔';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز پر اب تک کے کل ویوز: $countString۔';
+  }
+
+  @override
+  String get creatorHighlightTopVideo =>
+      'اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز میں سب سے زیادہ دیکھی جانے والی ویڈیو';
+
+  @override
+  String get creatorHighlightCreate => 'ایک اور بنائیں';
+
+  @override
+  String get creatorHighlightAnalytics => 'اپنے اعداد و شمار دیکھیں';
+
+  @override
+  String get creatorHighlightWatch => 'ویڈیو دیکھیں';
 }

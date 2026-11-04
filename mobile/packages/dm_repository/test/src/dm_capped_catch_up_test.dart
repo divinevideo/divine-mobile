@@ -23,7 +23,13 @@ import 'package:nostr_sdk/subscription.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+import 'support/live_dm_reads.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+}
 
 /// Fails to record the unread part of a window with a broken invariant.
 class _BrokenDebtSyncState extends DmSyncState {
@@ -292,7 +298,7 @@ void main() {
     when(() => client.unsubscribe(any())).thenAnswer((_) async {});
     when(
       () => client.subscribe(
-        any(),
+        any(that: isLiveDmRead),
         subscriptionId: any(named: 'subscriptionId'),
         tempRelays: any(named: 'tempRelays'),
         targetRelays: any(named: 'targetRelays'),

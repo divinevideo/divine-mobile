@@ -17,7 +17,13 @@ import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+import 'support/live_dm_reads.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+}
 
 class _MockNip17MessageService extends Mock implements NIP17MessageService {}
 
@@ -104,7 +110,7 @@ void main() {
       when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});
       when(
         () => nostrClient.subscribe(
-          any(),
+          any(that: isLiveDmRead),
           subscriptionId: any(named: 'subscriptionId'),
           tempRelays: any(named: 'tempRelays'),
           targetRelays: any(named: 'targetRelays'),
@@ -202,7 +208,8 @@ void main() {
           'sig': '',
         });
 
-    /// The sender's retraction: one `p` tag even for a group message.
+    /// A retraction in the shape Divine sent before #9774, which older Divine
+    /// builds still send: one `p` tag even for a group message.
     Event retraction({
       required String id,
       required List<String> targets,
@@ -284,7 +291,10 @@ void main() {
         );
 
         expect(
-          await processedDao.hasGiftWrap(_id('b')),
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: _id('b'),
+            ownerPubkey: _owner,
+          ),
           isTrue,
           reason:
               'the message is gone, so the retraction has nothing left to '
@@ -320,7 +330,13 @@ void main() {
           ),
         );
 
-        expect(await processedDao.hasGiftWrap(_id('b')), isTrue);
+        expect(
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: _id('b'),
+            ownerPubkey: _owner,
+          ),
+          isTrue,
+        );
       });
     });
 
@@ -352,7 +368,13 @@ void main() {
           ),
         );
 
-        expect(await processedDao.hasGiftWrap(_id('b')), isTrue);
+        expect(
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: _id('b'),
+            ownerPubkey: _owner,
+          ),
+          isTrue,
+        );
       });
     });
 
@@ -376,7 +398,10 @@ void main() {
         );
         await deliver(wrapId: _id('b'), rumor: early);
         expect(
-          await processedDao.hasGiftWrap(_id('b')),
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: _id('b'),
+            ownerPubkey: _owner,
+          ),
           isFalse,
           reason: 'its target has not arrived, so it must stay retryable',
         );
@@ -388,15 +413,21 @@ void main() {
         await deliver(wrapId: _id('b'), rumor: early);
 
         expect(await messageIsDeleted(_id('4')), isTrue);
-        expect(await processedDao.hasGiftWrap(_id('b')), isTrue);
+        expect(
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: _id('b'),
+            ownerPubkey: _owner,
+          ),
+          isTrue,
+        );
       });
 
       test(
         'applies to a group message when only the sender 1:1 was removed',
         () async {
-          // A sender builds one retraction with a single `p` tag even for a
-          // group message, so resolving its conversation from the tags lands
-          // on the 1:1 with the same sender.
+          // A retraction can carry a single `p` tag even for a group message
+          // (Divine's own did before #9774), so resolving its conversation
+          // from the tags lands on the 1:1 with the same sender.
           final participants = [_owner, _peer, _peer2]..sort();
           await conversationsDao.upsertConversation(
             id: DmRepository.computeConversationId(participants),
@@ -427,7 +458,13 @@ void main() {
           );
 
           expect(await messageIsDeleted(_id('5')), isTrue);
-          expect(await processedDao.hasGiftWrap(_id('b')), isTrue);
+          expect(
+            await processedDao.hasGiftWrapForOwner(
+              giftWrapId: _id('b'),
+              ownerPubkey: _owner,
+            ),
+            isTrue,
+          );
         },
       );
 
@@ -450,7 +487,13 @@ void main() {
         );
 
         expect(await messageIsDeleted(_id('1')), isTrue);
-        expect(await processedDao.hasGiftWrap(_id('b')), isTrue);
+        expect(
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: _id('b'),
+            ownerPubkey: _owner,
+          ),
+          isTrue,
+        );
       });
 
       test(
@@ -481,7 +524,13 @@ void main() {
           );
 
           expect(await messageIsDeleted(_id('1')), isTrue);
-          expect(await processedDao.hasGiftWrap(_id('b')), isTrue);
+          expect(
+            await processedDao.hasGiftWrapForOwner(
+              giftWrapId: _id('b'),
+              ownerPubkey: _owner,
+            ),
+            isTrue,
+          );
         },
       );
     });
@@ -518,7 +567,13 @@ void main() {
           isNull,
           reason: 'it was removed with its conversation and must stay gone',
         );
-        expect(await processedDao.hasGiftWrap(_id('a')), isTrue);
+        expect(
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: _id('a'),
+            ownerPubkey: _owner,
+          ),
+          isTrue,
+        );
       });
 
       test('is not stored again when its NIP-04 event is replayed', () async {

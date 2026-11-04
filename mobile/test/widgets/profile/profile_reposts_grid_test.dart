@@ -9,7 +9,9 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/profile_reposted_videos/profile_reposted_videos_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_reposts_grid.dart';
+import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
 
 import '../../helpers/go_router.dart';
 import '../../helpers/test_provider_overrides.dart';
@@ -223,7 +225,28 @@ void main() {
 
         await tester.pumpWidget(buildSubject());
 
-        expect(find.byType(SliverGrid), findsOneWidget);
+        expect(find.byType(ProfileMasonryGrid), findsOneWidget);
+      });
+
+      testWidgets('sizes each tile from its video dimensions', (tester) async {
+        final videos = _createTestVideos();
+        when(() => mockBloc.state).thenReturn(
+          ProfileRepostedVideosState(
+            status: ProfileRepostedVideosStatus.success,
+            videos: [
+              videos[0].copyWith(dimensions: '480x480'),
+              videos[1].copyWith(dimensions: '1080x1920'),
+            ],
+          ),
+        );
+
+        await tester.pumpWidget(buildSubject());
+
+        final tiles = find.byType(ProfileTabThumbnail);
+        final square = tester.getSize(tiles.at(0));
+        final vertical = tester.getSize(tiles.at(1));
+        expect(square.height, moreOrLessEquals(square.width));
+        expect(vertical.height, moreOrLessEquals(vertical.width * 3 / 2));
       });
 
       testWidgets('ends with the bottom safe area', (tester) async {
@@ -366,7 +389,7 @@ void main() {
           );
 
           expect(find.byType(ProfileRepostsGrid), findsOneWidget);
-          expect(find.byType(SliverGrid), findsOneWidget);
+          expect(find.byType(ProfileMasonryGrid), findsOneWidget);
 
           final customScrollView = tester.widget<CustomScrollView>(
             find.byType(CustomScrollView).last,

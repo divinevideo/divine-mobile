@@ -56,7 +56,6 @@ class VineBottomSheetSelectionMenu {
     DivineIconButton? headerLeadingAction,
     DivineIconButton? headerTrailingAction,
   }) {
-    final navigator = Navigator.of(context);
     return VineBottomSheet.show<String>(
       context: context,
       title: title,
@@ -75,7 +74,7 @@ class VineBottomSheetSelectionMenu {
                 label: option.label,
                 leadingIcon: option.leadingIcon,
                 isSelected: option.value == selectedValue,
-                onTap: () => navigator.pop(option.value),
+                value: option.value,
               ),
           ],
         ),
@@ -88,18 +87,22 @@ class VineBottomSheetSelectionMenu {
 class _VineBottomSheetSelectionOption extends StatelessWidget {
   const _VineBottomSheetSelectionOption({
     required this.label,
-    required this.onTap,
+    required this.value,
     this.leadingIcon,
     this.isSelected = false,
   });
 
   final String label;
+  final String value;
   final DivineIconName? leadingIcon;
   final bool isSelected;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    // Pop from inside the sheet: the opener may be unmounted by now, and its
+    // nearest navigator need not be the one the sheet opened on.
+    void onTap() => Navigator.of(context).pop(value);
+
     return Semantics(
       button: true,
       label: label,

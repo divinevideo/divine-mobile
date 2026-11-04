@@ -16,6 +16,7 @@ import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_tab_bottom_inset_sliver.dart';
 import 'package:openvine/widgets/profile/profile_tab_empty_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_error_state.dart';
@@ -121,26 +122,17 @@ class _ProfileRepostsGridState extends State<ProfileRepostsGrid>
         return CustomScrollView(
           physics: const ClampingScrollPhysics(),
           slivers: [
-            SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 2,
-                mainAxisSpacing: 2,
+            ProfileMasonryGrid(
+              childCount: repostedVideos.length,
+              aspectRatioOf: (index) =>
+                  profileTileAspectRatioForVideo(repostedVideos[index]),
+              itemBuilder: (context, index) => _RepostGridTile(
+                videoEvent: repostedVideos[index],
+                index: index,
+                allVideos: repostedVideos,
+                userIdHex: widget.userIdHex,
+                acquireFeedLease: widget.acquireFeedLease,
               ),
-              delegate: SliverChildBuilderDelegate((context, index) {
-                if (index >= repostedVideos.length) {
-                  return const SizedBox.shrink();
-                }
-
-                final videoEvent = repostedVideos[index];
-                return _RepostGridTile(
-                  videoEvent: videoEvent,
-                  index: index,
-                  allVideos: repostedVideos,
-                  userIdHex: widget.userIdHex,
-                  acquireFeedLease: widget.acquireFeedLease,
-                );
-              }, childCount: repostedVideos.length),
             ),
             if (state.isLoadingMore)
               const ProfileTabLoadingMoreSliver()

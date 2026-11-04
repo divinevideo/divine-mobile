@@ -19,6 +19,7 @@ import 'package:dm_repository/src/dm_batch_send_budget.dart';
 import 'package:dm_repository/src/dm_clock.dart';
 import 'package:dm_repository/src/dm_decrypt_isolate.dart';
 import 'package:dm_repository/src/dm_decryption_worker.dart';
+import 'package:dm_repository/src/dm_held_pool_wraps.dart';
 import 'package:dm_repository/src/dm_message_size.dart';
 import 'package:dm_repository/src/dm_reactions_repository.dart';
 import 'package:dm_repository/src/dm_read_state_writer.dart';
@@ -110,6 +111,14 @@ const Set<String> _unconfirmedRefusalCategories = {
   'other',
 };
 
+/// The DM kinds relays may serve only to their authenticated recipient:
+/// gift wraps (NIP-17 17.md:81) and legacy NIP-04 messages. Always asked for
+/// in a REQ without any other kind; see [DmRepository]'s `_fetchHistoryPage`.
+const List<int> _protectedDmKinds = [
+  EventKind.giftWrap,
+  EventKind.directMessage,
+];
+
 /// Process-local key for support-only DM content correlation tokens.
 ///
 /// Never persist or log this key: changing it on restart prevents tokens from
@@ -159,8 +168,8 @@ abstract class DmHistoryDrainConfig {
   static const int unsettledPageRetriesPerRun = 2;
 
   /// Automatic retries after a drain defers. A relay reconnect can resume the
-  /// drain sooner and cancels the retry, except while an ambiguous NIP-04
-  /// refusal awaits confirmation.
+  /// drain sooner and cancels the retry, except while an ambiguous refusal
+  /// in an end-of-drain recovery pass awaits confirmation.
   static const List<Duration> deferredRetryDelays = [
     Duration(seconds: 5),
     Duration(seconds: 15),
@@ -297,27 +306,6 @@ const Duration _ownDmInboxAuthoritativeTimeout = Duration(seconds: 3);
 /// eternally-retrying rows — the reason this backstop must stay generous.
 const Duration _messagePublishTimeout = DmBatchSendBudget.messagePublishTimeout;
 
-/// Outcome of resolving a user's own kind-10050 DM inbox relay list (#4974).
-///
-/// Distinguishes a genuine absence from a transient query failure so callers
-/// don't conflate them: the live subscription / drain fall back to the
-/// default pool on either, but RC3 must only publish-when-`absent` and never
-/// overwrite a real list when the lookup merely `failed`.
-/// Which local account terminally handled an already-processed event.
-///
-/// Only meaningful for NIP-04. A kind-1059 wrap id belongs to exactly one
-/// recipient, so "processed" and "processed by us" are the same fact there.
-enum _Nip04DedupHit {
-  /// Not processed by anyone on this device.
-  none,
-
-  /// Processed by the account that is receiving it now.
-  thisAccount,
-
-  /// Processed by a different local account, so this one never stored it.
-  otherAccount,
-}
-
 /// What a removal request resolves to, before anything is written.
 ///
 /// [absent] and [removable] both report `removed` to the caller — a stale id
@@ -360,8 +348,40 @@ typedef _OwnDmInboxRead = ({
   Event? list,
 });
 
-/// What one NIP-04 recovery sweep heard back about one page.
-typedef _Nip04PageAnswer = ({bool anyRelaySentEose, Set<String> closedRelays});
+/// What one recovery sweep (outgoing NIP-04 or deletions) heard back about
+/// one page.
+typedef _RecoveryPageAnswer = ({
+  bool anyRelaySentEose,
+  Set<String> closedRelays,
+});
+
+/// One page of history read from relays and handled: what the relays sent,
+/// whether every relay asked answered, whether the one relay asked refused it
+/// for good, whether a relay may have stopped at its result cap, the oldest
+/// stamp it held (where the next page starts, inclusive), and how many new
+/// gift wraps it decrypted before storing the page (a wrap that decrypts only
+/// on the per-event retry is not counted).
+typedef _HistoryPage = ({
+  List<Event> events,
+  bool authoritative,
+  bool refusedForGood,
+  bool possiblyCapped,
+  int? resumeAt,
+  int newGiftWraps,
+});
+
+/// What one relay's walk of the band below the live window found: whether
+/// the relay answered every page or refused for good, the pages and events
+/// read, how many new gift wraps were decrypted before storing, and the stamp
+/// reached if the page budget ran out before the floor.
+typedef _BandWalk = ({
+  bool answered,
+  bool refused,
+  int pages,
+  int events,
+  int newGiftWraps,
+  int? budgetStoppedAt,
+});
 
 /// A signed legacy kind-4 copy, and what a retry re-checks before
 /// republishing it (#8506).
@@ -433,8 +453,9 @@ typedef DmVisibleActivity = ({
 /// [DmInboxResolution.unreadable] is a fact about our own read — the wrap may
 /// be sitting on relays the recipient never queries, so it is reported
 /// soft-unconfirmed and the durable row is kept for the sweep to re-resolve
-/// (#7317). A message's row also records the accepted wrap, so its retries
-/// publish another recipient wrap only once the inbox is found (#10012).
+/// (#7317). The held row also records the accepted wrap — a message's, a
+/// reaction's, its removal's and a retraction's — so its retries publish
+/// another recipient wrap only once the inbox is found (#10012).
 /// Shared by every gift-wrap publisher that also reports delivery —
 /// the 1:1 send, its retry, the reaction fan-out (#8443), the deletion
 /// fan-out (#8515), and the group send (#8434) — so no sweep can undo what a
@@ -506,6 +527,7 @@ class DmMessageDeletionRetryTarget {
     required this.rumorId,
     required this.conversationId,
     required this.createdAt,
+    this.retriesRanOut = false,
   });
 
   /// Rumor id of the deleted message — the argument
@@ -518,6 +540,11 @@ class DmMessageDeletionRetryTarget {
 
   /// Deleted message's `created_at` (unix seconds). Orders the sweep.
   final int createdAt;
+
+  /// Whether an earlier run of automatic retries ran out without a relay
+  /// confirming the retraction ([DmRepository.markMessageDeletionUnconfirmed]),
+  /// so the sweep gives it a reduced allowance (#10012).
+  final bool retriesRanOut;
 }
 
 /// Repository for NIP-17 direct message operations.
@@ -919,6 +946,10 @@ class DmRepository {
 
   StreamSubscription<Event>? _giftWrapSubscription;
 
+  /// The live kind-5 read, opened once [_giftWrapSubscription]'s stored
+  /// events end or its hold limit passes, and ended with it.
+  StreamSubscription<Event>? _deletionsSubscription;
+
   /// The live subscription's progress through stored events, or null while
   /// not listening. See [_LiveCatchUp].
   _LiveCatchUp? _liveCatchUp;
@@ -931,6 +962,20 @@ class DmRepository {
   /// `since:` starts, so a gift wrap backdated by up to NIP-17's two days is
   /// still asked for.
   static const int _sinceOverlapSeconds = 2 * 86400;
+
+  /// How far below the live window's start [_requeryBelowWindowIfDue] asks.
+  static const int _belowWindowRequeryDepthSeconds = 7 * 86400;
+
+  /// How long a finished [_requeryBelowWindowIfDue] waits before the next.
+  static const int _belowWindowRequeryIntervalSeconds = 86400;
+
+  /// The deepest [_requeryBelowWindowIfDue] reads below the live window's
+  /// start, however far below it the last finished run read.
+  static const int _belowWindowRequeryMaxDepthSeconds = 30 * 86400;
+
+  /// How long [_requeryBelowWindowIfDue] waits after starting a run, finished
+  /// or not, before it starts another.
+  static const int _belowWindowRequeryRetrySeconds = 3600;
 
   /// How long a catch-up may hold wire stamps back before the newest one
   /// handled is saved anyway.
@@ -952,33 +997,34 @@ class DmRepository {
   final Map<Timer, _Nip04Copy> _nip04CopyRetryTimers = {};
 
   /// Backoff retry for deferred history drains. A relay reconnect cancels it,
-  /// except while an ambiguous NIP-04 refusal awaits confirmation: a
+  /// except while an ambiguous recovery refusal awaits confirmation: a
   /// non-confirming sweep can then run while this timer remains armed, because
   /// the timer is the only delayed opportunity that can confirm the refusal.
   /// The finite delay list bounds consecutive no-progress deferrals; durable
   /// cursor progress or completion replenishes the budget. #9030.
   Timer? _drainRetryTimer;
   int _automaticDrainRetryCount = 0;
-  bool _historyDrainCanConfirmNip04Refusal = false;
-  bool _pendingNip04RefusalConfirmation = false;
+  bool _historyDrainCanConfirmRefusal = false;
+  bool _pendingRefusalConfirmation = false;
   bool _confirmationWindowRelayEdgeUsed = false;
 
   /// Refusal signatures captured when the confirmation timer was armed.
-  /// A later non-confirming sweep can replace [_previousNip04Refusals]; the
+  /// A later non-confirming sweep can replace [_previousRecoveryRefusals]; the
   /// armed timer must not treat that new signature as already delayed.
-  Set<String> _armedNip04Refusals = {};
+  Set<String> _armedRecoveryRefusals = {};
 
-  /// Ambiguous relay refusal signatures from the previous outgoing NIP-04
-  /// sweep. A matching refusal must recur after a deferred drain retry before
-  /// it can count as an exhausted relay for history completion.
-  Set<String> _previousNip04Refusals = {};
+  /// Ambiguous relay refusal signatures from the previous sweeps of the
+  /// end-of-drain recovery passes (outgoing NIP-04, deletions). A matching
+  /// refusal must recur after a deferred drain retry before it can count as
+  /// an exhausted relay for history completion.
+  Set<String> _previousRecoveryRefusals = {};
 
   /// Replenishes deferred retries only after the drain durably made progress.
   ///
-  /// An authoritative empty gift-wrap page is not enough on its own: outgoing
-  /// NIP-04 recovery can still fail immediately afterward. Resetting before
-  /// that pass would turn a permanent NIP-04 outage into an unbounded sequence
-  /// of first-delay retries.
+  /// An authoritative empty gift-wrap page is not enough on its own: the
+  /// outgoing NIP-04 and deletion recovery passes can still fail immediately
+  /// afterward. Resetting before those passes would turn a permanent outage
+  /// of either into an unbounded sequence of first-delay retries.
   void _resetAutomaticDrainRetriesAfterProgress() {
     _automaticDrainRetryCount = 0;
   }
@@ -1413,17 +1459,17 @@ class DmRepository {
     unawaited(_ensurePostAuthMaintenance());
   }
 
-  /// Clears the delayed NIP-04 refusal-confirmation retry and its armed
+  /// Clears the delayed recovery refusal-confirmation retry and its armed
   /// state. Shared by [_resetState] and [stopListening].
-  void _resetNip04RefusalConfirmationState() {
+  void _resetRecoveryRefusalConfirmationState() {
     _drainRetryTimer?.cancel();
     _drainRetryTimer = null;
     _automaticDrainRetryCount = 0;
-    _historyDrainCanConfirmNip04Refusal = false;
-    _pendingNip04RefusalConfirmation = false;
+    _historyDrainCanConfirmRefusal = false;
+    _pendingRefusalConfirmation = false;
     _confirmationWindowRelayEdgeUsed = false;
-    _armedNip04Refusals = {};
-    _previousNip04Refusals = {};
+    _armedRecoveryRefusals = {};
+    _previousRecoveryRefusals = {};
   }
 
   /// Reset internal state so the repository can be re-initialized for a
@@ -1445,7 +1491,7 @@ class DmRepository {
     _eventLock = null;
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
-    _resetNip04RefusalConfirmationState();
+    _resetRecoveryRefusalConfirmationState();
     // Drop the in-flight history drain and decrypt-retry pass so the next
     // user can start fresh; the running loops bail on the _userPubkey change.
     _historyDrain = null;
@@ -1483,8 +1529,7 @@ class DmRepository {
     unawaited(_dismissalSubscription?.cancel());
     _dismissalSubscription = null;
     _pendingReadCursors.clear();
-    unawaited(_giftWrapSubscription?.cancel());
-    _giftWrapSubscription = null;
+    _endLiveSubscriptions();
     _liveCatchUp?.cancelHoldLimit();
     _liveCatchUp = null;
     // Drop the outgoing user's resolved own-inbox relays so the next user
@@ -1493,6 +1538,7 @@ class DmRepository {
     final subId = _subscriptionId;
     try {
       unawaited(_nostrClient.unsubscribe(subId));
+      unawaited(_nostrClient.unsubscribe(dmDeletionsSubscriptionId(subId)));
     } on Object {
       // Ignore if subscription doesn't exist
     }
@@ -1530,6 +1576,17 @@ class DmRepository {
   // -------------------------------------------------------------------------
   // Subscription lifecycle
   // -------------------------------------------------------------------------
+
+  /// Where the live subscription's `since:` starts for [pubkey]: the newest
+  /// processed wire stamp (the rumor stamp before one is known) minus
+  /// [_sinceOverlapSeconds]. `null` before anything was processed, when the
+  /// first open asks for a bounded backlog instead.
+  int? _liveWindowStart(String pubkey) {
+    final newest = _syncState?.newestSyncedAt(pubkey);
+    if (newest == null) return null;
+    final newestWire = _syncState?.newestWireSyncedAt(pubkey);
+    return (newestWire ?? newest) - _sinceOverlapSeconds;
+  }
 
   /// Start listening for incoming gift-wrapped DMs.
   ///
@@ -1584,9 +1641,10 @@ class DmRepository {
       // that outer stamp to be backdated by a random 0..2 days. Deriving the
       // boundary from the rumor clock therefore consumes part of the 2-day
       // overlap before the window opens, and a wrap whose backdate exceeds
-      // the remainder is dropped by the relay. Nothing asks for it again:
-      // `newestWireSyncedAt` only advances, so `since:` only rises, and the
-      // history drain that would otherwise repair the gap latches complete.
+      // the remainder is dropped by the relay. Only the daily re-query below
+      // the window asks for it again (#8439): `newestWireSyncedAt` only
+      // advances, so `since:` only rises, and the history drain that would
+      // otherwise repair the gap latches complete.
       // The measured erosion equals the newest wrap's own backdate, which is
       // uniform on [0, 2d) — half the intended margin, on average. See #8209.
       //
@@ -1597,20 +1655,21 @@ class DmRepository {
       // the full required overlap in the relay's clock: a compliant wrap's
       // wire stamp is at most its publication time, and every later compliant
       // wrap is stamped no earlier than its publication time minus two days.
-      final newest = _syncState?.newestSyncedAt(_userPubkey);
-      final newestWire = _syncState?.newestWireSyncedAt(_userPubkey);
-      final isFirstOpen = newest == null;
+      final since = _liveWindowStart(_userPubkey);
       final filter = nostr_filter.Filter(
-        kinds: [
-          EventKind.giftWrap,
-          EventKind.directMessage,
-          EventKind.eventDeletion,
-        ],
+        kinds: _protectedDmKinds,
         p: [_userPubkey],
-        limit: isFirstOpen ? 50 : null,
-        since: newest == null
-            ? null
-            : (newestWire ?? newest) - _sinceOverlapSeconds,
+        limit: since == null ? 50 : null,
+        since: since,
+      );
+      // Deletions in a REQ of their own, over the same window: a relay that
+      // gates DMs behind NIP-42 serves a REQ mixing them with kinds 1059 and
+      // 4 without the DMs, and never asks to authenticate (#9468).
+      final deletionsFilter = nostr_filter.Filter(
+        kinds: const [EventKind.eventDeletion],
+        p: [_userPubkey],
+        limit: filter.limit,
+        since: filter.since,
       );
 
       Log.info(
@@ -1663,6 +1722,42 @@ class DmRepository {
             normalizeRelayUrl(url) ?? url,
         },
       );
+      // Deletions are asked for once the DMs' stored events have ended, the
+      // AUTH replay's included: a gated relay answers a deletions-only REQ at
+      // once but holds the DMs, and a deletion handled before the message it
+      // names finds nothing to retract. The hold limit opens them too, as a
+      // relay can hold that end for the whole session. No catch-up either: a
+      // deletion saves no stamp, so it cannot move a window.
+      var deletionsOpened = false;
+      void openDeletions() {
+        if (deletionsOpened || _disposed) return;
+        if (!identical(_liveCatchUp, catchUp)) return;
+        deletionsOpened = true;
+        _deletionsSubscription = _nostrClient
+            .subscribe(
+              [deletionsFilter],
+              subscriptionId: dmDeletionsSubscriptionId(subscriptionId),
+              tempRelays: ownInbox,
+            )
+            .listen(
+              _handleIncomingEvent,
+              onError: (Object error) {
+                Log.error(
+                  'DM deletions subscription error: $error',
+                  category: LogCategory.system,
+                );
+                _endLiveSubscriptions();
+                _dropLiveCatchUp(catchUp);
+                if (!_disposed) _scheduleReconnect();
+              },
+              onDone: () {
+                _endLiveSubscriptions();
+                _dropLiveCatchUp(catchUp);
+                if (!_disposed) _scheduleReconnect();
+              },
+            );
+      }
+
       void limitHold() => catchUp.startHoldLimit(_storedEventsHoldLimit, () {
         // A slow relay can hold the stored events open past the limit after
         // another sent a batch that may be capped: that one is recorded
@@ -1671,7 +1766,9 @@ class DmRepository {
           _nostrClient.storedEventsPossiblyCapped(subscriptionId),
         );
         _maybeCommitCatchUp(catchUp);
+        openDeletions();
       });
+
       final stream = _nostrClient.subscribe(
         [filter],
         subscriptionId: subscriptionId,
@@ -1687,6 +1784,7 @@ class DmRepository {
             ..markCapped(end.possiblyCappedRelays);
           _maybeCommitCatchUp(catchUp);
           _readCatchUpDebt(catchUp);
+          openDeletions();
         },
       );
       _liveCatchUp = catchUp;
@@ -1705,8 +1803,7 @@ class DmRepository {
           // and schedule a reconnect. stopListening() now sets _disposed,
           // which suppresses that path as well (#7318); this cancel remains
           // the local cleanup for a stream that has already failed.
-          unawaited(_giftWrapSubscription?.cancel());
-          _giftWrapSubscription = null;
+          _endLiveSubscriptions();
           _dropLiveCatchUp(catchUp);
           if (!_disposed) {
             _scheduleReconnect();
@@ -1715,7 +1812,7 @@ class DmRepository {
         onDone: () {
           // Stream closed (relay disconnect, NostrClient rebuild, etc.)
           // Clear the subscription so startListening() can re-subscribe.
-          _giftWrapSubscription = null;
+          _endLiveSubscriptions();
           _dropLiveCatchUp(catchUp);
           if (!_disposed) {
             Log.info(
@@ -1927,25 +2024,43 @@ class DmRepository {
     }
   }
 
-  /// Fetches a single older page of DM events (gift wraps, NIP-04,
-  /// deletions) addressed to [pubkey] from the relay older than [until]
-  /// (inclusive), capped to [limit]. Each event flows through
-  /// [_handleIncomingEvent] so dedup, transaction integrity, and
-  /// sync-boundary tracking apply automatically. Returns the raw events so
-  /// the caller can advance its own pagination cursor by their outer
-  /// `created_at`, or `null` if the user switched / the repository was torn
-  /// down mid-fetch (so the caller stops paging for the stale user).
+  /// Fetches a single older page of DMs addressed to [pubkey], older than
+  /// [until] (inclusive) and capped to [limit]: gift wraps and NIP-04
+  /// messages, plus kind-5 deletions when [withDeletions] is set. Each event
+  /// flows through [_handleIncomingEvent] so dedup, transaction integrity, and
+  /// sync-boundary tracking apply automatically. Returns the raw events, or
+  /// `null` if the user switched / the repository was torn down mid-fetch (so
+  /// the caller stops paging for the stale user).
   ///
-  /// `authoritative` is false when nothing answered this page — no relay took
-  /// the REQ, a relay refused it with `CLOSED`, the client was disposed, or
-  /// only some relays answered. An empty page is proof of exhaustion only when
-  /// it is authoritative; see the guard in [_runHistoryDrain]. See #8209.
+  /// Kinds 1059 and 4 are asked for in a REQ of their own. A relay that gates
+  /// them behind NIP-42 (strfry's restricted reads, Divine's relay gate)
+  /// refuses that REQ, so the pool authenticates and replays it, but serves a
+  /// REQ that mixes them with kind 5 without the DMs and ends it like a
+  /// complete answer (#9468). [withDeletions] adds a second REQ for kind 5,
+  /// whose events are handled after the page's DMs.
+  ///
+  /// `authoritative` is false when nothing answered a read of this page — no
+  /// relay took the REQ, a relay refused it with `CLOSED`, the client was
+  /// disposed, or only some relays answered. An empty page is proof of
+  /// exhaustion only when it is authoritative; see the guard in
+  /// [_runHistoryDrain]. See #8209.
+  ///
+  /// `resumeAt` is where the next page can start without skipping anything:
+  /// the newest of the reads' oldest events. A read stopped at its limit may
+  /// hold more at or below its oldest event, and two reads stop at different
+  /// depths. Null for an empty page, and when a read that may have more sent
+  /// nothing: that read proves nothing about its range, so the page names no
+  /// point the other read could move it past.
+  ///
+  /// `possiblyCapped` is the cap evidence of the read `resumeAt` comes from,
+  /// or of a read that sent nothing. A read whose oldest event is older than
+  /// `resumeAt` sent all it holds at that second, so its cap leaves nothing
+  /// unsent there.
   ///
   /// [since] bounds the page from below. [onlyRelay] asks that one relay
   /// alone, on its pooled connection when the pool has one, instead of the
   /// pool and [tempRelays].
-  Future<({List<Event> events, bool authoritative, bool possiblyCapped})?>
-  _fetchHistoryPage({
+  Future<_HistoryPage?> _fetchHistoryPage({
     required int until,
     required int limit,
     required String subscriptionId,
@@ -1955,61 +2070,56 @@ class DmRepository {
     String? onlyRelay,
     List<String>? tempRelays,
     _LiveCatchUp? holdFor,
+    bool withDeletions = false,
   }) async {
-    final filter = nostr_filter.Filter(
-      kinds: [
-        EventKind.giftWrap,
-        EventKind.directMessage,
-        EventKind.eventDeletion,
-      ],
-      p: [pubkey],
-      since: since,
-      until: until,
-      limit: limit,
-    );
-
-    // Target the user's OWN kind-10050 inbox relays (in addition to the
-    // default pool) so the #4953/#4973 history drain reads gift wraps a
-    // sender delivered outside the default pool. `null` keeps the prior
-    // default-pool-only behavior. See #4974.
-    //
-    // queryEventsDetailed, not queryEvents: the latter discards `timedOut` and
-    // `noRelays`, so a page nothing answered arrives as an ordinary empty one
-    // and the drain reads it as exhaustion. `requireAllRelaysSettled` is what
-    // makes a relay's `CLOSED` refusal and a partial fan-out surface as
-    // `timedOut` rather than completing on whichever relays did answer. #8209.
-    final List<Event> events;
-    final bool authoritative;
-    final bool possiblyCapped;
-    if (onlyRelay == null) {
-      final result = await _nostrClient.queryEventsDetailed(
-        [filter],
+    final reads = await Future.wait([
+      _readHistoryKinds(
+        _protectedDmKinds,
+        pubkey: pubkey,
+        until: until,
+        limit: limit,
         subscriptionId: subscriptionId,
-        useCache: false,
+        since: since,
+        onlyRelay: onlyRelay,
         tempRelays: tempRelays,
-        requireAllRelaysSettled: true,
-      );
-      events = result.events;
-      authoritative = !result.noRelays && !result.timedOut;
-      // The drain judges its pages by their size; this read keeps no cap
-      // evidence, so a cap is never ruled out.
-      possiblyCapped = true;
-    } else {
-      // The debt walk keeps the pool's judgement of whether the relay may
-      // have stopped at its limit: a settled page can still be incomplete.
-      final result = await _nostrClient.readEvents(
-        [filter],
-        subscriptionId: subscriptionId,
-        useCache: false,
-        tempRelays: [onlyRelay],
-        relayTypes: const [RelayType.temp],
-        requireAllRelaysSettled: true,
-      );
-      events = result.events;
-      authoritative = result.isComplete;
-      possiblyCapped = result.possiblyCapped;
-    }
+      ),
+      if (withDeletions)
+        _readHistoryKinds(
+          const [EventKind.eventDeletion],
+          pubkey: pubkey,
+          until: until,
+          limit: limit,
+          subscriptionId: dmDeletionsSubscriptionId(subscriptionId),
+          since: since,
+          onlyRelay: onlyRelay,
+          tempRelays: tempRelays,
+        ),
+    ]);
     if (_ingestSessionEnded(pubkey, generation)) return null;
+    final events = [for (final read in reads) ...read.events];
+    final authoritative = reads.every((read) => read.authoritative);
+    final refusedForGood =
+        reads.any((read) => read.refusedForGood) &&
+        reads.every((read) => read.authoritative || read.refusedForGood);
+    final ends = [
+      for (final read in reads)
+        (
+          oldest: read.events.isEmpty
+              ? null
+              : read.events.map((event) => event.createdAt).reduce(min),
+          possiblyCapped: read.possiblyCapped,
+        ),
+    ];
+    final stalled = ends.any((end) => end.possiblyCapped && end.oldest == null);
+    int? resumeAt;
+    for (final end in ends) {
+      final oldest = end.oldest;
+      if (stalled || oldest == null) continue;
+      if (resumeAt == null || oldest > resumeAt) resumeAt = oldest;
+    }
+    final possiblyCapped =
+        stalled ||
+        ends.any((end) => end.possiblyCapped && end.oldest == resumeAt);
 
     // Pass 1 (off the _eventLock): batch-decrypt this page's gift wraps in one
     // isolate hop per chunk for local-key signers, instead of one isolate
@@ -2066,7 +2176,98 @@ class DmRepository {
     return (
       events: events,
       authoritative: authoritative,
+      refusedForGood: refusedForGood,
       possiblyCapped: possiblyCapped,
+      resumeAt: resumeAt,
+      newGiftWraps: preDecrypted.length,
+    );
+  }
+
+  /// One read of [kinds] addressed to [pubkey] for [_fetchHistoryPage] and
+  /// [_handleDeletionPage].
+  ///
+  /// Targets the user's OWN kind-10050 inbox relays (in addition to the
+  /// default pool) so the #4953/#4973 history drain reads gift wraps a sender
+  /// delivered outside the default pool. `null` [tempRelays] keeps the prior
+  /// default-pool-only behavior. See #4974.
+  ///
+  /// queryEventsDetailed, not queryEvents: the latter discards `timedOut` and
+  /// `noRelays`, so a page nothing answered arrives as an ordinary empty one
+  /// and the drain reads it as exhaustion. `requireAllRelaysSettled` is what
+  /// makes a relay's `CLOSED` refusal and a partial fan-out surface as
+  /// `timedOut` rather than completing on whichever relays did answer. #8209.
+  Future<
+    ({
+      List<Event> events,
+      bool authoritative,
+      bool refusedForGood,
+      bool possiblyCapped,
+    })
+  >
+  _readHistoryKinds(
+    List<int> kinds, {
+    required String pubkey,
+    required int until,
+    required int limit,
+    required String subscriptionId,
+    int? since,
+    String? onlyRelay,
+    List<String>? tempRelays,
+  }) async {
+    final filter = nostr_filter.Filter(
+      kinds: kinds,
+      p: [pubkey],
+      since: since,
+      until: until,
+      limit: limit,
+    );
+    if (onlyRelay == null) {
+      final result = await _nostrClient.queryEventsDetailed(
+        [filter],
+        subscriptionId: subscriptionId,
+        useCache: false,
+        tempRelays: tempRelays,
+        requireAllRelaysSettled: true,
+        // A relay that refuses for good (`restricted`, `blocked`, ...) beside
+        // relays that answered has said all it will: relay.damus.io refuses
+        // every DM read once it rejects AUTH. Ambiguous refusals still leave
+        // the page unanswered (#9468).
+        acceptRelayClosedWhenOthersAnswered: true,
+      );
+      return (
+        events: result.events,
+        authoritative: !result.noRelays && !result.timedOut,
+        refusedForGood: false,
+        // The drain judges its pages by their size; this read keeps no cap
+        // evidence, so a cap is never ruled out.
+        possiblyCapped: true,
+      );
+    }
+    // The debt walk and the re-query below the window keep the pool's
+    // judgement of whether the relay may have stopped at its limit: a settled
+    // page can still be incomplete.
+    final result = await _nostrClient.readEvents(
+      [filter],
+      subscriptionId: subscriptionId,
+      useCache: false,
+      tempRelays: [onlyRelay],
+      relayTypes: const [RelayType.temp],
+      requireAllRelaysSettled: true,
+    );
+    return (
+      events: result.events,
+      authoritative: result.isComplete,
+      // As a pool read settles on it beside a relay that answered (#9468).
+      // A refusal that may be transient or asks for AUTH, and a rate limit,
+      // say nothing about what the relay holds.
+      refusedForGood:
+          result.endedBy == QueryEnd.relayClosed &&
+          result.rateLimitedRelayCount == 0 &&
+          result.closedRelayReasons.isNotEmpty &&
+          !result.closedRelayReasons.values.any(
+            _unconfirmedRefusalCategories.contains,
+          ),
+      possiblyCapped: result.possiblyCapped,
     );
   }
 
@@ -2111,56 +2312,375 @@ class DmRepository {
   /// and is stranded under "Message requests". Pages `authors:[self]` kind-4
   /// newest→oldest and routes each through [_handleIncomingEvent], which
   /// already sets `currentUserHasSent` for self-authored messages. Bounded by
-  /// [DmHistoryDrainConfig.maxPages].
+  /// [DmHistoryDrainConfig.maxPages]; see [_runRecoveryPass].
+  Future<bool> _recoverOutgoingNip04(
+    String pubkey,
+    int generation, {
+    required bool allowRefusalConfirmation,
+  }) => _runRecoveryPass(
+    pubkey,
+    generation,
+    label: 'Outgoing NIP-04 recovery',
+    filterFor: (until) => nostr_filter.Filter(
+      authors: [pubkey],
+      kinds: [EventKind.directMessage],
+      until: until,
+      limit: DmHistoryDrainConfig.pageSize,
+    ),
+    subscriptionIdFor: (page) => dmNip04DrainSubscriptionId(pubkey, page),
+    pageKeyBase: 0,
+    allowRefusalConfirmation: allowRefusalConfirmation,
+  );
+
+  /// Applies the kind-5 deletions addressed to the user once every restored
+  /// message is stored.
+  ///
+  /// A deletion names the message it removes, and applying one finds that
+  /// message by id: one handled before its message is stored is dropped, and
+  /// a drain page brings a deletion before the older page holding its message.
+  /// The gift-wrap pages read only kinds 1059 and 4 (#9468), so deletions are
+  /// read here, after them and after [_recoverOutgoingNip04]. Pages `#p:[self]`
+  /// kind-5 newest→oldest on the relays those pages read, the account's own
+  /// inbox [tempRelays] included; see [_runRecoveryPass].
+  Future<bool> _recoverDeletions(
+    String pubkey,
+    int generation, {
+    required List<String>? tempRelays,
+    required bool allowRefusalConfirmation,
+  }) => _runRecoveryPass(
+    pubkey,
+    generation,
+    label: 'DM deletion recovery',
+    filterFor: (until) => nostr_filter.Filter(
+      kinds: [EventKind.eventDeletion],
+      p: [pubkey],
+      until: until,
+      limit: DmHistoryDrainConfig.pageSize,
+    ),
+    subscriptionIdFor: (page) => dmDeletionDrainSubscriptionId(pubkey, page),
+    pageKeyBase: DmHistoryDrainConfig.maxPages,
+    tempRelays: tempRelays,
+    allowRefusalConfirmation: allowRefusalConfirmation,
+  );
+
+  /// Asks again for the week below the live window, at most once a day, on
+  /// an install whose history drain has completed. The band starts a week
+  /// below the earlier of this window start and the one the last finished run
+  /// read below, so a run after a long gap covers the stamps between the two,
+  /// but never more than thirty days below the window.
+  ///
+  /// The live subscription asks from [_liveWindowStart] up and a completed
+  /// drain never asks again, so a gift wrap that reaches a relay after a newer
+  /// one was handled, stamped below that start, was never requested: a relay
+  /// that was down, an inbox relay first read later, a sender that backdates
+  /// past NIP-17's two days. NIP-59 bounds no backdate, so no overlap is wide
+  /// enough; this re-reads a bounded band and dedup absorbs what was already
+  /// handled. See #8439.
+  ///
+  /// Silent: it starts no recovery, so the inbox shows no restore progress.
+  /// What it finds is stored as it arrives, but the run is recorded only when
+  /// the inbox-relay list was read and every relay it asked answered every
+  /// page or refused for good; a run that was not is tried again an hour
+  /// later at the soonest. A gift wrap that never decrypts is queued for
+  /// retry again by each run whose band still holds it.
+  ///
+  /// Every relay's messages are read before any deletions, which are read
+  /// from now down, so a kind-5 deletion is handled after the message it
+  /// names. A gift-wrapped deletion comes with the messages and, read before
+  /// its target, waits for its next delivery, as in the drain.
+  Future<void> _requeryBelowWindowIfDue(
+    DmSyncState syncState,
+    String pubkey,
+    int generation,
+  ) async {
+    try {
+      final top = _liveWindowStart(pubkey);
+      if (top == null) return;
+      final startedAt = DmClock.now().nowSeconds;
+      if (_isRecent(
+            syncState.belowWindowRequeryAt(pubkey),
+            startedAt,
+            _belowWindowRequeryIntervalSeconds,
+          ) ||
+          _isRecent(
+            syncState.belowWindowRequeryAttemptAt(pubkey),
+            startedAt,
+            _belowWindowRequeryRetrySeconds,
+          )) {
+        return;
+      }
+      await syncState.setBelowWindowRequeryAttemptAt(pubkey, startedAt);
+      // From a week below the window start the last finished run read below,
+      // when that is lower, so no stamp falls between two runs.
+      final lastTop = syncState.belowWindowRequeryTop(pubkey);
+      final readsBelow = lastTop != null && lastTop < top ? lastTop : top;
+      final floor = max(
+        readsBelow - _belowWindowRequeryDepthSeconds,
+        top - _belowWindowRequeryMaxDepthSeconds,
+      );
+      final inbox = await _drainOwnInboxRelays(pubkey, generation);
+      if (_ingestSessionEnded(pubkey, generation)) return;
+      // Each relay is walked on its own: a merged answer resumes below its
+      // oldest event, which skips a relay that stopped at its cap above it.
+      final relays = <String>{
+        for (final url in [..._nostrClient.configuredRelays, ...?inbox.relays])
+          normalizeRelayUrl(url) ?? url,
+      };
+      final messages = <_BandWalk>[];
+      for (final url in relays) {
+        final walk = await _pageBelowWindow(
+          pubkey,
+          generation,
+          floor: floor,
+          from: top,
+          readPage: (page, until) => _fetchHistoryPage(
+            until: until,
+            since: floor,
+            limit: DmHistoryDrainConfig.pageSize,
+            subscriptionId: dmBelowWindowRequerySubscriptionId(pubkey, page),
+            pubkey: pubkey,
+            generation: generation,
+            onlyRelay: url,
+          ),
+        );
+        if (walk == null) return;
+        messages.add(walk);
+      }
+      // A deletion can be stamped anywhere above the message it names, and
+      // one that arrived before its message was dropped, so deletions are
+      // read from now down.
+      final deletions = <_BandWalk>[];
+      for (final url in relays) {
+        final walk = await _pageBelowWindow(
+          pubkey,
+          generation,
+          floor: floor,
+          from: startedAt,
+          readPage: (page, until) => _handleDeletionPage(
+            pubkey,
+            generation,
+            page: page,
+            until: until,
+            since: floor,
+            onlyRelay: url,
+          ),
+        );
+        if (walk == null) return;
+        deletions.add(walk);
+      }
+      final messagesAnswered = _bandAnswered(messages);
+      final deletionsAnswered = _bandAnswered(deletions);
+      final answered =
+          inbox.conclusive && messagesAnswered && deletionsAnswered;
+      if (answered && !_ingestSessionEnded(pubkey, generation)) {
+        await syncState.recordBelowWindowRequery(
+          pubkey,
+          at: startedAt,
+          top: top,
+        );
+      }
+      final walks = [...messages, ...deletions];
+      for (final walk in walks) {
+        final stoppedAt = walk.budgetStoppedAt;
+        if (stoppedAt == null) continue;
+        Log.warning(
+          'DM re-query below the window for ${pubkeyForLogs(pubkey)} stopped '
+          'at the page budget at stamp $stoppedAt, above the floor $floor',
+          category: LogCategory.system,
+        );
+      }
+      final outcome = answered
+          ? 'every relay answered or refused for good'
+          : 'not answered (inbox list read: ${inbox.conclusive}, messages: '
+                '$messagesAnswered, deletions: $deletionsAnswered), so an '
+                'inbox open an hour or more later asks again';
+      Log.info(
+        'DM re-query below the window for ${pubkeyForLogs(pubkey)}: stamps '
+        '$floor..$top, relays ${relays.length}, pages '
+        '${walks.fold(0, (n, walk) => n + walk.pages)}, events '
+        '${walks.fold(0, (n, walk) => n + walk.events)}, new gift wraps '
+        'decrypted ${messages.fold(0, (n, walk) => n + walk.newGiftWraps)}, '
+        '$outcome',
+        category: LogCategory.system,
+      );
+    } on Object catch (e, stackTrace) {
+      // Relay and IO failures are expected on flaky networks; the run is left
+      // unrecorded, so an inbox open an hour or more later asks again.
+      Log.warning(
+        'DM re-query below the window did not finish for '
+        '${pubkeyForLogs(pubkey)}: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      if (e is StateError || e is TypeError || e is RangeError) {
+        _errorReporter?.call(
+          e,
+          stackTrace,
+          site: DmRepositoryReportableSites.belowWindowRequeryUnexpectedFailure,
+        );
+      }
+    }
+  }
+
+  /// Whether a pass of [walks] read the whole band: every relay answered or
+  /// refused for good, and at least one answered, as a pool read settles on
+  /// refusals only beside a relay that answered.
+  static bool _bandAnswered(List<_BandWalk> walks) =>
+      walks.every((walk) => walk.answered || walk.refused) &&
+      walks.any((walk) => walk.answered);
+
+  /// Whether [stamp] lies less than [interval] seconds before [now]. A stamp
+  /// from the future, written while the device clock ran fast, is not recent:
+  /// trusting it would switch the re-query off until the clock caught up.
+  static bool _isRecent(int? stamp, int now, int interval) =>
+      stamp != null && stamp <= now && now - stamp < interval;
+
+  /// Walks one relay with [readPage] from [from] down to [floor], each page
+  /// starting at or below the oldest stamp of the page before. Stops when the
+  /// relay sends nothing more, sends fewer than its cap, leaves a page
+  /// unanswered or refuses it, the next page would start below [floor], or
+  /// [DmHistoryDrainConfig.maxPages] is reached. Returns null when the ingest
+  /// session ended.
+  Future<_BandWalk?> _pageBelowWindow(
+    String pubkey,
+    int generation, {
+    required int floor,
+    required int from,
+    required Future<_HistoryPage?> Function(int page, int until) readPage,
+  }) async {
+    var cursor = from;
+    var pages = 0;
+    var events = 0;
+    var newGiftWraps = 0;
+    _BandWalk walked({
+      bool answered = true,
+      bool refused = false,
+      int? budgetStoppedAt,
+    }) => (
+      answered: answered,
+      refused: refused,
+      pages: pages,
+      events: events,
+      newGiftWraps: newGiftWraps,
+      budgetStoppedAt: budgetStoppedAt,
+    );
+    for (var page = 0; page < DmHistoryDrainConfig.maxPages; page++) {
+      if (_ingestSessionEnded(pubkey, generation)) return null;
+      final result = await readPage(page, cursor);
+      if (result == null) return null;
+      pages++;
+      events += result.events.length;
+      newGiftWraps += result.newGiftWraps;
+      // What an unanswered page carried is stored; the run is not recorded.
+      if (!result.authoritative) {
+        return walked(answered: false, refused: result.refusedForGood);
+      }
+      final resumeAt = result.resumeAt;
+      if (resumeAt == null || !result.possiblyCapped) return walked();
+      // `until` is inclusive, so the oldest second is read again; dedup
+      // absorbs it.
+      final next = resumeAt < cursor ? resumeAt : cursor - 1;
+      if (next < floor) return walked();
+      cursor = next;
+    }
+    return walked(budgetStoppedAt: cursor);
+  }
+
+  /// Reads one page of the kind-5 deletions addressed to [pubkey] between
+  /// [since] and [until] from [onlyRelay], handling each as it arrives.
+  /// Returns null when the ingest session ended.
+  Future<_HistoryPage?> _handleDeletionPage(
+    String pubkey,
+    int generation, {
+    required int page,
+    required int until,
+    required int since,
+    required String onlyRelay,
+  }) async {
+    final read = await _readHistoryKinds(
+      const [EventKind.eventDeletion],
+      pubkey: pubkey,
+      until: until,
+      limit: DmHistoryDrainConfig.pageSize,
+      subscriptionId: dmDeletionsSubscriptionId(
+        dmBelowWindowRequerySubscriptionId(pubkey, page),
+      ),
+      since: since,
+      onlyRelay: onlyRelay,
+    );
+    for (var i = 0; i < read.events.length; i++) {
+      if (_ingestSessionEnded(pubkey, generation)) return null;
+      await _handleIncomingEvent(read.events[i]);
+      await _maybeYieldDuringDrain(i);
+    }
+    if (_ingestSessionEnded(pubkey, generation)) return null;
+    return (
+      events: read.events,
+      authoritative: read.authoritative,
+      refusedForGood: read.refusedForGood,
+      possiblyCapped: read.possiblyCapped,
+      resumeAt: read.events.isEmpty
+          ? null
+          : read.events.map((event) => event.createdAt).reduce(min),
+      newGiftWraps: 0,
+    );
+  }
+
+  /// Pages [filterFor]'s events newest→oldest after the gift-wrap drain
+  /// reached the end, routing each through [_handleIncomingEvent]. Bounded by
+  /// [DmHistoryDrainConfig.maxPages]. [label] names the pass in logs.
+  /// [tempRelays] are asked beside the pool, as in [_fetchHistoryPage].
   ///
   /// Returns `true` only when every page it read was authoritative and the
   /// walk ended on an empty page, at the epoch, or at the page budget. Returns
   /// `false` when a page was not, the query threw, or the ingest session
   /// ended; a `false` result MUST NOT mark the drain complete, so a momentary
-  /// outage cannot strand the user's outgoing NIP-04 (#5304, #8209). A page
-  /// that ended on terminal refusals counts as exhausted on first sight.
-  /// Ambiguous refusals are confirmed only when the same relay and page return
-  /// the same category on a later deferred drain retry.
-  Future<bool> _recoverOutgoingNip04(
+  /// outage cannot strand what the pass reads (#5304, #8209). A page that
+  /// ended on terminal refusals counts as exhausted on first sight. Ambiguous
+  /// refusals are confirmed only when the same relay and page return the same
+  /// category on a later deferred drain retry. Passes share that bookkeeping,
+  /// so each keys its pages from its own [pageKeyBase].
+  Future<bool> _runRecoveryPass(
     String pubkey,
     int generation, {
+    required String label,
+    required nostr_filter.Filter Function(int until) filterFor,
+    required String Function(int page) subscriptionIdFor,
+    required int pageKeyBase,
     required bool allowRefusalConfirmation,
+    List<String>? tempRelays,
   }) async {
     // A delayed pass confirms only a refusal seen both when its timer armed
     // and on the latest sweep that heard back about its page. A page answered
     // in between did not recur across the delay, and confirming it would end
     // restore early. A sweep that got no answer says nothing either way.
     final priorRefusals = allowRefusalConfirmation
-        ? _armedNip04Refusals.intersection(_previousNip04Refusals)
+        ? _armedRecoveryRefusals.intersection(_previousRecoveryRefusals)
         : const <String>{};
     final currentRefusals = <String>{};
-    final pageAnswers = <int, _Nip04PageAnswer>{};
+    final pageAnswers = <int, _RecoveryPageAnswer>{};
     try {
       var cursor = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       var sawUnansweredPage = false;
       for (var page = 0; page < DmHistoryDrainConfig.maxPages; page++) {
         if (_ingestSessionEnded(pubkey, generation)) return false;
+        final pageKey = pageKeyBase + page;
         final result = await _nostrClient.readEvents(
-          [
-            nostr_filter.Filter(
-              authors: [pubkey],
-              kinds: [EventKind.directMessage],
-              until: cursor,
-              limit: DmHistoryDrainConfig.pageSize,
-            ),
-          ],
-          subscriptionId: dmNip04DrainSubscriptionId(pubkey, page),
+          [filterFor(cursor)],
+          subscriptionId: subscriptionIdFor(page),
           useCache: false,
+          tempRelays: tempRelays,
           requireAllRelaysSettled: true,
         );
         final events = result.events;
         final ambiguousRefusals = <String>{
           for (final entry in result.closedRelayReasons.entries)
             if (_unconfirmedRefusalCategories.contains(entry.value))
-              '$page|${entry.key}|${entry.value}',
+              '$pageKey|${entry.key}|${entry.value}',
         };
         currentRefusals.addAll(ambiguousRefusals);
-        pageAnswers[page] = (
+        pageAnswers[pageKey] = (
           anyRelaySentEose: result.answeredNetworkRelayCount > 0,
           closedRelays: result.closedRelayReasons.keys.toSet(),
         );
@@ -2187,7 +2707,7 @@ class DmRepository {
               '${entry.key} ${entry.value}',
           ];
           Log.info(
-            'Outgoing NIP-04 recovery for ${pubkeyForLogs(pubkey)} counts '
+            '$label for ${pubkeyForLogs(pubkey)} counts '
             'page $page as answered despite relay refusals: '
             '${refusals.join(', ')}',
             category: LogCategory.system,
@@ -2199,8 +2719,8 @@ class DmRepository {
           // deferred retry confirmed. No relay taking the REQ, a silent relay,
           // or a refusal not yet confirmed arrives as an ordinary empty list,
           // and concluding "nothing to recover" would let the caller mark the
-          // drain complete and permanently strand the user's outgoing NIP-04
-          // (the #5202 failure mode, mirrored here).
+          // drain complete and permanently strand what this pass reads (the
+          // #5202 failure mode, mirrored here).
           return authoritative && !sawUnansweredPage;
         }
         if (!authoritative) sawUnansweredPage = true;
@@ -2210,8 +2730,9 @@ class DmRepository {
           await _maybeYieldDuringDrain(i);
         }
         // Step strictly below the oldest event seen so the loop terminates;
-        // `until` is inclusive, so a re-requested boundary is absorbed by the
-        // hasGiftWrap dedup in [_handleNip04Event].
+        // `until` is inclusive, so a re-requested boundary is read again and
+        // absorbed: [_handleNip04Event] dedups a message, and a deletion
+        // already applied is a no-op.
         final minCreatedAt = events
             .map((event) => event.createdAt)
             .reduce((a, b) => a < b ? a : b);
@@ -2219,16 +2740,16 @@ class DmRepository {
         if (next <= 0) return !sawUnansweredPage;
         cursor = next;
       }
-      // Page budget exhausted. NIP-04 is legacy/low-volume and the gift-wrap
-      // drain already reached the end, so treat this as done rather than
-      // looping a re-drain for a pathologically long kind-4 history.
+      // Page budget exhausted. These passes read low-volume kinds after the
+      // gift-wrap drain already reached the end, so treat this as done rather
+      // than looping a re-drain for a pathologically long history.
       return !sawUnansweredPage;
     } on Object catch (e, stackTrace) {
       // Relay/IO failures are expected on flaky networks. Returning false
       // defers drain completion so recovery retries later rather than
       // silently skipping it and marking complete. See #5304.
       Log.warning(
-        'Outgoing NIP-04 recovery did not finish for ${pubkeyForLogs(pubkey)}: '
+        '$label did not finish for ${pubkeyForLogs(pubkey)}: '
         '$e',
         category: LogCategory.system,
         error: e,
@@ -2249,10 +2770,10 @@ class DmRepository {
       // _resetState clears this memory for the next session; do not let the
       // stale sweep repopulate it with another account's refusal signatures.
       if (!_ingestSessionEnded(pubkey, generation)) {
-        _previousNip04Refusals = {
+        _previousRecoveryRefusals = {
           ...currentRefusals,
-          for (final sighting in _previousNip04Refusals)
-            if (!_nip04SightingAnswered(sighting, pageAnswers)) sighting,
+          for (final sighting in _previousRecoveryRefusals)
+            if (!_recoverySightingAnswered(sighting, pageAnswers)) sighting,
         };
       }
     }
@@ -2261,9 +2782,9 @@ class DmRepository {
   /// Whether this sweep heard back about [sighting]'s page from its relay.
   /// The relay closing the page again answers it; so does any relay sending
   /// EOSE, since the result counts EOSE without naming the relay.
-  static bool _nip04SightingAnswered(
+  static bool _recoverySightingAnswered(
     String sighting,
-    Map<int, _Nip04PageAnswer> pageAnswers,
+    Map<int, _RecoveryPageAnswer> pageAnswers,
   ) {
     final parts = sighting.split('|');
     final answer = pageAnswers[int.parse(parts.first)];
@@ -2354,31 +2875,30 @@ class DmRepository {
   /// backfilling every conversation that still has events on a relay.
   /// See #4953.
   ///
-  /// Idempotent and resumable: returns immediately once a clean drain has
-  /// completed for the user ([DmSyncState.historyDrainComplete]); an
-  /// interrupted drain resumes from the persisted boundary on the next
-  /// call. Concurrent callers share one in-flight run. Runs in the
-  /// background — per-event decryption already offloads to a [compute]
-  /// isolate — so it is safe to fire-and-forget from the inbox BLoC on
-  /// every open.
+  /// Idempotent and resumable: once a clean drain has completed for the user
+  /// ([DmSyncState.historyDrainComplete]) a call only re-reads the stamps
+  /// below the live window, at most once a day (#8439); an interrupted drain
+  /// resumes from the persisted boundary on the next call. Concurrent
+  /// callers share one in-flight run. Runs in the background — per-event
+  /// decryption already offloads to a [compute] isolate — so it is safe to
+  /// fire-and-forget from the inbox BLoC on every open.
   Future<void> backfillHistoryIfNeeded() {
     return _backfillHistoryIfNeeded();
   }
 
-  /// [allowNip04RefusalConfirmation] is passed only for the bounded retry
+  /// [allowRefusalConfirmation] is passed only for the bounded retry
   /// timer's pass, whose delay is what separates two sightings of an ambiguous
   /// refusal. If that timer fires during a non-confirming drain while a
   /// refusal awaits confirmation, its confirmation pass is queued to run as
   /// soon as the active drain finishes.
   Future<void> _backfillHistoryIfNeeded({
-    bool allowNip04RefusalConfirmation = false,
+    bool allowRefusalConfirmation = false,
   }) {
     final existing = _historyDrain;
     if (existing != null) {
-      if (allowNip04RefusalConfirmation &&
-          !_historyDrainCanConfirmNip04Refusal) {
-        if (_armedNip04Refusals.isNotEmpty) {
-          _pendingNip04RefusalConfirmation = true;
+      if (allowRefusalConfirmation && !_historyDrainCanConfirmRefusal) {
+        if (_armedRecoveryRefusals.isNotEmpty) {
+          _pendingRefusalConfirmation = true;
           Log.info(
             'DM history retry for ${pubkeyForLogs(_userPubkey)} will confirm '
             'a relay refusal after the active drain finishes',
@@ -2395,20 +2915,20 @@ class DmRepository {
       return existing;
     }
     final drain = _runHistoryDrain(
-      allowNip04RefusalConfirmation: allowNip04RefusalConfirmation,
+      allowRefusalConfirmation: allowRefusalConfirmation,
     );
     _historyDrain = drain;
-    _historyDrainCanConfirmNip04Refusal = allowNip04RefusalConfirmation;
+    _historyDrainCanConfirmRefusal = allowRefusalConfirmation;
     unawaited(
       drain.whenComplete(() {
         if (!identical(_historyDrain, drain)) return;
         _historyDrain = null;
-        _historyDrainCanConfirmNip04Refusal = false;
-        if (!_pendingNip04RefusalConfirmation) return;
-        _pendingNip04RefusalConfirmation = false;
+        _historyDrainCanConfirmRefusal = false;
+        if (!_pendingRefusalConfirmation) return;
+        _pendingRefusalConfirmation = false;
         if (_syncState?.historyDrainComplete(_userPubkey) ?? false) return;
         unawaited(
-          _backfillHistoryIfNeeded(allowNip04RefusalConfirmation: true),
+          _backfillHistoryIfNeeded(allowRefusalConfirmation: true),
         );
       }),
     );
@@ -2508,7 +3028,10 @@ class DmRepository {
         final row = pending[i];
         // Already recovered by the live sub / drain — clear the stale row so
         // it does not linger and re-query on every inbox open.
-        if (await _directMessagesDao.hasGiftWrap(row.giftWrapId)) {
+        if (await _directMessagesDao.hasGiftWrap(
+          row.giftWrapId,
+          ownerPubkey: pubkey,
+        )) {
           await dao.deletePending(
             giftWrapId: row.giftWrapId,
             ownerPubkey: pubkey,
@@ -2580,7 +3103,7 @@ class DmRepository {
   }
 
   Future<void> _runHistoryDrain({
-    required bool allowNip04RefusalConfirmation,
+    required bool allowRefusalConfirmation,
   }) async {
     // Ahead of isInitialized, which stopListening() deliberately leaves true so
     // a restart can re-open: the preamble below writes before reaching the
@@ -2644,6 +3167,7 @@ class DmRepository {
         'complete',
         category: LogCategory.system,
       );
+      await _requeryBelowWindowIfDue(syncState, pubkey, gen);
       return;
     }
 
@@ -2858,10 +3382,8 @@ class DmRepository {
         // makes progress. `until` is inclusive, so re-requesting the
         // boundary on a saturated page is absorbed by hasGiftWrap dedup
         // rather than lost.
-        final minCreatedAt = events
-            .map((event) => event.createdAt)
-            .reduce((a, b) => a < b ? a : b);
-        cursor = minCreatedAt < cursor ? minCreatedAt : cursor - 1;
+        final resumeAt = historyPage.resumeAt!;
+        cursor = resumeAt < cursor ? resumeAt : cursor - 1;
         if (cursor <= 0) {
           reachedEnd = true;
           break;
@@ -2894,9 +3416,19 @@ class DmRepository {
         final nip04Recovered = await _recoverOutgoingNip04(
           pubkey,
           gen,
-          allowRefusalConfirmation: allowNip04RefusalConfirmation,
+          allowRefusalConfirmation: allowRefusalConfirmation,
         );
-        if (nip04Recovered) {
+        // Deletions last, once every message they can name is stored. The
+        // same deferral applies: an unsettled pass leaves history incomplete.
+        final deletionsRecovered =
+            nip04Recovered &&
+            await _recoverDeletions(
+              pubkey,
+              gen,
+              tempRelays: ownInbox,
+              allowRefusalConfirmation: allowRefusalConfirmation,
+            );
+        if (deletionsRecovered) {
           // This run reached a conclusive answer about the account's own
           // inbox relays — completion is only reachable when it did — so a
           // later session never has to spend a read finding that out.
@@ -2918,11 +3450,14 @@ class DmRepository {
             category: LogCategory.system,
           );
         } else {
+          final pass = nip04Recovered
+              ? 'DM deletion recovery'
+              : 'outgoing NIP-04 recovery';
           Log.warning(
             'DM history drain reached the end for ${pubkeyForLogs(pubkey)} but '
-            'outgoing NIP-04 recovery could not complete (a relay did not '
-            'settle the read, or refused it and the refusal is not confirmed '
-            'yet); deferring completion.',
+            '$pass could not complete (a relay did not settle the read, or '
+            'refused it and the refusal is not confirmed yet); deferring '
+            'completion.',
             category: LogCategory.system,
           );
           _resumeDrainWhenRelayConnects(pubkey, gen);
@@ -3020,11 +3555,11 @@ class DmRepository {
     unawaited(_drainRelayReadySubscription?.cancel());
     _drainRelayReadySubscription = null;
     // A non-confirming sweep can defer while the delayed confirmation remains
-    // pending. While an ambiguous NIP-04 refusal awaits confirmation, any
+    // pending. While an ambiguous recovery refusal awaits confirmation, any
     // deferral keeps that deadline and slot, whatever made it defer; with none
     // awaiting, each reconnect resumes the drain as before.
-    if (_armedNip04Refusals.isNotEmpty &&
-        (_drainRetryTimer != null || _pendingNip04RefusalConfirmation)) {
+    if (_armedRecoveryRefusals.isNotEmpty &&
+        (_drainRetryTimer != null || _pendingRefusalConfirmation)) {
       // A queued confirmation starts as this drain ends and cancels any
       // listener armed here, so only a kept timer needs one.
       if (_drainRetryTimer != null) {
@@ -3053,9 +3588,9 @@ class DmRepository {
       return;
     }
     _confirmationWindowRelayEdgeUsed = false;
-    // _previousNip04Refusals is only ever reassigned to a fresh set, never
+    // _previousRecoveryRefusals is only ever reassigned to a fresh set, never
     // mutated in place, so aliasing it here needs no defensive copy.
-    _armedNip04Refusals = _previousNip04Refusals;
+    _armedRecoveryRefusals = _previousRecoveryRefusals;
     _listenForDrainRelayReconnect(pubkey, generation);
     final delay =
         DmHistoryDrainConfig.deferredRetryDelays[_automaticDrainRetryCount++];
@@ -3069,7 +3604,7 @@ class DmRepository {
         'bounded retry delay',
         category: LogCategory.system,
       );
-      unawaited(_backfillHistoryIfNeeded(allowNip04RefusalConfirmation: true));
+      unawaited(_backfillHistoryIfNeeded(allowRefusalConfirmation: true));
     });
   }
 
@@ -3101,7 +3636,7 @@ class DmRepository {
       unawaited(_drainRelayReadySubscription?.cancel());
       _drainRelayReadySubscription = null;
       if (_ingestSessionEnded(pubkey, generation)) return;
-      if (_armedNip04Refusals.isNotEmpty) {
+      if (_armedRecoveryRefusals.isNotEmpty) {
         _confirmationWindowRelayEdgeUsed = true;
       } else {
         _drainRetryTimer?.cancel();
@@ -3142,7 +3677,7 @@ class DmRepository {
     _liveCatchUp?.cancelHoldLimit();
     _liveCatchUp = null;
     _cancelNip04CopyRetries();
-    _resetNip04RefusalConfirmationState();
+    _resetRecoveryRefusalConfirmationState();
     await _drainRelayReadySubscription?.cancel();
     _drainRelayReadySubscription = null;
     // Drop the loop handles so a later startListening() starts a fresh pass
@@ -3176,10 +3711,17 @@ class DmRepository {
     _readFlush = null;
     unawaited(_dismissalSubscription?.cancel());
     _dismissalSubscription = null;
-    await _giftWrapSubscription?.cancel();
+    final dms = _giftWrapSubscription;
+    final deletions = _deletionsSubscription;
     _giftWrapSubscription = null;
+    _deletionsSubscription = null;
+    await dms?.cancel();
+    await deletions?.cancel();
     try {
       await _nostrClient.unsubscribe(_subscriptionId);
+      await _nostrClient.unsubscribe(
+        dmDeletionsSubscriptionId(_subscriptionId),
+      );
     } on Object {
       // Ignore if subscription doesn't exist
     }
@@ -3234,6 +3776,16 @@ class DmRepository {
   void _dropLiveCatchUp(_LiveCatchUp catchUp) {
     catchUp.cancelHoldLimit();
     if (identical(_liveCatchUp, catchUp)) _liveCatchUp = null;
+  }
+
+  /// Cancels both live REQs, the DMs and the deletions. They end together,
+  /// so a re-subscribe never runs beside a REQ left over from the previous
+  /// pair.
+  void _endLiveSubscriptions() {
+    unawaited(_giftWrapSubscription?.cancel());
+    unawaited(_deletionsSubscription?.cancel());
+    _giftWrapSubscription = null;
+    _deletionsSubscription = null;
   }
 
   /// Saves the stamps [catchUp] holds once the stored batch has fully
@@ -3421,9 +3973,9 @@ class DmRepository {
   /// all share its top may have left more of that second unsent. The walk
   /// reads on below it, but keeps its saved position at the highest such
   /// second, and at the floor keeps those seconds as the relay's debt rather
-  /// than forgetting it. A settled page that is empty but may be capped, from
-  /// a NIP-67 `more` or frames the pool dropped, proves nothing read and
-  /// leaves the debt for a later walk.
+  /// than forgetting it. A settled read that is empty but may be capped, from
+  /// a NIP-67 `more` or frames the pool dropped, proves nothing read, even
+  /// beside a read that sent events, and leaves the debt for a later walk.
   ///
   /// Each write names the debt it read. A catch-up can record more of a
   /// relay's debt between two pages, and a write from the old range would
@@ -3479,6 +4031,7 @@ class DmRepository {
             generation: catchUp.generation,
             onlyRelay: debt.relay,
             holdFor: catchUp,
+            withDeletions: true,
           );
           if (page == null) return;
           if (!page.authoritative) {
@@ -3490,13 +4043,12 @@ class DmRepository {
             );
             return;
           }
-          final stamps = page.events.map((event) => event.createdAt);
-          final oldest = stamps.isEmpty ? null : stamps.reduce(min);
+          final oldest = page.resumeAt;
           if (oldest == null && page.possiblyCapped) {
             Log.warning(
               'DM catch-up debt walk for ${pubkeyForLogs(owner)} kept '
-              '${debt.relay} at $until: it settled an empty page that may '
-              'have more.',
+              '${debt.relay} at $until: it settled a read that may have more '
+              'and sent nothing.',
               category: LogCategory.system,
             );
             leftForLater.add(debt.relay);
@@ -3673,8 +4225,8 @@ class DmRepository {
   ///
   ///  * NIP-09 makes `k` a SHOULD (`09.md:9`), so a conforming foreign client
   ///    may omit it entirely (#7329).
-  ///  * Our own sender hardcodes `['k','14']` even when deleting a kind-15
-  ///    file message, so the tag is already wrong on our own wire.
+  ///  * Our own sender hardcoded `['k','14']` even when deleting a kind-15
+  ///    file message, and deletions sent or queued then still carry it.
   ///  * Before this, *every* wrapped kind-5 went to the reactions handler,
   ///    which answered `processed` for anything not tagged `['k','7']`. That
   ///    recorded the wrap terminally and lost message deletions for good
@@ -3721,7 +4273,7 @@ class DmRepository {
       // randomizes gift-wrap `created_at` and a deletion can drain ahead of
       // the event it names. A null `_reactionsRepository` (legacy fixtures)
       // lands here too: that is "cannot resolve", not "nothing to do", and
-      // cementing it would burn the wrap for every account on the device.
+      // cementing it would skip the wrap on every later delivery.
       if ((resolved ?? DmWrapOutcome.deferred) == DmWrapOutcome.deferred) {
         unresolved.add(rumorId);
         outcome = DmWrapOutcome.deferred;
@@ -3871,70 +4423,54 @@ class DmRepository {
   /// participants, messages suppressed by a removed-conversation tombstone)
   /// leave a `processed_gift_wraps` ledger row instead. Checking both means a
   /// re-delivered wrap of any kind is skipped before paying a decrypt. #5452.
-  Future<bool> _alreadyProcessed(String giftWrapId) async {
-    if (await _directMessagesDao.hasGiftWrap(giftWrapId)) return true;
-    final ledger = _processedGiftWrapsDao;
-    if (ledger == null) return false;
-    return ledger.hasGiftWrap(giftWrapId);
-  }
-
-  /// Attributes an already-processed kind-4 to a local account.
   ///
-  /// [_alreadyProcessed] is global on the documented reasoning that a
-  /// gift-wrap event id is globally unique. That holds for kind 1059, where
-  /// NIP-59 mints a fresh ephemeral key and a separate wrap per recipient, so
-  /// one id can only ever belong to one local account. A kind 4 has no
-  /// envelope — one signed event, one author, one `p` recipient — so when both
-  /// ends are accounts on this device they genuinely share an id, and
-  /// `_recoverOutgoingNip04` makes that concrete by paging the whole outgoing
-  /// history of one account into tables the other one reads.
-  ///
-  /// The global probe still runs first and still decides whether to pay for a
-  /// decrypt: the event is terminally handled on this device either way. What
-  /// this adds is who handled it, which is what decides whether this account
-  /// may move its own sync boundary past it.
-  Future<_Nip04DedupHit> _nip04DedupHit(
-    String eventId, {
+  /// Scoped to [ownerPubkey]: did THIS account handle it? A wrap id is unique
+  /// to one account only for an inbound kind 1059. An outgoing row stores the
+  /// *recipient's* wrap id, and a kind 4 has no envelope — one signed event,
+  /// one author, one `p` recipient — so its id is shared by both ends. With
+  /// both accounts on one device, a global probe made the account that never
+  /// stored the message skip it before decrypting it (#6645).
+  Future<bool> _alreadyProcessed(
+    String giftWrapId, {
     required String ownerPubkey,
   }) async {
-    if (!await _alreadyProcessed(eventId)) return _Nip04DedupHit.none;
-    if (ownerPubkey.isEmpty) return _Nip04DedupHit.thisAccount;
-    // The kind-4 insert writes the same id into both `id` and `giftWrapId`,
-    // so an owner-scoped lookup by id is the exact counterpart of the global
-    // `hasGiftWrap` probe on this path — and it already applies the legacy
-    // unowned-row allowance.
-    if (await _directMessagesDao.getMessageById(
-          eventId,
-          ownerPubkey: ownerPubkey,
-        ) !=
-        null) {
-      return _Nip04DedupHit.thisAccount;
+    if (await _directMessagesDao.hasGiftWrap(
+      giftWrapId,
+      ownerPubkey: ownerPubkey,
+    )) {
+      return true;
     }
     final ledger = _processedGiftWrapsDao;
-    if (ledger != null &&
-        await ledger.hasGiftWrapForOwner(
-          giftWrapId: eventId,
-          ownerPubkey: ownerPubkey,
-        )) {
-      return _Nip04DedupHit.thisAccount;
-    }
-    return _Nip04DedupHit.otherAccount;
+    if (ledger == null) return false;
+    return ledger.hasGiftWrapForOwner(
+      giftWrapId: giftWrapId,
+      ownerPubkey: ownerPubkey,
+    );
   }
 
   /// Batched form of [_alreadyProcessed] for the history-drain dedup probe.
-  /// Resolves which of [giftWrapIds] are already persisted or in the dedup
-  /// ledger with TWO `IN` queries instead of 2×N sequential single-id lookups,
-  /// collapsing a full page's probe from ~200 bg-isolate round trips to 2. The
-  /// in-transaction `hasGiftWrap` re-check in the persist path still guards
-  /// TOCTOU races, so this is purely a fast-path filter. #5452.
-  Future<Set<String>> _alreadyProcessedBatch(Set<String> giftWrapIds) async {
+  /// Resolves which of [giftWrapIds] [ownerPubkey] already has persisted or in
+  /// the dedup ledger with TWO `IN` queries instead of 2×N sequential
+  /// single-id lookups, collapsing a full page's probe from ~200 bg-isolate
+  /// round trips to 2. The in-transaction `hasGiftWrap` re-check in the
+  /// persist path still guards TOCTOU races, so this is purely a fast-path
+  /// filter. #5452.
+  Future<Set<String>> _alreadyProcessedBatch(
+    Set<String> giftWrapIds, {
+    required String ownerPubkey,
+  }) async {
     if (giftWrapIds.isEmpty) return const <String>{};
     final present = <String>{
-      ...await _directMessagesDao.giftWrapIdsPresent(giftWrapIds),
+      ...await _directMessagesDao.giftWrapIdsPresent(
+        giftWrapIds,
+        ownerPubkey: ownerPubkey,
+      ),
     };
     final ledger = _processedGiftWrapsDao;
     if (ledger != null) {
-      present.addAll(await ledger.giftWrapIdsPresent(giftWrapIds));
+      present.addAll(
+        await ledger.giftWrapIdsPresent(giftWrapIds, ownerPubkey: ownerPubkey),
+      );
     }
     return present;
   }
@@ -3970,7 +4506,10 @@ class DmRepository {
     final Event? rumorEvent;
     try {
       // Dedup: skip if already processed (message row or ledger). #5452.
-      if (await _alreadyProcessed(giftWrapEvent.id)) {
+      if (await _alreadyProcessed(
+        giftWrapEvent.id,
+        ownerPubkey: ownerPubkey,
+      )) {
         // Still advance the wire boundary. A duplicate is by definition a
         // wrap we have processed, so its outer stamp belongs in the maximum
         // this boundary tracks, and without this an install that upgraded
@@ -4160,15 +4699,28 @@ class DmRepository {
         // Cross-device DM read-state marker (#4977). Route only Divine's read
         // marker d-tag to the reconciler before the DM-only kinds gate so it is
         // never rendered as a message, then record it terminally so it is not
-        // re-decrypted every launch. Other app-specific self-wraps must remain
-        // unrecorded so future/foreign kind-30078 handlers can still process
-        // them instead of losing them to the processed-wrap ledger.
+        // re-decrypted every launch. The account's own other app-data wraps
+        // stay unrecorded so a future handler can still process them instead
+        // of losing them to the processed-wrap ledger. Another account's
+        // can never be this account's app data, so those are recorded too.
+        // #10023.
         if (rumor.kind == EventKind.appSpecificData) {
           if (_hasReadMarkerDTag(rumor)) {
             await _reconcileReadMarker(rumor);
             await _recordProcessedWrap(
               giftWrapEvent.id,
               ownerPubkey: ownerPubkey,
+            );
+          } else if (rumor.pubkey != ownerPubkey) {
+            await _recordProcessedWrap(
+              giftWrapEvent.id,
+              ownerPubkey: ownerPubkey,
+            );
+            Log.debug(
+              'Ignoring kind-30078 app data ${rumor.id} (gift wrap '
+              '${giftWrapEvent.id}) from ${pubkeyForLogs(rumor.pubkey)}: it '
+              'is not app data this account wrote',
+              category: LogCategory.system,
             );
           }
           return;
@@ -4394,7 +4946,10 @@ class DmRepository {
           // Re-check dedup inside transaction (TOCTOU protection). The skip is
           // logged after the transaction below; logging here too would emit one
           // line per skip twice.
-          if (await _directMessagesDao.hasGiftWrap(giftWrapEvent.id)) {
+          if (await _directMessagesDao.hasGiftWrap(
+            giftWrapEvent.id,
+            ownerPubkey: ownerPubkey,
+          )) {
             skippedByTransactionalGiftWrapDedup = true;
             return;
           }
@@ -4743,7 +5298,7 @@ class DmRepository {
     ];
     final processed = await _alreadyProcessedBatch({
       for (final event in giftWraps) event.id,
-    });
+    }, ownerPubkey: _userPubkey);
     final pending = [
       for (final event in giftWraps)
         if (!processed.contains(event.id)) event,
@@ -4831,7 +5386,7 @@ class DmRepository {
     ];
     final processed = await _alreadyProcessedBatch({
       for (final event in giftWraps) event.id,
-    });
+    }, ownerPubkey: _userPubkey);
     final pending = [
       for (final event in giftWraps)
         if (!processed.contains(event.id)) event,
@@ -5138,39 +5693,21 @@ class DmRepository {
       // processed-wraps ledger also carries NIP-04 event ids that were
       // suppressed by a removed-conversation tombstone, so replays skip
       // decryption entirely — matching the terminal NIP-17 behavior. #7804.
-      final dedupHit = await _nip04DedupHit(
-        nip04Event.id,
-        ownerPubkey: ownerPubkey,
-      );
-      if (dedupHit != _Nip04DedupHit.none) {
-        if (dedupHit == _Nip04DedupHit.thisAccount) {
-          // Advance the wire boundary for the same reason the gift-wrap dedup
-          // path does. A kind 4 is its own envelope, so the stamp the relay
-          // filtered to deliver this replay is the event's own `created_at`.
-          await _recordWireSeen(
-            ownerPubkey,
-            nip04Event.createdAt,
-            deferTo: deferWireTo,
-          );
-        } else {
-          // A different local account processed this kind 4 — its id is shared
-          // by both ends, unlike a gift wrap's. This account never stored the
-          // message, so moving its boundary past the event would raise the
-          // floor of every future window over a message it does not have, and
-          // the boundary only ever rises. See #8209.
-          // A drain deliberately re-requests this event while its cursor stays
-          // above it. Logging every replay would fill the capture ring and
-          // evict the persist diagnostics the warning is meant to support.
-          if (_historyDrain == null) {
-            Log.warning(
-              'Skipping kind-4 ${nip04Event.id} for '
-              '${pubkeyForLogs(ownerPubkey)}: another local account processed '
-              'it, so this account is not advancing its sync boundary past a '
-              'message it never stored',
-              category: LogCategory.system,
-            );
-          }
-        }
+      //
+      // Scoped to this account: a kind 4's id is shared by both ends, so when
+      // the other end is also a local account its handling must not stand in
+      // for this one's. Skipping on it would drop this account's copy, and
+      // moving its boundary past a message it never stored raises the floor of
+      // every future window over it (#6645, #8209).
+      if (await _alreadyProcessed(nip04Event.id, ownerPubkey: ownerPubkey)) {
+        // Advance the wire boundary for the same reason the gift-wrap dedup
+        // path does. A kind 4 is its own envelope, so the stamp the relay
+        // filtered to deliver this replay is the event's own `created_at`.
+        await _recordWireSeen(
+          ownerPubkey,
+          nip04Event.createdAt,
+          deferTo: deferWireTo,
+        );
         if (_historyDrain == null) {
           Log.debug(
             'Skipping already-processed NIP-04 event ${nip04Event.id}',
@@ -5262,9 +5799,9 @@ class DmRepository {
             ),
           );
         } on FormatException {
-          // Every account on this device skips an id in the ledger, so the
-          // failure is final only when no other account could be the one the
-          // event was encrypted to.
+          // Record the failure only when no other account could be the one the
+          // event was encrypted to: a row here is this account's outcome, and
+          // an event meant for another recipient is not its to settle.
           final namesOneRecipient = nip04Event.tags.every(
             (tag) =>
                 tag.length < 2 || tag[0] != 'p' || tag[1] == recipientPubkey,
@@ -5376,7 +5913,10 @@ class DmRepository {
         // Re-check dedup inside transaction (TOCTOU protection). The skip is
         // logged after the transaction below; logging here too would emit one
         // line per skip twice.
-        if (await _directMessagesDao.hasGiftWrap(nip04Event.id)) {
+        if (await _directMessagesDao.hasGiftWrap(
+          nip04Event.id,
+          ownerPubkey: ownerPubkey,
+        )) {
           skippedByTransactionalGiftWrapDedup = true;
           return;
         }
@@ -5479,8 +6019,8 @@ class DmRepository {
       // wraps), so this bounded timestamp is a real send time and safe to
       // record as a cursor. A kind 4 is its own envelope — the stamp the
       // relay filters and the stamp the UI orders by are the same value — so
-      // it advances both boundaries. The live subscription's `since:` covers
-      // kinds [1059, 4, 5] with one filter, so the wire boundary has to track
+      // it advances both boundaries. The live DM REQ's `since:` covers kinds
+      // [1059, 4] with one filter, so the wire boundary has to track
       // whichever kind carried the newest wire stamp. See #8209.
       // Scoped to the delivering account, not whichever is current after the
       // decrypt and transaction return: nothing re-checks the session inside
@@ -7259,6 +7799,9 @@ class DmRepository {
   /// legacy plaintext kind-4 copy (recommended for shares — see the caller in
   /// `VideoSharingService`).
   ///
+  /// [additionalTags] ride on the rumor after the citation, such as the
+  /// question a viewer answers with a question sticker's answer.
+  ///
   /// Throws the same errors as [sendMessage].
   @useResult
   Future<NIP17SendResult> sendSharedVideo({
@@ -7270,6 +7813,7 @@ class DmRepository {
     String? videoEventId,
     String? relayHint,
     String? replyToId,
+    List<List<String>> additionalTags = const [],
     bool skipNip04Fallback = false,
     bool backgroundDelivery = false,
   }) async {
@@ -7298,6 +7842,7 @@ class DmRepository {
         recipientPubkey: recipientPubkey,
         content: baseContent,
         replyToId: replyToId,
+        additionalTags: additionalTags,
         backgroundDelivery: backgroundDelivery,
         skipNip04Fallback: skipNip04Fallback,
       );
@@ -7306,7 +7851,7 @@ class DmRepository {
     return sendMessage(
       recipientPubkey: recipientPubkey,
       content: '$baseContent\n${citation.nostrUri}',
-      additionalTags: [citation.qTag],
+      additionalTags: [citation.qTag, ...additionalTags],
       replyToId: replyToId,
       backgroundDelivery: backgroundDelivery,
       skipNip04Fallback: skipNip04Fallback,
@@ -8411,6 +8956,74 @@ class DmRepository {
     return stopped;
   }
 
+  /// Stop delivering a group message to a member held on an unreadable
+  /// inbox once its retries ran out (#10012), leaving the record
+  /// [cancelOutgoingSend] leaves, so the bubble reads "Not sent to everyone"
+  /// instead of "Failed to send".
+  ///
+  /// Only a held member ([_heldPoolWrapId]) whose inbox is still unreadable
+  /// is stopped, for a group message stored for the members who have it.
+  /// Its retries must be spent (`retryCount` of at least [maxRetries]), with
+  /// no recovery running. The call then returns `true`.
+  /// Anything else is left as it is and returns `false`:
+  /// a missing row, a delivery already stopped, a member that is not held or
+  /// still has retries (as after a Resend) or a recovery running, a 1:1
+  /// message, and a group message no member has, which all keep "Failed to
+  /// send".
+  ///
+  /// Throws [StateError] if the queue DAO is not wired in, and
+  /// [ArgumentError] if the row belongs to a different account.
+  Future<bool> stopHeldMemberDelivery({
+    required String rumorId,
+    required int maxRetries,
+  }) async {
+    _assertInitialized();
+    final dao = _outgoingDmsDao;
+    if (dao == null) {
+      throw StateError(
+        'stopHeldMemberDelivery requires the outgoing_dms queue DAO; '
+        'wire OutgoingDmsDao into DmRepository before calling.',
+      );
+    }
+    Future<bool> eligible(OutgoingDm? row) async {
+      if (row == null) return false;
+      if (row.ownerPubkey != _userPubkey) {
+        throw ArgumentError.value(
+          rumorId,
+          'rumorId',
+          'queue row belongs to a different account',
+        );
+      }
+      if (!_isLiveDelivery(row) || _heldPoolWrapId(row) == null) return false;
+      // Retries left, or one running now: the delivery is still in progress.
+      if (row.retryCount < maxRetries ||
+          _recoveriesInFlight.containsKey('full:${row.id}')) {
+        return false;
+      }
+      return _stoppedRowKeepsItsRecord(row);
+    }
+
+    final candidate = await dao.getById(rumorId);
+    if (!await eligible(candidate)) return false;
+    // The pool wrap survives a later failed publish to a found inbox. It
+    // proves a past held attempt, not that unreadability still explains this
+    // failure. Keep Resend when the inbox can now be read. Resolve outside
+    // the transaction so network waits never hold a database write lock.
+    final inbox = await resolveDmInboxRelaysDetailed(
+      candidate!.recipientPubkey,
+    );
+    if (inbox.state != DmInboxResolution.unreadable) return false;
+
+    var stopped = false;
+    await _conversationsDao.runInTransaction<void>(() async {
+      final row = await dao.getById(rumorId);
+      // A Resend or cancellation may have changed the row during the lookup.
+      if (!await eligible(row)) return;
+      stopped = await dao.markRecipientCancelled(rumorId);
+    });
+    return stopped;
+  }
+
   /// Cancel every queued row of the send batch containing [rumorId] — the
   /// group-send counterpart of [cancelOutgoingSend], for deleting a message.
   ///
@@ -8558,11 +9171,12 @@ class DmRepository {
       ownerPubkey: _ownerPubkey,
     );
     if (message == null || message.senderPubkey != _userPubkey) return false;
-    // Mirrors the thread query: a retraction that is pending or was refused
-    // keeps the bubble on screen, a confirmed one removes it.
+    // Mirrors the thread query: a retraction that is not yet confirmed for
+    // every recipient keeps the bubble on screen, a confirmed one removes it.
     return !message.isDeleted ||
-        message.deletionPublishStatus == DirectMessagesDao.deletionPending ||
-        message.deletionPublishStatus == DirectMessagesDao.deletionBlocked;
+        DirectMessagesDao.retractionsShownToSender.contains(
+          message.deletionPublishStatus,
+        );
   }
 
   /// Whether [row] is still a delivery in progress: present, and not one the
@@ -9811,12 +10425,13 @@ class DmRepository {
   /// Delete a sent message for everyone via NIP-09 kind 5.
   ///
   /// The kind-5 travels as a **NIP-17 rumor inside a kind-1059 gift wrap**
-  /// addressed to each participant (`17.md:87`), not as a bare event on the
-  /// public pool. The bare form named the counterparty in a plaintext `p` tag
-  /// alongside a real timestamp and the rumor kind, which defeats NIP-17's
-  /// first stated benefit (`17.md:97`) — and NIP-09 tells relays to keep
-  /// deletion requests indefinitely (`09.md:33`), so each one was a permanent
-  /// public record that these two pubkeys had a conversation (#7341).
+  /// (`17.md:87`), which Divine sends to each participant, not as a bare
+  /// event on the public pool. The bare form named the counterparty in a
+  /// plaintext `p` tag alongside a real timestamp and the rumor kind, which
+  /// defeats NIP-17's first stated benefit (`17.md:97`) — and NIP-09 tells
+  /// relays to keep deletion requests indefinitely (`09.md:33`), so each one
+  /// was a permanent public record that these two pubkeys had a conversation
+  /// (#7341).
   ///
   /// Returns once the deletion is **durable**, not once it is delivered. The
   /// row is soft-deleted and the rumor stored in one write; delivery is
@@ -9875,14 +10490,9 @@ class DmRepository {
     // `k` names the kind of the event being deleted (NIP-09 09.md:9), so it
     // reads the row rather than assuming 14 — a kind-15 file message was
     // previously mislabelled on the wire.
-    final deletion = _messageService!.buildRumor(
-      recipientPubkey: recipients.first,
-      content: '',
-      eventKind: EventKind.eventDeletion,
-      additionalTags: [
-        ['e', rumorId],
-        ['k', row.messageKind.toString()],
-      ],
+    final deletion = _messageService!.buildDeletionRumor(
+      targetEventId: rumorId,
+      targetKind: row.messageKind,
     );
 
     // Durability boundary. One write hides the bubble AND stores the rumor,
@@ -9946,11 +10556,14 @@ class DmRepository {
     required String conversationId,
     required Event deletion,
     required List<String> recipients,
+    Map<String, HeldWrap> heldWraps = const {},
   }) async {
     try {
       final (:result, :anyRecipientAccepted) = await _fanOutDeletion(
+        rumorId: rumorId,
         deletion: deletion,
         recipients: recipients,
+        heldWraps: heldWraps,
       );
       switch (result) {
         case NIP17SendSuccess():
@@ -10049,9 +10662,32 @@ class DmRepository {
             rumorId: r.id,
             conversationId: r.conversationId,
             createdAt: r.createdAt,
+            retriesRanOut:
+                r.deletionPublishStatus ==
+                DirectMessagesDao.deletionUnconfirmed,
           ),
         )
         .toList(growable: false);
+  }
+
+  /// Record that the automatic retries of the retraction of [rumorId] ran
+  /// out without every recipient confirming it (#10012).
+  ///
+  /// Its bubble then shows the failed retraction, with Try again, instead of
+  /// progress, and it stays on [retryableMessageDeletions] with
+  /// [DmMessageDeletionRetryTarget.retriesRanOut] set for a later launch.
+  /// Only a pending retraction changes, and not while a retry of it is
+  /// running: that retry settles the status itself. An automatic retry
+  /// leaves a retraction whose retries ran out unconfirmed throughout, and
+  /// the sender's Try again writes the warning back when nothing confirms it.
+  ///
+  /// Throws whatever the database throws.
+  Future<void> markMessageDeletionUnconfirmed({required String rumorId}) async {
+    if (_messageDeletionRecoveriesInFlight.containsKey(rumorId)) return;
+    await _directMessagesDao.markMessageDeletionUnconfirmed(
+      rumorId,
+      ownerPubkey: _ownerPubkey,
+    );
   }
 
   /// Re-drive a delete-for-everyone that no relay confirmed.
@@ -10069,20 +10705,73 @@ class DmRepository {
   /// before #8232, or unreadable — it mints one, because that row has no
   /// other route back: [deleteMessageForEveryone] returns early on
   /// `is_deleted` and the sweep's worklist requires a non-null rumor (#8284).
+  ///
+  /// A recipient an earlier attempt delivered the kind 5 to is sent nothing
+  /// again. One whose earlier wrap the fallback pool accepted on an
+  /// unreadable inbox is sent nothing more while it stays unreadable, is
+  /// settled on that wrap once they advertise no inbox, and is wrapped again
+  /// only once their inbox is found (#10012).
+  ///
+  /// [automatic] is for the retry sweep. A retraction whose retries ran out
+  /// keeps its warning through an automatic attempt, so a launch shows no
+  /// spinner and a kill mid-attempt leaves it on its reduced allowance. The
+  /// default is the sender's Try again, which moves it back to pending for
+  /// the spinner and writes the warning back when nothing confirms it, even
+  /// when it joins an automatic attempt already running (#10012).
   Future<DmMessageDeletionOutcome> retryMessageDeletion({
     required String rumorId,
+    bool automatic = false,
   }) {
     final existing = _messageDeletionRecoveriesInFlight[rumorId];
-    if (existing != null) return existing;
-    final future = _retryMessageDeletion(rumorId: rumorId);
+    if (existing != null) {
+      return automatic
+          ? existing
+          : _tryAgainWhileRetrying(rumorId: rumorId, running: existing);
+    }
+    final future = _retryMessageDeletion(
+      rumorId: rumorId,
+      automatic: automatic,
+    );
     _messageDeletionRecoveriesInFlight[rumorId] = future;
     return future.whenComplete(
       () => _messageDeletionRecoveriesInFlight.remove(rumorId),
     );
   }
 
+  /// The sender's Try again of [rumorId] while another attempt of it is
+  /// [running]: an automatic one leaves a retraction whose retries ran out
+  /// showing the warning, so move it to pending for the spinner before
+  /// joining, and write the warning back unless it settles (#10012).
+  /// The move is a compare-and-set, since the running attempt can settle the
+  /// row at any moment, and a settled row must never be reopened.
+  Future<DmMessageDeletionOutcome> _tryAgainWhileRetrying({
+    required String rumorId,
+    required Future<DmMessageDeletionOutcome> running,
+  }) async {
+    final movedToPending = await _directMessagesDao
+        .markUnconfirmedMessageDeletionPending(
+          rumorId,
+          ownerPubkey: _ownerPubkey,
+        );
+    final outcome = await running;
+    if (movedToPending && !_settlesDeletion(outcome)) {
+      await _directMessagesDao.markMessageDeletionUnconfirmed(
+        rumorId,
+        ownerPubkey: _ownerPubkey,
+      );
+    }
+    return outcome;
+  }
+
+  /// Whether [outcome] leaves the retraction settled, as sent or blocked.
+  /// Anything else leaves a row moved back to pending for nobody to settle.
+  static bool _settlesDeletion(DmMessageDeletionOutcome outcome) =>
+      outcome == DmMessageDeletionOutcome.sent ||
+      outcome == DmMessageDeletionOutcome.blocked;
+
   Future<DmMessageDeletionOutcome> _retryMessageDeletion({
     required String rumorId,
+    required bool automatic,
   }) async {
     if (_messageService == null || _userPubkey.isEmpty) {
       return DmMessageDeletionOutcome.unavailable;
@@ -10122,20 +10811,20 @@ class DmRepository {
     final mintedFresh = replayable == null;
     final deletion =
         replayable ??
-        _messageService!.buildRumor(
-          recipientPubkey: recipients.first,
-          content: '',
-          eventKind: EventKind.eventDeletion,
-          additionalTags: [
-            ['e', rumorId],
-            ['k', row.messageKind.toString()],
-          ],
+        _messageService!.buildDeletionRumor(
+          targetEventId: rumorId,
+          targetKind: row.messageKind,
         );
 
-    // A user-driven retry moves a blocked row back through pending so the
-    // bubble swaps its warning icon for progress. A freshly minted rumor must
-    // also cross the durability boundary before the wire, so the sweep can
-    // re-drive it. Sweep retries of an already-pending row need neither.
+    // The sender's retry of a blocked row, or of one whose automatic retries
+    // ran out (#10012), moves it back through pending so the bubble swaps its
+    // warning icon for progress. An automatic retry leaves a ran-out row as
+    // it is. A freshly minted rumor must also cross the durability boundary
+    // before the wire, so the sweep can re-drive it. Sweep retries of an
+    // already-pending row need neither.
+    final retriesRanOut =
+        row.deletionPublishStatus == DirectMessagesDao.deletionUnconfirmed;
+    var backToPending = false;
     if (mintedFresh ||
         row.deletionPublishStatus == DirectMessagesDao.deletionBlocked) {
       await _directMessagesDao.markMessageDeletionPending(
@@ -10145,24 +10834,50 @@ class DmRepository {
             : storedRumor!,
         ownerPubkey: _ownerPubkey,
       );
+      backToPending = true;
       if (mintedFresh) _notifyRetryableWork();
+    } else if (retriesRanOut && !automatic) {
+      // A compare-and-set, as for a Try again that joins a running attempt.
+      backToPending = await _directMessagesDao
+          .markUnconfirmedMessageDeletionPending(
+            rumorId,
+            ownerPubkey: _ownerPubkey,
+          );
     }
 
-    return _driveMessageDeletion(
+    final outcome = await _driveMessageDeletion(
       rumorId: rumorId,
       conversationId: row.conversationId,
       deletion: deletion,
       recipients: recipients,
+      // A freshly minted kind 5 replaced the stored one, and the wraps held
+      // for that one with it.
+      heldWraps: mintedFresh
+          ? const {}
+          : decodeHeldWraps(row.heldDeletionWraps),
     );
+    // It came back to pending with its retries spent and nothing confirmed
+    // it: show the warning again now, rather than a spinner until the
+    // sweep's next pass (#10012). This call holds the in-flight slot, so it
+    // writes through the DAO rather than [markMessageDeletionUnconfirmed].
+    if (retriesRanOut && backToPending && !_settlesDeletion(outcome)) {
+      await _directMessagesDao.markMessageDeletionUnconfirmed(
+        rumorId,
+        ownerPubkey: _ownerPubkey,
+      );
+    }
+    return outcome;
   }
 
   /// Wrap [deletion] to each recipient in turn.
   ///
-  /// Terminal success only when EVERY recipient's wrap lands. One row cannot
-  /// track per-recipient delivery, so a partial fan-out must not settle it —
-  /// the sweep re-drives the whole rumor and the recipients that already have
-  /// it dedup on the (identical) rumor id. Mirrors
-  /// `DmReactionsRepository._fanOutRumor`.
+  /// Terminal success only when EVERY recipient's wrap lands. One row holds
+  /// the retraction for every member, so a partial fan-out must not settle
+  /// it: settling would clear the stored rumor the missed members still need.
+  /// Instead the attempt records on the row the members it delivered to, and
+  /// a later attempt passes them back in [heldWraps] and sends them nothing,
+  /// counting them as delivered, so the sweep re-drives the rumor only to the
+  /// members it missed (#10012). Mirrors `DmReactionsRepository._fanOutRumor`.
   ///
   /// A recipient's wrap "lands" only when the relay that confirmed it is one
   /// the recipient reads. When their kind-10050 could not be READ the wrap
@@ -10177,9 +10892,10 @@ class DmRepository {
   ///
   /// Scoring the unreadable case as landed is #8515, and it is not merely a
   /// mislabel: [DirectMessagesDao.markMessageDeletionSent] clears the stored
-  /// rumor, and `getRetryableOwnMessageDeletions` selects on `deletion_pending`
-  /// AND a non-null rumor — so the row leaves the sweep's worklist on two
-  /// counts and the retraction becomes unrecoverable.
+  /// rumor, and `getRetryableOwnMessageDeletions` selects on
+  /// `deletion_pending` or `deletion_unconfirmed` AND a non-null rumor — so
+  /// the row leaves the sweep's worklist on two counts and the retraction
+  /// becomes unrecoverable.
   ///
   /// Unlike `_fanOutRumor`, the aggregate failure does NOT carry
   /// `retryablePending`. Nothing can observe it here: this result is consumed
@@ -10187,10 +10903,22 @@ class DmRepository {
   /// returns a [DmMessageDeletionOutcome]. The record also reports whether
   /// any post-downgrade recipient result was accepted, so the caller can
   /// distinguish wholly refused from partly delivered fan-outs (#8201).
+  ///
+  /// The wrap the pool held is recorded on the retracted message [rumorId],
+  /// and a later attempt passes it back in [heldWraps], keyed by recipient,
+  /// with the rules `_fanOutRumor` applies (#10012): nothing more to that
+  /// recipient while their inbox stays unreadable, the held wrap as their
+  /// delivery once they advertise no inbox, a new wrap once it is found. An
+  /// attempt in which any recipient's inbox is unreadable is held, so no
+  /// recipient's send publishes the sender's copy then; the attempt that
+  /// delivers publishes one per member, as every delivered retraction does
+  /// (#10016), a member it sends nothing included.
   Future<({NIP17SendResult result, bool anyRecipientAccepted})>
   _fanOutDeletion({
+    required String rumorId,
     required Event deletion,
     required List<String> recipients,
+    Map<String, HeldWrap> heldWraps = const {},
   }) async {
     // Resolve every recipient's kind-10050 inbox concurrently BEFORE the loop,
     // exactly as `sendMessage` and `sendGroupMessage` do. Without it the
@@ -10211,43 +10939,105 @@ class DmRepository {
         ).then((inbox) => inboxByRecipient[recipient] = inbox),
     ]);
     final selfWrapTargets = await selfWrapRelays;
+    final held = recipients.any(
+      (recipient) =>
+          heldWraps[recipient]?.delivered != true &&
+          inboxByRecipient[recipient]?.state == DmInboxResolution.unreadable,
+    );
     NIP17SendSuccess? lastSuccess;
     final failures = <NIP17SendFailure>[];
+    // The members this attempt delivered to, and the wrap each has (#10012).
+    final deliveredWraps = <String, String>{};
     for (final recipient in recipients) {
       final inbox = inboxByRecipient[recipient];
-      final published = await _messageService!
-          .sendRumor(
+      final heldWrap = heldWraps[recipient];
+      final NIP17SendResult result;
+      final unsent = await resolveHeldWrap(
+        messageService: _messageService!,
+        rumor: deletion,
+        recipientPubkey: recipient,
+        heldWrap: heldWrap,
+        inboxState: inbox?.state,
+      );
+      if (unsent != null) {
+        result = unsent;
+        // Settled on the held wrap, or delivered by an earlier attempt:
+        // publish the copy its send would have.
+        if (unsent.success && !held) {
+          final ownCopy = await _messageService!.publishSelfWrap(
             rumorEvent: deletion,
-            recipientPubkey: recipient,
-            targetRelays: inbox?.relays,
-            selfWrapTargetRelays: selfWrapTargets,
-            awaitRecipientOk: true,
-          )
-          .timeout(
-            _messagePublishTimeout,
-            // A hung socket is inconclusive, not a rejection: the frame may
-            // already be written. Time out into a retryable failure so the
-            // drive returns and the sweep re-drives, rather than leaving an
-            // unawaited future alive alongside every later attempt.
-            onTimeout: () => NIP17SendResult.failure(
-              'Deletion publish timed out after '
-              '${_messagePublishTimeout.inSeconds}s',
-              retryablePending: true,
-            ),
+            targetRelays: selfWrapTargets,
           );
-      // A pool `OK` for a recipient whose inbox we could not READ is not
-      // delivery: the retraction may be sitting where they never look, and
-      // `markMessageDeletionSent` would clear the stored rumor, taking the row
-      // off the sweep's worklist for good (#8515).
-      final result = inbox == null
-          ? published
-          : downgradeFallbackPoolDelivery(published, inbox.state);
+          if (!ownCopy.success) {
+            Log.warning(
+              'Own copy of retraction ${deletion.id} not published for '
+              '${pubkeyForLogs(recipient)}, who has wrap '
+              '${unsent.messageEventId} with no send: ${ownCopy.error}',
+              category: LogCategory.system,
+            );
+          }
+        }
+      } else {
+        final published = await _messageService!
+            .sendRumor(
+              rumorEvent: deletion,
+              recipientPubkey: recipient,
+              targetRelays: inbox?.relays,
+              selfWrapTargetRelays: selfWrapTargets,
+              awaitRecipientOk: true,
+              onSelfWrapDue: held
+                  ? (_) => Log.info(
+                      'Withholding the self-wrap for rumor ${deletion.id}: '
+                      'a recipient inbox is unreadable, so this attempt is '
+                      'held, not delivered (#10012)',
+                      category: LogCategory.system,
+                    )
+                  : null,
+            )
+            .timeout(
+              _messagePublishTimeout,
+              // A hung socket is inconclusive, not a rejection: the frame may
+              // already be written. Time out into a retryable failure so the
+              // drive returns and the sweep re-drives, rather than leaving an
+              // unawaited future alive alongside every later attempt.
+              onTimeout: () => NIP17SendResult.failure(
+                'Deletion publish timed out after '
+                '${_messagePublishTimeout.inSeconds}s',
+                retryablePending: true,
+              ),
+            );
+        // A pool `OK` for a recipient whose inbox we could not READ is not
+        // delivery: the retraction may be sitting where they never look, and
+        // `markMessageDeletionSent` would clear the stored rumor, taking the
+        // row off the sweep's worklist for good (#8515).
+        result = inbox == null
+            ? published
+            : downgradeFallbackPoolDelivery(published, inbox.state);
+        final heldWrapId = heldPoolWrapOf(published, result);
+        if (heldWrapId != null) {
+          await _recordHeldDeletionWrap(
+            rumorId: rumorId,
+            recipientPubkey: recipient,
+            wrapEventId: heldWrapId,
+          );
+        }
+      }
       switch (result) {
-        case NIP17SendSuccess():
+        case NIP17SendSuccess(:final messageEventId):
           lastSuccess = result;
+          if (heldWrap?.delivered != true) {
+            deliveredWraps[recipient] = messageEventId;
+          }
         case NIP17SendFailure():
           failures.add(result);
       }
+    }
+    // Only an attempt that leaves the row to be retried needs the record.
+    if (failures.isNotEmpty && deliveredWraps.isNotEmpty) {
+      await _recordDeliveredDeletionWraps(
+        rumorId: rumorId,
+        wraps: deliveredWraps,
+      );
     }
     final anyRecipientAccepted = lastSuccess != null;
     if (failures.isEmpty) {
@@ -10271,6 +11061,63 @@ class DmRepository {
           : NIP17SendResult.failure(summary),
       anyRecipientAccepted: anyRecipientAccepted,
     );
+  }
+
+  /// Records on the retraction of [rumorId] that the fallback pool holds
+  /// [wrapEventId] for [recipientPubkey] (#10012).
+  Future<void> _recordHeldDeletionWrap({
+    required String rumorId,
+    required String recipientPubkey,
+    required String wrapEventId,
+  }) => _recordDeletionWraps(
+    rumorId,
+    what: 'held pool wrap $wrapEventId',
+    write: () => _directMessagesDao.recordHeldDeletionWrap(
+      rumorId,
+      recipientPubkey: recipientPubkey,
+      wrapEventId: wrapEventId,
+      ownerPubkey: _ownerPubkey,
+    ),
+  );
+
+  /// Records on the retraction of [rumorId] that each member in [wraps] has
+  /// it, through the wrap it names (#10012).
+  Future<void> _recordDeliveredDeletionWraps({
+    required String rumorId,
+    required Map<String, String> wraps,
+  }) => _recordDeletionWraps(
+    rumorId,
+    what: 'that ${wraps.keys.map(pubkeyForLogs).join(', ')} have it',
+    write: () => _directMessagesDao.recordDeliveredDeletionWraps(
+      rumorId,
+      wraps: wraps,
+      ownerPubkey: _ownerPubkey,
+    ),
+  );
+
+  /// Runs [write], which records [what] on the retraction of [rumorId]
+  /// (#10012). Non-rethrowing: without the record the next retry wraps the
+  /// kind 5 again for those members, as every retry did before.
+  Future<void> _recordDeletionWraps(
+    String rumorId, {
+    required String what,
+    required Future<bool> Function() write,
+  }) async {
+    try {
+      await write();
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Failed to record $what on the retraction of $rumorId: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _errorReporter?.call(
+        e,
+        stackTrace,
+        site: DmRepositoryReportableSites.recordHeldPoolWrap,
+      );
+    }
   }
 
   /// Refreshes the denormalized preview columns of [conversationId] from its
@@ -13231,7 +14078,8 @@ class DmRepository {
       sendBatchId: row.sendBatchId,
       retractionStatus: switch (row.deletionPublishStatus) {
         DirectMessagesDao.deletionPending => DmRetractionStatus.pending,
-        DirectMessagesDao.deletionBlocked => DmRetractionStatus.failed,
+        DirectMessagesDao.deletionBlocked ||
+        DirectMessagesDao.deletionUnconfirmed => DmRetractionStatus.failed,
         _ => DmRetractionStatus.none,
       },
     );

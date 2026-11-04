@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/profile_feed/profile_tab_retap_cubit.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart' show FeedMode;
 import 'package:openvine/notifications/view/notifications_page.dart';
 import 'package:openvine/router/app_shell.dart';
@@ -60,14 +61,17 @@ List<RouteBase> shellRoutes() {
           // the app, instead of waiting for a rejected post.
           child: AgeReviewClosureLaunchNotice(
             // Provided above AppShell so both consumers can reach the same
-            // instance: VineBottomNav (inside AppShell) signals a home-tab
-            // retap and renders the refresh spinner; VideoFeedView (inside the
-            // home branch) listens and performs the refresh.
+            // instance: VineBottomNav (inside AppShell) signals a home-tab or
+            // profile-tab retap; the home branch refreshes its feed and the
+            // profile branch retries a failed load.
             child: BlocProvider<HomeFeedRetapCubit>(
               create: (_) => HomeFeedRetapCubit(),
-              child: AppShell(
-                currentIndex: navigationShell.currentIndex,
-                child: navigationShell,
+              child: BlocProvider<ProfileTabRetapCubit>(
+                create: (_) => ProfileTabRetapCubit(),
+                child: AppShell(
+                  currentIndex: navigationShell.currentIndex,
+                  child: navigationShell,
+                ),
               ),
             ),
           ),

@@ -28,7 +28,7 @@ final class LoopAlignmentPlanner {
     if (join.pose.maximumCornerDisplacement(first.width, first.height) <= .5)
       return null;
     final plans = input.clips.length == 1
-        ? _periodic(input.clips.single, firstFrames, matcher, limits)
+        ? _fixedView(input.clips.single, firstFrames, matcher, limits)
         : _finalShot(
             input.clips,
             lastFrames,
@@ -139,7 +139,7 @@ final class LoopAlignmentPlanner {
     return result;
   }
 
-  List<LoopClipPlan>? _periodic(
+  List<LoopClipPlan>? _fixedView(
     LoopClipInput clip,
     List<LoopFrame> frames,
     LoopFrameMatcher matcher,
@@ -161,58 +161,41 @@ final class LoopAlignmentPlanner {
       sourceEnd: clip.sourceEnd,
       keyframes: path,
     );
-    final period = (clip.sourceEnd - clip.sourceStart).inMicroseconds
-        .toDouble();
-    if (period <= 0) return null;
-    final sigma = math.min(500000 * clip.speed, period / 8);
-    final samples = frames;
-    final smoothed = <LoopKeyframe>[];
-    // Integrate a periodic Gaussian over timestamp-weighted decoded samples.
-    for (final frame in samples) {
-      var total = 0.0, x = 0.0, y = 0.0, angle = 0.0, logScale = 0.0;
-      for (var j = 0; j < samples.length; j++) {
-        final other = samples[j];
-        var d =
-            (frame.time - other.time).inMicroseconds.toDouble().abs() % period;
-        d = math.min(d, period - d);
-        final next = j + 1 < samples.length
-            ? samples[j + 1].time.inMicroseconds
-            : clip.sourceEnd.inMicroseconds;
-        final previous = j > 0
-            ? samples[j - 1].time.inMicroseconds
-            : clip.sourceStart.inMicroseconds;
-        final weight =
-            math.exp(-d * d / (2 * sigma * sigma)) *
-            math.max(1, next - previous) /
-            2;
-        final pose = camera.correctionAt(other.time);
-        total += weight;
-        x += weight * pose.tx;
-        y += weight * pose.ty;
-        angle += weight * pose.angle;
-        logScale += weight * math.log(pose.scale);
-      }
-      final target = LoopPose.components(
-        x: x / total,
-        y: y / total,
-        angle: angle / total,
-        logScale: logScale / total,
-      );
-      smoothed.add(
-        LoopKeyframe(
-          sourceTime: frame.time,
-          correction: camera.correctionAt(frame.time).inverse().then(target),
-        ),
-      );
-    }
-    return [
-      LoopClipPlan(
+    if (clip.sourceEnd <= clip.sourceStart) return null;
+    LoopClipPlan? best;
+    var bestZoom = double.infinity;
+    // Every trusted anchor is a possible fixed view. Cancel the same measured
+    // camera path into each one, then compare the constant crop they require.
+    for (final reference in path) {
+      final candidate = LoopClipPlan(
         clipId: clip.clipId,
         sourceStart: clip.sourceStart,
         sourceEnd: clip.sourceEnd,
-        keyframes: smoothed,
-      ),
-    ];
+        keyframes: [
+          for (final frame in frames)
+            LoopKeyframe(
+              sourceTime: frame.time,
+              correction: camera
+                  .correctionAt(frame.time)
+                  .inverse()
+                  .then(reference.correction),
+            ),
+        ],
+      );
+      final zoom = requiredZoom(
+        candidate,
+        frames.first.width,
+        frames.first.height,
+        frames.map((frame) => frame.time),
+      );
+      // Keep the strict minimum crop; chronological iteration retains the
+      // earliest trusted reference only when coverage costs are exactly equal.
+      if (zoom.isFinite && zoom < bestZoom) {
+        best = candidate;
+        bestZoom = zoom;
+      }
+    }
+    return best == null ? null : [best];
   }
 
   List<LoopClipPlan>? _finalShot(

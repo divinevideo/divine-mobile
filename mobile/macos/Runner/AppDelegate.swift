@@ -15,8 +15,16 @@ class AppDelegate: FlutterAppDelegate {
     LightLeakVideoEffect.register()
     ParticlesVideoEffect.register()
     TiltShiftVideoEffect.register()
+    SwirlVideoEffect.register()
+    RippleVideoEffect.register()
+    FlutedGlassVideoEffect.register()
     ZoomBlurVideoEffect.register()
+    SpinBlurVideoEffect.register()
     ComicVideoEffect.register()
+    EightBitVideoEffect.register()
+    AnaglyphVideoEffect.register()
+    RisoVideoEffect.register()
+    LookVideoEffect.register()
     AdjustVideoEffect.register()
     // CameraMacOSPlugin removed - Flutter now has native macOS camera support
   }

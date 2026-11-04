@@ -17,6 +17,7 @@ import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_
 import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_caption_preview_overlay.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_finish_listener.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
@@ -45,24 +46,26 @@ class VideoEditorScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: VideoEditorConstants.uiOverlayStyleFor(context.vineColors),
-      child: LoopRepairResultListener(
-        child: Stack(
-          fit: .expand,
-          children: [
-            // No bottom bar: the Edit button overlays the timeline in the slot
-            // of its context controls (see TimelineControlsBar), so showing or
-            // hiding it never resizes the canvas.
-            Scaffold(
-              backgroundColor: context.vineColors.surfaceContainerHigh,
-              resizeToAvoidBottomInset: false,
-              body: LayerTrackingResultListener(
-                child: ClipEditorResultListeners(
-                  child: _ScaffoldBody(isLoading: isLoading),
+      child: VideoEditorFinishListener(
+        child: LoopRepairResultListener(
+          child: Stack(
+            fit: .expand,
+            children: [
+              // No bottom bar: the Edit button overlays the timeline in the slot
+              // of its context controls (see TimelineControlsBar), so showing or
+              // hiding it never resizes the canvas.
+              Scaffold(
+                backgroundColor: context.vineColors.surfaceContainerHigh,
+                resizeToAvoidBottomInset: false,
+                body: LayerTrackingResultListener(
+                  child: ClipEditorResultListeners(
+                    child: _ScaffoldBody(isLoading: isLoading),
+                  ),
                 ),
               ),
-            ),
-            const _OperationProgressOverlays(),
-          ],
+              const _OperationProgressOverlays(),
+            ],
+          ),
         ),
       ),
     );
@@ -342,7 +345,7 @@ class _OverlayControls extends StatelessWidget {
           child: VideoEditorTuneOverlayControls(),
         ),
         // Effects-Editor: reaches down to the preview's edge, where its
-        // on-the-beat card sits; it centers its slider like the others.
+        // on-the-beat card sits, and centers its slider below its toolbar.
         VideoEditorMainState(openSubEditor: .effects) =>
           const VideoEditorEffectsOverlayControls(
             key: ValueKey('Effects-Overlay-Controls'),
@@ -358,8 +361,18 @@ class _OverlayControls extends StatelessWidget {
 ///
 /// Only visible while the draw, filter, tune or effects editor is open. Otherwise
 /// the timeline is shown instead (see [_TimelineSection]).
-class _BottomActions extends StatelessWidget {
+class _BottomActions extends StatefulWidget {
   const _BottomActions();
+
+  @override
+  State<_BottomActions> createState() => _BottomActionsState();
+}
+
+class _BottomActionsState extends State<_BottomActions> {
+  /// The sub-editor last open. Closing clears the open one at once, while the
+  /// bar collapses for a moment longer; keeping its height for that moment
+  /// stops the taller effects and filter bars from snapping down first.
+  SubEditorType? _lastOpened;
 
   @override
   Widget build(BuildContext context) {
@@ -367,20 +380,29 @@ class _BottomActions extends StatelessWidget {
     final openSubEditor = context.select(
       (VideoEditorMainBloc b) => b.state.openSubEditor,
     );
+    _lastOpened = openSubEditor ?? _lastOpened;
 
     return SizedBox(
-      height: systemNavigationBarHeight + VideoEditorConstants.bottomBarHeight,
+      height:
+          systemNavigationBarHeight +
+          switch (_lastOpened) {
+            SubEditorType.effects => VideoEditorEffectsBottomBar.heightOf(
+              context,
+            ),
+            SubEditorType.filter => VideoEditorFilterBottomBar.heightOf(
+              context,
+            ),
+            _ => VideoEditorConstants.bottomBarHeight,
+          },
       child: switch (openSubEditor) {
         // Draw-Bar
         SubEditorType.draw => const VideoEditorDrawBottomBar(
           key: ValueKey('Draw-Editor-Bottom-Bar'),
         ),
-        // Filter-Bar
-        SubEditorType.filter => Padding(
-          padding: .only(bottom: systemNavigationBarHeight),
-          child: const VideoEditorFilterBottomBar(
-            key: ValueKey('Filter-Editor-Bottom-Bar'),
-          ),
+        // Filter-Bar: reaches under the system navigation bar, where its
+        // grid scrolls on.
+        SubEditorType.filter => const VideoEditorFilterBottomBar(
+          key: ValueKey('Filter-Editor-Bottom-Bar'),
         ),
         // Tune-Bar
         SubEditorType.tune => Padding(
@@ -389,15 +411,13 @@ class _BottomActions extends StatelessWidget {
             key: ValueKey('Tune-Editor-Bottom-Bar'),
           ),
         ),
-        // Effects-Bar
-        SubEditorType.effects => Padding(
-          padding: .only(bottom: systemNavigationBarHeight),
-          child: const VideoEditorEffectsBottomBar(
-            key: ValueKey('Effects-Editor-Bottom-Bar'),
-          ),
+        // Effects-Bar: reaches under the system navigation bar, where its
+        // grid scrolls on.
+        SubEditorType.effects => const VideoEditorEffectsBottomBar(
+          key: ValueKey('Effects-Editor-Bottom-Bar'),
         ),
-        // Fallback — should not happen since _BottomActions is only
-        // rendered for draw/filter/tune/effects, but handle gracefully.
+        // Nothing open: the bar is collapsed, or collapsing after its
+        // sub-editor closed (see _lastOpened).
         _ => const SizedBox.shrink(),
       },
     );

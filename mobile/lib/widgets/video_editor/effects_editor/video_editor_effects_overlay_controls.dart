@@ -48,35 +48,57 @@ class VideoEditorEffectsOverlayControls extends StatelessWidget {
             ),
           ),
         ),
-        Padding(
-          // Centered where the other tools center their sliders.
-          padding: const .only(bottom: VideoEditorConstants.bottomBarHeight),
-          child: Align(
-            alignment: .centerRight,
-            child: AnimatedSwitcher(
-              transitionBuilder: (child, animation) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween(
-                      begin: const Offset(1, 0),
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: child,
+        Column(
+          children: [
+            const _TopBarContent(),
+            // Everything else sits under the toolbar: the bar under the
+            // preview is tall, so nothing may reach up behind it.
+            Expanded(
+              child: Stack(
+                fit: .expand,
+                children: [
+                  const Align(
+                    alignment: .bottomCenter,
+                    child: _OnBeatSwitch(),
                   ),
-                );
-              },
-              switchInCurve: Curves.easeInOut,
-              duration: const Duration(milliseconds: 220),
-              child: hasEffect
-                  ? const _IntensitySlider()
-                  : const SizedBox.shrink(),
+                  const Align(
+                    alignment: .bottomCenter,
+                    child: _DropsSettingsCard(),
+                  ),
+                  // Centered between the toolbar and the room kept at the
+                  // bottom for the on-the-beat switch.
+                  Padding(
+                    padding: const .only(
+                      bottom: VideoEditorConstants.bottomBarHeight,
+                    ),
+                    child: Align(
+                      alignment: .centerRight,
+                      child: AnimatedSwitcher(
+                        transitionBuilder: (child, animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween(
+                                begin: const Offset(1, 0),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
+                            ),
+                          );
+                        },
+                        switchInCurve: Curves.easeInOut,
+                        duration: const Duration(milliseconds: 220),
+                        child: hasEffect
+                            ? const _IntensitySlider()
+                            : const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
-        const Align(alignment: .bottomCenter, child: _OnBeatSwitch()),
-        const Align(alignment: .bottomCenter, child: _DropsSettingsCard()),
-        const _TopBarContent(),
       ],
     );
   }
@@ -188,6 +210,16 @@ class _OnBeatSwitch extends StatelessWidget {
 class _DropsSettingsCard extends StatelessWidget {
   const _DropsSettingsCard();
 
+  /// Around the card, clear of the intensity slider on the right.
+  static const EdgeInsets _margin = EdgeInsets.fromLTRB(16, 16, 72, 16);
+  static const EdgeInsets _childrenPadding = EdgeInsets.fromLTRB(16, 0, 16, 16);
+
+  /// A one-line [ListTile]'s height, and the padding it keeps around a title
+  /// taller than that. The card's title row is one, its title kept to a
+  /// single line.
+  static const double _titleRowMinHeight = 56;
+  static const double _titleRowVerticalPadding = 8;
+
   @override
   Widget build(BuildContext context) {
     final isDrops = context.select(
@@ -196,44 +228,69 @@ class _DropsSettingsCard extends StatelessWidget {
     );
     if (!isDrops) return const SizedBox.shrink();
     final l10n = context.l10n;
-    return Padding(
-      // Clear of the intensity slider on the right.
-      padding: const .fromLTRB(16, 16, 72, 16),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: context.vineColors.surfaceContainer,
-            borderRadius: .circular(16),
+    final titleStyle = VineTheme.titleSmallFont(
+      color: context.vineColors.onSurface,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final titleLine =
+            MediaQuery.textScalerOf(context).scale(titleStyle.fontSize!) *
+            (titleStyle.height ?? 1.2);
+        final titleRow = max(
+          _titleRowMinHeight,
+          titleLine + 2 * _titleRowVerticalPadding,
+        );
+        // The settings scroll in what the area under the toolbar leaves
+        // them, and never take more than 40% of the screen, so most of the
+        // video stays in view.
+        final settingsHeight = max(
+          0.0,
+          min(
+            MediaQuery.sizeOf(context).height * 0.4,
+            constraints.maxHeight -
+                _margin.vertical -
+                titleRow -
+                _childrenPadding.vertical,
           ),
-          // The tile's ink needs a surface of its own over the video.
-          child: Material(
-            type: MaterialType.transparency,
-            child: ExpansionTile(
-              title: Text(
-                l10n.videoEditorDropsSettingsTitle,
-                style: VineTheme.titleSmallFont(
-                  color: context.vineColors.onSurface,
+        );
+        return Padding(
+          padding: _margin,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: context.vineColors.surfaceContainer,
+                borderRadius: .circular(16),
+              ),
+              // The tile's ink needs a surface of its own over the video.
+              child: Material(
+                type: MaterialType.transparency,
+                child: ExpansionTile(
+                  title: Text(
+                    l10n.videoEditorDropsSettingsTitle,
+                    style: titleStyle,
+                    maxLines: 1,
+                    overflow: .ellipsis,
+                  ),
+                  shape: const Border(),
+                  collapsedShape: const Border(),
+                  iconColor: context.vineColors.onSurface,
+                  collapsedIconColor: context.vineColors.onSurface,
+                  childrenPadding: _childrenPadding,
+                  children: [
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: settingsHeight),
+                      child: const SingleChildScrollView(
+                        child: _DropsSettings(),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              shape: const Border(),
-              collapsedShape: const Border(),
-              iconColor: context.vineColors.onSurface,
-              collapsedIconColor: context.vineColors.onSurface,
-              childrenPadding: const .fromLTRB(16, 0, 16, 16),
-              children: [
-                ConstrainedBox(
-                  // Leaves most of the video in view while the card is open.
-                  constraints: BoxConstraints(
-                    maxHeight: MediaQuery.sizeOf(context).height * 0.4,
-                  ),
-                  child: const SingleChildScrollView(child: _DropsSettings()),
-                ),
-              ],
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

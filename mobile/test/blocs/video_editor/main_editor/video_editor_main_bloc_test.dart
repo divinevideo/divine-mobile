@@ -1,6 +1,8 @@
 // ABOUTME: Tests for VideoEditorMainBloc - main editor state management.
 // ABOUTME: Covers all 18 event handlers, state transitions, and edge cases.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
@@ -588,6 +590,108 @@ void main() {
             isFalse,
           ),
         ],
+      );
+    });
+
+    group(VideoEditorFinishRequested, () {
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'hands the edit over once its sticker fonts are loaded',
+        build: () => VideoEditorMainBloc(loadStickerFonts: (_) async {}),
+        act: (bloc) => bloc.add(const VideoEditorFinishRequested()),
+        expect: () => [
+          const VideoEditorMainState(isFinishing: true, finishCounter: 1),
+          const VideoEditorMainState(finishCounter: 1, handOverCounter: 1),
+        ],
+      );
+
+      test('loads the fonts of the sticker texts it is given', () async {
+        final loaded = <String>[];
+        final bloc = VideoEditorMainBloc(
+          loadStickerFonts: (texts) async => loaded.addAll(texts),
+        );
+        addTearDown(bloc.close);
+
+        bloc.add(const VideoEditorFinishRequested(stickerTexts: ['#party🎉']));
+        await pumpEventQueue();
+
+        expect(loaded, ['#party🎉']);
+      });
+
+      test('ignores Done while a hand-over waits for its fonts', () async {
+        final fonts = Completer<void>();
+        var loads = 0;
+        final bloc = VideoEditorMainBloc(
+          loadStickerFonts: (_) {
+            loads++;
+            return fonts.future;
+          },
+        );
+        addTearDown(bloc.close);
+
+        bloc
+          ..add(const VideoEditorFinishRequested())
+          ..add(const VideoEditorFinishRequested());
+        await pumpEventQueue();
+        expect(bloc.state.isFinishing, isTrue);
+
+        fonts.complete();
+        await pumpEventQueue();
+
+        expect(loads, 1);
+        expect(bloc.state.handOverCounter, 1);
+        expect(bloc.state.isFinishing, isFalse);
+      });
+    });
+
+    group(VideoEditorFinishCancelled, () {
+      test('a cancelled hand-over never hands over', () async {
+        final fonts = Completer<void>();
+        final bloc = VideoEditorMainBloc(loadStickerFonts: (_) => fonts.future);
+        addTearDown(bloc.close);
+
+        bloc.add(const VideoEditorFinishRequested());
+        await pumpEventQueue();
+        bloc.add(const VideoEditorFinishCancelled());
+        await pumpEventQueue();
+        expect(bloc.state.isFinishing, isFalse);
+
+        fonts.complete();
+        await pumpEventQueue();
+
+        expect(bloc.state.handOverCounter, 0);
+      });
+
+      test('a cancelled hand-over cannot complete a newer one', () async {
+        final first = Completer<void>();
+        final second = Completer<void>();
+        final pending = [first, second];
+        final bloc = VideoEditorMainBloc(
+          loadStickerFonts: (_) => pending.removeAt(0).future,
+        );
+        addTearDown(bloc.close);
+
+        bloc.add(const VideoEditorFinishRequested());
+        await pumpEventQueue();
+        bloc
+          ..add(const VideoEditorFinishCancelled())
+          ..add(const VideoEditorFinishRequested());
+        await pumpEventQueue();
+
+        first.complete();
+        await pumpEventQueue();
+        expect(bloc.state.handOverCounter, 0);
+        expect(bloc.state.isFinishing, isTrue);
+
+        second.complete();
+        await pumpEventQueue();
+        expect(bloc.state.handOverCounter, 1);
+      });
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'changes nothing without a pending hand-over',
+        build: buildBloc,
+        act: (bloc) => bloc.add(const VideoEditorFinishCancelled()),
+        expect: () => const <VideoEditorMainState>[],
       );
     });
 

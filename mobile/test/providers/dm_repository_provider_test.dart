@@ -15,6 +15,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
+import 'package:nostr_sdk/subscription.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
@@ -106,7 +107,17 @@ void main() {
           onStoredEventsStart: any(named: 'onStoredEventsStart'),
           onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
         ),
-      ).thenAnswer((_) => const Stream<Event>.empty());
+      ).thenAnswer((invocation) {
+        // A relay that has nothing stored: the REQ stays open and its stored
+        // events end, which is when the deletions REQ is opened.
+        final onEnd =
+            invocation.namedArguments[#onStoredEventsEnd]
+                as void Function(StoredEventsEnd)?;
+        scheduleMicrotask(
+          () => onEnd?.call(const StoredEventsEnd(deliveredEventCount: 0)),
+        );
+        return StreamController<Event>().stream;
+      });
       when(() => mockNostrClient.unsubscribe(any())).thenAnswer((_) async {});
       when(
         () => mockNostrClient.queryEventsDetailed(
@@ -232,7 +243,7 @@ void main() {
       // active and DMs will be ingested even without InboxPage mounting.
       verify(
         () => mockNostrClient.subscribe(
-          any(),
+          any(that: _readsGiftWraps),
           subscriptionId: any(named: 'subscriptionId'),
           onStoredEventsStart: any(named: 'onStoredEventsStart'),
           onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
@@ -453,14 +464,32 @@ void main() {
       );
       container.read(dmRepositoryProvider);
       await pumpEventQueue();
+      final opened = verify(
+        () => mockNostrClient.subscribe(
+          any(),
+          subscriptionId: captureAny(named: 'subscriptionId'),
+          onStoredEventsStart: any(named: 'onStoredEventsStart'),
+          onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+        ),
+      ).captured;
+      expect(opened, isNotEmpty);
 
       // ACT — disposing the container fires ref.onDispose hooks, which
       // include repository.stopListening.
       container.dispose();
       await pumpEventQueue();
 
-      // ASSERT — unsubscribe was called on the relay client.
-      verify(() => mockNostrClient.unsubscribe(any())).called(1);
+      // ASSERT — every subscription the repository opened was closed.
+      final closed = verify(
+        () => mockNostrClient.unsubscribe(captureAny()),
+      ).captured;
+      expect(closed, unorderedEquals(opened));
     });
   });
 }
+
+/// Matches a REQ filter list that asks for NIP-17 gift wraps (kind 1059).
+final Matcher _readsGiftWraps = predicate<List<nostr_filter.Filter>>(
+  (filters) => filters.any((f) => f.kinds?.contains(1059) ?? false),
+  'a filter list reading kind 1059',
+);

@@ -285,9 +285,9 @@ class _Scanner {
     };
     if (arguments != null && _detachedSinks.any(name.contains)) {
       for (final argument in arguments.arguments) {
-        final value = argument is NamedExpression
-            ? argument.expression
-            : argument;
+        final value = argument is NamedArgument
+            ? argument.argumentExpression
+            : argument as Expression;
         if (value is SimpleIdentifier) detachedTearOffs.add(value.name);
       }
     }
@@ -500,8 +500,8 @@ class _Scanner {
   bool _isDetached(FunctionExpression node) {
     if (node.body.isAsynchronous) return true;
     final parent = node.parent;
-    if (parent is! ArgumentList && parent is! NamedExpression) return false;
-    final invocation = parent is NamedExpression
+    if (parent is! ArgumentList && parent is! NamedArgument) return false;
+    final invocation = parent is NamedArgument
         ? parent.parent?.parent
         : parent?.parent;
     final name = switch (invocation) {

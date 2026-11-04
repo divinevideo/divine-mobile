@@ -13,6 +13,7 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/constants/terms_acceptance_keys.dart';
 import 'package:openvine/features/appearance/repositories/appearance_repository.dart';
+import 'package:openvine/features/creator_highlights/creator_highlights_repository.dart';
 import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/notifications/services/announcement_store.dart';
@@ -284,6 +285,7 @@ class UserDataCleanupService {
   /// leakage. Targeted destructive removal uses each owner's key helper.
   static const List<String> identityChangePrefixes = [
     SharedPreferencesAnnouncementStore.storagePrefix,
+    FunnelcakeCreatorHighlightsRepository.presentationPrefix,
     CuratedListRecoveryJournal.storagePrefix,
     CuratedListRecoveryStorage.quarantinePrefix,
     CuratedListRelayEvidence.storagePrefix,
@@ -484,6 +486,9 @@ class UserDataCleanupService {
     )) {
       await remove(key);
     }
+    await remove(
+      FunnelcakeCreatorHighlightsRepository.presentationKey(userPubkey),
+    );
     for (final key in BadgeRepository.localAccountKeys(userPubkey)) {
       await remove(key);
     }
@@ -762,6 +767,9 @@ class UserDataCleanupService {
       )) {
         await remove(key);
       }
+      await remove(
+        FunnelcakeCreatorHighlightsRepository.presentationKey(userPubkey),
+      );
       for (final key in BadgeRepository.localAccountKeys(userPubkey)) {
         await remove(key);
       }

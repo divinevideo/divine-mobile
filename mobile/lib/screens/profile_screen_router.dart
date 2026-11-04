@@ -12,6 +12,7 @@ import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_scope.dart';
+import 'package:openvine/blocs/profile_feed/profile_tab_retap_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -491,34 +492,26 @@ class _ProfileDataView extends ConsumerWidget {
           );
     }
 
-    return BlocListener<BackgroundPublishBloc, BackgroundPublishState>(
-      listenWhen: (_, current) => current.recentlyPublished.isNotEmpty,
-      listener: (context, state) {
-        // Refresh the feed when a background publish succeeds.
-        context.read<ProfileFeedCubit>().add(
-          const ProfileFeedRefreshRequested(),
-        );
-      },
-      child: switch (feedState.status) {
-        ProfileFeedStatus.failure => Center(
-          child: Text(context.l10n.profileFeedError),
-        ),
-        // During the cold load we render the real layout (header/stats
-        // skeletonize themselves; the videos tab shows a skeleton grid)
-        // instead of a separate placeholder, so the load→ready transition
-        // does not pop.
-        ProfileFeedStatus.initial ||
-        ProfileFeedStatus.loading ||
-        ProfileFeedStatus.ready => ProfileViewSwitcher(
+    return _RetryOnProfileTabRetap(
+      child: BlocListener<BackgroundPublishBloc, BackgroundPublishState>(
+        listenWhen: (_, current) => current.recentlyPublished.isNotEmpty,
+        listener: (context, state) {
+          // Refresh the feed when a background publish succeeds.
+          context.read<ProfileFeedCubit>().add(
+            const ProfileFeedRefreshRequested(),
+          );
+        },
+        // The profile stays on screen whatever the feed's status: a failed load
+        // shows its error and retry inside the Videos tab, so the header,
+        // Settings and pull-to-refresh remain reachable (#9773).
+        child: ProfileViewSwitcher(
           npub: npub,
           userIdHex: userIdHex,
           isOwnProfile: isOwnProfile,
           profile: profile,
           profileStats: profileStats,
           videos: feedState.videos,
-          isLoadingVideos:
-              feedState.status != ProfileFeedStatus.ready ||
-              feedState.isInitialLoad,
+          isLoadingVideos: feedState.isLoadingVideos,
           videoIndex: videoIndex,
           scrollController: scrollController,
           onEditProfile: onEditProfile,
@@ -527,7 +520,30 @@ class _ProfileDataView extends ConsumerWidget {
           onShareProfile: onShareProfile,
           refreshNotifier: refreshNotifier,
         ),
-      },
+      ),
+    );
+  }
+}
+
+/// Retries a failed profile load when the user re-taps the Profile tab.
+///
+/// The retap cubit is provided only above the app shell, so the lookup is
+/// lenient for a profile shown outside it.
+class _RetryOnProfileTabRetap extends StatelessWidget {
+  const _RetryOnProfileTabRetap({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final retaps = context.read<ProfileTabRetapCubit?>();
+    if (retaps == null) return child;
+    return BlocListener<ProfileTabRetapCubit, int>(
+      bloc: retaps,
+      listener: (context, _) => context.read<ProfileFeedCubit>().add(
+        const ProfileFeedRetryRequested(),
+      ),
+      child: child,
     );
   }
 }

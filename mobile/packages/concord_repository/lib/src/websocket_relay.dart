@@ -7,11 +7,12 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 /// Web and native Nostr transport for the explicitly configured POC relay.
 /// A publication succeeds only after the relay accepts its event ID.
-class WebSocketRelayGateway implements RelayGateway {
+class WebSocketRelayGateway implements RelayGateway, RelayHistoryStatus {
   WebSocketRelayGateway(
     this.url, {
     this.connectionTimeout = const Duration(seconds: 10),
     this.publishTimeout = const Duration(seconds: 10),
+    this.historyTimeout = const Duration(seconds: 15),
     this.reconnectDelay = const Duration(seconds: 1),
     this.maxReconnectAttempts = 3,
   });
@@ -19,6 +20,7 @@ class WebSocketRelayGateway implements RelayGateway {
   final String url;
   final Duration connectionTimeout;
   final Duration publishTimeout;
+  final Duration historyTimeout;
   final Duration reconnectDelay;
   final int maxReconnectAttempts;
   WebSocketChannel? _channel;
@@ -34,6 +36,18 @@ class WebSocketRelayGateway implements RelayGateway {
   var _reconnectAttempts = 0;
   var _connected = false;
   var _closed = false;
+
+  @override
+  Future<void> get historyReady {
+    if (_closed) return Future.error(StateError('Relay gateway is closed'));
+    return Future.wait<void>([
+      for (final subscription in _subs.values) subscription.history.future,
+    ]);
+  }
+
+  @override
+  bool get historyLimited =>
+      _subs.values.any((subscription) => subscription.historyLimited);
 
   Future<void> connect() {
     if (_closed) return Future.error(StateError('Relay gateway is closed'));
@@ -72,6 +86,7 @@ class WebSocketRelayGateway implements RelayGateway {
       }
       _connected = true;
       for (final entry in _subs.entries) {
+        entry.value.beginHistoryRequest();
         _send(['REQ', entry.key, entry.value.filter]);
       }
     } on Object catch (error) {
@@ -125,6 +140,7 @@ class WebSocketRelayGateway implements RelayGateway {
       final subscriptions = _subs.values.toList();
       _subs.clear();
       for (final subscription in subscriptions) {
+        subscription.failHistory(StateError('Relay reconnect exhausted'));
         subscription.controller.addError(
           StateError('Relay reconnect exhausted'),
         );
@@ -156,15 +172,26 @@ class WebSocketRelayGateway implements RelayGateway {
           return;
         }
         if (_subs.isEmpty) _reconnectAttempts = 0;
-        _subs[id] = _RelaySubscription(Map.of(filter), controller);
+        final subscription = _RelaySubscription(Map.of(filter), controller);
+        _subs[id] = subscription;
+        subscription.historyTimer = Timer(historyTimeout, () {
+          subscription.failHistory(
+            TimeoutException('Relay history boundary not received'),
+          );
+        });
         if (_connected) {
+          subscription.beginHistoryRequest();
           _send(['REQ', id, filter]);
         } else {
           _connectInBackground();
         }
       },
       onCancel: () {
-        if (_subs.remove(id) != null && _connected) {
+        final subscription = _subs.remove(id);
+        subscription?.failHistory(
+          StateError('Relay subscription is cancelled'),
+        );
+        if (subscription != null && _connected) {
           _send(['CLOSE', id]);
         }
         if (_subs.isEmpty) {
@@ -217,11 +244,16 @@ class WebSocketRelayGateway implements RelayGateway {
     if (message is! List || message.isEmpty) return;
     switch (message) {
       case ['EVENT', final String id, final Map<String, dynamic> event]:
-        if (_subs.containsKey(id)) _reconnectAttempts = 0;
-        _subs[id]?.controller.add(event);
+        final subscription = _subs[id];
+        if (subscription != null) {
+          _reconnectAttempts = 0;
+          subscription.receivedHistoryEvent();
+          subscription.controller.add(event);
+        }
       case ['EOSE', final String id]:
         // EOSE is a historical boundary; subscriptions remain live.
         if (_subs.containsKey(id)) _reconnectAttempts = 0;
+        _subs[id]?.completeHistory();
       case ['OK', final String id, final bool accepted, final String reason]:
         final pending = _publishes.remove(id);
         if (pending == null) return;
@@ -234,6 +266,9 @@ class WebSocketRelayGateway implements RelayGateway {
         _failPublishes(StateError('Relay notice: $reason'));
       case ['CLOSED', final String id, final String reason]:
         final subscription = _subs.remove(id);
+        subscription?.failHistory(
+          StateError('Relay closed subscription: $reason'),
+        );
         subscription?.controller.addError(
           StateError('Relay closed subscription: $reason'),
         );
@@ -265,6 +300,7 @@ class WebSocketRelayGateway implements RelayGateway {
     final subscriptions = _subs.values.toList();
     _subs.clear();
     for (final subscription in subscriptions) {
+      subscription.failHistory(StateError('Relay gateway is closed'));
       // Do not wait for paused consumers before releasing the transport.
       unawaited(subscription.controller.close());
     }
@@ -279,9 +315,45 @@ class WebSocketRelayGateway implements RelayGateway {
 }
 
 class _RelaySubscription {
-  _RelaySubscription(this.filter, this.controller);
+  _RelaySubscription(this.filter, this.controller) {
+    // Readiness is optional; retain errors for waiters without leaking an
+    // unhandled future error when a normal live-only consumer cancels.
+    unawaited(history.future.catchError((Object _) {}));
+  }
   final Map<String, dynamic> filter;
   final StreamController<Map<String, dynamic>> controller;
+  final history = Completer<void>();
+  Timer? historyTimer;
+  int _historyEvents = 0;
+  bool _historyEnded = false;
+  bool _historyLimited = false;
+
+  bool get historyLimited => _historyLimited;
+
+  void beginHistoryRequest() {
+    _historyEvents = 0;
+    _historyEnded = false;
+  }
+
+  void receivedHistoryEvent() {
+    if (_historyEnded) return;
+    _historyEvents++;
+    final limit = filter['limit'];
+    if (limit is int && limit > 0 && _historyEvents >= limit) {
+      _historyLimited = true;
+    }
+  }
+
+  void completeHistory() {
+    _historyEnded = true;
+    historyTimer?.cancel();
+    if (!history.isCompleted) history.complete();
+  }
+
+  void failHistory(Object error) {
+    historyTimer?.cancel();
+    if (!history.isCompleted) history.completeError(error);
+  }
 }
 
 class _PendingPublish {

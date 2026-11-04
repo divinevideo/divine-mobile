@@ -1,0 +1,9 @@
+# Daily creator highlights in Divine mobile
+
+The product requested is creator engagement inside divine-mobile. The engagement admin preview is not the product surface. Implementation is authorized by the user's instruction to get engagement working in divine-mobile.
+
+Place an automatically selected private card in Inbox → All. Use the app's existing Funnelcake client and real creator-video statistics so this works without deploying the unfinished engagement-service adapter. Celebrate a verified original publication day even when views are zero or unavailable; otherwise show a personal highlight from videos published this calendar week. Feature a real owned video and provide working video, analytics, and creation actions. No category picker or opt-in configuration is needed to receive personal encouragement.
+
+Views mean the currently known lifetime views on videos published this week; copy must say that. Never label them today's views or mix archive loops with Divine views. Missing or truncated evidence suppresses aggregate view counts and top claims. Filter collaborators, reposts, archived imports, future publications and local deletions; collapse edit siblings. No publication evidence means no invented card. Language/country/state creator ranks are not exposed by current mobile APIs and must stay absent rather than inferred from feed order.
+
+Use UI → Cubit → Repository → existing Funnelcake client. Each account gets separate state and presentation tracking. A one-time daily icon celebration respects reduced motion. Loading/failure must not block notifications; refresh when Inbox becomes visible and on refresh. Keep the card in the notification scroll flow. Use adaptive Divine surfaces, Phosphor icons and l10n strings. No push-policy changes or new production resources.

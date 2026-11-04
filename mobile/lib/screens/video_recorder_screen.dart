@@ -53,6 +53,7 @@ abstract final class CreationEntryPoint {
   static const cameraFab = 'camera_fab';
   static const library = 'library';
   static const videoReply = 'video_reply';
+  static const addYours = 'add_yours';
   static const quickAction = 'quick_action';
   static const postPublish = 'post_publish';
   static const editor = 'editor';
@@ -63,6 +64,7 @@ abstract final class CreationEntryPoint {
     cameraFab ||
     library ||
     videoReply ||
+    addYours ||
     quickAction ||
     postPublish ||
     editor => value!,
@@ -227,6 +229,10 @@ class _VideoRecorderBlocScope extends ConsumerWidget {
     final creationAnalyticsTracker = ref.watch(
       creationAnalyticsTrackerProvider,
     );
+    // The bloc finishes events still in flight after this widget unmounts,
+    // when its ref throws. The providers are app-scoped, so the readers go
+    // through the container instead.
+    final container = ProviderScope.containerOf(context, listen: false);
 
     return BlocProvider<VideoRecorderBloc>(
       key: ValueKey((
@@ -236,11 +242,13 @@ class _VideoRecorderBlocScope extends ConsumerWidget {
         creationAnalyticsTracker,
       )),
       create: (_) => VideoRecorderBloc(
-        readClipManager: () => ref.read(clipManagerProvider.notifier),
-        readVideoEditor: () => ref.read(videoEditorProvider.notifier),
-        readVideoEditorState: () => ref.read(videoEditorProvider),
-        readSharedPreferences: () => ref.read(sharedPreferencesProvider),
-        performanceMonitor: ref.read(performanceMonitoringServiceProvider),
+        readClipManager: () => container.read(clipManagerProvider.notifier),
+        readVideoEditor: () => container.read(videoEditorProvider.notifier),
+        readVideoEditorState: () => container.read(videoEditorProvider),
+        readSharedPreferences: () => container.read(sharedPreferencesProvider),
+        performanceMonitor: container.read(
+          performanceMonitoringServiceProvider,
+        ),
         onRecordingStarted: (mode) =>
             unawaited(creationAnalyticsTracker.recordingStarted(mode)),
         liveChromaKeySupported: ChromaKeyShader.isBackendSupported,

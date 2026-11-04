@@ -9,6 +9,7 @@ import 'package:equatable/equatable.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoSpeedRamp;
 
 /// Whether [layer] is a draw layer that can take part in a merge.
 ///
@@ -122,6 +123,7 @@ class TimelineOverlayItem extends Equatable {
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
     this.playbackSpeed = 1,
+    this.speedRamp,
     this.effectType,
     this.keyframeTimes = const [],
     this.maskKeyframeTimes = const [],
@@ -198,6 +200,13 @@ class TimelineOverlayItem extends Equatable {
   /// `1` for non-sound items.
   final double playbackSpeed;
 
+  /// The speed curve a sound item plays along over its whole window, instead
+  /// of [playbackSpeed]; `null` at a constant speed and for non-sound items.
+  final VideoSpeedRamp? speedRamp;
+
+  /// The constant speed that plays a sound item's window in the same time.
+  double get averageSpeed => speedRamp?.averageSpeed ?? playbackSpeed;
+
   /// The look of an effect item, which its tile names in the user's language.
   ///
   /// `null` for non-effect items.
@@ -225,8 +234,8 @@ class TimelineOverlayItem extends Equatable {
   /// Whether a sound item fades in or out at all.
   bool get hasFade => fadeIn > Duration.zero || fadeOut > Duration.zero;
 
-  /// How long [source] of a sound item's audio takes to play on the timeline.
-  Duration timelineSpanOf(Duration source) => source * (1 / playbackSpeed);
+  /// How long a sound item's window lasts that plays [source] of its audio.
+  Duration timelineSpanOf(Duration source) => source * (1 / averageSpeed);
 
   /// Start time in seconds for layout calculations.
   double get startTimeInSeconds => startTime.inMilliseconds / 1000.0;
@@ -251,6 +260,7 @@ class TimelineOverlayItem extends Equatable {
     Duration? fadeIn,
     Duration? fadeOut,
     double? playbackSpeed,
+    VideoSpeedRamp? speedRamp,
     EditorEffectType? effectType,
     List<Duration>? keyframeTimes,
     List<Duration>? maskKeyframeTimes,
@@ -273,6 +283,7 @@ class TimelineOverlayItem extends Equatable {
       fadeIn: fadeIn ?? this.fadeIn,
       fadeOut: fadeOut ?? this.fadeOut,
       playbackSpeed: playbackSpeed ?? this.playbackSpeed,
+      speedRamp: speedRamp ?? this.speedRamp,
       effectType: effectType ?? this.effectType,
       keyframeTimes: keyframeTimes ?? this.keyframeTimes,
       maskKeyframeTimes: maskKeyframeTimes ?? this.maskKeyframeTimes,
@@ -298,6 +309,7 @@ class TimelineOverlayItem extends Equatable {
     fadeIn,
     fadeOut,
     playbackSpeed,
+    speedRamp,
     effectType,
     keyframeTimes,
     maskKeyframeTimes,

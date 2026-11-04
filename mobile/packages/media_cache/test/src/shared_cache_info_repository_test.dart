@@ -78,6 +78,85 @@ void main() {
       });
     }
 
+    test(
+      'manager reads disk after initialization, sweeps, and account cleanup',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        final repository = createSharedCacheInfoRepository('manager_images');
+        final manager = MediaCacheManager(
+          config: const MediaCacheConfig(
+            cacheKey: 'manager_images',
+            enableSyncManifest: true,
+          ),
+          repoOverride: repository,
+          tempDirectoryProvider: () async => directory,
+        );
+        addTearDown(manager.close);
+        const url = 'https://example.com/avatar.jpg';
+        final bytes = Uint8List.fromList([1, 2, 3]);
+        final file = await manager.putFile(url, bytes, key: 'avatar');
+        await manager.initialize();
+        expect(manager.getCachedFileSync('avatar')?.path, file.path);
+        await manager.enforceCacheLimits(force: true);
+        final cached = await manager.getFileFromCache(
+          'avatar',
+          ignoreMemCache: true,
+        );
+        expect(cached, isNotNull);
+        expect(await cached!.file.readAsBytes(), bytes);
+
+        // This is the disk-cache operation used by account-switch cleanup.
+        await manager.clearCache();
+        expect(await repository.getAllObjects(), isEmpty);
+        expect(manager.getCachedFileSync('avatar'), isNull);
+        expect(
+          await manager.getFileFromCache('avatar', ignoreMemCache: true),
+          isNull,
+        );
+        final replacement = Uint8List.fromList([4, 5, 6]);
+        await manager.putFile(url, replacement, key: 'avatar');
+        await manager.enforceCacheLimits(force: true);
+        final reused = await manager.getFileFromCache(
+          'avatar',
+          ignoreMemCache: true,
+        );
+        expect(reused, isNotNull);
+        expect(await reused!.file.readAsBytes(), replacement);
+      },
+    );
+
+    test(
+      'keeps serving rows after a cache sweep closes its own connection',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        final repository = createSharedCacheInfoRepository('images');
+        // The cache store's connection, held for the manager's whole life.
+        await repository.open();
+        addTearDown(repository.close);
+        final cached = CacheObject(
+          'https://example.com/avatar.jpg',
+          key: 'avatar',
+          relativePath: 'avatar.jpg',
+          validTill: DateTime.utc(2030),
+        );
+        await repository.insert(cached);
+        // MediaCacheManager.enforceCacheLimits leases its own connection.
+        await repository.open();
+        expect(await repository.getAllObjects(), hasLength(1));
+        await repository.close();
+        expect((await repository.get('avatar'))?.relativePath, 'avatar.jpg');
+        await repository.insert(
+          CacheObject(
+            'https://example.com/banner.jpg',
+            key: 'banner',
+            relativePath: 'banner.jpg',
+            validTill: DateTime.utc(2030),
+          ),
+        );
+        expect(await repository.getAllObjects(), hasLength(2));
+      },
+    );
+
     test('retains the desktop JSON corruption-recovery repository', () async {
       debugDefaultTargetPlatformOverride = TargetPlatform.linux;
       final repository = createSharedCacheInfoRepository('desktop');

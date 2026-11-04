@@ -281,6 +281,7 @@ void main() {
       for (final changes in <Map<String, dynamic>>[
         {'created_at': 1.5},
         {'created_at': -1},
+        {'created_at': 8640000000001},
         {'kind': 9.5},
         {'content': null},
         {'pubkey': _author.toUpperCase()},
@@ -313,6 +314,12 @@ void main() {
           throwsA(isA<FormatException>()),
         );
       }
+    });
+    test('accepts the last timestamp a DateTime can hold', () async {
+      final rumor = {..._rumor(), 'created_at': 8640000000000};
+      rumor['id'] = _id(rumor);
+      final opened = await _open(await _wrap(await _seal(rumor)));
+      expect((opened['rumor'] as Map)['created_at'], 8640000000000);
     });
     test('rejects noncanonical binding and millisecond tags', () async {
       for (final tag in <List<String>>[

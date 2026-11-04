@@ -45,6 +45,8 @@ class CaptionGenerator {
   /// [preferOnDeviceRecognition] keeps recognition on-device on Apple
   /// platforms whenever the locale supports it; otherwise Apple's
   /// server-based recognition is used. Android always runs on-device.
+  /// [requireOnDeviceRecognition] instead fails when local recognition is
+  /// unavailable, without allowing server-based recognition.
   ///
   /// Throws:
   ///
@@ -64,6 +66,7 @@ class CaptionGenerator {
     required String audioPath,
     String? localeIdentifier,
     bool preferOnDeviceRecognition = true,
+    bool requireOnDeviceRecognition = false,
   }) async {
     if (!File(audioPath).existsSync()) {
       throw AudioFileNotFoundException(audioPath);
@@ -77,6 +80,7 @@ class CaptionGenerator {
         audioPath: audioPath,
         localeIdentifier: localeIdentifier,
         preferOnDeviceRecognition: preferOnDeviceRecognition,
+        requireOnDeviceRecognition: requireOnDeviceRecognition,
       ),
       _ => throw UnsupportedError(
         'caption_generator supports Android, iOS, and macOS only.',

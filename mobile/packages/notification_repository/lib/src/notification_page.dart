@@ -22,7 +22,9 @@ class NotificationPage extends Equatable {
   /// The enriched, grouped notification items for this page.
   final List<NotificationItem> items;
 
-  /// Total unread notifications reported by the server.
+  /// Unread notifications: the server's total on a social page, or the
+  /// unread [items] once client-side rows (announcements, room mentions) are
+  /// merged in.
   final int unreadCount;
 
   /// Cursor for fetching the next page, if available.

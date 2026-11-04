@@ -11,6 +11,7 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:pro_image_editor/features/main_editor/services/sizes_manager.dart'
     show SizesManager;
@@ -185,6 +186,49 @@ void main() {
         );
 
         expect(capturedAudio().single.endTime, const Duration(seconds: 1));
+      });
+
+      test('grows a sound that covered the end of a reloaded draft', () {
+        // Recorded at 30 fps, so none of these lengths falls on a whole
+        // millisecond. The sound is added before the draft is saved, against
+        // the exact lengths.
+        final recorded = [
+          for (final (index, micros) in [
+            966667,
+            1366667,
+            1266667,
+            566667,
+          ].indexed)
+            _clip('clip-$index', duration: Duration(microseconds: micros)),
+        ];
+        final sound = AudioEvent(
+          id: 'sound-1',
+          pubkey: 'bundled',
+          createdAt: 0,
+          url: 'asset://sounds/loop.mp3',
+          duration: 30,
+          endTime: compositionDuration(recorded),
+        );
+        // Reopening the draft reads the clips back from JSON.
+        final reloaded = [
+          for (final clip in recorded)
+            DivineVideoClip.fromJson(clip.toJson(), '/tmp'),
+        ];
+        final added = _clip('clip-added', duration: const Duration(seconds: 1));
+        when(() => stateManager.activeMeta).thenReturn({
+          VideoEditorConstants.audioStateHistoryKey: [sound.toJson()],
+        });
+
+        editor.setLengthenedClipState(
+          previousClips: reloaded,
+          clips: [...reloaded, added],
+        );
+
+        // The history entry holds the window in whole milliseconds.
+        expect(
+          capturedAudio().single.endTime?.inMilliseconds,
+          compositionDuration([...reloaded, added]).inMilliseconds,
+        );
       });
 
       test('writes no audio key when the composition has no sound', () {

@@ -19,7 +19,13 @@ import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+import 'support/live_dm_reads.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+}
 
 // Real key pairs: every gift wrap below is sealed, signed and decrypted for
 // real, so each pubkey has to belong to its secret.
@@ -96,7 +102,7 @@ void main() {
       when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});
       when(
         () => nostrClient.subscribe(
-          any(),
+          any(that: isLiveDmRead),
           subscriptionId: any(named: 'subscriptionId'),
           tempRelays: any(named: 'tempRelays'),
           targetRelays: any(named: 'targetRelays'),
@@ -236,7 +242,10 @@ void main() {
 
         await expectOnlyTheRoomHolding([rumor.id]);
         expect(
-          await processedDao.hasGiftWrap(wrap.id),
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: wrap.id,
+            ownerPubkey: _owner,
+          ),
           isFalse,
           reason:
               'a ledgered wrap is skipped before decryption on every later '
@@ -254,7 +263,13 @@ void main() {
         final wrap = await deliver(rumor, authorSecret: _ownerSecret);
 
         await expectOnlyTheRoomHolding([rumor.id]);
-        expect(await processedDao.hasGiftWrap(wrap.id), isFalse);
+        expect(
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: wrap.id,
+            ownerPubkey: _owner,
+          ),
+          isFalse,
+        );
       });
 
       test('is stored once when both of its self-copies arrive', () async {
@@ -290,7 +305,13 @@ void main() {
         final wrap = await deliver(rumor, authorSecret: _ownerSecret);
 
         expect(await conversations(), isEmpty);
-        expect(await processedDao.hasGiftWrap(wrap.id), isTrue);
+        expect(
+          await processedDao.hasGiftWrapForOwner(
+            giftWrapId: wrap.id,
+            ownerPubkey: _owner,
+          ),
+          isTrue,
+        );
       });
     });
 
@@ -316,7 +337,6 @@ void main() {
             eventKind: EventKind.reaction,
             additionalTags: [
               ['e', message.id],
-              ['p', message.pubkey],
               ['k', '${EventKind.privateDirectMessage}'],
             ],
             createdAt: _sentAt + 1,

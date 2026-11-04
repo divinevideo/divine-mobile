@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -116,6 +117,41 @@ void main() {
       expect(part.to, _ms(8000));
       expect(part.at, _ms(1000));
       expect(part.speed, 2);
+    });
+
+    test('places the beats of a ramped sound where its ramp plays them', () {
+      // A 5 s window from 1 s plays 4 s of the sound from 2 s: its first two
+      // seconds at 2x, the next two at 0.5x.
+      final part = beatSourceFor(
+        sounds: [
+          _sound(
+            'music',
+            startTime: _ms(1000),
+            startOffset: _ms(2000),
+            endTime: _ms(6000),
+          ).withSpeedRamp(
+            const VideoSpeedRamp([
+              VideoSpeedRampPoint(position: 0, speed: 2),
+              VideoSpeedRampPoint(position: 0.5, speed: 2),
+              VideoSpeedRampPoint(position: 0.5 + 1e-9, speed: 0.5),
+              VideoSpeedRampPoint(position: 1, speed: 0.5),
+            ]),
+          ),
+        ],
+        clips: const [],
+        videoEnd: _ms(10000),
+      ).single;
+
+      expect(part.from, _ms(2000));
+      expect(part.to.inMilliseconds, closeTo(6000, 1));
+      expect(part.playedLength.inMilliseconds, closeTo(5000, 1));
+      // A beat 3 s into the file plays 0.5 s into the window, and one 5 s in
+      // after the fast second and two slow ones.
+      expect(part.playedAfterFrom(_ms(3000)).inMilliseconds, closeTo(500, 1));
+      expect(
+        part.playedAfterFrom(_ms(5000)).inMilliseconds,
+        closeTo(3000, 1),
+      );
     });
 
     test('plays a sound without an end to the end of the video, but not past '

@@ -206,6 +206,30 @@ void main() {
         );
       });
 
+      testWidgets('a room mention names its room under the message', (
+        tester,
+      ) async {
+        await _pump(
+          tester,
+          notification: ActorNotification(
+            id: 'chat:introductions:${'b' * 64}',
+            type: NotificationKind.mention,
+            actor: _alice,
+            timestamp: DateTime.utc(2026, 5, 4, 12),
+            chatTarget: const ChatNotificationTarget(
+              communityId: 'community-test',
+              channelId: 'introductions',
+            ),
+          ),
+        );
+
+        expect(
+          find.textContaining(_l10n.notificationMentionedYou('Alice')),
+          findsOneWidget,
+        );
+        expect(find.textContaining('#introductions'), findsOneWidget);
+      });
+
       testWidgets('system message for system kind', (tester) async {
         await _pump(
           tester,
@@ -243,6 +267,33 @@ void main() {
         expect(
           find.textContaining(_l10n.notificationLikedYourVideo('Alice')),
           findsOneWidget,
+        );
+        expect(
+          find.textContaining(_l10n.notificationLikedYourComment('Alice')),
+          findsNothing,
+        );
+      });
+
+      testWidgets('"{actor} liked a video you\'re tagged in" for a like on '
+          "another creator's video", (tester) async {
+        await _pump(
+          tester,
+          notification: ActorNotification(
+            id: 'n1',
+            type: NotificationKind.like,
+            actor: _alice,
+            timestamp: DateTime.utc(2026, 5, 4, 12),
+            isTaggedVideo: true,
+          ),
+        );
+
+        expect(
+          find.textContaining(_l10n.notificationLikedTaggedVideo('Alice')),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining(_l10n.notificationLikedYourVideo('Alice')),
+          findsNothing,
         );
         expect(
           find.textContaining(_l10n.notificationLikedYourComment('Alice')),

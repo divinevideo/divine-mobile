@@ -15,7 +15,13 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+import 'support/live_dm_reads.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+}
 
 class _MockNip17MessageService extends Mock implements NIP17MessageService {}
 
@@ -116,7 +122,7 @@ class _Launch {
     when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});
     when(
       () => nostrClient.subscribe(
-        any(),
+        any(that: isLiveDmRead),
         subscriptionId: any(named: 'subscriptionId'),
         tempRelays: any(named: 'tempRelays'),
         targetRelays: any(named: 'targetRelays'),
@@ -176,8 +182,12 @@ class _Launch {
     );
     for (var attempt = 0; attempt < 200; attempt += 1) {
       await pumpEventQueue();
-      if (await DirectMessagesDao(db).hasGiftWrap(wrapId) ||
-          await ProcessedGiftWrapsDao(db).hasGiftWrap(wrapId)) {
+      if (await DirectMessagesDao(
+            db,
+          ).hasGiftWrap(wrapId, ownerPubkey: _owner) ||
+          await ProcessedGiftWrapsDao(
+            db,
+          ).hasGiftWrapForOwner(giftWrapId: wrapId, ownerPubkey: _owner)) {
         return;
       }
     }

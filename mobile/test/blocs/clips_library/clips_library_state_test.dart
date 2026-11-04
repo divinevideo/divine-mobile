@@ -278,6 +278,7 @@ void main() {
         const ClipLibraryAllFilter(),
         null,
         null,
+        null,
         false,
         false,
         null,

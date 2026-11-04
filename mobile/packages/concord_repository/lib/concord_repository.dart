@@ -5,6 +5,7 @@
 library;
 
 export 'src/concord_repository.dart';
+export 'src/room_activity_repository.dart';
 export 'src/sealed_chat_transport.dart';
 export 'src/sealed_transport.dart';
 export 'src/websocket_relay.dart';

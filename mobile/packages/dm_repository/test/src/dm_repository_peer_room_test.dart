@@ -21,7 +21,13 @@ import 'package:nostr_sdk/nip59/gift_wrap_util.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+import 'support/live_dm_reads.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+}
 
 class _FakeEvent extends Fake implements Event {}
 
@@ -163,7 +169,7 @@ void main() {
       when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});
       when(
         () => nostrClient.subscribe(
-          any(),
+          any(that: isLiveDmRead),
           subscriptionId: any(named: 'subscriptionId'),
           tempRelays: any(named: 'tempRelays'),
           targetRelays: any(named: 'targetRelays'),

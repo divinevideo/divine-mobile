@@ -10,6 +10,9 @@ import 'package:meta/meta.dart';
 import 'package:models/models.dart' show NativeProofData;
 import 'package:unified_logger/unified_logger.dart';
 
+// The Hive adapters in this part are maintained by hand, as in
+// blossom_upload_service: no hive_ce_generator release resolves beside
+// analyzer 13. A new @HiveField needs its read and write added there.
 part 'pending_upload.g.dart';
 
 const Object _pendingUploadUnset = Object();

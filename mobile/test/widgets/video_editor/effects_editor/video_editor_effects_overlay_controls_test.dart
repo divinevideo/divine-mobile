@@ -67,7 +67,7 @@ void main() {
 
     tearDown(() => cubit.close());
 
-    Widget buildWidget() {
+    Widget buildWidget({double height = 600}) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -95,10 +95,10 @@ void main() {
                 BlocProvider<VideoEditorEffectsCubit>.value(value: cubit),
                 BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
               ],
-              child: const SizedBox(
+              child: SizedBox(
                 width: 400,
-                height: 600,
-                child: VideoEditorEffectsOverlayControls(),
+                height: height,
+                child: const VideoEditorEffectsOverlayControls(),
               ),
             ),
           ),
@@ -126,6 +126,22 @@ void main() {
         );
         expect(slider.value, 0.35);
       });
+
+      testWidgets('stays below the toolbar over a short preview', (
+        tester,
+      ) async {
+        cubit.selectType(const EditorEffectType.builtIn(VideoEffectType.vhs));
+        // The preview left above the effects picker on a phone.
+        await tester.pumpWidget(buildWidget(height: 380));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getRect(find.byType(VideoEditorVerticalSlider)).top,
+          greaterThanOrEqualTo(
+            tester.getRect(find.bySemanticsLabel(doneLabel)).bottom,
+          ),
+        );
+      });
     });
 
     group('on the beat switch', () {
@@ -146,19 +162,26 @@ void main() {
         expect(cubit.state.onBeat, isTrue);
       });
 
-      testWidgets('shows for the zoom blur, the one effect Divine draws that '
-          'can fire on the beat', (tester) async {
+      testWidgets('shows for the zoom blur and the spin blur, the effects '
+          'Divine draws that can fire on the beat', (tester) async {
         cubit.selectType(EditorEffectType.tiltShift);
         await tester.pumpWidget(buildWidget());
         await tester.pumpAndSettle();
         expect(find.text(l10n.videoEditorEffectsOnBeat), findsNothing);
 
-        cubit.selectType(EditorEffectType.zoomBlur);
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(l10n.videoEditorEffectsOnBeat));
-        await tester.pumpAndSettle();
+        for (final type in [
+          EditorEffectType.zoomBlur,
+          EditorEffectType.spinBlur,
+        ]) {
+          cubit
+            ..selectType(type)
+            ..setOnBeat(onBeat: false);
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.videoEditorEffectsOnBeat));
+          await tester.pumpAndSettle();
 
-        expect(cubit.state.selectionOnBeat, isTrue);
+          expect(cubit.state.selectionOnBeat, isTrue, reason: type.name);
+        }
       });
 
       testWidgets('says when nothing in the video makes a sound', (
@@ -243,6 +266,30 @@ void main() {
         await tester.pump();
 
         expect(cubit.state.dropsSettings.seed, 42);
+      });
+
+      group('over a short preview', () {
+        Future<void> openShort(WidgetTester tester) async {
+          cubit.selectType(EditorEffectType.drops);
+          // The preview left above the effects picker on a small phone.
+          await tester.pumpWidget(buildWidget(height: 380));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.videoEditorDropsSettingsTitle));
+          await tester.pumpAndSettle();
+        }
+
+        testWidgets('open below the toolbar', (tester) async {
+          await openShort(tester);
+
+          expect(tester.takeException(), isNull);
+          expect(find.text(l10n.videoEditorDropsCountLabel), findsOneWidget);
+          expect(
+            tester.getRect(find.byType(ExpansionTile)).top,
+            greaterThanOrEqualTo(
+              tester.getRect(find.bySemanticsLabel(doneLabel)).bottom,
+            ),
+          );
+        });
       });
     });
 

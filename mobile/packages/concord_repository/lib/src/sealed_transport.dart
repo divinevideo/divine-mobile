@@ -205,6 +205,9 @@ final _hex32 = RegExp(r'^[0-9a-f]{64}$');
 final _hex64 = RegExp(r'^[0-9a-f]{128}$');
 final _decimal = RegExp(r'^(0|[1-9][0-9]*)$');
 
+// The last second a DateTime can hold; a later created_at cannot be shown.
+const _maxCreatedAt = 8640000000000;
+
 Map<String, dynamic> _decodeEvent(String encoded) {
   final value = jsonDecode(encoded);
   if (value is! Map<String, dynamic>) {
@@ -232,6 +235,7 @@ List<List<String>> _validateEvent(
       kind > 65535 ||
       createdAt is! int ||
       createdAt < 0 ||
+      createdAt > _maxCreatedAt ||
       event['content'] is! String ||
       tags is! List ||
       (signed && (sig is! String || !_hex64.hasMatch(sig))) ||

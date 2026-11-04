@@ -19,6 +19,7 @@ import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/ideas_transcript.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/utils/draft_audio_path_resolver.dart';
 import 'package:openvine/utils/editor_state_history_compaction.dart';
@@ -361,6 +362,32 @@ class DivineVideoDraft {
 
   final Map<String, dynamic> editorStateHistory;
   final Map<String, dynamic> editorEditingParameters;
+
+  /// What the social stickers on the video add to the post, read from the
+  /// current step of [editorStateHistory]: the layers a draft is rendered
+  /// with. [editorEditingParameters] only changes on Done, so it misses a
+  /// sticker added or deleted after that.
+  ///
+  /// Reads the whole history, so read it once per publish.
+  ///
+  /// Throws whatever [ImportStateHistory.fromMap] throws for a history it
+  /// cannot read, such as a [TypeError]; a post must not go out without the
+  /// tags its stickers show.
+  SocialStickerCredits get stickerCredits {
+    if (editorStateHistory.isEmpty) return const SocialStickerCredits();
+    final history = ImportStateHistory.fromMap(
+      editorStateHistory,
+      configs: ImportEditorConfigs(
+        // The stickers are read from the layers' meta, never drawn.
+        widgetLoader: (id, {meta}) => const SizedBox(),
+      ),
+    );
+    final position = history.editorPosition;
+    if (position < 0 || position >= history.stateHistory.length) {
+      return const SocialStickerCredits();
+    }
+    return SocialStickerCredits.of(history.stateHistory[position].layers);
+  }
 
   /// The final rendered clip ready for publishing.
   /// Cached to avoid re-rendering when no changes are made.

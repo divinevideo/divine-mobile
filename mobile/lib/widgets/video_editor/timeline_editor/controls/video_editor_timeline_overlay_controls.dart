@@ -1,6 +1,7 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
@@ -8,6 +9,7 @@ import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubi
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/extensions/layer_mask_keyframes.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
@@ -21,8 +23,13 @@ import 'package:openvine/models/video_editor/clip_speed_choice.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/layer_style.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/models/video_editor/sticker_card_layer.dart';
+import 'package:openvine/models/video_editor/tappable_sticker_layer.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_actions.dart';
@@ -32,8 +39,10 @@ import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_reatta
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transform.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_snack_bar.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/layer_blend_mode_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/layer_style_actions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_ducking_sheet.dart';
@@ -112,6 +121,15 @@ class _LayerOverlayControls extends StatelessWidget {
         layer != null && DetachedClipLayerData.isDetachedClipLayer(layer);
     final isAudioVisualizer =
         layer != null && AudioVisualizerLayerData.isAudioVisualizerLayer(layer);
+    final isInfoSticker =
+        layer != null && InfoStickerData.isInfoStickerLayer(layer);
+    final isSocialSticker =
+        layer != null && SocialStickerData.isSocialStickerLayer(layer);
+    // Info, social and interactive stickers show as they are, for as long as
+    // they were placed: no split, mask, opacity or blend.
+    final isStickerCard = isStickerCardLayer(layer);
+    // A video carries one interactive card.
+    final isInteractiveCard = layer != null && isInteractiveCardLayer(layer);
 
     // Every layer that takes a style can be multi-selected, to paste a style
     // onto several at once, delete them, or combine drawings or stickers, as
@@ -135,15 +153,20 @@ class _LayerOverlayControls extends StatelessWidget {
             ? () => _editTextLayer(context: context)
             : isAudioVisualizer
             ? () => _editAudioVisualizer(context: context)
+            : isInfoSticker
+            ? () => _editInfoSticker(context: context)
+            : isSocialSticker
+            ? () => _editSocialSticker(context: context)
             : null,
-        onDuplicated: () => _duplicateLayer(context: context),
+        onDuplicated: isInteractiveCard
+            ? null
+            : () => _duplicateLayer(context: context),
         onMultiSelect: canMultiSelect
             ? () => _startLayerMultiSelect(context: context)
             : null,
         multiSelectSemanticLabel:
             context.l10n.videoEditorSelectMultipleLayersSemanticLabel,
-        // Copy style / Paste style, for every layer but a hidden area and a
-        // detached clip; see [canCopyLayerStyle].
+        // Copy style / Paste style, for the layers [canCopyLayerStyle] allows.
         onCopyStyle: canTakeStyle ? () => _copyStyle(context: context) : null,
         copyStyleSemanticLabel:
             context.l10n.videoEditorCopyLayerStyleSemanticLabel,
@@ -153,7 +176,7 @@ class _LayerOverlayControls extends StatelessWidget {
         canPasteStyle: hasCopiedStyle,
         pasteStyleSemanticLabel:
             context.l10n.videoEditorPasteLayerStyleSemanticLabel,
-        onSplit: () => _splitLayer(context: context),
+        onSplit: isStickerCard ? null : () => _splitLayer(context: context),
         // The way back from Detach, for a detached clip only.
         onReattach: isDetachedClip
             ? () => _reattachLayer(context: context)
@@ -175,20 +198,19 @@ class _LayerOverlayControls extends StatelessWidget {
             DetachedClipLayerData.hasChromaKey(
               DetachedClipLayerData.metaOf(layer),
             ),
-        // A shape mask, for every layer the export draws from what the canvas
-        // shows; see [canMaskLayer].
+        // A shape mask, for the layers [canMaskLayer] allows.
         onShapeMask: canMaskLayer(layer)
             ? () => _editShapeMask(context: context)
             : null,
         hasShapeMask: layer?.mask != null,
         // Opacity, for every layer but a hidden area, whose whole purpose is to
-        // hide what is beneath it.
-        onOpacity: layer == null || isCensorLayer(layer)
+        // hide what is beneath it, and a sticker card.
+        onOpacity: layer == null || isCensorLayer(layer) || isStickerCard
             ? null
             : () => _editOpacity(context: context),
         hasOpacity: layer != null && _isSeeThrough(layer),
         // Blend, for the same layers: a hidden area draws nothing to blend.
-        onBlendMode: layer == null || isCensorLayer(layer)
+        onBlendMode: layer == null || isCensorLayer(layer) || isStickerCard
             ? null
             : () => _editBlendMode(context: context),
         hasBlendMode: layer != null && layer.blendMode != BlendMode.srcOver,
@@ -209,8 +231,13 @@ class _LayerOverlayControls extends StatelessWidget {
         //
         // They are off for a hidden area (blur, pixelate) too: it hides what is
         // beneath it the moment it shows, and an area that slid or faded in
-        // would show that for a moment first.
-        onAnimate: layer == null || isDetachedClip || isCensorLayer(layer)
+        // would show that for a moment first. And for a sticker a viewer taps
+        // where it stands, such as a link or a location.
+        onAnimate:
+            layer == null ||
+                isDetachedClip ||
+                isCensorLayer(layer) ||
+                isTappableStickerLayer(layer)
             ? null
             : () => _animateLayer(context: context),
         // Saved title styles, for text only. A burned-in caption cue is a text
@@ -236,6 +263,22 @@ class _LayerOverlayControls extends StatelessWidget {
     final layer = _liveLayer(context);
     if (layer == null) return;
     await editAudioVisualizerLayer(context, layer);
+  }
+
+  Future<void> _editInfoSticker({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await editInfoStickerLayer(context, layer);
+  }
+
+  Future<void> _editSocialSticker({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await editSocialStickerLayer(
+      context,
+      layer,
+      sounds: context.read<TimelineOverlayBloc>().state.audioTracks,
+    );
   }
 
   Future<void> _editTextLayer({required BuildContext context}) async {
@@ -781,7 +824,7 @@ class _SoundOverlayControls extends StatelessWidget {
         track?.originalSource != null,
         track?.hasVoiceProcessing ?? false,
         !(track?.equalizer.isNone ?? true),
-        (track?.playbackSpeed ?? 1) != 1,
+        track?.changesSpeed ?? false,
         track?.isVoiceOver ?? false,
         track?.ducksUnderVoiceOver ?? false,
       );
@@ -994,9 +1037,9 @@ class _SoundOverlayControls extends StatelessWidget {
     live?.value = null;
   }
 
-  /// Opens the speed sheet of the sound. A confirmed speed becomes one undo
-  /// step, with the sound's window rescaled to play the same stretch of it;
-  /// see [audioAtSpeed].
+  /// Opens the speed sheet of the sound. A confirmed speed or speed curve
+  /// becomes one undo step, with the sound's window rescaled to play the same
+  /// stretch of it; see [audioAtSpeed] and [audioAlongSpeedRamp].
   Future<void> _changeSpeed({required BuildContext context}) async {
     final editor = VideoEditorScope.of(context).editor;
     if (editor == null) return;
@@ -1013,35 +1056,47 @@ class _SoundOverlayControls extends StatelessWidget {
       isScrollControlled: true,
       body: VideoEditorClipSpeedSheet(
         initialSpeed: sound.playbackSpeed,
+        initialRamp: sound.speedRamp,
+        sourceDuration: sound.playedSourceSpan,
         title: context.l10n.videoEditorSoundSpeedSheetTitle,
-        offerCurve: false,
       ),
     );
-    final speed = switch (choice) {
-      ConstantClipSpeed(:final speed) => speed,
-      RampClipSpeed() || null => null,
-    };
-    if (speed == null || !context.mounted) return;
+    if (choice == null || !context.mounted) return;
 
-    // The slider steps in floating point; store the step it landed on, so a
-    // sound set back to 1x is exactly 1x again.
-    final newSpeed = (speed * 100).round() / 100;
     // Re-read the tracks after the async gap: another edit (an undo, a
     // finished extraction) may have changed them while the sheet was open.
     final tracks = editor.stateManager.audioTracks;
     final current = tracks.where((t) => t.id == item.id).firstOrNull;
-    if (current == null || current.playbackSpeed == newSpeed) return;
+    if (current == null) return;
 
     final compositionEnd = context.read<ClipEditorBloc>().state.totalDuration;
+    final AudioEvent updated;
+    switch (choice) {
+      case ConstantClipSpeed(:final speed):
+        // The slider steps in floating point; store the step it landed on,
+        // so a sound set back to 1x is exactly 1x again.
+        final newSpeed = (speed * 100).round() / 100;
+        if (current.speedRamp == null && current.playbackSpeed == newSpeed) {
+          return;
+        }
+        updated = audioAtSpeed(
+          current,
+          newSpeed,
+          compositionEnd: compositionEnd,
+        );
+      case RampClipSpeed(:final ramp):
+        if (current.speedRamp == ramp) return;
+        updated = audioAlongSpeedRamp(
+          current,
+          ramp,
+          compositionEnd: compositionEnd,
+        );
+    }
     editor.addHistory(
       meta: {
         ...editor.stateManager.activeMeta,
         VideoEditorConstants.audioStateHistoryKey: tracks
-            .map(
-              (t) => t.id == item.id
-                  ? audioAtSpeed(t, newSpeed, compositionEnd: compositionEnd)
-                  : t,
-            )
+            .map((t) => t.id == item.id ? updated : t)
             .map((e) => e.toJson())
             .toList(),
       },
@@ -1175,20 +1230,30 @@ class _SoundOverlayControls extends StatelessWidget {
     final track = tracks[trackIdx];
     // The tail starts as much further into the sound as the head plays of it,
     // which at a speed other than 1 is more or less than its timeline length.
-    final offsetShift = track.sourceSpanOf(splitAt - item.startTime);
+    final offsetShift = track.sourceOffsetAt(splitAt - item.startTime);
     // The fade in stays with the head and the fade out with the tail: the cut
     // itself is a new edge, which starts and ends at full volume.
-    final second = track.copyWith(
+    var second = track.copyWith(
       id: _copyId(item.id),
       startOffset: track.startOffset + offsetShift,
       startTime: splitAt,
       endTime: item.endTime,
       fadeInDuration: Duration.zero,
     );
-    final first = track.copyWith(
+    var first = track.copyWith(
       endTime: splitAt,
       fadeOutDuration: Duration.zero,
     );
+    // A ramp is cut in two, so every moment keeps its speed and its place.
+    if (track.speedRamp != null) {
+      final span = track.playedSourceSpan ?? offsetShift;
+      first = first.withSpeedRamp(
+        track.speedRampBetween(Duration.zero, offsetShift),
+      );
+      second = second.withSpeedRamp(
+        track.speedRampBetween(offsetShift, span),
+      );
+    }
 
     final updatedTracks = List.of(tracks)
       ..[trackIdx] = first

@@ -64,15 +64,42 @@ Every DM table on the device, and what bounds it. Only one is bounded by code.
 | `removed_message_ids` | no | deliberately. A rumor id is exact evidence that a message is gone for good, so a later NIP-09 retraction naming it can be settled and a replay of it is not stored again. Kept for the account's lifetime and cleared only when the user deletes their data. Ids and a timestamp only, no content |
 | `outgoing_dms` | partly | deleted on successful send or user cancel; a permanently failed row is marked `failed` and kept for manual retry; a delivery the sender stopped for a member of a stored group message is kept as `cancelled` (the record behind "Not sent to everyone") until that member's wrap lands after all, the message's retraction is confirmed, the conversation is removed or the account is cleared. The exception is a one-to-one row addressed to its own sender, which is deleted when a retry reaches it and at the next sign-in (#8363) |
 | `dm_message_reactions` | no | removed with their conversation; NIP-09 and own-supersede are soft deletes |
-| `pending_gift_wraps` | **yes** | attempts cap plus `deleteExhausted`, run at the top of every retry pass |
-| `processed_gift_wraps` | no | history drains read the ledger to avoid re-decrypting terminal outcomes; pruning entries makes old reactions, deletions, unsupported kinds, and tombstone-suppressed wraps eligible for decryption again |
+| `pending_gift_wraps` | **yes** | attempts cap plus `deleteExhausted`, run at the top of every retry pass. A dropped wrap leaves no ledger row, so one that never decrypts is queued again whenever a relay read delivers it again: the live window's two-day overlap, or the re-query below it (#8439) |
+| `processed_gift_wraps` | no | history drains, and the re-query below the live window (at most daily, a week deep and up to thirty days after a long gap; #8439), read the ledger to avoid re-decrypting terminal outcomes; pruning entries makes old reactions, deletions, unsupported kinds, and tombstone-suppressed wraps eligible for decryption again |
 
 `processed_gift_wraps` is the odd one out: its sibling `pending_gift_wraps` is
 bounded, while the history drain continues to consult processed rows on later
-passes. The table stores outcomes that may have no message row (reactions,
+passes, and the re-query below the live window consults them up to once a day.
+The table stores outcomes that may have no message row (reactions,
 deletions, unsupported kinds, and messages suppressed by a removal tombstone),
 so those rows remain part of the dedup ledger while history can be replayed.
 Its long-term growth should be measured before changing that policy.
+
+### Dedup is per account
+
+Both dedup lookups, the message row's `gift_wrap_id` and the ledger, answer
+"did *this account* handle it", not "did any account on the device". A wrap id
+is unique to one account only for an inbound gift wrap. An outgoing row stores
+the *recipient's* wrap id, and a kind-4 event id is shared by sender and
+recipient, so with both accounts on one device one id sits on two accounts'
+rows. The unique index and the ledger's primary key are both
+`(gift_wrap_id, owner_pubkey)` (schema v32, #6645), so each account keeps its
+own outcome for an id. That matters for a message dual-sent as NIP-17 and kind
+4: the recipient merges the kind 4 into its NIP-17 copy and must remember
+having done so, or the next replay stores the kind 4 a second time.
+
+### Recovering a wrap the ledger skipped
+
+The ledger records that a wrap reached a terminal outcome, not which one, so
+a row with no message behind it cannot be told from a reaction, a deletion or a
+suppressed message, and no migration can sweep such rows safely. v12 and v32
+therefore keep every ledger row (v32 only adds the owner to its key). A wrap that an earlier build ledgered without
+storing a message (the old device-wide keys, #6645) comes back the same way any
+account's history does: switching away from the account, or signing it out,
+deletes that account's messages, its ledger rows and its sync cursors (the
+account cleanup in `social_providers.dart`), and the next sign-in downloads its
+history again with the owner-scoped keys. A history download alone does not do
+it, because the ledger is read before a wrap is decrypted.
 
 ## The server copy
 

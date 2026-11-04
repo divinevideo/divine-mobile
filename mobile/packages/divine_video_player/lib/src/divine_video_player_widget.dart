@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:divine_video_player/src/divine_video_player_controller.dart';
+import 'package:divine_video_player/src/video_player_state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
@@ -67,11 +68,10 @@ class DivineVideoPlayer extends StatelessWidget {
     } else if (ctrl.useTexture && ctrl.textureId != null) {
       // SurfaceProducer does not forward ExoPlayer's GL transform matrix
       // (NATIVE_WINDOW_TRANSFORM_HINT) to Flutter, unlike the legacy
-      // SurfaceTextureEntry which encoded rotation implicitly. The native
-      // side reads Format.rotationDegrees and sends it explicitly so Dart
-      // can apply a RotatedBox. Listen to stateStream because
-      // onVideoSizeChanged fires after the first build.
-      surface = _RotatingTexture(controller: ctrl);
+      // SurfaceTextureEntry which encoded rotation and crop implicitly. The
+      // native side sends both explicitly so Dart can apply them. Listen to
+      // stateStream because they arrive after the first build.
+      surface = _PlayerTexture(controller: ctrl);
     } else {
       final creationParams = <String, dynamic>{'playerId': ctrl.playerId};
       surface = switch (defaultTargetPlatform) {
@@ -151,31 +151,81 @@ class _AndroidPlayerView extends StatelessWidget {
   // coverage:ignore-end
 }
 
-/// Renders the native [Texture] wrapped in a [RotatedBox] when the
-/// player reports a non-zero rotation. The native side reads
-/// `Format.rotationDegrees` and sends it via the event channel because
-/// `SurfaceProducer` does not forward ExoPlayer's GL transform matrix
-/// to Flutter (unlike the legacy `SurfaceTextureEntry`). Listens to
-/// [DivineVideoPlayerController.stateStream] so the rotation updates
-/// after the first build.
-class _RotatingTexture extends StatelessWidget {
-  const _RotatingTexture({required this.controller});
+/// Renders the native [Texture] upright and without the decoder's padding.
+///
+/// `SurfaceProducer` does not forward ExoPlayer's GL transform matrix to
+/// Flutter (unlike the legacy `SurfaceTextureEntry`), so the native side
+/// sends `Format.rotationDegrees` and the decoder's crop, which this applies
+/// with a [RotatedBox] and [_CroppedTexture]. Listens to
+/// [DivineVideoPlayerController.stateStream] so both update after the first
+/// build.
+class _PlayerTexture extends StatelessWidget {
+  const _PlayerTexture({required this.controller});
 
   final DivineVideoPlayerController controller;
 
+  static (int, Rect?) _layoutOf(DivineVideoPlayerState state) =>
+      (state.rotationDegrees, state.textureCrop);
+
   @override
   Widget build(BuildContext context) {
-    final texture = Texture(textureId: controller.textureId!);
-    return StreamBuilder<int>(
-      stream: controller.stateStream.map((s) => s.rotationDegrees).distinct(),
-      initialData: controller.state.rotationDegrees,
+    return StreamBuilder<(int, Rect?)>(
+      stream: controller.stateStream.map(_layoutOf).distinct(),
+      initialData: _layoutOf(controller.state),
       builder: (context, snapshot) {
-        final rotation = snapshot.data ?? 0;
+        final (rotation, crop) = snapshot.data ?? (0, null);
+        Widget texture = Texture(textureId: controller.textureId!);
+        // The crop is in the buffer's orientation, so it goes inside the
+        // rotation.
+        if (crop != null) texture = _CroppedTexture(crop: crop, child: texture);
         if (rotation == 0) return texture;
         return RotatedBox(quarterTurns: rotation ~/ 90, child: texture);
       },
     );
   }
+}
+
+/// Fills its box with only the [crop] part of [child], a texture whose
+/// padding lies outside [crop]. See [DivineVideoPlayerState.textureCrop].
+class _CroppedTexture extends StatelessWidget {
+  const _CroppedTexture({required this.crop, required this.child});
+
+  final Rect crop;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: CustomSingleChildLayout(
+        delegate: _TextureCropLayout(crop),
+        child: child,
+      ),
+    );
+  }
+}
+
+/// Sizes the texture so [crop] covers the whole box, and moves the padding
+/// before [crop] out of it.
+class _TextureCropLayout extends SingleChildLayoutDelegate {
+  const _TextureCropLayout(this.crop);
+
+  final Rect crop;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final box = constraints.biggest;
+    return BoxConstraints.tight(
+      Size(box.width / crop.width, box.height / crop.height),
+    );
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) =>
+      Offset(-crop.left * childSize.width, -crop.top * childSize.height);
+
+  @override
+  bool shouldRelayout(_TextureCropLayout oldDelegate) =>
+      crop != oldDelegate.crop;
 }
 
 /// Shows the [placeholder] over the video surface and fades it out once

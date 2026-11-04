@@ -26,6 +26,16 @@ class IndexerRelayConfig {
 
   /// Additional relays named in the user's NIP-17 kind-10050 DM inbox list,
   /// on top of divine's own relay, so DM writes retain redundancy.
+  ///
+  /// nos.lol refuses events over about 64 KiB (not advertised; inferred from
+  /// strfry's default), so it misses a DM whose rumor exceeds about 28.7 KB:
+  /// NIP-44 padding then grows the gift wrap from 55,121 to 66,045 bytes.
+  /// That takes about 9,460 CJK characters or 7,100 four-byte emoji, but the
+  /// composer counts grapheme clusters, not bytes: about 3,550 flags or
+  /// skin-toned emoji, or 1,140 four-person family emoji, are enough. The
+  /// message still reaches the recipient through the other inbox relays, so
+  /// this costs one copy, not delivery, and is accepted rather than lowering
+  /// `maxDmRumorBytes` for every send (#10317).
   static const List<String> dmInboxTaggedRelays = [
     'wss://nos.lol',
     'wss://relay.primal.net',

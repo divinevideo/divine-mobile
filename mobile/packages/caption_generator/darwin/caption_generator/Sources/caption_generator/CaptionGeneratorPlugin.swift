@@ -50,6 +50,7 @@ public final class CaptionGeneratorPlugin: NSObject, FlutterPlugin {
     }
     let localeIdentifier = args["localeIdentifier"] as? String
     let preferOnDevice = args["preferOnDeviceRecognition"] as? Bool ?? true
+    let requireOnDevice = args["requireOnDeviceRecognition"] as? Bool ?? false
 
     ensureAuthorization { [weak self] authorized in
       DispatchQueue.main.async {
@@ -63,7 +64,8 @@ public final class CaptionGeneratorPlugin: NSObject, FlutterPlugin {
         }
         self.startTranscription(
           audioPath: audioPath, localeIdentifier: localeIdentifier,
-          preferOnDevice: preferOnDevice, result: result)
+          preferOnDevice: preferOnDevice, requireOnDevice: requireOnDevice,
+          result: result)
       }
     }
   }
@@ -84,6 +86,7 @@ public final class CaptionGeneratorPlugin: NSObject, FlutterPlugin {
   /// Must be called on the main queue.
   private func startTranscription(
     audioPath: String, localeIdentifier: String?, preferOnDevice: Bool,
+    requireOnDevice: Bool,
     result: @escaping FlutterResult
   ) {
     let locale = localeIdentifier.map { Locale(identifier: $0) } ?? Locale.current
@@ -98,11 +101,19 @@ public final class CaptionGeneratorPlugin: NSObject, FlutterPlugin {
           details: nil))
       return
     }
+    guard !requireOnDevice || recognizer.supportsOnDeviceRecognition else {
+      result(
+        FlutterError(
+          code: "recognizer_unavailable",
+          message: "On-device speech recognition is unavailable for this locale",
+          details: nil))
+      return
+    }
     let request = SFSpeechURLRecognitionRequest(
       url: URL(fileURLWithPath: audioPath))
     request.shouldReportPartialResults = false
     request.taskHint = .dictation
-    if preferOnDevice, recognizer.supportsOnDeviceRecognition {
+    if requireOnDevice || (preferOnDevice && recognizer.supportsOnDeviceRecognition) {
       request.requiresOnDeviceRecognition = true
     }
     if #available(iOS 16.0, macOS 13.0, *) {

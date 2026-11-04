@@ -42,6 +42,11 @@ abstract class DmReactionsRepositoryReportableSites {
   /// still publishes; the superseded emoji's kind-5 removal is lost (#9915).
   static const String publishSupersedeDeletion = 'publish.supersedeDeletion';
 
+  /// `publish`: reading the reacted message, for the kind its `k` tag names,
+  /// threw. The reaction is still sent, tagged as a reaction to a kind-14
+  /// text message.
+  static const String publishTargetKindRead = 'publish.targetKindRead';
+
   /// `publish`: reading a superseded prior reaction's row, to see who it was
   /// sent to, threw. Its removal is recorded, if that write succeeds, and
   /// held for the retry sweep, which reads the row again.
@@ -65,4 +70,11 @@ abstract class DmReactionsRepositoryReportableSites {
   /// held, with nothing recorded, and looked at again on its next attempt.
   static const String wrapRecipientsTargetMessageRead =
       'wrapRecipients.targetMessageRead';
+
+  /// Recording on a reaction's row the wrap a fallback-pool relay accepted
+  /// while the recipient's inbox could not be read, or the members an attempt
+  /// that was not delivery reached, threw (#10012). The attempt's outcome
+  /// stands; the next attempt wraps the rumor again for those recipients, as
+  /// every attempt did before.
+  static const String recordHeldPoolWrap = 'heldPoolWrap.record';
 }

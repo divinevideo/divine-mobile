@@ -1,5 +1,75 @@
 {
   "@@locale": "ja",
+  "videoEditorSocialStickerPoll": "アンケート",
+  "videoEditorSocialStickerQuiz": "クイズ",
+  "videoEditorSocialStickerSlider": "スライダー",
+  "videoEditorSocialStickerPollSampleQuestion": "どれ？",
+  "videoEditorSocialStickerPollSampleYes": "はい",
+  "videoEditorSocialStickerPollSampleNo": "いいえ",
+  "videoEditorSocialStickerQuizSampleQuestion": "Vineが始まったのは…",
+  "videoEditorSocialStickerSliderSampleQuestion": "お腹のすき具合は？",
+  "videoEditorSocialStickerPollQuestionHint": "質問を入力",
+  "videoEditorSocialStickerPollOptionHint": "回答{number}",
+  "videoEditorSocialStickerPollRemoveOption": "回答{number}を削除",
+  "videoEditorSocialStickerQuizMarkRight": "回答{number}を正解にする",
+  "videoEditorSocialStickerPollAddOption": "回答を追加",
+  "videoEditorSocialStickerPollNote": "視聴者は投票後に結果を見られます。投票は公開されます。",
+  "videoEditorSocialStickerQuizNote": "正解にチェックを入れてください。視聴者は回答後に正解を見られます。",
+  "videoEditorSocialStickerSliderNote": "視聴者は絵文字をドラッグして回答し、平均の位置を見られます。",
+  "videoStickerQuizRightAnswer": "正解",
+  "videoStickerQuizWrongAnswer": "不正解",
+  "videoEditorSocialStickerQuestion": "質問",
+  "videoEditorSocialStickerAddYours": "あなたの番",
+  "videoEditorSocialStickerReplies": "返信",
+  "videoEditorSocialStickerQuestionSample": "なんでも聞いてください",
+  "videoEditorSocialStickerAddYoursSample": "デスク周りを見せてください",
+  "videoEditorSocialStickerRepliesSample": "動画で返信",
+  "videoEditorSocialStickerQuestionHint": "あなたの質問",
+  "videoEditorSocialStickerAddYoursPromptHint": "みんなに何を見せてもらいますか？",
+  "videoEditorSocialStickerAddYoursHashtagHint": "ハッシュタグ",
+  "videoEditorSocialStickerRepliesTitleHint": "タイトル",
+  "videoEditorSocialStickerQuestionNote": "回答はプライベートメッセージで届きます。",
+  "videoEditorSocialStickerAddYoursNote": "視聴者は自分の動画で回答します。すべての回答にこのハッシュタグが付き、あなたの動画にリンクされます。",
+  "videoEditorSocialStickerRepliesNote": "この動画に動画で返信した人を表示します。視聴者がタップすると返信を見られます。",
+  "videoEditorInteractiveCardAreaHint": "視聴者がタップできるよう、このステッカーは枠の中に配置されます",
+  "videoStickerPollSignInToVote": "投票するにはログインしてください。",
+  "videoStickerPollNotReady": "接続中です。少し待ってからもう一度お試しください。",
+  "videoStickerPollVoteFailed": "投票を送信できませんでした。もう一度お試しください。",
+  "videoStickerPollVotesArePublic": "投票は公開されます。誰でもあなたの選択を見られます。",
+  "videoStickerPollVoteCount": "{count, plural, other{{count}票}}",
+  "videoStickerQuestionAnswerHint": "タップして回答",
+  "videoStickerQuestionAnswerSemanticLabel": "回答: {question}",
+  "videoStickerAddYoursButton": "あなたの番",
+  "videoStickerAddYoursJoined": "{count, plural, =0{最初に参加しましょう} =1{{count}人が参加} other{{count}人が参加}}",
+  "videoStickerAddYoursJoinedAtLeast": "{count}人が参加",
+  "videoStickerAddYoursOpenSemanticLabel": "参加した人を見る",
+  "videoStickerAddYoursJoinSemanticLabel": "あなたの番: {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{まだ返信はありません} =1{返信{count}件} other{返信{count}件}}",
+  "videoStickerRepliesCountAtLeast": "返信{count}件",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{動画の返信、まだありません} =1{動画の返信{count}件を見る} other{動画の返信{count}件を見る}}",
+  "videoStickerRepliesSemanticLabelAtLeast": "動画の返信{count}件を見る",
+  "videoStickerQuestionSignIn": "回答するにはログインしてください。",
+  "videoStickerQuestionUnavailable": "このアカウントでは質問に回答できません。",
+  "videoStickerQuestionAnswerTitle": "回答",
+  "videoStickerQuestionAnswerFieldLabel": "あなたの回答",
+  "videoStickerQuestionAnswerPrivacyNote": "回答は{name}さんにだけ表示されます。あなたの名前を伏せて、動画で紹介されることがあります。",
+  "videoStickerQuestionAnswerSend": "送信",
+  "videoStickerQuestionAnswerSent": "回答を送信しました。",
+  "videoStickerQuestionAnswerTooLong": "回答が長すぎて送信できません。",
+  "videoStickerQuestionAnswerFailed": "回答を送信できませんでした。もう一度お試しください。",
+  "videoStickerAddYoursSignIn": "参加するにはログインしてください。",
+  "videoStickerRepliesManageTitle": "動画の返信",
+  "videoStickerRepliesEmpty": "動画の返信はまだありません。",
+  "videoStickerRepliesLoadFailed": "返信を読み込めませんでした。",
+  "videoStickerRepliesRetry": "もう一回",
+  "videoStickerRepliesPin": "ピン留め",
+  "videoStickerRepliesUnpin": "ピン留めを解除",
+  "videoStickerRepliesHide": "非表示",
+  "videoStickerRepliesShow": "表示",
+  "videoStickerRepliesPinned": "ピン留め済み",
+  "videoStickerRepliesHidden": "非表示中",
+  "videoStickerRepliesSaveFailed": "保存できませんでした。もう一度お試しください。",
+  "videoStickerRepliesWatchSemanticLabel": "{name}さんの返信を見る",
   "devOptionsClipRecovery": "クリップの復旧",
   "devOptionsClipRecoveryDescription": "別のアカウントに保存された録画と、どの項目からも参照されていない動画ファイルを探します。",
   "devOptionsClipRecoveryScan": "スキャン",
@@ -65,6 +135,7 @@
   "publishErrorPermissionDenied": "Divine にアップロードの権限がないよ。設定でアプリの権限を確認して、もう一回試してみて。",
   "publishErrorOutOfMemory": "端末のメモリが足りないよ。アプリをいくつか閉じて、もう一回試してみて。",
   "publishErrorOverlaysUnavailable": "この下書きのテキストとステッカーを準備できなかったよ。エディタで開いてから、もう一回投稿してみて。",
+  "publishErrorQuestionStickerRestricted": "このアカウントでは質問ステッカーを投稿できないよ。回答はプライベートメッセージで届くから。ステッカーを外してから、もう一回投稿してみて。",
   "publishErrorTooManyDetachedClips": "この端末では、切り離したクリップをこれほど多く同時に書き出せません。いくつかをタイムラインに戻してから、もう一度お試しください。",
   "publishErrorDraftTooManyDetachedClips": "この端末では、切り離したクリップをこれほど多く同時に書き出せません。下書きをエディタで開き、いくつかをタイムラインに戻してから、もう一度投稿してください。",
   "publishErrorUnknownServer": "不明なサーバー",
@@ -74,7 +145,10 @@
   "dmReactionRetryAction": "再試行",
   "dmMessageBubbleVideoReplyHint": "参照先の動画を開く",
   "commonSomethingWentWrong": "問題が発生しました",
-  "profileFeedError": "サーバーに接続できません。接続を確認してもう一度お試しください。",
+  "profileVideosLoadFailedTitle": "動画を読み込めませんでした",
+  "profileVideosLoadFailedOtherTitle": "動画を読み込めませんでした",
+  "profileVideosLoadFailedSubtitle": "接続を確認してもう一度お試しください。",
+  "profileVideosLoadFailedRetry": "もう一度試す",
   "profileFeedLoadMoreError": "これ以上の動画を読み込めませんでした。引っ張って更新してください。",
   "appTitle": "Divine",
   "@appTitle": {
@@ -679,6 +753,21 @@
   "metadataBadgeNotDivine": "Divine 以外",
   "metadataBadgeHumanMade": "人間が制作",
   "metadataSoundsLabel": "サウンド",
+  "metadataLinksLabel": "リンク",
+  "videoStickerLinkSemanticLabel": "リンクステッカー、{url} を開きます",
+  "videoStickerMentionSemanticLabel": "メンションステッカー、プロフィールを開きます",
+  "videoStickerHashtagSemanticLabel": "ハッシュタグステッカー、#{hashtag} を開きます",
+  "videoStickerSoundSemanticLabel": "サウンドステッカー、サウンドを開きます",
+  "videoStickerPlaceSemanticLabel": "場所ステッカー、{place} を地図で開きます",
+  "videoStickerCountdownSemanticLabel": "カウントダウンステッカー、リマインダーを設定します",
+  "videoStickerReplySemanticLabel": "返信ステッカー、この動画の返信先を開きます",
+  "videoStickerCountdownDays": "{count, plural, other{{count}日}}",
+  "videoStickerCountdownReminderSet": "リマインダーを設定しました。時間になったらお知らせします。",
+  "videoStickerCountdownReminderRemoved": "リマインダーを削除しました。",
+  "videoStickerCountdownOver": "このカウントダウンは終了しました。",
+  "videoStickerCountdownNotificationsOff": "リマインダーを受け取るには、Divine の通知をオンにしてください。",
+  "videoStickerCountdownReminderBody": "時間です！保存したカウントダウンが終了しました。",
+  "videoStickerLinkSheetBody": "このリンクはDivineの外で開きます。移動する前にアドレスを確認してください。",
   "metadataOriginalSound": "オリジナルサウンド",
   "metadataVerificationLabel": "認証",
   "metadataDeviceAttestation": "デバイスの認証",
@@ -1622,6 +1711,7 @@
   "routeInvalidUserId": "無効なユーザー ID",
   "routeInvalidVideoId": "無効な動画 ID",
   "routeInvalidSoundId": "無効なサウンド ID",
+  "routeInvalidQuestion": "無効な質問リンク",
   "routeInvalidCategory": "無効なカテゴリ",
   "routeNoVideosToDisplay": "表示する動画がないよ",
   "routeGoHome": "ホームに戻る",
@@ -2187,11 +2277,11 @@
   "videoClipBackupUnsignedSemanticLabel": "コンテンツ認証情報なしでギャラリーに保存済み。{label}",
   "videoClipStopMotionSemanticLabel": "ストップモーションクリップ、{frames}",
   "videoClipSemanticValueSelectedAtPosition": "選択済み、{position} 番目",
-  "videoClipSemanticValueSelected": "選択済み",
   "videoClipSemanticValueNotSelected": "未選択",
   "videoClipSemanticHintDisabled": "無効",
-  "videoClipSemanticHintSelect": "タップして選択、長押しでプレビュー",
-  "videoClipSemanticHintDeselect": "タップして選択解除、長押しでプレビュー",
+  "videoClipSemanticHintSelect": "タップして選択",
+  "videoClipSemanticHintDeselect": "タップして選択解除",
+  "videoClipSemanticHintPreview": "タップしてプレビュー",
   "libraryClipDuration": "{seconds}秒",
   "libraryTabClips": "クリップ",
   "libraryTabDrafts": "下書き",
@@ -2285,6 +2375,14 @@
   },
   "notificationLikedYourVideo": "{actorName}さんがあなたの動画にいいねしました",
   "@notificationLikedYourVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLikedTaggedVideo": "{actorName}さんがあなたがタグ付けされた動画にいいねしました",
+  "@notificationLikedTaggedVideo": {
     "placeholders": {
       "actorName": {
         "type": "String"
@@ -2572,9 +2670,51 @@
   "videoEditorEffectConfetti": "紙吹雪",
   "videoEditorEffectHearts": "ハート",
   "videoEditorEffectSparkles": "キラキラ",
+  "videoEditorEffectRain": "雨",
+  "videoEditorEffectLeaves": "落ち葉",
+  "videoEditorEffectBlossoms": "桜",
+  "videoEditorEffectBubbles": "シャボン玉",
+  "videoEditorEffectBokeh": "玉ボケ",
+  "videoEditorEffectMusicNotes": "音符",
+  "videoEditorEffectStars": "星",
+  "videoEditorEffectFireflies": "ホタル",
+  "videoEditorEffectEmbers": "火の粉",
+  "videoEditorEffectMoney": "お札",
+  "videoEditorEffectBalloons": "風船",
   "videoEditorEffectTiltShift": "ティルトシフト",
   "videoEditorEffectZoomBlur": "ズームブラー",
+  "videoEditorEffectSpinBlur": "スピンブラー",
   "videoEditorEffectComic": "コミック",
+  "videoEditorEffectSwirl": "渦巻き",
+  "videoEditorEffectRipple": "波紋",
+  "videoEditorEffectFlutedGlass": "モールガラス",
+  "videoEditorEffectEightBit": "8ビット",
+  "videoEditorEffectAnaglyph": "3Dメガネ",
+  "videoEditorEffectRiso": "リソグラフ",
+  "videoEditorEffectTealOrange": "ティール＆オレンジ",
+  "videoEditorEffectWarmFilm": "ウォームフィルム",
+  "videoEditorEffectSlideFilm": "リバーサルフィルム",
+  "videoEditorEffectCoolFilm": "クールフィルム",
+  "videoEditorEffectMatte": "マット",
+  "videoEditorEffectBleachBypass": "銀残し",
+  "videoEditorEffectCrossProcess": "クロスプロセス",
+  "videoEditorEffectGoldenHour": "ゴールデンアワー",
+  "videoEditorEffectMoonlight": "月明かり",
+  "videoEditorEffectSilver": "シルバー",
+  "videoEditorEffectCategoryRetro": "レトロ",
+  "videoEditorEffectCategoryGlitch": "グリッチ",
+  "videoEditorEffectCategoryDistort": "ゆがみ",
+  "videoEditorEffectCategoryLight": "光",
+  "videoEditorEffectCategoryMotion": "モーション",
+  "videoEditorEffectCategoryParticles": "パーティクル",
+  "videoEditorEffectCategoryLooks": "ルック",
+  "videoEditorFilterCategoryNatural": "ナチュラル",
+  "videoEditorFilterCategoryVibrant": "ビビッド",
+  "videoEditorFilterCategoryWarm": "ウォーム",
+  "videoEditorFilterCategoryCool": "クール",
+  "videoEditorFilterCategoryVintage": "ヴィンテージ",
+  "videoEditorFilterCategoryBlackAndWhite": "モノクロ",
+  "videoEditorFilterCategoryTints": "ティント",
   "videoEditorDropsSettingsTitle": "しずくを調整",
   "videoEditorDropsCountLabel": "数",
   "videoEditorDropsSizeLabel": "サイズ",
@@ -2945,11 +3085,108 @@
   "videoEditorLayerAnimationPulseTo": "縮小サイズ",
   "videoEditorLayerAnimationWiggleAngle": "傾き",
   "videoEditorLayerAnimationBounceHeight": "高さ",
+  "videoEditorLayerAnimationFlipSideways": "左右",
+  "videoEditorLayerAnimationFlipOver": "上下",
   "videoEditorLayerAnimationCustomPoint": "カスタム",
   "videoEditorLayerAnimationPointEnterHint": "スライドを始める位置を動画でタップしてください",
   "videoEditorLayerAnimationPointLeaveHint": "スライドを終える位置を動画でタップしてください",
   "videoEditorStickersDivineOriginals": "Divine オリジナル",
   "videoEditorStickerSearchHint": "ステッカーを検索...",
+  "videoEditorInfoStickersTitle": "情報",
+  "videoEditorSocialStickersTitle": "ソーシャル",
+  "videoEditorSocialStickerMention": "メンション",
+  "videoEditorSocialStickerHashtag": "ハッシュタグ",
+  "videoEditorSocialStickerSoundCredit": "サウンド",
+  "videoEditorSocialStickerMentionSample": "なまえ",
+  "videoEditorSocialStickerHashtagSample": "ハッシュタグ",
+  "videoEditorSocialStickerChoosePerson": "相手を選択",
+  "videoEditorSocialStickerMentionNote": "投稿でメンションされ、通知が届きます。",
+  "videoEditorSocialStickerHashtagHint": "ハッシュタグを入力",
+  "videoEditorSocialStickerHashtagNote": "投稿のハッシュタグにも追加されます。",
+  "videoEditorSocialStickerLyricHint": "歌詞の1行（任意）",
+  "videoEditorSocialStickerLink": "リンク",
+  "videoEditorSocialStickerLinkUrlHint": "ウェブアドレス",
+  "videoEditorSocialStickerLinkTitleHint": "タイトル（任意）",
+  "videoEditorSocialStickerLinkNote": "アドレスは投稿に追加されます。",
+  "videoEditorSocialStickerLinkInvalid": "まだウェブアドレスではありません。",
+  "videoEditorInteractiveStickersTitle": "インタラクティブ",
+  "videoEditorSocialStickerCountdown": "カウントダウン",
+  "videoEditorSocialStickerCountdownSample": "夏",
+  "videoEditorSocialStickerCountdownTitleHint": "何までカウントダウンしますか？",
+  "videoEditorSocialStickerCountdownNote": "視聴者は残り時間を見て、リマインダーを設定できます。",
+  "videoEditorSocialStickerCountdownOver": "その日時は過ぎています。新しい日時を選んでください。",
+  "videoEditorSocialStickerReply": "返信",
+  "videoEditorSocialStickerReplyNote": "視聴者がタップすると、返信先が表示されます。",
+  "videoEditorSocialStickerSoundNote": "音符",
+  "videoEditorSocialStickerSoundVinyl": "レコード",
+  "videoEditorSocialStickerSoundCassette": "カセット",
+  "videoEditorSocialStickerSoundEqualizer": "イコライザー",
+  "videoEditorSocialStickerSoundPlayer": "プレーヤー",
+  "videoEditorInfoStickerTime": "時刻",
+  "videoEditorInfoStickerDate": "日付",
+  "videoEditorInfoStickerLocation": "場所",
+  "videoEditorInfoStickerWeather": "天気",
+  "videoEditorInfoStickerAltitude": "標高",
+  "videoEditorInfoStickerBattery": "バッテリー",
+  "videoEditorInfoStickerStyleLight": "ライト",
+  "videoEditorInfoStickerStyleDark": "ダーク",
+  "videoEditorInfoStickerStyleBrand": "グリーン",
+  "videoEditorInfoStickerStyleOutline": "アウトライン",
+  "videoEditorInfoStickerStyleDigital": "デジタル",
+  "videoEditorInfoStickerStyleAnalog": "アナログ",
+  "videoEditorInfoStickerStyleGlass": "ガラス",
+  "videoEditorInfoStickerStyleHighlight": "イエロー",
+  "videoEditorInfoStickerStyleNeon": "ネオン",
+  "videoEditorInfoStickerStylePlain": "シンプル",
+  "videoEditorInfoStickerChangePlace": "場所を変更",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "この端末では場所の検索を利用できません。",
+  "videoEditorInfoStickerRecordedValue": "撮影時 · {value}",
+  "videoEditorInfoStickerNowValue": "現在 · {value}",
+  "videoEditorInfoStickerTodayValue": "今日 · {value}",
+  "videoEditorInfoStickerDayCount": "日数カウンター",
+  "videoEditorInfoStickerSun": "太陽",
+  "videoEditorInfoStickerMoon": "月",
+  "videoEditorInfoStickerRecTimer": "RECタイマー",
+  "videoEditorInfoStickerStyleFilm": "フィルム",
+  "videoEditorInfoStickerStyleCamcorder": "ビデオカメラ",
+  "videoEditorInfoStickerDayCountValue": "{day}日目",
+  "videoEditorInfoStickerDayCountOfValue": "{day}日目 / {total}日",
+  "videoEditorInfoStickerDayLabel": "日",
+  "videoEditorInfoStickerDayTotalLabel": "全日数（任意）",
+  "videoEditorInfoStickerSymbolPin": "ピン",
+  "videoEditorInfoStickerSymbolFlag": "国旗",
+  "videoEditorInfoStickerSymbolGlobe": "地球儀",
+  "videoEditorInfoStickerSymbolMap": "地図",
+  "videoEditorInfoStickerMoonNew": "新月",
+  "videoEditorInfoStickerMoonWaxingCrescent": "三日月",
+  "videoEditorInfoStickerMoonFirstQuarter": "上弦の月",
+  "videoEditorInfoStickerMoonWaxingGibbous": "十三夜月",
+  "videoEditorInfoStickerMoonFull": "満月",
+  "videoEditorInfoStickerMoonWaningGibbous": "寝待月",
+  "videoEditorInfoStickerMoonLastQuarter": "下弦の月",
+  "videoEditorInfoStickerMoonWaningCrescent": "有明月",
+  "videoEditorInfoStickerPlaceSearchHint": "都市や場所を検索",
+  "videoEditorInfoStickerPlaceNoResults": "場所が見つかりません",
+  "videoEditorInfoStickerPlaceSearchFailed": "場所を検索できませんでした。もう一度お試しください。",
+  "videoEditorInfoStickerPlacePrivacyNote": "動画に入るのは場所の名前だけで、正確な位置は入りません。",
+  "videoEditorInfoStickerLoading": "読み込み中…",
+  "videoEditorInfoStickerLoadFailed": "読み込めませんでした。もう一度お試しください。",
+  "videoEditorInfoStickerMetAttribution": "データ: MET Norway",
+  "videoEditorInfoStickerWeatherNow": "古い動画の天気はないため、現在の天気を表示しています。",
+  "videoEditorInfoStickerWeatherSunny": "晴れ",
+  "videoEditorInfoStickerWeatherClearNight": "晴れた夜",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "晴れ時々曇り",
+  "videoEditorInfoStickerWeatherCloudy": "曇り",
+  "videoEditorInfoStickerWeatherFog": "霧",
+  "videoEditorInfoStickerWeatherRain": "雨",
+  "videoEditorInfoStickerWeatherShowers": "にわか雨",
+  "videoEditorInfoStickerWeatherSnow": "雪",
+  "videoEditorInfoStickerWeatherThunderstorm": "雷雨",
+  "videoEditorInfoStickerSunTimeZoneNote": "時刻はスマートフォンのタイムゾーンで表示されます。",
+  "videoEditorInfoStickerTemperatureLabel": "気温",
+  "videoEditorInfoStickerUnitLabel": "単位",
+  "videoEditorInfoStickerBatteryLevelLabel": "バッテリー残量",
+  "videoEditorInfoStickerAdd": "ステッカーを追加",
   "videoEditorTextAlignmentSemanticLabel": "テキストの配置",
   "videoEditorTextBackgroundSemanticLabel": "テキストの背景",
   "videoEditorTextDontWrap": "折り返さない",
@@ -3117,6 +3354,8 @@
   "libraryTrashDeleteConfirmMessage": "これでクリップはゴミ箱からすぐに削除されます。",
   "libraryTrashEmptyConfirmTitle": "ゴミ箱を空にしますか？",
   "libraryTrashEmptyConfirmMessage": "これでゴミ箱から{count, plural, =1{1件のクリップ} other{{count}件のクリップ}}がすぐに完全に削除されます。",
+  "libraryTrashClipsRestored": "{count, plural, =1{クリップを復元しました} other{{count}件のクリップを復元しました}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{クリップを完全に削除しました} other{{count}件のクリップを完全に削除しました}}",
   "videoRecorderCloseLabel": "動画レコーダーを閉じる",
   "videoRecorderContinueToEditorLabel": "動画エディタへ進む",
   "videoRecorderCycleTimerLabel": "タイマーを切り替え",
@@ -4044,6 +4283,7 @@
       }
     }
   },
+  "videoMetadataTagsPickerStickerTag": "{tag}（動画内のステッカーから）",
   "videoEditorTimelineVolumePreview": "音量 {percent}%",
   "@videoEditorTimelineVolumePreview": {
     "placeholders": {
@@ -4157,6 +4397,9 @@
   "dmReelReplyComposerHint": "{name}さんにメッセージ…",
   "dmReelReplyComposerHintSelf": "自分に返信…",
   "dmReelReplyComposerSemanticLabel": "このリールに返信",
+  "dmQuestionAnswerReceivedLabel": "あなたの質問への回答: {question}",
+  "dmQuestionAnswerSentLabel": "回答した質問: {question}",
+  "dmQuestionAnswerWithVideo": "動画で回答",
   "dmReelReplyViewChat": "チャットを見る",
   "dmReelReplySentAnnouncement": "返信を送信しました",
   "dmReelReactionSentAnnouncement": "{emoji}でリアクションしました",
@@ -5793,8 +6036,97 @@
   "ideasDescriptionFive": "ただシェアしたかっただけ。",
   "ideasTitleSix": "今日のかけら",
   "ideasDescriptionSix": "ここに置いておきます。",
+  "messagesRoomsUnreadLabel": "{count, plural, other{ルーム、未読メッセージ{displayCount}件}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, other{新着{displayCount}件}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, other{未読メッセージ{displayCount}件}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, other{{displayCount}人}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, other{メッセージ{displayCount}件}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "過去24時間",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "アクティビティを確認中…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "アクティビティを読み込めませんでした。",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "最近のメッセージはありません。あいさつしてみましょう。",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "ダイレクト",
   "messagesRooms": "ルーム",
+  "messagesRoomsWithUnread": "ルーム ({badge})",
   "messagesPublicTestRooms": "公開テストルーム",
   "messagesPublicTestDisclosure": "これらのテストルームは公開されています。アクセスできる人は誰でもメッセージを読めます。",
   "messagesNoRooms": "まだルームはありません",
@@ -5903,5 +6235,57 @@
   "videoEditorLoopRepairProgress": "ループを揃えています…",
   "videoEditorLoopRepairTrimmed": "ループを滑らかにしました。{seconds}秒を削除しました。",
   "notificationFromDivine": "Divineからのお知らせ",
-  "announcementUnavailable": "このお知らせは現在ご覧いただけません。"
+  "announcementUnavailable": "このお知らせは現在ご覧いただけません。",
+  "creatorHighlightLabel": "今日のハイライト",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "今日つくった動画：{count}本。",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "あなたらしさが、今週を少し彩りました。",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "今週、創作した日数：{count}日。この調子で続けましょう。",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "今週投稿した動画の、これまでの合計再生回数：{count}回。",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "今週投稿した動画で最も再生された動画",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "もう一本つくる",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "自分の統計を見る",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "動画を見る",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

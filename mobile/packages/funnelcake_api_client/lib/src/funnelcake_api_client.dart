@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:funnelcake_api_client/src/exceptions.dart';
+import 'package:funnelcake_api_client/src/guarded_http_request.dart';
 import 'package:funnelcake_api_client/src/leaderboard_period.dart';
 import 'package:funnelcake_api_client/src/models/models.dart';
 import 'package:funnelcake_api_client/src/user_agent.dart';
@@ -91,6 +92,10 @@ class FunnelcakeApiClient {
 
   /// Sort key for profile searches ordered by follower count.
   static const String profileSortFollowers = 'followers';
+
+  /// Sort key for profile searches ordered by match strength, then creator
+  /// activity: followers, videos, loops, a profile picture and recent posts.
+  static const String profileSortRelevance = 'relevance';
 
   /// Server-side cap on the engagement-list endpoints, used as the default
   /// page size for [getVideoLikers].
@@ -421,6 +426,53 @@ class FunnelcakeApiClient {
   /// PR #4034's rollback semantics treat as a hard failure).
   Uri notificationsReadUri({required String pubkey}) =>
       Uri.parse('$_baseUrl/api/users/$pubkey/notifications/read');
+
+  /// Exact URL to bind in the activity request's NIP-98 signature.
+  Uri get notificationActivityUri =>
+      Uri.parse('$_baseUrl/api/v2/notifications/activity');
+
+  /// Reports visibility without changing notification read state.
+  ///
+  /// A 204 acknowledges applied, duplicate, and stale sequences alike.
+  /// Callers retry uncertain requests with the same [update] and fresh auth.
+  /// [isCurrent] lets supporting transports reject retired lifecycle retries.
+  Future<void> recordNotificationActivity(
+    NotificationActivityUpdate update, {
+    Map<String, String>? authHeaders,
+    bool Function()? isCurrent,
+  }) async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    final uri = notificationActivityUri;
+    try {
+      final request = isCurrent == null
+          ? http.Request('POST', uri)
+          : GuardedHttpRequest('POST', uri, isCurrent: isCurrent);
+      request.headers.addAll({
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...buildDivineClientHeaders(appVersion: _appVersion),
+        ...?authHeaders,
+      });
+      request.body = update.body;
+      final response = await _httpClient
+          .send(request)
+          .then(http.Response.fromStream)
+          .timeout(_timeout);
+      if (response.statusCode != 204) {
+        throw FunnelcakeApiException(
+          message: 'Failed to report notification activity',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } on Object {
+      throw const FunnelcakeException('Notification activity request failed');
+    }
+  }
 
   /// Builds the JSON body sent to [markNotificationsRead].
   ///
@@ -1945,6 +1997,143 @@ class FunnelcakeApiClient {
       rethrow;
     } catch (e) {
       throw FunnelcakeException('Failed to fetch video likers: $e');
+    }
+  }
+
+  /// Fetches the votes on the NIP-88 poll [pollId], counted on the server.
+  ///
+  /// Each pubkey's vote counts once: its latest, or for a quiz its earliest,
+  /// and only when it names an option of the poll. Deleted votes and votes
+  /// from moderated accounts do not count. The answer leaves out how the
+  /// caller voted; read that from the relays.
+  ///
+  /// Throws:
+  /// - [FunnelcakeNotConfiguredException] if the API is not
+  ///   configured.
+  /// - [FunnelcakeException] if the poll ID is empty.
+  /// - [FunnelcakeNotFoundException] if the API knows no such poll or has no
+  ///   such route.
+  /// - [FunnelcakeApiException] if the request fails.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] for other errors.
+  Future<PollVoteTally> getPollResults(String pollId) async {
+    if (!isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+
+    if (pollId.isEmpty) {
+      throw const FunnelcakeException('Poll ID cannot be empty');
+    }
+
+    final uri = Uri.parse(
+      '$_baseUrl/api/polls/${Uri.encodeComponent(pollId)}/results',
+    );
+
+    try {
+      final response = await _get(uri);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return PollVoteTally.fromJson(data);
+      } else if (response.statusCode == 404) {
+        throw FunnelcakeNotFoundException(
+          resource: 'Poll results',
+          url: uri.toString(),
+        );
+      } else {
+        throw FunnelcakeApiException(
+          message: 'Failed to fetch poll results',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (e) {
+      throw FunnelcakeException('Failed to fetch poll results: $e');
+    }
+  }
+
+  /// Fetches the videos responding to the video [videoId] names, by its
+  /// event id or d-tag, newest first, and how many there are in all: its
+  /// video replies, or for [VideoResponseType.joined] the videos that joined
+  /// the Add yours chain it starts, which carry [hashtag].
+  ///
+  /// Throws:
+  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
+  /// - [FunnelcakeException] if the video ID is empty, or a chain has no
+  ///   hashtag.
+  /// - [FunnelcakeNotFoundException] if the API knows no such video, or does
+  ///   not offer responses yet.
+  /// - [FunnelcakeApiException] if the request fails.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  /// - [FunnelcakeException] for other errors.
+  Future<VideoResponsesResponse> getVideoResponses({
+    required String videoId,
+    required VideoResponseType type,
+    String? hashtag,
+    int limit = 20,
+  }) async {
+    if (!isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+    if (videoId.isEmpty) {
+      throw const FunnelcakeException('Video ID cannot be empty');
+    }
+    if (type == VideoResponseType.joined && (hashtag?.isEmpty ?? true)) {
+      throw const FunnelcakeException('A chain needs its hashtag');
+    }
+
+    final uri =
+        Uri.parse(
+          '$_baseUrl/api/videos/${Uri.encodeComponent(videoId)}/responses',
+        ).replace(
+          queryParameters: {
+            'type': type.name,
+            'limit': limit.toString(),
+            'tag': ?hashtag,
+          },
+        );
+
+    try {
+      final response = await _get(uri);
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        final (:items, hasMore: _, nextCursor: _) = _unwrapListResponse(
+          decoded,
+        );
+        final total = decoded is Map<String, dynamic>
+            ? (decoded['total'] as num?)?.toInt()
+            : null;
+        return VideoResponsesResponse(
+          videos: items
+              .whereType<Map<String, dynamic>>()
+              .map(VideoStats.fromJson)
+              .where((v) => v.id.isNotEmpty && v.videoUrl.isNotEmpty)
+              .toList(),
+          total: total ?? items.length,
+        );
+      } else if (response.statusCode == 404) {
+        throw FunnelcakeNotFoundException(
+          resource: 'Video responses',
+          url: uri.toString(),
+        );
+      } else {
+        throw FunnelcakeApiException(
+          message: 'Failed to fetch video responses',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (e) {
+      throw FunnelcakeException('Failed to fetch video responses: $e');
     }
   }
 

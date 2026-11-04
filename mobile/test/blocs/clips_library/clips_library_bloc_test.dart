@@ -1638,6 +1638,33 @@ void main() {
       );
 
       blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+        'clears the last trash result when the trash loads',
+        // A clip restored, deleted again and restored once more would
+        // otherwise leave an equal result behind, and the trash list would
+        // not announce the second restore.
+        setUp: () {
+          when(
+            () => mockClipLibraryService.getTrashedClips(),
+          ).thenAnswer((_) async => [trashedClip]);
+        },
+        seed: () => const ClipsLibraryState(
+          status: ClipsLibraryStatus.loaded,
+          lastTrashResult: ClipsLibraryTrashResult(
+            action: ClipsLibraryTrashAction.restored,
+            clipIds: {'trashed'},
+          ),
+        ),
+        build: createBloc,
+        act: (bloc) => bloc.add(const ClipsLibraryTrashLoadRequested()),
+        expect: () => [
+          const ClipsLibraryState(status: ClipsLibraryStatus.trashLoading),
+          isA<ClipsLibraryState>()
+              .having((s) => s.status, 'status', ClipsLibraryStatus.trashLoaded)
+              .having((s) => s.lastTrashResult, 'lastTrashResult', isNull),
+        ],
+      );
+
+      blocTest<ClipsLibraryBloc, ClipsLibraryState>(
         'applies the type filter when loading trashed clips',
         setUp: () {
           when(() => mockClipLibraryService.getTrashedClips()).thenAnswer(
@@ -1708,6 +1735,14 @@ void main() {
                 (s) => s.lastDeletedClipIds,
                 'lastDeletedClipIds',
                 isEmpty,
+              )
+              .having(
+                (s) => s.lastTrashResult,
+                'lastTrashResult',
+                const ClipsLibraryTrashResult(
+                  action: ClipsLibraryTrashAction.restored,
+                  clipIds: {'trashed'},
+                ),
               ),
         ],
         verify: (_) {
@@ -1794,7 +1829,15 @@ void main() {
         expect: () => [
           isA<ClipsLibraryState>()
               .having((s) => s.status, 'status', ClipsLibraryStatus.trashLoaded)
-              .having((s) => s.trashedClips, 'trashedClips', isEmpty),
+              .having((s) => s.trashedClips, 'trashedClips', isEmpty)
+              .having(
+                (s) => s.lastTrashResult,
+                'lastTrashResult',
+                const ClipsLibraryTrashResult(
+                  action: ClipsLibraryTrashAction.deleted,
+                  clipIds: {'trashed'},
+                ),
+              ),
         ],
         verify: (_) {
           verify(() => mockClipLibraryService.hardDelete('trashed')).called(1);
@@ -1844,7 +1887,15 @@ void main() {
         expect: () => [
           isA<ClipsLibraryState>()
               .having((s) => s.status, 'status', ClipsLibraryStatus.trashLoaded)
-              .having((s) => s.trashedClips, 'trashedClips', isEmpty),
+              .having((s) => s.trashedClips, 'trashedClips', isEmpty)
+              .having(
+                (s) => s.lastTrashResult,
+                'lastTrashResult',
+                const ClipsLibraryTrashResult(
+                  action: ClipsLibraryTrashAction.deleted,
+                  clipIds: {'trashed'},
+                ),
+              ),
         ],
         verify: (_) {
           verify(() => mockClipLibraryService.getTrashedClips()).called(1);

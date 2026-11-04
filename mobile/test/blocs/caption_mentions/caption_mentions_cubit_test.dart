@@ -43,6 +43,26 @@ void main() {
 
   group(CaptionMentionsCubit, () {
     group('search', () {
+      test('offers an uncached candidate returned by the API', () async {
+        when(
+          () => profileRepository.searchUsersFromApi(
+            query: 'riv',
+            limit: any(named: 'limit'),
+            sortBy: any(named: 'sortBy'),
+          ),
+        ).thenAnswer((_) async => [_profile(_alice, name: 'River')]);
+
+        final cubit = CaptionMentionsCubit(
+          profileRepositoryOf: () => profileRepository,
+          candidatePubkeys: () => [_alice],
+        );
+        addTearDown(cubit.close);
+
+        await cubit.search('riv');
+
+        expect(cubit.state.suggestions.single.pubkey, _alice);
+      });
+
       test(
         'offers followed accounts from cache before any network call',
         () async {

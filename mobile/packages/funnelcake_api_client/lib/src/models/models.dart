@@ -1,13 +1,16 @@
 export 'audio_reuse_policy.dart';
 export 'featured_tab_config.dart';
 export 'featured_tab_videos_response.dart';
+export 'notification_activity_update.dart';
 export 'notification_response.dart';
+export 'poll_vote_tally.dart';
 export 'recent_videos_response.dart';
 export 'relay_notification.dart';
 export 'sound_stats.dart';
 export 'v2_popular_videos_response.dart';
 export 'video_comment.dart';
 export 'video_comments_response.dart';
+export 'video_responses_response.dart';
 export 'video_search_response.dart';
 export 'video_view_stats.dart';
 export 'videos_by_author_response.dart';

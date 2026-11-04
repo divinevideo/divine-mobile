@@ -16,6 +16,23 @@ String dmHistoryDrainSubscriptionId(String pubkey, int page) =>
 String dmCatchUpDebtSubscriptionId(String pubkey, int page) =>
     '${scopedSubscriptionId('dm_catchup', pubkey)}_$page';
 
+/// Subscription id for page [page] of the re-query below the live window of
+/// [pubkey] (#8439).
+String dmBelowWindowRequerySubscriptionId(String pubkey, int page) =>
+    '${scopedSubscriptionId('dm_requery', pubkey)}_$page';
+
+/// Subscription id for the kind-5 read paired with the read [readId] names.
+///
+/// Deletions are asked for in a REQ of their own: a relay that gates DMs
+/// behind NIP-42 serves a REQ mixing them with kinds 1059 and 4 without the
+/// DMs, instead of refusing it (#9468).
+String dmDeletionsSubscriptionId(String readId) => '${readId}_k5';
+
+/// Subscription id for page [page] of the end-of-drain deletion pass of
+/// [pubkey].
+String dmDeletionDrainSubscriptionId(String pubkey, int page) =>
+    '${scopedSubscriptionId('dm_drain_k5', pubkey)}_$page';
+
 /// Subscription id for page [page] of the NIP-04 history drain of [pubkey].
 String dmNip04DrainSubscriptionId(String pubkey, int page) =>
     '${scopedSubscriptionId('dm_drain_nip04', pubkey)}_$page';

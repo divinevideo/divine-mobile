@@ -80,9 +80,9 @@ class _GatingVisitor extends RecursiveAstVisitor<void> {
   void _checkSkeletonizer(String name, ArgumentList arguments, int offset) {
     if (name != 'Skeletonizer') return;
     for (final argument in arguments.arguments) {
-      if (argument is! NamedExpression) continue;
-      if (argument.name.label.name != 'effect') continue;
-      if (_isSkeletonEffectHelper(argument.expression)) return;
+      if (argument is! NamedArgument) continue;
+      if (argument.name.lexeme != 'effect') continue;
+      if (_isSkeletonEffectHelper(argument.argumentExpression)) return;
       break;
     }
     sites.add(_site(offset, 'skeletonizer'));

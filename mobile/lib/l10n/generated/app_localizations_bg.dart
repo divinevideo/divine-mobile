@@ -2047,6 +2047,252 @@ class AppLocalizationsBg extends AppLocalizations {
   String get metadataSoundsLabel => 'Звуци';
 
   @override
+  String get metadataLinksLabel => 'Линкове';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Стикер с линк, отваря $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'Стикер със споменаване, отваря профила';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Стикер с хаштаг, отваря #$hashtag';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => 'Стикер със звук, отваря звука';
+
+  @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Стикер с място, отваря $place в карта';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Стикер с обратно броене, задава напомняне';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Стикер с отговор, отваря това, на което отговаря видеото';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дни',
+      one: '$count ден',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Напомнянето е зададено. Ще ти пишем, когато стане време.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved =>
+      'Напомнянето е премахнато.';
+
+  @override
+  String get videoStickerCountdownOver => 'Това обратно броене приключи.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Включи известията за Divine, за да получиш напомнянето.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'Време е! Обратното броене, което запази, току-що приключи.';
+
+  @override
+  String get videoStickerQuizRightAnswer => 'Верен отговор';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'Грешен отговор';
+
+  @override
+  String get videoStickerPollSignInToVote =>
+      'Влез в профила си, за да гласуваш.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'Все още се свързва. Опитай отново след малко.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'Гласът ти не беше изпратен. Опитай отново.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'Гласовете са публични. Всеки може да види избора ти.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count гласа',
+      one: '1 глас',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'Докосни, за да отговориш';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'Отговор: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'Твой ред';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count се включиха',
+      one: '$count се включи',
+      zero: 'Започни ти',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count се включиха';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'Виж кой се включи';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'Твой ред: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count отговора',
+      one: '$count отговор',
+      zero: 'Още няма отговори',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count отговора';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Гледай $count видео отговора',
+      one: 'Гледай $count видео отговор',
+      zero: 'Видео отговори, още няма',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return 'Гледай $count видео отговора';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn =>
+      'Влез в профила си, за да отговориш.';
+
+  @override
+  String get videoStickerQuestionUnavailable =>
+      'Отговарянето на въпроси не е достъпно за профила ти.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'Отговор';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'Твоят отговор';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'Само $name вижда отговора ти. Може да го сподели във видео, без името ти.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'Изпрати';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'Отговорът е изпратен.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'Този отговор е твърде дълъг, за да се изпрати.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'Отговорът ти не беше изпратен. Опитай отново.';
+
+  @override
+  String get videoStickerAddYoursSignIn =>
+      'Влез в профила си, за да се включиш.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'Видео отговори';
+
+  @override
+  String get videoStickerRepliesEmpty => 'Още няма видео отговори.';
+
+  @override
+  String get videoStickerRepliesLoadFailed =>
+      'Отговорите не можаха да се заредят.';
+
+  @override
+  String get videoStickerRepliesRetry => 'Опитай пак';
+
+  @override
+  String get videoStickerRepliesPin => 'Закачи';
+
+  @override
+  String get videoStickerRepliesUnpin => 'Откачи';
+
+  @override
+  String get videoStickerRepliesHide => 'Скрий';
+
+  @override
+  String get videoStickerRepliesShow => 'Покажи';
+
+  @override
+  String get videoStickerRepliesPinned => 'Закачено';
+
+  @override
+  String get videoStickerRepliesHidden => 'Скрито';
+
+  @override
+  String get videoStickerRepliesSaveFailed => 'Не се запази. Опитай пак.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'Гледай отговора от $name';
+  }
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Този линк се отваря извън Divine. Провери адреса, преди да продължиш.';
+
+  @override
   String get metadataOriginalSound => 'Оригинален звук';
 
   @override
@@ -4416,8 +4662,19 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'Сървърът е недостъпен. Провери връзката си и опитай отново.';
+  String get profileVideosLoadFailedTitle =>
+      'Видеата ти не можаха да се заредят';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle =>
+      'Видеата не можаха да се заредят';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'Провери връзката си и опитай отново.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'Опитай пак';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -4745,6 +5002,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get routeInvalidSoundId => 'Невалиден идентификатор на звука';
+
+  @override
+  String get routeInvalidQuestion => 'Невалиден линк към въпрос';
 
   @override
   String get routeInvalidCategory => 'Невалидна категория';
@@ -6132,6 +6392,19 @@ class AppLocalizationsBg extends AppLocalizations {
   String get dmReelReplyComposerSemanticLabel => 'Отговор на този рийл';
 
   @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'Отговори на въпроса ти: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'Ти отговори: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'Отговори с видео';
+
+  @override
   String get dmReelReplyViewChat => 'Виж чата';
 
   @override
@@ -6865,21 +7138,20 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'Избран';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'Не е избран';
 
   @override
   String get videoClipSemanticHintDisabled => 'Деактивиран';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'Докоснете за избор, задръжте за преглед';
+  String get videoClipSemanticHintSelect => 'Докоснете за избор';
 
   @override
   String get videoClipSemanticHintDeselect =>
-      'Докоснете за премахване на избора, задръжте за преглед';
+      'Докоснете за премахване на избора';
+
+  @override
+  String get videoClipSemanticHintPreview => 'Докоснете за преглед';
 
   @override
   String get routerInvalidCreator => 'Невалиден създател';
@@ -7748,6 +8020,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Текстът и стикерите в тази чернова не можаха да се подготвят. Отвори я в редактора и публикувай пак.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'Профилът ти не може да публикува стикер с въпрос, защото отговорите идват като лични съобщения. Премахни го и публикувай отново.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'Устройството ти не може да експортира толкова много откачени клипове наведнъж. Върни няколко на времевата линия и опитай пак.';
 
@@ -8377,6 +8653,11 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName хареса видео, в което си отбелязан(а)';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName харесаха коментара ти';
   }
@@ -8735,6 +9016,28 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count клипа са възстановени',
+      one: 'Клипът е възстановен',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count клипа са изтрити окончателно',
+      one: 'Клипът е изтрит окончателно',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'Затворете видеорекордер';
 
   @override
@@ -8986,13 +9289,139 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectSparkles => 'Искри';
 
   @override
+  String get videoEditorEffectRain => 'Дъжд';
+
+  @override
+  String get videoEditorEffectLeaves => 'Листа';
+
+  @override
+  String get videoEditorEffectBlossoms => 'Листенца';
+
+  @override
+  String get videoEditorEffectBubbles => 'Мехурчета';
+
+  @override
+  String get videoEditorEffectBokeh => 'Боке';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'Ноти';
+
+  @override
+  String get videoEditorEffectStars => 'Звезди';
+
+  @override
+  String get videoEditorEffectFireflies => 'Светулки';
+
+  @override
+  String get videoEditorEffectEmbers => 'Жар';
+
+  @override
+  String get videoEditorEffectMoney => 'Пари';
+
+  @override
+  String get videoEditorEffectBalloons => 'Балони';
+
+  @override
   String get videoEditorEffectTiltShift => 'Тилт-шифт';
 
   @override
   String get videoEditorEffectZoomBlur => 'Зум размазване';
 
   @override
+  String get videoEditorEffectSpinBlur => 'Ротационно размазване';
+
+  @override
   String get videoEditorEffectComic => 'Комикс';
+
+  @override
+  String get videoEditorEffectSwirl => 'Вихър';
+
+  @override
+  String get videoEditorEffectRipple => 'Вълнички';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'Оребрено стъкло';
+
+  @override
+  String get videoEditorEffectEightBit => '8-битов';
+
+  @override
+  String get videoEditorEffectAnaglyph => '3D очила';
+
+  @override
+  String get videoEditorEffectRiso => 'Ризограф';
+
+  @override
+  String get videoEditorEffectTealOrange => 'Тюркоаз и оранжево';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'Топъл филм';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'Диапозитив';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'Студен филм';
+
+  @override
+  String get videoEditorEffectMatte => 'Матово';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'Без избелване';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'Кръстосана обработка';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'Златен час';
+
+  @override
+  String get videoEditorEffectMoonlight => 'Лунна светлина';
+
+  @override
+  String get videoEditorEffectSilver => 'Сребро';
+
+  @override
+  String get videoEditorEffectCategoryRetro => 'Ретро';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Глич';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Изкривяване';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Светлина';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Движение';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Частици';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'Визии';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Естествени';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Наситени';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Топли';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Студени';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Винтидж';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Черно-бели';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Оттенъци';
 
   @override
   String get videoEditorDropsSettingsTitle => 'Настройка на капките';
@@ -10727,6 +11156,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'Височина';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'Встрани';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Отгоре надолу';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'По избор';
 
   @override
@@ -10818,6 +11253,419 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorStickerSearchHint => 'Търсене на стикери...';
+
+  @override
+  String get videoEditorInfoStickersTitle => 'Инфо';
+
+  @override
+  String get videoEditorSocialStickersTitle => 'Социални';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Споменаване';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Хаштаг';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Звук';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'твоетоиме';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'хаштаг';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Избери човек';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Споменат е в публикацията ти и получава известие.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Въведи хаштаг';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Добавя се и към хаштаговете на публикацията ти.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'Ред от текста на песента (по избор)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Линк';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Уеб адрес';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'Заглавие (по избор)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'Адресът се добавя към публикацията ти.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => 'Това още не е уеб адрес.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Интерактивни';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Обратно броене';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Лято';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint => 'До какво броиш?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Зрителите виждат оставащото време и могат да си сложат напомняне.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Този момент мина. Избери нов.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Отговор';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'Зрителите го докосват, за да видят на какво отговаряш.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'Анкета';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'Куиз';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'Плъзгач';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'Кое?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'Да';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'Не';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine стартира през…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => 'Колко ти се яде?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'Задай въпрос';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'Отговор $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'Премахни отговор $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'Отбележи отговор $number като верен';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'Добави отговор';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'Зрителите виждат резултатите, след като гласуват. Гласовете са публични.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'Отбележи верния отговор. Зрителите го виждат, след като изберат.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'Зрителите плъзгат емоджито, за да отговорят, и виждат къде средно попада.';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'Въпрос';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'Твой ред';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'Отговори';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => 'Питай ме каквото искаш';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => 'Покажи бюрото си';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'Отговори с видео';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'Твоят въпрос';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      'Какво да покажат хората?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'Хаштаг';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'Заглавие';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'Отговорите идват при теб като лични съобщения.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'Зрителите отговарят със свое видео. Всеки отговор получава този хаштаг и води обратно към твоето видео.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'Показва видео отговорите на това видео. Зрителите го докосват, за да ги гледат.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'Стикерът стои в тази рамка, за да могат зрителите да го докосват';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Нота';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Плоча';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Касета';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Еквалайзер';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Плейър';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Час';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Дата';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Място';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Времето';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Надморска височина';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Батерия';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Светъл';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Тъмен';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Зелен';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Контур';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Цифров';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Аналогов';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Стъкло';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Жълт';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Неон';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Семпъл';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Смени мястото';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Търсенето на места не е налично на това устройство.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Заснемане · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Сега · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Днес · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Брояч на дни';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Слънце';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Луна';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC таймер';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Филм';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Видеокамера';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Ден $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Ден $day от $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Ден';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Общо дни (по желание)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Карфица';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Знаме';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Глобус';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Карта';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Новолуние';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Растящ сърп';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Първа четвърт';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Растяща луна';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Пълнолуние';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Намаляваща луна';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Последна четвърт';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Намаляващ сърп';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => 'Потърси град или място';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Няма намерени места';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Не успяхме да потърсим места. Опитай пак.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Във видеото ти влиза само името на мястото, никога точното ти местоположение.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Зарежда се…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Не успяхме да заредим. Опитай пак.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'Данни от MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'За по-стари видеа няма данни за времето, затова това е времето в момента.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Слънчево';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Ясна нощ';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Частична облачност';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Облачно';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Мъгла';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Дъжд';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Превалявания';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Сняг';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Гръмотевична буря';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Часовете са в часовата зона на телефона ти.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Температура';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Мерна единица';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Ниво на батерията';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Добави стикер';
 
   @override
   String get videoEditorSelectFontSemanticLabel => 'Избери шрифт';
@@ -12428,6 +13276,11 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Добавяне на „#$tag\"';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, от стикер във видеото ти';
   }
 
   @override
@@ -14396,10 +15249,87 @@ class AppLocalizationsBg extends AppLocalizations {
   String get ideasDescriptionSix => 'Оставям това тук.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Стаи, $displayCount непрочетени съобщения',
+      one: 'Стаи, $displayCount непрочетено съобщение',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Нови: $displayCount',
+      one: 'Ново: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount непрочетени съобщения',
+      one: '$displayCount непрочетено съобщение',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount души',
+      one: '$displayCount човек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount съобщения',
+      one: '$displayCount съобщение',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Последните 24 ч.';
+
+  @override
+  String get messagesRoomLoading => 'Проверка на активността…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Активността не можа да се зареди.';
+
+  @override
+  String get messagesRoomEmpty => 'Няма скорошни съобщения. Кажи здрасти.';
+
+  @override
   String get messagesDirect => 'Лични';
 
   @override
   String get messagesRooms => 'Стаи';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Стаи ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Публични тестови стаи';
@@ -14733,9 +15663,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14756,11 +15683,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -14794,9 +15716,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -14859,4 +15778,76 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
+
+  @override
+  String get creatorHighlightLabel => 'Твоят акцент за деня';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'Създадени видеа днес: $count.';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle =>
+      'В тази седмица има още малко от теб.';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'Творчески дни тази седмица: $count. Продължавай.';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Общо гледания досега на видеата, които публикува тази седмица: $countString.';
+  }
+
+  @override
+  String get creatorHighlightTopVideo =>
+      'Най-гледаното от видеата ти, публикувани тази седмица';
+
+  @override
+  String get creatorHighlightCreate => 'Създай още едно';
+
+  @override
+  String get creatorHighlightAnalytics => 'Виж статистиката си';
+
+  @override
+  String get creatorHighlightWatch => 'Гледай видеото';
 }

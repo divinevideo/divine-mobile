@@ -140,7 +140,12 @@ void main() {
         });
       });
 
-      tearDown(Nip89ClientTag.resetForTest);
+      // Two tests here turn the tag off; the persisted preference outlives the
+      // cache reset, so clear both for whichever suite runs next.
+      tearDown(() {
+        SharedPreferences.setMockInitialValues(<String, Object>{});
+        Nip89ClientTag.resetForTest();
+      });
 
       /// The event a first, failed attempt left in the personal cache.
       Event cachedSignedEvent({required bool attributed}) {

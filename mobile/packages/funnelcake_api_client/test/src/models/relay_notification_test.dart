@@ -43,9 +43,26 @@ void main() {
         final notification = RelayNotification.fromJson(json);
 
         expect(notification.referencedEventId, isNull);
+        expect(notification.referencedEventKind, isNull);
         expect(notification.content, isNull);
         expect(notification.isReferencedVideo, isFalse);
         expect(notification.referencedVideoTitle, isNull);
+      });
+
+      test('parses referenced_event_kind', () {
+        final notification = RelayNotification.fromJson({
+          'id': 'notif_123',
+          'source_pubkey': 'aabbccdd' * 8,
+          'source_event_id': '11223344' * 8,
+          'source_kind': 7,
+          'referenced_event_id': '55667788' * 8,
+          'referenced_event_kind': 16,
+          'notification_type': 'reaction',
+          'created_at': 1712345678,
+          'read': false,
+        });
+
+        expect(notification.referencedEventKind, equals(16));
       });
 
       test('flags video target when referenced_video is populated', () {

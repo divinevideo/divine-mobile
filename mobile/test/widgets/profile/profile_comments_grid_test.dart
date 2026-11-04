@@ -15,6 +15,7 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/profile/profile_comments_grid.dart';
+import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../helpers/go_router.dart';
@@ -189,6 +190,32 @@ void main() {
         await tester.pumpWidget(buildSubject());
 
         expect(find.text('Video Replies'), findsOneWidget);
+      });
+
+      testWidgets('sizes each video reply tile from its dimensions', (
+        tester,
+      ) async {
+        when(() => mockBloc.state).thenReturn(
+          ProfileCommentsState(
+            status: ProfileCommentsStatus.success,
+            videoReplies: [
+              _createVideoComment(
+                id: 'v1',
+              ).copyWith(videoDimensions: '480x480'),
+              _createVideoComment(
+                id: 'v2',
+              ).copyWith(videoDimensions: '1080x1920'),
+            ],
+          ),
+        );
+
+        await tester.pumpWidget(buildSubject());
+
+        final tiles = find.byType(ProfileTabThumbnail);
+        final square = tester.getSize(tiles.at(0));
+        final vertical = tester.getSize(tiles.at(1));
+        expect(square.height, moreOrLessEquals(square.width));
+        expect(vertical.height, moreOrLessEquals(vertical.width * 3 / 2));
       });
 
       testWidgets('text comments section when text comments exist', (

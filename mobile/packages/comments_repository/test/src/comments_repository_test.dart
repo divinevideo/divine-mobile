@@ -274,6 +274,13 @@ void main() {
                     'duration 6',
                     'blurhash LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
                   ],
+                  [
+                    'sticker',
+                    'reply',
+                    testRootEventId,
+                    '0.5 0.5 0.6 0.1',
+                    '0',
+                  ],
                 ],
               ),
             ],
@@ -297,6 +304,12 @@ void main() {
 
         expect(result.comments, hasLength(1));
         expect(result.comments.first.hasVideo, isTrue);
+        expect(
+          result.comments.first.stickerTags,
+          equals([
+            ['sticker', 'reply', testRootEventId, '0.5 0.5 0.6 0.1', '0'],
+          ]),
+        );
         expect(
           result.comments.first.videoUrl,
           equals('https://media.divine.video/reply/12345'),
@@ -616,6 +629,7 @@ void main() {
             ['imeta', 'url https://media.divine.video/video.mp4'],
             ['title', 'Reply title'],
             ['summary', 'Video reply summary'],
+            ['sticker', 'countdown', '1794391200', '0.5 0.2 0.6 0.1', '0'],
           ],
         );
         when(() => mockNostrClient.queryEvents(any())).thenAnswer(
@@ -633,6 +647,12 @@ void main() {
         expect(result.comments.first.id, equals('video_reply'));
         expect(result.comments.first.rootAddressableId, rootAddressableId);
         expect(result.comments.first.hasVideo, isTrue);
+        expect(
+          result.comments.first.stickerTags,
+          equals([
+            ['sticker', 'countdown', '1794391200', '0.5 0.2 0.6 0.1', '0'],
+          ]),
+        );
         // Its OWN coordinate and kind, not the parent video's — a reaction
         // tagged with the parent's would credit the parent's counts (#6124).
         expect(result.comments.first.eventKind, EventKind.videoVertical);

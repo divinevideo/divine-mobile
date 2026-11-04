@@ -9,13 +9,18 @@ void main() {
     Widget buildSubject({
       String title = 'No Items',
       String subtitle = 'Nothing here yet',
+      Widget? action,
     }) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         theme: VineTheme.theme,
         home: Scaffold(
-          body: ProfileTabEmptyState(title: title, subtitle: subtitle),
+          body: ProfileTabEmptyState(
+            title: title,
+            subtitle: subtitle,
+            action: action,
+          ),
         ),
       );
     }
@@ -33,6 +38,17 @@ void main() {
         );
 
         expect(find.text('Videos you like will appear here'), findsOneWidget);
+      });
+
+      testWidgets('action under the subtitle', (tester) async {
+        await tester.pumpWidget(
+          buildSubject(action: const Text('Try again')),
+        );
+
+        expect(
+          tester.getTopLeft(find.text('Try again')).dy,
+          greaterThan(tester.getBottomLeft(find.text('Nothing here yet')).dy),
+        );
       });
 
       testWidgets('$CustomScrollView with $SliverFillRemaining', (

@@ -10,7 +10,7 @@ import 'package:divine_camera/divine_camera.dart'
 import 'package:divine_ui/divine_ui.dart' show colorFromArgb32;
 import 'package:models/models.dart'
     as model
-    show AspectRatio, ClipSourceCredit, EqualizerSettings;
+    show AspectRatio, ClipSourceCredit, EqualizerSettings, VideoStickerRegion;
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -73,6 +73,7 @@ class DivineVideoClip {
     this.derivedFrom,
     this.recordingSha256,
     this.galleryBackup,
+    this.stickerRegions = const [],
     String? sourceAuthorPubkey,
     String? sourceEventId,
     String? sourceAddressableId,
@@ -367,6 +368,10 @@ class DivineVideoClip {
   /// Owned by the library entry: only `ClipLibraryService.setGalleryBackup`
   /// changes it, and a save of an older copy keeps what the entry holds.
   final ClipGalleryBackup? galleryBackup;
+
+  /// Where a viewer can tap the stickers on this clip once it is published;
+  /// set only on a final render, from the layers it was rendered with.
+  final List<model.VideoStickerRegion> stickerRegions;
 
   /// The files to name as this clip's sources when an edit of it is signed:
   /// [derivedFrom], or else the clip's own video file.
@@ -812,6 +817,7 @@ class DivineVideoClip {
     bool clearRecordingSha256 = false,
     ClipGalleryBackup? galleryBackup,
     bool clearGalleryBackup = false,
+    List<model.VideoStickerRegion>? stickerRegions,
     // Provenance is copied as a whole list: the scalar source fields are a
     // read-only view of its first entry, so setting one here could only mean
     // "replace the whole list with a single credit" — which silently drops the
@@ -913,6 +919,7 @@ class DivineVideoClip {
       galleryBackup: isNewLogicalClip || clearGalleryBackup
           ? null
           : (galleryBackup ?? this.galleryBackup),
+      stickerRegions: stickerRegions ?? this.stickerRegions,
       sourceCredits: nextSourceCredits,
     );
   }
@@ -930,6 +937,7 @@ class DivineVideoClip {
         ],
       if (libraryTitle != null) 'libraryTitle': libraryTitle,
       'durationMs': duration.inMilliseconds,
+      ..._subMillisecondJson('durationUs', duration),
       'recordedAt': recordedAt.toIso8601String(),
       'thumbnailPath': thumbnailPath != null
           ? p.basename(thumbnailPath!)
@@ -943,7 +951,9 @@ class DivineVideoClip {
           ? p.basename(ghostFramePath!)
           : null,
       'trimStartMs': trimStart.inMilliseconds,
+      ..._subMillisecondJson('trimStartUs', trimStart),
       'trimEndMs': trimEnd.inMilliseconds,
+      ..._subMillisecondJson('trimEndUs', trimEnd),
       if (sourceStartOffset > Duration.zero)
         'sourceStartOffsetMs': sourceStartOffset.inMilliseconds,
       if (minTrimStart > Duration.zero)
@@ -981,6 +991,8 @@ class DivineVideoClip {
         'derivedFrom': [for (final source in sources) source.toJson()],
       if (recordingSha256 != null) 'recordingSha256': recordingSha256,
       if (galleryBackup case final backup?) 'galleryBackup': backup.toJson(),
+      if (stickerRegions.isNotEmpty)
+        'stickerRegions': [for (final region in stickerRegions) region.toTag()],
       if (sourceAuthorPubkey != null) 'sourceAuthorPubkey': sourceAuthorPubkey,
       if (sourceEventId != null) 'sourceEventId': sourceEventId,
       if (sourceAddressableId != null)
@@ -1056,7 +1068,7 @@ class DivineVideoClip {
               Duration.zero,
               (sum, frame) => sum + frame.duration,
             )
-          : Duration(milliseconds: durationMs),
+          : _durationFromJson(json, 'duration'),
       recordedAt: DateTime.parse(rawRecordedAt),
       thumbnailPath: resolvePath(
         json['thumbnailPath'] as String?,
@@ -1082,8 +1094,8 @@ class DivineVideoClip {
         documentsPath,
         useOriginalPath: useOriginalPath,
       ),
-      trimStart: Duration(milliseconds: (json['trimStartMs'] as int?) ?? 0),
-      trimEnd: Duration(milliseconds: (json['trimEndMs'] as int?) ?? 0),
+      trimStart: _durationFromJson(json, 'trimStart'),
+      trimEnd: _durationFromJson(json, 'trimEnd'),
       sourceStartOffset: Duration(
         milliseconds: (json['sourceStartOffsetMs'] as int?) ?? 0,
       ),
@@ -1176,6 +1188,12 @@ class DivineVideoClip {
         useOriginalPath: useOriginalPath,
       ),
       recordingSha256: json['recordingSha256'] as String?,
+      stickerRegions: [
+        for (final tag in (json['stickerRegions'] as List<dynamic>?) ?? [])
+          ?model.VideoStickerRegion.fromTag([
+            for (final value in tag as List<dynamic>) '$value',
+          ]),
+      ],
       galleryBackup: ClipGalleryBackup.fromJson(
         json['galleryBackup'],
         documentsPath,
@@ -1219,6 +1237,27 @@ class DivineVideoClip {
         if (credit.authorPubkey.isNotEmpty && seen.add(credit.identityKey))
           credit,
     ]);
+  }
+
+  /// [value] under [key] in microseconds, or nothing when the matching
+  /// `…Ms` field already holds it exactly.
+  ///
+  /// Recordings and dragged trims are not whole milliseconds, and a clip read
+  /// back from the `…Ms` fields alone came out up to 2 ms longer. Over a few
+  /// clips that moved the composition end far enough that a sound which
+  /// covered it no longer grew onto a clip added after a draft was reopened.
+  static Map<String, int> _subMillisecondJson(String key, Duration value) => {
+    if (value.inMicroseconds % Duration.microsecondsPerMillisecond != 0)
+      key: value.inMicroseconds,
+  };
+
+  /// The `<name>Us` field of [json], falling back to `<name>Ms` for clips
+  /// written before it existed or that fall on a whole millisecond.
+  static Duration _durationFromJson(Map<String, dynamic> json, String name) {
+    if (json['${name}Us'] case final int micros) {
+      return Duration(microseconds: micros);
+    }
+    return Duration(milliseconds: (json['${name}Ms'] as int?) ?? 0);
   }
 
   /// Parses a persisted [ClipTransition], degrading to `null` (a hard cut) when

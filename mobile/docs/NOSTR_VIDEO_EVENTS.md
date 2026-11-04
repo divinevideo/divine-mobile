@@ -43,7 +43,7 @@ Tags: Array of [tagName, tagValue, ...additionalParams]
 
 | Tag | Format | Description | Required |
 |-----|--------|-------------|----------|
-| `title` | `["title", "Video Title"]` | Video title | Recommended |
+| `title` | `["title", "Video Title"]` | Video title. The Divine relay rejects a video event without this tag; an empty value (`["title", ""]`) is accepted for untitled videos | **Required** |
 | `m` | `["m", "video/mp4"]` | MIME type (video/mp4, video/webm, etc.) | Recommended |
 | `x` | `["x", "sha256hash"]` | SHA-256 hash of video file | Optional |
 | `size` | `["size", "12345678"]` | File size in bytes | Optional |
@@ -88,7 +88,7 @@ Attribution reuses the same marker convention on `p` tags, and extends it to
 | Tag | Format | Description |
 |-----|--------|-------------|
 | `a` | `["a", "34236:<pubkey>:<d>", "<relay>", "mention"]` | The video the creator chose as their Inspired By source. Written at publish. |
-| `a` | `["a", "34236:<pubkey>:<d>", "<relay>", "inspired-by"]` | The same reference, rewritten by the metadata edit flow. |
+| `a` | `["a", "34236:<pubkey>:<d>", "<relay>", "inspired-by"]` | The same reference, rewritten by the metadata edit flow when the edit picks another video. An edit that keeps the same video keeps `mention`, which an Add yours answer needs to stay in its chain. |
 | `a` | `["a", "34236:<pubkey>:<d>", "<relay>", "clip-source"]` | A published video this one actually reuses footage from. One per distinct source. |
 | `p` | `["p", "<pubkey>", "<relay>", "inspired-by"]` | Notifies the Inspired By creator (NIP-27: a mention without a `p` tag does not notify). |
 | `p` | `["p", "<pubkey>", "<relay>", "clip-source"]` | Notifies the author of reused footage. |
@@ -117,6 +117,288 @@ that uses such a clip credits its source with the `clip-source` markers above.
 Publishing lives in `mobile/lib/services/video_event_publisher.dart` and
 `mobile/lib/services/video_metadata_update_service.dart`; parsing in
 `mobile/packages/models/lib/src/video_event.dart`.
+
+### Divine Sticker Tags
+
+Social, location and interactive stickers placed in the video editor add what
+they point to, plus where a viewer can tap them. All of these are Divine
+conventions.
+
+| Tag | Format | Description |
+|-----|--------|-------------|
+| `t` | `["t", "summer"]` | A hashtag sticker's hashtag, written with the post's own hashtags. |
+| `p` | `["p", "<pubkey>", "<relay>", "mention"]` | A mention sticker's profile, written like a caption mention. |
+| `r` | `["r", "https://example.com/page", "link"]` | The web page of a link sticker. The `link` marker is required: an unmarked `r` tag on a video event is read as one of the video's own media URLs. |
+| `sticker` | `["sticker", "<kind>", "<target>", "<cx> <cy> <w> <h>", "<degrees>", "<start ms>", "<end ms>", "<style>", "<label>"]` | Where a tappable sticker stands on the video and how it looks, so a viewer can tap it and, for most kinds, draw it again. |
+
+The `sticker` tag's fields:
+
+- `kind` is `link`, `mention`, `hashtag`, `sound`, `place`, `countdown`,
+  `reply`, `poll`, `quiz`, `slider`, `question`, `prompt` or `replies`.
+- `target` is the full `http`/`https` address of a named host, the full hex
+  pubkey, or the hashtag. A reader strips one leading `#` from a hashtag and
+  lowercases it, as it does a pubkey. For `sound` it is the id the credited
+  sound's page opens it by: `bundled_<id>` for a sound from Divine's library,
+  or the event id of a sound published on Nostr. It is empty for a sound only
+  the video carries (an imported file, a provider sound, a video's original
+  sound), and the sticker then opens the video's own sound, the one its audio
+  reference names; such a sticker is only published when it credits that
+  sound. A reader takes any other sound target as empty. For `place` it is the
+  place's full name with its region and country, such as
+  `Zermatt, Wallis, Schweiz`, which a tap searches the viewer's map app for;
+  the location sticker keeps no coordinates. For `countdown` it is the Unix
+  time in seconds the countdown ends at. For `reply` it is the hex id of the
+  comment or video the video replies to. For `poll`, `quiz` and `slider` it
+  is the hex id of the NIP-88 `kind:1068` poll event; a reader takes any
+  other target as empty, and a sticker without its poll takes no vote. For
+  `prompt` (an Add yours) it is the address of the chain's first video,
+  `34236:<pubkey>:<d>`, or empty on that first video itself. For `question`
+  and `replies` it is always empty: they act on the video they are on.
+- The area gives the sticker's centre and its size before it is turned, as
+  fractions of the video frame's width (`cx`, `w`) and height (`cy`, `h`).
+- `degrees` is how far it is turned clockwise around its centre.
+- `start ms` and `end ms` are when it shows on the published video. Both are
+  optional: a missing start means from the beginning, a missing end means until
+  the video ends. Either may be an empty string when a later field follows.
+- `style` names the sticker's look (`light`, `dark`, `glass`, `brand`,
+  `highlight`, `neon`, `plain` or `outline`).
+- `label` is the text the sticker shows, without `@` or `#`: a link's title or
+  domain, a name, or a hashtag as typed; for a sound, its title, artist and line
+  of lyrics, one per line; a place's name as the sticker shows it; a
+  countdown's title; for a reply, the name of whom it replies to and the
+  comment, one per line; for a poll or a quiz, its question and then its
+  answers, and for a slider its question and then its emoji, one per line; a
+  question's question; for a `prompt`, its prompt and then the hashtag its
+  answers share, without `#`, one per line; a replies sticker's title. A
+  `question`, `prompt` or `replies` tag without that text is dropped.
+
+A reader drops the whole tag when:
+
+- it has no `degrees` (fewer than five elements, counting the tag name), or
+  names another `kind`;
+- a link has another scheme or no host;
+- a pubkey is not 64 hex characters;
+- a hashtag is empty, longer than 100 characters, or contains whitespace, `#`,
+  `/` or `?`;
+- a place is empty, longer than 200 characters, or contains a control
+  character such as a line break;
+- a countdown is not a whole number of seconds after 1970 and before the year
+  10000;
+- a reply target is not 64 hex characters;
+- a poll or a quiz has no question and two to four answers in its label, or
+  a slider no question and emoji, each on a line of its own;
+- the area is not four finite numbers, a size is not above 0 and at most 4, or
+  no part of the turned sticker can reach the frame;
+- the angle is not a finite number;
+- a time is not a whole number of milliseconds of zero or more, or the end is
+  not after the start.
+
+A label longer than 300 characters is dropped and the button kept; a poll,
+quiz or slider whose label is that long is dropped as a whole, as its label
+is what the player draws its answers from.
+
+The sticker is also part of the video's frames, so other clients still show
+it. Divine draws it again from `style` and `label` over the one in the frames,
+in the same area, sharp at the screen's resolution, and makes it the button;
+without both fields it only places the button, and a poll, quiz or slider
+shows only as it is in the frames, taking no votes. The copy draws only what
+covers: the text, and the pill's fill and border where they are solid. A
+see-through fill, a glow or a shadow is in the frames already and would come
+out twice as strong.
+
+Over a see-through look (`dark`, `glass`, `neon`, `plain`, `outline`) the
+frames show through the copy, so its text has to come out the same on the
+creator's and the viewer's phone. Divine draws sticker text in its bundled
+font, Bricolage Grotesque, and emoji in Noto Color Emoji, which it downloads
+from Google Fonts (`fonts.gstatic.com`, about 24 MB, kept on the device) the
+first time a sticker needs it. The link and note marks are drawn from vector
+paths, not emoji. A viewer's copy of a see-through look waits until Noto
+Color Emoji has loaded when its text has an emoji, and is never drawn for
+text in a script the bundled font lacks; until then the sticker shows as it
+is in the frames, with its button.
+
+A solid look (`light`, `brand`, `highlight`) hides the sticker in the frames,
+so its copy is drawn whatever script its text is in, and before Noto Color
+Emoji has loaded. The copy's pill fills the area, and the rest is scaled to
+fit inside it in proportion: a viewer's phone may draw a script the bundled
+font lacks, or emoji before Noto Color Emoji has loaded, wider or narrower
+than the creator's did, and stretched to the area its text would come out
+distorted.
+
+Emoji coverage is taken from the exact pinned font's cmap, not a Unicode
+emoji property. Over a see-through look, newer emoji absent from that file
+keep their appearance in the frames and their button instead of being
+redrawn in a phone's fallback font.
+
+Some stickers are published without `style`, since a copy would not match the
+frames:
+
+- a sound sticker whose design moves with the video (record, cassette, player,
+  equalizer), as a copy could not keep time with the frames beneath;
+- a sticker drawn see-through, with a blend mode or through a mask, as a copy
+  would come back solid;
+- a see-through look whose text has a character the bundled font lacks,
+  unless every such character is an emoji and the creator's app drew it in
+  Noto Color Emoji, as a viewer's phone could draw it differently;
+- a sticker with another layer over it at the same time, as a copy would hide
+  that layer.
+
+A sticker drawn fully transparent gets no tag. A sticker that moves across the
+video (keyframes, tracking or an animation) is never published with an area,
+which is why the editor offers none of those for any tappable sticker.
+
+The newer kinds:
+
+- `place` comes from a location sticker. It is never published with `style`:
+  its flag or globe is not in the tag, so the viewer gets only the button. A
+  location sticker placed before the full name was kept publishes its name
+  alone as the target.
+- `countdown` shows its title over the date and time it ends, which stay
+  true in every client. Divine's player draws it again with the time left in
+  place of the date, ticking each second, and its date again once it is over;
+  a tap sets a local reminder for the end, or removes it, and asks for
+  notification permission only then. On the web, which has no reminders, it
+  is no button. The editor offers a countdown in only the
+  solid `light`, `brand` and `highlight` looks, so the copy hides the date in
+  the frames.
+- `reply` shows the avatar, name and comment the video replies to, as they
+  were when the reply camera was opened, or the thumbnail and creator of the
+  video. It is never published with `style`, as its picture is not in the tag.
+  A tap opens the video the reply's own NIP-22 root tags name; for a reply to
+  a comment, with its comments open on that comment. It is published only on a
+  video that replies to its target.
+
+- `poll`, `quiz` and `slider` are a question viewers vote on, published as
+  a NIP-88 poll (see [Polls](#polls)). A video carries one. The editor offers
+  them in only the solid `light` look, a white card, so the copy the Divine
+  player draws can show the votes over the answers in the frames.
+  The player reads the poll and its votes only once the video is the one
+  playing, and shows the votes after the viewer voted; the creator sees them
+  straight away and does not vote.
+
+- `question`, `prompt` and `replies` are cards viewers act on, drawn like a
+  poll on one white card, and like a poll a video carries one of all these:
+  a poll, quiz, slider, question, Add yours or replies sticker. The editor
+  keeps it inside the part of the video the feed leaves clear and above every
+  other layer. The player reads who joined or replied only once the video is
+  the one playing, and draws the count, avatars and thumbnails over the card,
+  since a number drawn into the frames freezes at posting. See
+  [Question, Add yours and replies](#question-add-yours-and-replies).
+
+Older Divine versions drop a sticker tag whose `kind` they do not know, and
+then show the sticker only as it is in the frames.
+
+#### Question, Add yours and replies
+
+- **Question.** A tap on the answer field opens a page where the viewer
+  writes an answer, sent as a NIP-17 private message to the video's creator
+  through `DmRepository.sendSharedVideo`: it cites the video with a NIP-18
+  `q` tag, as a shared video does, and adds
+  `["divine:question", "<question>", "<video event id>"]`. Nobody else sees
+  it, and it is never sent as a plaintext kind 4 copy. The creator's
+  conversation shows the question above the answer and offers to answer it
+  with a video: a video reply to their own video, whose `reply` sticker shows
+  the question and the answer as its name and text, without who wrote it.
+  The video is read first and must be the creator's and the one cited; the
+  answer video is rooted at it, and its sticker shows the question on that
+  video's own question sticker, not the one in the message, which the sender
+  wrote. The creator does not answer their own question; a signed-out viewer
+  is asked to sign in. An account that may message only Divine, a protected
+  minor, is not offered the question sticker, a draft carrying one is refused
+  when it posts, and a tap on one tells it answering isn't available.
+- **Add yours (`prompt`).** A tap on its button opens the camera. The editor
+  places the same sticker on the answer, pointing at the same chain, and names
+  the chain's first video as what inspired the answer
+  (`["a", "<first video's address>", "<relay>", "mention"]`). The prompt's
+  hashtag is added to the answer like a hashtag sticker's. A video joined the
+  chain when it names the first video that way and carries the hashtag, which
+  also tells it from a video inspired by the first one for its sound. A
+  sticker's first video is honored only when that video carries an Add yours
+  of its own with the same hashtag; otherwise the chain starts at the
+  sticker's own video. While it was not read carrying one and a relay that
+  did not answer in full may hold it, the player counts the named chain but
+  offers no Join, since an answer would cite the wrong first video for good.
+  The player shows how many people joined, each counted
+  once by their newest answer the viewer's filters let through, and their
+  avatars; a tap on them opens the answers in the full-screen feed.
+- **Replies.** The player shows how many video replies the video has (kind
+  34236 videos whose NIP-22 `E` or `A` root tag names it), the avatars of the
+  latest, and their thumbnails in turn, held still under reduced motion. A tap
+  opens the replies in the full-screen feed, which applies the viewer's blocks
+  and content filters; a reply with a content warning shows only blurred on
+  the sticker. On the creator's own video a tap opens the list of replies,
+  where they pin one to the front and hide single ones. That curation is a
+  NIP-78 `kind:30078` event of the creator's with
+  `["d", "divine:replies:<video address>"]`, `["a", "<video address>"]` and,
+  per reply, a tag marked `pinned` or `hidden`: `["a", "<reply address>", "",
+  "hidden"]` for an addressable reply, so the mark outlives an edit of the
+  reply, or `["e", "<reply id>", "", "hidden"]` for one that is not. A newer
+  one replaces the one before. Viewers see the pinned reply first and none of
+  the hidden ones, on the sticker and in the feed.
+
+Funnelcake counts both and returns the latest
+(`GET /api/videos/{id}/responses?type=replies|joined&tag=<hashtag>`). For
+replies the app sends the video's event id, never its d-tag: a d-tag is unique
+only per author, and the server derives the address from the event, so replies
+to any version of the video still count. A chain is asked for by its first
+video's d-tag, and each answer it returns is checked as the relays' are.
+While it does not answer, the app reads them from the relay, at most 500 in one
+request, and shows the count with a plus, as a floor, when a relay may have
+stopped at its result-size limit.
+Reading lives in `mobile/packages/video_responses_repository`; the player's
+copy is `mobile/lib/widgets/video_feed_item/interactive_sticker_overlay.dart`.
+
+#### Polls
+
+A poll, quiz or slider sticker publishes a NIP-88 `kind:1068` poll event,
+signed in the video's publish step and sent just before the video, so the
+video never points to a poll the relays do not have yet. A retry that sends
+a video signed before sends no second poll: the one the video names went out
+ahead of it. A retry that has to sign the video again signs the same poll
+again, stamped with when the upload began, so the relays keep one; only an
+upload that starts over, or a change to client attribution in between, leaves
+a second poll behind. A scheduled post's poll goes out at once. When no relay
+takes the poll, the
+video is not published either.
+
+| Tag | Format | Description |
+|-----|--------|-------------|
+| content | `"Which outfit?"` | The question. |
+| `option` | `["option", "0", "Red"]` | An answer, numbered from `0`. A slider has eleven, `0` to `100` in steps of ten, each its own value. |
+| `relay` | `["relay", "wss://relay.divine.video"]` | Where votes are expected. |
+| `polltype` | `["polltype", "singlechoice"]` | Every Divine poll is single choice. |
+| `answer` | `["answer", "1"]` | A quiz's right answer; a Divine convention other clients ignore. Anyone can read it in the raw event. |
+| `slider` | `["slider", "😋"]` | A slider's emoji; a Divine convention. Other clients show a slider as a poll of its eleven steps. |
+
+A vote is a `kind:1018` event with `["e", "<poll id>", "<relay>"]` and one
+`["response", "<option id>"]`. Votes are public: anyone can read who voted
+for what, and the app says so once, after a viewer's first vote. Divine
+counts one vote per pubkey: a pubkey's latest vote, as NIP-88 says, but for a
+quiz its first, so an answer cannot be changed. A vote that changes an
+earlier one is stamped at least a second after it, so the change wins even
+within the same second. Funnelcake counts them
+(`GET /api/polls/{id}/results`, divine-funnelcake#1414, not deployed yet) and
+the app then reads only the viewer's own vote from the relay. Until that
+ships, and whenever Funnelcake does not answer within three seconds of the
+relay, the app counts the votes a relay holds itself, read in one request of
+at most 5000 within the read's five-second limit, along with the viewer's own.
+That count can run low on a large poll and has no filter for deleted votes or
+moderated accounts. A poll by anyone but the video's creator, of another kind,
+or asking or offering anything else than the sticker shows, is not the one it
+points to and takes no vote.
+
+Building and reading the events lives in `mobile/packages/poll_repository`;
+the player's copy is `mobile/lib/widgets/video_feed_item/poll_sticker_overlay.dart`.
+
+Before a link to a host outside `divine.video` and its subdomains opens, the
+app shows its whole domain and its address, cut after three lines, in a sheet.
+
+Publishing lives in `mobile/lib/services/video_publish/video_event_tags.dart`.
+The area is taken from the final render in
+`mobile/lib/services/video_editor/sticker_regions.dart`. Parsing is in
+`mobile/packages/models/lib/src/video_sticker_region.dart`, and the stickers
+drawn over the feed are in
+`mobile/lib/widgets/video_feed_item/video_sticker_tap_areas.dart`.
 
 ### Event Metadata
 

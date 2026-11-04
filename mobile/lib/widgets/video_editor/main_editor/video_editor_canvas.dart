@@ -25,6 +25,7 @@ import 'package:openvine/blocs/video_editor/text_wrap_hint/text_wrap_hint_cubit.
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/extensions/audio_volume_curve_mapping.dart';
 import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
@@ -43,8 +44,10 @@ import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/interactive_card_placement.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -53,6 +56,7 @@ import 'package:openvine/services/haptic_service.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/layer_capture_resolution.dart';
 import 'package:openvine/services/video_editor/preview_composition.dart';
+import 'package:openvine/services/video_editor/sound_speed_ramp_render_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_audio_preview.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_ducking.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_level_resolver.dart';
@@ -68,6 +72,7 @@ import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player
 import 'package:openvine/widgets/video_editor/draw_editor/paint_editor_stroke_width.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_preview.dart';
 import 'package:openvine/widgets/video_editor/main_editor/hit_test_expander.dart';
+import 'package:openvine/widgets/video_editor/main_editor/interactive_card_safe_area_guide.dart';
 import 'package:openvine/widgets/video_editor/main_editor/playhead_interpolator.dart';
 import 'package:openvine/widgets/video_editor/main_editor/stop_motion_playback_clock.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
@@ -684,6 +689,32 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
   bool get _isLayerBeingTransformed => _selectedLayer != null;
 
+  /// Runs [keepInteractiveCardInPlace] once the frame that may have moved
+  /// the video's interactive card is laid out. The history saved for this step was exported before that frame,
+  /// and a draft posted from the library renders from it, so a correction is
+  /// saved too.
+  void _keepInteractiveCardInPlace(
+    VideoEditorScope scope,
+    VideoEditorMainBloc bloc,
+  ) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final editor = scope.editor;
+      if (!mounted || editor == null || _isLayerBeingTransformed) return;
+      keepInteractiveCardInPlace(
+        editor,
+        targetAspectRatio: ref
+            .read(clipManagerProvider)
+            .firstClipOrNull
+            ?.targetAspectRatio
+            .value,
+        onChanged: () => _runDetached(
+          _onStateHistoryChange(scope, bloc),
+          'persist interactive card placement',
+        ),
+      );
+    });
+  }
+
   Layer? _selectedLayer;
 
   /// Tracks whether pointer was over remove area in the previous frame.
@@ -767,6 +798,15 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// Plans the dips of the sounds that duck under the voice-over, the same
   /// ones the export bakes in.
   final VideoEditorAudioDucking _audioDucking = VideoEditorAudioDucking();
+
+  /// Bakes the window of a sound with a speed ramp into a file the player
+  /// plays at 1×, as the export stretches it.
+  final SoundSpeedRampRenderService _soundRampRenders =
+      SoundSpeedRampRenderService();
+
+  /// Ramp renders the audio resyncs after, so several syncs asking for one
+  /// render resync once.
+  final _pendingSoundRampRenders = <Future<String?>>{};
 
   /// Bumped by every audio sync, so a sync that waited on the voice-over
   /// measurement does not put back tracks a newer sync already replaced.
@@ -1099,6 +1139,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       name: 'VideoEditorCanvas',
       category: LogCategory.video,
     );
+    InterruptedRenderMonitor.noteEditorPhase('editorClosed');
     _settleLayerCaptureTracking();
     _playheadInterpolator.dispose();
     _stopMotionClock.dispose();
@@ -1122,7 +1163,31 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     _liveEqualizerNotifier?.removeListener(_onLiveEqualizerChanged);
     _isPlayerReadyNotifier.dispose();
     _composition.dispose();
+    _soundRampRenders.clear();
     super.dispose();
+  }
+
+  /// The file [sound]'s window is baked into along its speed ramp, or `null`
+  /// without a ramp or until the file is rendered; the audio resyncs onto it
+  /// once it lands. Meanwhile the sound plays at the ramp's average speed.
+  String? _rampedSoundFile(AudioEvent sound) {
+    if (sound.speedRamp == null) return null;
+    final rendered = _soundRampRenders.cached(sound);
+    if (rendered != null) return rendered;
+    final render = _soundRampRenders.render(sound);
+    if (_pendingSoundRampRenders.add(render)) {
+      _runDetached(_resyncAudioOnto(render), 'render ramped sound');
+    }
+    return null;
+  }
+
+  Future<void> _resyncAudioOnto(Future<String?> render) async {
+    try {
+      if (await render == null || !mounted) return;
+      await _syncAudioTracks();
+    } finally {
+      _pendingSoundRampRenders.remove(render);
+    }
   }
 
   /// Swaps the composition onto a finished speed render — but only while the
@@ -1891,6 +1956,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     }
 
     _endClipLoad(generation, isReady: true);
+    InterruptedRenderMonitor.noteEditorPhase('playerReady');
 
     // Setup state stream listener
     _videoPlayerSubscription = player.stateStream.listen(_onPlayerStateChanged);
@@ -1956,6 +2022,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   Future<void> _syncStopMotionAudio() async {
     final generation = ++_audioSyncGeneration;
     final overlayState = context.read<TimelineOverlayBloc>().state;
+    _soundRampRenders.retain(overlayState.audioTracks);
     final isVoiceOverPreview = _isVoiceOverPreview;
     final audioById = {for (final e in overlayState.audioTracks) e.id: e};
     // Recording a voice-over mutes every sound, so the dips do not matter and
@@ -1985,7 +2052,13 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       // clip sampled into stills brings its own sound as an extracted track.
       final resolved = sound.resolvedSource;
       if (resolved == null) continue;
+      final rampFile = _rampedSoundFile(sound);
       final source = switch (resolved.kind) {
+        _ when rampFile != null => AudioSourceConfig.file(
+          rampFile,
+          start: Duration.zero,
+          end: item.endTime - item.startTime,
+        ),
         AudioSourceKind.asset => AudioSourceConfig.asset(
           resolved.path,
           start: trackStart,
@@ -2015,7 +2088,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           windowEnd: item.endTime,
           fadeIn: sound.fadeInDuration,
           fadeOut: sound.fadeOutDuration,
-          speed: sound.playbackSpeed,
+          speed: rampFile != null ? 1 : sound.averageSpeed,
           volumeCurve: duckingCurves[item.id],
         ),
       );
@@ -2043,9 +2116,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// draws them on the preview (#9708), with their windows, and the beats of
   /// an effect on the beat, moved onto the player's timeline.
   ///
-  /// The Adjust sets' highlights, shadows, vibrance and sharpening come
-  /// last, as in the export (see `adjustVideoEffectsOf`); while the Adjust
-  /// editor is open its sliders stand in for them.
+  /// The looks come after the other effects, and the Adjust sets'
+  /// highlights, shadows, vibrance and sharpening last, as in the export
+  /// (see `looksLast` and `adjustVideoEffectsOf`); while the Adjust editor is
+  /// open its sliders stand in for them.
   void _syncFrameEffects() {
     final player = _videoPlayer;
     if (player == null || !mounted) return;
@@ -2057,7 +2131,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         context.read<VideoEditorMainBloc>().state.openSubEditor ==
         SubEditorType.tune;
     final effects = [
-      ...state.previewCustomEffects,
+      ...looksLast(state.previewCustomEffects),
       ...previewAdjustVideoEffects(
         applied:
             VideoEditorScope.of(
@@ -2138,6 +2212,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         identical(_videoPlayer, player);
 
     final overlayState = context.read<TimelineOverlayBloc>().state;
+    // Every ramped window the timeline plays stays rendered, however many.
+    _soundRampRenders.retain(overlayState.audioTracks);
     // Captured before the loop can await: the track builders below await the
     // native side, and reading the bloc from a disposed context afterwards
     // would throw.
@@ -2189,9 +2265,26 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         outputEnd: outputEnd,
       );
 
+      final rampFile = _rampedSoundFile(sound);
       try {
         final AudioTrack track;
-        if (sound.isBundled && sound.assetPath != null) {
+        if (rampFile != null) {
+          // The ramp is baked in from the window's start.
+          track = AudioTrack.file(
+            rampFile,
+            volume: _previewVolume(
+              sound.volume,
+              isVoiceOverPreview: isVoiceOverPreview,
+            ),
+            videoStartTime: item.startTime,
+            videoEndTime: videoEndTime,
+            fadeInDuration: sound.fadeInDuration,
+            fadeOutDuration: sound.fadeOutDuration,
+            equalizer: sound.equalizer.toPlayerEqualizer(),
+            volumeCurve:
+                duckingCurves[item.id]?.toPlayerVolumeCurve() ?? const [],
+          );
+        } else if (sound.isBundled && sound.assetPath != null) {
           track = await AudioTrack.asset(
             sound.assetPath!,
             volume: _previewVolume(
@@ -2204,7 +2297,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
-            playbackSpeed: sound.playbackSpeed,
+            playbackSpeed: sound.averageSpeed,
             volumeCurve:
                 duckingCurves[item.id]?.toPlayerVolumeCurve() ?? const [],
           );
@@ -2221,7 +2314,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
-            playbackSpeed: sound.playbackSpeed,
+            playbackSpeed: sound.averageSpeed,
             volumeCurve:
                 duckingCurves[item.id]?.toPlayerVolumeCurve() ?? const [],
           );
@@ -2238,7 +2331,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
-            playbackSpeed: sound.playbackSpeed,
+            playbackSpeed: sound.averageSpeed,
             volumeCurve:
                 duckingCurves[item.id]?.toPlayerVolumeCurve() ?? const [],
           );
@@ -2401,8 +2494,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         detachedClips: detachedClips,
       )
       ..setActive(
+        // A sound credit's equalizer follows the sound as a visualizer does.
         isActive: editor.activeLayers.any(
-          AudioVisualizerLayerData.isAudioVisualizerLayer,
+          (layer) =>
+              AudioVisualizerLayerData.isAudioVisualizerLayer(layer) ||
+              (SocialStickerData.of(layer)?.listensToSound ?? false),
         ),
       );
 
@@ -3473,6 +3569,20 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                       ),
                       stream: rebuildStream,
                     ),
+                    ReactiveWidget(
+                      builder: (context) {
+                        final selected = editor.selectedLayer;
+                        return InteractiveCardSafeAreaGuide(
+                          isVisible:
+                              editor.isLayerBeingTransformed &&
+                              selected != null &&
+                              isInteractiveCardLayer(selected),
+                          targetAspectRatio: targetAspectRatio.value,
+                          fittedBoxScale: scope.fittedBoxScale,
+                        );
+                      },
+                      stream: rebuildStream,
+                    ),
                   ];
                 },
               ),
@@ -3620,6 +3730,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                 context.read<ClipEditorBloc>().add(
                   const ClipEditorCapturedChromaKeysBakeRequested(),
                 );
+
+                // After the seeded first entry, so what is placed now is an
+                // edit the creator can undo.
+                if (editorStateHistory.isEmpty) {
+                  scope.onFreshSessionReady?.call();
+                }
               },
               onDone: _handleDone,
               onImportHistoryStart: (state, import) {
@@ -3629,6 +3745,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   category: LogCategory.video,
                 );
                 _isImportingHistory = true;
+                InterruptedRenderMonitor.noteEditorPhase('historyImportStart');
               },
               onImportHistoryEnd: (state, import) {
                 Log.debug(
@@ -3637,9 +3754,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   category: LogCategory.video,
                 );
                 _isImportingHistory = false;
+                InterruptedRenderMonitor.noteEditorPhase('historyImported');
                 _syncMainCapabilities(scope, bloc);
               },
               onStateHistoryChange: (_, _) {
+                _keepInteractiveCardInPlace(scope, bloc);
                 _runDetached(
                   _onStateHistoryChange(scope, bloc),
                   'persist editor history',
@@ -3739,6 +3858,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
                 _wasOverRemoveArea = false;
                 bloc.add(const VideoEditorLayerInteractionEnded());
+                _keepInteractiveCardInPlace(scope, bloc);
               },
               onAddLayer: (layer) {
                 Log.debug(
@@ -3747,6 +3867,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   category: LogCategory.video,
                 );
                 _syncMainCapabilities(scope, bloc);
+                _keepInteractiveCardInPlace(scope, bloc);
               },
               onRemoveLayer: (layer) {
                 Log.debug(

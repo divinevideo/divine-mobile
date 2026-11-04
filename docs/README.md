@@ -36,6 +36,7 @@ This directory is the index for current repository documentation. Use it to find
 - [mobile/docs/NOSTR_VIDEO_EVENTS.md](../mobile/docs/NOSTR_VIDEO_EVENTS.md)
 - [mobile/docs/FEED_LOAD_TRACES.md](../mobile/docs/FEED_LOAD_TRACES.md) - what the `feed_load_*` Firebase Performance traces measure and how to compare them
 - [mobile/docs/LOCALIZATION_STYLE_GUIDE.md](../mobile/docs/LOCALIZATION_STYLE_GUIDE.md) - per-locale tone, dialect, terminology, and translation review
+- [mobile/docs/CLIP_LIBRARY.md](../mobile/docs/CLIP_LIBRARY.md) - how recorded clips are stored, organized, trashed and picked
 
 ## Historical Docs
 

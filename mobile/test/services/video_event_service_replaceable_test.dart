@@ -555,5 +555,47 @@ void main() {
       // Assert
       expect(notified, true, reason: 'Should notify listeners on update');
     });
+
+    test(
+      'updateVideoEvent keeps the edit when an earlier revision arrives later',
+      () {
+        const pubkey =
+            '00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff';
+        const vineId = 'stale-revision-vine';
+        const videoUrl = 'https://example.com/video.mp4';
+
+        // Every revision re-emits the first publish's published_at, which
+        // VideoEvent.createdAt prefers over the signed created_at.
+        sdk.Event revision(String caption, int createdAt) => sdk.Event(
+          pubkey,
+          NIP71VideoKinds.addressableShortVideo,
+          [
+            ['d', vineId],
+            ['url', videoUrl],
+            ['published_at', '1000'],
+          ],
+          caption,
+          createdAt: createdAt,
+        );
+
+        service.handleEventForTesting(
+          revision('first caption', 1000),
+          SubscriptionType.discovery,
+        );
+        service.updateVideoEvent(
+          VideoEvent.fromNostrEvent(revision('latest caption', 2000)),
+        );
+        expect(service.discoveryVideos.single.content, 'latest caption');
+
+        // A relay that has not seen the latest edit still serves an earlier
+        // one when the profile re-subscribes after the update.
+        service.handleEventForTesting(
+          revision('earlier edit caption', 1500),
+          SubscriptionType.discovery,
+        );
+
+        expect(service.discoveryVideos.single.content, 'latest caption');
+      },
+    );
   });
 }

@@ -1879,6 +1879,232 @@ class AppLocalizationsZh extends AppLocalizations {
   String get metadataSoundsLabel => '声音';
 
   @override
+  String get metadataLinksLabel => '链接';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return '链接贴纸，打开 $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel => '提及贴纸，打开个人主页';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return '话题标签贴纸，打开 #$hashtag';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => '声音贴纸，打开声音';
+
+  @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return '地点贴纸，在地图中打开 $place';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel => '倒计时贴纸，设置提醒';
+
+  @override
+  String get videoStickerReplySemanticLabel => '回复贴纸，打开这个视频回复的内容';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet => '提醒已设置，到时间我们会通知你。';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => '提醒已移除。';
+
+  @override
+  String get videoStickerCountdownOver => '这个倒计时已经结束了。';
+
+  @override
+  String get videoStickerCountdownNotificationsOff => '打开 Divine 的通知才能收到提醒。';
+
+  @override
+  String get videoStickerCountdownReminderBody => '时间到！你保存的倒计时刚刚结束。';
+
+  @override
+  String get videoStickerQuizRightAnswer => '正确答案';
+
+  @override
+  String get videoStickerQuizWrongAnswer => '错误答案';
+
+  @override
+  String get videoStickerPollSignInToVote => '登录后才能投票。';
+
+  @override
+  String get videoStickerPollNotReady => '仍在连接中，请稍后再试。';
+
+  @override
+  String get videoStickerPollVoteFailed => '你的投票没有发送成功，请重试。';
+
+  @override
+  String get videoStickerPollVotesArePublic => '投票是公开的，任何人都能看到你的选择。';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 票',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => '点按回答';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return '回答：$question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => '轮到你了';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 人已参与',
+      one: '$count 人已参与',
+      zero: '来做第一个吧',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count 人已参与';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => '看看谁参与了';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return '轮到你了：$prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 条回复',
+      one: '$count 条回复',
+      zero: '还没有回复',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count 条回复';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '观看 $count 条视频回复',
+      one: '观看 $count 条视频回复',
+      zero: '视频回复，暂无',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return '观看 $count 条视频回复';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => '登录后才能回答。';
+
+  @override
+  String get videoStickerQuestionUnavailable => '你的账号无法回答问题。';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => '回答';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => '你的回答';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return '只有 $name 能看到你的回答。对方可能会在视频里分享它，但不会显示你的名字。';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => '发送';
+
+  @override
+  String get videoStickerQuestionAnswerSent => '回答已发送。';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong => '回答太长，发不出去。';
+
+  @override
+  String get videoStickerQuestionAnswerFailed => '你的回答没有发送成功，请重试。';
+
+  @override
+  String get videoStickerAddYoursSignIn => '登录后才能参与。';
+
+  @override
+  String get videoStickerRepliesManageTitle => '视频回复';
+
+  @override
+  String get videoStickerRepliesEmpty => '还没有视频回复。';
+
+  @override
+  String get videoStickerRepliesLoadFailed => '无法加载回复。';
+
+  @override
+  String get videoStickerRepliesRetry => '再试一次';
+
+  @override
+  String get videoStickerRepliesPin => '置顶';
+
+  @override
+  String get videoStickerRepliesUnpin => '取消置顶';
+
+  @override
+  String get videoStickerRepliesHide => '隐藏';
+
+  @override
+  String get videoStickerRepliesShow => '显示';
+
+  @override
+  String get videoStickerRepliesPinned => '已置顶';
+
+  @override
+  String get videoStickerRepliesHidden => '已隐藏';
+
+  @override
+  String get videoStickerRepliesSaveFailed => '没能保存，再试一次。';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return '观看 $name 的回复';
+  }
+
+  @override
+  String get videoStickerLinkSheetBody => '此链接会在 Divine 之外打开。继续之前请先核对网址。';
+
+  @override
   String get metadataOriginalSound => '原声';
 
   @override
@@ -4079,7 +4305,16 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError => '连不上服务器。请检查网络连接后重试。';
+  String get profileVideosLoadFailedTitle => '无法加载你的视频';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => '无法加载视频';
+
+  @override
+  String get profileVideosLoadFailedSubtitle => '请检查网络连接后重试。';
+
+  @override
+  String get profileVideosLoadFailedRetry => '再试一次';
 
   @override
   String get profileFeedLoadMoreError => '无法加载更多视频。下拉刷新试试。';
@@ -4396,6 +4631,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get routeInvalidSoundId => '无效的声音 ID';
+
+  @override
+  String get routeInvalidQuestion => '无效的提问链接';
 
   @override
   String get routeInvalidCategory => '无效的分类';
@@ -5714,6 +5952,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmReelReplyComposerSemanticLabel => '回复此视频';
 
   @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return '回答了你的问题：$question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return '你回答了：$question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => '用视频回答';
+
+  @override
   String get dmReelReplyViewChat => '查看聊天';
 
   @override
@@ -6406,19 +6657,19 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => '已选中';
-
-  @override
   String get videoClipSemanticValueNotSelected => '未选中';
 
   @override
   String get videoClipSemanticHintDisabled => '已禁用';
 
   @override
-  String get videoClipSemanticHintSelect => '点按选择，长按预览';
+  String get videoClipSemanticHintSelect => '点按选择';
 
   @override
-  String get videoClipSemanticHintDeselect => '点按取消选择，长按预览';
+  String get videoClipSemanticHintDeselect => '点按取消选择';
+
+  @override
+  String get videoClipSemanticHintPreview => '点按预览';
 
   @override
   String get routerInvalidCreator => '无效的创作者';
@@ -7209,6 +7460,10 @@ class AppLocalizationsZh extends AppLocalizations {
       '这份草稿上的文字和贴纸没能准备好。到编辑器里打开，然后重新发布。';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      '你的账号不能发布提问贴纸，因为回答会以私信形式发来。请移除它，然后重新发布。';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       '你的设备无法一次导出这么多已分离的片段。把其中几个放回时间线后再试。';
 
@@ -7806,6 +8061,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName 点赞了一个标记了你的视频';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName 点赞了你的评论';
   }
@@ -8149,6 +8409,28 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已恢复 $count 个片段',
+      one: '已恢复片段',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已永久删除 $count 个片段',
+      one: '已永久删除片段',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => '关闭录像机';
 
   @override
@@ -8392,13 +8674,139 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectSparkles => '闪光';
 
   @override
+  String get videoEditorEffectRain => '雨滴';
+
+  @override
+  String get videoEditorEffectLeaves => '落叶';
+
+  @override
+  String get videoEditorEffectBlossoms => '樱花';
+
+  @override
+  String get videoEditorEffectBubbles => '泡泡';
+
+  @override
+  String get videoEditorEffectBokeh => '光斑';
+
+  @override
+  String get videoEditorEffectMusicNotes => '音符';
+
+  @override
+  String get videoEditorEffectStars => '星星';
+
+  @override
+  String get videoEditorEffectFireflies => '萤火虫';
+
+  @override
+  String get videoEditorEffectEmbers => '火花';
+
+  @override
+  String get videoEditorEffectMoney => '钞票';
+
+  @override
+  String get videoEditorEffectBalloons => '气球';
+
+  @override
   String get videoEditorEffectTiltShift => '移轴';
 
   @override
   String get videoEditorEffectZoomBlur => '变焦模糊';
 
   @override
+  String get videoEditorEffectSpinBlur => '旋转模糊';
+
+  @override
   String get videoEditorEffectComic => '漫画';
+
+  @override
+  String get videoEditorEffectSwirl => '漩涡';
+
+  @override
+  String get videoEditorEffectRipple => '涟漪';
+
+  @override
+  String get videoEditorEffectFlutedGlass => '长虹玻璃';
+
+  @override
+  String get videoEditorEffectEightBit => '8 位';
+
+  @override
+  String get videoEditorEffectAnaglyph => '3D 眼镜';
+
+  @override
+  String get videoEditorEffectRiso => '孔版印刷';
+
+  @override
+  String get videoEditorEffectTealOrange => '青橙';
+
+  @override
+  String get videoEditorEffectWarmFilm => '暖调胶片';
+
+  @override
+  String get videoEditorEffectSlideFilm => '反转片';
+
+  @override
+  String get videoEditorEffectCoolFilm => '冷调胶片';
+
+  @override
+  String get videoEditorEffectMatte => '哑光';
+
+  @override
+  String get videoEditorEffectBleachBypass => '留银';
+
+  @override
+  String get videoEditorEffectCrossProcess => '交叉冲印';
+
+  @override
+  String get videoEditorEffectGoldenHour => '黄金时刻';
+
+  @override
+  String get videoEditorEffectMoonlight => '月光';
+
+  @override
+  String get videoEditorEffectSilver => '银盐黑白';
+
+  @override
+  String get videoEditorEffectCategoryRetro => '复古';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => '故障';
+
+  @override
+  String get videoEditorEffectCategoryDistort => '扭曲';
+
+  @override
+  String get videoEditorEffectCategoryLight => '光影';
+
+  @override
+  String get videoEditorEffectCategoryMotion => '动感';
+
+  @override
+  String get videoEditorEffectCategoryParticles => '粒子';
+
+  @override
+  String get videoEditorEffectCategoryLooks => '调色';
+
+  @override
+  String get videoEditorFilterCategoryNatural => '自然';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => '鲜艳';
+
+  @override
+  String get videoEditorFilterCategoryWarm => '暖色';
+
+  @override
+  String get videoEditorFilterCategoryCool => '冷色';
+
+  @override
+  String get videoEditorFilterCategoryVintage => '怀旧';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => '黑白';
+
+  @override
+  String get videoEditorFilterCategoryTints => '色调';
 
   @override
   String get videoEditorDropsSettingsTitle => '调节水滴';
@@ -10009,6 +10417,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => '高度';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => '左右';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => '上下';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => '自定义';
 
   @override
@@ -10088,6 +10502,400 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorStickerSearchHint => '搜索贴纸...';
+
+  @override
+  String get videoEditorInfoStickersTitle => '信息';
+
+  @override
+  String get videoEditorSocialStickersTitle => '社交';
+
+  @override
+  String get videoEditorSocialStickerMention => '提及';
+
+  @override
+  String get videoEditorSocialStickerHashtag => '话题标签';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => '声音';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => '你的名字';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => '话题';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => '选择一个人';
+
+  @override
+  String get videoEditorSocialStickerMentionNote => '对方会在你的帖子中被提及，并收到通知。';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => '输入话题标签';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote => '也会加到你帖子的话题标签里。';
+
+  @override
+  String get videoEditorSocialStickerLyricHint => '一句歌词（可选）';
+
+  @override
+  String get videoEditorSocialStickerLink => '链接';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => '网址';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => '标题（可选）';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => '网址会添加到你的帖子里。';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => '这还不是一个网址。';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => '互动';
+
+  @override
+  String get videoEditorSocialStickerCountdown => '倒计时';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => '夏天';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint => '你在倒数什么？';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote => '观众能看到剩余时间，还可以设置提醒。';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver => '这个时间已经过了，选个新的吧。';
+
+  @override
+  String get videoEditorSocialStickerReply => '回复';
+
+  @override
+  String get videoEditorSocialStickerReplyNote => '观众点一下就能看到你在回复什么。';
+
+  @override
+  String get videoEditorSocialStickerPoll => '投票';
+
+  @override
+  String get videoEditorSocialStickerQuiz => '测验';
+
+  @override
+  String get videoEditorSocialStickerSlider => '滑块';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => '选哪个？';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => '是';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => '否';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine 上线于…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => '你有多饿？';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => '提个问题';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return '答案 $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return '移除答案 $number';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return '将答案 $number 设为正确答案';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => '添加答案';
+
+  @override
+  String get videoEditorSocialStickerPollNote => '观众投票后即可看到结果。投票是公开的。';
+
+  @override
+  String get videoEditorSocialStickerQuizNote => '勾选正确答案。观众作答后就能看到它。';
+
+  @override
+  String get videoEditorSocialStickerSliderNote => '观众拖动表情来作答，并能看到平均落在哪里。';
+
+  @override
+  String get videoEditorSocialStickerQuestion => '提问';
+
+  @override
+  String get videoEditorSocialStickerAddYours => '轮到你了';
+
+  @override
+  String get videoEditorSocialStickerReplies => '回复';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => '随便问我';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => '晒晒你的桌面布置';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => '用视频回复';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => '你的问题';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint => '想让大家展示什么？';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => '话题标签';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => '标题';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote => '回答会以私信的形式发给你。';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      '观众用自己的视频来回应。每个回应都会带上这个话题标签，并链接回你的视频。';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      '显示谁用视频回复了这个视频。观众点一下就能观看这些回复。';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint => '这个贴纸会留在这个框内，方便观众点按';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => '音符';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => '黑胶唱片';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => '磁带';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => '均衡器';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => '播放器';
+
+  @override
+  String get videoEditorInfoStickerTime => '时间';
+
+  @override
+  String get videoEditorInfoStickerDate => '日期';
+
+  @override
+  String get videoEditorInfoStickerLocation => '地点';
+
+  @override
+  String get videoEditorInfoStickerWeather => '天气';
+
+  @override
+  String get videoEditorInfoStickerAltitude => '海拔';
+
+  @override
+  String get videoEditorInfoStickerBattery => '电量';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => '浅色';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => '深色';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => '绿色';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => '描边';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => '数字';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => '指针';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => '玻璃';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => '黄色';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => '霓虹';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => '简约';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => '更换地点';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable => '此设备不支持地点搜索。';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return '拍摄时 · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return '现在 · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return '今天 · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => '天数计数';
+
+  @override
+  String get videoEditorInfoStickerSun => '太阳';
+
+  @override
+  String get videoEditorInfoStickerMoon => '月亮';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC 计时';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => '胶片';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => '摄像机';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return '第 $day 天';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return '第 $day 天 / 共 $total 天';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => '天数';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => '总天数（可选）';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => '图钉';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => '国旗';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => '地球仪';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => '地图';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => '新月';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => '蛾眉月';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => '上弦月';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => '盈凸月';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => '满月';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => '亏凸月';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => '下弦月';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => '残月';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => '搜索城市或地点';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => '没有找到地点';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed => '无法搜索地点。请再试一次。';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      '视频里只会显示地点名称，绝不会包含你的精确位置。';
+
+  @override
+  String get videoEditorInfoStickerLoading => '加载中…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed => '无法加载。请再试一次。';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => '数据来自 MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow => '较早的视频没有天气数据，这里显示的是现在的天气。';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => '晴';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => '晴朗的夜晚';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => '晴间多云';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => '多云';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => '雾';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => '雨';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => '阵雨';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => '雪';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => '雷雨';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote => '时间按你手机的时区显示。';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => '温度';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => '单位';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => '电池电量';
+
+  @override
+  String get videoEditorInfoStickerAdd => '添加贴纸';
 
   @override
   String get videoEditorSelectFontSemanticLabel => '选择字体';
@@ -11558,6 +12366,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '添加“#$tag”';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag，来自视频中的贴纸';
   }
 
   @override
@@ -13396,10 +14209,82 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ideasDescriptionSix => '把这个留在这里。';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '聊天室、$displayCount 条未读消息',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount 条新消息',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount 条未读消息',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount 人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount 条消息',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => '过去24小时';
+
+  @override
+  String get messagesRoomLoading => '正在查看动态…';
+
+  @override
+  String get messagesRoomLoadFailed => '无法加载动态。';
+
+  @override
+  String get messagesRoomEmpty => '最近没有消息，打个招呼吧。';
+
+  @override
   String get messagesDirect => '私信';
 
   @override
   String get messagesRooms => '聊天室';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return '聊天室 ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => '公开测试聊天室';
@@ -13709,9 +14594,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -13732,11 +14614,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -13770,9 +14647,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -13835,4 +14709,74 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
+
+  @override
+  String get creatorHighlightLabel => '你的今日亮点';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return '你今天创作的视频：$count 个。';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle => '这周又多了一点你的色彩。';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return '本周创作天数：$count 天。继续创作吧。';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '你本周发布的视频截至目前的总播放次数：$countString 次。';
+  }
+
+  @override
+  String get creatorHighlightTopVideo => '你本周发布的视频中播放次数最多的一条';
+
+  @override
+  String get creatorHighlightCreate => '再创作一个';
+
+  @override
+  String get creatorHighlightAnalytics => '查看你的数据';
+
+  @override
+  String get creatorHighlightWatch => '观看视频';
 }

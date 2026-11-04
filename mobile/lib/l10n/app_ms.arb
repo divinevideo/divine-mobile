@@ -1,5 +1,75 @@
 {
   "@@locale": "ms",
+  "videoEditorSocialStickerPoll": "Undian",
+  "videoEditorSocialStickerQuiz": "Kuiz",
+  "videoEditorSocialStickerSlider": "Peluncur",
+  "videoEditorSocialStickerPollSampleQuestion": "Yang mana?",
+  "videoEditorSocialStickerPollSampleYes": "Ya",
+  "videoEditorSocialStickerPollSampleNo": "Tidak",
+  "videoEditorSocialStickerQuizSampleQuestion": "Vine dilancarkan pada tahun…",
+  "videoEditorSocialStickerSliderSampleQuestion": "Berapa lapar anda?",
+  "videoEditorSocialStickerPollQuestionHint": "Tanya soalan",
+  "videoEditorSocialStickerPollOptionHint": "Jawapan {number}",
+  "videoEditorSocialStickerPollRemoveOption": "Buang jawapan {number}",
+  "videoEditorSocialStickerQuizMarkRight": "Tandakan jawapan {number} sebagai betul",
+  "videoEditorSocialStickerPollAddOption": "Tambah jawapan",
+  "videoEditorSocialStickerPollNote": "Penonton melihat keputusan selepas mengundi. Undian adalah awam.",
+  "videoEditorSocialStickerQuizNote": "Tandakan jawapan yang betul. Penonton melihatnya selepas memilih satu.",
+  "videoEditorSocialStickerSliderNote": "Penonton menyeret emoji untuk menjawab dan melihat purata kedudukannya.",
+  "videoStickerQuizRightAnswer": "Jawapan betul",
+  "videoStickerQuizWrongAnswer": "Jawapan salah",
+  "videoEditorSocialStickerQuestion": "Soalan",
+  "videoEditorSocialStickerAddYours": "Giliran anda",
+  "videoEditorSocialStickerReplies": "Balasan",
+  "videoEditorSocialStickerQuestionSample": "Tanya saya apa sahaja",
+  "videoEditorSocialStickerAddYoursSample": "Tunjukkan susunan meja anda",
+  "videoEditorSocialStickerRepliesSample": "Balas dengan video",
+  "videoEditorSocialStickerQuestionHint": "Soalan anda",
+  "videoEditorSocialStickerAddYoursPromptHint": "Apa yang patut orang tunjukkan?",
+  "videoEditorSocialStickerAddYoursHashtagHint": "Hashtag",
+  "videoEditorSocialStickerRepliesTitleHint": "Tajuk",
+  "videoEditorSocialStickerQuestionNote": "Jawapan sampai kepada anda sebagai mesej peribadi.",
+  "videoEditorSocialStickerAddYoursNote": "Penonton menjawab dengan video mereka sendiri. Setiap jawapan mendapat hashtag ini dan dipautkan kembali ke video anda.",
+  "videoEditorSocialStickerRepliesNote": "Menunjukkan siapa yang membalas video ini dengan video. Penonton ketik padanya untuk menonton balasan.",
+  "videoEditorInteractiveCardAreaHint": "Pelekat ini kekal dalam kotak ini supaya penonton boleh mengetiknya",
+  "videoStickerPollSignInToVote": "Log masuk untuk mengundi.",
+  "videoStickerPollNotReady": "Masih menyambung. Cuba lagi sebentar nanti.",
+  "videoStickerPollVoteFailed": "Undian anda tidak dihantar. Cuba lagi.",
+  "videoStickerPollVotesArePublic": "Undian adalah awam. Sesiapa pun boleh melihat pilihan anda.",
+  "videoStickerPollVoteCount": "{count, plural, other{{count} undian}}",
+  "videoStickerQuestionAnswerHint": "Ketik untuk menjawab",
+  "videoStickerQuestionAnswerSemanticLabel": "Jawab: {question}",
+  "videoStickerAddYoursButton": "Giliran anda",
+  "videoStickerAddYoursJoined": "{count, plural, =0{Jadilah yang pertama} =1{{count} orang menyertai} other{{count} orang menyertai}}",
+  "videoStickerAddYoursJoinedAtLeast": "{count} orang menyertai",
+  "videoStickerAddYoursOpenSemanticLabel": "Lihat siapa yang menyertai",
+  "videoStickerAddYoursJoinSemanticLabel": "Giliran anda: {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{Belum ada balasan} =1{{count} balasan} other{{count} balasan}}",
+  "videoStickerRepliesCountAtLeast": "{count} balasan",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{Balasan video, belum ada} =1{Tonton {count} balasan video} other{Tonton {count} balasan video}}",
+  "videoStickerRepliesSemanticLabelAtLeast": "Tonton {count} balasan video",
+  "videoStickerQuestionSignIn": "Log masuk untuk menjawab.",
+  "videoStickerQuestionUnavailable": "Menjawab soalan tidak tersedia untuk akaun anda.",
+  "videoStickerQuestionAnswerTitle": "Jawab",
+  "videoStickerQuestionAnswerFieldLabel": "Jawapan anda",
+  "videoStickerQuestionAnswerPrivacyNote": "Hanya {name} yang melihat jawapan anda. Mereka mungkin berkongsinya dalam video, tanpa nama anda.",
+  "videoStickerQuestionAnswerSend": "Hantar",
+  "videoStickerQuestionAnswerSent": "Jawapan dihantar.",
+  "videoStickerQuestionAnswerTooLong": "Jawapan itu terlalu panjang untuk dihantar.",
+  "videoStickerQuestionAnswerFailed": "Jawapan anda tidak dihantar. Cuba lagi.",
+  "videoStickerAddYoursSignIn": "Log masuk untuk menyertai.",
+  "videoStickerRepliesManageTitle": "Balasan video",
+  "videoStickerRepliesEmpty": "Belum ada balasan video.",
+  "videoStickerRepliesLoadFailed": "Tidak dapat memuatkan balasan.",
+  "videoStickerRepliesRetry": "Cuba lagi",
+  "videoStickerRepliesPin": "Semat",
+  "videoStickerRepliesUnpin": "Buang sematan",
+  "videoStickerRepliesHide": "Sembunyikan",
+  "videoStickerRepliesShow": "Tunjuk",
+  "videoStickerRepliesPinned": "Disemat",
+  "videoStickerRepliesHidden": "Disembunyikan",
+  "videoStickerRepliesSaveFailed": "Tidak dapat disimpan. Cuba lagi.",
+  "videoStickerRepliesWatchSemanticLabel": "Tonton balasan daripada {name}",
   "devOptionsClipRecovery": "Pemulihan klip",
   "devOptionsClipRecoveryDescription": "Mencari rakaman yang disimpan di bawah akaun lain dan fail video yang tidak lagi dirujuk oleh mana-mana entri.",
   "devOptionsClipRecoveryScan": "Imbas",
@@ -979,6 +1049,21 @@
   "metadataBadgeNotDivine": "Bukan Divine",
   "metadataBadgeHumanMade": "Buatan Manusia",
   "metadataSoundsLabel": "Bunyi",
+  "metadataLinksLabel": "Pautan",
+  "videoStickerLinkSemanticLabel": "Pelekat pautan, membuka {url}",
+  "videoStickerMentionSemanticLabel": "Pelekat sebutan, membuka profil",
+  "videoStickerHashtagSemanticLabel": "Pelekat tanda pagar, membuka #{hashtag}",
+  "videoStickerSoundSemanticLabel": "Pelekat bunyi, membuka bunyi",
+  "videoStickerPlaceSemanticLabel": "Pelekat lokasi, membuka {place} dalam peta",
+  "videoStickerCountdownSemanticLabel": "Pelekat kira detik, menetapkan peringatan",
+  "videoStickerReplySemanticLabel": "Pelekat balasan, membuka apa yang dibalas oleh video ini",
+  "videoStickerCountdownDays": "{count, plural, other{{count} hari}}",
+  "videoStickerCountdownReminderSet": "Peringatan ditetapkan. Kami akan beritahu anda apabila tiba masanya.",
+  "videoStickerCountdownReminderRemoved": "Peringatan dibuang.",
+  "videoStickerCountdownOver": "Kira detik ini sudah tamat.",
+  "videoStickerCountdownNotificationsOff": "Hidupkan pemberitahuan untuk Divine untuk menerima peringatan.",
+  "videoStickerCountdownReminderBody": "Sudah tiba masanya! Kira detik yang anda simpan baru sahaja tamat.",
+  "videoStickerLinkSheetBody": "Pautan ini dibuka di luar Divine. Semak alamatnya sebelum anda teruskan.",
   "metadataOriginalSound": "Bunyi asal",
   "metadataVerificationLabel": "Pengesahan",
   "metadataDeviceAttestation": "Pengesahan peranti",
@@ -2135,10 +2220,10 @@
       }
     }
   },
-  "profileFeedError": "Tidak dapat mencapai pelayan. Semak sambungan anda dan cuba lagi.",
-  "@profileFeedError": {
-    "description": "Full-screen message shown when an author's profile feed fails to load."
-  },
+  "profileVideosLoadFailedTitle": "Tidak dapat memuatkan video anda",
+  "profileVideosLoadFailedOtherTitle": "Tidak dapat memuatkan video",
+  "profileVideosLoadFailedSubtitle": "Semak sambungan anda dan cuba lagi.",
+  "profileVideosLoadFailedRetry": "Cuba lagi",
   "profileFeedLoadMoreError": "Tidak dapat memuatkan lebih banyak video. Tarik untuk muat semula.",
   "@profileFeedLoadMoreError": {
     "description": "Transient message shown when paginating an author's profile feed fails."
@@ -2335,6 +2420,7 @@
   "routeInvalidUserId": "ID pengguna tidak sah",
   "routeInvalidVideoId": "ID video tidak sah",
   "routeInvalidSoundId": "ID bunyi tidak sah",
+  "routeInvalidQuestion": "Pautan soalan tidak sah",
   "routeInvalidCategory": "Kategori tidak sah",
   "routeNoVideosToDisplay": "Tiada video untuk dipaparkan",
   "routeGoHome": "Ke laman utama",
@@ -3003,6 +3089,28 @@
   "@dmReelReplyComposerSemanticLabel": {
     "description": "Screen-reader label for the in-player reel reply text field."
   },
+  "dmQuestionAnswerReceivedLabel": "Menjawab soalan anda: {question}",
+  "@dmQuestionAnswerReceivedLabel": {
+    "description": "Line above a message in a conversation that answers the question sticker on one of the viewer's videos. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerSentLabel": "Anda menjawab: {question}",
+  "@dmQuestionAnswerSentLabel": {
+    "description": "Line above the viewer's own message in a conversation that answers someone's question sticker. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerWithVideo": "Jawab dengan video",
+  "@dmQuestionAnswerWithVideo": {
+    "description": "Button above an answer to the viewer's question sticker that opens the camera to reply with a video showing the question and the answer, without who wrote it."
+  },
   "dmReelReplyViewChat": "Lihat sembang",
   "@dmReelReplyViewChat": {
     "description": "Tappable action in the 'Sent · View chat' confirmation that opens the DM conversation."
@@ -3102,7 +3210,7 @@
   },
   "dmStatusNotSentToEveryone": "Tidak dihantar kepada semua orang",
   "@dmStatusNotSentToEveryone": {
-    "description": "Caption under a sent group DM bubble that reached some members but not all, after the sender stopped trying to reach the rest (Stop trying, or a delete for everyone that has not gone through). Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it."
+    "description": "Caption under a sent group DM bubble that reached some members but not all, after delivery to the rest stopped: the sender chose Stop trying, a delete for everyone has not gone through, or the app gave up on a member whose inbox could not be read once its retries ran out. Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it."
   },
   "inboxConversationActionsSheetLabel": "Tindakan perbualan",
   "@inboxConversationActionsSheetLabel": {
@@ -3402,11 +3510,11 @@
     }
   },
   "videoClipSemanticValueSelectedAtPosition": "Dipilih, nombor {position}",
-  "videoClipSemanticValueSelected": "Dipilih",
   "videoClipSemanticValueNotSelected": "Tidak dipilih",
   "videoClipSemanticHintDisabled": "Dilumpuhkan",
-  "videoClipSemanticHintSelect": "Ketik untuk memilih, tekan lama untuk pratonton",
-  "videoClipSemanticHintDeselect": "Ketik untuk menyahpilih, tekan lama untuk pratonton",
+  "videoClipSemanticHintSelect": "Ketik untuk memilih",
+  "videoClipSemanticHintDeselect": "Ketik untuk menyahpilih",
+  "videoClipSemanticHintPreview": "Ketik untuk pratonton",
   "routerInvalidCreator": "Pencipta tidak sah",
   "routerInvalidHashtagRoute": "Laluan hashtag tidak sah",
   "categoryGalleryCouldNotLoadVideos": "Tidak dapat memuatkan video",
@@ -3813,6 +3921,7 @@
   "publishErrorPermissionDenied": "Divine tidak mempunyai kebenaran untuk memuat naik. Semak kebenaran apl dalam tetapan anda dan cuba lagi.",
   "publishErrorOutOfMemory": "Peranti anda kekurangan memori. Tutup beberapa apl dan cuba lagi.",
   "publishErrorOverlaysUnavailable": "Teks dan pelekat pada draf ini tidak dapat disediakan. Buka ia dalam penyunting, kemudian siarkan semula.",
+  "publishErrorQuestionStickerRestricted": "Akaun anda tidak boleh menyiarkan pelekat soalan, kerana jawapannya datang sebagai mesej peribadi. Alih keluar pelekat itu, kemudian siarkan semula.",
   "publishErrorTooManyDetachedClips": "Peranti anda tidak dapat mengeksport klip ditanggalkan sebanyak ini serentak. Kembalikan beberapa ke garis masa dan cuba lagi.",
   "publishErrorDraftTooManyDetachedClips": "Peranti anda tidak dapat mengeksport klip ditanggalkan sebanyak ini serentak. Buka draf dalam penyunting, kembalikan beberapa ke garis masa, kemudian siarkan semula.",
   "publishErrorUnknownServer": "Pelayan tidak diketahui",
@@ -4224,6 +4333,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} menyukai video yang menanda anda",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} menyukai komen anda",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",
@@ -4533,6 +4650,8 @@
     "description": "Confirmation-sheet title shown before permanently deleting every clip from trash."
   },
   "libraryTrashEmptyConfirmMessage": "Ini memadam {count, plural, =1{1 klip} other{{count} klip}} secara kekal daripada tong sampah serta-merta.",
+  "libraryTrashClipsRestored": "{count, plural, =1{Klip dipulihkan} other{{count} klip dipulihkan}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{Klip dipadam secara kekal} other{{count} klip dipadam secara kekal}}",
   "@libraryTrashEmptyConfirmMessage": {
     "description": "Confirmation-sheet subtitle shown before permanently deleting every clip from trash.",
     "placeholders": {
@@ -4638,9 +4757,51 @@
   "videoEditorEffectConfetti": "Konfeti",
   "videoEditorEffectHearts": "Hati",
   "videoEditorEffectSparkles": "Kilauan",
+  "videoEditorEffectRain": "Hujan",
+  "videoEditorEffectLeaves": "Daun",
+  "videoEditorEffectBlossoms": "Kelopak",
+  "videoEditorEffectBubbles": "Buih",
+  "videoEditorEffectBokeh": "Bokeh",
+  "videoEditorEffectMusicNotes": "Not muzik",
+  "videoEditorEffectStars": "Bintang",
+  "videoEditorEffectFireflies": "Kelip-kelip",
+  "videoEditorEffectEmbers": "Bara",
+  "videoEditorEffectMoney": "Duit",
+  "videoEditorEffectBalloons": "Belon",
   "videoEditorEffectTiltShift": "Tilt-Shift",
   "videoEditorEffectZoomBlur": "Kabur Zum",
+  "videoEditorEffectSpinBlur": "Kabur Putar",
   "videoEditorEffectComic": "Komik",
+  "videoEditorEffectSwirl": "Pusaran",
+  "videoEditorEffectRipple": "Riak",
+  "videoEditorEffectFlutedGlass": "Kaca Beralur",
+  "videoEditorEffectEightBit": "8-Bit",
+  "videoEditorEffectAnaglyph": "Cermin Mata 3D",
+  "videoEditorEffectRiso": "Cetakan Riso",
+  "videoEditorEffectTealOrange": "Teal & Oren",
+  "videoEditorEffectWarmFilm": "Filem Hangat",
+  "videoEditorEffectSlideFilm": "Filem Slaid",
+  "videoEditorEffectCoolFilm": "Filem Sejuk",
+  "videoEditorEffectMatte": "Mat",
+  "videoEditorEffectBleachBypass": "Bleach Bypass",
+  "videoEditorEffectCrossProcess": "Proses Silang",
+  "videoEditorEffectGoldenHour": "Waktu Keemasan",
+  "videoEditorEffectMoonlight": "Cahaya Bulan",
+  "videoEditorEffectSilver": "Perak",
+  "videoEditorEffectCategoryRetro": "Retro",
+  "videoEditorEffectCategoryGlitch": "Glitch",
+  "videoEditorEffectCategoryDistort": "Herotan",
+  "videoEditorEffectCategoryLight": "Cahaya",
+  "videoEditorEffectCategoryMotion": "Gerakan",
+  "videoEditorEffectCategoryParticles": "Zarah",
+  "videoEditorEffectCategoryLooks": "Rona",
+  "videoEditorFilterCategoryNatural": "Semula jadi",
+  "videoEditorFilterCategoryVibrant": "Terang",
+  "videoEditorFilterCategoryWarm": "Hangat",
+  "videoEditorFilterCategoryCool": "Sejuk",
+  "videoEditorFilterCategoryVintage": "Vintaj",
+  "videoEditorFilterCategoryBlackAndWhite": "Hitam putih",
+  "videoEditorFilterCategoryTints": "Warna",
   "videoEditorDropsSettingsTitle": "Laras titisan",
   "videoEditorDropsCountLabel": "Bilangan",
   "videoEditorDropsSizeLabel": "Saiz",
@@ -5386,6 +5547,8 @@
   "videoEditorLayerAnimationPulseTo": "Kecut ke",
   "videoEditorLayerAnimationWiggleAngle": "Kecondongan",
   "videoEditorLayerAnimationBounceHeight": "Ketinggian",
+  "videoEditorLayerAnimationFlipSideways": "Ke sisi",
+  "videoEditorLayerAnimationFlipOver": "Atas ke bawah",
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
@@ -5416,6 +5579,101 @@
   "videoEditorFeedPreviewContent": "Elakkan meletakkan kandungan di belakang kawasan ini.",
   "videoEditorStickersDivineOriginals": "Divine Originals",
   "videoEditorStickerSearchHint": "Cari pelekat...",
+  "videoEditorInfoStickersTitle": "Info",
+  "videoEditorSocialStickersTitle": "Sosial",
+  "videoEditorSocialStickerMention": "Sebutan",
+  "videoEditorSocialStickerHashtag": "Hashtag",
+  "videoEditorSocialStickerSoundCredit": "Bunyi",
+  "videoEditorSocialStickerMentionSample": "namaanda",
+  "videoEditorSocialStickerHashtagSample": "hashtag",
+  "videoEditorSocialStickerChoosePerson": "Pilih seseorang",
+  "videoEditorSocialStickerMentionNote": "Mereka disebut dalam siaran anda dan menerima pemberitahuan.",
+  "videoEditorSocialStickerHashtagHint": "Taip hashtag",
+  "videoEditorSocialStickerHashtagNote": "Turut ditambah pada hashtag siaran anda.",
+  "videoEditorSocialStickerLyricHint": "Satu baris lirik (pilihan)",
+  "videoEditorSocialStickerLink": "Pautan",
+  "videoEditorSocialStickerLinkUrlHint": "Alamat web",
+  "videoEditorSocialStickerLinkTitleHint": "Tajuk (pilihan)",
+  "videoEditorSocialStickerLinkNote": "Alamat ditambah pada siaran anda.",
+  "videoEditorSocialStickerLinkInvalid": "Itu belum lagi alamat web.",
+  "videoEditorInteractiveStickersTitle": "Interaktif",
+  "videoEditorSocialStickerCountdown": "Kira detik",
+  "videoEditorSocialStickerCountdownSample": "Musim panas",
+  "videoEditorSocialStickerCountdownTitleHint": "Anda mengira detik untuk apa?",
+  "videoEditorSocialStickerCountdownNote": "Penonton nampak baki masa dan boleh tetapkan peringatan.",
+  "videoEditorSocialStickerCountdownOver": "Saat itu sudah berlalu. Pilih yang baharu.",
+  "videoEditorSocialStickerReply": "Balasan",
+  "videoEditorSocialStickerReplyNote": "Penonton ketik padanya untuk lihat apa yang anda balas.",
+  "videoEditorSocialStickerSoundNote": "Not",
+  "videoEditorSocialStickerSoundVinyl": "Piring hitam",
+  "videoEditorSocialStickerSoundCassette": "Kaset",
+  "videoEditorSocialStickerSoundEqualizer": "Penyama",
+  "videoEditorSocialStickerSoundPlayer": "Pemain",
+  "videoEditorInfoStickerTime": "Masa",
+  "videoEditorInfoStickerDate": "Tarikh",
+  "videoEditorInfoStickerLocation": "Lokasi",
+  "videoEditorInfoStickerWeather": "Cuaca",
+  "videoEditorInfoStickerAltitude": "Ketinggian",
+  "videoEditorInfoStickerBattery": "Bateri",
+  "videoEditorInfoStickerStyleLight": "Cerah",
+  "videoEditorInfoStickerStyleDark": "Gelap",
+  "videoEditorInfoStickerStyleBrand": "Hijau",
+  "videoEditorInfoStickerStyleOutline": "Garis luar",
+  "videoEditorInfoStickerStyleDigital": "Digital",
+  "videoEditorInfoStickerStyleAnalog": "Analog",
+  "videoEditorInfoStickerStyleGlass": "Kaca",
+  "videoEditorInfoStickerStyleHighlight": "Kuning",
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "videoEditorInfoStickerStylePlain": "Ringkas",
+  "videoEditorInfoStickerChangePlace": "Tukar tempat",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Carian tempat tidak tersedia pada peranti ini.",
+  "videoEditorInfoStickerRecordedValue": "Rakaman · {value}",
+  "videoEditorInfoStickerNowValue": "Sekarang · {value}",
+  "videoEditorInfoStickerTodayValue": "Hari ini · {value}",
+  "videoEditorInfoStickerDayCount": "Pengira hari",
+  "videoEditorInfoStickerSun": "Matahari",
+  "videoEditorInfoStickerMoon": "Bulan",
+  "videoEditorInfoStickerRecTimer": "Pemasa REC",
+  "videoEditorInfoStickerStyleFilm": "Filem",
+  "videoEditorInfoStickerStyleCamcorder": "Kamera video",
+  "videoEditorInfoStickerDayCountValue": "Hari ke-{day}",
+  "videoEditorInfoStickerDayCountOfValue": "Hari ke-{day} daripada {total}",
+  "videoEditorInfoStickerDayLabel": "Hari",
+  "videoEditorInfoStickerDayTotalLabel": "Jumlah hari (pilihan)",
+  "videoEditorInfoStickerSymbolPin": "Pin",
+  "videoEditorInfoStickerSymbolFlag": "Bendera",
+  "videoEditorInfoStickerSymbolGlobe": "Glob",
+  "videoEditorInfoStickerSymbolMap": "Peta",
+  "videoEditorInfoStickerMoonNew": "Anak bulan",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Sabit muda",
+  "videoEditorInfoStickerMoonFirstQuarter": "Suku pertama",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Bulan cembung muda",
+  "videoEditorInfoStickerMoonFull": "Bulan purnama",
+  "videoEditorInfoStickerMoonWaningGibbous": "Bulan cembung tua",
+  "videoEditorInfoStickerMoonLastQuarter": "Suku akhir",
+  "videoEditorInfoStickerMoonWaningCrescent": "Sabit tua",
+  "videoEditorInfoStickerPlaceSearchHint": "Cari bandar atau tempat",
+  "videoEditorInfoStickerPlaceNoResults": "Tiada tempat ditemui",
+  "videoEditorInfoStickerPlaceSearchFailed": "Tidak dapat mencari tempat. Cuba lagi.",
+  "videoEditorInfoStickerPlacePrivacyNote": "Hanya nama tempat yang masuk ke dalam video anda, bukan kedudukan tepat anda.",
+  "videoEditorInfoStickerLoading": "Memuatkan…",
+  "videoEditorInfoStickerLoadFailed": "Tidak dapat dimuatkan. Cuba lagi.",
+  "videoEditorInfoStickerMetAttribution": "Data daripada MET Norway",
+  "videoEditorInfoStickerWeatherNow": "Tiada data cuaca untuk video lama, jadi ini cuaca sekarang.",
+  "videoEditorInfoStickerWeatherSunny": "Cerah",
+  "videoEditorInfoStickerWeatherClearNight": "Malam cerah",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Separa mendung",
+  "videoEditorInfoStickerWeatherCloudy": "Mendung",
+  "videoEditorInfoStickerWeatherFog": "Kabus",
+  "videoEditorInfoStickerWeatherRain": "Hujan",
+  "videoEditorInfoStickerWeatherShowers": "Hujan berselang",
+  "videoEditorInfoStickerWeatherSnow": "Salji",
+  "videoEditorInfoStickerWeatherThunderstorm": "Ribut petir",
+  "videoEditorInfoStickerSunTimeZoneNote": "Masa dipaparkan dalam zon waktu telefon anda.",
+  "videoEditorInfoStickerTemperatureLabel": "Suhu",
+  "videoEditorInfoStickerUnitLabel": "Unit",
+  "videoEditorInfoStickerBatteryLevelLabel": "Tahap bateri",
+  "videoEditorInfoStickerAdd": "Tambah pelekat",
   "videoEditorSelectFontSemanticLabel": "Pilih fon",
   "videoEditorFontUnknown": "Tidak diketahui",
   "videoEditorSplitPlayheadOutsideClip": "Kepala main mestilah berada dalam klip yang dipilih untuk memisahkan.",
@@ -6072,6 +6330,7 @@
       }
     }
   },
+  "videoMetadataTagsPickerStickerTag": "{tag}, daripada pelekat dalam video anda",
   "authMinAgeNotice": "Divine Greenlight",
   "@authMinAgeNotice": {
     "description": "Welcome-screen Divine Greenlight label above the sign-in / create-account buttons."
@@ -7089,8 +7348,97 @@
   "ideasDescriptionFive": "Cuma hendak berkongsi.",
   "ideasTitleSix": "Sedikit tentang hari ini",
   "ideasDescriptionSix": "Saya tinggalkan ini di sini.",
+  "messagesRoomsUnreadLabel": "{count, plural, other{Bilik, {displayCount} mesej belum dibaca}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, other{{displayCount} baharu}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, other{{displayCount} mesej belum dibaca}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, other{{displayCount} orang}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, other{{displayCount} mesej}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "24 jam terakhir",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Menyemak aktiviti…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Aktiviti tidak dapat dimuatkan.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Tiada mesej terkini. Jom sapa yang lain.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Langsung",
   "messagesRooms": "Bilik",
+  "messagesRoomsWithUnread": "Bilik ({badge})",
   "messagesPublicTestRooms": "Bilik ujian awam",
   "messagesPublicTestDisclosure": "Bilik ujian ini terbuka kepada umum. Sesiapa yang mempunyai akses boleh membaca mesej anda.",
   "messagesNoRooms": "Belum ada bilik",
@@ -7194,5 +7542,57 @@
   "videoEditorLoopRepairProgress": "Menjajarkan gelung anda…",
   "videoEditorLoopRepairTrimmed": "Gelung dilancarkan. {seconds} s dibuang.",
   "notificationFromDivine": "Daripada Divine",
-  "announcementUnavailable": "Pengumuman ini tidak lagi tersedia."
+  "announcementUnavailable": "Pengumuman ini tidak lagi tersedia.",
+  "creatorHighlightLabel": "Sorotan harian anda",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "Video yang anda hasilkan hari ini: {count}.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "Minggu ini ada sedikit lagi sentuhan anda.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "Hari berkarya minggu ini: {count}. Teruskan berkarya.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "Jumlah tontonan setakat ini bagi video yang anda siarkan minggu ini: {count}.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "Paling banyak ditonton antara video yang anda siarkan minggu ini",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "Hasilkan lagi",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "Lihat statistik anda",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "Tonton video",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

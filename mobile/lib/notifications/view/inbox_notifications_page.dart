@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/blocs/badges/badges_cubit.dart';
+import 'package:openvine/features/creator_highlights/creator_highlights_inbox_view.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mixins/reduced_motion_tab_controller_mixin.dart';
 import 'package:openvine/notifications/bloc/notification_feed_bloc.dart';
@@ -189,7 +190,18 @@ class _InboxNotificationsScaffoldState
                             onViewPending: () =>
                                 tabController.animateTo(_badgesTabIndex),
                           ),
-                          const Expanded(child: NotificationsView()),
+                          Expanded(
+                            child: AnimatedBuilder(
+                              animation: tabController,
+                              builder: (context, child) =>
+                                  CreatorHighlightsInboxView(
+                                    isVisible:
+                                        widget.isVisible &&
+                                        tabController.index == 0 &&
+                                        !tabController.indexIsChanging,
+                                  ),
+                            ),
+                          ),
                         ],
                       ),
                     ),

@@ -170,6 +170,13 @@ pushNotificationTapTarget({
   required String? tapTargetType,
   required String? tapTargetValue,
 }) {
+  if (notificationType == NotificationWireValues.activityDigest) {
+    return (
+      target: const OpenInboxTarget(),
+      targetEventId: null,
+      videoCoordinate: null,
+    );
+  }
   if (notificationType == NotificationWireValues.campaign) {
     final location = campaignAppRoute(
       type: tapTargetType,

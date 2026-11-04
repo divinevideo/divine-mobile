@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:notification_repository/notification_repository.dart';
+import 'package:openvine/features/chat/chat_mention_providers.dart';
 import 'package:openvine/notifications/providers/announcement_providers.dart';
 import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
@@ -94,6 +95,7 @@ final notificationRepositoryProvider = Provider<NotificationRepository?>((ref) {
 
   final repository = NotificationRepository(
     announcementsRepository: announcements,
+    localNotifications: ref.watch(chatMentionRepositoryProvider),
     funnelcakeApiClient: funnelcakeApiClient,
     profileRepository: profileRepository,
     notificationsDao: db.notificationsDao,

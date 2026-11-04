@@ -35,11 +35,16 @@ class VideoDetailRouteExtra {
     this.fallbackVideoIds = const [],
     this.initialVideo,
     this.dmReplyContext,
+    this.focusCommentId,
   });
 
   final bool autoOpenComments;
   final List<String> fallbackVideoIds;
   final VideoEvent? initialVideo;
+
+  /// The comment the comments sheet [autoOpenComments] opens scrolls to,
+  /// such as the one a tapped reply sticker replies to.
+  final String? focusCommentId;
 
   /// Present when the reel was opened from a DM thread — drives the in-player
   /// reply/reaction bar. Null for feed/profile opens.
@@ -69,6 +74,7 @@ class VideoDetailScreen extends ConsumerWidget {
     this.initialVideo,
     this.videoFeedBuilder,
     this.dmReplyContext,
+    this.focusCommentId,
     super.key,
   });
 
@@ -77,6 +83,9 @@ class VideoDetailScreen extends ConsumerWidget {
   final List<String> fallbackVideoIds;
   final VideoEvent? initialVideo;
   final Widget Function(VideoEvent video)? videoFeedBuilder;
+
+  /// The comment the comments sheet [autoOpenComments] opens scrolls to.
+  final String? focusCommentId;
 
   /// Present when opened from a DM thread — forwarded to the player for the
   /// in-player reply/reaction bar.
@@ -222,7 +231,10 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
     ref.watch(blocklistVersionProvider);
     ref.watch(divineHostFilterVersionProvider);
     ref.watch(contentFilterVersionProvider);
-    final videoEventService = ref.read(videoEventServiceProvider);
+    // Watched, not read: a read leaves the service without a listener once the
+    // screen covers the feed, so Riverpod defers its post-sign-in rebuild to
+    // the next read — this build — where it schedules a refresh mid-build.
+    final videoEventService = ref.watch(videoEventServiceProvider);
     final screen = widget.screen;
 
     return BlocConsumer<VideoDetailCubit, VideoDetailState>(
@@ -273,6 +285,7 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
               contextTitle: context.l10n.videoDetailContextTitle,
               trafficSource: ViewTrafficSource.share,
               autoOpenComments: screen.autoOpenComments,
+              focusCommentId: screen.focusCommentId,
               dmReplyContext: screen.dmReplyContext,
             );
         }

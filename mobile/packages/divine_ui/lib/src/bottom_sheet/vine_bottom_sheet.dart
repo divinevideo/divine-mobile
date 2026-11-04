@@ -152,9 +152,15 @@ class VineBottomSheet extends StatelessWidget {
   /// underlying [DraggableScrollableSheet] to enable snap-to-position
   /// behaviour between user-defined fractions of the viewport.
   ///
-  /// [useRootNavigator] is forwarded to [showModalBottomSheet]; set it to
-  /// true when the sheet must appear above a nested navigator such as the
-  /// tab shell.
+  /// [useRootNavigator] is forwarded to [showModalBottomSheet]. It defaults
+  /// to true so the sheet covers the bottom navigation of a tab shell. Set it
+  /// to false only to keep the sheet in the nearest enclosing navigator.
+  ///
+  /// With the default, the opener's nearest navigator can differ from the
+  /// sheet's. Close the sheet from a context inside it, for example
+  /// `Navigator.of(context).pop()` in the body: a navigator resolved from the
+  /// opener before the sheet opens would pop the wrong route. If it must be
+  /// resolved early, use `Navigator.of(context, rootNavigator: true)`.
   ///
   /// [tapOutsideToDismiss], when true (the default) and [scrollable] is
   /// true, wraps the sheet so that taps on the scrim above the sheet
@@ -226,7 +232,7 @@ class VineBottomSheet extends StatelessWidget {
     double maxChildSize = 0.9,
     bool snap = false,
     List<double>? snapSizes,
-    bool useRootNavigator = false,
+    bool useRootNavigator = true,
     bool tapOutsideToDismiss = true,
     Widget Function(BuildContext context, Widget child)? contentWrapper,
     VoidCallback? onShow,

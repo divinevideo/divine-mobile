@@ -271,8 +271,7 @@ void main() {
 
       // A pause-aware sheet opened with `useRootNavigator: false` lives on a
       // branch navigator, so the shell stays the top *root* route while that
-      // sheet is on screen — community_suggest_sheet.dart is the shipped
-      // example. Model that still-visible hold.
+      // sheet is on screen. Model that still-visible hold.
       final sheetOwner = Object();
       container
           .read(overlayVisibilityProvider.notifier)

@@ -32,6 +32,12 @@ final class ProfileFeedRefreshRequested extends ProfileFeedEvent {
   final Completer<void>? completer;
 }
 
+/// Reloads the feed after a failed cold load; ignored unless the feed is in
+/// [ProfileFeedStatus.failure]. `droppable`, so a burst of triggers runs once.
+final class ProfileFeedRetryRequested extends ProfileFeedEvent {
+  const ProfileFeedRetryRequested();
+}
+
 /// Re-applies feed filters in place over the cached source (no re-fetch).
 /// Dispatched when a blocklist/content-preference version changes (#4782).
 final class ProfileFeedFiltersChanged extends ProfileFeedEvent {
@@ -49,11 +55,6 @@ final class ProfileFeedRelaySnapshotChanged extends ProfileFeedEvent {
 /// `restartable`.
 final class ProfileFeedVideoUpdated extends ProfileFeedEvent {
   const ProfileFeedVideoUpdated();
-}
-
-/// Internal: the cold-load hard timeout fired; clears [ProfileFeedState.isInitialLoad].
-final class ProfileFeedInitialLoadTimedOut extends ProfileFeedEvent {
-  const ProfileFeedInitialLoadTimedOut();
 }
 
 /// Internal: background Nostr enrichment of the REST page completed; merge the

@@ -4,6 +4,7 @@
 // ABOUTME: All queries are scoped by ownerPubkey for multi-account isolation.
 
 import 'package:db_client/db_client.dart';
+import 'package:db_client/src/database/daos/held_pool_wraps.dart';
 import 'package:drift/drift.dart';
 
 part 'direct_messages_dao.g.dart';
@@ -50,6 +51,20 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
   /// state (#8201).
   static const String deletionBlocked = 'deletion_blocked';
 
+  /// The automatic retries ran out with no relay confirming the wrap for
+  /// every recipient (#10012). Not terminal: the row keeps its kind-5 and
+  /// held wraps, stays on the retry worklist for a later launch, and the
+  /// sender sees a warning with Try again instead of a spinner.
+  static const String deletionUnconfirmed = 'deletion_unconfirmed';
+
+  /// Own retractions whose message the sender still sees in the thread: none
+  /// is confirmed for every recipient yet.
+  static const List<String> retractionsShownToSender = [
+    deletionPending,
+    deletionBlocked,
+    deletionUnconfirmed,
+  ];
+
   /// Build a filter expression that returns rows owned by [ownerPubkey]
   /// **or** legacy rows with no owner.
   ///
@@ -77,11 +92,22 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     return exactOwner | (legacy & exactCopyExists.not());
   }
 
+  /// Rows [ownerPubkey] holds, counting a legacy unowned row as its own.
+  ///
+  /// Unlike [_visibleToOwner] this ignores the owned-copy shadowing: a
+  /// dedup probe asks whether the account has handled the wrap, not which of
+  /// two rows it should read.
+  Expression<bool> _heldBy($DirectMessagesTable row, String ownerPubkey) {
+    return row.ownerPubkey.equals(ownerPubkey) |
+        row.ownerPubkey.equals('') |
+        row.ownerPubkey.isNull();
+  }
+
   /// Rows the sender must still be able to recognize in the conversation.
   ///
-  /// A pending or refused own retraction is deliberately visible even though
-  /// `is_deleted` is already true. The message disappears only after every
-  /// recipient confirms the deletion.
+  /// An own retraction in [retractionsShownToSender] is deliberately visible
+  /// even though `is_deleted` is already true. The message disappears only
+  /// after every recipient confirms the deletion.
   ///
   /// Never NULL, so [isRetracted] can negate it: a status that is NULL makes
   /// `IN` NULL, and NOT NULL is NULL too.
@@ -93,21 +119,23 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
         ? const Constant(false)
         : t.senderPubkey.equals(ownerPubkey) &
               t.deletionPublishStatus.isNotNull() &
-              t.deletionPublishStatus.isIn([deletionPending, deletionBlocked]);
+              t.deletionPublishStatus.isIn(retractionsShownToSender);
     return t.isDeleted.equals(false) | uncertainOwnRetraction;
   }
 
   /// Insert a decrypted DM, returning whether a row was actually written.
   ///
   /// Uses `INSERT OR IGNORE` so that violations on either the primary key
-  /// (`id`, `owner_pubkey`) **or** the UNIQUE index on `gift_wrap_id` are
-  /// handled gracefully without throwing. A `false` return means a local
-  /// uniqueness constraint skipped the row, and callers must avoid advancing
-  /// receive-side state that depends on a newly persisted message.
+  /// (`id`, `owner_pubkey`) **or** the UNIQUE index on (`gift_wrap_id`,
+  /// `owner_pubkey`) are handled gracefully without throwing. A `false` return
+  /// means a local uniqueness constraint skipped the row, and callers must
+  /// avoid advancing receive-side state that depends on a newly persisted
+  /// message.
   ///
   /// NIP-17 rumor events are immutable — the same rumor ID always carries
-  /// the same content. Rumor uniqueness is owner-scoped, while gift-wrap IDs
-  /// remain globally unique because a wrap has exactly one recipient.
+  /// the same content. Both the rumor ID and the gift-wrap ID are unique per
+  /// owner: an outgoing row holds the recipient's wrap ID and a kind-4 ID is
+  /// shared by both ends, so two local accounts can hold one ID (#6645).
   ///
   /// For kind 14 (text), only [content] is used.
   /// For kind 15 (file), [content] holds the file URL and file metadata
@@ -368,25 +396,105 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
   /// worklist until every recipient confirms the wrap. Mirrors
   /// `DmReactionsDao.markOwnDeletionPending`.
   ///
+  /// The wraps held for an earlier kind-5 (#10012) are kept only when
+  /// [deletionRumorJson] is that same kind-5, as when a blocked retraction is
+  /// tried again.
+  ///
   /// Returns `true` if the row was updated, `false` if [rumorId] was not
   /// found.
   Future<bool> markMessageDeletionPending(
     String rumorId, {
     required String deletionRumorJson,
     String? ownerPubkey,
-  }) async {
-    final rows =
-        await (update(directMessages)..where(
-              (t) => t.id.equals(rumorId) & _visibleToOwner(t, ownerPubkey),
-            ))
-            .write(
-              DirectMessagesCompanion(
-                isDeleted: const Value(true),
-                deletionRumorJson: Value(deletionRumorJson),
-                deletionPublishStatus: const Value(deletionPending),
-              ),
-            );
-    return rows > 0;
+  }) {
+    return transaction(() async {
+      final row = await _firstVisible(rumorId, ownerPubkey);
+      final sameRetraction = row?.deletionRumorJson == deletionRumorJson;
+      final rows =
+          await (update(directMessages)..where(
+                (t) => t.id.equals(rumorId) & _visibleToOwner(t, ownerPubkey),
+              ))
+              .write(
+                DirectMessagesCompanion(
+                  isDeleted: const Value(true),
+                  deletionRumorJson: Value(deletionRumorJson),
+                  deletionPublishStatus: const Value(deletionPending),
+                  heldDeletionWraps: sameRetraction
+                      ? const Value.absent()
+                      : const Value(null),
+                ),
+              );
+      return rows > 0;
+    });
+  }
+
+  /// Record that a fallback-pool relay accepted [wrapEventId], a gift wrap of
+  /// the kind-5 retracting [rumorId], for [recipientPubkey] while their inbox
+  /// could not be read (#10012), in [DirectMessages.heldDeletionWraps].
+  ///
+  /// Recorded only while the retraction is still pending, or unconfirmed
+  /// because its retries ran out (an automatic retry leaves it so), with its
+  /// stored kind-5, so an attempt that ends after another one settled the row
+  /// records nothing. A recipient already recorded as having the retraction
+  /// keeps that. Returns whether it was recorded.
+  Future<bool> recordHeldDeletionWrap(
+    String rumorId, {
+    required String recipientPubkey,
+    required String wrapEventId,
+    String? ownerPubkey,
+  }) => _recordDeletionWraps(
+    rumorId,
+    wraps: {recipientPubkey: wrapEventId},
+    delivered: false,
+    ownerPubkey: ownerPubkey,
+  );
+
+  /// Record that each recipient in [wraps] has the retraction of [rumorId],
+  /// through the gift wrap it names, in [DirectMessages.heldDeletionWraps]
+  /// (#10012), so a later attempt sends them nothing. Recorded on the terms
+  /// [recordHeldDeletionWrap] records on. Returns whether it was recorded.
+  Future<bool> recordDeliveredDeletionWraps(
+    String rumorId, {
+    required Map<String, String> wraps,
+    String? ownerPubkey,
+  }) => _recordDeletionWraps(
+    rumorId,
+    wraps: wraps,
+    delivered: true,
+    ownerPubkey: ownerPubkey,
+  );
+
+  Future<bool> _recordDeletionWraps(
+    String rumorId, {
+    required Map<String, String> wraps,
+    required bool delivered,
+    String? ownerPubkey,
+  }) {
+    return transaction(() async {
+      final row = await _firstVisible(rumorId, ownerPubkey);
+      if (row == null ||
+          row.deletionRumorJson == null ||
+          (row.deletionPublishStatus != deletionPending &&
+              row.deletionPublishStatus != deletionUnconfirmed)) {
+        return false;
+      }
+      final rows =
+          await (update(directMessages)..where(
+                (t) => t.id.equals(rumorId) & _visibleToOwner(t, ownerPubkey),
+              ))
+              .write(
+                DirectMessagesCompanion(
+                  heldDeletionWraps: Value(
+                    withHeldWraps(
+                      row.heldDeletionWraps,
+                      wraps,
+                      delivered: delivered,
+                    ),
+                  ),
+                ),
+              );
+      return rows > 0;
+    });
   }
 
   /// A relay confirmed the deletion wrap: drop the stored rumor and move the
@@ -435,12 +543,63 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     ownerPubkey: ownerPubkey,
   );
 
+  /// Record that the automatic retries of the pending retraction of [rumorId]
+  /// ran out without every recipient confirming it (#10012).
+  ///
+  /// The row keeps its kind-5, its held wraps and `is_deleted`, so the sender
+  /// sees it with a warning and Try again, and a later launch retries it.
+  /// Only a `deletion_pending` row changes, so a confirmation or a block that
+  /// landed first is never overwritten. Returns whether the row was changed.
+  Future<bool> markMessageDeletionUnconfirmed(
+    String rumorId, {
+    String? ownerPubkey,
+  }) async {
+    final rows =
+        await (update(directMessages)..where(
+              (t) =>
+                  t.id.equals(rumorId) &
+                  _visibleToOwner(t, ownerPubkey) &
+                  t.deletionPublishStatus.equals(deletionPending),
+            ))
+            .write(
+              const DirectMessagesCompanion(
+                deletionPublishStatus: Value(deletionUnconfirmed),
+              ),
+            );
+    return rows > 0;
+  }
+
+  /// Move a retraction whose retries ran out ([deletionUnconfirmed]) back to
+  /// pending for the sender's Try again (#10012), keeping its kind-5 and held
+  /// wraps. Compare-and-set: only an unconfirmed row changes, so one that
+  /// settled as sent or blocked in the meantime is never reopened. Returns
+  /// whether the row was changed.
+  Future<bool> markUnconfirmedMessageDeletionPending(
+    String rumorId, {
+    String? ownerPubkey,
+  }) async {
+    final rows =
+        await (update(directMessages)..where(
+              (t) =>
+                  t.id.equals(rumorId) &
+                  _visibleToOwner(t, ownerPubkey) &
+                  t.deletionPublishStatus.equals(deletionUnconfirmed),
+            ))
+            .write(
+              const DirectMessagesCompanion(
+                deletionPublishStatus: Value(deletionPending),
+              ),
+            );
+    return rows > 0;
+  }
+
   /// Move a deletion row to a terminal [status].
   ///
   /// [retainRumor] and [restoreToThread] are required rather than defaulted:
   /// whether the payload survives, and whether the message comes back, are the
   /// whole difference between the two terminal states, so a future third
-  /// caller has to decide both deliberately.
+  /// caller has to decide both deliberately. The wraps held for the rumor
+  /// (#10012) go or stay with it.
   ///
   /// `is_deleted` is written in both directions rather than left absent: a
   /// restored blocked row is visible AND still holds a rumor, so a later
@@ -462,6 +621,9 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
                 deletionRumorJson: retainRumor
                     ? const Value.absent()
                     : const Value(null),
+                heldDeletionWraps: retainRumor
+                    ? const Value.absent()
+                    : const Value(null),
                 isDeleted: Value(!restoreToThread),
                 deletionPublishStatus: Value(status),
               ),
@@ -470,7 +632,8 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Own deletions still awaiting confirmed delivery, oldest first — the
-  /// retry sweep's worklist.
+  /// retry sweep's worklist. A row whose earlier automatic retries ran out
+  /// ([deletionUnconfirmed]) stays on it, so a later launch tries again.
   ///
   /// Scoped to rows this account authored *and* soft-deleted, so a peer's
   /// deletion applied locally is never re-published from this device.
@@ -484,10 +647,23 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
                 t.senderPubkey.equals(ownerPubkey) &
                 t.isDeleted.equals(true) &
                 t.deletionRumorJson.isNotNull() &
-                t.deletionPublishStatus.equals(deletionPending),
+                t.deletionPublishStatus.isIn(const [
+                  deletionPending,
+                  deletionUnconfirmed,
+                ]),
           )
           ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
         .get();
+  }
+
+  /// The row an update of [rumorId] for [ownerPubkey] reads first. Unlike
+  /// [getMessageById] it never throws when, with no owner given, several
+  /// accounts hold the id.
+  Future<DirectMessageRow?> _firstVisible(String rumorId, String? ownerPubkey) {
+    return (select(directMessages)
+          ..where((t) => t.id.equals(rumorId) & _visibleToOwner(t, ownerPubkey))
+          ..limit(1))
+        .getSingleOrNull();
   }
 
   /// Look up a message by rumor event ID.
@@ -519,30 +695,42 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     return await query.getSingleOrNull() != null;
   }
 
-  /// Check if a gift wrap event has already been processed (dedup).
+  /// Has [ownerPubkey] already persisted a message for [giftWrapId] (dedup)?
   ///
-  /// Intentionally NOT scoped by `ownerPubkey`: gift-wrap event IDs are
-  /// globally unique per the Nostr protocol, so cross-account dedup
-  /// prevents re-processing the same relay event for multiple local accounts.
-  Future<bool> hasGiftWrap(String giftWrapId) async {
+  /// Owner-scoped: a wrap id is unique to one account only for an inbound
+  /// NIP-17 wrap. An outgoing row stores the *recipient's* wrap id, and a
+  /// kind-4 id is shared by sender and recipient, so on a device holding both
+  /// ends one id sits on two accounts' rows (#6645). A legacy unowned row
+  /// counts as the account's own, as in every other owner-scoped read.
+  Future<bool> hasGiftWrap(
+    String giftWrapId, {
+    required String ownerPubkey,
+  }) async {
     final query = selectOnly(directMessages)
-      ..where(directMessages.giftWrapId.equals(giftWrapId))
-      ..addColumns([directMessages.id]);
-    final result = await query.getSingleOrNull();
-    return result != null;
+      ..where(
+        directMessages.giftWrapId.equals(giftWrapId) &
+            _heldBy(directMessages, ownerPubkey),
+      )
+      ..addColumns([directMessages.id])
+      ..limit(1);
+    return (await query.get()).isNotEmpty;
   }
 
-  /// Which of [giftWrapIds] already have a persisted message row. Batched
-  /// counterpart to [hasGiftWrap]: one `IN` query instead of N single-id
-  /// lookups, used by the history-drain dedup probe to avoid a per-wrap DB
-  /// round trip. Like [hasGiftWrap], it is NOT scoped by `ownerPubkey`
-  /// (gift-wrap IDs are globally unique). Returns an empty set for an empty
-  /// input.
-  Future<Set<String>> giftWrapIdsPresent(Set<String> giftWrapIds) async {
+  /// Which of [giftWrapIds] [ownerPubkey] already has a persisted message row
+  /// for. Batched counterpart to [hasGiftWrap]: one `IN` query instead of N
+  /// single-id lookups, used by the history-drain dedup probe to avoid a
+  /// per-wrap DB round trip. Returns an empty set for an empty input.
+  Future<Set<String>> giftWrapIdsPresent(
+    Set<String> giftWrapIds, {
+    required String ownerPubkey,
+  }) async {
     if (giftWrapIds.isEmpty) return const <String>{};
     final query = selectOnly(directMessages)
       ..addColumns([directMessages.giftWrapId])
-      ..where(directMessages.giftWrapId.isIn(giftWrapIds));
+      ..where(
+        directMessages.giftWrapId.isIn(giftWrapIds) &
+            _heldBy(directMessages, ownerPubkey),
+      );
     final rows = await query.get();
     final present = <String>{};
     for (final row in rows) {

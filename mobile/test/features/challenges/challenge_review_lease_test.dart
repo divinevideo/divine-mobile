@@ -147,7 +147,7 @@ void main() {
           await tester.pumpAndSettle();
           DivineButton agree() => tester.widget<DivineButton>(
             find.ancestor(
-              of: find.text('Agree and submit'),
+              of: find.text('Enter this video'),
               matching: find.byType(DivineButton),
             ),
           );

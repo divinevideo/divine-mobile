@@ -1974,6 +1974,240 @@ class AppLocalizationsAm extends AppLocalizations {
   String get metadataSoundsLabel => 'ይሰማል።';
 
   @override
+  String get metadataLinksLabel => 'ሊንኮች';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'የሊንክ ተለጣፊ፣ $url ይከፍታል';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel => 'የመጥቀሻ ተለጣፊ፣ መገለጫውን ይከፍታል';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'የሃሽታግ ተለጣፊ፣ #$hashtag ይከፍታል';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => 'የድምጽ ተለጣፊ፣ ድምጹን ይከፍታል';
+
+  @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'የቦታ ተለጣፊ፣ $placeን በካርታ ይከፍታል';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel => 'የኋሊት ቆጠራ ተለጣፊ፣ ማስታወሻ ያዘጋጃል';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'የምላሽ ተለጣፊ፣ ይህ ቪዲዮ የሚመልሰውን ይከፍታል';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ቀናት',
+      one: '$count ቀን',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'ማስታወሻ ተዘጋጅቷል። ጊዜው ሲደርስ እናሳውቅዎታለን።';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'ማስታወሻው ተወግዷል።';
+
+  @override
+  String get videoStickerCountdownOver => 'ይህ የኋሊት ቆጠራ አልቋል።';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'ማስታወሻውን ለማግኘት የDivine ማሳወቂያዎችን ያብሩ።';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'ጊዜው ደርሷል! ያስቀመጡት የኋሊት ቆጠራ አሁን አልቋል።';
+
+  @override
+  String get videoStickerQuizRightAnswer => 'ትክክለኛ መልስ';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'የተሳሳተ መልስ';
+
+  @override
+  String get videoStickerPollSignInToVote => 'ድምፅ ለመስጠት ይግቡ።';
+
+  @override
+  String get videoStickerPollNotReady => 'አሁንም በመገናኘት ላይ። ትንሽ ቆይተው እንደገና ይሞክሩ።';
+
+  @override
+  String get videoStickerPollVoteFailed => 'ድምፅዎ አልደረሰም። እንደገና ይሞክሩ።';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'ድምፆች ይፋዊ ናቸው። ማንኛውም ሰው የመረጡትን ማየት ይችላል።';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ድምፆች',
+      one: '$count ድምፅ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => 'ለመመለስ ይንኩ';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'መልስ፦ $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'የእርስዎ ተራ';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ተሳታፊዎች',
+      one: '$count ተሳታፊ',
+      zero: 'ቀድመው ይጀምሩ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count ተሳታፊዎች';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'ተሳታፊዎችን ይመልከቱ';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'የእርስዎ ተራ፦ $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ምላሾች',
+      one: '$count ምላሽ',
+      zero: 'እስካሁን ምንም ምላሽ የለም',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count ምላሾች';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count የቪዲዮ ምላሾችን ይመልከቱ',
+      one: '$count የቪዲዮ ምላሽ ይመልከቱ',
+      zero: 'የቪዲዮ ምላሾች፣ እስካሁን የሉም',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return '$count የቪዲዮ ምላሾችን ይመልከቱ';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => 'ለመመለስ ይግቡ።';
+
+  @override
+  String get videoStickerQuestionUnavailable => 'ጥያቄዎችን መመለስ ለመለያዎ አይገኝም።';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'መልስ';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'የእርስዎ መልስ';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'መልስዎ ለ$name ብቻ ይታያል። ስምዎ ሳይጠቀስ በቪዲዮ ሊጋራ ይችላል።';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'ይላኩ';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'መልሱ ተልኳል።';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong => 'ያ መልስ ለመላክ በጣም ረጅም ነው።';
+
+  @override
+  String get videoStickerQuestionAnswerFailed => 'መልስዎ አልደረሰም። እንደገና ይሞክሩ።';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'ለመሳተፍ ይግቡ።';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'የቪዲዮ ምላሾች';
+
+  @override
+  String get videoStickerRepliesEmpty => 'እስካሁን የቪዲዮ ምላሾች የሉም።';
+
+  @override
+  String get videoStickerRepliesLoadFailed => 'ምላሾቹን መጫን አልተቻለም።';
+
+  @override
+  String get videoStickerRepliesRetry => 'እንደገና ይሞክሩ';
+
+  @override
+  String get videoStickerRepliesPin => 'ይሰኩ';
+
+  @override
+  String get videoStickerRepliesUnpin => 'ያንሱ';
+
+  @override
+  String get videoStickerRepliesHide => 'ይደብቁ';
+
+  @override
+  String get videoStickerRepliesShow => 'ያሳዩ';
+
+  @override
+  String get videoStickerRepliesPinned => 'የተሰካ';
+
+  @override
+  String get videoStickerRepliesHidden => 'የተደበቀ';
+
+  @override
+  String get videoStickerRepliesSaveFailed => 'ማስቀመጥ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return 'የ$nameን ምላሽ ይመልከቱ';
+  }
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'ይህ ሊንክ ከDivine ውጭ ይከፈታል። ከመሄድዎ በፊት አድራሻውን ያረጋግጡ።';
+
+  @override
   String get metadataOriginalSound => 'ኦሪጅናል ድምጽ';
 
   @override
@@ -4266,8 +4500,16 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'አገልጋዩ ጋር መድረስ አልተቻለም። ግንኙነትዎን አረጋግጠው እንደገና ይሞክሩ።';
+  String get profileVideosLoadFailedTitle => 'ቪዲዮዎችዎን መጫን አልተቻለም';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => 'ቪዲዮዎችን መጫን አልተቻለም';
+
+  @override
+  String get profileVideosLoadFailedSubtitle => 'ግንኙነትዎን አረጋግጠው እንደገና ይሞክሩ።';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'እንደገና ይሞክሩ';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -4591,6 +4833,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get routeInvalidSoundId => 'ልክ ያልሆነ የድምጽ መታወቂያ';
+
+  @override
+  String get routeInvalidQuestion => 'ልክ ያልሆነ የጥያቄ አገናኝ';
 
   @override
   String get routeInvalidCategory => 'ልክ ያልሆነ ምድብ';
@@ -5936,6 +6181,19 @@ class AppLocalizationsAm extends AppLocalizations {
   String get dmReelReplyComposerSemanticLabel => 'ለዚህ ሪል ይመልሱ';
 
   @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'ለጥያቄዎ መልስ፦ $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'የእርስዎ መልስ፦ $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'በቪዲዮ ይመልሱ';
+
+  @override
   String get dmReelReplyViewChat => 'ውይይት ይመልከቱ';
 
   @override
@@ -6645,21 +6903,19 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'ተመርጧል';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'አልተመረጠም';
 
   @override
   String get videoClipSemanticHintDisabled => 'ተሰናክሏል';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'ለመምረጥ ነካ ያድርጉ፣ ቅድሚያ ለማሳየት ረዘም ያሉ ጫን';
+  String get videoClipSemanticHintSelect => 'ለመምረጥ ነካ ያድርጉ';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'ለማቋረጥ ነካ ያድርጉ፣ ቅድሚያ ለማሳየት ረዘም ያሉ ጫን';
+  String get videoClipSemanticHintDeselect => 'ለማቋረጥ ነካ ያድርጉ';
+
+  @override
+  String get videoClipSemanticHintPreview => 'ቅድሚያ ለማሳየት ነካ ያድርጉ';
 
   @override
   String get routerInvalidCreator => 'ልክ ያልሆነ ፈጣሪ';
@@ -7499,6 +7755,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'የዚህ ረቂቅ ጽሑፍና ተለጣፊዎች ሊዘጋጁ አልቻሉም። በአራሚው ውስጥ ይክፈቱት፣ ከዚያ እንደገና ይለጥፉ።';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'መለያዎ የጥያቄ ተለጣፊ መለጠፍ አይችልም፣ ምክንያቱም መልሶቹ እንደ የግል መልዕክቶች ይመጣሉ። ያስወግዱት፣ ከዚያ እንደገና ይለጥፉ።';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'መሣሪያዎ ይህን ያህል የተነጠሉ ቅንጥቦችን በአንድ ጊዜ ወደ ውጭ መላክ አይችልም። ጥቂቶቹን ወደ ጊዜ መስመሩ ይመልሱ እና እንደገና ይሞክሩ።';
 
@@ -8111,6 +8371,11 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName የተጠቀስክበትን ቪዲዮ ወደውታል።';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName አስተያየትህን ወደውታል።';
   }
@@ -8461,6 +8726,28 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ክሊፖች ተመልሰዋል',
+      one: 'ክሊፑ ተመልሷል',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ክሊፖች በቋሚነት ተሰርዘዋል',
+      one: 'ክሊፑ በቋሚነት ተሰርዟል',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'የቪዲዮ መቅረጫ ዝጋ';
 
   @override
@@ -8706,13 +8993,139 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectSparkles => 'ብልጭታዎች';
 
   @override
+  String get videoEditorEffectRain => 'ዝናብ';
+
+  @override
+  String get videoEditorEffectLeaves => 'ቅጠሎች';
+
+  @override
+  String get videoEditorEffectBlossoms => 'የአበባ ቅጠሎች';
+
+  @override
+  String get videoEditorEffectBubbles => 'አረፋዎች';
+
+  @override
+  String get videoEditorEffectBokeh => 'ቦኬ';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'ኖታዎች';
+
+  @override
+  String get videoEditorEffectStars => 'ኮከቦች';
+
+  @override
+  String get videoEditorEffectFireflies => 'የእሳት ዝንቦች';
+
+  @override
+  String get videoEditorEffectEmbers => 'ፍም';
+
+  @override
+  String get videoEditorEffectMoney => 'ገንዘብ';
+
+  @override
+  String get videoEditorEffectBalloons => 'ፊኛዎች';
+
+  @override
   String get videoEditorEffectTiltShift => 'ቲልት-ሺፍት';
 
   @override
   String get videoEditorEffectZoomBlur => 'የማጉላት ብዥታ';
 
   @override
+  String get videoEditorEffectSpinBlur => 'የማሽከርከር ብዥታ';
+
+  @override
   String get videoEditorEffectComic => 'ኮሚክ';
+
+  @override
+  String get videoEditorEffectSwirl => 'ሽክርክሪት';
+
+  @override
+  String get videoEditorEffectRipple => 'ክብ ሞገዶች';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'ባለሸንተረር መስታወት';
+
+  @override
+  String get videoEditorEffectEightBit => '8-ቢት';
+
+  @override
+  String get videoEditorEffectAnaglyph => '3D መነጽር';
+
+  @override
+  String get videoEditorEffectRiso => 'ሪሶ ህትመት';
+
+  @override
+  String get videoEditorEffectTealOrange => 'ቲል እና ብርቱካናማ';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'ሞቃት ፊልም';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'ስላይድ ፊልም';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'ቀዝቃዛ ፊልም';
+
+  @override
+  String get videoEditorEffectMatte => 'ደብዛዛ';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'ብሊች ባይፓስ';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'ክሮስ ፕሮሰስ';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'ወርቃማ ሰዓት';
+
+  @override
+  String get videoEditorEffectMoonlight => 'የጨረቃ ብርሃን';
+
+  @override
+  String get videoEditorEffectSilver => 'ብራማ';
+
+  @override
+  String get videoEditorEffectCategoryRetro => 'ሬትሮ';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'ግሊች';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'ማዛባት';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'ብርሃን';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'እንቅስቃሴ';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'ቅንጣቶች';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'ገጽታዎች';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'ተፈጥሯዊ';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'ደማቅ';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'ሞቃት';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'ቀዝቃዛ';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'ቪንቴጅ';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'ጥቁር እና ነጭ';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'ቀለሞች';
 
   @override
   String get videoEditorDropsSettingsTitle => 'ጠብታዎችን አስተካክል';
@@ -10390,6 +10803,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'ቁመት';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'ወደ ጎን';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'ከላይ ወደ ታች';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'ብጁ';
 
   @override
@@ -10474,6 +10893,411 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorStickerSearchHint => 'ተለጣፊዎችን ፈልግ...';
+
+  @override
+  String get videoEditorInfoStickersTitle => 'መረጃ';
+
+  @override
+  String get videoEditorSocialStickersTitle => 'ማኅበራዊ';
+
+  @override
+  String get videoEditorSocialStickerMention => 'መጥቀስ';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'ሃሽታግ';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'ድምፅ';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'ስምዎ';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'ሃሽታግ';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'ሰው ይምረጡ';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'በልጥፍዎ ውስጥ ይጠቀሳሉ፣ ማሳወቂያም ይደርሳቸዋል።';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'ሃሽታግ ይጻፉ';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote => 'ወደ ልጥፍዎ ሃሽታጎችም ይታከላል።';
+
+  @override
+  String get videoEditorSocialStickerLyricHint => 'የዘፈን ግጥም መስመር (አማራጭ)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'ሊንክ';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'የድር አድራሻ';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'ርዕስ (አማራጭ)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => 'አድራሻው ወደ ልጥፍዎ ይታከላል።';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => 'ይህ ገና የድር አድራሻ አይደለም።';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'መስተጋብራዊ';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'የኋሊት ቆጠራ';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'በጋ';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint => 'ወደ ምን እየቆጠሩ ነው?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'ተመልካቾች የቀረውን ጊዜ ያያሉ፤ ማስታወሻም ማዘጋጀት ይችላሉ።';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver => 'ያ ጊዜ አልፏል። አዲስ ይምረጡ።';
+
+  @override
+  String get videoEditorSocialStickerReply => 'ምላሽ';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'ተመልካቾች ሲነኩት ምን ላይ ምላሽ እንደሚሰጡ ያያሉ።';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'ድምፅ መስጫ';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'ፈተና';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'ተንሸራታች';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'የትኛው?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'አዎ';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'አይ';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine የተጀመረው በ…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => 'ምን ያህል ርቦዎታል?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'ጥያቄ ይጠይቁ';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'መልስ $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'መልስ $numberን ያስወግዱ';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'መልስ $numberን ትክክለኛ ብለው ይምረጡ';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'መልስ ያክሉ';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'ተመልካቾች ድምፅ ከሰጡ በኋላ ውጤቱን ያያሉ። ድምፆች ይፋዊ ናቸው።';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'ትክክለኛውን መልስ ምልክት ያድርጉ። ተመልካቾች መልስ ከመረጡ በኋላ ያዩታል።';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'ተመልካቾች ለመመለስ ኢሞጂውን ይጎትታሉ፣ አማካዩም የት እንደሚያርፍ ያያሉ።';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'ጥያቄ';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'የእርስዎ ተራ';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'ምላሾች';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => 'ማንኛውንም ነገር ይጠይቁኝ';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => 'የጠረጴዛዎን አደረጃጀት ያሳዩ';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => 'በቪዲዮ ምላሽ ይስጡ';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'የእርስዎ ጥያቄ';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint => 'ሰዎች ምን ያሳዩ?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'ሃሽታግ';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'ርዕስ';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'መልሶች እንደ የግል መልእክት ይደርሱዎታል።';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'ተመልካቾች በራሳቸው ቪዲዮ ይመልሳሉ። እያንዳንዱ መልስ ይህን ሃሽታግ ያገኛል፣ ወደ ቪዲዮዎም ይመራል።';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'ለዚህ ቪዲዮ በቪዲዮ ምላሽ የሰጡትን ያሳያል። ተመልካቾች ምላሾቹን ለማየት ይነኩታል።';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'ተመልካቾች መንካት እንዲችሉ ይህ ተለጣፊ በዚህ ሳጥን ውስጥ ይቆያል';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'ኖታ';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'የሙዚቃ ሸክላ';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'ካሴት';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'ኢኳላይዘር';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'ማጫወቻ';
+
+  @override
+  String get videoEditorInfoStickerTime => 'ሰዓት';
+
+  @override
+  String get videoEditorInfoStickerDate => 'ቀን';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'ቦታ';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'የአየር ሁኔታ';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'ከፍታ';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'ባትሪ';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'ፈዛዛ';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'ጨለማ';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'አረንጓዴ';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'ዝርዝር መስመር';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'ዲጂታል';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'አናሎግ';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'መስታወት';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'ቢጫ';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'ኒዮን';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'ቀላል';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'ቦታ ይቀይሩ';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'በዚህ መሣሪያ ላይ የቦታ ፍለጋ አይገኝም።';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'የተቀረጸበት · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'አሁን · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'ዛሬ · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'የቀን ቆጣሪ';
+
+  @override
+  String get videoEditorInfoStickerSun => 'ፀሐይ';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'ጨረቃ';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC ሰዓት ቆጣሪ';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'ፊልም';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'ካምኮርደር';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'ቀን $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'ቀን $day ከ$total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'ቀን';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'ጠቅላላ ቀናት (አማራጭ)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'ፒን';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'ባንዲራ';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'ሉል';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'ካርታ';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'አዲስ ጨረቃ';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'እያደገ ያለ ቀጭን ጨረቃ';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'የመጀመሪያ ሩብ';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'እያደገ ያለ ጨረቃ';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'ሙሉ ጨረቃ';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'እየቀነሰ ያለ ጨረቃ';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'የመጨረሻ ሩብ';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'እየቀነሰ ያለ ቀጭን ጨረቃ';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => 'ከተማ ወይም ቦታ ይፈልጉ';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'ምንም ቦታ አልተገኘም';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'ቦታዎችን መፈለግ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'በቪዲዮዎ ውስጥ የሚገባው የቦታው ስም ብቻ ነው፤ ትክክለኛው አካባቢዎ በጭራሽ አይገባም።';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'በመጫን ላይ…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed => 'መጫን አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'መረጃ ከ MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'ለቆዩ ቪዲዮዎች የአየር ሁኔታ መረጃ የለም፤ ይህ የአሁኑ የአየር ሁኔታ ነው።';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'ፀሐያማ';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'ጥርት ያለ ሌሊት';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'በከፊል ደመናማ';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'ደመናማ';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'ጭጋግ';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'ዝናብ';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'ካፊያ';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'በረዶ';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'ነጎድጓድ';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote => 'ሰዓቶቹ በስልክዎ የሰዓት ሰቅ ናቸው።';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'የሙቀት መጠን';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'መለኪያ';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'የባትሪ መጠን';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'ተለጣፊ ያክሉ';
 
   @override
   String get videoEditorSelectFontSemanticLabel => 'ቅርጸ-ቁምፊ ይምረጡ';
@@ -12009,6 +12833,11 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" ያክሉ';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag፣ በቪዲዮዎ ውስጥ ካለ ስቲከር';
   }
 
   @override
@@ -13906,10 +14735,87 @@ class AppLocalizationsAm extends AppLocalizations {
   String get ideasDescriptionSix => 'ይህን እዚህ እተዋለሁ።';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ክፍሎች፣ $displayCount ያልተነበቡ መልእክቶች',
+      one: 'ክፍሎች፣ $displayCount ያልተነበበ መልእክት',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'አዳዲስ፦ $displayCount',
+      one: 'አዲስ፦ $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount ያልተነበቡ መልእክቶች',
+      one: '$displayCount ያልተነበበ መልእክት',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount ሰዎች',
+      one: '$displayCount ሰው',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount መልእክቶች',
+      one: '$displayCount መልእክት',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'ባለፉት 24 ሰዓታት';
+
+  @override
+  String get messagesRoomLoading => 'እንቅስቃሴ በመፈተሽ ላይ…';
+
+  @override
+  String get messagesRoomLoadFailed => 'እንቅስቃሴውን መጫን አልተቻለም።';
+
+  @override
+  String get messagesRoomEmpty => 'የቅርብ ጊዜ መልእክቶች የሉም። ሰላም ይበሉ።';
+
+  @override
   String get messagesDirect => 'ቀጥታ';
 
   @override
   String get messagesRooms => 'ክፍሎች';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'ክፍሎች ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'ይፋዊ የሙከራ ክፍሎች';
@@ -14233,9 +15139,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14256,11 +15159,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -14294,9 +15192,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -14359,4 +15254,74 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
+
+  @override
+  String get creatorHighlightLabel => 'የዛሬ ድምቀትዎ';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'ዛሬ የፈጠሯቸው ቪዲዮዎች፦ $count።';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle => 'በዚህ ሳምንት ከእርስዎ የሆነ ነገር ትንሽ ተጨምሯል።';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'በዚህ ሳምንት የፈጠሩባቸው ቀናት፦ $count። ይቀጥሉ።';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'በዚህ ሳምንት ያሳተሟቸው ቪዲዮዎች እስካሁን ያገኟቸው ጠቅላላ እይታዎች፦ $countString።';
+  }
+
+  @override
+  String get creatorHighlightTopVideo => 'በዚህ ሳምንት ካሳተሟቸው ቪዲዮዎች በብዛት የታየው';
+
+  @override
+  String get creatorHighlightCreate => 'ሌላ ይፍጠሩ';
+
+  @override
+  String get creatorHighlightAnalytics => 'ስታቲስቲክስዎን ይመልከቱ';
+
+  @override
+  String get creatorHighlightWatch => 'ቪዲዮውን ይመልከቱ';
 }

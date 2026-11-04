@@ -1,6 +1,5 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -13,8 +12,7 @@ part 'video_editor_filter_state.dart';
 /// closing sub-editors) should be done through [VideoEditorScope] in the UI.
 class VideoEditorFilterBloc
     extends Bloc<VideoEditorFilterEvent, VideoEditorFilterState> {
-  VideoEditorFilterBloc()
-    : super(VideoEditorFilterState(filters: VideoEditorConstants.filters)) {
+  VideoEditorFilterBloc() : super(const VideoEditorFilterState()) {
     on<VideoEditorFilterEditorInitialized>(_onEditorInitialized);
     on<VideoEditorFilterSelected>(_onFilterSelected);
     on<VideoEditorFilterOpacityChanged>(_onOpacityChanged);
@@ -76,7 +74,7 @@ class VideoEditorFilterBloc
     Emitter<VideoEditorFilterState> emit,
   ) {
     final filter = state.selectedFilter;
-    if (filter == null || filter == PresetFilters.none) return;
+    if (filter == null) return;
 
     emit(
       state.copyWith(

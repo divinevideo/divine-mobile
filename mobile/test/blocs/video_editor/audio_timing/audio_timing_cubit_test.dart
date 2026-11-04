@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_editor/audio_timing/audio_timing_cubit.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:sound_service/sound_service.dart';
 
@@ -94,6 +95,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(Duration.zero);
     registerFallbackValue(const AudioSourceConfig.network(''));
+    registerFallbackValue((Duration _) => 1.0);
   });
 
   group(AudioTimingCubit, () {
@@ -367,6 +369,54 @@ void main() {
           verify(() => mockClipPlayer.setSpeed(2)).called(1);
         },
       );
+
+      group('along a speed ramp', () {
+        // A 4 s window along the ramp plays 3.2 s of the sound: its first
+        // half twice as fast, its second half at half speed.
+        AudioEvent rampedSound() =>
+            _createTestSound(duration: 60)
+                .copyWith(endTime: const Duration(seconds: 4))
+                .withSpeedRamp(
+                  const VideoSpeedRamp([
+                    VideoSpeedRampPoint(position: 0, speed: 2),
+                    VideoSpeedRampPoint(position: 0.5, speed: 2),
+                    VideoSpeedRampPoint(position: 0.5 + 1e-9, speed: 0.5),
+                    VideoSpeedRampPoint(position: 1, speed: 0.5),
+                  ]),
+                );
+
+        test("selects the sound at the ramp's average speed", () {
+          final normal = buildCubit();
+          final ramped = buildCubit(sound: rampedSound());
+          addTearDown(normal.close);
+          addTearDown(ramped.close);
+
+          expect(
+            ramped.selectionSecs,
+            closeTo(normal.selectionSecs * 0.8, 1e-6),
+          );
+        });
+
+        blocTest<AudioTimingCubit, AudioTimingState>(
+          'plays the selection along the ramp',
+          setUp: () => when(
+            () => mockClipPlayer.setSpeedCurve(any()),
+          ).thenAnswer((_) async {}),
+          build: () => buildCubit(sound: rampedSound()),
+          seed: () => const AudioTimingState(audioDuration: 60),
+          act: (cubit) => cubit.resumePlayback(),
+          verify: (_) {
+            final speedAt =
+                verify(
+                      () => mockClipPlayer.setSpeedCurve(captureAny()),
+                    ).captured.single
+                    as double Function(Duration);
+            expect(speedAt(const Duration(seconds: 1)), 2);
+            expect(speedAt(const Duration(seconds: 2)), 0.5);
+            verifyNever(() => mockClipPlayer.setSpeed(any()));
+          },
+        );
+      });
 
       blocTest<AudioTimingCubit, AudioTimingState>(
         'leaves the player speed alone for a sound at normal speed',

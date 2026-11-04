@@ -254,6 +254,13 @@ void main() {
       'recording and exact successful-video review survive SQLite reopen',
       () async {
         SharedPreferences.setMockInitialValues({});
+        // This test turns the client tag off, and later suites in the merged
+        // run would inherit it. resetForTest() clears only the cache, so the
+        // persisted preference is wiped too.
+        addTearDown(() {
+          SharedPreferences.setMockInitialValues({});
+          Nip89ClientTag.resetForTest();
+        });
         await Nip89ClientTag.setEnabled(enabled: true);
         final organizer = SyntheticSigner();
         final creator = SyntheticSigner();

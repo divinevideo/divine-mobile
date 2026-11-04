@@ -1346,6 +1346,301 @@
   "metadataBadgeNotDivine": "Not Divine",
   "metadataBadgeHumanMade": "Human-Made",
   "metadataSoundsLabel": "Sounds",
+  "metadataLinksLabel": "Links",
+  "@metadataLinksLabel": {
+    "description": "Label of the section in a video's info sheet that lists the web pages its link stickers point to."
+  },
+  "videoStickerLinkSemanticLabel": "Link sticker, opens {url}",
+  "@videoStickerLinkSemanticLabel": {
+    "description": "Screen reader label for the invisible button over a link sticker on a playing video; tapping it opens the web page.",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerMentionSemanticLabel": "Mention sticker, opens the profile",
+  "@videoStickerMentionSemanticLabel": {
+    "description": "Screen reader label for the invisible button over a mention sticker on a playing video; tapping it opens the mentioned profile."
+  },
+  "videoStickerHashtagSemanticLabel": "Hashtag sticker, opens #{hashtag}",
+  "@videoStickerHashtagSemanticLabel": {
+    "description": "Screen reader label for the invisible button over a hashtag sticker on a playing video; tapping it opens the hashtag's feed.",
+    "placeholders": {
+      "hashtag": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerSoundSemanticLabel": "Sound sticker, opens the sound",
+  "@videoStickerSoundSemanticLabel": {
+    "description": "Screen reader label for the invisible button over a sound sticker on a playing video; tapping it opens the page of the video's sound."
+  },
+  "videoStickerPlaceSemanticLabel": "Location sticker, opens {place} in a map",
+  "@videoStickerPlaceSemanticLabel": {
+    "description": "Screen reader label for the button over a location sticker on a playing video; tapping it opens the place in the phone's map app.",
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerCountdownSemanticLabel": "Countdown sticker, sets a reminder",
+  "@videoStickerCountdownSemanticLabel": {
+    "description": "Screen reader label for the button over a countdown sticker on a playing video; tapping it sets or removes a reminder for when the countdown ends."
+  },
+  "videoStickerReplySemanticLabel": "Reply sticker, opens what this video replies to",
+  "@videoStickerReplySemanticLabel": {
+    "description": "Screen reader label for the button over a reply sticker on a playing video; tapping it opens the comment or video this video replies to."
+  },
+  "videoStickerCountdownDays": "{count, plural, =1{{count} day} other{{count} days}}",
+  "@videoStickerCountdownDays": {
+    "description": "The whole days left on a countdown sticker in the player, shown before the hours, minutes and seconds, as in '12 days 04:33:10'.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoStickerCountdownReminderSet": "Reminder set. We'll ping you when it's time.",
+  "@videoStickerCountdownReminderSet": {
+    "description": "Snackbar after a viewer taps a countdown sticker: a reminder is now set for when the countdown ends."
+  },
+  "videoStickerCountdownReminderRemoved": "Reminder removed.",
+  "@videoStickerCountdownReminderRemoved": {
+    "description": "Snackbar after a viewer taps a countdown sticker they had set a reminder for: the reminder is gone."
+  },
+  "videoStickerCountdownOver": "This countdown is over.",
+  "@videoStickerCountdownOver": {
+    "description": "Snackbar when a viewer taps a countdown sticker whose date has already passed, so there is nothing to remind them of."
+  },
+  "videoStickerCountdownNotificationsOff": "Turn on notifications for Divine to get the reminder.",
+  "@videoStickerCountdownNotificationsOff": {
+    "description": "Snackbar when a viewer taps a countdown sticker but the app may not show notifications, so the reminder cannot be set."
+  },
+  "videoStickerCountdownReminderBody": "It's time! The countdown you saved just ended.",
+  "@videoStickerCountdownReminderBody": {
+    "description": "Text of the notification a viewer gets when a countdown they set a reminder for ends; the countdown's title is the notification's title."
+  },
+  "videoStickerQuizRightAnswer": "Right answer",
+  "@videoStickerQuizRightAnswer": {
+    "description": "Said by a screen reader of the right answer of a quiz sticker on a video, once the viewer has answered."
+  },
+  "videoStickerQuizWrongAnswer": "Wrong answer",
+  "@videoStickerQuizWrongAnswer": {
+    "description": "Said by a screen reader of the wrong answer a viewer picked on a quiz sticker on a video."
+  },
+  "videoStickerPollSignInToVote": "Sign in to vote.",
+  "@videoStickerPollSignInToVote": {
+    "description": "Snackbar when someone who is not signed in taps an answer of a poll, quiz or slider sticker on a video."
+  },
+  "videoStickerPollNotReady": "Still connecting. Try again in a moment.",
+  "@videoStickerPollNotReady": {
+    "description": "Snackbar when a signed-in viewer taps an answer of a poll, quiz or slider sticker before the app can send their vote yet."
+  },
+  "videoStickerPollVoteFailed": "Your vote didn't go through. Try again.",
+  "@videoStickerPollVoteFailed": {
+    "description": "Snackbar when a viewer's vote on a poll, quiz or slider sticker could not be sent."
+  },
+  "videoStickerPollVotesArePublic": "Votes are public. Anyone can see what you picked.",
+  "@videoStickerPollVotesArePublic": {
+    "description": "Snackbar shown once, after a viewer's first vote on a poll, quiz or slider sticker, saying that votes on Divine are public."
+  },
+  "videoStickerPollVoteCount": "{count, plural, one{1 vote} other{{count} votes}}",
+  "@videoStickerPollVoteCount": {
+    "description": "Under a poll, quiz or slider on the creator's own video: how many people voted.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoStickerQuestionAnswerHint": "Tap to answer",
+  "@videoStickerQuestionAnswerHint": {
+    "description": "Placeholder in the answer field drawn on a question sticker, in the video and in the player. Short."
+  },
+  "videoStickerQuestionAnswerSemanticLabel": "Answer: {question}",
+  "@videoStickerQuestionAnswerSemanticLabel": {
+    "description": "Screen-reader label of a question sticker in the player, which opens the answer screen. {question} is what the creator asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerAddYoursButton": "Add yours",
+  "@videoStickerAddYoursButton": {
+    "description": "Button on an Add yours sticker that opens the camera to answer its prompt with a video. Short; the same as the sticker's name."
+  },
+  "videoStickerAddYoursJoined": "{count, plural, =0{Be the first} =1{1 joined} other{{count} joined}}",
+  "@videoStickerAddYoursJoined": {
+    "description": "On an Add yours sticker in the player: how many people answered its prompt with a video.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoStickerAddYoursJoinedAtLeast": "{count} joined",
+  "@videoStickerAddYoursJoinedAtLeast": {
+    "description": "On an Add yours sticker in the player: how many people answered its prompt with a video, when the count is only a floor. {count} is pre-formatted, such as 500+.",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerAddYoursOpenSemanticLabel": "See who joined",
+  "@videoStickerAddYoursOpenSemanticLabel": {
+    "description": "Screen-reader label of the avatars and count on an Add yours sticker, which open the videos that answered it."
+  },
+  "videoStickerAddYoursJoinSemanticLabel": "Add yours: {prompt}",
+  "@videoStickerAddYoursJoinSemanticLabel": {
+    "description": "Screen-reader label of the Add yours button, which opens the camera. {prompt} is the sticker's prompt.",
+    "placeholders": {
+      "prompt": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerRepliesCount": "{count, plural, =0{No replies yet} =1{1 reply} other{{count} replies}}",
+  "@videoStickerRepliesCount": {
+    "description": "On a replies sticker in the player: how many video replies the video has.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoStickerRepliesCountAtLeast": "{count} replies",
+  "@videoStickerRepliesCountAtLeast": {
+    "description": "On a replies sticker in the player: how many video replies the video has, when the count is only a floor. {count} is pre-formatted, such as 500+.",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{Video replies, none yet} =1{Watch 1 video reply} other{Watch {count} video replies}}",
+  "@videoStickerRepliesSemanticLabel": {
+    "description": "Screen-reader label of a replies sticker in the player, which opens the video replies.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoStickerRepliesSemanticLabelAtLeast": "Watch {count} video replies",
+  "@videoStickerRepliesSemanticLabelAtLeast": {
+    "description": "Screen-reader label of a replies sticker in the player, which opens the video replies, when their count is only a floor. {count} is pre-formatted, such as 500+.",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerQuestionSignIn": "Sign in to answer.",
+  "@videoStickerQuestionSignIn": {
+    "description": "Snackbar when someone who is not signed in taps a question sticker on a video."
+  },
+  "videoStickerQuestionUnavailable": "Answering questions isn't available for your account.",
+  "@videoStickerQuestionUnavailable": {
+    "description": "Snackbar when an account that may message only Divine, a protected minor, taps a question sticker on a video: its answers go as private messages, which it cannot send."
+  },
+  "videoStickerQuestionAnswerTitle": "Answer",
+  "@videoStickerQuestionAnswerTitle": {
+    "description": "Title of the full-screen page where a viewer answers a question sticker."
+  },
+  "videoStickerQuestionAnswerFieldLabel": "Your answer",
+  "@videoStickerQuestionAnswerFieldLabel": {
+    "description": "Label of the field where a viewer types their answer to a question sticker."
+  },
+  "videoStickerQuestionAnswerPrivacyNote": "Only {name} sees your answer. They might share it in a video, without your name.",
+  "@videoStickerQuestionAnswerPrivacyNote": {
+    "description": "Note under the answer field: the answer goes privately to the video's creator, who can answer it in a new video showing the question and the answer but not who wrote it. {name} is the creator's display name.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerQuestionAnswerSend": "Send",
+  "@videoStickerQuestionAnswerSend": {
+    "description": "Button that sends a viewer's answer to a question sticker as a private message."
+  },
+  "videoStickerQuestionAnswerSent": "Answer sent.",
+  "@videoStickerQuestionAnswerSent": {
+    "description": "Snackbar after a viewer's answer to a question sticker went out."
+  },
+  "videoStickerQuestionAnswerTooLong": "That answer is too long to send.",
+  "@videoStickerQuestionAnswerTooLong": {
+    "description": "Snackbar when a viewer's answer to a question sticker is too long for one message."
+  },
+  "videoStickerQuestionAnswerFailed": "Your answer didn't go through. Try again.",
+  "@videoStickerQuestionAnswerFailed": {
+    "description": "Snackbar when a viewer's answer to a question sticker could not be sent."
+  },
+  "videoStickerAddYoursSignIn": "Sign in to add yours.",
+  "@videoStickerAddYoursSignIn": {
+    "description": "Snackbar when someone who is not signed in taps the Add yours button on a video."
+  },
+  "videoStickerRepliesManageTitle": "Video replies",
+  "@videoStickerRepliesManageTitle": {
+    "description": "Title of the page where a creator sees the video replies to one of their videos, and pins or hides them."
+  },
+  "videoStickerRepliesEmpty": "No video replies yet.",
+  "@videoStickerRepliesEmpty": {
+    "description": "Shown on the video replies page while nobody has replied to the video with a video."
+  },
+  "videoStickerRepliesLoadFailed": "Couldn't load the replies.",
+  "@videoStickerRepliesLoadFailed": {
+    "description": "Shown on the video replies page when the replies could not be read."
+  },
+  "videoStickerRepliesRetry": "Try again",
+  "@videoStickerRepliesRetry": {
+    "description": "Button on the video replies page that reads the replies again after they could not be read."
+  },
+  "videoStickerRepliesPin": "Pin",
+  "@videoStickerRepliesPin": {
+    "description": "Button beside a video reply that puts it first in the replies viewers see. Short."
+  },
+  "videoStickerRepliesUnpin": "Unpin",
+  "@videoStickerRepliesUnpin": {
+    "description": "Button beside the pinned video reply that stops putting it first. Short."
+  },
+  "videoStickerRepliesHide": "Hide",
+  "@videoStickerRepliesHide": {
+    "description": "Button beside a video reply that leaves it out of the replies viewers see. Short."
+  },
+  "videoStickerRepliesShow": "Show",
+  "@videoStickerRepliesShow": {
+    "description": "Button beside a hidden video reply that lets viewers see it again. Short."
+  },
+  "videoStickerRepliesPinned": "Pinned",
+  "@videoStickerRepliesPinned": {
+    "description": "Label under the video reply the creator pinned first."
+  },
+  "videoStickerRepliesHidden": "Hidden",
+  "@videoStickerRepliesHidden": {
+    "description": "Label under a video reply the creator hid from viewers."
+  },
+  "videoStickerRepliesSaveFailed": "Couldn't save that. Try again.",
+  "@videoStickerRepliesSaveFailed": {
+    "description": "Snackbar when pinning or hiding a video reply could not be saved."
+  },
+  "videoStickerRepliesWatchSemanticLabel": "Watch the reply by {name}",
+  "@videoStickerRepliesWatchSemanticLabel": {
+    "description": "Screen-reader label of a video reply on the video replies page, which opens it in the full-screen player. {name} is who posted it.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerLinkSheetBody": "This link opens outside Divine. Check the address before you go.",
+  "@videoStickerLinkSheetBody": {
+    "description": "Note in the sheet a link sticker on a video opens, above the link's full address: the page opens outside the app."
+  },
   "metadataOriginalSound": "Original sound",
   "metadataVerificationLabel": "Verification",
   "metadataDeviceAttestation": "Device attestation",
@@ -2836,9 +3131,21 @@
       }
     }
   },
-  "profileFeedError": "Can't reach the server. Check your connection and try again.",
-  "@profileFeedError": {
-    "description": "Full-screen message shown when an author's profile feed fails to load. This state is only reached when the API could not be reached at all — an author with genuinely no videos gets the empty state instead — so the copy names the connection rather than implying the profile is empty. Wording deliberately matches authSignInErrorNetwork."
+  "profileVideosLoadFailedTitle": "Couldn't load your videos",
+  "@profileVideosLoadFailedTitle": {
+    "description": "Title in the Videos tab of the viewer's own profile when their videos failed to load. The rest of the profile stays on screen around it. Only reached when the server could not be reached, so it must not read as 'you have no videos'."
+  },
+  "profileVideosLoadFailedOtherTitle": "Couldn't load videos",
+  "@profileVideosLoadFailedOtherTitle": {
+    "description": "Title in the Videos tab of someone else's profile when their videos failed to load. Same state as profileVideosLoadFailedTitle, without 'your'."
+  },
+  "profileVideosLoadFailedSubtitle": "Check your connection and try again.",
+  "@profileVideosLoadFailedSubtitle": {
+    "description": "Line under the title when a profile's videos failed to load."
+  },
+  "profileVideosLoadFailedRetry": "Try again",
+  "@profileVideosLoadFailedRetry": {
+    "description": "Button under a profile's failed-to-load videos that loads them again."
   },
   "profileFeedLoadMoreError": "Couldn't load more videos. Pull to refresh.",
   "@profileFeedLoadMoreError": {
@@ -3076,6 +3383,10 @@
   "routeInvalidUserId": "Invalid user ID",
   "routeInvalidVideoId": "Invalid video ID",
   "routeInvalidSoundId": "Invalid sound ID",
+  "routeInvalidQuestion": "Invalid question link",
+  "@routeInvalidQuestion": {
+    "description": "Error page when a link to answer a question sticker names no creator, video or question."
+  },
   "routeInvalidCategory": "Invalid category",
   "routeNoVideosToDisplay": "No videos to display",
   "routeGoHome": "Go home",
@@ -4014,6 +4325,28 @@
   "@dmReelReplyComposerSemanticLabel": {
     "description": "Screen-reader label for the in-player reel reply text field."
   },
+  "dmQuestionAnswerReceivedLabel": "Answered your question: {question}",
+  "@dmQuestionAnswerReceivedLabel": {
+    "description": "Line above a message in a conversation that answers the question sticker on one of the viewer's videos. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerSentLabel": "You answered: {question}",
+  "@dmQuestionAnswerSentLabel": {
+    "description": "Line above the viewer's own message in a conversation that answers someone's question sticker. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerWithVideo": "Answer with a video",
+  "@dmQuestionAnswerWithVideo": {
+    "description": "Button above an answer to the viewer's question sticker that opens the camera to reply with a video showing the question and the answer, without who wrote it."
+  },
   "dmReelReplyViewChat": "View chat",
   "@dmReelReplyViewChat": {
     "description": "Tappable action in the 'Sent · View chat' confirmation that opens the DM conversation."
@@ -4145,7 +4478,7 @@
   },
   "dmStatusNotSentToEveryone": "Not sent to everyone",
   "@dmStatusNotSentToEveryone": {
-    "description": "Caption under a sent group DM bubble that reached some members but not all, after the sender stopped trying to reach the rest (Stop trying, or a delete for everyone that has not gone through). Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it."
+    "description": "Caption under a sent group DM bubble that reached some members but not all, after delivery to the rest stopped: the sender chose Stop trying, a delete for everyone has not gone through, or the app gave up on a member whose inbox could not be read once its retries ran out. Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it."
   },
   "inboxConversationActionsSheetLabel": "Conversation actions",
   "@inboxConversationActionsSheetLabel": {
@@ -4703,11 +5036,14 @@
       }
     }
   },
-  "videoClipSemanticValueSelected": "Selected",
   "videoClipSemanticValueNotSelected": "Not selected",
   "videoClipSemanticHintDisabled": "Disabled",
-  "videoClipSemanticHintSelect": "Tap to select, long press to preview",
-  "videoClipSemanticHintDeselect": "Tap to deselect, long press to preview",
+  "videoClipSemanticHintSelect": "Tap to select",
+  "videoClipSemanticHintDeselect": "Tap to deselect",
+  "videoClipSemanticHintPreview": "Tap to preview",
+  "@videoClipSemanticHintPreview": {
+    "description": "Accessibility hint on a library clip thumbnail outside selection mode, where a tap opens the clip preview."
+  },
   "routerInvalidCreator": "Invalid creator",
   "routerInvalidHashtagRoute": "Invalid hashtag route",
   "categoryGalleryCouldNotLoadVideos": "Could not load videos",
@@ -5202,6 +5538,10 @@
   "publishErrorPermissionDenied": "Divine doesn’t have permission to upload. Check app permissions in your settings and try again.",
   "publishErrorOutOfMemory": "Your device is low on memory. Close some apps and try again.",
   "publishErrorOverlaysUnavailable": "The text and stickers on this draft couldn’t be prepared. Open it in the editor, then post again.",
+  "publishErrorQuestionStickerRestricted": "Your account can't post a question sticker, since its answers come as private messages. Remove it, then post again.",
+  "@publishErrorQuestionStickerRestricted": {
+    "description": "Shown when a post was refused because it carries a question sticker and the account may message only Divine, a protected minor: answers to a question come as private messages, which the account cannot receive. Removing the sticker in the editor lets it post."
+  },
   "publishErrorTooManyDetachedClips": "Your device can't export this many detached clips at once. Put a few back on the timeline and try again.",
   "@publishErrorTooManyDetachedClips": {
     "description": "Shown on the post screen when the export failed because the device could not decode every clip detached onto the editor canvas at the same time. Retrying fails the same way, so it tells the user to move some detached clips back onto the timeline (the action labelled videoEditorReattachLabel) and try again. Use the same noun for the clips as this locale's videoEditorDetachedClipLabel."
@@ -5668,6 +6008,15 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} liked a video you're tagged in",
+  "@notificationLikedTaggedVideo": {
+    "description": "Notification text when someone likes another creator's video that tags the user, for example as a collaborator. The video is not the user's own, so the text must not say \"your video\".",
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} liked your comment",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",
@@ -6005,6 +6354,24 @@
       }
     }
   },
+  "libraryTrashClipsRestored": "{count, plural, =1{Clip restored} other{{count} clips restored}}",
+  "@libraryTrashClipsRestored": {
+    "description": "Screen-reader announcement after clips are restored from trash and their rows leave the trash list.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryTrashClipsDeleted": "{count, plural, =1{Clip permanently deleted} other{{count} clips permanently deleted}}",
+  "@libraryTrashClipsDeleted": {
+    "description": "Screen-reader announcement after clips are permanently deleted from trash (one at a time or by emptying it) and their rows leave the trash list.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "videoRecorderCloseLabel": "Close video recorder",
   "videoRecorderContinueToEditorLabel": "Continue to video editor",
   "videoRecorderCameraPreviewLabel": "Camera preview",
@@ -6249,6 +6616,50 @@
   "@videoEditorEffectSparkles": {
     "description": "Name of a video effect: small four-pointed glints twinkle over the picture."
   },
+  "videoEditorEffectRain": "Rain",
+  "@videoEditorEffectRain": {
+    "description": "Name of a video effect: rain streaks down at a slant over the picture."
+  },
+  "videoEditorEffectLeaves": "Leaves",
+  "@videoEditorEffectLeaves": {
+    "description": "Name of a video effect: autumn leaves in reds, oranges and yellows rock and turn over as they fall over the picture."
+  },
+  "videoEditorEffectBlossoms": "Blossoms",
+  "@videoEditorEffectBlossoms": {
+    "description": "Name of a video effect: pink cherry blossom petals flutter down over the picture on the wind."
+  },
+  "videoEditorEffectBubbles": "Bubbles",
+  "@videoEditorEffectBubbles": {
+    "description": "Name of a video effect: shimmering soap bubbles float up over the picture."
+  },
+  "videoEditorEffectBokeh": "Bokeh",
+  "@videoEditorEffectBokeh": {
+    "description": "Name of a video effect, after the photography term: soft round discs of out-of-focus light drift and glow over the picture. Use the photography term your language uses."
+  },
+  "videoEditorEffectMusicNotes": "Music notes",
+  "@videoEditorEffectMusicNotes": {
+    "description": "Name of a video effect: music notes (♪, ♫) rock as they rise over the picture. Keep it short — it sits under a small tile."
+  },
+  "videoEditorEffectStars": "Stars",
+  "@videoEditorEffectStars": {
+    "description": "Name of a video effect: five-pointed gold and silver stars spin as they fall over the picture."
+  },
+  "videoEditorEffectFireflies": "Fireflies",
+  "@videoEditorEffectFireflies": {
+    "description": "Name of a video effect: small yellow-green lights wander about over the picture, glowing up and fading, like fireflies at night."
+  },
+  "videoEditorEffectEmbers": "Embers",
+  "@videoEditorEffectEmbers": {
+    "description": "Name of a video effect: glowing orange sparks rise from below and die away, as over a campfire."
+  },
+  "videoEditorEffectMoney": "Money",
+  "@videoEditorEffectMoney": {
+    "description": "Name of a video effect: green banknotes tumble down over the picture, as in \"make it rain\"."
+  },
+  "videoEditorEffectBalloons": "Balloons",
+  "@videoEditorEffectBalloons": {
+    "description": "Name of a video effect: colourful party balloons on strings swing as they rise over the picture."
+  },
   "videoEditorEffectTiltShift": "Tilt-Shift",
   "@videoEditorEffectTiltShift": {
     "description": "Name of a video effect: the top and bottom of the picture are blurred, so the scene looks like a miniature model. Tilt-shift is the photography term for this look."
@@ -6257,9 +6668,133 @@
   "@videoEditorEffectZoomBlur": {
     "description": "Name of a video effect: the picture streaks outward from its centre, as if the camera zoomed in during the shot."
   },
+  "videoEditorEffectSpinBlur": "Spin Blur",
+  "@videoEditorEffectSpinBlur": {
+    "description": "Name of a video effect: the picture streaks around its centre, as if the camera turned during the shot."
+  },
   "videoEditorEffectComic": "Comic",
   "@videoEditorEffectComic": {
     "description": "Name of a video effect: the picture looks like a printed comic book, with flat colours, halftone dots and ink outlines."
+  },
+  "videoEditorEffectSwirl": "Swirl",
+  "@videoEditorEffectSwirl": {
+    "description": "Name of a video effect: the picture twists around its centre, as if stirred."
+  },
+  "videoEditorEffectRipple": "Ripple",
+  "@videoEditorEffectRipple": {
+    "description": "Name of a video effect: rings spread out from the centre of the picture, like ripples on water after a stone drops in."
+  },
+  "videoEditorEffectFlutedGlass": "Fluted Glass",
+  "@videoEditorEffectFlutedGlass": {
+    "description": "Name of a video effect: the picture is seen through ribbed (fluted or reeded) glass, made of upright ribs that each show a squeezed slice of it."
+  },
+  "videoEditorEffectEightBit": "8-Bit",
+  "@videoEditorEffectEightBit": {
+    "description": "Name of a video effect: the picture looks like the pixel art of early video game consoles, in large pixels and few colours. Use the term your language uses for retro 8-bit video game graphics."
+  },
+  "videoEditorEffectAnaglyph": "3D Glasses",
+  "@videoEditorEffectAnaglyph": {
+    "description": "Name of a video effect: the picture is split into a red and a cyan copy laid over each other, slightly apart, like an old 3D film or comic viewed through red-cyan cardboard 3D glasses."
+  },
+  "videoEditorEffectRiso": "Riso Print",
+  "@videoEditorEffectRiso": {
+    "description": "Name of a video effect: the picture looks printed on a risograph, in grainy pink and blue ink on paper, slightly out of register. Keep Riso or use your language's word for risograph printing."
+  },
+  "videoEditorEffectTealOrange": "Teal & Orange",
+  "@videoEditorEffectTealOrange": {
+    "description": "Name of a colour-graded look in the video effects picker: the blockbuster film grade, with teal (blue-green) shadows and greens, and warm orange skin and highlights. Keep the colour names short; \"& \" may become your language's \"and\"."
+  },
+  "videoEditorEffectWarmFilm": "Warm Film",
+  "@videoEditorEffectWarmFilm": {
+    "description": "Name of a colour-graded look in the video effects picker: the soft, warm colours of a portrait photo film, with muted greens. \"Film\" means photographic film, as in the Old Film effect."
+  },
+  "videoEditorEffectSlideFilm": "Slide Film",
+  "@videoEditorEffectSlideFilm": {
+    "description": "Name of a colour-graded look in the video effects picker: the vivid, contrasty colours of slide (reversal) photo film, with deep blue skies. Use your language's word for slide or reversal film."
+  },
+  "videoEditorEffectCoolFilm": "Cool Film",
+  "@videoEditorEffectCoolFilm": {
+    "description": "Name of a colour-graded look in the video effects picker: the clean, cool colours of an everyday photo film, with emerald greens. \"Cool\" means cool in colour temperature (bluish), the opposite of Warm Film."
+  },
+  "videoEditorEffectMatte": "Matte",
+  "@videoEditorEffectMatte": {
+    "description": "Name of a colour-graded look in the video effects picker: a soft faded look with lifted greyish blacks and muted colours, like a matte print."
+  },
+  "videoEditorEffectBleachBypass": "Bleach Bypass",
+  "@videoEditorEffectBleachBypass": {
+    "description": "Name of a colour-graded look in the video effects picker: cold, hard and silvery with most colour drained, after the film processing technique that skips the bleach step. Keep the English term where film people use it."
+  },
+  "videoEditorEffectCrossProcess": "Cross Process",
+  "@videoEditorEffectCrossProcess": {
+    "description": "Name of a colour-graded look in the video effects picker: blue shadows and yellow highlights, after the photo technique of developing slide film as a negative. Keep the English term where photographers use it."
+  },
+  "videoEditorEffectGoldenHour": "Golden Hour",
+  "@videoEditorEffectGoldenHour": {
+    "description": "Name of a colour-graded look in the video effects picker: the warm golden light of the hour before sunset."
+  },
+  "videoEditorEffectMoonlight": "Moonlight",
+  "@videoEditorEffectMoonlight": {
+    "description": "Name of a colour-graded look in the video effects picker: the picture made dark and blue, as if shot at night by moonlight."
+  },
+  "videoEditorEffectSilver": "Silver",
+  "@videoEditorEffectSilver": {
+    "description": "Name of a colour-graded look in the video effects picker: black-and-white photo film with deep blacks and darker skies. Silver refers to silver-based black-and-white film, not to the colour."
+  },
+  "videoEditorEffectCategoryRetro": "Retro",
+  "@videoEditorEffectCategoryRetro": {
+    "description": "Name of a group in the video effects picker: effects that look like old media, such as VHS tape, old film or an old TV."
+  },
+  "videoEditorEffectCategoryGlitch": "Glitch",
+  "@videoEditorEffectCategoryGlitch": {
+    "description": "Name of a group in the video effects picker: effects that make the picture break up digitally. Use the same word as the Glitch effect."
+  },
+  "videoEditorEffectCategoryDistort": "Distort",
+  "@videoEditorEffectCategoryDistort": {
+    "description": "Name of a group in the video effects picker: effects that bend, mirror or split the picture, or show it as through a lens."
+  },
+  "videoEditorEffectCategoryLight": "Light",
+  "@videoEditorEffectCategoryLight": {
+    "description": "Name of a group in the video effects picker: effects that add, take away or flash light, such as glow, vignette or strobe."
+  },
+  "videoEditorEffectCategoryMotion": "Motion",
+  "@videoEditorEffectCategoryMotion": {
+    "description": "Name of a group in the video effects picker: effects that make the picture shake, pulse or leave a trail."
+  },
+  "videoEditorEffectCategoryParticles": "Particles",
+  "@videoEditorEffectCategoryParticles": {
+    "description": "Name of a group in the video effects picker: effects where snow, confetti, hearts or sparkles fall or float over the picture."
+  },
+  "videoEditorEffectCategoryLooks": "Looks",
+  "@videoEditorEffectCategoryLooks": {
+    "description": "Name of a group in the video effects picker: colour-graded looks that change the colours of the picture the way a film stock or a colourist would, such as Teal & Orange or Warm Film."
+  },
+  "videoEditorFilterCategoryNatural": "Natural",
+  "@videoEditorFilterCategoryNatural": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that lift the picture subtly and keep its colours true to life."
+  },
+  "videoEditorFilterCategoryVibrant": "Vibrant",
+  "@videoEditorFilterCategoryVibrant": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that add colour and contrast."
+  },
+  "videoEditorFilterCategoryWarm": "Warm",
+  "@videoEditorFilterCategoryWarm": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that give the picture a golden, orange or yellow cast. Warm as in colour temperature."
+  },
+  "videoEditorFilterCategoryCool": "Cool",
+  "@videoEditorFilterCategoryCool": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that give the picture a blue or green cast. Cool as in colour temperature, not as in great."
+  },
+  "videoEditorFilterCategoryVintage": "Vintage",
+  "@videoEditorFilterCategoryVintage": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that make the picture look faded, washed out or sepia, like an old photo."
+  },
+  "videoEditorFilterCategoryBlackAndWhite": "B&W",
+  "@videoEditorFilterCategoryBlackAndWhite": {
+    "description": "Name of a group in the colour filter picker of the video editor: black-and-white filters. Short, as it labels a tab."
+  },
+  "videoEditorFilterCategoryTints": "Tints",
+  "@videoEditorFilterCategoryTints": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that lay one strong colour, such as red or blue, over the whole picture."
   },
   "videoEditorDropsSettingsTitle": "Adjust drops",
   "@videoEditorDropsSettingsTitle": {
@@ -7579,7 +8114,7 @@
   },
   "videoEditorTransitionSpin": "Spin",
   "@videoEditorTransitionSpin": {
-    "description": "Transition option: the picture spins all the way round as it changes from the current clip to the next."
+    "description": "Transition option: the picture spins all the way round as it changes from the current clip to the next. Also the layer animation that turns a text or sticker around its center into place, away, or on and on in the Loop tab."
   },
   "videoEditorTransitionWhipPan": "Whip pan",
   "@videoEditorTransitionWhipPan": {
@@ -7619,7 +8154,7 @@
   },
   "videoEditorTransitionFlip": "Flip",
   "@videoEditorTransitionFlip": {
-    "description": "Transition option: the picture turns over in 3D like a card, with the next clip on its back."
+    "description": "Transition option: the picture turns over in 3D like a card, with the next clip on its back. Also the layer animation that turns a text or sticker over like a card as it appears or disappears."
   },
   "videoEditorTransitionCube": "Cube",
   "@videoEditorTransitionCube": {
@@ -7882,6 +8417,14 @@
   "@videoEditorLayerAnimationBounceHeight": {
     "description": "Section label above the slider that sets how high a bouncing layer is lifted, as a percentage of its own height."
   },
+  "videoEditorLayerAnimationFlipSideways": "Sideways",
+  "@videoEditorLayerAnimationFlipSideways": {
+    "description": "Screen reader label of the icon option that makes a flip layer animation turn the layer around its vertical axis like a card, its left and right edges trading places."
+  },
+  "videoEditorLayerAnimationFlipOver": "Top over bottom",
+  "@videoEditorLayerAnimationFlipOver": {
+    "description": "Screen reader label of the icon option that makes a flip layer animation turn the layer around its horizontal axis, its top and bottom edges trading places."
+  },
   "videoEditorLayerAnimationCustomPoint": "Custom",
   "@videoEditorLayerAnimationCustomPoint": {
     "description": "Direction option for a slide animation that starts (or ends) at a point the creator taps on the video, instead of travelling to or from a canvas edge."
@@ -7921,6 +8464,549 @@
   "videoEditorFeedPreviewContent": "Avoid placing content behind these areas.",
   "videoEditorStickersDivineOriginals": "Divine Originals",
   "videoEditorStickerSearchHint": "Search stickers...",
+  "videoEditorInfoStickersTitle": "Info",
+  "@videoEditorInfoStickersTitle": {
+    "description": "Heading of the info stickers (time, date, weather and so on) in the video editor's sticker sheet."
+  },
+  "videoEditorSocialStickersTitle": "Social",
+  "@videoEditorSocialStickersTitle": {
+    "description": "Heading above the row of social stickers (mention, hashtag, sound credit) in the video editor's sticker sheet."
+  },
+  "videoEditorSocialStickerMention": "Mention",
+  "@videoEditorSocialStickerMention": {
+    "description": "Name of the sticker that mentions a person in the video; the sheet title and timeline label for it."
+  },
+  "videoEditorSocialStickerHashtag": "Hashtag",
+  "@videoEditorSocialStickerHashtag": {
+    "description": "Name of the sticker that shows a hashtag in the video and adds it to the post's hashtags."
+  },
+  "videoEditorSocialStickerSoundCredit": "Sound",
+  "@videoEditorSocialStickerSoundCredit": {
+    "description": "Name of the sticker that credits the title and artist of the video's sound."
+  },
+  "videoEditorSocialStickerMentionSample": "yourname",
+  "@videoEditorSocialStickerMentionSample": {
+    "description": "Made-up handle shown after an @ on the sample mention sticker in the sticker sheet. Lowercase, one word."
+  },
+  "videoEditorSocialStickerHashtagSample": "hashtag",
+  "@videoEditorSocialStickerHashtagSample": {
+    "description": "Made-up hashtag shown after a # on the sample hashtag sticker in the sticker sheet. Lowercase, one word."
+  },
+  "videoEditorSocialStickerChoosePerson": "Choose someone",
+  "@videoEditorSocialStickerChoosePerson": {
+    "description": "Row in the mention sticker sheet that opens the people search to pick who the sticker mentions."
+  },
+  "videoEditorSocialStickerMentionNote": "They're mentioned in your post and get a notification.",
+  "@videoEditorSocialStickerMentionNote": {
+    "description": "Help line in the mention sticker sheet: placing the sticker mentions the person in the post, which notifies them."
+  },
+  "videoEditorSocialStickerHashtagHint": "Type a hashtag",
+  "@videoEditorSocialStickerHashtagHint": {
+    "description": "Label of the field where the creator types the hashtag a hashtag sticker shows."
+  },
+  "videoEditorSocialStickerHashtagNote": "Also added to your post's hashtags.",
+  "@videoEditorSocialStickerHashtagNote": {
+    "description": "Help line in the hashtag sticker sheet: the sticker's hashtag also becomes one of the post's hashtags."
+  },
+  "videoEditorSocialStickerLyricHint": "Line of lyrics (optional)",
+  "@videoEditorSocialStickerLyricHint": {
+    "description": "Label of the optional field for a line of song lyrics shown under a sound credit sticker."
+  },
+  "videoEditorSocialStickerLink": "Link",
+  "@videoEditorSocialStickerLink": {
+    "description": "Name of the sticker that shows a link to a web page in the video and adds its address to the post."
+  },
+  "videoEditorSocialStickerLinkUrlHint": "Web address",
+  "@videoEditorSocialStickerLinkUrlHint": {
+    "description": "Label of the field where the creator types the web address a link sticker points to."
+  },
+  "videoEditorSocialStickerLinkTitleHint": "Title (optional)",
+  "@videoEditorSocialStickerLinkTitleHint": {
+    "description": "Label of the optional field for a short title a link sticker shows instead of the domain."
+  },
+  "videoEditorSocialStickerLinkNote": "The address is added to your post.",
+  "@videoEditorSocialStickerLinkNote": {
+    "description": "Help line in the link sticker sheet: the address also goes into the published post."
+  },
+  "videoEditorSocialStickerLinkInvalid": "That's not a web address yet.",
+  "@videoEditorSocialStickerLinkInvalid": {
+    "description": "Warning in the link sticker sheet while the typed text is not a usable web address."
+  },
+  "videoEditorInteractiveStickersTitle": "Interactive",
+  "@videoEditorInteractiveStickersTitle": {
+    "description": "Heading above the row of interactive stickers (countdown, reply, poll, quiz, slider) in the video editor's sticker sheet: stickers viewers can tap in the Divine player."
+  },
+  "videoEditorSocialStickerCountdown": "Countdown",
+  "@videoEditorSocialStickerCountdown": {
+    "description": "Name of the sticker that counts down to a date and time; the sheet title and timeline label for it."
+  },
+  "videoEditorSocialStickerCountdownSample": "Summer",
+  "@videoEditorSocialStickerCountdownSample": {
+    "description": "Made-up title on the sample countdown sticker in the sticker sheet, something people count down to. One short word."
+  },
+  "videoEditorSocialStickerCountdownTitleHint": "What are you counting down to?",
+  "@videoEditorSocialStickerCountdownTitleHint": {
+    "description": "Label of the field where the creator types the title a countdown sticker shows above its date."
+  },
+  "videoEditorSocialStickerCountdownNote": "Viewers see the time left and can set a reminder.",
+  "@videoEditorSocialStickerCountdownNote": {
+    "description": "Help line in the countdown sticker sheet: in the Divine player the sticker shows the live time left, and a tap sets a reminder for when it ends."
+  },
+  "videoEditorSocialStickerCountdownOver": "That moment has passed. Pick a new one.",
+  "@videoEditorSocialStickerCountdownOver": {
+    "description": "Warning in the countdown sticker sheet when the countdown's date and time are already over, for example in a draft reopened later."
+  },
+  "videoEditorSocialStickerReply": "Reply",
+  "@videoEditorSocialStickerReply": {
+    "description": "Name of the sticker that shows the comment or video a video reply answers; the sheet title and timeline label for it."
+  },
+  "videoEditorSocialStickerReplyNote": "Viewers tap it to see what you're replying to.",
+  "@videoEditorSocialStickerReplyNote": {
+    "description": "Help line in the reply sticker sheet: in the player, tapping the sticker opens the comment or video this video replies to."
+  },
+  "videoEditorSocialStickerPoll": "Poll",
+  "@videoEditorSocialStickerPoll": {
+    "description": "Name of the sticker that asks viewers a question with two to four answers they vote on; the sheet title and timeline label for it."
+  },
+  "videoEditorSocialStickerQuiz": "Quiz",
+  "@videoEditorSocialStickerQuiz": {
+    "description": "Name of the sticker that asks viewers a question with one right answer, which they see once they pick one; the sheet title and timeline label for it."
+  },
+  "videoEditorSocialStickerSlider": "Slider",
+  "@videoEditorSocialStickerSlider": {
+    "description": "Name of the sticker where viewers rate a question by dragging an emoji along a bar; the sheet title and timeline label for it."
+  },
+  "videoEditorSocialStickerPollSampleQuestion": "Which one?",
+  "@videoEditorSocialStickerPollSampleQuestion": {
+    "description": "Made-up question on the sample poll sticker in the sticker sheet. Short."
+  },
+  "videoEditorSocialStickerPollSampleYes": "Yes",
+  "@videoEditorSocialStickerPollSampleYes": {
+    "description": "First made-up answer on the sample poll sticker in the sticker sheet."
+  },
+  "videoEditorSocialStickerPollSampleNo": "No",
+  "@videoEditorSocialStickerPollSampleNo": {
+    "description": "Second made-up answer on the sample poll sticker in the sticker sheet."
+  },
+  "videoEditorSocialStickerQuizSampleQuestion": "Vine launched in…",
+  "@videoEditorSocialStickerQuizSampleQuestion": {
+    "description": "Made-up question on the sample quiz sticker in the sticker sheet; its answers are the years 2013 and 2015. Keep the trailing ellipsis if it reads naturally."
+  },
+  "videoEditorSocialStickerSliderSampleQuestion": "How hungry are you?",
+  "@videoEditorSocialStickerSliderSampleQuestion": {
+    "description": "Made-up question on the sample emoji slider sticker in the sticker sheet; viewers answer by dragging a 😋 along a bar."
+  },
+  "videoEditorSocialStickerPollQuestionHint": "Ask a question",
+  "@videoEditorSocialStickerPollQuestionHint": {
+    "description": "Label of the field where the creator types the question a poll, quiz or slider sticker asks."
+  },
+  "videoEditorSocialStickerPollOptionHint": "Answer {number}",
+  "@videoEditorSocialStickerPollOptionHint": {
+    "description": "Label of the field where the creator types one answer of a poll or quiz sticker, numbered from 1. The number is pre-formatted at the call site.",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorSocialStickerPollRemoveOption": "Remove answer {number}",
+  "@videoEditorSocialStickerPollRemoveOption": {
+    "description": "Screen reader label of the button that removes one answer, numbered from 1, from a poll or quiz sticker. The number is pre-formatted at the call site.",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorSocialStickerQuizMarkRight": "Make answer {number} the right one",
+  "@videoEditorSocialStickerQuizMarkRight": {
+    "description": "Screen reader label of the button that marks one answer, numbered from 1, as the right answer of a quiz sticker. The number is pre-formatted at the call site.",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorSocialStickerPollAddOption": "Add answer",
+  "@videoEditorSocialStickerPollAddOption": {
+    "description": "Button in the poll and quiz sticker sheet that adds another answer field, up to four."
+  },
+  "videoEditorSocialStickerPollNote": "Viewers see the results once they vote. Votes are public.",
+  "@videoEditorSocialStickerPollNote": {
+    "description": "Help line in the poll sticker sheet: in the Divine player viewers see how everyone voted after they vote, and anyone can see who voted for what."
+  },
+  "videoEditorSocialStickerQuizNote": "Tick the right answer. Viewers see it once they've picked one.",
+  "@videoEditorSocialStickerQuizNote": {
+    "description": "Help line in the quiz sticker sheet: the creator marks the right answer with the tick next to it, and viewers see which one was right after they answer."
+  },
+  "videoEditorSocialStickerSliderNote": "Viewers drag the emoji to answer and see where it lands on average.",
+  "@videoEditorSocialStickerSliderNote": {
+    "description": "Help line in the emoji slider sticker sheet: viewers rate by dragging the emoji along the bar, then see the average of everyone's answers."
+  },
+  "videoEditorSocialStickerQuestion": "Question",
+  "@videoEditorSocialStickerQuestion": {
+    "description": "Name of the sticker that asks viewers a question they answer in a private message to the creator; the sheet title and timeline label for it."
+  },
+  "videoEditorSocialStickerAddYours": "Add yours",
+  "@videoEditorSocialStickerAddYours": {
+    "description": "Name of the sticker with a prompt such as 'Show your desk setup' that viewers answer with a video of their own; the sheet title and timeline label for it. Same wording as the sticker's button."
+  },
+  "videoEditorSocialStickerReplies": "Replies",
+  "@videoEditorSocialStickerReplies": {
+    "description": "Name of the sticker that shows the video replies to a video and opens them; the sheet title and timeline label for it."
+  },
+  "videoEditorSocialStickerQuestionSample": "Ask me anything",
+  "@videoEditorSocialStickerQuestionSample": {
+    "description": "Question a new question sticker starts with, and the sample in the sticker sheet. The creator can change it."
+  },
+  "videoEditorSocialStickerAddYoursSample": "Show your desk setup",
+  "@videoEditorSocialStickerAddYoursSample": {
+    "description": "Made-up prompt on the sample Add yours sticker in the sticker sheet: viewers answer it with a video of their own."
+  },
+  "videoEditorSocialStickerRepliesSample": "Reply with a video",
+  "@videoEditorSocialStickerRepliesSample": {
+    "description": "Title a new replies sticker starts with, and the sample in the sticker sheet. The creator can change it."
+  },
+  "videoEditorSocialStickerQuestionHint": "Your question",
+  "@videoEditorSocialStickerQuestionHint": {
+    "description": "Label of the field where the creator types what a question sticker asks."
+  },
+  "videoEditorSocialStickerAddYoursPromptHint": "What should people show?",
+  "@videoEditorSocialStickerAddYoursPromptHint": {
+    "description": "Label of the field where the creator types the prompt of an Add yours sticker, such as 'Show your desk setup'."
+  },
+  "videoEditorSocialStickerAddYoursHashtagHint": "Hashtag",
+  "@videoEditorSocialStickerAddYoursHashtagHint": {
+    "description": "Label of the field with the hashtag every answer to an Add yours sticker shares. It starts with the prompt's words run together."
+  },
+  "videoEditorSocialStickerRepliesTitleHint": "Title",
+  "@videoEditorSocialStickerRepliesTitleHint": {
+    "description": "Label of the field where the creator types the title of a replies sticker."
+  },
+  "videoEditorSocialStickerQuestionNote": "Answers come to you as private messages.",
+  "@videoEditorSocialStickerQuestionNote": {
+    "description": "Help line in the question sticker sheet: viewers' answers arrive in the creator's messages and nobody else sees them."
+  },
+  "videoEditorSocialStickerAddYoursNote": "Viewers answer with a video of their own. Every answer gets this hashtag and links back to your video.",
+  "@videoEditorSocialStickerAddYoursNote": {
+    "description": "Help line in the Add yours sticker sheet."
+  },
+  "videoEditorSocialStickerRepliesNote": "Shows who replied to this video with a video. Viewers tap it to watch the replies.",
+  "@videoEditorSocialStickerRepliesNote": {
+    "description": "Help line in the replies sticker sheet."
+  },
+  "videoEditorInteractiveCardAreaHint": "This sticker stays in this box so viewers can tap it",
+  "@videoEditorInteractiveCardAreaHint": {
+    "description": "Line beside the outlined box shown while the creator moves a poll, quiz, slider, question, Add yours or replies sticker: the sticker can only stand inside it, clear of the feed's buttons and caption."
+  },
+  "videoEditorSocialStickerSoundNote": "Note",
+  "@videoEditorSocialStickerSoundNote": {
+    "description": "Name of the sound credit design with a music note in front of the title and artist."
+  },
+  "videoEditorSocialStickerSoundVinyl": "Record",
+  "@videoEditorSocialStickerSoundVinyl": {
+    "description": "Name of the sound credit design with a vinyl record in front of the title and artist."
+  },
+  "videoEditorSocialStickerSoundCassette": "Cassette",
+  "@videoEditorSocialStickerSoundCassette": {
+    "description": "Name of the sound credit design with a cassette tape in front of the title and artist."
+  },
+  "videoEditorSocialStickerSoundEqualizer": "Equalizer",
+  "@videoEditorSocialStickerSoundEqualizer": {
+    "description": "Name of the sound credit design with equalizer bars in front of the title and artist."
+  },
+  "videoEditorSocialStickerSoundPlayer": "Player",
+  "@videoEditorSocialStickerSoundPlayer": {
+    "description": "Name of the sound credit design that looks like a music player with a progress bar and buttons."
+  },
+  "videoEditorInfoStickerTime": "Time",
+  "@videoEditorInfoStickerTime": {
+    "description": "Name of the info sticker that shows the time a clip was recorded."
+  },
+  "videoEditorInfoStickerDate": "Date",
+  "@videoEditorInfoStickerDate": {
+    "description": "Name of the info sticker that shows the date a clip was recorded."
+  },
+  "videoEditorInfoStickerLocation": "Location",
+  "@videoEditorInfoStickerLocation": {
+    "description": "Name of the info sticker that shows a place name."
+  },
+  "videoEditorInfoStickerWeather": "Weather",
+  "@videoEditorInfoStickerWeather": {
+    "description": "Name of the info sticker that shows the weather at a place."
+  },
+  "videoEditorInfoStickerAltitude": "Altitude",
+  "@videoEditorInfoStickerAltitude": {
+    "description": "Name of the info sticker that shows the altitude of a place."
+  },
+  "videoEditorInfoStickerBattery": "Battery",
+  "@videoEditorInfoStickerBattery": {
+    "description": "Name of the info sticker that shows the phone's battery level."
+  },
+  "videoEditorInfoStickerStyleLight": "Light",
+  "@videoEditorInfoStickerStyleLight": {
+    "description": "Name of the info sticker style with a white background."
+  },
+  "videoEditorInfoStickerStyleDark": "Dark",
+  "@videoEditorInfoStickerStyleDark": {
+    "description": "Name of the info sticker style with a dark see-through background."
+  },
+  "videoEditorInfoStickerStyleBrand": "Green",
+  "@videoEditorInfoStickerStyleBrand": {
+    "description": "Name of the info sticker style with Divine's green background."
+  },
+  "videoEditorInfoStickerStyleOutline": "Outline",
+  "@videoEditorInfoStickerStyleOutline": {
+    "description": "Name of the info sticker style with a white outline and no background."
+  },
+  "videoEditorInfoStickerStyleDigital": "Digital",
+  "@videoEditorInfoStickerStyleDigital": {
+    "description": "Name of the time sticker style that looks like a digital clock."
+  },
+  "videoEditorInfoStickerStyleAnalog": "Analog",
+  "@videoEditorInfoStickerStyleAnalog": {
+    "description": "Name of the time sticker style that looks like a clock with hands."
+  },
+  "videoEditorInfoStickerStyleGlass": "Glass",
+  "@videoEditorInfoStickerStyleGlass": {
+    "description": "Name of the info sticker style with a pale see-through background the video shows through."
+  },
+  "videoEditorInfoStickerStyleHighlight": "Yellow",
+  "@videoEditorInfoStickerStyleHighlight": {
+    "description": "Name of the info sticker style with a yellow background, like a highlighter."
+  },
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "@videoEditorInfoStickerStyleNeon": {
+    "description": "Name of the info sticker style with white text glowing green and no background."
+  },
+  "videoEditorInfoStickerStylePlain": "Plain",
+  "@videoEditorInfoStickerStylePlain": {
+    "description": "Name of the info sticker style with white text, a soft shadow and no background."
+  },
+  "videoEditorInfoStickerChangePlace": "Change place",
+  "@videoEditorInfoStickerChangePlace": {
+    "description": "Row in the info sticker sheet that goes back to the place search to pick another place."
+  },
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Place search isn't available on this device.",
+  "@videoEditorInfoStickerPlaceSearchUnavailable": {
+    "description": "Shown in the place search of an info sticker when the phone has no geocoder, such as an Android phone without Google services."
+  },
+  "videoEditorInfoStickerRecordedValue": "Recorded · {value}",
+  "@videoEditorInfoStickerRecordedValue": {
+    "description": "Chip in the time and date sticker sheet that picks the time the clip was recorded; value is that time or date.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorInfoStickerNowValue": "Now · {value}",
+  "@videoEditorInfoStickerNowValue": {
+    "description": "Chip in the time sticker sheet that picks the current time; value is the time now.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorInfoStickerTodayValue": "Today · {value}",
+  "@videoEditorInfoStickerTodayValue": {
+    "description": "Chip in the date sticker sheet that picks today's date; value is today's date.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorInfoStickerDayCount": "Day counter",
+  "@videoEditorInfoStickerDayCount": {
+    "description": "Name of the info sticker that counts days of a challenge or series, such as 'Day 12 of 30'."
+  },
+  "videoEditorInfoStickerSun": "Sun",
+  "@videoEditorInfoStickerSun": {
+    "description": "Name of the info sticker that shows when the sun rose and set at a place."
+  },
+  "videoEditorInfoStickerMoon": "Moon",
+  "@videoEditorInfoStickerMoon": {
+    "description": "Name of the info sticker that shows the phase of the moon."
+  },
+  "videoEditorInfoStickerRecTimer": "REC timer",
+  "@videoEditorInfoStickerRecTimer": {
+    "description": "Name of the info sticker that shows a camcorder's recording timer running with the video. Keep REC as it is."
+  },
+  "videoEditorInfoStickerStyleFilm": "Film",
+  "@videoEditorInfoStickerStyleFilm": {
+    "description": "Name of the info sticker style that looks like the orange date a film camera prints on a photo."
+  },
+  "videoEditorInfoStickerStyleCamcorder": "Camcorder",
+  "@videoEditorInfoStickerStyleCamcorder": {
+    "description": "Name of the info sticker style that looks like a camcorder's viewfinder, with a red recording dot."
+  },
+  "videoEditorInfoStickerDayCountValue": "Day {day}",
+  "@videoEditorInfoStickerDayCountValue": {
+    "description": "Day counter sticker without an end; day is the already formatted day number, an ordinal rather than a quantity.",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorInfoStickerDayCountOfValue": "Day {day} of {total}",
+  "@videoEditorInfoStickerDayCountOfValue": {
+    "description": "Day counter sticker with an end, such as 'Day 12 of 30'; day and total are already formatted numbers.",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorInfoStickerDayLabel": "Day",
+  "@videoEditorInfoStickerDayLabel": {
+    "description": "Label of the field for the day number a day counter sticker shows."
+  },
+  "videoEditorInfoStickerDayTotalLabel": "Total days (optional)",
+  "@videoEditorInfoStickerDayTotalLabel": {
+    "description": "Label of the optional field for how many days a day counter counts to."
+  },
+  "videoEditorInfoStickerSymbolPin": "Pin",
+  "@videoEditorInfoStickerSymbolPin": {
+    "description": "Choice that shows a pin in front of the place name on a location sticker."
+  },
+  "videoEditorInfoStickerSymbolFlag": "Flag",
+  "@videoEditorInfoStickerSymbolFlag": {
+    "description": "Choice that shows the country's flag in front of the place name on a location sticker."
+  },
+  "videoEditorInfoStickerSymbolGlobe": "Globe",
+  "@videoEditorInfoStickerSymbolGlobe": {
+    "description": "Choice that shows a globe turned to the place's side of the world in front of the place name on a location sticker."
+  },
+  "videoEditorInfoStickerSymbolMap": "Map",
+  "@videoEditorInfoStickerSymbolMap": {
+    "description": "Choice that shows a folded map in front of the place name on a location sticker."
+  },
+  "videoEditorInfoStickerMoonNew": "New moon",
+  "@videoEditorInfoStickerMoonNew": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerMoonWaxingCrescent": "Waxing crescent",
+  "@videoEditorInfoStickerMoonWaxingCrescent": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerMoonFirstQuarter": "First quarter",
+  "@videoEditorInfoStickerMoonFirstQuarter": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerMoonWaxingGibbous": "Waxing gibbous",
+  "@videoEditorInfoStickerMoonWaxingGibbous": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerMoonFull": "Full moon",
+  "@videoEditorInfoStickerMoonFull": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerMoonWaningGibbous": "Waning gibbous",
+  "@videoEditorInfoStickerMoonWaningGibbous": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerMoonLastQuarter": "Last quarter",
+  "@videoEditorInfoStickerMoonLastQuarter": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerMoonWaningCrescent": "Waning crescent",
+  "@videoEditorInfoStickerMoonWaningCrescent": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerPlaceSearchHint": "Search for a city or place",
+  "@videoEditorInfoStickerPlaceSearchHint": {
+    "description": "Hint of the search field for the place a location, weather or altitude sticker shows."
+  },
+  "videoEditorInfoStickerPlaceNoResults": "No places found",
+  "@videoEditorInfoStickerPlaceNoResults": {
+    "description": "Shown when the place search for an info sticker finds nothing."
+  },
+  "videoEditorInfoStickerPlaceSearchFailed": "Couldn't search for places. Try again.",
+  "@videoEditorInfoStickerPlaceSearchFailed": {
+    "description": "Shown when the place search for an info sticker fails."
+  },
+  "videoEditorInfoStickerPlacePrivacyNote": "Only the place name goes into your video, never your exact position.",
+  "@videoEditorInfoStickerPlacePrivacyNote": {
+    "description": "Note under the place search of an info sticker."
+  },
+  "videoEditorInfoStickerLoading": "Loading…",
+  "@videoEditorInfoStickerLoading": {
+    "description": "Shown while an info sticker loads the weather, the altitude or the battery level."
+  },
+  "videoEditorInfoStickerLoadFailed": "Couldn't load this. Try again.",
+  "@videoEditorInfoStickerLoadFailed": {
+    "description": "Shown when an info sticker cannot load the weather or the altitude."
+  },
+  "videoEditorInfoStickerMetAttribution": "Data from MET Norway",
+  "@videoEditorInfoStickerMetAttribution": {
+    "description": "Credit for the weather and altitude data, required by its licence. Keep the name MET Norway as it is."
+  },
+  "videoEditorInfoStickerWeatherNow": "There's no weather for older videos, so this is the weather right now.",
+  "@videoEditorInfoStickerWeatherNow": {
+    "description": "Shown under the temperature field of a weather sticker whose video was recorded more than about an hour ago: the weather service keeps no past hours, so the sticker shows the current weather instead."
+  },
+  "videoEditorInfoStickerWeatherSunny": "Sunny",
+  "@videoEditorInfoStickerWeatherSunny": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerWeatherClearNight": "Clear night",
+  "@videoEditorInfoStickerWeatherClearNight": {
+    "description": "Name of the weather pick for a clear sky at night, shown next to a moon emoji on a weather sticker."
+  },
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Partly cloudy",
+  "@videoEditorInfoStickerWeatherPartlyCloudy": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerWeatherCloudy": "Cloudy",
+  "@videoEditorInfoStickerWeatherCloudy": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerWeatherFog": "Fog",
+  "@videoEditorInfoStickerWeatherFog": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerWeatherRain": "Rain",
+  "@videoEditorInfoStickerWeatherRain": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerWeatherShowers": "Showers",
+  "@videoEditorInfoStickerWeatherShowers": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerWeatherSnow": "Snow",
+  "@videoEditorInfoStickerWeatherSnow": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerWeatherThunderstorm": "Thunderstorm",
+  "@videoEditorInfoStickerWeatherThunderstorm": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerSunTimeZoneNote": "Times are in your phone's time zone.",
+  "@videoEditorInfoStickerSunTimeZoneNote": {
+    "description": "Shown under a sunrise and sunset sticker: the times are given in the phone's time zone, not the place's."
+  },
+  "videoEditorInfoStickerTemperatureLabel": "Temperature",
+  "@videoEditorInfoStickerTemperatureLabel": {
+    "description": "Label of the field where the creator can change the temperature a weather sticker shows."
+  },
+  "videoEditorInfoStickerUnitLabel": "Unit",
+  "@videoEditorInfoStickerUnitLabel": {
+    "description": "Accessibility label of the switch between units, such as °C and °F, on an info sticker."
+  },
+  "videoEditorInfoStickerBatteryLevelLabel": "Battery level",
+  "@videoEditorInfoStickerBatteryLevelLabel": {
+    "description": "Label of the slider that sets the battery level a battery sticker shows."
+  },
+  "videoEditorInfoStickerAdd": "Add sticker",
+  "@videoEditorInfoStickerAdd": {
+    "description": "Button that places the info sticker on the video."
+  },
   "videoEditorSelectFontSemanticLabel": "Select font",
   "videoEditorFontUnknown": "Unknown",
   "videoEditorSplitPlayheadOutsideClip": "Playhead must be within the selected clip to split.",
@@ -8921,6 +10007,15 @@
   },
   "videoMetadataTagsPickerAddTag": "Add \"#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
+  "videoMetadataTagsPickerStickerTag": "{tag}, from a sticker in your video",
+  "@videoMetadataTagsPickerStickerTag": {
+    "description": "Screen reader label of a hashtag in the tags picker that comes from a hashtag sticker in the video and can only be removed with the sticker. {tag} is the hashtag without its #.",
     "placeholders": {
       "tag": {
         "type": "String"
@@ -10970,8 +12065,106 @@
   "@ideasDescriptionSix": {
     "description": "Inline publishing ideas: DescriptionSix"
   },
+  "messagesRoomsUnreadLabel": "{count, plural, =1{Rooms, {displayCount} unread message} other{Rooms, {displayCount} unread messages}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{{displayCount} new} other{{displayCount} new}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, =1{{displayCount} unread message} other{{displayCount} unread messages}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, =1{{displayCount} person} other{{displayCount} people}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, =1{{displayCount} message} other{{displayCount} messages}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Last 24h",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Checking activity…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Activity couldn’t load.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "No recent messages. Say hello.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history holds no message to preview; says recent because older messages may have expired, and does not claim the room has never had messages."
+  },
   "messagesDirect": "Direct",
   "messagesRooms": "Rooms",
+  "messagesRoomsWithUnread": "Rooms ({badge})",
+  "@messagesRoomsWithUnread": {
+    "description": "Rooms selector in Messages while rooms have unread messages. badge is the unread count as shown on screen, such as 3, 5+ or 99+.",
+    "placeholders": {
+      "badge": {
+        "type": "String",
+        "example": "5+"
+      }
+    }
+  },
   "messagesPublicTestRooms": "Public test rooms",
   "messagesPublicTestDisclosure": "These test rooms are public. Anyone with access can read your messages.",
   "messagesNoRooms": "No rooms yet",
@@ -11386,10 +12579,6 @@
   "@challengeReview": {
     "description": "Native challenge participation test-build flow."
   },
-  "challengeAgree": "Agree and submit",
-  "@challengeAgree": {
-    "description": "Native challenge participation test-build flow."
-  },
   "challengeWithdraw": "Withdraw entry",
   "@challengeWithdraw": {
     "description": "Native challenge participation test-build flow."
@@ -11417,11 +12606,6 @@
   "challengeRules": "Current rules",
   "@challengeRules": {
     "description": "Native challenge participation test-build flow."
-  },
-  "challengeDeadline": "Deadline (UTC): {deadline}",
-  "@challengeDeadline": {
-    "description": "Challenge deadline, explicitly in UTC; deadline is formatted in the app locale.",
-    "placeholders": {"deadline": {"type": "String"}}
   },
   "challengeOwner": "Signing account",
   "@challengeOwner": {
@@ -11465,10 +12649,6 @@
   },
   "challengeEntries": "Entries",
   "@challengeEntries": {
-    "description": "Native challenge participation test-build flow."
-  },
-  "challengeResults": "Results",
-  "@challengeResults": {
     "description": "Native challenge participation test-build flow."
   },
   "challengeWinnerUnavailable": "Selected entry unavailable",
@@ -11542,5 +12722,69 @@
   "challengeDetails": "Technical details",
   "@challengeDetails": {
     "description": "Challenge entry review challengeDetails"
+  },
+  "challengeLocalDeadline": "Deadline: {deadline} ({timeZone})",
+  "@challengeLocalDeadline": {"description": "Challenge deadline in the viewer display timezone, including its actual zone label.", "placeholders": {"deadline": {"type": "String"}, "timeZone": {"type": "String"}}},
+  "challengeEnter": "Enter challenge",
+  "challengeEnterVideo": "Enter this video",
+  "challengeOrganizer": "Organizer",
+  "challengeAllRules": "Show all rules",
+  "challengeWinners": "Winners",
+  "challengeAwaitingResults": "Awaiting results",
+  "challengeOrganizerTimezone": "Organizer timezone: {timeZone}",
+  "@challengeOrganizerTimezone": {"placeholders": {"timeZone": {"type": "String"}}},
+  "challengeOrganizerTime": "Organizer time: {deadline} ({timeZone})",
+  "@challengeOrganizerTime": {"placeholders": {"deadline": {"type": "String"}, "timeZone": {"type": "String"}}},
+  "creatorHighlightLabel": "Your daily highlight",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "{count, plural, =1{You made something today.} other{You made {count} videos today.}}",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "Your week has a little more you in it.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "{count, plural, =1{One creative day this week. Keep going.} other{{count} creative days this week. Keep going.}}",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "{count, plural, =1{{count} view on videos you posted this week, so far.} other{{count} views on videos you posted this week, so far.}}",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "Most-watched of this week’s videos",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "Make another",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "See your stats",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "Watch video",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   }
 }

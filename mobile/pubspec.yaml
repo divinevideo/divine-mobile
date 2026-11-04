@@ -18,7 +18,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 # Marketing-version changes are release decisions. Keep the current train until
 # approval; ask a maintainer and follow ../docs/RELEASE_CHECKLIST.md before editing.
-version: 1.0.27+820
+version: 1.0.28+820
 
 environment:
   sdk: ^3.13.0
@@ -80,6 +80,7 @@ workspace:
   - packages/nostr_key_manager
   - packages/people_lists_repository
   - packages/permissions_service
+  - packages/poll_repository
   - packages/publishing_suggestions
   - packages/profile_repository
   - packages/reposts_repository
@@ -93,6 +94,7 @@ workspace:
   - packages/user_ranking
   - packages/verifier_client
   - packages/video_event_cache
+  - packages/video_responses_repository
   - packages/videos_repository
   - packages/voice_effects
 
@@ -143,9 +145,9 @@ dependencies:
 
   # State management
   bloc: ^9.2.1
-  flutter_riverpod: ^3.0.0
-  riverpod: ^3.3.2
-  riverpod_annotation: ^4.0.3
+  flutter_riverpod: ^3.4.3
+  riverpod: ^3.4.3
+  riverpod_annotation: ^4.0.7
   flutter_bloc: ^9.0.0
   bloc_concurrency: ^0.3.0
   provider: ^6.1.5+1
@@ -316,6 +318,12 @@ dependencies:
   # Permissions Service - runtime permission checks (camera, mic, photos)
   permissions_service:
 
+  # Poll Repository - NIP-88 polls, quizzes and sliders on videos
+  poll_repository:
+
+  # Video Responses Repository - a video's video replies and Add yours answers
+  video_responses_repository:
+
   # Profile Repository - Kind 0 user metadata persistence and search
   profile_repository:
 
@@ -350,6 +358,9 @@ dependencies:
 
   # Count Formatter - Compact number formatting
   count_formatter:
+
+  # Challenge deadline conversion for signed IANA organizer timezones.
+  timezone: ^0.11.0
 
   # Time Formatter - Locale-aware timestamp formatting
   time_formatter:
@@ -419,8 +430,8 @@ dependencies:
   # extra Flutter-specific native SQLite providers can make plain SQLite win.
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
-  pro_video_editor: ^2.47.0
-  pro_image_editor: ^14.21.1
+  pro_video_editor: ^2.50.0
+  pro_image_editor: ^14.23.1
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
   flutter_staggered_grid_view: ^0.7.0
@@ -429,6 +440,9 @@ dependencies:
   pointer_interceptor: ^0.10.1+2
   volume_controller: ^3.4.4
   meta: ^1.18.0
+  battery_plus: ^7.1.2
+  daylight: ^3.1.0
+  geocoding: ^5.0.0
   flutter_timezone: ^5.1.1
 
 dependency_overrides:
@@ -463,7 +477,9 @@ dev_dependencies:
   # AST to tell Cubit.emit (throws after close) from an event handler's
   # Emitter.call (cancelled, so a no-op). Already in the tree transitively via
   # build_runner; named here so the guard does not depend on that staying true.
-  analyzer: ^12.1.0
+  # Held below 14 by test 1.31.1, the only test release matching the test_api
+  # that Flutter 3.47.2's flutter_test pins.
+  analyzer: ^13.3.0
 
   # Testing
   file: ^7.0.1
@@ -483,14 +499,13 @@ dev_dependencies:
   # Code generation
   build_runner: ^2.15.0
   go_router_builder: ^4.5.2
-  hive_ce_generator: ^1.6.0
 
   # Integration test utilities
   postgres: ^3.5.0
 
   # CLI tools
   args: ^2.4.2
-  riverpod_generator: ^4.0.4
+  riverpod_generator: ^4.0.9
   # custom_lint: ^0.6.4  # Temporarily disabled due to rxdart version conflict
   # riverpod_lint: ^2.3.10  # Depends on custom_lint
   # go_router_builder 4.5.2 needs source_helper 1.4, which json_serializable's
@@ -527,6 +542,8 @@ flutter:
     - assets/licenses/
     - assets/icon/
     - assets/illustrations/
+    - assets/info_stickers/
+    - assets/looks/
     - assets/loading-brand-sprite.png
     - assets/seed_data/seed_events.json
     - assets/seed_data/classic_viner_profiles.json
@@ -555,13 +572,21 @@ flutter:
   # picker; the others draw the tiles of Divine's own effects in the effects
   # picker.
   shaders:
+    - shaders/anaglyph.frag
     - shaders/chroma_key.frag
     - shaders/comic.frag
     - shaders/drops.frag
+    - shaders/eight_bit.frag
     - shaders/fisheye.frag
+    - shaders/fluted_glass.frag
     - shaders/light_leak.frag
     - shaders/light_leak_transition.frag
+    - shaders/look.frag
     - shaders/particles.frag
+    - shaders/ripple.frag
+    - shaders/riso.frag
+    - shaders/spin_blur.frag
+    - shaders/swirl.frag
     - shaders/tilt_shift.frag
     - shaders/zoom_blur.frag
 

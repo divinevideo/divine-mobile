@@ -48,6 +48,7 @@ import 'package:openvine/services/c2pa_signing_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/file_cleanup_service.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
+import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
@@ -334,6 +335,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   /// Loads existing draft data if [draftId] is provided, including clips
   /// and metadata.
   Future<void> initialize({String? draftId}) async {
+    InterruptedRenderMonitor.noteEditorPhase('editorOpen', restart: true);
     // Reset old editing states but keep metadata
     final audioSharingEnabled = ref
         .read(audioSharingPreferenceServiceProvider)
@@ -1287,6 +1289,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     );
 
     final draft = await _draftService.getDraftById(draftId);
+    InterruptedRenderMonitor.noteEditorPhase('draftLoaded');
     if (draft == null) {
       Log.warning(
         '⚠️ Draft not found or has no valid clips: $draftId',
@@ -1297,6 +1300,16 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     }
 
     _challengeContext = draft.challengeContext;
+    // The draft's own reply target wins over whatever the provider holds, so a
+    // reopened reply still publishes into its thread and an unrelated draft
+    // never picks up the context of a reply the user abandoned.
+    final replyContextNotifier = ref.read(videoReplyContextProvider.notifier);
+    final replyContext = draft.videoReplyContext;
+    if (replyContext != null) {
+      replyContextNotifier.set(replyContext);
+    } else {
+      replyContextNotifier.clear();
+    }
 
     // Drop clips whose source video file is gone. A draft can outlive its
     // media: a clip removed mid-session has its file deleted by

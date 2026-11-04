@@ -3427,6 +3427,336 @@ abstract class AppLocalizations {
   /// **'Sounds'**
   String get metadataSoundsLabel;
 
+  /// Label of the section in a video's info sheet that lists the web pages its link stickers point to.
+  ///
+  /// In en, this message translates to:
+  /// **'Links'**
+  String get metadataLinksLabel;
+
+  /// Screen reader label for the invisible button over a link sticker on a playing video; tapping it opens the web page.
+  ///
+  /// In en, this message translates to:
+  /// **'Link sticker, opens {url}'**
+  String videoStickerLinkSemanticLabel(String url);
+
+  /// Screen reader label for the invisible button over a mention sticker on a playing video; tapping it opens the mentioned profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Mention sticker, opens the profile'**
+  String get videoStickerMentionSemanticLabel;
+
+  /// Screen reader label for the invisible button over a hashtag sticker on a playing video; tapping it opens the hashtag's feed.
+  ///
+  /// In en, this message translates to:
+  /// **'Hashtag sticker, opens #{hashtag}'**
+  String videoStickerHashtagSemanticLabel(String hashtag);
+
+  /// Screen reader label for the invisible button over a sound sticker on a playing video; tapping it opens the page of the video's sound.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound sticker, opens the sound'**
+  String get videoStickerSoundSemanticLabel;
+
+  /// Screen reader label for the button over a location sticker on a playing video; tapping it opens the place in the phone's map app.
+  ///
+  /// In en, this message translates to:
+  /// **'Location sticker, opens {place} in a map'**
+  String videoStickerPlaceSemanticLabel(String place);
+
+  /// Screen reader label for the button over a countdown sticker on a playing video; tapping it sets or removes a reminder for when the countdown ends.
+  ///
+  /// In en, this message translates to:
+  /// **'Countdown sticker, sets a reminder'**
+  String get videoStickerCountdownSemanticLabel;
+
+  /// Screen reader label for the button over a reply sticker on a playing video; tapping it opens the comment or video this video replies to.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply sticker, opens what this video replies to'**
+  String get videoStickerReplySemanticLabel;
+
+  /// The whole days left on a countdown sticker in the player, shown before the hours, minutes and seconds, as in '12 days 04:33:10'.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} day} other{{count} days}}'**
+  String videoStickerCountdownDays(int count);
+
+  /// Snackbar after a viewer taps a countdown sticker: a reminder is now set for when the countdown ends.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder set. We\'ll ping you when it\'s time.'**
+  String get videoStickerCountdownReminderSet;
+
+  /// Snackbar after a viewer taps a countdown sticker they had set a reminder for: the reminder is gone.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder removed.'**
+  String get videoStickerCountdownReminderRemoved;
+
+  /// Snackbar when a viewer taps a countdown sticker whose date has already passed, so there is nothing to remind them of.
+  ///
+  /// In en, this message translates to:
+  /// **'This countdown is over.'**
+  String get videoStickerCountdownOver;
+
+  /// Snackbar when a viewer taps a countdown sticker but the app may not show notifications, so the reminder cannot be set.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on notifications for Divine to get the reminder.'**
+  String get videoStickerCountdownNotificationsOff;
+
+  /// Text of the notification a viewer gets when a countdown they set a reminder for ends; the countdown's title is the notification's title.
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s time! The countdown you saved just ended.'**
+  String get videoStickerCountdownReminderBody;
+
+  /// Said by a screen reader of the right answer of a quiz sticker on a video, once the viewer has answered.
+  ///
+  /// In en, this message translates to:
+  /// **'Right answer'**
+  String get videoStickerQuizRightAnswer;
+
+  /// Said by a screen reader of the wrong answer a viewer picked on a quiz sticker on a video.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong answer'**
+  String get videoStickerQuizWrongAnswer;
+
+  /// Snackbar when someone who is not signed in taps an answer of a poll, quiz or slider sticker on a video.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to vote.'**
+  String get videoStickerPollSignInToVote;
+
+  /// Snackbar when a signed-in viewer taps an answer of a poll, quiz or slider sticker before the app can send their vote yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Still connecting. Try again in a moment.'**
+  String get videoStickerPollNotReady;
+
+  /// Snackbar when a viewer's vote on a poll, quiz or slider sticker could not be sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Your vote didn\'t go through. Try again.'**
+  String get videoStickerPollVoteFailed;
+
+  /// Snackbar shown once, after a viewer's first vote on a poll, quiz or slider sticker, saying that votes on Divine are public.
+  ///
+  /// In en, this message translates to:
+  /// **'Votes are public. Anyone can see what you picked.'**
+  String get videoStickerPollVotesArePublic;
+
+  /// Under a poll, quiz or slider on the creator's own video: how many people voted.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 vote} other{{count} votes}}'**
+  String videoStickerPollVoteCount(int count);
+
+  /// Placeholder in the answer field drawn on a question sticker, in the video and in the player. Short.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to answer'**
+  String get videoStickerQuestionAnswerHint;
+
+  /// Screen-reader label of a question sticker in the player, which opens the answer screen. {question} is what the creator asks.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer: {question}'**
+  String videoStickerQuestionAnswerSemanticLabel(String question);
+
+  /// Button on an Add yours sticker that opens the camera to answer its prompt with a video. Short; the same as the sticker's name.
+  ///
+  /// In en, this message translates to:
+  /// **'Add yours'**
+  String get videoStickerAddYoursButton;
+
+  /// On an Add yours sticker in the player: how many people answered its prompt with a video.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Be the first} =1{1 joined} other{{count} joined}}'**
+  String videoStickerAddYoursJoined(int count);
+
+  /// On an Add yours sticker in the player: how many people answered its prompt with a video, when the count is only a floor. {count} is pre-formatted, such as 500+.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} joined'**
+  String videoStickerAddYoursJoinedAtLeast(String count);
+
+  /// Screen-reader label of the avatars and count on an Add yours sticker, which open the videos that answered it.
+  ///
+  /// In en, this message translates to:
+  /// **'See who joined'**
+  String get videoStickerAddYoursOpenSemanticLabel;
+
+  /// Screen-reader label of the Add yours button, which opens the camera. {prompt} is the sticker's prompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Add yours: {prompt}'**
+  String videoStickerAddYoursJoinSemanticLabel(String prompt);
+
+  /// On a replies sticker in the player: how many video replies the video has.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No replies yet} =1{1 reply} other{{count} replies}}'**
+  String videoStickerRepliesCount(int count);
+
+  /// On a replies sticker in the player: how many video replies the video has, when the count is only a floor. {count} is pre-formatted, such as 500+.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} replies'**
+  String videoStickerRepliesCountAtLeast(String count);
+
+  /// Screen-reader label of a replies sticker in the player, which opens the video replies.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Video replies, none yet} =1{Watch 1 video reply} other{Watch {count} video replies}}'**
+  String videoStickerRepliesSemanticLabel(int count);
+
+  /// Screen-reader label of a replies sticker in the player, which opens the video replies, when their count is only a floor. {count} is pre-formatted, such as 500+.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch {count} video replies'**
+  String videoStickerRepliesSemanticLabelAtLeast(String count);
+
+  /// Snackbar when someone who is not signed in taps a question sticker on a video.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to answer.'**
+  String get videoStickerQuestionSignIn;
+
+  /// Snackbar when an account that may message only Divine, a protected minor, taps a question sticker on a video: its answers go as private messages, which it cannot send.
+  ///
+  /// In en, this message translates to:
+  /// **'Answering questions isn\'t available for your account.'**
+  String get videoStickerQuestionUnavailable;
+
+  /// Title of the full-screen page where a viewer answers a question sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer'**
+  String get videoStickerQuestionAnswerTitle;
+
+  /// Label of the field where a viewer types their answer to a question sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answer'**
+  String get videoStickerQuestionAnswerFieldLabel;
+
+  /// Note under the answer field: the answer goes privately to the video's creator, who can answer it in a new video showing the question and the answer but not who wrote it. {name} is the creator's display name.
+  ///
+  /// In en, this message translates to:
+  /// **'Only {name} sees your answer. They might share it in a video, without your name.'**
+  String videoStickerQuestionAnswerPrivacyNote(String name);
+
+  /// Button that sends a viewer's answer to a question sticker as a private message.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get videoStickerQuestionAnswerSend;
+
+  /// Snackbar after a viewer's answer to a question sticker went out.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer sent.'**
+  String get videoStickerQuestionAnswerSent;
+
+  /// Snackbar when a viewer's answer to a question sticker is too long for one message.
+  ///
+  /// In en, this message translates to:
+  /// **'That answer is too long to send.'**
+  String get videoStickerQuestionAnswerTooLong;
+
+  /// Snackbar when a viewer's answer to a question sticker could not be sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answer didn\'t go through. Try again.'**
+  String get videoStickerQuestionAnswerFailed;
+
+  /// Snackbar when someone who is not signed in taps the Add yours button on a video.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to add yours.'**
+  String get videoStickerAddYoursSignIn;
+
+  /// Title of the page where a creator sees the video replies to one of their videos, and pins or hides them.
+  ///
+  /// In en, this message translates to:
+  /// **'Video replies'**
+  String get videoStickerRepliesManageTitle;
+
+  /// Shown on the video replies page while nobody has replied to the video with a video.
+  ///
+  /// In en, this message translates to:
+  /// **'No video replies yet.'**
+  String get videoStickerRepliesEmpty;
+
+  /// Shown on the video replies page when the replies could not be read.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the replies.'**
+  String get videoStickerRepliesLoadFailed;
+
+  /// Button on the video replies page that reads the replies again after they could not be read.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get videoStickerRepliesRetry;
+
+  /// Button beside a video reply that puts it first in the replies viewers see. Short.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin'**
+  String get videoStickerRepliesPin;
+
+  /// Button beside the pinned video reply that stops putting it first. Short.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin'**
+  String get videoStickerRepliesUnpin;
+
+  /// Button beside a video reply that leaves it out of the replies viewers see. Short.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide'**
+  String get videoStickerRepliesHide;
+
+  /// Button beside a hidden video reply that lets viewers see it again. Short.
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get videoStickerRepliesShow;
+
+  /// Label under the video reply the creator pinned first.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned'**
+  String get videoStickerRepliesPinned;
+
+  /// Label under a video reply the creator hid from viewers.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden'**
+  String get videoStickerRepliesHidden;
+
+  /// Snackbar when pinning or hiding a video reply could not be saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save that. Try again.'**
+  String get videoStickerRepliesSaveFailed;
+
+  /// Screen-reader label of a video reply on the video replies page, which opens it in the full-screen player. {name} is who posted it.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch the reply by {name}'**
+  String videoStickerRepliesWatchSemanticLabel(String name);
+
+  /// Note in the sheet a link sticker on a video opens, above the link's full address: the page opens outside the app.
+  ///
+  /// In en, this message translates to:
+  /// **'This link opens outside Divine. Check the address before you go.'**
+  String get videoStickerLinkSheetBody;
+
   /// No description provided for @metadataOriginalSound.
   ///
   /// In en, this message translates to:
@@ -7417,11 +7747,29 @@ abstract class AppLocalizations {
   /// **'Unfollowed {name}'**
   String profileUnfollowedUser(String name);
 
-  /// Full-screen message shown when an author's profile feed fails to load. This state is only reached when the API could not be reached at all — an author with genuinely no videos gets the empty state instead — so the copy names the connection rather than implying the profile is empty. Wording deliberately matches authSignInErrorNetwork.
+  /// Title in the Videos tab of the viewer's own profile when their videos failed to load. The rest of the profile stays on screen around it. Only reached when the server could not be reached, so it must not read as 'you have no videos'.
   ///
   /// In en, this message translates to:
-  /// **'Can\'t reach the server. Check your connection and try again.'**
-  String get profileFeedError;
+  /// **'Couldn\'t load your videos'**
+  String get profileVideosLoadFailedTitle;
+
+  /// Title in the Videos tab of someone else's profile when their videos failed to load. Same state as profileVideosLoadFailedTitle, without 'your'.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load videos'**
+  String get profileVideosLoadFailedOtherTitle;
+
+  /// Line under the title when a profile's videos failed to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your connection and try again.'**
+  String get profileVideosLoadFailedSubtitle;
+
+  /// Button under a profile's failed-to-load videos that loads them again.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get profileVideosLoadFailedRetry;
 
   /// Transient message shown when paginating an author's profile feed fails.
   ///
@@ -7962,6 +8310,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invalid sound ID'**
   String get routeInvalidSoundId;
+
+  /// Error page when a link to answer a question sticker names no creator, video or question.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid question link'**
+  String get routeInvalidQuestion;
 
   /// No description provided for @routeInvalidCategory.
   ///
@@ -10363,6 +10717,24 @@ abstract class AppLocalizations {
   /// **'Reply to this reel'**
   String get dmReelReplyComposerSemanticLabel;
 
+  /// Line above a message in a conversation that answers the question sticker on one of the viewer's videos. {question} is what the sticker asks.
+  ///
+  /// In en, this message translates to:
+  /// **'Answered your question: {question}'**
+  String dmQuestionAnswerReceivedLabel(String question);
+
+  /// Line above the viewer's own message in a conversation that answers someone's question sticker. {question} is what the sticker asks.
+  ///
+  /// In en, this message translates to:
+  /// **'You answered: {question}'**
+  String dmQuestionAnswerSentLabel(String question);
+
+  /// Button above an answer to the viewer's question sticker that opens the camera to reply with a video showing the question and the answer, without who wrote it.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer with a video'**
+  String get dmQuestionAnswerWithVideo;
+
   /// Tappable action in the 'Sent · View chat' confirmation that opens the DM conversation.
   ///
   /// In en, this message translates to:
@@ -10507,7 +10879,7 @@ abstract class AppLocalizations {
   /// **'Failed to send'**
   String get dmStatusFailed;
 
-  /// Caption under a sent group DM bubble that reached some members but not all, after the sender stopped trying to reach the rest (Stop trying, or a delete for everyone that has not gone through). Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it.
+  /// Caption under a sent group DM bubble that reached some members but not all, after delivery to the rest stopped: the sender chose Stop trying, a delete for everyone has not gone through, or the app gave up on a member whose inbox could not be read once its retries ran out. Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it.
   ///
   /// In en, this message translates to:
   /// **'Not sent to everyone'**
@@ -11509,12 +11881,6 @@ abstract class AppLocalizations {
   /// **'Selected, number {position}'**
   String videoClipSemanticValueSelectedAtPosition(int position);
 
-  /// No description provided for @videoClipSemanticValueSelected.
-  ///
-  /// In en, this message translates to:
-  /// **'Selected'**
-  String get videoClipSemanticValueSelected;
-
   /// No description provided for @videoClipSemanticValueNotSelected.
   ///
   /// In en, this message translates to:
@@ -11530,14 +11896,20 @@ abstract class AppLocalizations {
   /// No description provided for @videoClipSemanticHintSelect.
   ///
   /// In en, this message translates to:
-  /// **'Tap to select, long press to preview'**
+  /// **'Tap to select'**
   String get videoClipSemanticHintSelect;
 
   /// No description provided for @videoClipSemanticHintDeselect.
   ///
   /// In en, this message translates to:
-  /// **'Tap to deselect, long press to preview'**
+  /// **'Tap to deselect'**
   String get videoClipSemanticHintDeselect;
+
+  /// Accessibility hint on a library clip thumbnail outside selection mode, where a tap opens the clip preview.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to preview'**
+  String get videoClipSemanticHintPreview;
 
   /// No description provided for @routerInvalidCreator.
   ///
@@ -12952,6 +13324,12 @@ abstract class AppLocalizations {
   /// **'The text and stickers on this draft couldn’t be prepared. Open it in the editor, then post again.'**
   String get publishErrorOverlaysUnavailable;
 
+  /// Shown when a post was refused because it carries a question sticker and the account may message only Divine, a protected minor: answers to a question come as private messages, which the account cannot receive. Removing the sticker in the editor lets it post.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account can\'t post a question sticker, since its answers come as private messages. Remove it, then post again.'**
+  String get publishErrorQuestionStickerRestricted;
+
   /// Shown on the post screen when the export failed because the device could not decode every clip detached onto the editor canvas at the same time. Retrying fails the same way, so it tells the user to move some detached clips back onto the timeline (the action labelled videoEditorReattachLabel) and try again. Use the same noun for the clips as this locale's videoEditorDetachedClipLabel.
   ///
   /// In en, this message translates to:
@@ -14005,6 +14383,12 @@ abstract class AppLocalizations {
   /// **'{actorName} liked your video'**
   String notificationLikedYourVideo(String actorName);
 
+  /// Notification text when someone likes another creator's video that tags the user, for example as a collaborator. The video is not the user's own, so the text must not say "your video".
+  ///
+  /// In en, this message translates to:
+  /// **'{actorName} liked a video you\'re tagged in'**
+  String notificationLikedTaggedVideo(String actorName);
+
   /// Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.
   ///
   /// In en, this message translates to:
@@ -14579,6 +14963,18 @@ abstract class AppLocalizations {
   /// **'This permanently deletes {count, plural, =1{1 clip} other{{count} clips}} from trash right away.'**
   String libraryTrashEmptyConfirmMessage(int count);
 
+  /// Screen-reader announcement after clips are restored from trash and their rows leave the trash list.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Clip restored} other{{count} clips restored}}'**
+  String libraryTrashClipsRestored(int count);
+
+  /// Screen-reader announcement after clips are permanently deleted from trash (one at a time or by emptying it) and their rows leave the trash list.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Clip permanently deleted} other{{count} clips permanently deleted}}'**
+  String libraryTrashClipsDeleted(int count);
+
   /// No description provided for @videoRecorderCloseLabel.
   ///
   /// In en, this message translates to:
@@ -15011,6 +15407,72 @@ abstract class AppLocalizations {
   /// **'Sparkles'**
   String get videoEditorEffectSparkles;
 
+  /// Name of a video effect: rain streaks down at a slant over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Rain'**
+  String get videoEditorEffectRain;
+
+  /// Name of a video effect: autumn leaves in reds, oranges and yellows rock and turn over as they fall over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaves'**
+  String get videoEditorEffectLeaves;
+
+  /// Name of a video effect: pink cherry blossom petals flutter down over the picture on the wind.
+  ///
+  /// In en, this message translates to:
+  /// **'Blossoms'**
+  String get videoEditorEffectBlossoms;
+
+  /// Name of a video effect: shimmering soap bubbles float up over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Bubbles'**
+  String get videoEditorEffectBubbles;
+
+  /// Name of a video effect, after the photography term: soft round discs of out-of-focus light drift and glow over the picture. Use the photography term your language uses.
+  ///
+  /// In en, this message translates to:
+  /// **'Bokeh'**
+  String get videoEditorEffectBokeh;
+
+  /// Name of a video effect: music notes (♪, ♫) rock as they rise over the picture. Keep it short — it sits under a small tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Music notes'**
+  String get videoEditorEffectMusicNotes;
+
+  /// Name of a video effect: five-pointed gold and silver stars spin as they fall over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Stars'**
+  String get videoEditorEffectStars;
+
+  /// Name of a video effect: small yellow-green lights wander about over the picture, glowing up and fading, like fireflies at night.
+  ///
+  /// In en, this message translates to:
+  /// **'Fireflies'**
+  String get videoEditorEffectFireflies;
+
+  /// Name of a video effect: glowing orange sparks rise from below and die away, as over a campfire.
+  ///
+  /// In en, this message translates to:
+  /// **'Embers'**
+  String get videoEditorEffectEmbers;
+
+  /// Name of a video effect: green banknotes tumble down over the picture, as in "make it rain".
+  ///
+  /// In en, this message translates to:
+  /// **'Money'**
+  String get videoEditorEffectMoney;
+
+  /// Name of a video effect: colourful party balloons on strings swing as they rise over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Balloons'**
+  String get videoEditorEffectBalloons;
+
   /// Name of a video effect: the top and bottom of the picture are blurred, so the scene looks like a miniature model. Tilt-shift is the photography term for this look.
   ///
   /// In en, this message translates to:
@@ -15023,11 +15485,197 @@ abstract class AppLocalizations {
   /// **'Zoom Blur'**
   String get videoEditorEffectZoomBlur;
 
+  /// Name of a video effect: the picture streaks around its centre, as if the camera turned during the shot.
+  ///
+  /// In en, this message translates to:
+  /// **'Spin Blur'**
+  String get videoEditorEffectSpinBlur;
+
   /// Name of a video effect: the picture looks like a printed comic book, with flat colours, halftone dots and ink outlines.
   ///
   /// In en, this message translates to:
   /// **'Comic'**
   String get videoEditorEffectComic;
+
+  /// Name of a video effect: the picture twists around its centre, as if stirred.
+  ///
+  /// In en, this message translates to:
+  /// **'Swirl'**
+  String get videoEditorEffectSwirl;
+
+  /// Name of a video effect: rings spread out from the centre of the picture, like ripples on water after a stone drops in.
+  ///
+  /// In en, this message translates to:
+  /// **'Ripple'**
+  String get videoEditorEffectRipple;
+
+  /// Name of a video effect: the picture is seen through ribbed (fluted or reeded) glass, made of upright ribs that each show a squeezed slice of it.
+  ///
+  /// In en, this message translates to:
+  /// **'Fluted Glass'**
+  String get videoEditorEffectFlutedGlass;
+
+  /// Name of a video effect: the picture looks like the pixel art of early video game consoles, in large pixels and few colours. Use the term your language uses for retro 8-bit video game graphics.
+  ///
+  /// In en, this message translates to:
+  /// **'8-Bit'**
+  String get videoEditorEffectEightBit;
+
+  /// Name of a video effect: the picture is split into a red and a cyan copy laid over each other, slightly apart, like an old 3D film or comic viewed through red-cyan cardboard 3D glasses.
+  ///
+  /// In en, this message translates to:
+  /// **'3D Glasses'**
+  String get videoEditorEffectAnaglyph;
+
+  /// Name of a video effect: the picture looks printed on a risograph, in grainy pink and blue ink on paper, slightly out of register. Keep Riso or use your language's word for risograph printing.
+  ///
+  /// In en, this message translates to:
+  /// **'Riso Print'**
+  String get videoEditorEffectRiso;
+
+  /// Name of a colour-graded look in the video effects picker: the blockbuster film grade, with teal (blue-green) shadows and greens, and warm orange skin and highlights. Keep the colour names short; "& " may become your language's "and".
+  ///
+  /// In en, this message translates to:
+  /// **'Teal & Orange'**
+  String get videoEditorEffectTealOrange;
+
+  /// Name of a colour-graded look in the video effects picker: the soft, warm colours of a portrait photo film, with muted greens. "Film" means photographic film, as in the Old Film effect.
+  ///
+  /// In en, this message translates to:
+  /// **'Warm Film'**
+  String get videoEditorEffectWarmFilm;
+
+  /// Name of a colour-graded look in the video effects picker: the vivid, contrasty colours of slide (reversal) photo film, with deep blue skies. Use your language's word for slide or reversal film.
+  ///
+  /// In en, this message translates to:
+  /// **'Slide Film'**
+  String get videoEditorEffectSlideFilm;
+
+  /// Name of a colour-graded look in the video effects picker: the clean, cool colours of an everyday photo film, with emerald greens. "Cool" means cool in colour temperature (bluish), the opposite of Warm Film.
+  ///
+  /// In en, this message translates to:
+  /// **'Cool Film'**
+  String get videoEditorEffectCoolFilm;
+
+  /// Name of a colour-graded look in the video effects picker: a soft faded look with lifted greyish blacks and muted colours, like a matte print.
+  ///
+  /// In en, this message translates to:
+  /// **'Matte'**
+  String get videoEditorEffectMatte;
+
+  /// Name of a colour-graded look in the video effects picker: cold, hard and silvery with most colour drained, after the film processing technique that skips the bleach step. Keep the English term where film people use it.
+  ///
+  /// In en, this message translates to:
+  /// **'Bleach Bypass'**
+  String get videoEditorEffectBleachBypass;
+
+  /// Name of a colour-graded look in the video effects picker: blue shadows and yellow highlights, after the photo technique of developing slide film as a negative. Keep the English term where photographers use it.
+  ///
+  /// In en, this message translates to:
+  /// **'Cross Process'**
+  String get videoEditorEffectCrossProcess;
+
+  /// Name of a colour-graded look in the video effects picker: the warm golden light of the hour before sunset.
+  ///
+  /// In en, this message translates to:
+  /// **'Golden Hour'**
+  String get videoEditorEffectGoldenHour;
+
+  /// Name of a colour-graded look in the video effects picker: the picture made dark and blue, as if shot at night by moonlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Moonlight'**
+  String get videoEditorEffectMoonlight;
+
+  /// Name of a colour-graded look in the video effects picker: black-and-white photo film with deep blacks and darker skies. Silver refers to silver-based black-and-white film, not to the colour.
+  ///
+  /// In en, this message translates to:
+  /// **'Silver'**
+  String get videoEditorEffectSilver;
+
+  /// Name of a group in the video effects picker: effects that look like old media, such as VHS tape, old film or an old TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Retro'**
+  String get videoEditorEffectCategoryRetro;
+
+  /// Name of a group in the video effects picker: effects that make the picture break up digitally. Use the same word as the Glitch effect.
+  ///
+  /// In en, this message translates to:
+  /// **'Glitch'**
+  String get videoEditorEffectCategoryGlitch;
+
+  /// Name of a group in the video effects picker: effects that bend, mirror or split the picture, or show it as through a lens.
+  ///
+  /// In en, this message translates to:
+  /// **'Distort'**
+  String get videoEditorEffectCategoryDistort;
+
+  /// Name of a group in the video effects picker: effects that add, take away or flash light, such as glow, vignette or strobe.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get videoEditorEffectCategoryLight;
+
+  /// Name of a group in the video effects picker: effects that make the picture shake, pulse or leave a trail.
+  ///
+  /// In en, this message translates to:
+  /// **'Motion'**
+  String get videoEditorEffectCategoryMotion;
+
+  /// Name of a group in the video effects picker: effects where snow, confetti, hearts or sparkles fall or float over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Particles'**
+  String get videoEditorEffectCategoryParticles;
+
+  /// Name of a group in the video effects picker: colour-graded looks that change the colours of the picture the way a film stock or a colourist would, such as Teal & Orange or Warm Film.
+  ///
+  /// In en, this message translates to:
+  /// **'Looks'**
+  String get videoEditorEffectCategoryLooks;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that lift the picture subtly and keep its colours true to life.
+  ///
+  /// In en, this message translates to:
+  /// **'Natural'**
+  String get videoEditorFilterCategoryNatural;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that add colour and contrast.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrant'**
+  String get videoEditorFilterCategoryVibrant;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that give the picture a golden, orange or yellow cast. Warm as in colour temperature.
+  ///
+  /// In en, this message translates to:
+  /// **'Warm'**
+  String get videoEditorFilterCategoryWarm;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that give the picture a blue or green cast. Cool as in colour temperature, not as in great.
+  ///
+  /// In en, this message translates to:
+  /// **'Cool'**
+  String get videoEditorFilterCategoryCool;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that make the picture look faded, washed out or sepia, like an old photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Vintage'**
+  String get videoEditorFilterCategoryVintage;
+
+  /// Name of a group in the colour filter picker of the video editor: black-and-white filters. Short, as it labels a tab.
+  ///
+  /// In en, this message translates to:
+  /// **'B&W'**
+  String get videoEditorFilterCategoryBlackAndWhite;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that lay one strong colour, such as red or blue, over the whole picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Tints'**
+  String get videoEditorFilterCategoryTints;
 
   /// Header of the expandable card in the video effects editor that holds the settings of the Drops effect.
   ///
@@ -17657,7 +18305,7 @@ abstract class AppLocalizations {
   /// **'Zoom out'**
   String get videoEditorTransitionZoomOut;
 
-  /// Transition option: the picture spins all the way round as it changes from the current clip to the next.
+  /// Transition option: the picture spins all the way round as it changes from the current clip to the next. Also the layer animation that turns a text or sticker around its center into place, away, or on and on in the Loop tab.
   ///
   /// In en, this message translates to:
   /// **'Spin'**
@@ -17717,7 +18365,7 @@ abstract class AppLocalizations {
   /// **'Diagonal wipe'**
   String get videoEditorTransitionDiagonalWipe;
 
-  /// Transition option: the picture turns over in 3D like a card, with the next clip on its back.
+  /// Transition option: the picture turns over in 3D like a card, with the next clip on its back. Also the layer animation that turns a text or sticker over like a card as it appears or disappears.
   ///
   /// In en, this message translates to:
   /// **'Flip'**
@@ -18083,6 +18731,18 @@ abstract class AppLocalizations {
   /// **'Height'**
   String get videoEditorLayerAnimationBounceHeight;
 
+  /// Screen reader label of the icon option that makes a flip layer animation turn the layer around its vertical axis like a card, its left and right edges trading places.
+  ///
+  /// In en, this message translates to:
+  /// **'Sideways'**
+  String get videoEditorLayerAnimationFlipSideways;
+
+  /// Screen reader label of the icon option that makes a flip layer animation turn the layer around its horizontal axis, its top and bottom edges trading places.
+  ///
+  /// In en, this message translates to:
+  /// **'Top over bottom'**
+  String get videoEditorLayerAnimationFlipOver;
+
   /// Direction option for a slide animation that starts (or ends) at a point the creator taps on the video, instead of travelling to or from a canvas edge.
   ///
   /// In en, this message translates to:
@@ -18244,6 +18904,756 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search stickers...'**
   String get videoEditorStickerSearchHint;
+
+  /// Heading of the info stickers (time, date, weather and so on) in the video editor's sticker sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Info'**
+  String get videoEditorInfoStickersTitle;
+
+  /// Heading above the row of social stickers (mention, hashtag, sound credit) in the video editor's sticker sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Social'**
+  String get videoEditorSocialStickersTitle;
+
+  /// Name of the sticker that mentions a person in the video; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Mention'**
+  String get videoEditorSocialStickerMention;
+
+  /// Name of the sticker that shows a hashtag in the video and adds it to the post's hashtags.
+  ///
+  /// In en, this message translates to:
+  /// **'Hashtag'**
+  String get videoEditorSocialStickerHashtag;
+
+  /// Name of the sticker that credits the title and artist of the video's sound.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound'**
+  String get videoEditorSocialStickerSoundCredit;
+
+  /// Made-up handle shown after an @ on the sample mention sticker in the sticker sheet. Lowercase, one word.
+  ///
+  /// In en, this message translates to:
+  /// **'yourname'**
+  String get videoEditorSocialStickerMentionSample;
+
+  /// Made-up hashtag shown after a # on the sample hashtag sticker in the sticker sheet. Lowercase, one word.
+  ///
+  /// In en, this message translates to:
+  /// **'hashtag'**
+  String get videoEditorSocialStickerHashtagSample;
+
+  /// Row in the mention sticker sheet that opens the people search to pick who the sticker mentions.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose someone'**
+  String get videoEditorSocialStickerChoosePerson;
+
+  /// Help line in the mention sticker sheet: placing the sticker mentions the person in the post, which notifies them.
+  ///
+  /// In en, this message translates to:
+  /// **'They\'re mentioned in your post and get a notification.'**
+  String get videoEditorSocialStickerMentionNote;
+
+  /// Label of the field where the creator types the hashtag a hashtag sticker shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a hashtag'**
+  String get videoEditorSocialStickerHashtagHint;
+
+  /// Help line in the hashtag sticker sheet: the sticker's hashtag also becomes one of the post's hashtags.
+  ///
+  /// In en, this message translates to:
+  /// **'Also added to your post\'s hashtags.'**
+  String get videoEditorSocialStickerHashtagNote;
+
+  /// Label of the optional field for a line of song lyrics shown under a sound credit sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Line of lyrics (optional)'**
+  String get videoEditorSocialStickerLyricHint;
+
+  /// Name of the sticker that shows a link to a web page in the video and adds its address to the post.
+  ///
+  /// In en, this message translates to:
+  /// **'Link'**
+  String get videoEditorSocialStickerLink;
+
+  /// Label of the field where the creator types the web address a link sticker points to.
+  ///
+  /// In en, this message translates to:
+  /// **'Web address'**
+  String get videoEditorSocialStickerLinkUrlHint;
+
+  /// Label of the optional field for a short title a link sticker shows instead of the domain.
+  ///
+  /// In en, this message translates to:
+  /// **'Title (optional)'**
+  String get videoEditorSocialStickerLinkTitleHint;
+
+  /// Help line in the link sticker sheet: the address also goes into the published post.
+  ///
+  /// In en, this message translates to:
+  /// **'The address is added to your post.'**
+  String get videoEditorSocialStickerLinkNote;
+
+  /// Warning in the link sticker sheet while the typed text is not a usable web address.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s not a web address yet.'**
+  String get videoEditorSocialStickerLinkInvalid;
+
+  /// Heading above the row of interactive stickers (countdown, reply, poll, quiz, slider) in the video editor's sticker sheet: stickers viewers can tap in the Divine player.
+  ///
+  /// In en, this message translates to:
+  /// **'Interactive'**
+  String get videoEditorInteractiveStickersTitle;
+
+  /// Name of the sticker that counts down to a date and time; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Countdown'**
+  String get videoEditorSocialStickerCountdown;
+
+  /// Made-up title on the sample countdown sticker in the sticker sheet, something people count down to. One short word.
+  ///
+  /// In en, this message translates to:
+  /// **'Summer'**
+  String get videoEditorSocialStickerCountdownSample;
+
+  /// Label of the field where the creator types the title a countdown sticker shows above its date.
+  ///
+  /// In en, this message translates to:
+  /// **'What are you counting down to?'**
+  String get videoEditorSocialStickerCountdownTitleHint;
+
+  /// Help line in the countdown sticker sheet: in the Divine player the sticker shows the live time left, and a tap sets a reminder for when it ends.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewers see the time left and can set a reminder.'**
+  String get videoEditorSocialStickerCountdownNote;
+
+  /// Warning in the countdown sticker sheet when the countdown's date and time are already over, for example in a draft reopened later.
+  ///
+  /// In en, this message translates to:
+  /// **'That moment has passed. Pick a new one.'**
+  String get videoEditorSocialStickerCountdownOver;
+
+  /// Name of the sticker that shows the comment or video a video reply answers; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get videoEditorSocialStickerReply;
+
+  /// Help line in the reply sticker sheet: in the player, tapping the sticker opens the comment or video this video replies to.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewers tap it to see what you\'re replying to.'**
+  String get videoEditorSocialStickerReplyNote;
+
+  /// Name of the sticker that asks viewers a question with two to four answers they vote on; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Poll'**
+  String get videoEditorSocialStickerPoll;
+
+  /// Name of the sticker that asks viewers a question with one right answer, which they see once they pick one; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiz'**
+  String get videoEditorSocialStickerQuiz;
+
+  /// Name of the sticker where viewers rate a question by dragging an emoji along a bar; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Slider'**
+  String get videoEditorSocialStickerSlider;
+
+  /// Made-up question on the sample poll sticker in the sticker sheet. Short.
+  ///
+  /// In en, this message translates to:
+  /// **'Which one?'**
+  String get videoEditorSocialStickerPollSampleQuestion;
+
+  /// First made-up answer on the sample poll sticker in the sticker sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get videoEditorSocialStickerPollSampleYes;
+
+  /// Second made-up answer on the sample poll sticker in the sticker sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get videoEditorSocialStickerPollSampleNo;
+
+  /// Made-up question on the sample quiz sticker in the sticker sheet; its answers are the years 2013 and 2015. Keep the trailing ellipsis if it reads naturally.
+  ///
+  /// In en, this message translates to:
+  /// **'Vine launched in…'**
+  String get videoEditorSocialStickerQuizSampleQuestion;
+
+  /// Made-up question on the sample emoji slider sticker in the sticker sheet; viewers answer by dragging a 😋 along a bar.
+  ///
+  /// In en, this message translates to:
+  /// **'How hungry are you?'**
+  String get videoEditorSocialStickerSliderSampleQuestion;
+
+  /// Label of the field where the creator types the question a poll, quiz or slider sticker asks.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask a question'**
+  String get videoEditorSocialStickerPollQuestionHint;
+
+  /// Label of the field where the creator types one answer of a poll or quiz sticker, numbered from 1. The number is pre-formatted at the call site.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer {number}'**
+  String videoEditorSocialStickerPollOptionHint(String number);
+
+  /// Screen reader label of the button that removes one answer, numbered from 1, from a poll or quiz sticker. The number is pre-formatted at the call site.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove answer {number}'**
+  String videoEditorSocialStickerPollRemoveOption(String number);
+
+  /// Screen reader label of the button that marks one answer, numbered from 1, as the right answer of a quiz sticker. The number is pre-formatted at the call site.
+  ///
+  /// In en, this message translates to:
+  /// **'Make answer {number} the right one'**
+  String videoEditorSocialStickerQuizMarkRight(String number);
+
+  /// Button in the poll and quiz sticker sheet that adds another answer field, up to four.
+  ///
+  /// In en, this message translates to:
+  /// **'Add answer'**
+  String get videoEditorSocialStickerPollAddOption;
+
+  /// Help line in the poll sticker sheet: in the Divine player viewers see how everyone voted after they vote, and anyone can see who voted for what.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewers see the results once they vote. Votes are public.'**
+  String get videoEditorSocialStickerPollNote;
+
+  /// Help line in the quiz sticker sheet: the creator marks the right answer with the tick next to it, and viewers see which one was right after they answer.
+  ///
+  /// In en, this message translates to:
+  /// **'Tick the right answer. Viewers see it once they\'ve picked one.'**
+  String get videoEditorSocialStickerQuizNote;
+
+  /// Help line in the emoji slider sticker sheet: viewers rate by dragging the emoji along the bar, then see the average of everyone's answers.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewers drag the emoji to answer and see where it lands on average.'**
+  String get videoEditorSocialStickerSliderNote;
+
+  /// Name of the sticker that asks viewers a question they answer in a private message to the creator; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Question'**
+  String get videoEditorSocialStickerQuestion;
+
+  /// Name of the sticker with a prompt such as 'Show your desk setup' that viewers answer with a video of their own; the sheet title and timeline label for it. Same wording as the sticker's button.
+  ///
+  /// In en, this message translates to:
+  /// **'Add yours'**
+  String get videoEditorSocialStickerAddYours;
+
+  /// Name of the sticker that shows the video replies to a video and opens them; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Replies'**
+  String get videoEditorSocialStickerReplies;
+
+  /// Question a new question sticker starts with, and the sample in the sticker sheet. The creator can change it.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask me anything'**
+  String get videoEditorSocialStickerQuestionSample;
+
+  /// Made-up prompt on the sample Add yours sticker in the sticker sheet: viewers answer it with a video of their own.
+  ///
+  /// In en, this message translates to:
+  /// **'Show your desk setup'**
+  String get videoEditorSocialStickerAddYoursSample;
+
+  /// Title a new replies sticker starts with, and the sample in the sticker sheet. The creator can change it.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply with a video'**
+  String get videoEditorSocialStickerRepliesSample;
+
+  /// Label of the field where the creator types what a question sticker asks.
+  ///
+  /// In en, this message translates to:
+  /// **'Your question'**
+  String get videoEditorSocialStickerQuestionHint;
+
+  /// Label of the field where the creator types the prompt of an Add yours sticker, such as 'Show your desk setup'.
+  ///
+  /// In en, this message translates to:
+  /// **'What should people show?'**
+  String get videoEditorSocialStickerAddYoursPromptHint;
+
+  /// Label of the field with the hashtag every answer to an Add yours sticker shares. It starts with the prompt's words run together.
+  ///
+  /// In en, this message translates to:
+  /// **'Hashtag'**
+  String get videoEditorSocialStickerAddYoursHashtagHint;
+
+  /// Label of the field where the creator types the title of a replies sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get videoEditorSocialStickerRepliesTitleHint;
+
+  /// Help line in the question sticker sheet: viewers' answers arrive in the creator's messages and nobody else sees them.
+  ///
+  /// In en, this message translates to:
+  /// **'Answers come to you as private messages.'**
+  String get videoEditorSocialStickerQuestionNote;
+
+  /// Help line in the Add yours sticker sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewers answer with a video of their own. Every answer gets this hashtag and links back to your video.'**
+  String get videoEditorSocialStickerAddYoursNote;
+
+  /// Help line in the replies sticker sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows who replied to this video with a video. Viewers tap it to watch the replies.'**
+  String get videoEditorSocialStickerRepliesNote;
+
+  /// Line beside the outlined box shown while the creator moves a poll, quiz, slider, question, Add yours or replies sticker: the sticker can only stand inside it, clear of the feed's buttons and caption.
+  ///
+  /// In en, this message translates to:
+  /// **'This sticker stays in this box so viewers can tap it'**
+  String get videoEditorInteractiveCardAreaHint;
+
+  /// Name of the sound credit design with a music note in front of the title and artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get videoEditorSocialStickerSoundNote;
+
+  /// Name of the sound credit design with a vinyl record in front of the title and artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get videoEditorSocialStickerSoundVinyl;
+
+  /// Name of the sound credit design with a cassette tape in front of the title and artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Cassette'**
+  String get videoEditorSocialStickerSoundCassette;
+
+  /// Name of the sound credit design with equalizer bars in front of the title and artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Equalizer'**
+  String get videoEditorSocialStickerSoundEqualizer;
+
+  /// Name of the sound credit design that looks like a music player with a progress bar and buttons.
+  ///
+  /// In en, this message translates to:
+  /// **'Player'**
+  String get videoEditorSocialStickerSoundPlayer;
+
+  /// Name of the info sticker that shows the time a clip was recorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get videoEditorInfoStickerTime;
+
+  /// Name of the info sticker that shows the date a clip was recorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get videoEditorInfoStickerDate;
+
+  /// Name of the info sticker that shows a place name.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get videoEditorInfoStickerLocation;
+
+  /// Name of the info sticker that shows the weather at a place.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather'**
+  String get videoEditorInfoStickerWeather;
+
+  /// Name of the info sticker that shows the altitude of a place.
+  ///
+  /// In en, this message translates to:
+  /// **'Altitude'**
+  String get videoEditorInfoStickerAltitude;
+
+  /// Name of the info sticker that shows the phone's battery level.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery'**
+  String get videoEditorInfoStickerBattery;
+
+  /// Name of the info sticker style with a white background.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get videoEditorInfoStickerStyleLight;
+
+  /// Name of the info sticker style with a dark see-through background.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get videoEditorInfoStickerStyleDark;
+
+  /// Name of the info sticker style with Divine's green background.
+  ///
+  /// In en, this message translates to:
+  /// **'Green'**
+  String get videoEditorInfoStickerStyleBrand;
+
+  /// Name of the info sticker style with a white outline and no background.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline'**
+  String get videoEditorInfoStickerStyleOutline;
+
+  /// Name of the time sticker style that looks like a digital clock.
+  ///
+  /// In en, this message translates to:
+  /// **'Digital'**
+  String get videoEditorInfoStickerStyleDigital;
+
+  /// Name of the time sticker style that looks like a clock with hands.
+  ///
+  /// In en, this message translates to:
+  /// **'Analog'**
+  String get videoEditorInfoStickerStyleAnalog;
+
+  /// Name of the info sticker style with a pale see-through background the video shows through.
+  ///
+  /// In en, this message translates to:
+  /// **'Glass'**
+  String get videoEditorInfoStickerStyleGlass;
+
+  /// Name of the info sticker style with a yellow background, like a highlighter.
+  ///
+  /// In en, this message translates to:
+  /// **'Yellow'**
+  String get videoEditorInfoStickerStyleHighlight;
+
+  /// Name of the info sticker style with white text glowing green and no background.
+  ///
+  /// In en, this message translates to:
+  /// **'Neon'**
+  String get videoEditorInfoStickerStyleNeon;
+
+  /// Name of the info sticker style with white text, a soft shadow and no background.
+  ///
+  /// In en, this message translates to:
+  /// **'Plain'**
+  String get videoEditorInfoStickerStylePlain;
+
+  /// Row in the info sticker sheet that goes back to the place search to pick another place.
+  ///
+  /// In en, this message translates to:
+  /// **'Change place'**
+  String get videoEditorInfoStickerChangePlace;
+
+  /// Shown in the place search of an info sticker when the phone has no geocoder, such as an Android phone without Google services.
+  ///
+  /// In en, this message translates to:
+  /// **'Place search isn\'t available on this device.'**
+  String get videoEditorInfoStickerPlaceSearchUnavailable;
+
+  /// Chip in the time and date sticker sheet that picks the time the clip was recorded; value is that time or date.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded · {value}'**
+  String videoEditorInfoStickerRecordedValue(String value);
+
+  /// Chip in the time sticker sheet that picks the current time; value is the time now.
+  ///
+  /// In en, this message translates to:
+  /// **'Now · {value}'**
+  String videoEditorInfoStickerNowValue(String value);
+
+  /// Chip in the date sticker sheet that picks today's date; value is today's date.
+  ///
+  /// In en, this message translates to:
+  /// **'Today · {value}'**
+  String videoEditorInfoStickerTodayValue(String value);
+
+  /// Name of the info sticker that counts days of a challenge or series, such as 'Day 12 of 30'.
+  ///
+  /// In en, this message translates to:
+  /// **'Day counter'**
+  String get videoEditorInfoStickerDayCount;
+
+  /// Name of the info sticker that shows when the sun rose and set at a place.
+  ///
+  /// In en, this message translates to:
+  /// **'Sun'**
+  String get videoEditorInfoStickerSun;
+
+  /// Name of the info sticker that shows the phase of the moon.
+  ///
+  /// In en, this message translates to:
+  /// **'Moon'**
+  String get videoEditorInfoStickerMoon;
+
+  /// Name of the info sticker that shows a camcorder's recording timer running with the video. Keep REC as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'REC timer'**
+  String get videoEditorInfoStickerRecTimer;
+
+  /// Name of the info sticker style that looks like the orange date a film camera prints on a photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Film'**
+  String get videoEditorInfoStickerStyleFilm;
+
+  /// Name of the info sticker style that looks like a camcorder's viewfinder, with a red recording dot.
+  ///
+  /// In en, this message translates to:
+  /// **'Camcorder'**
+  String get videoEditorInfoStickerStyleCamcorder;
+
+  /// Day counter sticker without an end; day is the already formatted day number, an ordinal rather than a quantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {day}'**
+  String videoEditorInfoStickerDayCountValue(String day);
+
+  /// Day counter sticker with an end, such as 'Day 12 of 30'; day and total are already formatted numbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {day} of {total}'**
+  String videoEditorInfoStickerDayCountOfValue(String day, String total);
+
+  /// Label of the field for the day number a day counter sticker shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get videoEditorInfoStickerDayLabel;
+
+  /// Label of the optional field for how many days a day counter counts to.
+  ///
+  /// In en, this message translates to:
+  /// **'Total days (optional)'**
+  String get videoEditorInfoStickerDayTotalLabel;
+
+  /// Choice that shows a pin in front of the place name on a location sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin'**
+  String get videoEditorInfoStickerSymbolPin;
+
+  /// Choice that shows the country's flag in front of the place name on a location sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Flag'**
+  String get videoEditorInfoStickerSymbolFlag;
+
+  /// Choice that shows a globe turned to the place's side of the world in front of the place name on a location sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Globe'**
+  String get videoEditorInfoStickerSymbolGlobe;
+
+  /// Choice that shows a folded map in front of the place name on a location sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Map'**
+  String get videoEditorInfoStickerSymbolMap;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'New moon'**
+  String get videoEditorInfoStickerMoonNew;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Waxing crescent'**
+  String get videoEditorInfoStickerMoonWaxingCrescent;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'First quarter'**
+  String get videoEditorInfoStickerMoonFirstQuarter;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Waxing gibbous'**
+  String get videoEditorInfoStickerMoonWaxingGibbous;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Full moon'**
+  String get videoEditorInfoStickerMoonFull;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Waning gibbous'**
+  String get videoEditorInfoStickerMoonWaningGibbous;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Last quarter'**
+  String get videoEditorInfoStickerMoonLastQuarter;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Waning crescent'**
+  String get videoEditorInfoStickerMoonWaningCrescent;
+
+  /// Hint of the search field for the place a location, weather or altitude sticker shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Search for a city or place'**
+  String get videoEditorInfoStickerPlaceSearchHint;
+
+  /// Shown when the place search for an info sticker finds nothing.
+  ///
+  /// In en, this message translates to:
+  /// **'No places found'**
+  String get videoEditorInfoStickerPlaceNoResults;
+
+  /// Shown when the place search for an info sticker fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t search for places. Try again.'**
+  String get videoEditorInfoStickerPlaceSearchFailed;
+
+  /// Note under the place search of an info sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the place name goes into your video, never your exact position.'**
+  String get videoEditorInfoStickerPlacePrivacyNote;
+
+  /// Shown while an info sticker loads the weather, the altitude or the battery level.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading…'**
+  String get videoEditorInfoStickerLoading;
+
+  /// Shown when an info sticker cannot load the weather or the altitude.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this. Try again.'**
+  String get videoEditorInfoStickerLoadFailed;
+
+  /// Credit for the weather and altitude data, required by its licence. Keep the name MET Norway as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Data from MET Norway'**
+  String get videoEditorInfoStickerMetAttribution;
+
+  /// Shown under the temperature field of a weather sticker whose video was recorded more than about an hour ago: the weather service keeps no past hours, so the sticker shows the current weather instead.
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s no weather for older videos, so this is the weather right now.'**
+  String get videoEditorInfoStickerWeatherNow;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunny'**
+  String get videoEditorInfoStickerWeatherSunny;
+
+  /// Name of the weather pick for a clear sky at night, shown next to a moon emoji on a weather sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear night'**
+  String get videoEditorInfoStickerWeatherClearNight;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Partly cloudy'**
+  String get videoEditorInfoStickerWeatherPartlyCloudy;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloudy'**
+  String get videoEditorInfoStickerWeatherCloudy;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Fog'**
+  String get videoEditorInfoStickerWeatherFog;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Rain'**
+  String get videoEditorInfoStickerWeatherRain;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Showers'**
+  String get videoEditorInfoStickerWeatherShowers;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Snow'**
+  String get videoEditorInfoStickerWeatherSnow;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Thunderstorm'**
+  String get videoEditorInfoStickerWeatherThunderstorm;
+
+  /// Shown under a sunrise and sunset sticker: the times are given in the phone's time zone, not the place's.
+  ///
+  /// In en, this message translates to:
+  /// **'Times are in your phone\'s time zone.'**
+  String get videoEditorInfoStickerSunTimeZoneNote;
+
+  /// Label of the field where the creator can change the temperature a weather sticker shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Temperature'**
+  String get videoEditorInfoStickerTemperatureLabel;
+
+  /// Accessibility label of the switch between units, such as °C and °F, on an info sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get videoEditorInfoStickerUnitLabel;
+
+  /// Label of the slider that sets the battery level a battery sticker shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery level'**
+  String get videoEditorInfoStickerBatteryLevelLabel;
+
+  /// Button that places the info sticker on the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Add sticker'**
+  String get videoEditorInfoStickerAdd;
 
   /// No description provided for @videoEditorSelectFontSemanticLabel.
   ///
@@ -20660,6 +22070,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add \"#{tag}\"'**
   String videoMetadataTagsPickerAddTag(String tag);
+
+  /// Screen reader label of a hashtag in the tags picker that comes from a hashtag sticker in the video and can only be removed with the sticker. {tag} is the hashtag without its #.
+  ///
+  /// In en, this message translates to:
+  /// **'{tag}, from a sticker in your video'**
+  String videoMetadataTagsPickerStickerTag(String tag);
 
   /// Welcome-screen Divine Greenlight label above the sign-in / create-account buttons.
   ///
@@ -23781,6 +25197,66 @@ abstract class AppLocalizations {
   /// **'Leaving this here.'**
   String get ideasDescriptionSix;
 
+  /// Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Rooms, {displayCount} unread message} other{Rooms, {displayCount} unread messages}}'**
+  String messagesRoomsUnreadLabel(int count, String displayCount);
+
+  /// Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{displayCount} new} other{{displayCount} new}}'**
+  String messagesRoomNewCount(int count, String displayCount);
+
+  /// Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{displayCount} unread message} other{{displayCount} unread messages}}'**
+  String messagesRoomUnreadLabel(int count, String displayCount);
+
+  /// Latest public room message preview with the safely resolved sender name.
+  ///
+  /// In en, this message translates to:
+  /// **'{author}: {message}'**
+  String messagesRoomLatestMessage(String author, String message);
+
+  /// Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{displayCount} person} other{{displayCount} people}}'**
+  String messagesRoomContributors(int count, String displayCount);
+
+  /// Public room messages in the last 24 hours. displayCount can include + when history is incomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{displayCount} message} other{{displayCount} messages}}'**
+  String messagesRoomRecentMessages(int count, String displayCount);
+
+  /// Time window for the adjacent room contributor and message counts.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 24h'**
+  String get messagesRoomActivityPeriod;
+
+  /// Room activity has not finished loading; zero activity is not yet known.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking activity…'**
+  String get messagesRoomLoading;
+
+  /// Room activity load failed, shown alongside a Retry button.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity couldn’t load.'**
+  String get messagesRoomLoadFailed;
+
+  /// Invitation in a public room row when retained history holds no message to preview; says recent because older messages may have expired, and does not claim the room has never had messages.
+  ///
+  /// In en, this message translates to:
+  /// **'No recent messages. Say hello.'**
+  String get messagesRoomEmpty;
+
   /// Label of the chip in the Messages tab that shows the account's direct conversations. Sits beside the Rooms chip.
   ///
   /// In en, this message translates to:
@@ -23792,6 +25268,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rooms'**
   String get messagesRooms;
+
+  /// Rooms selector in Messages while rooms have unread messages. badge is the unread count as shown on screen, such as 3, 5+ or 99+.
+  ///
+  /// In en, this message translates to:
+  /// **'Rooms ({badge})'**
+  String messagesRoomsWithUnread(String badge);
 
   /// Heading above the room list in Messages while rooms are an internal public test.
   ///
@@ -24372,12 +25854,6 @@ abstract class AppLocalizations {
   /// Native challenge participation test-build flow.
   ///
   /// In en, this message translates to:
-  /// **'Agree and submit'**
-  String get challengeAgree;
-
-  /// Native challenge participation test-build flow.
-  ///
-  /// In en, this message translates to:
   /// **'Withdraw entry'**
   String get challengeWithdraw;
 
@@ -24416,12 +25892,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Current rules'**
   String get challengeRules;
-
-  /// Challenge deadline, explicitly in UTC; deadline is formatted in the app locale.
-  ///
-  /// In en, this message translates to:
-  /// **'Deadline (UTC): {deadline}'**
-  String challengeDeadline(String deadline);
 
   /// Native challenge participation test-build flow.
   ///
@@ -24488,12 +25958,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Entries'**
   String get challengeEntries;
-
-  /// Native challenge participation test-build flow.
-  ///
-  /// In en, this message translates to:
-  /// **'Results'**
-  String get challengeResults;
 
   /// Native challenge participation test-build flow.
   ///
@@ -24602,6 +26066,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Technical details'**
   String get challengeDetails;
+
+  /// Challenge deadline in the viewer display timezone, including its actual zone label.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline: {deadline} ({timeZone})'**
+  String challengeLocalDeadline(String deadline, String timeZone);
+
+  /// No description provided for @challengeEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter challenge'**
+  String get challengeEnter;
+
+  /// No description provided for @challengeEnterVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter this video'**
+  String get challengeEnterVideo;
+
+  /// No description provided for @challengeOrganizer.
+  ///
+  /// In en, this message translates to:
+  /// **'Organizer'**
+  String get challengeOrganizer;
+
+  /// No description provided for @challengeAllRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all rules'**
+  String get challengeAllRules;
+
+  /// No description provided for @challengeWinners.
+  ///
+  /// In en, this message translates to:
+  /// **'Winners'**
+  String get challengeWinners;
+
+  /// No description provided for @challengeAwaitingResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting results'**
+  String get challengeAwaitingResults;
+
+  /// No description provided for @challengeOrganizerTimezone.
+  ///
+  /// In en, this message translates to:
+  /// **'Organizer timezone: {timeZone}'**
+  String challengeOrganizerTimezone(String timeZone);
+
+  /// No description provided for @challengeOrganizerTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Organizer time: {deadline} ({timeZone})'**
+  String challengeOrganizerTime(String deadline, String timeZone);
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'Your daily highlight'**
+  String get creatorHighlightLabel;
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{You made something today.} other{You made {count} videos today.}}'**
+  String creatorHighlightCreatedToday(int count);
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'Your week has a little more you in it.'**
+  String get creatorHighlightWeekTitle;
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{One creative day this week. Keep going.} other{{count} creative days this week. Keep going.}}'**
+  String creatorHighlightCreationDays(int count);
+
+  /// Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} view on videos you posted this week, so far.} other{{count} views on videos you posted this week, so far.}}'**
+  String creatorHighlightWeeklyViews(int count);
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'Most-watched of this week’s videos'**
+  String get creatorHighlightTopVideo;
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'Make another'**
+  String get creatorHighlightCreate;
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'See your stats'**
+  String get creatorHighlightAnalytics;
+
+  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch video'**
+  String get creatorHighlightWatch;
 }
 
 class _AppLocalizationsDelegate

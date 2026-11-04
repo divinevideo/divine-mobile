@@ -108,6 +108,10 @@ class DmSyncState {
   static const _drainInboxCoveredPrefix = 'dm.drainCoveredOwnInbox.';
   static const _drainCompletedBeforePrefix = 'dm.historyDrainCompletedBefore.';
   static const _catchUpDebtPrefix = 'dm.catchUpDebt.';
+  static const _belowWindowRequeryPrefix = 'dm.belowWindowRequeryAt.';
+  static const _belowWindowRequeryTopPrefix = 'dm.belowWindowRequeryTop.';
+  static const _belowWindowRequeryAttemptPrefix =
+      'dm.belowWindowRequeryAttemptAt.';
   static const _drainCompletionMigrationPrefix =
       'dm.historyDrainCompletionMigration.';
 
@@ -161,7 +165,13 @@ class DmSyncState {
   /// Those installs skip the new relay-only read unless completion is re-armed.
   /// Spend one background recovery pass from now, retaining the earlier
   /// completion record so established inboxes stay ungated (#8550).
-  static const int currentDrainVersion = 6;
+  ///
+  /// Bumped to 7 for #9468: a relay that gates kinds 1059 and 4 behind NIP-42
+  /// answered the drain's mixed request with the deletions alone and never
+  /// asked to authenticate, so an install whose drain completed against it
+  /// never read those gift wraps. The drain now reads them in a request of
+  /// their own; spend one background re-drain so the latched installs do too.
+  static const int currentDrainVersion = 7;
 
   /// Maximum clock skew, in seconds, tolerated on a self-asserted DM
   /// `created_at` before callers should stop treating it as an honest send
@@ -539,6 +549,47 @@ class DmSyncState {
     await _prefs.setInt('$_groupRecoveryVersionPrefix$pubkey', version);
   }
 
+  /// When the last finished re-query below the live window for [pubkey]
+  /// started, in unix seconds; `null` if none has finished. A run finishes
+  /// when it read the account's inbox-relay list and every relay it asked
+  /// answered every page or refused for good. `DmRepository` asks again only
+  /// once a day after one (#8439).
+  int? belowWindowRequeryAt(String pubkey) =>
+      _prefs.getInt('$_belowWindowRequeryPrefix$pubkey');
+
+  /// The live window start the last finished re-query read below for
+  /// [pubkey], in unix seconds; `null` if none has finished. The next run
+  /// reads a week below the earlier of this and its own window start, so no
+  /// stamp falls between two runs (#8439).
+  int? belowWindowRequeryTop(String pubkey) =>
+      _prefs.getInt('$_belowWindowRequeryTopPrefix$pubkey');
+
+  /// Records that the re-query below the live window for [pubkey] that
+  /// started at [at] finished reading below the window start [top], both in
+  /// unix seconds. See [belowWindowRequeryAt] and [belowWindowRequeryTop].
+  Future<void> recordBelowWindowRequery(
+    String pubkey, {
+    required int at,
+    required int top,
+  }) async {
+    // [top] first: a run whose time was lost reads as unfinished and runs
+    // again, while a time without its window would skip the overlap.
+    await _prefs.setInt('$_belowWindowRequeryTopPrefix$pubkey', top);
+    await _prefs.setInt('$_belowWindowRequeryPrefix$pubkey', at);
+  }
+
+  /// When a re-query below the live window last started for [pubkey], in
+  /// unix seconds, finished or not; `null` if none has. `DmRepository` starts
+  /// another at most hourly (#8439).
+  int? belowWindowRequeryAttemptAt(String pubkey) =>
+      _prefs.getInt('$_belowWindowRequeryAttemptPrefix$pubkey');
+
+  /// Records that a re-query below the live window for [pubkey] started at
+  /// [at] (unix seconds). See [belowWindowRequeryAttemptAt].
+  Future<void> setBelowWindowRequeryAttemptAt(String pubkey, int at) async {
+    await _prefs.setInt('$_belowWindowRequeryAttemptPrefix$pubkey', at);
+  }
+
   /// The parts of past catch-up windows, for [pubkey], that relays may have
   /// withheld at their result cap and that have not been read yet, one
   /// entry per relay. A malformed record reads as empty.
@@ -842,6 +893,9 @@ class DmSyncState {
     await _prefs.remove('$_drainCompletedBeforePrefix$pubkey');
     await _prefs.remove('$_drainCompletionMigrationPrefix$pubkey');
     await _prefs.remove('$_catchUpDebtPrefix$pubkey');
+    await _prefs.remove('$_belowWindowRequeryPrefix$pubkey');
+    await _prefs.remove('$_belowWindowRequeryTopPrefix$pubkey');
+    await _prefs.remove('$_belowWindowRequeryAttemptPrefix$pubkey');
   }
 
   /// Removes all DM sync state entries for every pubkey.
@@ -864,7 +918,10 @@ class DmSyncState {
               key.startsWith(_drainInboxCoveredPrefix) ||
               key.startsWith(_drainCompletedBeforePrefix) ||
               key.startsWith(_drainCompletionMigrationPrefix) ||
-              key.startsWith(_catchUpDebtPrefix),
+              key.startsWith(_catchUpDebtPrefix) ||
+              key.startsWith(_belowWindowRequeryPrefix) ||
+              key.startsWith(_belowWindowRequeryTopPrefix) ||
+              key.startsWith(_belowWindowRequeryAttemptPrefix),
         )
         .toList();
     for (final key in keysToRemove) {

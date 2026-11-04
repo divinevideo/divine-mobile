@@ -1,8 +1,15 @@
 // ABOUTME: Tests for the pure video-event tag builders: reply threading, text
-// ABOUTME: tracks, descriptive metadata, and creator credits
+// ABOUTME: tracks, descriptive metadata, creator credits and linked pages
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' show ClipSourceCredit;
+import 'package:models/models.dart'
+    show
+        ClipSourceCredit,
+        VideoEvent,
+        VideoStickerKind,
+        VideoStickerRegion,
+        videoLinkTagMarker;
+import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/services/upload_manager.dart';
@@ -306,6 +313,59 @@ void main() {
 
       expect(tags.where((tag) => tag.first == 'a'), hasLength(2));
       expect(tags.any((tag) => tag.first == 'p'), isFalse);
+    });
+  });
+
+  group('addVideoStickerTags', () {
+    test('adds a sticker tag for each tappable sticker', () {
+      const region = VideoStickerRegion(
+        kind: VideoStickerKind.hashtag,
+        target: 'summer',
+        centerX: 0.5,
+        centerY: 0.5,
+        width: 0.2,
+        height: 0.1,
+      );
+      final tags = <List<String>>[];
+
+      addVideoStickerTags(tags, [region]);
+
+      expect(tags, equals([region.toTag()]));
+    });
+  });
+
+  group('addVideoLinkTags', () {
+    test('marks each linked page once', () {
+      final tags = <List<String>>[];
+
+      addVideoLinkTags(tags, [
+        'https://divine.video/',
+        'https://divine.video/',
+      ]);
+
+      expect(
+        tags,
+        equals([
+          ['r', 'https://divine.video/', videoLinkTagMarker],
+        ]),
+      );
+    });
+
+    test('is never picked as the video it is posted with', () {
+      // An MP4 outranks an HLS stream, so an unmarked `r` tag to one would
+      // replace the video's own address.
+      const stream = 'https://media.divine.video/vine-1/video.m3u8';
+      final tags = <List<String>>[
+        ['d', 'vine-1'],
+        ['url', stream],
+      ];
+      addVideoLinkTags(tags, ['https://example.com/clip.mp4']);
+
+      final video = VideoEvent.fromNostrEvent(
+        Event(_self, 34236, tags, 'A video', createdAt: 1778120201),
+      );
+
+      expect(video.videoUrl, equals(stream));
     });
   });
 }

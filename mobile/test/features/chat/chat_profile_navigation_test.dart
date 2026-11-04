@@ -3,6 +3,7 @@
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:concord_protocol/concord_protocol.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -101,5 +102,91 @@ void main() {
         },
       );
     }
+
+    testWidgets('a mention in a message opens the mentioned profile', (
+      tester,
+    ) async {
+      const author =
+          '3333333333333333333333333333333333333333333333333333333333333333';
+      const mentioned =
+          '7777777777777777777777777777777777777777777777777777777777777777';
+      final cubit = _ChatCubit();
+      when(() => cubit.state).thenReturn(const ChatState());
+      whenListen(cubit, const Stream<ChatState>.empty());
+      when(cubit.visibleMessages).thenReturn([
+        ChatMessage(
+          id: '5555555555555555555555555555555555555555555555555555555555555555',
+          channelId: 'general',
+          author: author,
+          body: 'hi nostr:${NostrKeyUtils.encodePubKey(mentioned)}',
+          createdAt: 1,
+          mentionedPubkeys: const [mentioned],
+        ),
+      ]);
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => BlocProvider<ChatCubit>.value(
+              value: cubit,
+              child: const ChatScreen(),
+            ),
+          ),
+          GoRoute(
+            path: OtherProfileScreen.pathWithNpub,
+            builder: (_, state) =>
+                Scaffold(body: Text(state.pathParameters['npub']!)),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      UserProfile profile(String pubkey, String name) => UserProfile(
+        pubkey: pubkey,
+        displayName: name,
+        rawData: const {},
+        createdAt: DateTime(2026),
+        eventId: '6' * 64,
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            for (final (pubkey, name) in [
+              (author, 'Room member'),
+              (mentioned, 'Mentioned friend'),
+            ]) ...[
+              fetchUserProfileProvider(
+                pubkey,
+              ).overrideWith((ref) async => profile(pubkey, name)),
+              profileIdentityResolvingProvider(pubkey).overrideWithValue(false),
+              profileVanishedProvider(pubkey).overrideWith((ref) => false),
+            ],
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final message = tester.widget<SelectableText>(
+        find.byWidgetPredicate(
+          (widget) => widget is SelectableText && widget.textSpan != null,
+        ),
+      );
+      final link = message.textSpan!.children!
+          .whereType<TextSpan>()
+          .singleWhere(
+            (span) => span.recognizer != null,
+          );
+      // SelectableText paints through RenderEditable, which text-range
+      // finders cannot see, so fire the mention span's own recognizer.
+      (link.recognizer! as TapGestureRecognizer).onTap!();
+      await tester.pumpAndSettle();
+      expect(
+        find.text(NostrKeyUtils.encodePubKey(mentioned)),
+        findsOneWidget,
+      );
+    });
   });
 }

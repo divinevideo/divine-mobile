@@ -1,5 +1,75 @@
 {
   "@@locale": "tr",
+  "videoEditorSocialStickerPoll": "Anket",
+  "videoEditorSocialStickerQuiz": "Test",
+  "videoEditorSocialStickerSlider": "Kaydırıcı",
+  "videoEditorSocialStickerPollSampleQuestion": "Hangisi?",
+  "videoEditorSocialStickerPollSampleYes": "Evet",
+  "videoEditorSocialStickerPollSampleNo": "Hayır",
+  "videoEditorSocialStickerQuizSampleQuestion": "Vine hangi yıl çıktı?",
+  "videoEditorSocialStickerSliderSampleQuestion": "Ne kadar açsın?",
+  "videoEditorSocialStickerPollQuestionHint": "Bir soru sor",
+  "videoEditorSocialStickerPollOptionHint": "{number}. yanıt",
+  "videoEditorSocialStickerPollRemoveOption": "{number}. yanıtı kaldır",
+  "videoEditorSocialStickerQuizMarkRight": "{number}. yanıtı doğru olarak işaretle",
+  "videoEditorSocialStickerPollAddOption": "Yanıt ekle",
+  "videoEditorSocialStickerPollNote": "İzleyenler oy verince sonuçları görür. Oylar herkese açıktır.",
+  "videoEditorSocialStickerQuizNote": "Doğru yanıtı işaretle. İzleyenler bir yanıt seçince onu görür.",
+  "videoEditorSocialStickerSliderNote": "İzleyenler yanıt vermek için emojiyi sürükler ve ortalamada nereye düştüğünü görür.",
+  "videoStickerQuizRightAnswer": "Doğru cevap",
+  "videoStickerQuizWrongAnswer": "Yanlış cevap",
+  "videoEditorSocialStickerQuestion": "Soru",
+  "videoEditorSocialStickerAddYours": "Sıra sende",
+  "videoEditorSocialStickerReplies": "Yanıtlar",
+  "videoEditorSocialStickerQuestionSample": "Bana her şeyi sor",
+  "videoEditorSocialStickerAddYoursSample": "Masa düzenini göster",
+  "videoEditorSocialStickerRepliesSample": "Videoyla yanıt ver",
+  "videoEditorSocialStickerQuestionHint": "Sorduğun soru",
+  "videoEditorSocialStickerAddYoursPromptHint": "İnsanlar ne göstersin?",
+  "videoEditorSocialStickerAddYoursHashtagHint": "Hashtag",
+  "videoEditorSocialStickerRepliesTitleHint": "Başlık",
+  "videoEditorSocialStickerQuestionNote": "Yanıtlar sana özel mesaj olarak gelir.",
+  "videoEditorSocialStickerAddYoursNote": "İzleyenler kendi videolarıyla yanıt verir. Her yanıt bu hashtag'i alır ve senin videona bağlanır.",
+  "videoEditorSocialStickerRepliesNote": "Bu videoya videoyla yanıt verenleri gösterir. İzleyenler dokunup yanıtları izler.",
+  "videoEditorInteractiveCardAreaHint": "Bu çıkartma, izleyenler dokunabilsin diye bu kutuda kalır",
+  "videoStickerPollSignInToVote": "Oy vermek için giriş yap.",
+  "videoStickerPollNotReady": "Hâlâ bağlanıyor. Birazdan tekrar dene.",
+  "videoStickerPollVoteFailed": "Verdiğin oy gönderilemedi. Tekrar dene.",
+  "videoStickerPollVotesArePublic": "Oylar herkese açık. Herkes neyi seçtiğini görebilir.",
+  "videoStickerPollVoteCount": "{count, plural, one{1 oy} other{{count} oy}}",
+  "videoStickerQuestionAnswerHint": "Yanıtlamak için dokun",
+  "videoStickerQuestionAnswerSemanticLabel": "Yanıtla: {question}",
+  "videoStickerAddYoursButton": "Sıra sende",
+  "videoStickerAddYoursJoined": "{count, plural, =0{İlk sen ol} =1{{count} kişi katıldı} other{{count} kişi katıldı}}",
+  "videoStickerAddYoursJoinedAtLeast": "{count} kişi katıldı",
+  "videoStickerAddYoursOpenSemanticLabel": "Kimlerin katıldığını gör",
+  "videoStickerAddYoursJoinSemanticLabel": "Sıra sende: {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{Henüz yanıt yok} =1{{count} yanıt} other{{count} yanıt}}",
+  "videoStickerRepliesCountAtLeast": "{count} yanıt",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{Video yanıtları, henüz yok} =1{{count} video yanıtını izle} other{{count} video yanıtını izle}}",
+  "videoStickerRepliesSemanticLabelAtLeast": "{count} video yanıtını izle",
+  "videoStickerQuestionSignIn": "Yanıtlamak için giriş yap.",
+  "videoStickerQuestionUnavailable": "Hesabın için soruları yanıtlama kullanılamıyor.",
+  "videoStickerQuestionAnswerTitle": "Yanıtla",
+  "videoStickerQuestionAnswerFieldLabel": "Yanıtın",
+  "videoStickerQuestionAnswerPrivacyNote": "Yanıtını yalnızca {name} görür. Bunu bir videoda, adın olmadan paylaşabilir.",
+  "videoStickerQuestionAnswerSend": "Gönder",
+  "videoStickerQuestionAnswerSent": "Yanıt gönderildi.",
+  "videoStickerQuestionAnswerTooLong": "Bu yanıt göndermek için çok uzun.",
+  "videoStickerQuestionAnswerFailed": "Yanıtın gönderilemedi. Tekrar dene.",
+  "videoStickerAddYoursSignIn": "Katılmak için giriş yap.",
+  "videoStickerRepliesManageTitle": "Video yanıtları",
+  "videoStickerRepliesEmpty": "Henüz video yanıtı yok.",
+  "videoStickerRepliesLoadFailed": "Yanıtlar yüklenemedi.",
+  "videoStickerRepliesRetry": "Tekrar dene",
+  "videoStickerRepliesPin": "Sabitle",
+  "videoStickerRepliesUnpin": "Sabitlemeyi kaldır",
+  "videoStickerRepliesHide": "Gizle",
+  "videoStickerRepliesShow": "Göster",
+  "videoStickerRepliesPinned": "Sabitlenmiş",
+  "videoStickerRepliesHidden": "Gizlenmiş",
+  "videoStickerRepliesSaveFailed": "Kaydedilemedi. Tekrar dene.",
+  "videoStickerRepliesWatchSemanticLabel": "{name} kişisinin yanıtını izle",
   "devOptionsClipRecovery": "Klip kurtarma",
   "devOptionsClipRecoveryDescription": "Başka bir hesap altında saklanan kayıtları ve artık hiçbir kaydın işaret etmediği video dosyalarını bulur.",
   "devOptionsClipRecoveryScan": "Tara",
@@ -65,6 +135,7 @@
   "publishErrorPermissionDenied": "Divine'in yükleme izni yok. Ayarlarından uygulama izinlerini kontrol edip tekrar dene.",
   "publishErrorOutOfMemory": "Cihazının belleği azaldı. Bazı uygulamaları kapatıp tekrar dene.",
   "publishErrorOverlaysUnavailable": "Bu taslaktaki yazı ve çıkartmalar hazırlanamadı. Düzenleyicide aç ve tekrar paylaş.",
+  "publishErrorQuestionStickerRestricted": "Hesabın soru çıkartması paylaşamaz, çünkü yanıtlar özel mesaj olarak gelir. Çıkartmayı kaldır, sonra yeniden paylaş.",
   "publishErrorTooManyDetachedClips": "Cihazın bu kadar çok ayrılmış klibi aynı anda dışa aktaramıyor. Birkaçını zaman çizelgesine geri koyup tekrar dene.",
   "publishErrorDraftTooManyDetachedClips": "Cihazın bu kadar çok ayrılmış klibi aynı anda dışa aktaramıyor. Taslağı düzenleyicide aç, birkaçını zaman çizelgesine geri koy ve tekrar paylaş.",
   "publishErrorUnknownServer": "Bilinmeyen sunucu",
@@ -74,7 +145,10 @@
   "dmReactionRetryAction": "Yeniden dene",
   "dmMessageBubbleVideoReplyHint": "Atıfta bulunulan videoyu aç",
   "commonSomethingWentWrong": "Bir hata oluştu",
-  "profileFeedError": "Sunucuya ulaşılamıyor. Bağlantını kontrol edip tekrar dene.",
+  "profileVideosLoadFailedTitle": "Videoların yüklenemedi",
+  "profileVideosLoadFailedOtherTitle": "Videolar yüklenemedi",
+  "profileVideosLoadFailedSubtitle": "Bağlantını kontrol edip tekrar dene.",
+  "profileVideosLoadFailedRetry": "Tekrar dene",
   "profileFeedLoadMoreError": "Daha fazla video yüklenemedi. Yenilemek için aşağı çek.",
   "appTitle": "Divine",
   "@appTitle": {
@@ -679,6 +753,21 @@
   "metadataBadgeNotDivine": "Divine Değil",
   "metadataBadgeHumanMade": "İnsan Yapımı",
   "metadataSoundsLabel": "Sesler",
+  "metadataLinksLabel": "Bağlantılar",
+  "videoStickerLinkSemanticLabel": "Bağlantı çıkartması, {url} adresini açar",
+  "videoStickerMentionSemanticLabel": "Bahsetme çıkartması, profili açar",
+  "videoStickerHashtagSemanticLabel": "Hashtag çıkartması, #{hashtag} etiketini açar",
+  "videoStickerSoundSemanticLabel": "Ses çıkartması, sesi açar",
+  "videoStickerPlaceSemanticLabel": "Konum çıkartması, {place} yerini haritada açar",
+  "videoStickerCountdownSemanticLabel": "Geri sayım çıkartması, hatırlatıcı kurar",
+  "videoStickerReplySemanticLabel": "Yanıt çıkartması, bu videonun yanıt verdiği şeyi açar",
+  "videoStickerCountdownDays": "{count, plural, =1{{count} gün} other{{count} gün}}",
+  "videoStickerCountdownReminderSet": "Hatırlatıcı kuruldu. Zamanı gelince haber veririz.",
+  "videoStickerCountdownReminderRemoved": "Hatırlatıcı kaldırıldı.",
+  "videoStickerCountdownOver": "Bu geri sayım sona erdi.",
+  "videoStickerCountdownNotificationsOff": "Hatırlatıcıyı almak için Divine bildirimlerini aç.",
+  "videoStickerCountdownReminderBody": "Zamanı geldi! Kaydettiğin geri sayım az önce bitti.",
+  "videoStickerLinkSheetBody": "Bu bağlantı Divine dışında açılır. Devam etmeden önce adresi kontrol et.",
   "metadataOriginalSound": "Orijinal ses",
   "metadataVerificationLabel": "Doğrulama",
   "metadataDeviceAttestation": "Cihaz tasdik",
@@ -1629,6 +1718,7 @@
   "routeInvalidUserId": "Geçersiz kullanıcı kimliği",
   "routeInvalidVideoId": "Geçersiz video kimliği",
   "routeInvalidSoundId": "Geçersiz ses kimliği",
+  "routeInvalidQuestion": "Geçersiz soru bağlantısı",
   "routeInvalidCategory": "Geçersiz kategori",
   "routeNoVideosToDisplay": "Gösterilecek video yok",
   "routeGoHome": "Ana sayfaya git",
@@ -2194,11 +2284,11 @@
   "videoClipBackupUnsignedSemanticLabel": "Galerinde içerik kimlik bilgileri olmadan. {label}",
   "videoClipStopMotionSemanticLabel": "Stop motion klibi, {frames}",
   "videoClipSemanticValueSelectedAtPosition": "Seçildi, numara {position}",
-  "videoClipSemanticValueSelected": "Seçildi",
   "videoClipSemanticValueNotSelected": "Seçilmedi",
   "videoClipSemanticHintDisabled": "Devre dışı",
-  "videoClipSemanticHintSelect": "Seçmek için dokun, önizlemek için uzun bas",
-  "videoClipSemanticHintDeselect": "Seçimi kaldırmak için dokun, önizlemek için uzun bas",
+  "videoClipSemanticHintSelect": "Seçmek için dokun",
+  "videoClipSemanticHintDeselect": "Seçimi kaldırmak için dokun",
+  "videoClipSemanticHintPreview": "Önizlemek için dokun",
   "libraryClipDuration": "{seconds} sn",
   "libraryTabClips": "Klipler",
   "libraryTabDrafts": "Taslaklar",
@@ -2292,6 +2382,14 @@
   },
   "notificationLikedYourVideo": "{actorName} videonu beğendi",
   "@notificationLikedYourVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLikedTaggedVideo": "{actorName} etiketlendiğin bir videoyu beğendi",
+  "@notificationLikedTaggedVideo": {
     "placeholders": {
       "actorName": {
         "type": "String"
@@ -2579,9 +2677,51 @@
   "videoEditorEffectConfetti": "Konfeti",
   "videoEditorEffectHearts": "Kalpler",
   "videoEditorEffectSparkles": "Pırıltılar",
+  "videoEditorEffectRain": "Yağmur",
+  "videoEditorEffectLeaves": "Yapraklar",
+  "videoEditorEffectBlossoms": "Kiraz çiçeği",
+  "videoEditorEffectBubbles": "Baloncuklar",
+  "videoEditorEffectBokeh": "Bokeh",
+  "videoEditorEffectMusicNotes": "Notalar",
+  "videoEditorEffectStars": "Yıldızlar",
+  "videoEditorEffectFireflies": "Ateş böcekleri",
+  "videoEditorEffectEmbers": "Kor",
+  "videoEditorEffectMoney": "Para",
+  "videoEditorEffectBalloons": "Balonlar",
   "videoEditorEffectTiltShift": "Tilt-Shift",
   "videoEditorEffectZoomBlur": "Zoom Bulanıklığı",
+  "videoEditorEffectSpinBlur": "Dönme Bulanıklığı",
   "videoEditorEffectComic": "Çizgi Roman",
+  "videoEditorEffectSwirl": "Girdap",
+  "videoEditorEffectRipple": "Dalgacık",
+  "videoEditorEffectFlutedGlass": "Yivli Cam",
+  "videoEditorEffectEightBit": "8-Bit",
+  "videoEditorEffectAnaglyph": "3D Gözlük",
+  "videoEditorEffectRiso": "Riso Baskı",
+  "videoEditorEffectTealOrange": "Turkuaz ve Turuncu",
+  "videoEditorEffectWarmFilm": "Sıcak Film",
+  "videoEditorEffectSlideFilm": "Slayt Filmi",
+  "videoEditorEffectCoolFilm": "Soğuk Film",
+  "videoEditorEffectMatte": "Mat",
+  "videoEditorEffectBleachBypass": "Bleach Bypass",
+  "videoEditorEffectCrossProcess": "Çapraz İşlem",
+  "videoEditorEffectGoldenHour": "Altın Saat",
+  "videoEditorEffectMoonlight": "Ay Işığı",
+  "videoEditorEffectSilver": "Gümüş",
+  "videoEditorEffectCategoryRetro": "Retro",
+  "videoEditorEffectCategoryGlitch": "Glitch",
+  "videoEditorEffectCategoryDistort": "Bozulma",
+  "videoEditorEffectCategoryLight": "Işık",
+  "videoEditorEffectCategoryMotion": "Hareket",
+  "videoEditorEffectCategoryParticles": "Parçacıklar",
+  "videoEditorEffectCategoryLooks": "Görünümler",
+  "videoEditorFilterCategoryNatural": "Doğal",
+  "videoEditorFilterCategoryVibrant": "Canlı",
+  "videoEditorFilterCategoryWarm": "Sıcak",
+  "videoEditorFilterCategoryCool": "Soğuk",
+  "videoEditorFilterCategoryVintage": "Vintage",
+  "videoEditorFilterCategoryBlackAndWhite": "Siyah beyaz",
+  "videoEditorFilterCategoryTints": "Tonlar",
   "videoEditorDropsSettingsTitle": "Damlaları ayarla",
   "videoEditorDropsCountLabel": "Sayı",
   "videoEditorDropsSizeLabel": "Boyut",
@@ -2952,11 +3092,108 @@
   "videoEditorLayerAnimationPulseTo": "Küçülme boyutu",
   "videoEditorLayerAnimationWiggleAngle": "Eğim",
   "videoEditorLayerAnimationBounceHeight": "Yükseklik",
+  "videoEditorLayerAnimationFlipSideways": "Yana doğru",
+  "videoEditorLayerAnimationFlipOver": "Yukarıdan aşağı",
   "videoEditorLayerAnimationCustomPoint": "Özel nokta",
   "videoEditorLayerAnimationPointEnterHint": "Videoda nereden kayarak gireceğine dokun",
   "videoEditorLayerAnimationPointLeaveHint": "Videoda nereye kayarak çıkacağına dokun",
   "videoEditorStickersDivineOriginals": "Divine Orijinaller",
   "videoEditorStickerSearchHint": "Çıkartma ara...",
+  "videoEditorInfoStickersTitle": "Bilgi",
+  "videoEditorSocialStickersTitle": "Sosyal",
+  "videoEditorSocialStickerMention": "Bahsetme",
+  "videoEditorSocialStickerHashtag": "Hashtag",
+  "videoEditorSocialStickerSoundCredit": "Ses",
+  "videoEditorSocialStickerMentionSample": "adın",
+  "videoEditorSocialStickerHashtagSample": "hashtag",
+  "videoEditorSocialStickerChoosePerson": "Birini seç",
+  "videoEditorSocialStickerMentionNote": "Gönderinde bu kişiden bahsedilir ve bildirim alır.",
+  "videoEditorSocialStickerHashtagHint": "Hashtag yaz",
+  "videoEditorSocialStickerHashtagNote": "Gönderinin hashtag'lerine de eklenir.",
+  "videoEditorSocialStickerLyricHint": "Şarkı sözünden bir satır (isteğe bağlı)",
+  "videoEditorSocialStickerLink": "Bağlantı",
+  "videoEditorSocialStickerLinkUrlHint": "Web adresi",
+  "videoEditorSocialStickerLinkTitleHint": "Başlık (isteğe bağlı)",
+  "videoEditorSocialStickerLinkNote": "Adres gönderine eklenir.",
+  "videoEditorSocialStickerLinkInvalid": "Bu henüz bir web adresi değil.",
+  "videoEditorInteractiveStickersTitle": "Etkileşimli",
+  "videoEditorSocialStickerCountdown": "Geri sayım",
+  "videoEditorSocialStickerCountdownSample": "Yaz",
+  "videoEditorSocialStickerCountdownTitleHint": "Neye geri sayıyorsun?",
+  "videoEditorSocialStickerCountdownNote": "İzleyenler kalan süreyi görür ve hatırlatıcı kurabilir.",
+  "videoEditorSocialStickerCountdownOver": "O an geçti. Yenisini seç.",
+  "videoEditorSocialStickerReply": "Yanıt",
+  "videoEditorSocialStickerReplyNote": "İzleyenler dokunup neye yanıt verdiğini görür.",
+  "videoEditorSocialStickerSoundNote": "Nota",
+  "videoEditorSocialStickerSoundVinyl": "Plak",
+  "videoEditorSocialStickerSoundCassette": "Kaset",
+  "videoEditorSocialStickerSoundEqualizer": "Ekolayzer",
+  "videoEditorSocialStickerSoundPlayer": "Oynatıcı",
+  "videoEditorInfoStickerTime": "Saat",
+  "videoEditorInfoStickerDate": "Tarih",
+  "videoEditorInfoStickerLocation": "Konum",
+  "videoEditorInfoStickerWeather": "Hava durumu",
+  "videoEditorInfoStickerAltitude": "Rakım",
+  "videoEditorInfoStickerBattery": "Pil",
+  "videoEditorInfoStickerStyleLight": "Açık",
+  "videoEditorInfoStickerStyleDark": "Koyu",
+  "videoEditorInfoStickerStyleBrand": "Yeşil",
+  "videoEditorInfoStickerStyleOutline": "Kontur",
+  "videoEditorInfoStickerStyleDigital": "Dijital",
+  "videoEditorInfoStickerStyleAnalog": "Analog",
+  "videoEditorInfoStickerStyleGlass": "Cam",
+  "videoEditorInfoStickerStyleHighlight": "Sarı",
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "videoEditorInfoStickerStylePlain": "Sade",
+  "videoEditorInfoStickerChangePlace": "Yeri değiştir",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Bu cihazda yer arama kullanılamıyor.",
+  "videoEditorInfoStickerRecordedValue": "Kayıt · {value}",
+  "videoEditorInfoStickerNowValue": "Şimdi · {value}",
+  "videoEditorInfoStickerTodayValue": "Bugün · {value}",
+  "videoEditorInfoStickerDayCount": "Gün sayacı",
+  "videoEditorInfoStickerSun": "Güneş",
+  "videoEditorInfoStickerMoon": "Ay",
+  "videoEditorInfoStickerRecTimer": "REC sayacı",
+  "videoEditorInfoStickerStyleFilm": "Film",
+  "videoEditorInfoStickerStyleCamcorder": "Kamera",
+  "videoEditorInfoStickerDayCountValue": "{day}. gün",
+  "videoEditorInfoStickerDayCountOfValue": "{day}. gün / {total}",
+  "videoEditorInfoStickerDayLabel": "Gün",
+  "videoEditorInfoStickerDayTotalLabel": "Toplam gün (isteğe bağlı)",
+  "videoEditorInfoStickerSymbolPin": "İğne",
+  "videoEditorInfoStickerSymbolFlag": "Bayrak",
+  "videoEditorInfoStickerSymbolGlobe": "Küre",
+  "videoEditorInfoStickerSymbolMap": "Harita",
+  "videoEditorInfoStickerMoonNew": "Yeni ay",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Büyüyen hilal",
+  "videoEditorInfoStickerMoonFirstQuarter": "İlk dördün",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Büyüyen şişkin ay",
+  "videoEditorInfoStickerMoonFull": "Dolunay",
+  "videoEditorInfoStickerMoonWaningGibbous": "Küçülen şişkin ay",
+  "videoEditorInfoStickerMoonLastQuarter": "Son dördün",
+  "videoEditorInfoStickerMoonWaningCrescent": "Küçülen hilal",
+  "videoEditorInfoStickerPlaceSearchHint": "Şehir veya yer ara",
+  "videoEditorInfoStickerPlaceNoResults": "Yer bulunamadı",
+  "videoEditorInfoStickerPlaceSearchFailed": "Yer aranamadı. Tekrar dene.",
+  "videoEditorInfoStickerPlacePrivacyNote": "Videona yalnızca yerin adı girer, asla tam konumun değil.",
+  "videoEditorInfoStickerLoading": "Yükleniyor…",
+  "videoEditorInfoStickerLoadFailed": "Yüklenemedi. Tekrar dene.",
+  "videoEditorInfoStickerMetAttribution": "Veriler: MET Norway",
+  "videoEditorInfoStickerWeatherNow": "Eski videolar için hava durumu yok, bu yüzden şu anki hava durumu gösteriliyor.",
+  "videoEditorInfoStickerWeatherSunny": "Güneşli",
+  "videoEditorInfoStickerWeatherClearNight": "Açık gece",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Parçalı bulutlu",
+  "videoEditorInfoStickerWeatherCloudy": "Bulutlu",
+  "videoEditorInfoStickerWeatherFog": "Sis",
+  "videoEditorInfoStickerWeatherRain": "Yağmur",
+  "videoEditorInfoStickerWeatherShowers": "Sağanak",
+  "videoEditorInfoStickerWeatherSnow": "Kar",
+  "videoEditorInfoStickerWeatherThunderstorm": "Gök gürültülü fırtına",
+  "videoEditorInfoStickerSunTimeZoneNote": "Saatler telefonunun saat diliminde.",
+  "videoEditorInfoStickerTemperatureLabel": "Sıcaklık",
+  "videoEditorInfoStickerUnitLabel": "Birim",
+  "videoEditorInfoStickerBatteryLevelLabel": "Pil seviyesi",
+  "videoEditorInfoStickerAdd": "Çıkartma ekle",
   "videoEditorTextAlignmentSemanticLabel": "Metin hizalama",
   "videoEditorTextBackgroundSemanticLabel": "Metin arka planı",
   "videoEditorTextDontWrap": "Metni kaydırma",
@@ -3124,6 +3361,8 @@
   "libraryTrashDeleteConfirmMessage": "Bu işlem klibi hemen çöp kutusundan kaldırır.",
   "libraryTrashEmptyConfirmTitle": "Çöp kutusu boşaltılsın mı?",
   "libraryTrashEmptyConfirmMessage": "Bu işlem {count, plural, =1{1 klibi} other{{count} klibi}} hemen çöp kutusundan kalıcı olarak siler.",
+  "libraryTrashClipsRestored": "{count, plural, =1{Klip geri yüklendi} other{{count} klip geri yüklendi}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{Klip kalıcı olarak silindi} other{{count} klip kalıcı olarak silindi}}",
   "videoRecorderCloseLabel": "Video kaydediciyi kapat",
   "videoRecorderContinueToEditorLabel": "Video düzenleyiciye devam et",
   "videoRecorderCycleTimerLabel": "Zamanlayıcıyı değiştir",
@@ -4044,6 +4283,7 @@
       }
     }
   },
+  "videoMetadataTagsPickerStickerTag": "{tag}, videondaki bir çıkartmadan",
   "videoEditorTimelineVolumePreview": "Ses seviyesi {percent}%",
   "@videoEditorTimelineVolumePreview": {
     "placeholders": {
@@ -4157,6 +4397,9 @@
   "dmReelReplyComposerHint": "{name} kişisine mesaj…",
   "dmReelReplyComposerHintSelf": "Kendine yanıt ver…",
   "dmReelReplyComposerSemanticLabel": "Bu reel'e yanıt ver",
+  "dmQuestionAnswerReceivedLabel": "Sorduğun soruyu yanıtladı: {question}",
+  "dmQuestionAnswerSentLabel": "Yanıtladın: {question}",
+  "dmQuestionAnswerWithVideo": "Videoyla yanıtla",
   "dmReelReplyViewChat": "Sohbeti gör",
   "dmReelReplySentAnnouncement": "Yanıt gönderildi",
   "dmReelReactionSentAnnouncement": "{emoji} ile tepki verildi",
@@ -5793,8 +6036,97 @@
   "ideasDescriptionFive": "Sadece paylaşmak istedim.",
   "ideasTitleSix": "Bugünden bir parça",
   "ideasDescriptionSix": "Bunu buraya bırakıyorum.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{Odalar, {displayCount} okunmamış mesaj} other{Odalar, {displayCount} okunmamış mesaj}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{{displayCount} yeni} other{{displayCount} yeni}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} okunmamış mesaj} other{{displayCount} okunmamış mesaj}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} kişi} other{{displayCount} kişi}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} mesaj} other{{displayCount} mesaj}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Son 24 saat",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Hareketlilik kontrol ediliyor…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Hareketlilik yüklenemedi.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Son zamanlarda mesaj yok. Bir merhaba de.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Doğrudan",
   "messagesRooms": "Odalar",
+  "messagesRoomsWithUnread": "Odalar ({badge})",
   "messagesPublicTestRooms": "Herkese açık test odaları",
   "messagesPublicTestDisclosure": "Bu test odaları herkese açıktır. Erişimi olan herkes mesajlarını okuyabilir.",
   "messagesNoRooms": "Henüz oda yok",
@@ -5903,5 +6235,57 @@
   "videoEditorLoopRepairProgress": "Döngün hizalanıyor…",
   "videoEditorLoopRepairTrimmed": "Döngü yumuşatıldı. {seconds} sn kaldırıldı.",
   "notificationFromDivine": "Divine’dan",
-  "announcementUnavailable": "Bu duyuru artık kullanılamıyor."
+  "announcementUnavailable": "Bu duyuru artık kullanılamıyor.",
+  "creatorHighlightLabel": "Günün öne çıkan anı",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "Bugün oluşturduğun videolar: {count}.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "Bu hafta biraz daha senin izini taşıyor.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "Bu hafta ürettiğin gün sayısı: {count}. Devam et.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "Bu hafta paylaştığın videoların şu ana kadarki toplam izlenme sayısı: {count}.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "Bu hafta paylaştığın videolar arasında en çok izlenen",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "Bir tane daha yap",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "İstatistiklerine bak",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "Videoyu izle",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

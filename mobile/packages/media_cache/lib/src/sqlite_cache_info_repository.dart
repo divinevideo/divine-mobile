@@ -31,16 +31,46 @@ class SqliteCacheInfoRepository implements CacheInfoRepository {
   final CacheInfoRepository Function(String) _repositoryFactory;
   final Future<void> Function(String) _deleteDatabase;
   Future<String>? _path;
-  Future<bool>? _opening;
+  Future<void> _lifecycle = Future<void>.value();
+  bool _isOpen = false;
   late CacheInfoRepository _repository;
+
+  /// Callers holding the index open after a successful [open] call.
+  ///
+  /// The cache store holds the index for its whole life while each cache sweep
+  /// opens and closes its own connection. The database is shared, so it may
+  /// only close with the last connection: closing it on a sweep's [close] left
+  /// every later lookup failing with `database_closed`.
+  int _connections = 0;
 
   Future<String> get _databasePath => _path ??= () async {
     final directory = await _directoryProvider();
     return path.join(directory.path, '$_databaseName.db');
   }();
 
+  /// Acquires one lease on the index, which needs its own [close].
+  ///
+  /// Lifecycle operations run in invocation order. Failed or refused opens
+  /// acquire no lease and a later call can retry with a fresh provider.
   @override
-  Future<bool> open() => _opening ??= _open();
+  Future<bool> open() => _scheduleLifecycle(() async {
+    if (!_isOpen) {
+      _isOpen = await _open();
+      if (!_isOpen) return false;
+    }
+    _connections++;
+    return true;
+  });
+
+  Future<bool> _scheduleLifecycle(Future<bool> Function() operation) {
+    final result = _lifecycle.then((_) => operation());
+    // The caller receives the error; subsequent operations must still run.
+    _lifecycle = result.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return result;
+  }
 
   Future<bool> _open() async {
     final filePath = await _databasePath;
@@ -62,20 +92,21 @@ class SqliteCacheInfoRepository implements CacheInfoRepository {
     }
   }
 
+  /// Closes one connection, and the database with the last one.
+  ///
+  /// Returns false while other connections keep the database open.
   @override
-  Future<bool> close() async {
-    final opening = _opening;
-    if (opening == null) return true;
-    try {
-      await opening;
-    } on Object {
-      // A failed open owns no usable repository connection to close.
-      return true;
+  Future<bool> close() => _scheduleLifecycle(() async {
+    if (_connections > 0) {
+      _connections--;
+      if (_connections > 0) return false;
     }
+    if (!_isOpen) return true;
+    // Retain the provider if close fails or is refused, allowing a retry.
     final closed = await _repository.close();
-    if (closed) _opening = null;
+    if (closed) _isOpen = false;
     return closed;
-  }
+  });
 
   @override
   Future<bool> exists() async => File(await _databasePath).existsSync();

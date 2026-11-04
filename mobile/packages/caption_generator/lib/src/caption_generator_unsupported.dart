@@ -14,6 +14,7 @@ class CaptionGenerator {
     required String audioPath,
     String? localeIdentifier,
     bool preferOnDeviceRecognition = true,
+    bool requireOnDeviceRecognition = false,
   }) {
     throw UnsupportedError(
       'caption_generator supports Android, iOS, and macOS only.',

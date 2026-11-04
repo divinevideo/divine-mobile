@@ -9,6 +9,7 @@ import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/ideas_transcript.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/video_render_failure_reason.dart';
 import 'package:openvine/models/video_metadata/video_metadata_expiration.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -190,6 +191,11 @@ class VideoEditorProviderState {
     final tracks = editorEditingParameters?.audioTracksFromMeta ?? const [];
     return tracks.isEmpty ? null : tracks.first;
   }
+
+  /// What the social stickers on the video add to the post, as of the last
+  /// time the editor handed over its layers.
+  SocialStickerCredits get stickerCredits =>
+      SocialStickerCredits.of(editorEditingParameters?.layers ?? const []);
 
   /// Whether [selectedSound] was recorded against in the recorder and should
   /// be seeded into the editor timeline as a concrete audio track.

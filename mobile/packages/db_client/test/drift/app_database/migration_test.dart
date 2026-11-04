@@ -306,9 +306,245 @@ void main() {
       });
     }
 
-    test('current schema version is 30', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 30);
+    test('current schema version is 32', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 32);
     });
+
+    test(
+      'v32 keys the dedup ledger per account, keeping every recorded row',
+      () async {
+        final schema = await verifier.schemaAt(31);
+        final ownerA = 'a' * 64;
+        final ownerB = 'b' * 64;
+        final wrapId = 'c' * 64;
+        const insertRow =
+            'INSERT INTO processed_gift_wraps '
+            '(gift_wrap_id, processed_at, owner_pubkey) VALUES (?,?,?)';
+        schema.rawDatabase
+          ..execute(insertRow, [wrapId, 100, ownerA])
+          ..execute(insertRow, ['d' * 64, 101, null]);
+        expect(
+          () => schema.rawDatabase.execute(insertRow, [wrapId, 102, ownerB]),
+          throwsA(anything),
+          reason: 'precondition: the v31 key lets one account hold an id',
+        );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+
+        await verifier.migrateAndValidate(db, 32);
+
+        final dao = db.processedGiftWrapsDao;
+        expect(await dao.count(), 2, reason: 'no recorded row is lost');
+        expect(
+          await dao.hasGiftWrapForOwner(
+            giftWrapId: wrapId,
+            ownerPubkey: ownerA,
+          ),
+          isTrue,
+        );
+        expect(
+          await dao.hasGiftWrapForOwner(
+            giftWrapId: 'd' * 64,
+            ownerPubkey: ownerB,
+          ),
+          isTrue,
+          reason:
+              'a row with no owner is backfilled and still counts as the '
+              "account's own",
+        );
+        await dao.record(giftWrapId: wrapId, ownerPubkey: ownerB);
+        expect(
+          await dao.hasGiftWrapForOwner(
+            giftWrapId: wrapId,
+            ownerPubkey: ownerB,
+          ),
+          isTrue,
+          reason: 'the second account now remembers the same id itself',
+        );
+        expect(await dao.count(), 3);
+      },
+    );
+
+    test(
+      'v32 lets two accounts hold one gift-wrap id, keeping the rows already '
+      'stored',
+      () async {
+        final schema = await verifier.schemaAt(31);
+        final ownerA = 'a' * 64;
+        final ownerB = 'b' * 64;
+        final wrapId = 'c' * 64;
+        const insertMessage =
+            'INSERT INTO direct_messages (id, conversation_id, sender_pubkey, '
+            'content, created_at, gift_wrap_id, owner_pubkey) '
+            'VALUES (?,?,?,?,?,?,?)';
+        // The snapshot carries no hand-written indexes, so give it the one a
+        // shipped v31 install holds.
+        schema.rawDatabase
+          ..execute(
+            'CREATE UNIQUE INDEX idx_dm_gift_wrap_id '
+            'ON direct_messages (gift_wrap_id)',
+          )
+          ..execute(insertMessage, [
+            'rumor_a',
+            'd' * 64,
+            ownerA,
+            'sent to b',
+            1700000000,
+            wrapId,
+            ownerA,
+          ]);
+        expect(
+          () => schema.rawDatabase.execute(insertMessage, [
+            'rumor_a',
+            'e' * 64,
+            ownerA,
+            'sent to b',
+            1700000000,
+            wrapId,
+            ownerB,
+          ]),
+          throwsA(anything),
+          reason: 'precondition: the v31 index lets one account hold a wrap id',
+        );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+
+        await verifier.migrateAndValidate(db, 32);
+
+        expect(
+          await db.directMessagesDao.hasGiftWrap(wrapId, ownerPubkey: ownerA),
+          isTrue,
+          reason: 'the row stored before the upgrade is kept',
+        );
+        expect(
+          await db.directMessagesDao.insertMessage(
+            id: 'rumor_a',
+            conversationId: 'e' * 64,
+            senderPubkey: ownerA,
+            content: 'sent to b',
+            createdAt: 1700000000,
+            giftWrapId: wrapId,
+            ownerPubkey: ownerB,
+          ),
+          isTrue,
+          reason: 'the second account keeps its own copy of the same wrap id',
+        );
+        expect(
+          await db.directMessagesDao.insertMessage(
+            id: 'rumor_a_again',
+            conversationId: 'd' * 64,
+            senderPubkey: ownerA,
+            content: 'sent to b',
+            createdAt: 1700000000,
+            giftWrapId: wrapId,
+            ownerPubkey: ownerA,
+          ),
+          isFalse,
+          reason: 'a wrap id still dedups within one account',
+        );
+      },
+    );
+
+    test(
+      'v31 gives queued DM reactions and retractions a held-wrap record, '
+      'keeping the rows they belong to',
+      () async {
+        final schema = await verifier.schemaAt(30);
+        final owner = 'a' * 64;
+        final reactionId = 'b' * 64;
+        final messageId = 'c' * 64;
+        schema.rawDatabase
+          ..execute(
+            'INSERT INTO dm_message_reactions (id, conversation_id, '
+            'target_message_id, target_message_author, reactor_pubkey, emoji, '
+            'created_at, owner_pubkey, rumor_event_json, publish_status, '
+            'recipient_pubkeys) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+            [
+              reactionId,
+              'd' * 64,
+              messageId,
+              'e' * 64,
+              owner,
+              '🔥',
+              1700000000,
+              owner,
+              '{"kind":7}',
+              'pending',
+              '["${'e' * 64}"]',
+            ],
+          )
+          ..execute(
+            'INSERT INTO direct_messages (id, conversation_id, sender_pubkey, '
+            'content, created_at, gift_wrap_id, owner_pubkey, is_deleted, '
+            'deletion_rumor_json, deletion_publish_status) '
+            'VALUES (?,?,?,?,?,?,?,?,?,?)',
+            [
+              messageId,
+              'd' * 64,
+              owner,
+              'retracted',
+              1700000000,
+              'f' * 64,
+              owner,
+              1,
+              '{"kind":5}',
+              'deletion_pending',
+            ],
+          );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+
+        await verifier.migrateAndValidate(db, 31);
+
+        final reaction = await db.dmReactionsDao.getById(
+          id: reactionId,
+          ownerPubkey: owner,
+        );
+        expect(reaction!.rumorEventJson, '{"kind":7}');
+        expect(reaction.heldReactionWraps, isNull);
+        expect(reaction.heldRemovalWraps, isNull);
+        final message = await db.directMessagesDao.getMessageById(
+          messageId,
+          ownerPubkey: owner,
+        );
+        expect(message!.deletionRumorJson, '{"kind":5}');
+        expect(message.heldDeletionWraps, isNull);
+        // A read cannot tell a missing nullable column from an empty one; a
+        // write names the column, so it throws unless the upgrade added it.
+        expect(
+          await db.dmReactionsDao.recordHeldReactionWrap(
+            id: reactionId,
+            ownerPubkey: owner,
+            recipientPubkey: 'e' * 64,
+            wrapEventId: '1' * 64,
+          ),
+          isTrue,
+        );
+        expect(
+          await db.directMessagesDao.recordHeldDeletionWrap(
+            messageId,
+            recipientPubkey: 'e' * 64,
+            wrapEventId: '2' * 64,
+            ownerPubkey: owner,
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    for (final version in [1, 11]) {
+      test(
+        'v$version schema migrates directly to the current version, through '
+        'the v12 rebuild of direct_messages',
+        () async {
+          final schema = await verifier.schemaAt(version);
+          final db = AppDatabase(schema.newConnection());
+          addTearDown(db.close);
+
+          await verifier.migrateAndValidate(db, db.schemaVersion);
+        },
+      );
+    }
 
     test(
       'a v26 conversation reopened since its removal counts as rejoined '

@@ -1,5 +1,75 @@
 {
   "@@locale": "it",
+  "videoEditorSocialStickerPoll": "Sondaggio",
+  "videoEditorSocialStickerQuiz": "Quiz",
+  "videoEditorSocialStickerSlider": "Slider",
+  "videoEditorSocialStickerPollSampleQuestion": "Quale?",
+  "videoEditorSocialStickerPollSampleYes": "Sì",
+  "videoEditorSocialStickerPollSampleNo": "No",
+  "videoEditorSocialStickerQuizSampleQuestion": "Vine è nato nel…",
+  "videoEditorSocialStickerSliderSampleQuestion": "Quanta fame hai?",
+  "videoEditorSocialStickerPollQuestionHint": "Fai una domanda",
+  "videoEditorSocialStickerPollOptionHint": "Risposta {number}",
+  "videoEditorSocialStickerPollRemoveOption": "Rimuovi la risposta {number}",
+  "videoEditorSocialStickerQuizMarkRight": "Segna la risposta {number} come giusta",
+  "videoEditorSocialStickerPollAddOption": "Aggiungi risposta",
+  "videoEditorSocialStickerPollNote": "Chi guarda vede i risultati dopo aver votato. I voti sono pubblici.",
+  "videoEditorSocialStickerQuizNote": "Spunta la risposta giusta. Chi guarda la vede dopo aver risposto.",
+  "videoEditorSocialStickerSliderNote": "Chi guarda trascina l'emoji per rispondere e vede dove finisce in media.",
+  "videoStickerQuizRightAnswer": "Risposta giusta",
+  "videoStickerQuizWrongAnswer": "Risposta sbagliata",
+  "videoEditorSocialStickerQuestion": "Domanda",
+  "videoEditorSocialStickerAddYours": "Tocca a te",
+  "videoEditorSocialStickerReplies": "Risposte",
+  "videoEditorSocialStickerQuestionSample": "Chiedimi qualsiasi cosa",
+  "videoEditorSocialStickerAddYoursSample": "Mostra la tua postazione",
+  "videoEditorSocialStickerRepliesSample": "Rispondi con un video",
+  "videoEditorSocialStickerQuestionHint": "La tua domanda",
+  "videoEditorSocialStickerAddYoursPromptHint": "Cosa devono mostrare le persone?",
+  "videoEditorSocialStickerAddYoursHashtagHint": "Hashtag",
+  "videoEditorSocialStickerRepliesTitleHint": "Titolo",
+  "videoEditorSocialStickerQuestionNote": "Le risposte ti arrivano come messaggi privati.",
+  "videoEditorSocialStickerAddYoursNote": "Chi guarda risponde con un proprio video. Ogni risposta riceve questo hashtag e rimanda al tuo video.",
+  "videoEditorSocialStickerRepliesNote": "Mostra chi ha risposto a questo video con un video. Chi guarda lo tocca per vedere le risposte.",
+  "videoEditorInteractiveCardAreaHint": "Questo sticker resta in questo riquadro così chi guarda può toccarlo",
+  "videoStickerPollSignInToVote": "Accedi per votare.",
+  "videoStickerPollNotReady": "Connessione in corso. Riprova tra un attimo.",
+  "videoStickerPollVoteFailed": "Il tuo voto non è arrivato. Riprova.",
+  "videoStickerPollVotesArePublic": "I voti sono pubblici. Chiunque può vedere cosa hai scelto.",
+  "videoStickerPollVoteCount": "{count, plural, one{1 voto} many{{count} di voti} other{{count} voti}}",
+  "videoStickerQuestionAnswerHint": "Tocca per rispondere",
+  "videoStickerQuestionAnswerSemanticLabel": "Rispondi: {question}",
+  "videoStickerAddYoursButton": "Tocca a te",
+  "videoStickerAddYoursJoined": "{count, plural, =0{Inizia tu} =1{{count} partecipazione} many{{count} di partecipazioni} other{{count} partecipazioni}}",
+  "videoStickerAddYoursJoinedAtLeast": "{count} partecipazioni",
+  "videoStickerAddYoursOpenSemanticLabel": "Vedi chi ha partecipato",
+  "videoStickerAddYoursJoinSemanticLabel": "Tocca a te: {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{Ancora nessuna risposta} =1{{count} risposta} many{{count} di risposte} other{{count} risposte}}",
+  "videoStickerRepliesCountAtLeast": "{count} risposte",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{Video risposte, ancora nessuna} =1{Guarda {count} video risposta} many{Guarda {count} di video risposte} other{Guarda {count} video risposte}}",
+  "videoStickerRepliesSemanticLabelAtLeast": "Guarda {count} video risposte",
+  "videoStickerQuestionSignIn": "Accedi per rispondere.",
+  "videoStickerQuestionUnavailable": "Rispondere alle domande non è disponibile per il tuo account.",
+  "videoStickerQuestionAnswerTitle": "Rispondi",
+  "videoStickerQuestionAnswerFieldLabel": "La tua risposta",
+  "videoStickerQuestionAnswerPrivacyNote": "Solo {name} vede la tua risposta. Potrebbe condividerla in un video, senza il tuo nome.",
+  "videoStickerQuestionAnswerSend": "Invia",
+  "videoStickerQuestionAnswerSent": "Risposta inviata.",
+  "videoStickerQuestionAnswerTooLong": "Questa risposta è troppo lunga da inviare.",
+  "videoStickerQuestionAnswerFailed": "La tua risposta non è arrivata. Riprova.",
+  "videoStickerAddYoursSignIn": "Accedi per partecipare.",
+  "videoStickerRepliesManageTitle": "Video risposte",
+  "videoStickerRepliesEmpty": "Ancora nessuna video risposta.",
+  "videoStickerRepliesLoadFailed": "Impossibile caricare le risposte.",
+  "videoStickerRepliesRetry": "Riprova",
+  "videoStickerRepliesPin": "Fissa",
+  "videoStickerRepliesUnpin": "Non fissare più",
+  "videoStickerRepliesHide": "Nascondi",
+  "videoStickerRepliesShow": "Mostra",
+  "videoStickerRepliesPinned": "Fissata",
+  "videoStickerRepliesHidden": "Nascosta",
+  "videoStickerRepliesSaveFailed": "Salvataggio non riuscito. Riprova.",
+  "videoStickerRepliesWatchSemanticLabel": "Guarda la risposta di {name}",
   "devOptionsClipRecovery": "Recupero clip",
   "devOptionsClipRecoveryDescription": "Trova registrazioni salvate con un altro account e file video a cui nessuna voce fa più riferimento.",
   "devOptionsClipRecoveryScan": "Analizza",
@@ -65,6 +135,7 @@
   "publishErrorPermissionDenied": "Divine non ha il permesso di caricare. Controlla i permessi dell'app nelle impostazioni e riprova.",
   "publishErrorOutOfMemory": "Memoria insufficiente sul dispositivo. Chiudi alcune app e riprova.",
   "publishErrorOverlaysUnavailable": "Non è stato possibile preparare testo e sticker di questa bozza. Aprila nell’editor e ripubblica.",
+  "publishErrorQuestionStickerRestricted": "Il tuo account non può pubblicare uno sticker con domanda, perché le risposte arrivano come messaggi privati. Rimuovilo e poi pubblica di nuovo.",
   "publishErrorTooManyDetachedClips": "Il tuo dispositivo non riesce a esportare così tante clip staccate insieme. Rimettine alcune nella timeline e riprova.",
   "publishErrorDraftTooManyDetachedClips": "Il tuo dispositivo non riesce a esportare così tante clip staccate insieme. Apri la bozza nell’editor, rimettine alcune nella timeline e ripubblica.",
   "publishErrorUnknownServer": "Server sconosciuto",
@@ -74,7 +145,10 @@
   "dmReactionRetryAction": "Riprova",
   "dmMessageBubbleVideoReplyHint": "Apri il video di riferimento",
   "commonSomethingWentWrong": "Qualcosa è andato storto",
-  "profileFeedError": "Impossibile raggiungere il server. Controlla la connessione e riprova.",
+  "profileVideosLoadFailedTitle": "Non è stato possibile caricare i tuoi video",
+  "profileVideosLoadFailedOtherTitle": "Non è stato possibile caricare i video",
+  "profileVideosLoadFailedSubtitle": "Controlla la connessione e riprova.",
+  "profileVideosLoadFailedRetry": "Riprova",
   "profileFeedLoadMoreError": "Non è stato possibile caricare altri video. Trascina per aggiornare.",
   "appTitle": "Divine",
   "@appTitle": {
@@ -682,6 +756,21 @@
   "metadataBadgeNotDivine": "Non Divine",
   "metadataBadgeHumanMade": "Fatto da umani",
   "metadataSoundsLabel": "Suoni",
+  "metadataLinksLabel": "Link",
+  "videoStickerLinkSemanticLabel": "Sticker link, apre {url}",
+  "videoStickerMentionSemanticLabel": "Sticker menzione, apre il profilo",
+  "videoStickerHashtagSemanticLabel": "Sticker hashtag, apre #{hashtag}",
+  "videoStickerSoundSemanticLabel": "Sticker audio, apre l'audio",
+  "videoStickerPlaceSemanticLabel": "Sticker luogo, apre {place} in una mappa",
+  "videoStickerCountdownSemanticLabel": "Sticker conto alla rovescia, imposta un promemoria",
+  "videoStickerReplySemanticLabel": "Sticker risposta, apre ciò a cui risponde questo video",
+  "videoStickerCountdownDays": "{count, plural, =1{{count} giorno} many{{count} giorni} other{{count} giorni}}",
+  "videoStickerCountdownReminderSet": "Promemoria impostato. Ti avvisiamo quando è il momento.",
+  "videoStickerCountdownReminderRemoved": "Promemoria rimosso.",
+  "videoStickerCountdownOver": "Questo conto alla rovescia è finito.",
+  "videoStickerCountdownNotificationsOff": "Attiva le notifiche di Divine per ricevere il promemoria.",
+  "videoStickerCountdownReminderBody": "È il momento! Il conto alla rovescia che hai salvato è appena finito.",
+  "videoStickerLinkSheetBody": "Questo link si apre fuori da Divine. Controlla l'indirizzo prima di andare.",
   "metadataOriginalSound": "Audio originale",
   "metadataVerificationLabel": "Verifica",
   "metadataDeviceAttestation": "Attestazione del dispositivo",
@@ -1632,6 +1721,7 @@
   "routeInvalidUserId": "ID utente non valido",
   "routeInvalidVideoId": "ID video non valido",
   "routeInvalidSoundId": "ID audio non valido",
+  "routeInvalidQuestion": "Link della domanda non valido",
   "routeInvalidCategory": "Categoria non valida",
   "routeNoVideosToDisplay": "Nessun video da mostrare",
   "routeGoHome": "Vai alla home",
@@ -2197,11 +2287,11 @@
   "videoClipBackupUnsignedSemanticLabel": "Nella tua galleria senza credenziali di contenuto. {label}",
   "videoClipStopMotionSemanticLabel": "Clip in stop-motion, {frames}",
   "videoClipSemanticValueSelectedAtPosition": "Selezionato, numero {position}",
-  "videoClipSemanticValueSelected": "Selezionato",
   "videoClipSemanticValueNotSelected": "Non selezionato",
   "videoClipSemanticHintDisabled": "Disabilitato",
-  "videoClipSemanticHintSelect": "Tocca per selezionare, tieni premuto per anteprima",
-  "videoClipSemanticHintDeselect": "Tocca per deselezionare, tieni premuto per anteprima",
+  "videoClipSemanticHintSelect": "Tocca per selezionare",
+  "videoClipSemanticHintDeselect": "Tocca per deselezionare",
+  "videoClipSemanticHintPreview": "Tocca per l'anteprima",
   "libraryClipDuration": "{seconds} s",
   "libraryTabClips": "Clip",
   "libraryTabDrafts": "Bozze",
@@ -2295,6 +2385,14 @@
   },
   "notificationLikedYourVideo": "{actorName} ha messo like al tuo video",
   "@notificationLikedYourVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationLikedTaggedVideo": "{actorName} ha messo like a un video che ti tagga",
+  "@notificationLikedTaggedVideo": {
     "placeholders": {
       "actorName": {
         "type": "String"
@@ -2507,6 +2605,8 @@
   "libraryTrashDeleteConfirmMessage": "Questo rimuove subito la clip dal cestino.",
   "libraryTrashEmptyConfirmTitle": "Svuotare il cestino?",
   "libraryTrashEmptyConfirmMessage": "Questo elimina definitivamente dal cestino {count, plural, =1{1 clip} other{{count} clip}} subito.",
+  "libraryTrashClipsRestored": "{count, plural, =1{Clip ripristinato} many{{count} di clip ripristinati} other{{count} clip ripristinati}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{Clip eliminato definitivamente} many{{count} di clip eliminati definitivamente} other{{count} clip eliminati definitivamente}}",
   "videoRecorderCloseLabel": "Chiudi registratore video",
   "videoRecorderContinueToEditorLabel": "Continua all'editor video",
   "videoRecorderCameraPreviewLabel": "Anteprima fotocamera",
@@ -2599,9 +2699,51 @@
   "videoEditorEffectConfetti": "Coriandoli",
   "videoEditorEffectHearts": "Cuori",
   "videoEditorEffectSparkles": "Scintille",
+  "videoEditorEffectRain": "Pioggia",
+  "videoEditorEffectLeaves": "Foglie",
+  "videoEditorEffectBlossoms": "Petali",
+  "videoEditorEffectBubbles": "Bolle",
+  "videoEditorEffectBokeh": "Bokeh",
+  "videoEditorEffectMusicNotes": "Note",
+  "videoEditorEffectStars": "Stelle",
+  "videoEditorEffectFireflies": "Lucciole",
+  "videoEditorEffectEmbers": "Braci",
+  "videoEditorEffectMoney": "Soldi",
+  "videoEditorEffectBalloons": "Palloncini",
   "videoEditorEffectTiltShift": "Tilt-shift",
   "videoEditorEffectZoomBlur": "Sfocatura zoom",
+  "videoEditorEffectSpinBlur": "Sfocatura rotatoria",
   "videoEditorEffectComic": "Fumetto",
+  "videoEditorEffectSwirl": "Vortice",
+  "videoEditorEffectRipple": "Increspature",
+  "videoEditorEffectFlutedGlass": "Vetro cannettato",
+  "videoEditorEffectEightBit": "8 bit",
+  "videoEditorEffectAnaglyph": "Occhiali 3D",
+  "videoEditorEffectRiso": "Risografia",
+  "videoEditorEffectTealOrange": "Teal & Orange",
+  "videoEditorEffectWarmFilm": "Pellicola calda",
+  "videoEditorEffectSlideFilm": "Diapositiva",
+  "videoEditorEffectCoolFilm": "Pellicola fredda",
+  "videoEditorEffectMatte": "Opaco",
+  "videoEditorEffectBleachBypass": "Bleach bypass",
+  "videoEditorEffectCrossProcess": "Cross process",
+  "videoEditorEffectGoldenHour": "Ora d'oro",
+  "videoEditorEffectMoonlight": "Chiaro di luna",
+  "videoEditorEffectSilver": "Argento",
+  "videoEditorEffectCategoryRetro": "Retrò",
+  "videoEditorEffectCategoryGlitch": "Glitch",
+  "videoEditorEffectCategoryDistort": "Distorsione",
+  "videoEditorEffectCategoryLight": "Luce",
+  "videoEditorEffectCategoryMotion": "Movimento",
+  "videoEditorEffectCategoryParticles": "Particelle",
+  "videoEditorEffectCategoryLooks": "Look",
+  "videoEditorFilterCategoryNatural": "Naturale",
+  "videoEditorFilterCategoryVibrant": "Vivace",
+  "videoEditorFilterCategoryWarm": "Caldo",
+  "videoEditorFilterCategoryCool": "Freddo",
+  "videoEditorFilterCategoryVintage": "Vintage",
+  "videoEditorFilterCategoryBlackAndWhite": "B/N",
+  "videoEditorFilterCategoryTints": "Tinte",
   "videoEditorDropsSettingsTitle": "Regola le gocce",
   "videoEditorDropsCountLabel": "Numero",
   "videoEditorDropsSizeLabel": "Dimensione",
@@ -3025,6 +3167,8 @@
   "videoEditorLayerAnimationPulseTo": "Riduci a",
   "videoEditorLayerAnimationWiggleAngle": "Inclinazione",
   "videoEditorLayerAnimationBounceHeight": "Altezza",
+  "videoEditorLayerAnimationFlipSideways": "Di lato",
+  "videoEditorLayerAnimationFlipOver": "Dall'alto in basso",
   "videoEditorLayerAnimationCustomPoint": "Punto personalizzato",
   "videoEditorLayerAnimationPointEnterHint": "Tocca il video nel punto da cui deve entrare",
   "videoEditorLayerAnimationPointLeaveHint": "Tocca il video nel punto verso cui deve uscire",
@@ -3050,6 +3194,101 @@
   "videoEditorFeedPreviewContent": "Evita di posizionare contenuti dietro queste aree.",
   "videoEditorStickersDivineOriginals": "Divine Originali",
   "videoEditorStickerSearchHint": "Cerca sticker...",
+  "videoEditorInfoStickersTitle": "Info",
+  "videoEditorSocialStickersTitle": "Social",
+  "videoEditorSocialStickerMention": "Menzione",
+  "videoEditorSocialStickerHashtag": "Hashtag",
+  "videoEditorSocialStickerSoundCredit": "Audio",
+  "videoEditorSocialStickerMentionSample": "tuonome",
+  "videoEditorSocialStickerHashtagSample": "hashtag",
+  "videoEditorSocialStickerChoosePerson": "Scegli qualcuno",
+  "videoEditorSocialStickerMentionNote": "Viene menzionato nel tuo post e riceve una notifica.",
+  "videoEditorSocialStickerHashtagHint": "Scrivi un hashtag",
+  "videoEditorSocialStickerHashtagNote": "Viene aggiunto anche agli hashtag del tuo post.",
+  "videoEditorSocialStickerLyricHint": "Una riga del testo (facoltativo)",
+  "videoEditorSocialStickerLink": "Link",
+  "videoEditorSocialStickerLinkUrlHint": "Indirizzo web",
+  "videoEditorSocialStickerLinkTitleHint": "Titolo (facoltativo)",
+  "videoEditorSocialStickerLinkNote": "L'indirizzo viene aggiunto al tuo post.",
+  "videoEditorSocialStickerLinkInvalid": "Non è ancora un indirizzo web.",
+  "videoEditorInteractiveStickersTitle": "Interattivi",
+  "videoEditorSocialStickerCountdown": "Conto alla rovescia",
+  "videoEditorSocialStickerCountdownSample": "Estate",
+  "videoEditorSocialStickerCountdownTitleHint": "Per cosa stai facendo il conto alla rovescia?",
+  "videoEditorSocialStickerCountdownNote": "Chi guarda vede il tempo che manca e può impostare un promemoria.",
+  "videoEditorSocialStickerCountdownOver": "Quel momento è passato. Scegline uno nuovo.",
+  "videoEditorSocialStickerReply": "Risposta",
+  "videoEditorSocialStickerReplyNote": "Toccandolo, si vede a cosa stai rispondendo.",
+  "videoEditorSocialStickerSoundNote": "Nota",
+  "videoEditorSocialStickerSoundVinyl": "Vinile",
+  "videoEditorSocialStickerSoundCassette": "Cassetta",
+  "videoEditorSocialStickerSoundEqualizer": "Equalizzatore",
+  "videoEditorSocialStickerSoundPlayer": "Lettore",
+  "videoEditorInfoStickerTime": "Ora",
+  "videoEditorInfoStickerDate": "Data",
+  "videoEditorInfoStickerLocation": "Luogo",
+  "videoEditorInfoStickerWeather": "Meteo",
+  "videoEditorInfoStickerAltitude": "Altitudine",
+  "videoEditorInfoStickerBattery": "Batteria",
+  "videoEditorInfoStickerStyleLight": "Chiaro",
+  "videoEditorInfoStickerStyleDark": "Scuro",
+  "videoEditorInfoStickerStyleBrand": "Verde",
+  "videoEditorInfoStickerStyleOutline": "Contorno",
+  "videoEditorInfoStickerStyleDigital": "Digitale",
+  "videoEditorInfoStickerStyleAnalog": "Analogico",
+  "videoEditorInfoStickerStyleGlass": "Vetro",
+  "videoEditorInfoStickerStyleHighlight": "Giallo",
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "videoEditorInfoStickerStylePlain": "Semplice",
+  "videoEditorInfoStickerChangePlace": "Cambia luogo",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "La ricerca dei luoghi non è disponibile su questo dispositivo.",
+  "videoEditorInfoStickerRecordedValue": "Registrazione · {value}",
+  "videoEditorInfoStickerNowValue": "Ora · {value}",
+  "videoEditorInfoStickerTodayValue": "Oggi · {value}",
+  "videoEditorInfoStickerDayCount": "Contagiorni",
+  "videoEditorInfoStickerSun": "Sole",
+  "videoEditorInfoStickerMoon": "Luna",
+  "videoEditorInfoStickerRecTimer": "Timer REC",
+  "videoEditorInfoStickerStyleFilm": "Pellicola",
+  "videoEditorInfoStickerStyleCamcorder": "Videocamera",
+  "videoEditorInfoStickerDayCountValue": "Giorno {day}",
+  "videoEditorInfoStickerDayCountOfValue": "Giorno {day} di {total}",
+  "videoEditorInfoStickerDayLabel": "Giorno",
+  "videoEditorInfoStickerDayTotalLabel": "Giorni totali (facoltativo)",
+  "videoEditorInfoStickerSymbolPin": "Spillo",
+  "videoEditorInfoStickerSymbolFlag": "Bandiera",
+  "videoEditorInfoStickerSymbolGlobe": "Globo",
+  "videoEditorInfoStickerSymbolMap": "Mappa",
+  "videoEditorInfoStickerMoonNew": "Luna nuova",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Luna crescente",
+  "videoEditorInfoStickerMoonFirstQuarter": "Primo quarto",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Gibbosa crescente",
+  "videoEditorInfoStickerMoonFull": "Luna piena",
+  "videoEditorInfoStickerMoonWaningGibbous": "Gibbosa calante",
+  "videoEditorInfoStickerMoonLastQuarter": "Ultimo quarto",
+  "videoEditorInfoStickerMoonWaningCrescent": "Luna calante",
+  "videoEditorInfoStickerPlaceSearchHint": "Cerca una città o un luogo",
+  "videoEditorInfoStickerPlaceNoResults": "Nessun luogo trovato",
+  "videoEditorInfoStickerPlaceSearchFailed": "Impossibile cercare i luoghi. Riprova.",
+  "videoEditorInfoStickerPlacePrivacyNote": "Nel tuo video finisce solo il nome del luogo, mai la tua posizione esatta.",
+  "videoEditorInfoStickerLoading": "Caricamento…",
+  "videoEditorInfoStickerLoadFailed": "Impossibile caricare. Riprova.",
+  "videoEditorInfoStickerMetAttribution": "Dati di MET Norway",
+  "videoEditorInfoStickerWeatherNow": "Per i video più vecchi non c'è il meteo, quindi questo è il meteo di adesso.",
+  "videoEditorInfoStickerWeatherSunny": "Soleggiato",
+  "videoEditorInfoStickerWeatherClearNight": "Notte serena",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Parzialmente nuvoloso",
+  "videoEditorInfoStickerWeatherCloudy": "Nuvoloso",
+  "videoEditorInfoStickerWeatherFog": "Nebbia",
+  "videoEditorInfoStickerWeatherRain": "Pioggia",
+  "videoEditorInfoStickerWeatherShowers": "Rovesci",
+  "videoEditorInfoStickerWeatherSnow": "Neve",
+  "videoEditorInfoStickerWeatherThunderstorm": "Temporale",
+  "videoEditorInfoStickerSunTimeZoneNote": "Gli orari sono nel fuso orario del tuo telefono.",
+  "videoEditorInfoStickerTemperatureLabel": "Temperatura",
+  "videoEditorInfoStickerUnitLabel": "Unità",
+  "videoEditorInfoStickerBatteryLevelLabel": "Livello batteria",
+  "videoEditorInfoStickerAdd": "Aggiungi sticker",
   "videoEditorSelectFontSemanticLabel": "Seleziona carattere",
   "videoEditorFontUnknown": "Sconosciuto",
   "videoEditorSplitFailed": "Divisione non riuscita. Riprovare.",
@@ -4044,6 +4283,7 @@
       }
     }
   },
+  "videoMetadataTagsPickerStickerTag": "{tag}, da uno sticker nel tuo video",
   "videoEditorTimelineVolumePreview": "Volume {percent}%",
   "@videoEditorTimelineVolumePreview": {
     "placeholders": {
@@ -4157,6 +4397,9 @@
   "dmReelReplyComposerHint": "Messaggio a {name}…",
   "dmReelReplyComposerHintSelf": "Rispondi a te stesso…",
   "dmReelReplyComposerSemanticLabel": "Rispondi a questo reel",
+  "dmQuestionAnswerReceivedLabel": "Ha risposto alla tua domanda: {question}",
+  "dmQuestionAnswerSentLabel": "Hai risposto: {question}",
+  "dmQuestionAnswerWithVideo": "Rispondi con un video",
   "dmReelReplyViewChat": "Vedi chat",
   "dmReelReplySentAnnouncement": "Risposta inviata",
   "dmReelReactionSentAnnouncement": "Hai reagito {emoji}",
@@ -5793,8 +6036,97 @@
   "ideasDescriptionFive": "Volevo solo condividere.",
   "ideasTitleSix": "Un po’ di oggi",
   "ideasDescriptionSix": "Lo lascio qui.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{Stanze, {displayCount} messaggio non letto} many{Stanze, {displayCount} messaggi non letti} other{Stanze, {displayCount} messaggi non letti}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{{displayCount} da leggere} many{{displayCount} da leggere} other{{displayCount} da leggere}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} messaggio non letto} many{{displayCount} messaggi non letti} other{{displayCount} messaggi non letti}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} persona} many{{displayCount} persone} other{{displayCount} persone}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} messaggio} many{{displayCount} messaggi} other{{displayCount} messaggi}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Ultime 24 ore",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Controllo dell’attività…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Impossibile caricare l’attività.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Nessun messaggio recente. Di’ ciao.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Diretti",
   "messagesRooms": "Stanze",
+  "messagesRoomsWithUnread": "Stanze ({badge})",
   "messagesPublicTestRooms": "Stanze di prova pubbliche",
   "messagesPublicTestDisclosure": "Queste stanze di prova sono pubbliche. Chiunque abbia accesso può leggere i tuoi messaggi.",
   "messagesNoRooms": "Ancora nessuna stanza",
@@ -5903,5 +6235,57 @@
   "videoEditorLoopRepairProgress": "Allineamento del loop…",
   "videoEditorLoopRepairTrimmed": "Loop reso più fluido. Rimossi {seconds} s.",
   "notificationFromDivine": "Da Divine",
-  "announcementUnavailable": "Questo annuncio non è più disponibile."
+  "announcementUnavailable": "Questo annuncio non è più disponibile.",
+  "creatorHighlightLabel": "Il tuo momento del giorno",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "Video che hai creato oggi: {count}.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "Questa settimana c’è un po’ più di te.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "Giorni creativi questa settimana: {count}. Continua così.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "Visualizzazioni totali finora dei video che hai pubblicato questa settimana: {count}.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "Il più visto tra i video che hai pubblicato questa settimana",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "Creane un altro",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "Guarda le tue statistiche",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "Guarda il video",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

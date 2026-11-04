@@ -13,6 +13,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import androidx.media3.common.C
 import androidx.media3.common.Format
@@ -139,6 +140,21 @@ internal class DivineVideoPlayerInstance(
             (surfaceProducer?.handlesCropAndRotation() == true)
 
     /**
+     * Whether Dart has to draw only [decoderCrop] of the texture. The
+     * SurfaceProducer's ImageReader hands Flutter the decoder's whole buffer,
+     * padding included; the legacy SurfaceTexture, a SurfaceProducer that
+     * handles crop and a GL stage all show the picture alone.
+     */
+    private val dartAppliesCrop: Boolean
+        get() = surfaceProducer?.handlesCropAndRotation() == false && !routesThroughGl
+
+    /** The codec output format [decoderCrop] was read from. Playback thread only. */
+    private var decoderOutputFormat: MediaFormat? = null
+
+    /** Where the picture sits in the decoder's buffers, when they are larger. */
+    private var decoderCrop: DecoderCrop? = null
+
+    /**
      * Accumulated per-clip start offsets on the global timeline, expressed
      * in playback (speed-adjusted) time — i.e. the same coordinate space
      * Dart uses for the editor timeline. Source duration is divided by the
@@ -229,6 +245,24 @@ internal class DivineVideoPlayerInstance(
     /** The size reported to Dart while a GL stage draws the frames. */
     private val frameEffectReportedSize: Size?
         get() = if (routesThroughGl) frameEffectOutputSize else null
+
+    /** What [sendStateUpdate] tells Dart about the shape of the picture. */
+    private data class PictureLayout(
+        val width: Int,
+        val height: Int,
+        val pixelWidthHeightRatio: Double,
+        val rotationDegrees: Int,
+        val textureCrop: DecoderCrop?,
+    )
+
+    /**
+     * The layout reported before the frame-effect stage was installed, kept
+     * until the stage draws its first frame. Until then the texture holds the
+     * decoder's last buffer, which a SurfaceProducer that leaves crop and
+     * rotation to Dart shows unrotated: switching Dart to the stage's upright
+     * layout at once turned that frame sideways.
+     */
+    private var preEffectLayout: PictureLayout? = null
 
     /** The buffer size the output surface was set to for frame effects. */
     private var frameEffectSurfaceSize: Size? = null
@@ -390,10 +424,16 @@ internal class DivineVideoPlayerInstance(
 
     /**
      * Fires on the playback thread for every frame about to be rendered.
-     * Returns immediately unless a paused seek is armed, so feed playback
-     * does not enqueue a main-thread task per frame.
+     * Returns immediately unless a paused seek is armed or the decoder's
+     * output format changed, so feed playback does not enqueue a main-thread
+     * task per frame.
      */
-    private val renderedFrameListener = VideoFrameMetadataListener { _, _, _, _ ->
+    private val renderedFrameListener = VideoFrameMetadataListener { _, _, _, mediaFormat ->
+        if (mediaFormat != null && mediaFormat !== decoderOutputFormat) {
+            decoderOutputFormat = mediaFormat
+            val crop = DecoderCrop.of(mediaFormat)
+            mainHandler.post { onDecoderCropChanged(crop) }
+        }
         val armed = armedSeekGeneration
         if (!seekAwaitsFrame || armed == NO_ARMED_SEEK) return@VideoFrameMetadataListener
         mainHandler.post { onSeekFrameRendered(armed) }
@@ -1721,9 +1761,11 @@ internal class DivineVideoPlayerInstance(
                 mainHandler.post { if (frameEffectsState === created) startFrameEffectsFill() }
             }
         }
+        val exoPlayer = player
+        // Read while the frames still bypass the stage.
+        if (existing == null && exoPlayer != null) preEffectLayout = currentPictureLayout()
         state.setConfigs(configs)
         frameEffectsState = state
-        val exoPlayer = player
         if (exoPlayer != null) {
             if (existing == null) installFrameEffects(exoPlayer, state)
             updateFrameEffectWindows()
@@ -2210,6 +2252,19 @@ internal class DivineVideoPlayerInstance(
         if (player?.playbackState == Player.STATE_READY) completeSeekIfPending()
     }
 
+    /** Sends a changed [decoderCrop] to Dart, which draws only that part of the texture. */
+    private fun onDecoderCropChanged(crop: DecoderCrop?) {
+        if (crop == decoderCrop) return
+        decoderCrop = crop
+        if (crop != null) {
+            DivineVideoPlayerLog.info(
+                "$logTarget decoder pads its frames: $crop",
+                name = "DivineVideoPlayer.Playback",
+            )
+        }
+        sendStateUpdate()
+    }
+
     /** Completes the pending seekTo result so Dart's await returns. */
     private fun completeSeekIfPending() {
         seekAwaitsFrame = false
@@ -2236,6 +2291,7 @@ internal class DivineVideoPlayerInstance(
         }
 
         val totalDurationMs = computeTotalDuration(exoPlayer)
+        val layout = preEffectLayout ?: currentPictureLayout()
 
         val statusString = when {
             exoPlayer.playerError != null -> "error"
@@ -2258,14 +2314,12 @@ internal class DivineVideoPlayerInstance(
             "volume" to volume,
             "playbackSpeed" to speed,
             "isFirstFrameRendered" to firstFrameRendered,
-            // With frame effects, Media3 reports no video size (b/292111083)
-            // and its pipeline hands over upright frames: report the display
-            // size it draws, unrotated.
-            "videoWidth" to (frameEffectReportedSize?.width ?: videoWidth),
-            "videoHeight" to (frameEffectReportedSize?.height ?: videoHeight),
-            "pixelWidthHeightRatio" to if (frameEffectReportedSize != null) 1.0 else pixelWidthHeightRatio,
-            "rotationDegrees" to if (frameEffectReportedSize != null) 0 else rotationDegrees,
+            "videoWidth" to layout.width,
+            "videoHeight" to layout.height,
+            "pixelWidthHeightRatio" to layout.pixelWidthHeightRatio,
+            "rotationDegrees" to layout.rotationDegrees,
         )
+        layout.textureCrop?.let { map["textureCrop"] = it.toFractions() }
         exoPlayer.playerError?.let { error ->
             map["errorMessage"] = error.localizedMessage
                 ?: error.cause?.localizedMessage
@@ -2273,6 +2327,22 @@ internal class DivineVideoPlayerInstance(
             map["errorCode"] = errorCodeFor(error)
         }
         sink.success(map)
+    }
+
+    /** The layout of the frames the player draws now. */
+    private fun currentPictureLayout(): PictureLayout {
+        // With frame effects, Media3 reports no video size (b/292111083)
+        // and its pipeline hands over upright frames: report the display
+        // size it draws, unrotated.
+        val glSize = frameEffectReportedSize
+        if (glSize != null) return PictureLayout(glSize.width, glSize.height, 1.0, 0, null)
+        return PictureLayout(
+            videoWidth,
+            videoHeight,
+            pixelWidthHeightRatio,
+            rotationDegrees,
+            decoderCrop?.takeIf { dartAppliesCrop },
+        )
     }
 
     /** Human-readable name for a media3 `PLAY_WHEN_READY_CHANGE_REASON_*`. */
@@ -2687,6 +2757,9 @@ internal class DivineVideoPlayerInstance(
 
         override fun onRenderedFirstFrame() {
             firstFrameRendered = true
+            // Fires for the first frame after a re-prepare, playing or paused,
+            // so a frame-effect stage installed since has drawn by now.
+            preEffectLayout = null
             // A frame reached the surface, so whatever contention caused a
             // prior decoder error has cleared — allow the full retry budget
             // again for any future error.

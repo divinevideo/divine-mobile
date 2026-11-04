@@ -13,7 +13,9 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:uuid/uuid.dart';
 
 class ChallengePage extends ConsumerWidget {
@@ -64,16 +66,21 @@ class ChallengePage extends ConsumerWidget {
               coordinate: link.coordinate,
               submissions: session.submissions,
               refresh: () => session.refreshForDisplay(link.coordinate),
-              loadCandidates: () async {
+              loadCandidates: () async => [],
+              loadCandidatePage: (offset) async {
                 await session.store.checkLive();
                 final feed = await videos.getAuthorFeed(
                   authorPubkey: session.store.owner,
                   skipCache: true,
+                  offset: offset,
                 );
                 await session.store.checkLive();
-                return feed.videos
-                    .where((v) => v.pubkey == session.store.owner)
-                    .toList();
+                return ChallengeCandidatePage(
+                  videos: feed.videos
+                      .where((v) => v.pubkey == session.store.owner)
+                      .toList(),
+                  nextOffset: feed.hasMore == false ? null : feed.nextOffset,
+                );
               },
               exactVideo: session.adapter.exactEvent,
               clientTags: () async => await Nip89ClientTag.wantsClientTag(1111)
@@ -93,21 +100,54 @@ class ChallengePage extends ConsumerWidget {
             unawaited(cubit.load());
             return cubit;
           },
-          child: ChallengeView(
-            ownerName: ref
-                .watch(userProfileReactiveProvider(session.store.owner))
-                .value
-                ?.bestDisplayName,
-            onRecord: (context, id) async {
-              await context.push<void>(
-                Uri(
-                  path: VideoRecorderScreen.path,
-                  queryParameters: {'challenge_recording': id},
-                ).toString(),
+          child: Consumer(
+            builder: (context, ref, _) {
+              final organizer = context.select(
+                (ChallengeParticipationCubit cubit) =>
+                    cubit.state.read?.view.definition?.event.pubkey,
               );
-              if (context.mounted) {
-                await context.read<ChallengeParticipationCubit>().load();
-              }
+              final organizerProfile = organizer == null
+                  ? null
+                  : ref.watch(userProfileReactiveProvider(organizer)).value;
+              return ChallengeView(
+                loadCandidatePreview: (id) async {
+                  final video = await session.adapter.exactEvent(id);
+                  if (video == null ||
+                      video.id != id ||
+                      video.pubkey != session.store.owner) {
+                    return null;
+                  }
+                  await session.refreshVideo?.call(video);
+                  await session.store.checkLive();
+                  return session.reads.isVisible(video) ? video : null;
+                },
+                organizerName: organizerProfile?.bestDisplayName,
+                organizerAvatarUrl: organizerProfile?.picture,
+                onOrganizerTap: organizer == null
+                    ? null
+                    : () {
+                        unawaited(
+                          OtherProfileRouteData(
+                            npub: NostrKeyUtils.encodePubKey(organizer),
+                          ).push<void>(context),
+                        );
+                      },
+                ownerName: ref
+                    .watch(userProfileReactiveProvider(session.store.owner))
+                    .value
+                    ?.bestDisplayName,
+                onRecord: (context, id) async {
+                  await context.push<void>(
+                    Uri(
+                      path: VideoRecorderScreen.path,
+                      queryParameters: {'challenge_recording': id},
+                    ).toString(),
+                  );
+                  if (context.mounted) {
+                    await context.read<ChallengeParticipationCubit>().load();
+                  }
+                },
+              );
             },
           ),
         );

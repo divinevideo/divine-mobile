@@ -160,6 +160,7 @@ class _Harness {
   final ves = _MockVideoEventService();
   final blocklist = _MockContentBlocklistRepository();
   final pins = _MockProfilePinsRepository();
+  final retryTriggers = StreamController<void>.broadcast();
 
   void Function()? onChanged;
   void Function(VideoEvent)? onUpdate;
@@ -213,6 +214,7 @@ class _Harness {
     blocklistRepository: blocklist,
     profilePinsRepository: pins,
     enrichVideos: enrichOverride ?? _noopEnrich,
+    retryTriggers: retryTriggers.stream,
   );
 }
 
@@ -239,9 +241,10 @@ void main() {
       await CacheSync.init(dao: cacheDao);
     });
 
-    tearDown(() {
+    tearDown(() async {
       ProfileFeedCubit.snapshotPersistDebounce =
           originalSnapshotPersistDebounce;
+      await h.retryTriggers.close();
     });
 
     Future<ProfileFeedCubit> buildReady(AuthorFeedResult result) async {
@@ -715,6 +718,7 @@ void main() {
       expect(cubit.state.status, ProfileFeedStatus.failure);
       expect(cubit.state.videos, isEmpty);
       expect(cubit.state.isFetchingTotalCount, isFalse);
+      expect(cubit.state.isInitialLoad, isFalse);
     });
 
     test(
@@ -730,6 +734,54 @@ void main() {
         expect(cubit.state.videos.single.id, 'relay');
       },
     );
+
+    group('videos that arrive after a failed cold load', () {
+      test('relay videos clear the failure', () {
+        fakeAsync((clock) {
+          final originalAudit = ProfileFeedCubit.relaySnapshotAudit;
+          ProfileFeedCubit.relaySnapshotAudit = const Duration(
+            milliseconds: 20,
+          );
+          addTearDown(
+            () => ProfileFeedCubit.relaySnapshotAudit = originalAudit,
+          );
+          h.stubAuthorFeedThrows(Exception('unreachable'));
+          final cubit = h.build();
+          clock.flushMicrotasks();
+          clock.elapse(Duration.zero);
+          expect(cubit.state.status, ProfileFeedStatus.failure);
+
+          when(() => h.ves.authorVideos(_author)).thenReturn([_video('r')]);
+          h.onChanged!();
+          clock.elapse(const Duration(milliseconds: 20));
+          clock.flushMicrotasks();
+
+          expect(cubit.state.videos.map((v) => v.id), ['r']);
+          expect(cubit.state.status, ProfileFeedStatus.ready);
+          unawaited(cubit.close());
+          clock.flushMicrotasks();
+        });
+      });
+
+      test('videos a filter change reveals clear the failure', () async {
+        when(() => h.ves.authorVideos(_author)).thenReturn([_video('x')]);
+        when(() => h.blocklist.shouldFilterFromFeeds(_author)).thenReturn(true);
+        h.stubAuthorFeedThrows(Exception('unreachable'));
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+        expect(cubit.state.status, ProfileFeedStatus.failure);
+
+        when(
+          () => h.blocklist.shouldFilterFromFeeds(_author),
+        ).thenReturn(false);
+        cubit.add(const ProfileFeedFiltersChanged());
+        await pumpEventQueue();
+
+        expect(cubit.state.videos.map((v) => v.id), ['x']);
+        expect(cubit.state.status, ProfileFeedStatus.ready);
+      });
+    });
 
     test(
       'loadMore REST: appends the next page and advances the offset',
@@ -1206,11 +1258,11 @@ void main() {
       verify(() => h.ves.removeListener(any())).called(1);
     });
 
-    test('spinner: isInitialLoad clears on the hard timeout when nothing '
-        'settles', () {
+    test('spinner: isInitialLoad holds while the cold REST load is in '
+        'flight', () {
       fakeAsync((async) {
-        // REST is in flight; relay empty -> isInitialLoad stays true until the
-        // hard timeout fires.
+        // A slow load must keep the skeleton rather than read as "No videos
+        // yet" before REST has answered (#9773, #4164).
         final completer = Completer<AuthorFeedResult>();
         when(
           () => h.repo.getAuthorFeed(
@@ -1225,15 +1277,17 @@ void main() {
 
         expect(cubit.state.isInitialLoad, isTrue);
 
-        async.elapse(ProfileFeedCubit.initialLoadHardTimeout);
+        async.elapse(const Duration(seconds: 30));
+        async.flushMicrotasks();
+
+        expect(cubit.state.isInitialLoad, isTrue);
+
+        completer.complete(_result(const []));
         async.flushMicrotasks();
 
         expect(cubit.state.isInitialLoad, isFalse);
+        expect(cubit.state.status, ProfileFeedStatus.ready);
 
-        // Settle the in-flight load and close inside the zone so no handler is
-        // left awaiting across teardown.
-        completer.complete(_result(const []));
-        async.flushMicrotasks();
         // fakeAsync owns the zone's microtask queue, so close is intentionally
         // fire-and-forget here after settling the load; awaiting it outside
         // the zone would strand the test continuation in that queue.
@@ -1242,6 +1296,37 @@ void main() {
         expect(cubit.isClosed, isTrue);
       });
     });
+
+    test(
+      'spinner: a refresh during the cold load keeps the skeleton',
+      () async {
+        final completer = Completer<AuthorFeedResult>();
+        when(
+          () => h.repo.getAuthorFeed(
+            authorPubkey: any(named: 'authorPubkey'),
+            offset: any(named: 'offset'),
+            relaySeed: any(named: 'relaySeed'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer((_) => completer.future);
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        // Runs before the close above, which waits for the in-flight load.
+        addTearDown(() {
+          if (!completer.isCompleted) completer.complete(_result(const []));
+        });
+        await pumpEventQueue();
+        expect(cubit.state.isInitialLoad, isTrue);
+
+        cubit.add(const ProfileFeedRefreshRequested());
+        await pumpEventQueue();
+
+        expect(cubit.state.isInitialLoad, isTrue);
+        completer.complete(_result(const []));
+        await pumpEventQueue();
+        expect(cubit.state.isInitialLoad, isFalse);
+      },
+    );
 
     test('background enrichment re-emits with the enriched copies', () async {
       h.enrichOverride = (videos) async => [
@@ -2154,6 +2239,131 @@ void main() {
           ),
         );
       });
+    });
+
+    group('retry after a failed cold load', () {
+      Future<ProfileFeedCubit> buildFailed() async {
+        h.stubAuthorFeedThrows(Exception('unreachable'));
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+        expect(cubit.state.status, ProfileFeedStatus.failure);
+        h.stubAuthorFeed(_result(const []));
+        return cubit;
+      }
+
+      test('$ProfileFeedRetryRequested reloads a failed feed', () async {
+        final cubit = await buildFailed();
+
+        cubit.add(const ProfileFeedRetryRequested());
+        await pumpEventQueue();
+
+        expect(cubit.state.status, ProfileFeedStatus.ready);
+        expect(cubit.state.isInitialLoad, isFalse);
+      });
+
+      test('a retry loads as much as the cold load would have', () async {
+        final cubit = await buildFailed();
+        h.stubAuthorFeedSequence([
+          _result(
+            [_video('a'), _video('b')],
+            nextOffset: 2,
+            hasMore: true,
+          ),
+          _result([_video('c'), _video('d')], hasMore: false),
+        ]);
+
+        cubit.add(const ProfileFeedRetryRequested());
+        await pumpEventQueue(times: 8);
+
+        expect(cubit.state.videos.map((v) => v.id), ['a', 'b', 'c', 'd']);
+      });
+
+      test('a retry fetches the pin list again', () async {
+        final cubit = await buildFailed();
+        clearInteractions(h.pins);
+
+        cubit.add(const ProfileFeedRetryRequested());
+        await pumpEventQueue();
+
+        verify(() => h.pins.fetch(_author)).called(1);
+      });
+
+      test('$ProfileFeedRetryRequested leaves a loaded feed alone', () async {
+        final cubit = await buildReady(_result([_video('a')]));
+        addTearDown(cubit.close);
+        clearInteractions(h.repo);
+
+        cubit.add(const ProfileFeedRetryRequested());
+        await pumpEventQueue();
+
+        verifyNever(
+          () => h.repo.getAuthorFeed(
+            authorPubkey: any(named: 'authorPubkey'),
+            offset: any(named: 'offset'),
+            relaySeed: any(named: 'relaySeed'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        );
+        expect(cubit.state.videos.map((v) => v.id), ['a']);
+      });
+
+      test('a retry trigger reloads a failed feed', () async {
+        final cubit = await buildFailed();
+
+        h.retryTriggers.add(null);
+        await pumpEventQueue();
+
+        expect(cubit.state.status, ProfileFeedStatus.ready);
+      });
+
+      test('a retry trigger leaves a loaded feed alone', () async {
+        final cubit = await buildReady(_result([_video('a')]));
+        addTearDown(cubit.close);
+        clearInteractions(h.repo);
+
+        h.retryTriggers.add(null);
+        await pumpEventQueue();
+
+        verifyNever(
+          () => h.repo.getAuthorFeed(
+            authorPubkey: any(named: 'authorPubkey'),
+            offset: any(named: 'offset'),
+            relaySeed: any(named: 'relaySeed'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        );
+      });
+    });
+  });
+
+  group('ProfileFeedState.isLoadingVideos', () {
+    test('is true until the first load starts and while it runs', () {
+      expect(const ProfileFeedState().isLoadingVideos, isTrue);
+      expect(
+        const ProfileFeedState(status: ProfileFeedStatus.loading)
+            .isLoadingVideos,
+        isTrue,
+      );
+      expect(
+        const ProfileFeedState(
+          status: ProfileFeedStatus.ready,
+          isInitialLoad: true,
+        ).isLoadingVideos,
+        isTrue,
+      );
+    });
+
+    test('is false once videos loaded or the load failed', () {
+      expect(
+        const ProfileFeedState(status: ProfileFeedStatus.ready).isLoadingVideos,
+        isFalse,
+      );
+      expect(
+        const ProfileFeedState(status: ProfileFeedStatus.failure)
+            .isLoadingVideos,
+        isFalse,
+      );
     });
   });
 }

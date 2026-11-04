@@ -1869,6 +1869,236 @@ class AppLocalizationsKo extends AppLocalizations {
   String get metadataSoundsLabel => '사운드';
 
   @override
+  String get metadataLinksLabel => '링크';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return '링크 스티커, $url 열기';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel => '멘션 스티커, 프로필 열기';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return '해시태그 스티커, #$hashtag 열기';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => '사운드 스티커, 사운드 열기';
+
+  @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return '위치 스티커, 지도에서 $place 열기';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel => '카운트다운 스티커, 알림 설정';
+
+  @override
+  String get videoStickerReplySemanticLabel => '답글 스티커, 이 동영상이 답하는 대상 열기';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count일',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet => '알림을 설정했어요. 때가 되면 알려 드릴게요.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => '알림을 삭제했어요.';
+
+  @override
+  String get videoStickerCountdownOver => '이 카운트다운은 끝났어요.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      '알림을 받으려면 Divine 알림을 켜 주세요.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      '시간이 됐어요! 저장한 카운트다운이 방금 끝났어요.';
+
+  @override
+  String get videoStickerQuizRightAnswer => '정답';
+
+  @override
+  String get videoStickerQuizWrongAnswer => '오답';
+
+  @override
+  String get videoStickerPollSignInToVote => '로그인해야 투표할 수 있어요.';
+
+  @override
+  String get videoStickerPollNotReady => '아직 연결 중이에요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get videoStickerPollVoteFailed => '투표가 전송되지 않았어요. 다시 시도해 주세요.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      '투표는 공개돼요. 누구나 내가 고른 답을 볼 수 있어요.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count표',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint => '탭해서 답하기';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return '답하기: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => '나도 참여';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count명 참여',
+      one: '$count명 참여',
+      zero: '첫 번째로 참여해 보세요',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count명 참여';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => '참여한 사람 보기';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return '나도 참여: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '답글 $count개',
+      one: '답글 $count개',
+      zero: '아직 답글이 없어요',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '답글 $count개';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '영상 답글 $count개 보기',
+      one: '영상 답글 $count개 보기',
+      zero: '영상 답글, 아직 없음',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return '영상 답글 $count개 보기';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn => '로그인해야 답할 수 있어요.';
+
+  @override
+  String get videoStickerQuestionUnavailable => '이 계정에서는 질문에 답할 수 없어요.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => '답하기';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => '내 답변';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return '$name님만 내 답변을 볼 수 있어요. 내 이름 없이 영상에서 공유될 수도 있어요.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => '보내기';
+
+  @override
+  String get videoStickerQuestionAnswerSent => '답변을 보냈어요.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong => '답변이 너무 길어서 보낼 수 없어요.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed => '답변이 전송되지 않았어요. 다시 시도해 주세요.';
+
+  @override
+  String get videoStickerAddYoursSignIn => '로그인해야 참여할 수 있어요.';
+
+  @override
+  String get videoStickerRepliesManageTitle => '영상 답글';
+
+  @override
+  String get videoStickerRepliesEmpty => '아직 영상 답글이 없어요.';
+
+  @override
+  String get videoStickerRepliesLoadFailed => '답글을 불러오지 못했어요.';
+
+  @override
+  String get videoStickerRepliesRetry => '다시 시도';
+
+  @override
+  String get videoStickerRepliesPin => '고정';
+
+  @override
+  String get videoStickerRepliesUnpin => '고정 해제';
+
+  @override
+  String get videoStickerRepliesHide => '숨기기';
+
+  @override
+  String get videoStickerRepliesShow => '보이기';
+
+  @override
+  String get videoStickerRepliesPinned => '고정됨';
+
+  @override
+  String get videoStickerRepliesHidden => '숨김';
+
+  @override
+  String get videoStickerRepliesSaveFailed => '저장하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return '$name님의 답글 보기';
+  }
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      '이 링크는 Divine 밖에서 열려요. 이동하기 전에 주소를 확인하세요.';
+
+  @override
   String get metadataOriginalSound => '오리지널 사운드';
 
   @override
@@ -4111,7 +4341,16 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError => '서버에 연결할 수 없습니다. 연결을 확인하고 다시 시도해 주세요.';
+  String get profileVideosLoadFailedTitle => '내 영상을 불러오지 못했어요';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle => '영상을 불러오지 못했어요';
+
+  @override
+  String get profileVideosLoadFailedSubtitle => '연결을 확인하고 다시 시도해 주세요.';
+
+  @override
+  String get profileVideosLoadFailedRetry => '다시 시도';
 
   @override
   String get profileFeedLoadMoreError => '영상을 더 불러오지 못했어요. 당겨서 새로고침하세요.';
@@ -4432,6 +4671,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get routeInvalidSoundId => '잘못된 사운드 ID예요';
+
+  @override
+  String get routeInvalidQuestion => '잘못된 질문 링크예요';
 
   @override
   String get routeInvalidCategory => '잘못된 카테고리예요';
@@ -5765,6 +6007,19 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dmReelReplyComposerSemanticLabel => '이 릴스에 답장';
 
   @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return '내 질문에 답했어요: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return '내가 답한 질문: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => '영상으로 답하기';
+
+  @override
   String get dmReelReplyViewChat => '채팅 보기';
 
   @override
@@ -6466,19 +6721,19 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => '선택됨';
-
-  @override
   String get videoClipSemanticValueNotSelected => '선택 안 됨';
 
   @override
   String get videoClipSemanticHintDisabled => '비활성화됨';
 
   @override
-  String get videoClipSemanticHintSelect => '탭하여 선택, 길게 눌러 미리보기';
+  String get videoClipSemanticHintSelect => '탭하여 선택';
 
   @override
-  String get videoClipSemanticHintDeselect => '탭하여 선택 해제, 길게 눌러 미리보기';
+  String get videoClipSemanticHintDeselect => '탭하여 선택 해제';
+
+  @override
+  String get videoClipSemanticHintPreview => '탭하여 미리보기';
 
   @override
   String get routerInvalidCreator => '유효하지 않은 크리에이터';
@@ -7296,6 +7551,10 @@ class AppLocalizationsKo extends AppLocalizations {
       '이 초안의 텍스트와 스티커를 준비하지 못했어요. 편집기에서 연 다음 다시 게시해주세요.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      '이 계정은 질문 스티커를 올릴 수 없어요. 답변이 비공개 메시지로 오기 때문이에요. 스티커를 지운 뒤 다시 올려 주세요.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       '이 기기에서는 분리한 클립을 한 번에 이만큼 내보낼 수 없어요. 몇 개를 타임라인으로 되돌린 뒤 다시 시도해 주세요.';
 
@@ -7899,6 +8158,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName님이 회원님이 태그된 동영상을 좋아해요';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorName님이 회원님의 댓글을 좋아해요';
   }
@@ -8241,6 +8505,28 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '클립 $count개를 복원했어요',
+      one: '클립을 복원했어요',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '클립 $count개를 영구 삭제했어요',
+      one: '클립을 영구 삭제했어요',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => '동영상 녹화기 닫기';
 
   @override
@@ -8483,13 +8769,139 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectSparkles => '반짝이';
 
   @override
+  String get videoEditorEffectRain => '비';
+
+  @override
+  String get videoEditorEffectLeaves => '낙엽';
+
+  @override
+  String get videoEditorEffectBlossoms => '벚꽃';
+
+  @override
+  String get videoEditorEffectBubbles => '비눗방울';
+
+  @override
+  String get videoEditorEffectBokeh => '보케';
+
+  @override
+  String get videoEditorEffectMusicNotes => '음표';
+
+  @override
+  String get videoEditorEffectStars => '별';
+
+  @override
+  String get videoEditorEffectFireflies => '반딧불이';
+
+  @override
+  String get videoEditorEffectEmbers => '불씨';
+
+  @override
+  String get videoEditorEffectMoney => '돈';
+
+  @override
+  String get videoEditorEffectBalloons => '풍선';
+
+  @override
   String get videoEditorEffectTiltShift => '틸트 시프트';
 
   @override
   String get videoEditorEffectZoomBlur => '줌 블러';
 
   @override
+  String get videoEditorEffectSpinBlur => '스핀 블러';
+
+  @override
   String get videoEditorEffectComic => '만화';
+
+  @override
+  String get videoEditorEffectSwirl => '소용돌이';
+
+  @override
+  String get videoEditorEffectRipple => '물결';
+
+  @override
+  String get videoEditorEffectFlutedGlass => '플루티드 글라스';
+
+  @override
+  String get videoEditorEffectEightBit => '8비트';
+
+  @override
+  String get videoEditorEffectAnaglyph => '3D 안경';
+
+  @override
+  String get videoEditorEffectRiso => '리소 인쇄';
+
+  @override
+  String get videoEditorEffectTealOrange => '틸 & 오렌지';
+
+  @override
+  String get videoEditorEffectWarmFilm => '웜 필름';
+
+  @override
+  String get videoEditorEffectSlideFilm => '슬라이드 필름';
+
+  @override
+  String get videoEditorEffectCoolFilm => '쿨 필름';
+
+  @override
+  String get videoEditorEffectMatte => '매트';
+
+  @override
+  String get videoEditorEffectBleachBypass => '블리치 바이패스';
+
+  @override
+  String get videoEditorEffectCrossProcess => '크로스 프로세스';
+
+  @override
+  String get videoEditorEffectGoldenHour => '골든 아워';
+
+  @override
+  String get videoEditorEffectMoonlight => '달빛';
+
+  @override
+  String get videoEditorEffectSilver => '실버';
+
+  @override
+  String get videoEditorEffectCategoryRetro => '레트로';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => '글리치';
+
+  @override
+  String get videoEditorEffectCategoryDistort => '왜곡';
+
+  @override
+  String get videoEditorEffectCategoryLight => '빛';
+
+  @override
+  String get videoEditorEffectCategoryMotion => '모션';
+
+  @override
+  String get videoEditorEffectCategoryParticles => '파티클';
+
+  @override
+  String get videoEditorEffectCategoryLooks => '룩';
+
+  @override
+  String get videoEditorFilterCategoryNatural => '내추럴';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => '비비드';
+
+  @override
+  String get videoEditorFilterCategoryWarm => '웜';
+
+  @override
+  String get videoEditorFilterCategoryCool => '쿨';
+
+  @override
+  String get videoEditorFilterCategoryVintage => '빈티지';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => '흑백';
+
+  @override
+  String get videoEditorFilterCategoryTints => '틴트';
 
   @override
   String get videoEditorDropsSettingsTitle => '물방울 조정';
@@ -10129,6 +10541,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => '높이';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => '좌우';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => '상하';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => '사용자 지정';
 
   @override
@@ -10211,6 +10629,409 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorStickerSearchHint => '스티커 검색...';
+
+  @override
+  String get videoEditorInfoStickersTitle => '정보';
+
+  @override
+  String get videoEditorSocialStickersTitle => '소셜';
+
+  @override
+  String get videoEditorSocialStickerMention => '멘션';
+
+  @override
+  String get videoEditorSocialStickerHashtag => '해시태그';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => '사운드';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => '이름';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => '해시태그';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => '사람 선택';
+
+  @override
+  String get videoEditorSocialStickerMentionNote => '게시물에서 멘션되고 알림을 받아요.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => '해시태그 입력';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote => '게시물 해시태그에도 추가돼요.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint => '가사 한 줄 (선택)';
+
+  @override
+  String get videoEditorSocialStickerLink => '링크';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => '웹 주소';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => '제목 (선택)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => '주소가 게시물에 추가돼요.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => '아직 웹 주소가 아니에요.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => '인터랙티브';
+
+  @override
+  String get videoEditorSocialStickerCountdown => '카운트다운';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => '여름';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint => '무엇을 향해 카운트다운하나요?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      '시청자는 남은 시간을 보고 알림을 설정할 수 있어요.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver => '이미 지난 시간이에요. 새로 골라 주세요.';
+
+  @override
+  String get videoEditorSocialStickerReply => '답글';
+
+  @override
+  String get videoEditorSocialStickerReplyNote => '시청자가 탭하면 무엇에 답하는지 볼 수 있어요.';
+
+  @override
+  String get videoEditorSocialStickerPoll => '투표';
+
+  @override
+  String get videoEditorSocialStickerQuiz => '퀴즈';
+
+  @override
+  String get videoEditorSocialStickerSlider => '슬라이더';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => '어떤 게 좋아요?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => '네';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => '아니요';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion => 'Vine이 출시된 해는…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion => '얼마나 배고파요?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => '질문하기';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return '$number번 답변';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return '$number번 답변 삭제';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return '$number번 답변을 정답으로 표시';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => '답변 추가';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      '시청자는 투표한 뒤 결과를 볼 수 있어요. 투표는 공개돼요.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      '정답에 체크해 주세요. 시청자는 답을 고른 뒤 정답을 볼 수 있어요.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      '시청자는 이모지를 끌어서 답하고 평균 위치를 볼 수 있어요.';
+
+  @override
+  String get videoEditorSocialStickerQuestion => '질문';
+
+  @override
+  String get videoEditorSocialStickerAddYours => '나도 참여';
+
+  @override
+  String get videoEditorSocialStickerReplies => '답글';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => '무엇이든 물어보세요';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample => '책상 셋업을 보여 주세요';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample => '영상으로 답글 달기';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => '내 질문';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      '사람들이 무엇을 보여 주면 좋을까요?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => '해시태그';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => '제목';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote => '답변은 비공개 메시지로 받아요.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      '시청자는 자기 영상으로 답해요. 모든 답변에 이 해시태그가 붙고 내 영상으로 연결돼요.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      '이 영상에 영상으로 답글을 단 사람을 보여 줘요. 시청자가 탭하면 답글을 볼 수 있어요.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      '시청자가 탭할 수 있도록 이 스티커는 이 상자 안에 있어요';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => '음표';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => '레코드';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => '카세트';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => '이퀄라이저';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => '플레이어';
+
+  @override
+  String get videoEditorInfoStickerTime => '시간';
+
+  @override
+  String get videoEditorInfoStickerDate => '날짜';
+
+  @override
+  String get videoEditorInfoStickerLocation => '위치';
+
+  @override
+  String get videoEditorInfoStickerWeather => '날씨';
+
+  @override
+  String get videoEditorInfoStickerAltitude => '고도';
+
+  @override
+  String get videoEditorInfoStickerBattery => '배터리';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => '라이트';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => '다크';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => '그린';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => '윤곽선';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => '디지털';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => '아날로그';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => '글래스';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => '옐로';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => '네온';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => '심플';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => '장소 변경';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      '이 기기에서는 장소 검색을 사용할 수 없어요.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return '촬영 시각 · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return '지금 · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return '오늘 · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => '일수 카운터';
+
+  @override
+  String get videoEditorInfoStickerSun => '태양';
+
+  @override
+  String get videoEditorInfoStickerMoon => '달';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC 타이머';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => '필름';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => '캠코더';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return '$day일째';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return '$total일 중 $day일째';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => '일차';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => '전체 일수(선택)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => '핀';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => '국기';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => '지구본';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => '지도';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => '삭';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => '초승달';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => '상현달';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => '차가는 달';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => '보름달';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => '기우는 달';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => '하현달';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => '그믐달';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => '도시나 장소를 검색해요';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => '장소를 찾지 못했어요';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      '장소를 검색하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      '영상에는 장소 이름만 들어가고, 정확한 위치는 절대 들어가지 않아요.';
+
+  @override
+  String get videoEditorInfoStickerLoading => '불러오는 중…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed => '불러오지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => '데이터 제공: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      '오래된 동영상의 날씨는 없어서 지금 날씨를 보여 줘요.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => '맑음';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => '맑은 밤';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => '구름 조금';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => '흐림';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => '안개';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => '비';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => '소나기';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => '눈';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => '뇌우';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote => '시간은 휴대폰의 시간대로 표시돼요.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => '기온';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => '단위';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => '배터리 잔량';
+
+  @override
+  String get videoEditorInfoStickerAdd => '스티커 추가';
 
   @override
   String get videoEditorSelectFontSemanticLabel => '폰트 선택';
@@ -11710,6 +12531,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" 추가';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, 동영상 속 스티커에서';
   }
 
   @override
@@ -13572,10 +14398,82 @@ class AppLocalizationsKo extends AppLocalizations {
   String get ideasDescriptionSix => '여기에 남겨 둘게요.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '채팅방, 읽지 않은 메시지 $displayCount개',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '새 메시지 $displayCount개',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '읽지 않은 메시지 $displayCount개',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount명',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '메시지 $displayCount개',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => '최근 24시간';
+
+  @override
+  String get messagesRoomLoading => '활동을 확인하고 있어요…';
+
+  @override
+  String get messagesRoomLoadFailed => '활동을 불러오지 못했어요.';
+
+  @override
+  String get messagesRoomEmpty => '최근 메시지가 없어요. 인사를 건네 보세요.';
+
+  @override
   String get messagesDirect => '다이렉트';
 
   @override
   String get messagesRooms => '채팅방';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return '채팅방 ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => '공개 테스트 채팅방';
@@ -13893,9 +14791,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -13916,11 +14811,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -13954,9 +14844,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -14019,4 +14906,74 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
+
+  @override
+  String get creatorHighlightLabel => '오늘의 하이라이트';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return '오늘 만든 동영상: $count개.';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle => '이번 주에 나만의 색깔을 조금 더했어요.';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return '이번 주에 창작한 날: $count일. 계속 만들어 봐요.';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '이번 주에 올린 동영상의 지금까지 누적 조회수: $countString회.';
+  }
+
+  @override
+  String get creatorHighlightTopVideo => '이번 주에 올린 동영상 중 가장 많이 시청된 영상';
+
+  @override
+  String get creatorHighlightCreate => '하나 더 만들기';
+
+  @override
+  String get creatorHighlightAnalytics => '내 통계 보기';
+
+  @override
+  String get creatorHighlightWatch => '동영상 보기';
 }

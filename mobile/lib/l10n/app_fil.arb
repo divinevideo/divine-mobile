@@ -1,5 +1,75 @@
 {
   "@@locale": "fil",
+  "videoEditorSocialStickerPoll": "Poll",
+  "videoEditorSocialStickerQuiz": "Quiz",
+  "videoEditorSocialStickerSlider": "Slider",
+  "videoEditorSocialStickerPollSampleQuestion": "Alin dito?",
+  "videoEditorSocialStickerPollSampleYes": "Oo",
+  "videoEditorSocialStickerPollSampleNo": "Hindi",
+  "videoEditorSocialStickerQuizSampleQuestion": "Nag-launch ang Vine noong…",
+  "videoEditorSocialStickerSliderSampleQuestion": "Gaano ka kagutom?",
+  "videoEditorSocialStickerPollQuestionHint": "Magtanong",
+  "videoEditorSocialStickerPollOptionHint": "Sagot {number}",
+  "videoEditorSocialStickerPollRemoveOption": "Alisin ang sagot {number}",
+  "videoEditorSocialStickerQuizMarkRight": "Gawing tamang sagot ang sagot {number}",
+  "videoEditorSocialStickerPollAddOption": "Magdagdag ng sagot",
+  "videoEditorSocialStickerPollNote": "Makikita ng viewers ang results pagkatapos nilang bumoto. Public ang mga boto.",
+  "videoEditorSocialStickerQuizNote": "I-tick ang tamang sagot. Makikita ito ng viewers pagkatapos nilang pumili.",
+  "videoEditorSocialStickerSliderNote": "Idi-drag ng viewers ang emoji para sumagot at makikita nila kung saan ito napupunta sa average.",
+  "videoStickerQuizRightAnswer": "Tamang sagot",
+  "videoStickerQuizWrongAnswer": "Maling sagot",
+  "videoEditorSocialStickerQuestion": "Tanong",
+  "videoEditorSocialStickerAddYours": "Ikaw naman",
+  "videoEditorSocialStickerReplies": "Mga reply",
+  "videoEditorSocialStickerQuestionSample": "Tanungin mo ako ng kahit ano",
+  "videoEditorSocialStickerAddYoursSample": "Ipakita ang desk setup mo",
+  "videoEditorSocialStickerRepliesSample": "Mag-reply gamit ang video",
+  "videoEditorSocialStickerQuestionHint": "Tanong mo",
+  "videoEditorSocialStickerAddYoursPromptHint": "Ano ang dapat ipakita ng mga tao?",
+  "videoEditorSocialStickerAddYoursHashtagHint": "Hashtag",
+  "videoEditorSocialStickerRepliesTitleHint": "Pamagat",
+  "videoEditorSocialStickerQuestionNote": "Darating sa iyo ang mga sagot bilang private message.",
+  "videoEditorSocialStickerAddYoursNote": "Sasagot ang viewers gamit ang sarili nilang video. Bawat sagot ay may ganitong hashtag at naka-link pabalik sa video mo.",
+  "videoEditorSocialStickerRepliesNote": "Ipinapakita kung sino ang nag-reply sa video na ito gamit ang video. I-tap ito ng viewers para mapanood ang mga reply.",
+  "videoEditorInteractiveCardAreaHint": "Nananatili ang sticker sa box na ito para ma-tap ito ng viewers",
+  "videoStickerPollSignInToVote": "Mag-sign in para bumoto.",
+  "videoStickerPollNotReady": "Kumokonekta pa. Subukan ulit maya-maya.",
+  "videoStickerPollVoteFailed": "Hindi naipadala ang boto mo. Subukan ulit.",
+  "videoStickerPollVotesArePublic": "Public ang mga boto. Makikita ng kahit sino ang pinili mo.",
+  "videoStickerPollVoteCount": "{count, plural, one{{count} boto} other{{count} boto}}",
+  "videoStickerQuestionAnswerHint": "I-tap para sumagot",
+  "videoStickerQuestionAnswerSemanticLabel": "Sagutin: {question}",
+  "videoStickerAddYoursButton": "Ikaw naman",
+  "videoStickerAddYoursJoined": "{count, plural, =0{Mauna ka na} =1{{count} ang sumali} other{{count} ang sumali}}",
+  "videoStickerAddYoursJoinedAtLeast": "{count} ang sumali",
+  "videoStickerAddYoursOpenSemanticLabel": "Tingnan kung sino ang sumali",
+  "videoStickerAddYoursJoinSemanticLabel": "Ikaw naman: {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{Wala pang reply} =1{{count} reply} other{{count} reply}}",
+  "videoStickerRepliesCountAtLeast": "{count} reply",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{Mga video reply, wala pa} =1{Panoorin ang {count} video reply} other{Panoorin ang {count} video reply}}",
+  "videoStickerRepliesSemanticLabelAtLeast": "Panoorin ang {count} video reply",
+  "videoStickerQuestionSignIn": "Mag-sign in para sumagot.",
+  "videoStickerQuestionUnavailable": "Hindi available sa account mo ang pagsagot sa mga tanong.",
+  "videoStickerQuestionAnswerTitle": "Sumagot",
+  "videoStickerQuestionAnswerFieldLabel": "Sagot mo",
+  "videoStickerQuestionAnswerPrivacyNote": "Si {name} lang ang makakakita ng sagot mo. Puwede nila itong i-share sa isang video, nang wala ang pangalan mo.",
+  "videoStickerQuestionAnswerSend": "Ipadala",
+  "videoStickerQuestionAnswerSent": "Naipadala ang sagot.",
+  "videoStickerQuestionAnswerTooLong": "Masyadong mahaba ang sagot para maipadala.",
+  "videoStickerQuestionAnswerFailed": "Hindi naipadala ang sagot mo. Subukan ulit.",
+  "videoStickerAddYoursSignIn": "Mag-sign in para sumali.",
+  "videoStickerRepliesManageTitle": "Mga video reply",
+  "videoStickerRepliesEmpty": "Wala pang video reply.",
+  "videoStickerRepliesLoadFailed": "Hindi ma-load ang mga reply.",
+  "videoStickerRepliesRetry": "Subukan ulit",
+  "videoStickerRepliesPin": "I-pin",
+  "videoStickerRepliesUnpin": "I-unpin",
+  "videoStickerRepliesHide": "Itago",
+  "videoStickerRepliesShow": "Ipakita",
+  "videoStickerRepliesPinned": "Naka-pin",
+  "videoStickerRepliesHidden": "Nakatago",
+  "videoStickerRepliesSaveFailed": "Hindi nai-save. Subukan ulit.",
+  "videoStickerRepliesWatchSemanticLabel": "Panoorin ang reply ni {name}",
   "devOptionsClipRecovery": "Pagbawi ng clip",
   "devOptionsClipRecoveryDescription": "Naghahanap ng mga recording na nakaimbak sa ibang account at mga video file na wala nang tumutukoy na entry.",
   "devOptionsClipRecoveryScan": "I-scan",
@@ -65,6 +135,7 @@
   "publishErrorPermissionDenied": "Walang permission ang Divine para mag-upload. Tingnan ang app permissions sa iyong settings at subukan ulit.",
   "publishErrorOutOfMemory": "Kulang ang memory sa device mo. Magsara ng ilang app at subukan ulit.",
   "publishErrorOverlaysUnavailable": "Hindi na-prepare ang text at stickers sa draft na ito. Buksan mo sa editor, tapos i-post ulit.",
+  "publishErrorQuestionStickerRestricted": "Hindi makakapag-post ang account mo ng question sticker, dahil dumarating ang mga sagot bilang private message. Alisin ito, saka mag-post ulit.",
   "publishErrorTooManyDetachedClips": "Hindi kaya ng device mo na i-export nang sabay-sabay ang ganito karaming na-detach na clip. Ibalik ang ilan sa timeline at subukan ulit.",
   "publishErrorDraftTooManyDetachedClips": "Hindi kaya ng device mo na i-export nang sabay-sabay ang ganito karaming na-detach na clip. Buksan ang draft sa editor, ibalik ang ilan sa timeline, tapos i-post ulit.",
   "publishErrorUnknownServer": "Hindi kilalang server",
@@ -74,7 +145,10 @@
   "dmReactionRetryAction": "Subukan muli",
   "dmMessageBubbleVideoReplyHint": "Buksan ang tinukoy na video",
   "commonSomethingWentWrong": "May nangyaring problema",
-  "profileFeedError": "Hindi maabot ang server. Tingnan ang iyong koneksyon at subukan ulit.",
+  "profileVideosLoadFailedTitle": "Hindi na-load ang iyong mga video",
+  "profileVideosLoadFailedOtherTitle": "Hindi na-load ang mga video",
+  "profileVideosLoadFailedSubtitle": "Tingnan ang iyong koneksyon at subukan ulit.",
+  "profileVideosLoadFailedRetry": "Subukan ulit",
   "profileFeedLoadMoreError": "Hindi na-load ang iba pang video. Hilahin pababa para mag-refresh.",
   "appTitle": "Divine",
   "settingsTitle": "Mga Setting",
@@ -551,6 +625,21 @@
   "metadataBadgeNotDivine": "Hindi Divine",
   "metadataBadgeHumanMade": "Gawa ng Tao",
   "metadataSoundsLabel": "Mga Tunog",
+  "metadataLinksLabel": "Mga Link",
+  "videoStickerLinkSemanticLabel": "Link sticker, binubuksan ang {url}",
+  "videoStickerMentionSemanticLabel": "Mention sticker, binubuksan ang profile",
+  "videoStickerHashtagSemanticLabel": "Hashtag sticker, binubuksan ang #{hashtag}",
+  "videoStickerSoundSemanticLabel": "Sound sticker, binubuksan ang sound",
+  "videoStickerPlaceSemanticLabel": "Location sticker, binubuksan ang {place} sa mapa",
+  "videoStickerCountdownSemanticLabel": "Countdown sticker, nagse-set ng reminder",
+  "videoStickerReplySemanticLabel": "Reply sticker, binubuksan ang sinasagot ng video na ito",
+  "videoStickerCountdownDays": "{count, plural, =1{{count} araw} other{{count} araw}}",
+  "videoStickerCountdownReminderSet": "Na-set na ang reminder. Sasabihan ka namin pag oras na.",
+  "videoStickerCountdownReminderRemoved": "Tinanggal ang reminder.",
+  "videoStickerCountdownOver": "Tapos na ang countdown na ito.",
+  "videoStickerCountdownNotificationsOff": "I-on ang notifications para sa Divine para makuha ang reminder.",
+  "videoStickerCountdownReminderBody": "Oras na! Kakatapos lang ng countdown na na-save mo.",
+  "videoStickerLinkSheetBody": "Bubuksan ang link na ito sa labas ng Divine. Tingnan muna ang address bago ka tumuloy.",
   "metadataOriginalSound": "Orihinal na sound",
   "metadataVerificationLabel": "Beripikasyon",
   "metadataDeviceAttestation": "Device attestation",
@@ -1217,6 +1306,7 @@
   "routeInvalidUserId": "Invalid na user ID",
   "routeInvalidVideoId": "Invalid na video ID",
   "routeInvalidSoundId": "Invalid na sound ID",
+  "routeInvalidQuestion": "Invalid na link ng tanong",
   "routeInvalidCategory": "Invalid na category",
   "routeNoVideosToDisplay": "Walang video na maipapakita",
   "routeGoHome": "Pumunta sa home",
@@ -1673,11 +1763,11 @@
   "videoClipBackupUnsignedSemanticLabel": "Nasa gallery mo nang walang content credentials. {label}",
   "videoClipStopMotionSemanticLabel": "Stop-motion clip, {frames}",
   "videoClipSemanticValueSelectedAtPosition": "Napili, numero {position}",
-  "videoClipSemanticValueSelected": "Napili",
   "videoClipSemanticValueNotSelected": "Hindi napili",
   "videoClipSemanticHintDisabled": "Hindi pinagana",
-  "videoClipSemanticHintSelect": "I-tap para piliin, pindutin nang matagal para i-preview",
-  "videoClipSemanticHintDeselect": "I-tap para alisin ang pagpili, pindutin nang matagal para i-preview",
+  "videoClipSemanticHintSelect": "I-tap para piliin",
+  "videoClipSemanticHintDeselect": "I-tap para alisin ang pagpili",
+  "videoClipSemanticHintPreview": "I-tap para i-preview",
   "routerInvalidCreator": "Invalid na creator",
   "routerInvalidHashtagRoute": "Invalid na hashtag route",
   "categoryGalleryCouldNotLoadVideos": "Hindi na-load ang mga video",
@@ -1747,6 +1837,7 @@
   "contentLabelMisleading": "Nakakapagligaw",
   "contentLabelSensitiveContent": "Sensitibong Content",
   "notificationLikedYourVideo": "Ni-like ni {actorName} ang video mo",
+  "notificationLikedTaggedVideo": "Ni-like ni {actorName} ang isang video kung saan naka-tag ka",
   "notificationGroupLikedYourComment": "Ni-like nina {actorName} ang comment mo",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",
@@ -1821,6 +1912,8 @@
   "libraryTrashDeleteConfirmMessage": "Aalisin nito agad ang clip mula sa trash.",
   "libraryTrashEmptyConfirmTitle": "I-empty ang trash?",
   "libraryTrashEmptyConfirmMessage": "Permanente nitong ide-delete agad mula sa trash ang {count, plural, =1{{count} clip} other{{count} clip}}.",
+  "libraryTrashClipsRestored": "{count, plural, =1{Naibalik ang clip} other{Naibalik ang {count} clip}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{Permanenteng na-delete ang clip} other{Permanenteng na-delete ang {count} clip}}",
   "videoRecorderCloseLabel": "Isara ang video recorder",
   "videoRecorderContinueToEditorLabel": "Magpatuloy sa video editor",
   "videoRecorderCameraPreviewLabel": "Preview ng camera",
@@ -1900,9 +1993,51 @@
   "videoEditorEffectConfetti": "Confetti",
   "videoEditorEffectHearts": "Mga Puso",
   "videoEditorEffectSparkles": "Kislap",
+  "videoEditorEffectRain": "Ulan",
+  "videoEditorEffectLeaves": "Mga Dahon",
+  "videoEditorEffectBlossoms": "Mga Talulot",
+  "videoEditorEffectBubbles": "Mga Bula",
+  "videoEditorEffectBokeh": "Bokeh",
+  "videoEditorEffectMusicNotes": "Mga Nota",
+  "videoEditorEffectStars": "Mga Bituin",
+  "videoEditorEffectFireflies": "Alitaptap",
+  "videoEditorEffectEmbers": "Baga",
+  "videoEditorEffectMoney": "Pera",
+  "videoEditorEffectBalloons": "Mga Lobo",
   "videoEditorEffectTiltShift": "Tilt-Shift",
   "videoEditorEffectZoomBlur": "Zoom Blur",
+  "videoEditorEffectSpinBlur": "Spin Blur",
   "videoEditorEffectComic": "Komiks",
+  "videoEditorEffectSwirl": "Swirl",
+  "videoEditorEffectRipple": "Ripple",
+  "videoEditorEffectFlutedGlass": "Fluted Glass",
+  "videoEditorEffectEightBit": "8-Bit",
+  "videoEditorEffectAnaglyph": "3D Glasses",
+  "videoEditorEffectRiso": "Riso Print",
+  "videoEditorEffectTealOrange": "Teal & Orange",
+  "videoEditorEffectWarmFilm": "Warm Film",
+  "videoEditorEffectSlideFilm": "Slide Film",
+  "videoEditorEffectCoolFilm": "Cool Film",
+  "videoEditorEffectMatte": "Matte",
+  "videoEditorEffectBleachBypass": "Bleach Bypass",
+  "videoEditorEffectCrossProcess": "Cross Process",
+  "videoEditorEffectGoldenHour": "Golden Hour",
+  "videoEditorEffectMoonlight": "Liwanag ng Buwan",
+  "videoEditorEffectSilver": "Silver",
+  "videoEditorEffectCategoryRetro": "Retro",
+  "videoEditorEffectCategoryGlitch": "Glitch",
+  "videoEditorEffectCategoryDistort": "Distort",
+  "videoEditorEffectCategoryLight": "Liwanag",
+  "videoEditorEffectCategoryMotion": "Galaw",
+  "videoEditorEffectCategoryParticles": "Particles",
+  "videoEditorEffectCategoryLooks": "Looks",
+  "videoEditorFilterCategoryNatural": "Natural",
+  "videoEditorFilterCategoryVibrant": "Matingkad",
+  "videoEditorFilterCategoryWarm": "Mainit",
+  "videoEditorFilterCategoryCool": "Malamig",
+  "videoEditorFilterCategoryVintage": "Vintage",
+  "videoEditorFilterCategoryBlackAndWhite": "Itim at puti",
+  "videoEditorFilterCategoryTints": "Mga kulay",
   "videoEditorDropsSettingsTitle": "Isaayos ang drops",
   "videoEditorDropsCountLabel": "Bilang",
   "videoEditorDropsSizeLabel": "Laki",
@@ -2318,6 +2453,8 @@
   "videoEditorLayerAnimationPulseTo": "Paliitin hanggang",
   "videoEditorLayerAnimationWiggleAngle": "Hilig",
   "videoEditorLayerAnimationBounceHeight": "Taas",
+  "videoEditorLayerAnimationFlipSideways": "Patagilid",
+  "videoEditorLayerAnimationFlipOver": "Mula itaas pababa",
   "videoEditorLayerAnimationCustomPoint": "Custom",
   "videoEditorLayerAnimationPointEnterHint": "I-tap ang video kung saan ito dapat mag-slide papasok",
   "videoEditorLayerAnimationPointLeaveHint": "I-tap ang video kung saan ito dapat mag-slide palabas",
@@ -2344,6 +2481,101 @@
   "videoEditorFeedPreviewContent": "Iwasan ang paglalagay ng content sa likod ng mga area na ito.",
   "videoEditorStickersDivineOriginals": "Divine Originals",
   "videoEditorStickerSearchHint": "Maghanap ng mga sticker...",
+  "videoEditorInfoStickersTitle": "Info",
+  "videoEditorSocialStickersTitle": "Social",
+  "videoEditorSocialStickerMention": "Mention",
+  "videoEditorSocialStickerHashtag": "Hashtag",
+  "videoEditorSocialStickerSoundCredit": "Sound",
+  "videoEditorSocialStickerMentionSample": "pangalanmo",
+  "videoEditorSocialStickerHashtagSample": "hashtag",
+  "videoEditorSocialStickerChoosePerson": "Pumili ng tao",
+  "videoEditorSocialStickerMentionNote": "Mamemention sila sa post mo at makakatanggap ng notification.",
+  "videoEditorSocialStickerHashtagHint": "Mag-type ng hashtag",
+  "videoEditorSocialStickerHashtagNote": "Idadagdag din sa mga hashtag ng post mo.",
+  "videoEditorSocialStickerLyricHint": "Isang linya ng lyrics (opsyonal)",
+  "videoEditorSocialStickerLink": "Link",
+  "videoEditorSocialStickerLinkUrlHint": "Web address",
+  "videoEditorSocialStickerLinkTitleHint": "Pamagat (opsyonal)",
+  "videoEditorSocialStickerLinkNote": "Idadagdag ang address sa post mo.",
+  "videoEditorSocialStickerLinkInvalid": "Hindi pa ito web address.",
+  "videoEditorInteractiveStickersTitle": "Interactive",
+  "videoEditorSocialStickerCountdown": "Countdown",
+  "videoEditorSocialStickerCountdownSample": "Tag-init",
+  "videoEditorSocialStickerCountdownTitleHint": "Para saan ang countdown mo?",
+  "videoEditorSocialStickerCountdownNote": "Makikita ng viewers ang natitirang oras at puwede silang mag-set ng reminder.",
+  "videoEditorSocialStickerCountdownOver": "Lumipas na ang oras na 'yan. Pumili ng bago.",
+  "videoEditorSocialStickerReply": "Reply",
+  "videoEditorSocialStickerReplyNote": "I-tap ito ng viewers para makita kung ano ang sinasagot mo.",
+  "videoEditorSocialStickerSoundNote": "Nota",
+  "videoEditorSocialStickerSoundVinyl": "Plaka",
+  "videoEditorSocialStickerSoundCassette": "Cassette",
+  "videoEditorSocialStickerSoundEqualizer": "Equalizer",
+  "videoEditorSocialStickerSoundPlayer": "Player",
+  "videoEditorInfoStickerTime": "Oras",
+  "videoEditorInfoStickerDate": "Petsa",
+  "videoEditorInfoStickerLocation": "Lokasyon",
+  "videoEditorInfoStickerWeather": "Panahon",
+  "videoEditorInfoStickerAltitude": "Altitude",
+  "videoEditorInfoStickerBattery": "Baterya",
+  "videoEditorInfoStickerStyleLight": "Light",
+  "videoEditorInfoStickerStyleDark": "Dark",
+  "videoEditorInfoStickerStyleBrand": "Green",
+  "videoEditorInfoStickerStyleOutline": "Outline",
+  "videoEditorInfoStickerStyleDigital": "Digital",
+  "videoEditorInfoStickerStyleAnalog": "Analog",
+  "videoEditorInfoStickerStyleGlass": "Glass",
+  "videoEditorInfoStickerStyleHighlight": "Yellow",
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "videoEditorInfoStickerStylePlain": "Plain",
+  "videoEditorInfoStickerChangePlace": "Palitan ang lugar",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Hindi available ang place search sa device na ito.",
+  "videoEditorInfoStickerRecordedValue": "Na-record · {value}",
+  "videoEditorInfoStickerNowValue": "Ngayon · {value}",
+  "videoEditorInfoStickerTodayValue": "Ngayong araw · {value}",
+  "videoEditorInfoStickerDayCount": "Bilang ng araw",
+  "videoEditorInfoStickerSun": "Sunrise at sunset",
+  "videoEditorInfoStickerMoon": "Buwan",
+  "videoEditorInfoStickerRecTimer": "REC timer",
+  "videoEditorInfoStickerStyleFilm": "Film",
+  "videoEditorInfoStickerStyleCamcorder": "Camcorder",
+  "videoEditorInfoStickerDayCountValue": "Day {day}",
+  "videoEditorInfoStickerDayCountOfValue": "Day {day} ng {total}",
+  "videoEditorInfoStickerDayLabel": "Araw",
+  "videoEditorInfoStickerDayTotalLabel": "Kabuuang araw (opsyonal)",
+  "videoEditorInfoStickerSymbolPin": "Pin",
+  "videoEditorInfoStickerSymbolFlag": "Bandila",
+  "videoEditorInfoStickerSymbolGlobe": "Globo",
+  "videoEditorInfoStickerSymbolMap": "Mapa",
+  "videoEditorInfoStickerMoonNew": "Bagong buwan",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Waxing crescent",
+  "videoEditorInfoStickerMoonFirstQuarter": "First quarter",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Waxing gibbous",
+  "videoEditorInfoStickerMoonFull": "Kabilugan ng buwan",
+  "videoEditorInfoStickerMoonWaningGibbous": "Waning gibbous",
+  "videoEditorInfoStickerMoonLastQuarter": "Last quarter",
+  "videoEditorInfoStickerMoonWaningCrescent": "Waning crescent",
+  "videoEditorInfoStickerPlaceSearchHint": "Maghanap ng lungsod o lugar",
+  "videoEditorInfoStickerPlaceNoResults": "Walang nahanap na lugar",
+  "videoEditorInfoStickerPlaceSearchFailed": "Hindi makapaghanap ng mga lugar. Subukan ulit.",
+  "videoEditorInfoStickerPlacePrivacyNote": "Pangalan lang ng lugar ang mapupunta sa video mo, hindi kailanman ang eksaktong lokasyon mo.",
+  "videoEditorInfoStickerLoading": "Naglo-load…",
+  "videoEditorInfoStickerLoadFailed": "Hindi ma-load. Subukan ulit.",
+  "videoEditorInfoStickerMetAttribution": "Data mula sa MET Norway",
+  "videoEditorInfoStickerWeatherNow": "Walang weather para sa mas lumang video, kaya ito ang weather ngayon.",
+  "videoEditorInfoStickerWeatherSunny": "Maaraw",
+  "videoEditorInfoStickerWeatherClearNight": "Maaliwalas na gabi",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Bahagyang maulap",
+  "videoEditorInfoStickerWeatherCloudy": "Maulap",
+  "videoEditorInfoStickerWeatherFog": "Hamog",
+  "videoEditorInfoStickerWeatherRain": "Ulan",
+  "videoEditorInfoStickerWeatherShowers": "Pabugso-bugsong ulan",
+  "videoEditorInfoStickerWeatherSnow": "Niyebe",
+  "videoEditorInfoStickerWeatherThunderstorm": "Kulog at kidlat",
+  "videoEditorInfoStickerSunTimeZoneNote": "Ang mga oras ay nasa time zone ng phone mo.",
+  "videoEditorInfoStickerTemperatureLabel": "Temperatura",
+  "videoEditorInfoStickerUnitLabel": "Unit",
+  "videoEditorInfoStickerBatteryLevelLabel": "Antas ng baterya",
+  "videoEditorInfoStickerAdd": "Magdagdag ng sticker",
   "videoEditorSelectFontSemanticLabel": "Pumili ng font",
   "videoEditorFontUnknown": "Hindi alam",
   "videoEditorSplitFailed": "Nabigo ang paghati. Pakisubukan muli.",
@@ -3071,6 +3303,7 @@
       }
     }
   },
+  "videoMetadataTagsPickerStickerTag": "{tag}, mula sa sticker sa video mo",
   "videoEditorTimelineVolumePreview": "Volume {percent}%",
   "@videoEditorTimelineVolumePreview": {
     "placeholders": {
@@ -3184,6 +3417,9 @@
   "dmReelReplyComposerHint": "Mag-message kay {name}…",
   "dmReelReplyComposerHintSelf": "Sagutin ang sarili mo…",
   "dmReelReplyComposerSemanticLabel": "Tumugon sa reel na ito",
+  "dmQuestionAnswerReceivedLabel": "Sinagot ang tanong mo: {question}",
+  "dmQuestionAnswerSentLabel": "Sinagot mo: {question}",
+  "dmQuestionAnswerWithVideo": "Sumagot gamit ang video",
   "dmReelReplyViewChat": "Tingnan ang chat",
   "dmReelReplySentAnnouncement": "Naipadala ang tugon",
   "dmReelReactionSentAnnouncement": "Nag-react ng {emoji}",
@@ -4820,8 +5056,97 @@
   "ideasDescriptionFive": "Gusto ko lang magbahagi.",
   "ideasTitleSix": "Kaunti mula sa araw na ito",
   "ideasDescriptionSix": "Iiwan ko ito rito.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{Mga silid, {displayCount} mensaheng hindi pa nababasa} other{Mga silid, {displayCount} mensaheng hindi pa nababasa}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{Bago: {displayCount}} other{Bago: {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} mensaheng hindi pa nababasa} other{{displayCount} mensaheng hindi pa nababasa}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} tao} other{{displayCount} tao}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} mensahe} other{{displayCount} mensahe}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Nakaraang 24 oras",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Tinitingnan ang aktibidad…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Hindi ma-load ang aktibidad.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Walang kamakailang mensahe. Mag-hello ka.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Direkta",
   "messagesRooms": "Mga silid",
+  "messagesRoomsWithUnread": "Mga silid ({badge})",
   "messagesPublicTestRooms": "Mga pampublikong silid para sa pagsubok",
   "messagesPublicTestDisclosure": "Pampubliko ang mga silid na ito para sa pagsubok. Mababasa ng sinumang may access ang mga mensahe mo.",
   "messagesNoRooms": "Wala pang mga silid",
@@ -4930,5 +5255,57 @@
   "videoEditorLoopRepairProgress": "Inihahanay ang loop mo…",
   "videoEditorLoopRepairTrimmed": "Mas maayos na ang loop. Inalis ang {seconds} s.",
   "notificationFromDivine": "Mula sa Divine",
-  "announcementUnavailable": "Hindi na available ang anunsyong ito."
+  "announcementUnavailable": "Hindi na available ang anunsyong ito.",
+  "creatorHighlightLabel": "Highlight mo ngayong araw",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "Mga video na ginawa mo ngayon: {count}.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "May dagdag na bahagi mo sa linggong ito.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "Mga araw na gumawa ka ngayong linggo: {count}. Tuloy lang.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "Kabuuang views sa ngayon ng mga video na pinost mo ngayong linggo: {count}.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "Pinakapinanood sa mga video na pinost mo ngayong linggo",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "Gumawa pa",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "Tingnan ang stats mo",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "Panoorin ang video",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

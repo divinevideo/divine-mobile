@@ -1,20 +1,28 @@
 // ABOUTME: Mobile-first channel list inside Messages, grouped by community.
 // ABOUTME: Shows public-room context and clear full-row conversation targets.
 
+import 'package:concord_repository/concord_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/features/chat/public_room_notice.dart';
+import 'package:openvine/features/chat/room_activity_tile.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 class RoomsView extends StatelessWidget {
   const RoomsView({
     required this.communities,
     required this.onRoomSelected,
+    this.activity = const {},
+    this.channelIdFor,
+    this.onRetry,
     super.key,
   });
 
   final List<ChatCommunity> communities;
+  final Map<String, RoomActivitySummary> activity;
+  final String Function(String communityId, String channelId)? channelIdFor;
+  final VoidCallback? onRetry;
   final void Function(String communityId, String channelId) onRoomSelected;
 
   @override
@@ -54,24 +62,12 @@ class RoomsView extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               for (final channel in community.channels)
-                DivineListTile(
-                  leading: Container(
-                    width: 44,
-                    height: 44,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: context.vineColors.surfaceContainer,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      '#',
-                      style: VineTheme.titleLargeFont(
-                        color: context.vineColors.accentPositive,
-                      ),
-                    ),
-                  ),
+                RoomActivityTile(
                   title: channel,
-                  subtitle: context.l10n.listVisibilityPublic,
+                  activity:
+                      activity[channelIdFor?.call(community.id, channel) ??
+                          channel],
+                  onRetry: onRetry,
                   onTap: () => onRoomSelected(community.id, channel),
                 ),
             ],

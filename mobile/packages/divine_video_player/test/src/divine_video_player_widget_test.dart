@@ -3,6 +3,7 @@ import 'package:divine_video_player/src/linux/linux_video_player_backend.dart';
 import 'package:divine_video_player/src/web/web_video_player_backend.dart';
 import 'package:divine_video_player/src/web/web_video_player_backend_factory.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -75,6 +76,34 @@ void main() {
       ),
     );
     return webController;
+  }
+
+  /// A texture-backed controller whose native side reports [state], through
+  /// [events] when given so a test can report more states.
+  Future<DivineVideoPlayerController> initTextureController(
+    Map<Object?, Object?> state, {
+    _StateStreamHandler? events,
+  }) async {
+    final nextId = DivineVideoPlayerController.nextId;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('divine_video_player'), (
+          call,
+        ) async {
+          if (call.method != 'create') return null;
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            ..setMockMethodCallHandler(
+              MethodChannel('divine_video_player/player_$nextId'),
+              (call) async => null,
+            )
+            ..setMockStreamHandler(
+              EventChannel('divine_video_player/player_$nextId/events'),
+              events ?? _StateStreamHandler(state),
+            );
+          return <Object?, Object?>{'textureId': 99};
+        });
+    final textureController = DivineVideoPlayerController(useTexture: true);
+    await textureController.initialize();
+    return textureController;
   }
 
   group(DivineVideoPlayer, () {
@@ -231,47 +260,19 @@ void main() {
 
         expect(find.byType(Texture), findsOneWidget);
         expect(find.byType(RotatedBox), findsNothing);
+        expect(find.byType(ClipRect), findsNothing);
       },
     );
 
     testWidgets(
       'wraps Texture in RotatedBox when state.rotationDegrees is non-zero',
       (tester) async {
-        final nextId = DivineVideoPlayerController.nextId;
-
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(
-              const MethodChannel('divine_video_player'),
-              (call) async {
-                if (call.method == 'create') {
-                  TestDefaultBinaryMessengerBinding
-                      .instance
-                      .defaultBinaryMessenger
-                      .setMockMethodCallHandler(
-                        MethodChannel('divine_video_player/player_$nextId'),
-                        (call) async => null,
-                      );
-
-                  TestDefaultBinaryMessengerBinding
-                      .instance
-                      .defaultBinaryMessenger
-                      .setMockStreamHandler(
-                        EventChannel(
-                          'divine_video_player/player_$nextId/events',
-                        ),
-                        _RotatedStreamHandler(),
-                      );
-
-                  return <Object?, Object?>{'textureId': 99};
-                }
-                return null;
-              },
-            );
-
-        final textureController = DivineVideoPlayerController(
-          useTexture: true,
-        );
-        await textureController.initialize();
+        final textureController = await initTextureController({
+          ..._playingState,
+          'videoWidth': 1080,
+          'videoHeight': 1920,
+          'rotationDegrees': 90,
+        });
 
         await tester.pumpWidget(
           Directionality(
@@ -288,6 +289,119 @@ void main() {
         expect(rotatedBox.quarterTurns, equals(1));
       },
     );
+
+    group('texture crop', () {
+      testWidgets('draws only the cropped part of a padded texture', (
+        tester,
+      ) async {
+        final textureController = await initTextureController({
+          ..._playingState,
+          'videoWidth': 1080,
+          'videoHeight': 1920,
+          'textureCrop': [0.0, 0.0, 1080 / 1088, 1.0],
+        });
+
+        await tester.pumpWidget(
+          Center(
+            child: SizedBox(
+              width: 108,
+              height: 192,
+              child: DivineVideoPlayer(controller: textureController),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final box = tester.getRect(find.byType(DivineVideoPlayer));
+        final texture = tester.getRect(find.byType(Texture));
+        expect(texture.topLeft, equals(box.topLeft));
+        expect(texture.size.width, moreOrLessEquals(108 * 1088 / 1080));
+        expect(texture.size.height, equals(192));
+        expect(
+          find.ancestor(
+            of: find.byType(Texture),
+            matching: find.byType(ClipRect),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('follows the crop of the next clip', (tester) async {
+        final first = {
+          ..._playingState,
+          'videoWidth': 1080,
+          'videoHeight': 1920,
+          'textureCrop': [0.0, 0.0, 1080 / 1088, 1.0],
+        };
+        final events = _StateStreamHandler(first);
+        final textureController = await initTextureController(
+          first,
+          events: events,
+        );
+        await tester.pumpWidget(
+          Center(
+            child: SizedBox(
+              width: 108,
+              height: 192,
+              child: DivineVideoPlayer(controller: textureController),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(
+          tester.getSize(find.byType(Texture)).width,
+          moreOrLessEquals(108 * 1088 / 1080),
+        );
+
+        events.emit({
+          ...first,
+          'textureCrop': [0.0, 0.0, 1080 / 1152, 1.0],
+        });
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getSize(find.byType(Texture)).width,
+          moreOrLessEquals(108 * 1152 / 1080),
+        );
+      });
+
+      testWidgets('crops in the texture orientation, inside the rotation', (
+        tester,
+      ) async {
+        final textureController = await initTextureController({
+          ..._playingState,
+          'videoWidth': 1080,
+          'videoHeight': 1920,
+          'rotationDegrees': 90,
+          'textureCrop': [0.0, 4 / 1088, 1.0, 1084 / 1088],
+        });
+
+        await tester.pumpWidget(
+          Center(
+            child: SizedBox(
+              width: 108,
+              height: 192,
+              child: DivineVideoPlayer(controller: textureController),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(
+          find.descendant(
+            of: find.byType(RotatedBox),
+            matching: find.byType(ClipRect),
+          ),
+          findsOneWidget,
+        );
+        final texture = tester.renderObject<RenderBox>(find.byType(Texture));
+        expect(texture.size.width, equals(192));
+        expect(texture.size.height, moreOrLessEquals(108 * 1088 / 1080));
+        final offset = (texture.parentData! as BoxParentData).offset;
+        expect(offset.dx, equals(0));
+        expect(offset.dy, moreOrLessEquals(-4 / 1080 * 108));
+      });
+    });
 
     testWidgets('does not render Stack when placeholder is null', (
       tester,
@@ -703,24 +817,33 @@ class _FirstFrameStreamHandler extends MockStreamHandler {
   void onCancel(Object? arguments) {}
 }
 
-class _RotatedStreamHandler extends MockStreamHandler {
+const _playingState = <Object?, Object?>{
+  'status': 'playing',
+  'positionMs': 0,
+  'durationMs': 1000,
+  'bufferedPositionMs': 0,
+  'currentClipIndex': 0,
+  'clipCount': 1,
+  'isLooping': false,
+  'volume': 1.0,
+  'playbackSpeed': 1.0,
+  'isFirstFrameRendered': true,
+};
+
+class _StateStreamHandler extends MockStreamHandler {
+  _StateStreamHandler(this.state);
+
+  final Map<Object?, Object?> state;
+
+  late MockStreamHandlerEventSink _events;
+
+  /// Reports a further state from the native side.
+  void emit(Map<Object?, Object?> next) => _events.success(next);
+
   @override
   void onListen(Object? arguments, MockStreamHandlerEventSink events) {
-    events.success(<Object?, Object?>{
-      'status': 'playing',
-      'positionMs': 0,
-      'durationMs': 1000,
-      'bufferedPositionMs': 0,
-      'currentClipIndex': 0,
-      'clipCount': 1,
-      'isLooping': false,
-      'volume': 1.0,
-      'playbackSpeed': 1.0,
-      'isFirstFrameRendered': true,
-      'videoWidth': 1080,
-      'videoHeight': 1920,
-      'rotationDegrees': 90,
-    });
+    _events = events;
+    events.success(state);
   }
 
   @override

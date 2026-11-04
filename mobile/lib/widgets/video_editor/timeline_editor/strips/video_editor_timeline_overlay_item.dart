@@ -12,12 +12,17 @@ import 'package:openvine/models/video_editor/audio_fade.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_strip_thumbnails.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_censor_tools.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_bottom_bar.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_labels.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_labels.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoSpeedRamp;
 
 /// Multi-select visual state for an overlay tile while the timeline is in
 /// draw-layer multi-select mode.
@@ -60,6 +65,14 @@ String timelineOverlayItemLabel(
   }
   if (_isAudioVisualizer(layer)) {
     return context.l10n.videoEditorAudioVisualizerLabel;
+  }
+  final info = layer == null ? null : InfoStickerData.of(layer);
+  if (info != null) {
+    return context.l10n.infoStickerKindLabel(info.kind);
+  }
+  final social = layer == null ? null : SocialStickerData.of(layer);
+  if (social != null) {
+    return context.l10n.socialStickerKindLabel(social.kind);
   }
   return item.label;
 }
@@ -177,6 +190,7 @@ class TimelineOverlayItemTile extends StatelessWidget {
                     rightChannel: item.waveformRightChannel,
                     fadeIn: item.fadeIn,
                     playbackSpeed: item.playbackSpeed,
+                    speedRamp: item.speedRamp,
                   )
                 : _isDetachedClip(item.layer)
                 ? _DetachedClipContent(item: item)
@@ -455,7 +469,21 @@ class _StickerPreview extends StatelessWidget {
       child: Row(
         mainAxisSize: .min,
         children: [
-          if (layer != null) layer.widget,
+          // An info or social sticker lays out at its own size; the bar is far
+          // smaller than that, so it is scaled down with room around it. A
+          // long one is held to a sample's width, so its name stays in view.
+          if (layer != null &&
+              (InfoStickerData.isInfoStickerLayer(layer) ||
+                  SocialStickerData.isSocialStickerLayer(layer)))
+            Padding(
+              padding: const .fromLTRB(2, 4, 8, 4),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120),
+                child: FittedBox(child: layer.widget),
+              ),
+            )
+          else if (layer != null)
+            layer.widget,
           Text(
             label,
             style: VineTheme.labelMediumFont(
@@ -513,6 +541,7 @@ class _FadingOutSoundContent extends StatelessWidget {
       fadeOut: item.fadeOut,
       audibleDuration: end < item.endTime ? end - item.startTime : null,
       playbackSpeed: item.playbackSpeed,
+      speedRamp: item.speedRamp,
     );
   }
 }
@@ -521,7 +550,7 @@ class _FadingOutSoundContent extends StatelessWidget {
 ///
 /// The waveform shows the source samples windowed to
 /// `[startOffset, startOffset + currentDuration * playbackSpeed]`, the stretch
-/// of the sound the item plays. Left-trimming advances
+/// of the sound the item plays, spread along [speedRamp] when it has one. Left-trimming advances
 /// [startOffset], scrolling the trimmed-away head out of view instead of
 /// clipping the tail — so the visible waveform matches what actually plays.
 class _SoundContent extends StatelessWidget {
@@ -537,6 +566,7 @@ class _SoundContent extends StatelessWidget {
     this.fadeOut = Duration.zero,
     this.audibleDuration,
     this.playbackSpeed = 1,
+    this.speedRamp,
   });
 
   final String label;
@@ -564,13 +594,18 @@ class _SoundContent extends StatelessWidget {
   /// How many seconds of the source play per second of [currentDuration].
   final double playbackSpeed;
 
+  /// The curve the item plays along over its whole window, instead of
+  /// [playbackSpeed]; `null` at a constant speed.
+  final VideoSpeedRamp? speedRamp;
+
   @override
   Widget build(BuildContext context) {
     // The painter maps samples against the full-source duration, then windows
     // them to the stretch of the source the item plays. When the source
     // duration is unknown there's no basis to resolve the offset against, so
     // fall back to treating that stretch as the whole source.
-    final playedSource = currentDuration * playbackSpeed;
+    final playedSource =
+        currentDuration * (speedRamp?.averageSpeed ?? playbackSpeed);
     final hasSourceDuration =
         sourceDuration != null && sourceDuration! > Duration.zero;
     final audioDuration = hasSourceDuration ? sourceDuration! : playedSource;
@@ -610,6 +645,7 @@ class _SoundContent extends StatelessWidget {
                   fadeOut: fadeOut,
                   audibleDuration: audibleDuration,
                   playbackSpeed: playbackSpeed,
+                  speedRamp: speedRamp,
                 ),
               ),
             ),

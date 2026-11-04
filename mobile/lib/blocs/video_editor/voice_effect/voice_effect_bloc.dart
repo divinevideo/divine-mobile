@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart'
     show AudioEvent, AudioSourceKind, VoiceEffect, VoiceFilter;
 import 'package:openvine/blocs/video_editor/voice_effect/voice_effect_preset.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/services/video_editor/voice_effect_service.dart';
 import 'package:openvine/utils/audio_mime_type.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -196,7 +197,7 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
         // reverb picked, then its effect slid back to nothing.
         result =
             (track.playsProcessedCopy ? _unprocessed(track, source) : track)
-                .copyWith(id: id, playbackSpeed: state.playbackSpeed);
+                .copyWith(id: id, playbackSpeed: _resultSpeed);
       } else {
         final processed = await _service.process(
           source: source,
@@ -215,7 +216,7 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
           clearMimeType: processed.mimeType == null,
           voiceEffect: state.effect,
           noiseReduction: state.noiseReduction,
-          playbackSpeed: state.playbackSpeed,
+          playbackSpeed: _resultSpeed,
           // A track already playing a copy keeps the sound it came from.
           originalUrl: track.playsProcessedCopy ? null : track.url,
           originalMimeType: track.playsProcessedCopy ? null : track.mimeType,
@@ -235,6 +236,10 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
       );
     }
   }
+
+  /// The speed to hand over with the result: `null` keeps the track's speed
+  /// ramp, which a speed would replace.
+  double? get _resultSpeed => state.keepsSpeedRamp ? null : state.playbackSpeed;
 
   /// [track] playing the sound it was processed from, [source], again.
   ///
@@ -300,15 +305,21 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
     };
   }
 
-  /// Loops [audition], at the speed the sound plays at with the pick.
+  /// Loops [audition], at the speed the sound plays at with the pick, or
+  /// along the track's speed ramp.
   Future<bool> _loop(
     AudioSourceConfig audition, {
     required bool Function() isCancelled,
   }) async {
     await _player.setClip(audition);
     // Set every time, since an earlier audition may have played at another
-    // speed.
-    await _player.setSpeed(state.playbackSpeed);
+    // speed. The audition is the stretch the track plays, so its positions
+    // are the ramp's.
+    if (state.keepsSpeedRamp) {
+      await _player.setSpeedCurve(state.track.speedAtSourceOffset);
+    } else {
+      await _player.setSpeed(state.playbackSpeed);
+    }
     if (isCancelled() || isClosed || _isFinishing) return false;
     // play completes when playback stops, not when it starts. Keep the
     // audition in state immediately so switching settings can reclaim it.

@@ -17,7 +17,13 @@ import 'package:nostr_sdk/signer/isolate_decrypt_signer.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+import 'support/live_dm_reads.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {
+  _MockNostrClient() {
+    stubQuietLiveDeletions(this);
+  }
+}
 
 /// A signer whose key is held on the device, as for a local-key account.
 class _LocalKeySigner extends LocalNostrSigner implements IsolateDecryptSigner {
@@ -42,12 +48,18 @@ class _HeldProcessedGiftWrapsDao extends ProcessedGiftWrapsDao {
   final resume = Completer<void>();
 
   @override
-  Future<bool> hasGiftWrap(String giftWrapId) async {
+  Future<bool> hasGiftWrapForOwner({
+    required String giftWrapId,
+    required String ownerPubkey,
+  }) async {
     if (giftWrapId == holdId && !started.isCompleted) {
       started.complete();
       await resume.future;
     }
-    return super.hasGiftWrap(giftWrapId);
+    return super.hasGiftWrapForOwner(
+      giftWrapId: giftWrapId,
+      ownerPubkey: ownerPubkey,
+    );
   }
 }
 
@@ -150,7 +162,7 @@ void main() {
       when(() => nostrClient.unsubscribe(any())).thenAnswer((_) async {});
       when(
         () => nostrClient.subscribe(
-          any(),
+          any(that: isLiveDmRead),
           subscriptionId: any(named: 'subscriptionId'),
           tempRelays: any(named: 'tempRelays'),
           targetRelays: any(named: 'targetRelays'),

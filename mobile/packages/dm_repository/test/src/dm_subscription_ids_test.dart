@@ -15,10 +15,20 @@ void main() {
     test("every id fits NIP-01's 64-character cap", () {
       final ids = <String>[
         dmInboxSubscriptionId(_pubkey),
+        dmDeletionsSubscriptionId(dmInboxSubscriptionId(_pubkey)),
         for (var page = 0; page < 1000; page++) ...[
           dmHistoryDrainSubscriptionId(_pubkey, page),
+          dmDeletionsSubscriptionId(
+            dmHistoryDrainSubscriptionId(_pubkey, page),
+          ),
           dmNip04DrainSubscriptionId(_pubkey, page),
+          dmDeletionDrainSubscriptionId(_pubkey, page),
           dmCatchUpDebtSubscriptionId(_pubkey, page),
+          dmDeletionsSubscriptionId(dmCatchUpDebtSubscriptionId(_pubkey, page)),
+          dmBelowWindowRequerySubscriptionId(_pubkey, page),
+          dmDeletionsSubscriptionId(
+            dmBelowWindowRequerySubscriptionId(_pubkey, page),
+          ),
         ],
       ];
 
@@ -54,6 +64,17 @@ void main() {
       expect(
         dmHistoryDrainSubscriptionId(_pubkey, 0),
         isNot(equals(dmHistoryDrainSubscriptionId(_otherPubkey, 0))),
+      );
+    });
+
+    test('a deletions read never shares the id of the read it pairs', () {
+      final inbox = dmInboxSubscriptionId(_pubkey);
+      final page = dmHistoryDrainSubscriptionId(_pubkey, 0);
+      expect(dmDeletionsSubscriptionId(inbox), isNot(equals(inbox)));
+      expect(dmDeletionsSubscriptionId(page), isNot(equals(page)));
+      expect(
+        dmDeletionsSubscriptionId(page),
+        isNot(equals(dmHistoryDrainSubscriptionId(_pubkey, 1))),
       );
     });
 

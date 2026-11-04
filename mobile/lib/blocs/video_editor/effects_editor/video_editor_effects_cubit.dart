@@ -110,11 +110,11 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
     unawaited(_refreshBeats());
   }
 
-  /// Picks [type], or no effect for `null`.
+  /// Picks [type].
   ///
   /// Switching to another effect keeps the intensity the user dialed in.
-  void selectType(EditorEffectType? type) {
-    emit(state.copyWith(selectedType: type, clearSelectedType: type == null));
+  void selectType(EditorEffectType type) {
+    emit(state.copyWith(selectedType: type));
     unawaited(_refreshBeats());
   }
 
@@ -155,10 +155,11 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   /// Closes the editor and returns the effects to commit to the history.
   ///
   /// A new effect is added over the whole video; an edited one keeps its
-  /// window and place in the list. Picking no effect adds nothing, or removes
-  /// the edited effect. A flashing effect replaces other flashing effects in
-  /// its window (see [withoutFlashingOverlaps]); `replacedFlashing` says so,
-  /// for the UI to explain.
+  /// window and place in the list. A new effect with nothing picked adds
+  /// nothing, and an edited one dialed down to no intensity is removed. A
+  /// flashing effect replaces other flashing effects in its window (see
+  /// [withoutFlashingOverlaps]); `replacedFlashing` says so, for the UI to
+  /// explain.
   ({List<EditorVideoEffect> effects, bool replacedFlashing}) confirm() {
     final selection = state.selection;
     final picked = selection != null && selection.intensity > 0

@@ -7,6 +7,7 @@ import divine_camera
 import CryptoKit
 import Flutter
 @testable import LibProofMode
+import ImageIO
 import ObjectivePGP
 @testable import Runner
 
@@ -1013,7 +1014,10 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
 
     clipURL = FileManager.default.temporaryDirectory
       .appendingPathComponent("playback_end_\(UUID().uuidString).mp4")
-    try Self.writeClip(to: clipURL, frames: 30)
+    let clip = try XCTUnwrap(
+      Data(base64Encoded: Self.clipBase64, options: .ignoreUnknownCharacters)
+    )
+    try clip.write(to: clipURL)
     _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
     try waitForState("the clip loads") { $0["status"] as? String == "paused" }
   }
@@ -1376,42 +1380,59 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     let description: String
   }
 
-  /// Writes a 30 fps H.264 clip of [frames] grey frames.
-  private static func writeClip(to url: URL, frames: Int) throws {
-    let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
-    let input = AVAssetWriterInput(
-      mediaType: .video,
-      outputSettings: [
-        AVVideoCodecKey: AVVideoCodecType.h264,
-        AVVideoWidthKey: 64,
-        AVVideoHeightKey: 64,
-      ]
-    )
-    let adaptor = AVAssetWriterInputPixelBufferAdaptor(
-      assetWriterInput: input,
-      sourcePixelBufferAttributes: nil
-    )
-    writer.add(input)
-    XCTAssertTrue(writer.startWriting())
-    writer.startSession(atSourceTime: .zero)
-    for index in 0..<frames {
-      var buffer: CVPixelBuffer?
-      CVPixelBufferCreate(nil, 64, 64, kCVPixelFormatType_32BGRA, nil, &buffer)
-      let frame = try XCTUnwrap(buffer)
-      CVPixelBufferLockBaseAddress(frame, [])
-      memset(CVPixelBufferGetBaseAddress(frame)!, 0x80, CVPixelBufferGetDataSize(frame))
-      CVPixelBufferUnlockBaseAddress(frame, [])
-      while !input.isReadyForMoreMediaData {
-        RunLoop.main.run(until: Date().addingTimeInterval(0.01))
-      }
-      adaptor.append(frame, withPresentationTime: CMTime(value: CMTimeValue(index), timescale: 30))
-    }
-    input.markAsFinished()
-    let finished = DispatchSemaphore(value: 0)
-    writer.finishWriting { finished.signal() }
-    finished.wait()
-    XCTAssertEqual(writer.status, .completed, "\(writer.error.map { "\($0)" } ?? "")")
-  }
+  /// A 30 fps H.264 clip of 30 grey 64×64 frames, 1 s long, as `AVAssetWriter`
+  /// encodes it. Committed rather than encoded per test: encoding started a
+  /// video encoder in every `setUp`, which took seconds on a busy simulator and
+  /// longest on the first test of a freshly booted one.
+  private static let clipBase64 = """
+    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
+    AAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAABAAAAAQAAAAAAA
+    JGVkdHMAAAAcZWxzdAAAAAAAAAABAAACWAAAABQAAQAAAAADU21kaWEAAAAgbWRoZAAAAADnCl9/
+    5wpfgAAAAlgAAAJYVcQAAAAAADFoZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAQ29yZSBNZWRp
+    YSBWaWRlbwAAAAL6bWluZgAAABR2bWhkAAAAAQAAAAAAAAAAAAAAJGRpbmYAAAAcZHJlZgAAAAAA
+    AAABAAAADHVybCAAAAABAAACunN0YmwAAACgc3RzZAAAAAAAAAABAAAAkGF2YzEAAAAAAAAAAQAA
+    AAAAAAAAAAAAAAAAAAAAQABAAEgAAABIAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAY//8AAAAqYXZjQwFkAAr/4QATJ2QACqxSMQmwFqBAQEYVr3vgIAEABCj+CYsAAAAQ
+    cGFzcAAAAAEAAAABAAAAGHN0dHMAAAAAAAAAAQAAAB4AAAAUAAABAGN0dHMAAAAAAAAAHgAAAAEA
+    AAAUAAAAAQAAACgAAAABAAAAAAAAAAEAAAAoAAAAAQAAAAAAAAABAAAAKAAAAAEAAAAAAAAAAQAA
+    ACgAAAABAAAAAAAAAAEAAAAoAAAAAQAAAAAAAAABAAAAKAAAAAEAAAAAAAAAAQAAACgAAAABAAAA
+    AAAAAAEAAAAoAAAAAQAAAAAAAAABAAAAKAAAAAEAAAAAAAAAAQAAACgAAAABAAAAAAAAAAEAAAAo
+    AAAAAQAAAAAAAAABAAAAKAAAAAEAAAAAAAAAAQAAACgAAAABAAAAAAAAAAEAAAAoAAAAAQAAAAAA
+    AAABAAAAFAAAABRzdHNzAAAAAAAAAAEAAAABAAAAKnNkdHAAAAAAIBAYEBgQGBAYEBgQGBAYEBgQ
+    GBAYEBgQGBAYEBgYAAAAHHN0c2MAAAAAAAAAAQAAAAEAAAAeAAAAAQAAAIxzdHN6AAAAAAAAAAAA
+    AAAeAAAAVwAAAC8AAAAwAAAAMAAAADAAAAAyAAAAMAAAADIAAAAwAAAAMgAAADAAAAAyAAAAMAAA
+    ADIAAAAwAAAAMgAAADAAAAAyAAAAMAAAADIAAAAwAAAAMgAAADAAAAAyAAAAMAAAADIAAAAwAAAA
+    MgAAADAAAAAyAAAAFHN0Y28AAAAAAAAAAQAAACw=
+    """
 }
 
 /// The registry iOS hands this plugin *is* the `FlutterEngine`, and the plugin
@@ -1725,7 +1746,8 @@ final class DropsVideoEffectTests: XCTestCase {
   }
 }
 
-/// Light leak, particles, tilt-shift, zoom blur and comic are drawn with Metal
+/// Light leak, particles, tilt-shift, swirl, ripple, fluted glass, zoom blur,
+/// spin blur, comic, 8-bit, 3D glasses and riso print are drawn with Metal
 /// kernels on iOS and macOS (`ShaderVideoEffect`), and with the same shaders in
 /// GLSL on Android and in the effects picker (`shaders/*.frag`). These tests
 /// check every pixel each kernel draws against its shader's formulas computed
@@ -1832,6 +1854,17 @@ final class ShaderVideoEffectTests: XCTestCase {
     }
   }
 
+  func testSpinBlurDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = SpinBlurVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.spinBlur(px, py, strength: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity)")
+    }
+  }
+
   func testComicDrawsWhatTheAndroidShaderDraws() {
     for intensity in [1.0, 0.45] {
       let effect = ComicVideoEffect(params: ["intensity": intensity])
@@ -1846,13 +1879,97 @@ final class ShaderVideoEffectTests: XCTestCase {
     }
   }
 
+  func testSwirlDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = SwirlVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.swirl(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity)")
+    }
+  }
+
+  func testRippleDrawsWhatTheAndroidShaderDraws() {
+    for (intensity, seconds) in [(1.0, 0.0), (0.6, 1.5), (0.8, 41.9)] {
+      let effect = RippleVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.ripple(px, py, intensity: intensity, seconds: seconds)
+      }
+      let difference = compare(effect, seconds: seconds, expected)
+      // The crests light the frame by up to 12%, which scales the GPU's
+      // filtering and half-float rounding with it; a change to the rings, the
+      // push or the light moves far more.
+      XCTAssertLessThan(difference.worst, 0.004, "intensity \(intensity), \(seconds) s")
+    }
+  }
+
+  func testFlutedGlassDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = FlutedGlassVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.flutedGlass(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity)")
+    }
+  }
+
+  func testEightBitDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = EightBitVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.eightBit(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      // A cell whose colour lies right on a dither threshold can take either
+      // level, on the GPU and here; a change to the cells, the dither or the
+      // palette moves far more.
+      XCTAssertLessThan(difference.share, 0.002, "intensity \(intensity)")
+    }
+  }
+
+  func testAnaglyphDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = AnaglyphVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.anaglyph(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity)")
+    }
+  }
+
+  func testRisoDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = RisoVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.riso(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      // Each ink's soft edge triples a filtering difference in the colour it
+      // reads; a change to the inks, the grain pattern or the sideways offset
+      // moves far more. The frame's red only varies across it and its grain
+      // cells are single pixels, so the vertical offset and the grain size go
+      // unseen here.
+      XCTAssertLessThan(difference.share, 0.002, "intensity \(intensity)")
+    }
+  }
+
   func testLeavesTheFrameAloneAtNoIntensity() {
     let effects: [ShaderVideoEffect] = [
       LightLeakVideoEffect(params: ["intensity": 0]),
       ParticlesVideoEffect(style: .snow, params: ["intensity": 0]),
       TiltShiftVideoEffect(params: ["intensity": 0]),
+      SwirlVideoEffect(params: ["intensity": 0]),
+      RippleVideoEffect(params: ["intensity": 0]),
+      FlutedGlassVideoEffect(params: ["intensity": 0]),
       ZoomBlurVideoEffect(params: ["intensity": 0]),
+      SpinBlurVideoEffect(params: ["intensity": 0]),
       ComicVideoEffect(params: ["intensity": 0]),
+      EightBitVideoEffect(params: ["intensity": 0]),
+      AnaglyphVideoEffect(params: ["intensity": 0]),
+      RisoVideoEffect(params: ["intensity": 0]),
     ]
     for effect in effects {
       let output = effect.render(frame, history: [], timeUs: 0, effectTimeUs: 1_000_000)
@@ -1860,20 +1977,20 @@ final class ShaderVideoEffectTests: XCTestCase {
     }
   }
 
-  func testZoomBlurOnTheBeatFadesEachHitOutOverHalfASecond() {
-    let beats: [Int64]? = ZoomBlurHits.beats(["beatsUs": [1_200_000, 200_000]])
+  func testBlurOnTheBeatFadesEachHitOutOverHalfASecond() {
+    let beats: [Int64]? = BlurHits.beats(["beatsUs": [1_200_000, 200_000]])
     XCTAssertEqual(beats, [200_000, 1_200_000])
-    XCTAssertNil(ZoomBlurHits.beats(["intensity": 0.5]))
+    XCTAssertNil(BlurHits.beats(["intensity": 0.5]))
     let cases: [(Int64, Double)] = [
       (0, 0), (200_000, 0.8), (450_000, 0.2), (699_999, 0), (1_200_000, 0.8),
       (1_325_000, 0.45),
     ]
     for (time, expected) in cases {
-      let strength: Double = ZoomBlurHits.strength(
+      let strength: Double = BlurHits.strength(
         intensity: 0.8, beatsUs: beats, effectTimeUs: time)
       XCTAssertEqual(strength, expected, accuracy: 1e-5, "\(time) us")
     }
-    let allThrough: Double = ZoomBlurHits.strength(
+    let allThrough: Double = BlurHits.strength(
       intensity: 0.8, beatsUs: nil, effectTimeUs: 123)
     XCTAssertEqual(allThrough, 0.8)
   }
@@ -2047,21 +2164,35 @@ final class ShaderVideoEffectTests: XCTestCase {
   /// Per style: the cell size, how fast and which way the cells move, how far
   /// a particle sways and how many cells hold one.
   private struct ParticleLook {
-    let style: Double
+    let style: Int
     var cell = 0.14
     var speed = -0.22
+    var drift = 0.0
     var sway = 0.1
     var density = 0.75
 
     init(style: Double) {
-      self.style = style
-      if style > 2.5 {
-        (cell, speed, sway, density) = (0.15, 0.03, 0.0, 0.45)
-      } else if style > 1.5 {
-        (cell, speed, sway, density) = (0.17, 0.12, 0.1, 0.35)
-      } else if style > 0.5 {
-        (cell, speed, sway, density) = (0.13, -0.32, 0.08, 0.6)
+      self.style = Int(style + 0.5)
+      switch self.style {
+      case 1: (cell, speed, sway, density) = (0.13, -0.32, 0.08, 0.6)
+      case 2: (cell, speed, sway, density) = (0.17, 0.12, 0.1, 0.35)
+      case 3: (cell, speed, sway, density) = (0.15, 0.03, 0.0, 0.45)
+      case 4: (cell, speed, sway, density) = (0.2, -1.5, 0.0, 0.7)
+      case 5: (cell, speed, sway, density) = (0.2, -0.14, 0.1, 0.4)
+      case 6: (cell, speed, sway, density) = (0.15, -0.12, 0.1, 0.45)
+      case 7: (cell, speed, sway, density) = (0.18, 0.09, 0.08, 0.35)
+      case 8: (cell, speed, sway, density) = (0.32, 0.025, 0.05, 0.45)
+      case 9: (cell, speed, sway, density) = (0.2, 0.1, 0.06, 0.35)
+      case 10: (cell, speed, sway, density) = (0.15, -0.1, 0.08, 0.45)
+      case 11: (cell, speed, sway, density) = (0.18, 0.015, 0.06, 0.4)
+      case 12: (cell, speed, sway, density) = (0.13, 0.35, 0.09, 0.55)
+      case 13: (cell, speed, sway, density) = (0.2, -0.2, 0.1, 0.45)
+      case 14: (cell, speed, sway, density) = (0.3, 0.1, 0.06, 0.35)
+      default: break
       }
+      // How fast the cells move sideways, for the rain and petals the wind
+      // slants.
+      drift = self.style == 4 ? 0.22 : (self.style == 6 ? 0.08 : 0.0)
     }
   }
 
@@ -2070,11 +2201,14 @@ final class ShaderVideoEffectTests: XCTestCase {
   ) -> [Double] {
     let s = Double(min(width, height))
     var color: [Double] = tap(px, py)
+    let fallLength: Double = hypot(look.drift, look.speed)
+    let fallX: Double = look.drift / fallLength
+    let fallY: Double = look.speed / fallLength
     for k in 0..<3 {
       let layer = Double(k)
       let depth: Double = 0.55 + 0.225 * layer
       let size: Double = s * look.cell * depth
-      let qx: Double = px / size + 0.37 * layer
+      let qx: Double = (px - look.drift * depth * t * s) / size + 0.37 * layer
       let qy: Double = (py - look.speed * depth * t * s) / size
       let idx: Double = qx.rounded(.down) + 131 * layer
       let idy: Double = qy.rounded(.down) + 71 * layer
@@ -2085,14 +2219,24 @@ final class ShaderVideoEffectTests: XCTestCase {
       let dx: Double = fract(qx) - (0.25 + 0.5 * h[0]) - look.sway * sin(swayAngle)
       let dy: Double = fract(qy) - (0.25 + 0.5 * h[1])
       let alpha: Double = 0.55 + 0.45 * depth
-      if look.style > 2.5 {
-        color = sparkle(color, dx, dy, g, alpha: alpha, seconds: t)
-      } else if look.style > 1.5 {
-        color = heartParticle(color, dx, dy, g, alpha: alpha, seconds: t)
-      } else if look.style > 0.5 {
-        color = confetti(color, dx, dy, h, g, alpha: alpha, seconds: t)
-      } else {
-        color = snowflake(color, dx, dy, g, alpha: alpha)
+      switch look.style {
+      case 1: color = confetti(color, dx, dy, h, g, alpha: alpha, seconds: t)
+      case 2: color = heartParticle(color, dx, dy, g, alpha: alpha, seconds: t)
+      case 3: color = sparkle(color, dx, dy, g, alpha: alpha, seconds: t)
+      case 4: color = raindrop(color, dx, dy, g, alpha: alpha, fallX: fallX, fallY: fallY)
+      case 5: color = leaf(color, dx, dy, h, g, alpha: alpha, seconds: t)
+      case 6: color = petal(color, dx, dy, h, g, alpha: alpha, seconds: t)
+      case 7: color = bubble(color, dx, dy, g, alpha: alpha, seconds: t)
+      case 8: color = bokeh(color, dx, dy, g, alpha: alpha, seconds: t)
+      case 9: color = note(color, dx, dy, g, alpha: alpha, seconds: t)
+      case 10: color = starParticle(color, dx, dy, h, g, alpha: alpha, seconds: t)
+      case 11: color = firefly(color, dx, dy, g, alpha: alpha, seconds: t)
+      case 12:
+        let height: Double = py / Double(self.height)
+        color = ember(color, dx, dy, g, alpha: alpha, seconds: t, height: height)
+      case 13: color = banknote(color, dx, dy, h, g, alpha: alpha, seconds: t)
+      case 14: color = balloon(color, dx, dy, g, alpha: alpha, seconds: t)
+      default: color = snowflake(color, dx, dy, g, alpha: alpha)
       }
     }
     return color
@@ -2160,6 +2304,327 @@ final class ShaderVideoEffectTests: XCTestCase {
     return mix(color, [0.97, 0.98, 1.0], alpha * cover)
   }
 
+  /// Signed distance to a box of half-size `bx` by `by` around the origin.
+  private func box(_ px: Double, _ py: Double, _ bx: Double, _ by: Double) -> Double {
+    let qx: Double = abs(px) - bx
+    let qy: Double = abs(py) - by
+    let outside: Double = hypot(max(qx, 0), max(qy, 0))
+    return outside + min(max(qx, qy), 0)
+  }
+
+  /// Distance to the segment from (ax, ay) to (bx, by).
+  private func segment(
+    _ px: Double, _ py: Double, _ ax: Double, _ ay: Double, _ bx: Double, _ by: Double
+  ) -> Double {
+    let pax: Double = px - ax
+    let pay: Double = py - ay
+    let bax: Double = bx - ax
+    let bay: Double = by - ay
+    let along: Double = (pax * bax + pay * bay) / (bax * bax + bay * bay)
+    let h: Double = clamp(along)
+    return hypot(pax - bax * h, pay - bay * h)
+  }
+
+  /// Signed distance to a lens around the origin, pointed at y = ±b and w
+  /// wide on either side of its middle.
+  private func lens(_ px: Double, _ py: Double, _ b: Double, _ w: Double) -> Double {
+    let d: Double = 0.5 * (b * b / w - w)
+    let x: Double = abs(px)
+    let y: Double = abs(py)
+    if (y - b) * d > x * b { return hypot(x, y - b) }
+    return hypot(x + d, y) - d - w
+  }
+
+  /// Signed distance to a five-pointed star around the origin with its
+  /// points r out and its inner corners rf of the way there.
+  private func star(_ px: Double, _ py: Double, _ r: Double, _ rf: Double) -> Double {
+    let kx: Double = 0.809017
+    let ky: Double = -0.587785
+    var x: Double = abs(px)
+    var y: Double = py
+    let first: Double = max(kx * x + ky * y, 0)
+    x -= 2 * first * kx
+    y -= 2 * first * ky
+    let second: Double = max(-kx * x + ky * y, 0)
+    x += 2 * second * kx
+    y -= 2 * second * ky
+    x = abs(x)
+    y -= r
+    let bax: Double = -rf * ky
+    let bay: Double = rf * kx - 1
+    let along: Double = (x * bax + y * bay) / (bax * bax + bay * bay)
+    let h: Double = min(max(along, 0), r)
+    let side: Double = sign(y * bax - x * bay)
+    return hypot(x - bax * h, y - bay * h) * side
+  }
+
+  /// `light` added to `color` the way a screen blend does.
+  private func glow(_ color: [Double], _ light: [Double]) -> [Double] {
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let added: Double = clamp(light[k])
+      out[k] = 1 - (1 - color[k]) * (1 - added)
+    }
+    return out
+  }
+
+  /// `color` times `factor`, channel by channel.
+  private func scaled(_ color: [Double], _ factor: Double) -> [Double] {
+    [color[0] * factor, color[1] * factor, color[2] * factor]
+  }
+
+  /// `a + b · cos(2π (hue + offset))` for each channel's offset.
+  private func palette(
+    _ hue: Double, _ a: Double, _ b: Double, _ offsets: [Double]
+  ) -> [Double] {
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let wave: Double = cos(6.2832 * (hue + offsets[k]))
+      out[k] = a + b * wave
+    }
+    return out
+  }
+
+  private func raindrop(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    fallX: Double, fallY: Double
+  ) -> [Double] {
+    let along: Double = dx * fallX + dy * fallY
+    let across: Double = abs(fallX * dy - fallY * dx)
+    let reach: Double = 0.14 + 0.08 * g[2]
+    let past: Double = max(abs(along) - reach, 0)
+    let line: Double = 1 - smoothstep(0.004, 0.011, hypot(across, past))
+    let head: Double = 0.25 + 0.75 * smoothstep(-reach, reach, along)
+    return mix(color, [0.82, 0.88, 0.96], alpha * 0.7 * line * head)
+  }
+
+  private func leaf(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ h: [Double], _ g: [Double],
+    alpha: Double, seconds t: Double
+  ) -> [Double] {
+    let tumbleAngle: Double = t * (1.2 + 1.2 * g[2]) + 6.2832 * h[1]
+    let tumble: Double = abs(cos(tumbleAngle))
+    let rockAngle: Double = t * (0.6 + 0.6 * g[0]) + 6.2832 * g[1]
+    let tilt: Double = 2 * g[2] - 1 + 0.6 * cos(rockAngle)
+    let u = turn(dx, dy, tilt)
+    let blade: Double = lens(u.x, u.y, 0.11, 0.05 * tumble + 0.006)
+    let stalk: Double = segment(u.x, u.y, 0, -0.11, 0, -0.128) - 0.006
+    let hue: Double = fract(g[2] * 7.31)
+    var tone: [Double] = mix([0.78, 0.2, 0.08], [0.95, 0.5, 0.1], smoothstep(0, 0.5, hue))
+    tone = mix(tone, [0.92, 0.72, 0.18], smoothstep(0.5, 1, hue))
+    let brown: Double = fract(g[2] * 13.7) >= 0.8 ? 1 : 0
+    tone = mix(tone, [0.5, 0.28, 0.12], brown)
+    let vein: Double = 1 - smoothstep(0.003, 0.007, abs(u.x))
+    let shade: Double = (0.6 + 0.4 * tumble) * (1 - 0.35 * vein)
+    tone = scaled(tone, shade)
+    let onStalk: Double = blade >= stalk ? 1 : 0
+    tone = mix(tone, scaled(tone, 0.6), onStalk)
+    let cover: Double = 1 - smoothstep(-0.012, 0.012, min(blade, stalk))
+    return mix(color, tone, alpha * cover)
+  }
+
+  private func petal(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ h: [Double], _ g: [Double],
+    alpha: Double, seconds t: Double
+  ) -> [Double] {
+    let flutterAngle: Double = t * (2 + 2 * g[1]) + 6.2832 * h[1]
+    let flutter: Double = abs(cos(flutterAngle))
+    let spin: Double = t * (0.8 + 1.2 * g[0]) * sign(h[0] - 0.5)
+    let u = turn(dx, dy, 6.2832 * g[2] + spin)
+    let w: Double = 0.075 * (0.25 + 0.75 * flutter)
+    let taper: Double = 0.8 + 0.25 * min(max(u.y / 0.1, -1), 1)
+    let ex: Double = u.x / (w * taper)
+    let ey: Double = u.y / 0.1
+    let body: Double = (hypot(ex, ey) - 1) * w
+    let bounds: Double = max(abs(u.y) - 0.1, abs(u.x) - 0.08)
+    let notch: Double = 0.03 - hypot(u.x, u.y - 0.11)
+    let edge: Double = max(max(body, bounds), notch)
+    let tint: [Double] = mix([0.96, 0.55, 0.7], [1.0, 0.87, 0.91], smoothstep(-1, 1, ey))
+    let cover: Double = 1 - smoothstep(-0.012, 0.012, edge)
+    return mix(color, scaled(tint, 0.75 + 0.25 * flutter), alpha * 0.95 * cover)
+  }
+
+  private func bubble(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    seconds t: Double
+  ) -> [Double] {
+    let r: Double = 0.08 + 0.07 * g[2]
+    let wobbleAngle: Double = t * (2 + 2 * g[0]) + 6.2832 * g[1]
+    let wobble: Double = 0.04 * sin(wobbleAngle)
+    let ux: Double = dx * (1 + wobble)
+    let uy: Double = dy * (1 - wobble)
+    let l: Double = hypot(ux, uy)
+    let film: Double = 1 - smoothstep(-0.006, 0.006, l - r)
+    let rim: Double = pow(clamp(l / r), 6) * film
+    let swirl: Double = g[0] + 0.12 * t + 0.5 * (ux - 0.6 * uy) / r
+    let iris: [Double] = palette(swirl, 0.6, 0.4, [0.0, 0.33, 0.67])
+    let sx: Double = ux + 0.4 * r
+    let sy: Double = uy - 0.45 * r
+    let shine: Double = exp(-(sx * sx + sy * sy) / (0.04 * r * r))
+    let tinted: [Double] = mix(color, iris, alpha * (0.08 * film + 0.6 * rim))
+    let light: Double = alpha * film * 0.8 * shine
+    return glow(tinted, [light, light, light])
+  }
+
+  private func bokeh(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    seconds t: Double
+  ) -> [Double] {
+    let r: Double = 0.11 + 0.08 * g[2]
+    let l: Double = hypot(dx, dy)
+    let inside: Double = 1 - smoothstep(r - 0.025, r, l)
+    let ring: Double = 0.6 + 0.4 * smoothstep(0.5 * r, r, l)
+    let pulseAngle: Double = t * (0.5 + 0.5 * g[0]) + 6.2832 * g[1]
+    let pulse: Double = 0.5 + 0.5 * sin(pulseAngle)
+    let strength: Double = alpha * inside * ring * (0.2 + 0.35 * pulse)
+    let tint: [Double] = palette(fract(g[2] * 7.31), 0.75, 0.25, [0.0, 0.2, 0.45])
+    return glow(color, scaled(tint, strength))
+  }
+
+  /// Signed distance to a note's head around the origin, in the note's units.
+  private func noteHead(_ x: Double, _ y: Double) -> Double {
+    let turned = turn(x, y, 0.4)
+    return (hypot(turned.x / 0.3, turned.y / 0.21) - 1) * 0.21
+  }
+
+  private func note(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    seconds t: Double
+  ) -> [Double] {
+    let size: Double = 0.155
+    let pair: Bool = fract(g[2] * 13.7) > 0.5
+    let rockAngle: Double = t * (1 + g[0]) + 6.2832 * g[1]
+    let turned = turn(dx, dy, 0.35 * sin(rockAngle))
+    let ux: Double = turned.x / size + (pair ? 0.36 : 0.14)
+    let uy: Double = turned.y / size + (pair ? 0.48 : 0.4)
+    var edge: Double = noteHead(ux, uy)
+    edge = min(edge, segment(ux, uy, 0.27, 0.06, 0.27, 1.0) - 0.045)
+    if pair {
+      let vx: Double = ux - 0.72
+      let vy: Double = uy - 0.16
+      edge = min(edge, noteHead(vx, vy))
+      edge = min(edge, segment(vx, vy, 0.27, 0.06, 0.27, 1.0) - 0.045)
+      edge = min(edge, segment(ux, uy, 0.27, 0.93, 0.99, 1.09) - 0.075)
+    } else {
+      edge = min(edge, segment(ux, uy, 0.27, 1.0, 0.55, 0.62) - 0.05)
+      edge = min(edge, segment(ux, uy, 0.55, 0.62, 0.5, 0.42) - 0.045)
+    }
+    edge *= size
+    let fill: Double = 1 - smoothstep(-0.012, 0.012, edge)
+    let ink: Double = 1 - smoothstep(0, 0.03, edge)
+    let tint: [Double] = palette(fract(g[2] * 7.31), 0.82, 0.18, [0.0, 0.33, 0.67])
+    let outline: Double = alpha * 0.6 * max(ink - fill, 0)
+    let inked: [Double] = mix(color, scaled(color, 0.35), outline)
+    return mix(inked, tint, alpha * fill)
+  }
+
+  private func starParticle(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ h: [Double], _ g: [Double],
+    alpha: Double, seconds t: Double
+  ) -> [Double] {
+    let r: Double = 0.1 + 0.04 * g[2]
+    let spin: Double = t * (0.6 + 0.8 * g[0]) * sign(h[0] - 0.5)
+    let u = turn(dx, dy, 6.2832 * g[2] + spin)
+    let edge: Double = star(u.x, u.y, r, 0.45)
+    let inner: Double = clamp(-edge / (0.35 * r))
+    let glintAngle: Double = t * (2 + 2 * g[1]) + 6.2832 * h[1]
+    let glint: Double = 0.5 + 0.5 * sin(glintAngle)
+    let gold: [Double] = mix([0.93, 0.6, 0.1], [1.0, 0.95, 0.6], inner)
+    let silver: [Double] = [0.72 + 0.24 * inner, 0.76 + 0.24 * inner, 0.84 + 0.24 * inner]
+    let isSilver: Double = fract(g[2] * 7.31) >= 0.75 ? 1 : 0
+    let tone: [Double] = scaled(mix(gold, silver, isSilver), 0.85 + 0.25 * glint)
+    let lit: [Double] = [min(tone[0], 1), min(tone[1], 1), min(tone[2], 1)]
+    let cover: Double = 1 - smoothstep(-0.012, 0.012, edge)
+    return mix(color, lit, alpha * 0.95 * cover)
+  }
+
+  private func firefly(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    seconds t: Double
+  ) -> [Double] {
+    let wanderAngle: Double = t * (0.5 + 0.5 * g[2]) + 6.2832 * g[0]
+    let y: Double = dy - 0.06 * sin(wanderAngle)
+    let blinkAngle: Double = t * (0.9 + 0.9 * g[0]) + 6.2832 * g[1]
+    let blink: Double = smoothstep(0.25, 0.9, 0.5 + 0.5 * sin(blinkAngle))
+    let r2: Double = dx * dx + y * y
+    let core: Double = exp(-r2 / 0.0008)
+    let halo: Double = exp(-r2 / 0.006)
+    let tint: [Double] = mix([0.75, 1.0, 0.3], [1.0, 1.0, 0.85], core)
+    return glow(color, scaled(tint, blink * alpha * (core + 0.55 * halo)))
+  }
+
+  private func ember(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    seconds t: Double, height: Double
+  ) -> [Double] {
+    let jitterAngle: Double = t * (3 + 2 * g[2]) + 6.2832 * g[0]
+    let x: Double = dx - 0.03 * sin(jitterAngle)
+    let flickerAngle: Double = t * (6 + 6 * g[0]) + 6.2832 * g[1]
+    let flicker: Double = 0.6 + 0.4 * sin(flickerAngle)
+    let ey: Double = dy * 0.45
+    let core: Double = exp(-(x * x + ey * ey) / 0.0006)
+    let halo: Double = exp(-(x * x + dy * dy) / 0.0036)
+    let hot: [Double] = mix([1.0, 0.32, 0.06], [1.0, 0.72, 0.25], fract(g[2] * 7.31))
+    let tint: [Double] = mix(hot, [1.0, 0.92, 0.7], 0.6 * core)
+    let fade: Double = 1 - 0.7 * height
+    return glow(color, scaled(tint, alpha * flicker * fade * (1.3 * core + 0.5 * halo)))
+  }
+
+  private func banknote(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ h: [Double], _ g: [Double],
+    alpha: Double, seconds t: Double
+  ) -> [Double] {
+    let tumbleAngle: Double = t * (2 + 2 * g[1]) + 6.2832 * h[1]
+    let tumble: Double = abs(cos(tumbleAngle))
+    let spin: Double = t * (0.6 + 1.0 * g[0]) * sign(h[0] - 0.5)
+    let u = turn(dx, dy, 6.2832 * g[2] + spin)
+    let breadth: Double = 0.062 * tumble + 0.004
+    let edge: Double = box(u.x, u.y, 0.12, breadth)
+    let frame: Double = box(u.x, u.y, 0.106, breadth - 0.014 * tumble)
+    let oval: Double = hypot(u.x / 0.12 / 0.3, u.y / breadth / 0.62)
+    let dark: [Double] = [0.18, 0.42, 0.24]
+    var tone: [Double] = mix([0.6, 0.8, 0.55], dark, smoothstep(-0.003, 0.003, frame))
+    tone = mix(tone, [0.78, 0.9, 0.72], 0.6 * (1 - smoothstep(0.8, 0.9, oval)))
+    tone = mix(tone, dark, 0.85 * (1 - smoothstep(0.08, 0.16, abs(oval - 1))))
+    let cover: Double = 1 - smoothstep(-0.012, 0.012, edge)
+    return mix(color, scaled(tone, 0.6 + 0.4 * tumble), alpha * cover)
+  }
+
+  private func balloon(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    seconds t: Double
+  ) -> [Double] {
+    let size: Double = 0.16
+    let swingAngle: Double = t * (0.6 + 0.6 * g[0]) + 6.2832 * g[1]
+    let turned = turn(dx, dy, 0.12 * sin(swingAngle))
+    let ux: Double = turned.x / size
+    let uy: Double = turned.y / size
+    let qy: Double = uy - 0.38
+    let taper: Double = 1 - 0.15 * min(max(qy / 0.72, -1), 1)
+    let n: Double = hypot(ux * taper / 0.6, qy / 0.72)
+    let body: Double = (n - 1) * 0.6
+    let knot: Double = hypot(ux, uy + 0.41) - 0.08
+    let waveAngle: Double = 6 * uy + 2 * t + 6.2832 * g[1]
+    let wave: Double = 0.06 * sin(waveAngle)
+    let ends: Double = max(-1.12 - uy, uy + 0.45)
+    let line: Double = max(abs(ux - wave) - 0.02, ends)
+    let hue: Double = fract(g[2] * 7.31)
+    let offsets: [Double] = [0.0, 0.6667, 0.3333]
+    var tone = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let ramp: Double = abs(fract(hue + offsets[k]) * 6 - 3) - 1
+      tone[k] = (0.2 + 0.8 * clamp(ramp)) * 0.92
+    }
+    let sx: Double = ux + 0.25
+    let sy: Double = qy - 0.3
+    let shine: Double = 0.7 * exp(-(sx * sx + sy * sy) / 0.02)
+    let skin: [Double] = mix(scaled(tone, 1 - 0.35 * smoothstep(0.3, 1, n)), [1, 1, 1], shine)
+    let string: Double = 1 - smoothstep(0, 0.06, line)
+    var out: [Double] = mix(color, [0.9, 0.9, 0.9], alpha * 0.7 * string)
+    out = mix(out, scaled(tone, 0.7), alpha * (1 - smoothstep(-0.075, 0.075, knot)))
+    return mix(out, skin, alpha * 0.95 * (1 - smoothstep(-0.075, 0.075, body)))
+  }
+
   private func tiltShift(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
     let s = Double(min(width, height))
     let away: Double = abs(py / Double(height) - 0.5)
@@ -2185,6 +2650,51 @@ final class ShaderVideoEffectTests: XCTestCase {
     return out
   }
 
+  private func swirl(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let cx: Double = Double(width) / 2
+    let cy: Double = Double(height) / 2
+    let dx: Double = px - cx
+    let dy: Double = py - cy
+    let w: Double = max(1 - hypot(dx, dy) / (0.5 * Double(min(width, height))), 0)
+    let angle: Double = 3 * intensity * w * w
+    let co: Double = cos(angle)
+    let si: Double = sin(angle)
+    return tap(cx + co * dx - si * dy, cy + si * dx + co * dy)
+  }
+
+  private func ripple(_ px: Double, _ py: Double, intensity: Double, seconds t: Double)
+    -> [Double]
+  {
+    let cx: Double = Double(width) / 2
+    let cy: Double = Double(height) / 2
+    let dx: Double = px - cx
+    let dy: Double = py - cy
+    let r: Double = hypot(dx, dy)
+    let s = Double(min(width, height))
+    let phase: Double = 6.2832 * fract(r / (0.1 * s) - fract(t * 0.75))
+    let fade: Double = smoothstep(0, 0.2 * s, r)
+    let push: Double = 0.012 * s * intensity * fade * sin(phase)
+    let zoom: Double = 1 - 0.025 * intensity
+    let reach: Double = push / max(r, 0.001)
+    let color: [Double] = tap(cx + dx * zoom + dx * reach, cy + dy * zoom + dy * reach)
+    let light: Double = 1 + 0.12 * intensity * fade * cos(phase)
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 { out[k] = clamp(color[k] * light) }
+    return out
+  }
+
+  private func flutedGlass(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let rib: Double = 0.08 * Double(min(width, height))
+    let across: Double = fract((px - 0.5 * Double(width)) / rib + 0.5) - 0.5
+    let x: Double = abs(px + 1.5 * intensity * across * rib)
+    let color: [Double] = tap(Double(width) - abs(Double(width) - x), py)
+    let shade: Double = 1 - 0.6 * intensity * across * across
+    let glint: Double = 1 - smoothstep(0, 0.15, abs(across + 0.22))
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 { out[k] = clamp(color[k] * shade + 0.1 * intensity * glint) }
+    return out
+  }
+
   private func zoomBlur(_ px: Double, _ py: Double, strength: Double) -> [Double] {
     let cx: Double = Double(width) / 2
     let cy: Double = Double(height) / 2
@@ -2197,6 +2707,25 @@ final class ShaderVideoEffectTests: XCTestCase {
       for k in 0..<3 { color[k] += more[k] }
     }
     for k in 0..<3 { color[k] /= 32 }
+    return color
+  }
+
+  private func spinBlur(_ px: Double, _ py: Double, strength: Double) -> [Double] {
+    let cx: Double = Double(width) / 2
+    let cy: Double = Double(height) / 2
+    let dx: Double = px - cx
+    let dy: Double = py - cy
+    let jitter: Double = noise(px, py)
+    var color = [Double](repeating: 0, count: 3)
+    for i in 0..<32 {
+      let share: Double = (Double(i) + jitter) / 32
+      let angle: Double = 0.22 * strength * (share - 0.5)
+      let s: Double = sin(angle)
+      let k: Double = cos(angle)
+      let more: [Double] = tap(cx + dx * k - dy * s, cy + dx * s + dy * k)
+      for c in 0..<3 { color[c] += more[c] }
+    }
+    for c in 0..<3 { color[c] /= 32 }
     return color
   }
 
@@ -2234,6 +2763,80 @@ final class ShaderVideoEffectTests: XCTestCase {
       out[k] = color[k] + (comic - color[k]) * intensity
     }
     return out
+  }
+
+  /// One step of the 8-bit's ordered dither.
+  private func bayer(_ ax: Double, _ ay: Double) -> Double {
+    let x: Double = ax.rounded(.down)
+    let y: Double = ay.rounded(.down)
+    return fract(x * 0.5 + y * y * 0.75)
+  }
+
+  private func eightBit(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let cell: Double = max(1, s / 100)
+    let ix: Double = (px / cell).rounded(.down)
+    let iy: Double = (py / cell).rounded(.down)
+    let cx: Double = (ix + 0.5) * cell
+    let cy: Double = (iy + 0.5) * cell
+    let q: Double = 0.25 * cell
+    let color: [Double] = tap(px, py)
+    let corners: [(Double, Double)] = [(-q, -q), (q, -q), (-q, q), (q, q)]
+    var block = [Double](repeating: 0, count: 3)
+    for (dx, dy) in corners {
+      let more: [Double] = tap(cx + dx, cy + dy)
+      for k in 0..<3 { block[k] += 0.25 * more[k] }
+    }
+    let threshold: Double = 0.25 * bayer(0.5 * ix, 0.5 * iy) + bayer(ix, iy)
+    let levels: [Double] = [7, 7, 3]
+    var shade = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let level: Double = (block[k] * levels[k] + threshold).rounded(.down)
+      shade[k] = min(max(level, 0), levels[k]) / levels[k]
+    }
+    return mix(color, shade, intensity)
+  }
+
+  private func anaglyph(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let shift: Double = 0.014 * s * intensity
+    let color: [Double] = tap(px, py)
+    let left: [Double] = tap(px - shift, py)
+    let right: [Double] = tap(px + shift, py)
+    let leftLuma: Double = luma(left)
+    let rightLuma: Double = luma(right)
+    let stereo: [Double] = [
+      leftLuma + (left[0] - leftLuma) * 0.3,
+      rightLuma + (right[1] - rightLuma) * 0.3,
+      rightLuma + (right[2] - rightLuma) * 0.3,
+    ]
+    return mix(color, stereo, intensity)
+  }
+
+  /// How much of a grain cell an ink of `density` covers, against its noise.
+  private func cover(_ density: Double, _ threshold: Double) -> Double {
+    clamp((density - 0.15 - 0.7 * threshold) / 0.3 + 0.5)
+  }
+
+  private func riso(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let size: Double = max(1, s / 360)
+    let gx: Double = (px / size).rounded(.down)
+    let gy: Double = (py / size).rounded(.down)
+    let color: [Double] = tap(px, py)
+    let slipped: [Double] = tap(px + 0.006 * s, py - 0.004 * s)
+    let pink: Double = cover(1 - color[1], noise(gx, gy))
+    let blue: Double = cover(1 - slipped[0], noise(gx + 19, gy + 7))
+    let paper: [Double] = [0.96, 0.94, 0.9]
+    let pinkInk: [Double] = [1, 0.28, 0.69]
+    let blueInk: [Double] = [0, 0.47, 0.75]
+    var riso = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let throughPink: Double = 1 + (pinkInk[k] - 1) * pink
+      let throughBlue: Double = 1 + (blueInk[k] - 1) * blue
+      riso[k] = paper[k] * throughPink * throughBlue
+    }
+    return mix(color, riso, intensity)
   }
 }
 
@@ -2396,6 +2999,158 @@ final class AdjustVideoEffectTests: XCTestCase {
         }
         for k in 0..<3 { out[(yi * width + xi) * 3 + k] = color[k] }
       }
+    }
+    return out
+  }
+}
+
+/// The looks map colours through a lookup table with Core Image's
+/// `CIColorCube` on iOS and macOS, and with a shader that interpolates the
+/// same table trilinearly on Android (`LookVideoEffect`) and in the effects
+/// picker (`shaders/look.frag`). These tests read a table laid out as
+/// `tools/generate_looks.dart` writes it, load every look's table from the
+/// app's Flutter assets, as the effect does, and check every pixel the filter
+/// draws against that interpolation computed here on the CPU. So a table read
+/// upside down or with its channels swapped fails, and so does a filter that
+/// interpolates differently. No test runs the Android copy: a change to it has
+/// to be made here as well.
+final class LookVideoEffectTests: XCTestCase {
+  private let points = LookVideoEffect.points
+
+  /// Colours that fall between the table's points, on a 23-step grid in each
+  /// channel.
+  private let steps = 23
+
+  func testEveryLookCarriesItsTable() {
+    for look in LookVideoEffect.Look.allCases {
+      let cube = LookVideoEffect.cube(of: look)
+      XCTAssertEqual(cube?.count, points * points * points * 4 * 4, "\(look)")
+    }
+  }
+
+  func testReadsATableAsTheGeneratorLaysItOut() throws {
+    // The identity: pixel (b * 33 + r, g) holds (r, g, b) / 32.
+    let width = points * points
+    var bytes = [UInt8](repeating: 255, count: width * points * 4)
+    func level(_ index: Int) -> UInt8 { UInt8((Double(index) * 255 / 32).rounded()) }
+    for b in 0..<points {
+      for g in 0..<points {
+        for r in 0..<points {
+          let i = (g * width + b * points + r) * 4
+          bytes[i] = level(r)
+          bytes[i + 1] = level(g)
+          bytes[i + 2] = level(b)
+        }
+      }
+    }
+    let image = try XCTUnwrap(
+      CGImage(
+        width: width, height: points, bitsPerComponent: 8, bitsPerPixel: 32,
+        bytesPerRow: width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+        bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+        provider: CGDataProvider(data: Data(bytes) as CFData)!, decode: nil,
+        shouldInterpolate: false, intent: .defaultIntent))
+    let url = FileManager.default.temporaryDirectory
+      .appendingPathComponent("identity_look_\(UUID().uuidString).png")
+    defer { try? FileManager.default.removeItem(at: url) }
+    let destination = try XCTUnwrap(
+      CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil))
+    CGImageDestinationAddImage(destination, image, nil)
+    XCTAssertTrue(CGImageDestinationFinalize(destination))
+
+    let cube = try XCTUnwrap(LookVideoEffect.cubeData(fromTableAt: url))
+    let table: [Float] = cube.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+    XCTAssertEqual(table.count, points * points * points * 4)
+    var worst: Float = 0
+    for b in 0..<points {
+      for g in 0..<points {
+        for r in 0..<points {
+          let i = ((b * points + g) * points + r) * 4
+          let expected: [UInt8] = [level(r), level(g), level(b)]
+          for k in 0..<3 {
+            worst = max(worst, abs(table[i + k] - Float(expected[k]) / 255))
+          }
+          XCTAssertEqual(table[i + 3], 1)
+        }
+      }
+    }
+    XCTAssertLessThan(worst, 1e-6)
+  }
+
+  func testGradesWithTheTrilinearLookupTheAndroidShaderDoes() throws {
+    let width = steps * steps, height = steps
+    var pixels = [Float](repeating: 1, count: width * height * 4)
+    for b in 0..<steps {
+      for g in 0..<steps {
+        for r in 0..<steps {
+          let i = (g * width + b * steps + r) * 4
+          pixels[i] = Float(r) / Float(steps - 1)
+          pixels[i + 1] = Float(g) / Float(steps - 1)
+          pixels[i + 2] = Float(b) / Float(steps - 1)
+        }
+      }
+    }
+    let frame = CIImage(
+      bitmapData: Data(bytes: pixels, count: pixels.count * 4),
+      bytesPerRow: width * 16,
+      size: CGSize(width: width, height: height),
+      format: .RGBAf,
+      colorSpace: nil)
+    let context = CIContext(options: [.workingColorSpace: NSNull()])
+
+    for look in LookVideoEffect.Look.allCases {
+      let cube = try XCTUnwrap(LookVideoEffect.cube(of: look), "\(look)")
+      let table: [Float] = cube.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+      for intensity in [1.0, 0.4] {
+        let output = LookVideoEffect(look: look, params: ["intensity": intensity])
+          .render(frame, history: [], timeUs: 0, effectTimeUs: 0)
+        XCTAssertEqual(output.extent, frame.extent)
+        var drawn = [Float](repeating: 0, count: pixels.count)
+        drawn.withUnsafeMutableBytes {
+          context.render(
+            output, toBitmap: $0.baseAddress!, rowBytes: width * 16,
+            bounds: frame.extent, format: .RGBAf, colorSpace: nil)
+        }
+        var worst: Double = 0
+        for i in stride(from: 0, to: pixels.count, by: 4) {
+          let color: [Double] = (0..<3).map { Double(pixels[i + $0]) }
+          let graded: [Double] = lookUp(color, in: table)
+          for k in 0..<3 {
+            let expected: Double = color[k] + (graded[k] - color[k]) * intensity
+            worst = max(worst, abs(Double(drawn[i + k]) - expected))
+          }
+        }
+        // Core Image's half-float intermediates round to about 0.001.
+        XCTAssertLessThan(worst, 0.003, "\(look), intensity \(intensity)")
+      }
+    }
+  }
+
+  func testLeavesTheFrameAloneAtNoIntensity() {
+    let frame = CIImage(color: CIColor(red: 0.2, green: 0.5, blue: 0.7))
+      .cropped(to: CGRect(x: 0, y: 0, width: 4, height: 4))
+    let output = LookVideoEffect(look: .tealOrange, params: ["intensity": 0])
+      .render(frame, history: [], timeUs: 0, effectTimeUs: 0)
+    XCTAssertTrue(output === frame)
+  }
+
+  /// `color` looked up in `table`, `CIColorCube` data with red changing
+  /// fastest: red and green interpolated within the two nearest blue slices,
+  /// then blue between them, as the Android shader does.
+  private func lookUp(_ color: [Double], in table: [Float]) -> [Double] {
+    let last = Double(points - 1)
+    let p: [Double] = color.map { min(max($0, 0), 1) * last }
+    let lower: [Int] = p.map { min(Int($0), points - 2) }
+    let f: [Double] = (0..<3).map { p[$0] - Double(lower[$0]) }
+    var out = [Double](repeating: 0, count: 3)
+    for corner in 0..<8 {
+      let dr = corner & 1, dg = (corner >> 1) & 1, db = corner >> 2
+      let wr: Double = dr == 1 ? f[0] : 1 - f[0]
+      let wg: Double = dg == 1 ? f[1] : 1 - f[1]
+      let wb: Double = db == 1 ? f[2] : 1 - f[2]
+      let index: Int =
+        (((lower[2] + db) * points + lower[1] + dg) * points + lower[0] + dr) * 4
+      for k in 0..<3 { out[k] += wr * wg * wb * Double(table[index + k]) }
     }
     return out
   }

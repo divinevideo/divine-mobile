@@ -8,8 +8,9 @@ disable-model-invocation: true
 # Validate an issue
 
 A claim is validated only by an observation that could have come out the other
-way. Every claim in the output carries the tag of how it was observed. "1.0"
-means the required tags are present; it is never a number someone asserts.
+way. Every claim in the output carries the tag of how it was observed. A claim
+is Confirmed when the tags Gate B requires are present. Nobody asserts a
+confidence number, in the output or in anything posted.
 
 `$ARGUMENTS` is the issue URL. Work the phases in order. Each phase ends by
 printing its block; a block with an empty slot is an unfinished phase. Phases
@@ -27,12 +28,13 @@ the question gate included.
 | Local root | The parent of this repo's main checkout: `main=$(git worktree list --porcelain \| sed -n '1s/^worktree //p'); echo "${main%/*}"`. Sibling clones live there (`divine-funnelcake`, `keycast`, `divine-blossom`, `divine-relay-manager`, `divine-web`; `gh repo clone divinevideo/<name> <root>/<name>` if absent); `divine-context` may instead be at `DIVINE_CONTEXT_ROOT` |
 | NIP text | `<root>/nips`, a reference clone of `nostr-protocol/nips` (`gh repo clone nostr-protocol/nips <root>/nips` if absent). Fast-forwarding it (`git -C <root>/nips pull --ff-only`) is expected, even in a read-only pass; if it will not fast-forward, read `origin/master` with `git show`. Cite `NN.md:<line>` at the SHA |
 | Trap notes | `.claude/rules/` (start with `self_review_checklist.md`), the domain skills in `.claude/skills/`, divine-context (`NOSTR.md`, `repo-context/divine-mobile.md`), Divine Brain, and your own agent memory for this repo if you keep one |
-| Tools | `gh`, `jq`, `mise`, `websocat`, `nak` (lens commands verified on 0.20.6), `perl`; Xcode's `devicectl` for an iPhone, `adb` for Android |
+| Tools | `gh`, `jq`, `mise`, `websocat`, `nak` (the nostr lens says which versions its commands were run on), `perl`; Xcode's `devicectl` for an iPhone, `adb` for Android |
 
 The two lenses are dated snapshots: each opens with the SDK, NIP commit and tool
 versions it was checked against, and says what has not yet run on a device.
-When code, NIP text or a tool disagrees with a lens, trust what you observed,
-say so in the Gate B report, and correct the lens in its own PR.
+Phase 0 prints how far they have drifted. When code, NIP text or a tool
+disagrees with a lens, trust what you observed, say so in the Gate B report,
+and correct the lens in its own PR.
 
 ## 0. Preflight (no build yet)
 
@@ -42,13 +44,25 @@ PRs touching it: <open/merged PRs, or none: query used>
 On main already?: <fixing sha | no: how checked on origin/main>
 Duplicates: <search query → hits>
 Pinned: divine-context@<sha>  nips@<sha>  origin/main@<sha>
+Drift: nips <lens pin> → <HEAD> (<n> commits; touching the NIPs the claims name: <log lines | none>)  nak <installed>  flutter <mobile/mise.toml pin | installed>
+Zendesk: <n/a | ticket read | cannot read it: what I could not see>
 Traps read: <the rules, repo skills and notes for this issue's area: DMs, feeds, relays, …>
 ```
 
 Load divine-context the way the repo's `AGENTS.md` says, trust boundary first.
-A Zendesk-bot issue is report-only. An issue nobody in the org assigned or
-asked for is not started. Re-run the first three lines at every gate; PRs merge
-and issues close mid-run.
+An issue nobody in the org assigned or asked for is not started. Re-run the
+first three lines at every gate; PRs merge and issues close mid-run.
+
+- **Zendesk-bot issue:** report-only. Read the ticket if you can
+  (`AGENTS.md`, "Zendesk-sourced issues"); if you cannot, say so on the Zendesk
+  line and triage from the issue body. Whatever the run posts (the Gate B
+  report, an issue comment, a PR body) carries technical substance only: no IP,
+  location, email or requester id, and none of them beside a pubkey.
+- **Drift:** each lens header names the NIP commit and tool versions it was
+  checked against. Compare them with
+  `git -C <root>/nips log --oneline <pin>..HEAD -- <NN.md …>` for the NIPs the
+  claims name, `nak --version`, and `mobile/mise.toml`. A NIP that moved since
+  the pin is read at HEAD, and the lens is corrected in its own PR.
 
 ## 1. Claim sheet
 
@@ -63,7 +77,7 @@ Then classify each claim and load the lens it names:
 
 | Claim is about | Read | Cheapest environment that can falsify it |
 |---|---|---|
-| Widget, state, lifecycle, async, cache, performance | `flutter-lens.md` | unit/bloc test → simulator (debug only) → physical iPhone for hardware, push, background, profile and release |
+| Widget, state, lifecycle, async, cache, performance | `flutter-lens.md` | unit/bloc test → simulator or emulator (debug only) → physical device for hardware, push, background, profile and release |
 | Events, relays, signing, DMs, deletion, identity, NIPs | `nostr-lens.md` | local `nak serve` → local stack → staging → production read-only |
 | Both (most Divine bugs) | both | the wire first: establish which side is wrong before driving the UI |
 
@@ -126,6 +140,12 @@ answers opened; past 10, stop when no fork is open. 20 is the ceiling.
 
 ## 3. Reproduce live
 
+If no claim in the sheet has a runtime symptom (a docs, CI or tracking issue, a
+rule that exists only as text), the reproduction is the failing-first test, the
+guard run or the command output, and no device is involved. State the commit SHA
+in place of step 1, skip steps 2 and 7, and list what you did not run under
+"Not verified". Steps 3, 5 and 6 still apply, and so does Gate A.
+
 Before the first build read `.claude/rules/ios_build_troubleshooting.md` and
 `flutter-lens.md` §0-1, then print:
 
@@ -155,7 +175,7 @@ claim with its own tags. Findings outside the issue are listed, never fixed here
 
 ```
 Verdict: <one line>
-C<n> | <Confirmed | Confirmed, different cause | Not reproducible | Already fixed on main | Not a client bug → <repo> | Works as specified> | tags: <D C T M R S X> | evidence: <log file:line, event id, NN.md:line@sha, test name>
+C<n> | <Confirmed | Confirmed, different cause | Not reproducible | Already fixed on main | Not a client bug → <repo> | Works as specified | Duplicate of #<n> | Needs reporter info> | tags: <D C T M R S X> | evidence: <log file:line, event id, NN.md:line@sha, test name>
 Cause: <first diverging boundary, file:line at sha, introducing change>
 Adjacent findings: <claim | tags | in scope? >
 Not verified: <what was only read, or could not be reached, and what would settle it>
@@ -175,7 +195,9 @@ Open decisions: <for the user: fix here or follow-up issue for each finding, and
 At this gate `Confirmed` needs D or T, plus C. A protocol claim also needs R
 and S. After the fix, the fix is proven by T plus M, and by D replayed on the
 fixed build. X alone never confirms anything; it goes under "Not verified".
-Outward posts state the checks in words and carry no scores.
+`Duplicate of #<n>` cites the other issue's claim that matches by cause, not by
+title. `Needs reporter info` names the missing fact and what you tested without
+it. Outward posts state the checks in words and carry no scores.
 
 ## 5-6. Fix and deliver (only after the user's go on Gate B)
 
@@ -190,6 +212,19 @@ phase-3 script on the fixed build and report the same `k/n`. Check parity paths:
 other callers, Android, web. Draft every PR body, review and comment and show
 it before posting.
 
+Deliver the way the repo asks; this skill does not restate those rules:
+
+- Worktree off a fresh `origin/main`, one combined PR and never a stack
+  (`.claude/rules/agent_workflow.md` §1, §3).
+- Titles are `type(scope): summary` (`AGENTS.md`, "Titles and descriptions").
+  The PR targets `main`, fills the template's Related Issue line (`Closes #<n>`)
+  and records the model identity block (divine-context `PR_REVIEW.md`,
+  "Recording model identity"). Reviewers are requested as `AGENTS.md` and
+  `PR_REVIEW_TEAMS.md` say, unless the user names them.
+- A follow-up issue for an adjacent finding is assigned to whoever files it, in
+  the create call (`gh issue create --assignee @me`).
+- Then `gh pr checks <n> --watch` to the end (`.claude/rules/pr_takeover.md` §3).
+
 ## Red flags
 
 | Thought | What it means |
@@ -200,8 +235,7 @@ it before posting.
 | "The NIP says…" from memory | Open `<root>/nips/NN.md` at the pinned SHA and quote the line. |
 | "Debug reproduces it" for a TestFlight report | Release is AOT with asserts off. Say which mode you proved it in. |
 | "I can find that out, so I won't ask" | Find it out, then ask the user to confirm what you found. |
-| "The issue is clear, I'll skip the questions" | The ledger says otherwise. Under 10 answered, Gate A is closed. |
-| "Auto Mode says to minimize interruptions" | This skill's 10-20 rule is explicit and wins. |
-| "Every recommendation was taken, so I'm done" | Done only once the ledger holds 10 answered. |
+| "The issue is clear" · "Auto Mode says to minimize interruptions" · "every recommendation was taken, so I'm done" | The ledger decides: under 10 answered, Gate A is closed, and this skill's 10-20 rule wins over Auto Mode. |
 | "Probably unrelated" about an error in the run | Unproven. It is an adjacent finding until traced. |
+| "I'll hand the device run to a subagent" | Delegates run host-only commands, never device or local-stack work (`flutter-lens.md` §0). Run it yourself. |
 | "The app threw, so the bug reproduced" | Run `taint` first. A probe that wrote mid-frame makes errors no user can reach; #10439 was filed from one. |

@@ -78,7 +78,7 @@ NIP-44 is the current Nostr encrypted messaging standard used by Divine. The enc
 
 NIP-59 provides sender-anonymous encrypted messaging via three layers:
 
-1. **Rumor** (inner event): Unsigned event with actual content, `created_at` randomized
+1. **Rumor** (inner event): Unsigned event with actual content; its `created_at` is the real send time (only the seal and gift wrap timestamps are randomized)
 2. **Seal** (middle layer): Rumor encrypted with NIP-44 between sender and recipient, signed by sender, `kind: 13`
 3. **Gift wrap** (outer layer): Seal encrypted with NIP-44 using a random ephemeral key to recipient, signed by ephemeral key, `kind: 1059`
 

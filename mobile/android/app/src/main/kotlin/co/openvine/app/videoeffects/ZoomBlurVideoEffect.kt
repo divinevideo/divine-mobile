@@ -17,16 +17,16 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
  * long the streaks are) and, for an effect on the beat, `beatsUs`: the beats,
  * in microseconds after the effect's start. On the beat the streaks only show
- * on each hit and fade out over half a second; see [ZoomBlurHits].
+ * on each hit and fade out over half a second; see [BlurHits].
  */
 class ZoomBlurVideoEffect(params: Map<String, Any?>) : ShaderVideoEffect(FRAGMENT_SHADER) {
 
     private val intensity = intensityOf(params)
 
-    private val beatsUs = ZoomBlurHits.beatsOf(params)
+    private val beatsUs = BlurHits.beatsOf(params)
 
     override fun setUniforms(shader: CustomVideoEffectShader, effectTimeUs: Long) {
-        shader.setFloat("uStrength", ZoomBlurHits.strength(intensity, beatsUs, effectTimeUs))
+        shader.setFloat("uStrength", BlurHits.strength(intensity, beatsUs, effectTimeUs))
     }
 
     companion object {
@@ -62,15 +62,15 @@ void main() {
 }
 
 /**
- * How strongly the zoom blur streaks at a moment. Mirrors the Swift
- * `ZoomBlurHits`.
+ * How strongly the zoom blur, or the spin blur, streaks at a moment. Mirrors
+ * the Swift `BlurHits`.
  *
  * All the time it streaks at its intensity. On the beat each beat starts a hit
  * at the intensity that fades out over [HIT_US] as `(1 - u)²`, `u` the share
  * of the hit gone, as the built-in zoom pulse eases out; a later beat starts
  * the next hit. Before the first beat it does not streak at all.
  */
-object ZoomBlurHits {
+object BlurHits {
     /** How long one hit lasts. */
     const val HIT_US = 500_000L
 

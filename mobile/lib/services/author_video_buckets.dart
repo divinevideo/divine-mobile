@@ -99,9 +99,11 @@ class AuthorVideoBuckets {
   /// Caches [video], deduplicating addressable (NIP-71) events by
   /// `(pubkey, vineId)` because each edit mints a new event id.
   ///
-  /// An existing entry is overwritten only by a newer `createdAt`. New videos
-  /// go to the front unless [isHistorical]. Creates the bucket when it is
-  /// missing. Returns whether this added a video rather than updating one.
+  /// An existing entry is overwritten only by a newer
+  /// [VideoEvent.nostrCreatedAt]; `createdAt` prefers `published_at`, which
+  /// every edit of a video re-emits. New videos go to the front unless
+  /// [isHistorical]. Creates the bucket when it is missing. Returns whether
+  /// this added a video rather than updating one.
   bool addOrUpdateByVine(
     VideoEvent video, {
     required String authorPubkey,
@@ -114,7 +116,7 @@ class AuthorVideoBuckets {
     );
 
     if (existingIndex != -1) {
-      if (video.createdAt > bucket[existingIndex].createdAt) {
+      if (video.nostrCreatedAt > bucket[existingIndex].nostrCreatedAt) {
         bucket[existingIndex] = video;
         _invalidate(authorPubkey);
       }

@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/profile_feed/profile_tab_retap_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/router/routes/shell.dart';
@@ -109,12 +110,15 @@ void main() {
       // A closed account is told why on launch (support-trust-safety#260).
       expect(sideEffects.child, isA<AgeReviewClosureLaunchNotice>());
       final closureNotice = sideEffects.child as AgeReviewClosureLaunchNotice;
-      // The retap cubit wraps AppShell so the bottom nav and the home
-      // branch's feed share one instance (see shell.dart).
+      // The retap cubits wrap AppShell so the bottom nav and the home and
+      // profile branches share one instance of each (see shell.dart).
       expect(closureNotice.child, isA<BlocProvider<HomeFeedRetapCubit>>());
       final retapProvider =
           closureNotice.child as BlocProvider<HomeFeedRetapCubit>;
-      expect(retapProvider.child, isA<AppShell>());
+      expect(retapProvider.child, isA<BlocProvider<ProfileTabRetapCubit>>());
+      final profileRetapProvider =
+          retapProvider.child! as BlocProvider<ProfileTabRetapCubit>;
+      expect(profileRetapProvider.child, isA<AppShell>());
     });
   });
 }

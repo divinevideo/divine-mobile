@@ -1,5 +1,75 @@
 {
   "@@locale": "ur",
+  "videoEditorSocialStickerPoll": "پول",
+  "videoEditorSocialStickerQuiz": "کوئز",
+  "videoEditorSocialStickerSlider": "سلائیڈر",
+  "videoEditorSocialStickerPollSampleQuestion": "کون سا؟",
+  "videoEditorSocialStickerPollSampleYes": "ہاں",
+  "videoEditorSocialStickerPollSampleNo": "نہیں",
+  "videoEditorSocialStickerQuizSampleQuestion": "Vine کب شروع ہوا؟",
+  "videoEditorSocialStickerSliderSampleQuestion": "آپ کو کتنی بھوک لگی ہے؟",
+  "videoEditorSocialStickerPollQuestionHint": "سوال پوچھیں",
+  "videoEditorSocialStickerPollOptionHint": "جواب {number}",
+  "videoEditorSocialStickerPollRemoveOption": "جواب {number} ہٹائیں",
+  "videoEditorSocialStickerQuizMarkRight": "جواب {number} کو درست قرار دیں",
+  "videoEditorSocialStickerPollAddOption": "جواب شامل کریں",
+  "videoEditorSocialStickerPollNote": "ناظرین ووٹ دینے کے بعد نتائج دیکھتے ہیں۔ ووٹ عوامی ہوتے ہیں۔",
+  "videoEditorSocialStickerQuizNote": "درست جواب پر نشان لگائیں۔ ناظرین جواب چننے کے بعد اسے دیکھتے ہیں۔",
+  "videoEditorSocialStickerSliderNote": "ناظرین جواب دینے کے لیے ایموجی کو گھسیٹتے ہیں اور اوسط دیکھتے ہیں۔",
+  "videoStickerQuizRightAnswer": "درست جواب",
+  "videoStickerQuizWrongAnswer": "غلط جواب",
+  "videoEditorSocialStickerQuestion": "سوال",
+  "videoEditorSocialStickerAddYours": "آپ کی باری",
+  "videoEditorSocialStickerReplies": "جوابات",
+  "videoEditorSocialStickerQuestionSample": "مجھ سے کچھ بھی پوچھیں",
+  "videoEditorSocialStickerAddYoursSample": "اپنا ڈیسک سیٹ اپ دکھائیں",
+  "videoEditorSocialStickerRepliesSample": "ویڈیو سے جواب دیں",
+  "videoEditorSocialStickerQuestionHint": "آپ کا سوال",
+  "videoEditorSocialStickerAddYoursPromptHint": "لوگ کیا دکھائیں؟",
+  "videoEditorSocialStickerAddYoursHashtagHint": "ہیش ٹیگ",
+  "videoEditorSocialStickerRepliesTitleHint": "عنوان",
+  "videoEditorSocialStickerQuestionNote": "جوابات آپ کو نجی پیغامات کے طور پر ملتے ہیں۔",
+  "videoEditorSocialStickerAddYoursNote": "ناظرین اپنی ویڈیو کے ساتھ جواب دیتے ہیں۔ ہر جواب کو یہ ہیش ٹیگ ملتا ہے اور وہ آپ کی ویڈیو سے لنک ہوتا ہے۔",
+  "videoEditorSocialStickerRepliesNote": "دکھاتا ہے کہ کس نے اس ویڈیو کا جواب ویڈیو سے دیا۔ ناظرین جوابات دیکھنے کے لیے اسے ٹیپ کرتے ہیں۔",
+  "videoEditorInteractiveCardAreaHint": "یہ اسٹیکر اسی خانے میں رہتا ہے تاکہ ناظرین اسے ٹیپ کر سکیں",
+  "videoStickerPollSignInToVote": "ووٹ دینے کے لیے سائن ان کریں۔",
+  "videoStickerPollNotReady": "ابھی کنیکٹ ہو رہا ہے۔ تھوڑی دیر میں دوبارہ کوشش کریں۔",
+  "videoStickerPollVoteFailed": "آپ کا ووٹ نہیں پہنچا۔ دوبارہ کوشش کریں۔",
+  "videoStickerPollVotesArePublic": "ووٹ عوامی ہوتے ہیں۔ کوئی بھی دیکھ سکتا ہے کہ آپ نے کیا چنا۔",
+  "videoStickerPollVoteCount": "{count, plural, one{1 ووٹ} other{{count} ووٹ}}",
+  "videoStickerQuestionAnswerHint": "جواب دینے کے لیے ٹیپ کریں",
+  "videoStickerQuestionAnswerSemanticLabel": "جواب: {question}",
+  "videoStickerAddYoursButton": "آپ کی باری",
+  "videoStickerAddYoursJoined": "{count, plural, =0{پہلے آپ} =1{{count} نے حصہ لیا} other{{count} نے حصہ لیا}}",
+  "videoStickerAddYoursJoinedAtLeast": "{count} نے حصہ لیا",
+  "videoStickerAddYoursOpenSemanticLabel": "دیکھیں کس نے حصہ لیا",
+  "videoStickerAddYoursJoinSemanticLabel": "آپ کی باری: {prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{ابھی کوئی جواب نہیں} =1{{count} جواب} other{{count} جوابات}}",
+  "videoStickerRepliesCountAtLeast": "{count} جوابات",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{ویڈیو جوابات، ابھی کوئی نہیں} =1{{count} ویڈیو جواب دیکھیں} other{{count} ویڈیو جوابات دیکھیں}}",
+  "videoStickerRepliesSemanticLabelAtLeast": "{count} ویڈیو جوابات دیکھیں",
+  "videoStickerQuestionSignIn": "جواب دینے کے لیے سائن ان کریں۔",
+  "videoStickerQuestionUnavailable": "آپ کے اکاؤنٹ کے لیے سوالوں کے جواب دینا دستیاب نہیں ہے۔",
+  "videoStickerQuestionAnswerTitle": "جواب دیں",
+  "videoStickerQuestionAnswerFieldLabel": "آپ کا جواب",
+  "videoStickerQuestionAnswerPrivacyNote": "آپ کا جواب صرف {name} دیکھ سکتے ہیں۔ وہ اسے کسی ویڈیو میں، آپ کے نام کے بغیر، شیئر کر سکتے ہیں۔",
+  "videoStickerQuestionAnswerSend": "بھیجیں",
+  "videoStickerQuestionAnswerSent": "جواب بھیج دیا گیا۔",
+  "videoStickerQuestionAnswerTooLong": "یہ جواب بھیجنے کے لیے بہت لمبا ہے۔",
+  "videoStickerQuestionAnswerFailed": "آپ کا جواب نہیں پہنچا۔ دوبارہ کوشش کریں۔",
+  "videoStickerAddYoursSignIn": "حصہ لینے کے لیے سائن ان کریں۔",
+  "videoStickerRepliesManageTitle": "ویڈیو جوابات",
+  "videoStickerRepliesEmpty": "ابھی کوئی ویڈیو جواب نہیں۔",
+  "videoStickerRepliesLoadFailed": "جوابات لوڈ نہیں ہو سکے۔",
+  "videoStickerRepliesRetry": "دوبارہ کوشش کریں",
+  "videoStickerRepliesPin": "پن کریں",
+  "videoStickerRepliesUnpin": "پن ہٹائیں",
+  "videoStickerRepliesHide": "چھپائیں",
+  "videoStickerRepliesShow": "دکھائیں",
+  "videoStickerRepliesPinned": "پن شدہ",
+  "videoStickerRepliesHidden": "چھپا ہوا",
+  "videoStickerRepliesSaveFailed": "محفوظ نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+  "videoStickerRepliesWatchSemanticLabel": "{name} کا جواب دیکھیں",
   "devOptionsClipRecovery": "کلپ کی بازیابی",
   "devOptionsClipRecoveryDescription": "کسی دوسرے اکاؤنٹ کے تحت محفوظ ریکارڈنگز اور ایسی ویڈیو فائلیں تلاش کرتا ہے جن کا اب کوئی اندراج حوالہ نہیں دیتا۔",
   "devOptionsClipRecoveryScan": "اسکین کریں",
@@ -979,6 +1049,21 @@
   "metadataBadgeNotDivine": "Divine نہیں",
   "metadataBadgeHumanMade": "انسان کی بنائی ہوئی",
   "metadataSoundsLabel": "آوازیں",
+  "metadataLinksLabel": "لنکس",
+  "videoStickerLinkSemanticLabel": "لنک اسٹیکر، {url} کھولتا ہے",
+  "videoStickerMentionSemanticLabel": "ذکر اسٹیکر، پروفائل کھولتا ہے",
+  "videoStickerHashtagSemanticLabel": "ہیش ٹیگ اسٹیکر، #{hashtag} کھولتا ہے",
+  "videoStickerSoundSemanticLabel": "ساؤنڈ اسٹیکر، ساؤنڈ کھولتا ہے",
+  "videoStickerPlaceSemanticLabel": "مقام اسٹیکر، {place} کو نقشے میں کھولتا ہے",
+  "videoStickerCountdownSemanticLabel": "الٹی گنتی اسٹیکر، یاد دہانی لگاتا ہے",
+  "videoStickerReplySemanticLabel": "جواب اسٹیکر، وہ کھولتا ہے جس کا یہ ویڈیو جواب ہے",
+  "videoStickerCountdownDays": "{count, plural, =1{{count} دن} other{{count} دن}}",
+  "videoStickerCountdownReminderSet": "یاد دہانی لگ گئی۔ وقت آنے پر ہم آپ کو بتائیں گے۔",
+  "videoStickerCountdownReminderRemoved": "یاد دہانی ہٹا دی گئی۔",
+  "videoStickerCountdownOver": "یہ الٹی گنتی ختم ہو گئی۔",
+  "videoStickerCountdownNotificationsOff": "یاد دہانی پانے کے لیے Divine کی اطلاعات آن کریں۔",
+  "videoStickerCountdownReminderBody": "وقت آ گیا! آپ کی محفوظ کی ہوئی الٹی گنتی ابھی ختم ہوئی۔",
+  "videoStickerLinkSheetBody": "یہ لنک Divine سے باہر کھلتا ہے۔ آگے جانے سے پہلے ایڈریس دیکھ لیں۔",
   "metadataOriginalSound": "اصل آواز",
   "metadataVerificationLabel": "تصدیق",
   "metadataDeviceAttestation": "ڈیوائس تصدیق",
@@ -2135,10 +2220,10 @@
       }
     }
   },
-  "profileFeedError": "سرور تک رسائی نہیں ہو رہی۔ اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔",
-  "@profileFeedError": {
-    "description": "Full-screen message shown when an author's profile feed fails to load."
-  },
+  "profileVideosLoadFailedTitle": "آپ کی ویڈیوز لوڈ نہیں ہو سکیں",
+  "profileVideosLoadFailedOtherTitle": "ویڈیوز لوڈ نہیں ہو سکیں",
+  "profileVideosLoadFailedSubtitle": "اپنا کنکشن چیک کر کے دوبارہ کوشش کریں۔",
+  "profileVideosLoadFailedRetry": "دوبارہ کوشش کریں",
   "profileFeedLoadMoreError": "مزید ویڈیوز لوڈ نہیں ہو سکیں۔ ریفریش کے لیے کھینچیں۔",
   "@profileFeedLoadMoreError": {
     "description": "Transient message shown when paginating an author's profile feed fails."
@@ -2335,6 +2420,7 @@
   "routeInvalidUserId": "غلط صارف ID",
   "routeInvalidVideoId": "غلط ویڈیو ID",
   "routeInvalidSoundId": "غلط آواز ID",
+  "routeInvalidQuestion": "سوال کا لنک غلط ہے",
   "routeInvalidCategory": "غلط زمرہ",
   "routeNoVideosToDisplay": "دکھانے کے لیے کوئی ویڈیو نہیں",
   "routeGoHome": "ہوم پر جائیں",
@@ -3003,6 +3089,28 @@
   "@dmReelReplyComposerSemanticLabel": {
     "description": "Screen-reader label for the in-player reel reply text field."
   },
+  "dmQuestionAnswerReceivedLabel": "آپ کے سوال کا جواب دیا: {question}",
+  "@dmQuestionAnswerReceivedLabel": {
+    "description": "Line above a message in a conversation that answers the question sticker on one of the viewer's videos. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerSentLabel": "آپ نے جواب دیا: {question}",
+  "@dmQuestionAnswerSentLabel": {
+    "description": "Line above the viewer's own message in a conversation that answers someone's question sticker. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerWithVideo": "ویڈیو سے جواب دیں",
+  "@dmQuestionAnswerWithVideo": {
+    "description": "Button above an answer to the viewer's question sticker that opens the camera to reply with a video showing the question and the answer, without who wrote it."
+  },
   "dmReelReplyViewChat": "چیٹ دیکھیں",
   "@dmReelReplyViewChat": {
     "description": "Tappable action in the 'Sent · View chat' confirmation that opens the DM conversation."
@@ -3102,7 +3210,7 @@
   },
   "dmStatusNotSentToEveryone": "سب کو نہیں بھیجا گیا",
   "@dmStatusNotSentToEveryone": {
-    "description": "Caption under a sent group DM bubble that reached some members but not all, after the sender stopped trying to reach the rest (Stop trying, or a delete for everyone that has not gone through). Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it."
+    "description": "Caption under a sent group DM bubble that reached some members but not all, after delivery to the rest stopped: the sender chose Stop trying, a delete for everyone has not gone through, or the app gave up on a member whose inbox could not be read once its retries ran out. Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it."
   },
   "inboxConversationActionsSheetLabel": "گفتگو کارروائیاں",
   "@inboxConversationActionsSheetLabel": {
@@ -3402,11 +3510,11 @@
     }
   },
   "videoClipSemanticValueSelectedAtPosition": "منتخب، نمبر {position}",
-  "videoClipSemanticValueSelected": "منتخب",
   "videoClipSemanticValueNotSelected": "منتخب نہیں",
   "videoClipSemanticHintDisabled": "غیر فعال",
-  "videoClipSemanticHintSelect": "منتخب کرنے کے لیے ٹیپ کریں، پیش منظر کے لیے دیر تک دبائیں",
-  "videoClipSemanticHintDeselect": "انتخاب ختم کرنے کے لیے ٹیپ کریں، پیش منظر کے لیے دیر تک دبائیں",
+  "videoClipSemanticHintSelect": "منتخب کرنے کے لیے ٹیپ کریں",
+  "videoClipSemanticHintDeselect": "انتخاب ختم کرنے کے لیے ٹیپ کریں",
+  "videoClipSemanticHintPreview": "پیش منظر کے لیے ٹیپ کریں",
   "routerInvalidCreator": "غلط کریئیٹر",
   "routerInvalidHashtagRoute": "غلط ہیش ٹیگ روٹ",
   "categoryGalleryCouldNotLoadVideos": "ویڈیوز لوڈ نہیں ہو سکیں",
@@ -3813,6 +3921,7 @@
   "publishErrorPermissionDenied": "Divine کو اپلوڈ کرنے کی اجازت نہیں ہے۔ اپنی ترتیبات میں ایپ اجازتیں چیک کر کے دوبارہ کوشش کریں۔",
   "publishErrorOutOfMemory": "آپ کی ڈیوائس کی میموری کم ہے۔ کچھ ایپس بند کر کے دوبارہ کوشش کریں۔",
   "publishErrorOverlaysUnavailable": "اس مسودے کا ٹیکسٹ اور اسٹیکرز تیار نہیں ہو سکے۔ اسے ایڈیٹر میں کھولیں، پھر دوبارہ پوسٹ کریں۔",
+  "publishErrorQuestionStickerRestricted": "آپ کا اکاؤنٹ سوال والا اسٹیکر پوسٹ نہیں کر سکتا، کیونکہ اس کے جواب نجی پیغامات کے طور پر آتے ہیں۔ اسے ہٹائیں، پھر دوبارہ پوسٹ کریں۔",
   "publishErrorTooManyDetachedClips": "آپ کی ڈیوائس ایک ساتھ اتنے زیادہ الگ کیے گئے کلپس ایکسپورٹ نہیں کر سکتی۔ کچھ کلپس واپس ٹائم لائن پر رکھیں اور دوبارہ کوشش کریں۔",
   "publishErrorDraftTooManyDetachedClips": "آپ کی ڈیوائس ایک ساتھ اتنے زیادہ الگ کیے گئے کلپس ایکسپورٹ نہیں کر سکتی۔ مسودے کو ایڈیٹر میں کھولیں، کچھ کلپس واپس ٹائم لائن پر رکھیں، پھر دوبارہ پوسٹ کریں۔",
   "publishErrorUnknownServer": "نامعلوم سرور",
@@ -4224,6 +4333,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} نے ایک ایسی ویڈیو پسند کی جس میں آپ ٹیگ ہیں",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} نے آپ کا تبصرہ پسند کیا",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",
@@ -4533,6 +4650,8 @@
     "description": "Confirmation-sheet title shown before permanently deleting every clip from trash."
   },
   "libraryTrashEmptyConfirmMessage": "یہ {count, plural, =1{1 کلپ} other{{count} کلپس}} فوراً ٹریش سے مستقل طور پر حذف کر دے گا۔",
+  "libraryTrashClipsRestored": "{count, plural, =1{کلپ بحال ہو گئی} other{{count} کلپس بحال ہو گئیں}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{کلپ مستقل طور پر حذف ہو گئی} other{{count} کلپس مستقل طور پر حذف ہو گئیں}}",
   "@libraryTrashEmptyConfirmMessage": {
     "description": "Confirmation-sheet subtitle shown before permanently deleting every clip from trash.",
     "placeholders": {
@@ -4638,9 +4757,51 @@
   "videoEditorEffectConfetti": "کنفیٹی",
   "videoEditorEffectHearts": "دل",
   "videoEditorEffectSparkles": "چمک",
+  "videoEditorEffectRain": "بارش",
+  "videoEditorEffectLeaves": "پتے",
+  "videoEditorEffectBlossoms": "پنکھڑیاں",
+  "videoEditorEffectBubbles": "بلبلے",
+  "videoEditorEffectBokeh": "بوکے",
+  "videoEditorEffectMusicNotes": "سُر",
+  "videoEditorEffectStars": "ستارے",
+  "videoEditorEffectFireflies": "جگنو",
+  "videoEditorEffectEmbers": "انگارے",
+  "videoEditorEffectMoney": "پیسے",
+  "videoEditorEffectBalloons": "غبارے",
   "videoEditorEffectTiltShift": "ٹلٹ شفٹ",
   "videoEditorEffectZoomBlur": "زوم بلر",
+  "videoEditorEffectSpinBlur": "اسپن بلر",
   "videoEditorEffectComic": "کامک",
+  "videoEditorEffectSwirl": "بھنور",
+  "videoEditorEffectRipple": "دائروی لہریں",
+  "videoEditorEffectFlutedGlass": "دھاری دار شیشہ",
+  "videoEditorEffectEightBit": "8 بٹ",
+  "videoEditorEffectAnaglyph": "تھری ڈی عینک",
+  "videoEditorEffectRiso": "ریسو پرنٹ",
+  "videoEditorEffectTealOrange": "ٹیل اور نارنجی",
+  "videoEditorEffectWarmFilm": "گرم فلم",
+  "videoEditorEffectSlideFilm": "سلائیڈ فلم",
+  "videoEditorEffectCoolFilm": "ٹھنڈی فلم",
+  "videoEditorEffectMatte": "میٹ",
+  "videoEditorEffectBleachBypass": "بلیچ بائی پاس",
+  "videoEditorEffectCrossProcess": "کراس پروسیس",
+  "videoEditorEffectGoldenHour": "سنہری وقت",
+  "videoEditorEffectMoonlight": "چاندنی",
+  "videoEditorEffectSilver": "چاندی",
+  "videoEditorEffectCategoryRetro": "ریٹرو",
+  "videoEditorEffectCategoryGlitch": "گلچ",
+  "videoEditorEffectCategoryDistort": "بگاڑ",
+  "videoEditorEffectCategoryLight": "روشنی",
+  "videoEditorEffectCategoryMotion": "حرکت",
+  "videoEditorEffectCategoryParticles": "ذرات",
+  "videoEditorEffectCategoryLooks": "انداز",
+  "videoEditorFilterCategoryNatural": "قدرتی",
+  "videoEditorFilterCategoryVibrant": "شوخ",
+  "videoEditorFilterCategoryWarm": "گرم",
+  "videoEditorFilterCategoryCool": "ٹھنڈا",
+  "videoEditorFilterCategoryVintage": "ونٹیج",
+  "videoEditorFilterCategoryBlackAndWhite": "سیاہ و سفید",
+  "videoEditorFilterCategoryTints": "رنگ",
   "videoEditorDropsSettingsTitle": "قطرے ایڈجسٹ کریں",
   "videoEditorDropsCountLabel": "تعداد",
   "videoEditorDropsSizeLabel": "سائز",
@@ -5386,6 +5547,8 @@
   "videoEditorLayerAnimationPulseTo": "یہاں تک چھوٹا کریں",
   "videoEditorLayerAnimationWiggleAngle": "جھکاؤ",
   "videoEditorLayerAnimationBounceHeight": "اونچائی",
+  "videoEditorLayerAnimationFlipSideways": "پہلو کی طرف",
+  "videoEditorLayerAnimationFlipOver": "اوپر سے نیچے",
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
@@ -5416,6 +5579,101 @@
   "videoEditorFeedPreviewContent": "ان علاقوں کے پیچھے مواد رکھنے سے گریز کریں۔",
   "videoEditorStickersDivineOriginals": "Divine اوریجنلز",
   "videoEditorStickerSearchHint": "اسٹیکرز تلاش کریں...",
+  "videoEditorInfoStickersTitle": "معلومات",
+  "videoEditorSocialStickersTitle": "سماجی",
+  "videoEditorSocialStickerMention": "ذکر",
+  "videoEditorSocialStickerHashtag": "ہیش ٹیگ",
+  "videoEditorSocialStickerSoundCredit": "آواز",
+  "videoEditorSocialStickerMentionSample": "آپکانام",
+  "videoEditorSocialStickerHashtagSample": "ہیش_ٹیگ",
+  "videoEditorSocialStickerChoosePerson": "کسی کو منتخب کریں",
+  "videoEditorSocialStickerMentionNote": "آپ کی پوسٹ میں ان کا ذکر ہوگا اور انہیں اطلاع ملے گی۔",
+  "videoEditorSocialStickerHashtagHint": "ہیش ٹیگ لکھیں",
+  "videoEditorSocialStickerHashtagNote": "آپ کی پوسٹ کے ہیش ٹیگز میں بھی شامل ہو جاتا ہے۔",
+  "videoEditorSocialStickerLyricHint": "گانے کے بولوں کی ایک سطر (اختیاری)",
+  "videoEditorSocialStickerLink": "لنک",
+  "videoEditorSocialStickerLinkUrlHint": "ویب ایڈریس",
+  "videoEditorSocialStickerLinkTitleHint": "عنوان (اختیاری)",
+  "videoEditorSocialStickerLinkNote": "ایڈریس آپ کی پوسٹ میں شامل ہو جاتا ہے۔",
+  "videoEditorSocialStickerLinkInvalid": "یہ ابھی ویب ایڈریس نہیں ہے۔",
+  "videoEditorInteractiveStickersTitle": "انٹرایکٹو",
+  "videoEditorSocialStickerCountdown": "الٹی گنتی",
+  "videoEditorSocialStickerCountdownSample": "گرمیاں",
+  "videoEditorSocialStickerCountdownTitleHint": "آپ کس چیز کی الٹی گنتی کر رہے ہیں؟",
+  "videoEditorSocialStickerCountdownNote": "دیکھنے والے باقی وقت دیکھ سکتے ہیں اور یاد دہانی لگا سکتے ہیں۔",
+  "videoEditorSocialStickerCountdownOver": "وہ وقت گزر چکا ہے۔ نیا وقت منتخب کریں۔",
+  "videoEditorSocialStickerReply": "جواب",
+  "videoEditorSocialStickerReplyNote": "دیکھنے والے اسے ٹیپ کر کے دیکھتے ہیں کہ آپ کس کا جواب دے رہے ہیں۔",
+  "videoEditorSocialStickerSoundNote": "سُر",
+  "videoEditorSocialStickerSoundVinyl": "ریکارڈ",
+  "videoEditorSocialStickerSoundCassette": "کیسٹ",
+  "videoEditorSocialStickerSoundEqualizer": "ایکولائزر",
+  "videoEditorSocialStickerSoundPlayer": "پلیئر",
+  "videoEditorInfoStickerTime": "وقت",
+  "videoEditorInfoStickerDate": "تاریخ",
+  "videoEditorInfoStickerLocation": "مقام",
+  "videoEditorInfoStickerWeather": "موسم",
+  "videoEditorInfoStickerAltitude": "بلندی",
+  "videoEditorInfoStickerBattery": "بیٹری",
+  "videoEditorInfoStickerStyleLight": "ہلکا",
+  "videoEditorInfoStickerStyleDark": "گہرا",
+  "videoEditorInfoStickerStyleBrand": "سبز",
+  "videoEditorInfoStickerStyleOutline": "خاکہ",
+  "videoEditorInfoStickerStyleDigital": "ڈیجیٹل",
+  "videoEditorInfoStickerStyleAnalog": "اینالاگ",
+  "videoEditorInfoStickerStyleGlass": "شیشہ",
+  "videoEditorInfoStickerStyleHighlight": "پیلا",
+  "videoEditorInfoStickerStyleNeon": "نیون",
+  "videoEditorInfoStickerStylePlain": "سادہ",
+  "videoEditorInfoStickerChangePlace": "جگہ تبدیل کریں",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "اس ڈیوائس پر جگہ کی تلاش دستیاب نہیں ہے۔",
+  "videoEditorInfoStickerRecordedValue": "ریکارڈنگ · {value}",
+  "videoEditorInfoStickerNowValue": "ابھی · {value}",
+  "videoEditorInfoStickerTodayValue": "آج · {value}",
+  "videoEditorInfoStickerDayCount": "دنوں کا شمار",
+  "videoEditorInfoStickerSun": "سورج",
+  "videoEditorInfoStickerMoon": "چاند",
+  "videoEditorInfoStickerRecTimer": "REC ٹائمر",
+  "videoEditorInfoStickerStyleFilm": "فلم",
+  "videoEditorInfoStickerStyleCamcorder": "کیم کورڈر",
+  "videoEditorInfoStickerDayCountValue": "دن {day}",
+  "videoEditorInfoStickerDayCountOfValue": "دن {day} از {total}",
+  "videoEditorInfoStickerDayLabel": "دن",
+  "videoEditorInfoStickerDayTotalLabel": "کل دن (اختیاری)",
+  "videoEditorInfoStickerSymbolPin": "پن",
+  "videoEditorInfoStickerSymbolFlag": "جھنڈا",
+  "videoEditorInfoStickerSymbolGlobe": "گلوب",
+  "videoEditorInfoStickerSymbolMap": "نقشہ",
+  "videoEditorInfoStickerMoonNew": "نیا چاند",
+  "videoEditorInfoStickerMoonWaxingCrescent": "بڑھتا ہلال",
+  "videoEditorInfoStickerMoonFirstQuarter": "پہلی چوتھائی",
+  "videoEditorInfoStickerMoonWaxingGibbous": "بڑھتا چاند",
+  "videoEditorInfoStickerMoonFull": "پورا چاند",
+  "videoEditorInfoStickerMoonWaningGibbous": "گھٹتا چاند",
+  "videoEditorInfoStickerMoonLastQuarter": "آخری چوتھائی",
+  "videoEditorInfoStickerMoonWaningCrescent": "گھٹتا ہلال",
+  "videoEditorInfoStickerPlaceSearchHint": "شہر یا جگہ تلاش کریں",
+  "videoEditorInfoStickerPlaceNoResults": "کوئی جگہ نہیں ملی",
+  "videoEditorInfoStickerPlaceSearchFailed": "جگہیں تلاش نہیں ہو سکیں۔ دوبارہ کوشش کریں۔",
+  "videoEditorInfoStickerPlacePrivacyNote": "آپ کی ویڈیو میں صرف جگہ کا نام جاتا ہے، آپ کا درست مقام کبھی نہیں۔",
+  "videoEditorInfoStickerLoading": "لوڈ ہو رہا ہے…",
+  "videoEditorInfoStickerLoadFailed": "لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+  "videoEditorInfoStickerMetAttribution": "ڈیٹا: MET Norway",
+  "videoEditorInfoStickerWeatherNow": "پرانی ویڈیوز کے لیے موسم دستیاب نہیں، اس لیے یہ ابھی کا موسم ہے۔",
+  "videoEditorInfoStickerWeatherSunny": "دھوپ",
+  "videoEditorInfoStickerWeatherClearNight": "صاف رات",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "جزوی ابر آلود",
+  "videoEditorInfoStickerWeatherCloudy": "ابر آلود",
+  "videoEditorInfoStickerWeatherFog": "دھند",
+  "videoEditorInfoStickerWeatherRain": "بارش",
+  "videoEditorInfoStickerWeatherShowers": "بوچھاڑ",
+  "videoEditorInfoStickerWeatherSnow": "برف",
+  "videoEditorInfoStickerWeatherThunderstorm": "گرج چمک کے ساتھ طوفان",
+  "videoEditorInfoStickerSunTimeZoneNote": "اوقات آپ کے فون کے ٹائم زون میں ہیں۔",
+  "videoEditorInfoStickerTemperatureLabel": "درجہ حرارت",
+  "videoEditorInfoStickerUnitLabel": "اکائی",
+  "videoEditorInfoStickerBatteryLevelLabel": "بیٹری لیول",
+  "videoEditorInfoStickerAdd": "اسٹیکر شامل کریں",
   "videoEditorSelectFontSemanticLabel": "فانٹ منتخب کریں",
   "videoEditorFontUnknown": "نامعلوم",
   "videoEditorSplitPlayheadOutsideClip": "تقسیم کے لیے پلے ہیڈ منتخب کلپ کے اندر ہونا چاہیے۔",
@@ -6072,6 +6330,7 @@
       }
     }
   },
+  "videoMetadataTagsPickerStickerTag": "{tag}، آپ کی ویڈیو کے ایک اسٹیکر سے",
   "authMinAgeNotice": "Divine Greenlight",
   "@authMinAgeNotice": {
     "description": "Welcome-screen Divine Greenlight label above the sign-in / create-account buttons."
@@ -7089,8 +7348,97 @@
   "ideasDescriptionFive": "بس شیئر کرنا تھا۔",
   "ideasTitleSix": "آج کا ایک حصہ",
   "ideasDescriptionSix": "یہ یہاں چھوڑ رہا ہوں۔",
+  "messagesRoomsUnreadLabel": "{count, plural, one{کمرے، {displayCount} غیر پڑھا پیغام} other{کمرے، {displayCount} غیر پڑھے پیغامات}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{نیا: {displayCount}} other{نئے: {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} غیر پڑھا پیغام} other{{displayCount} غیر پڑھے پیغامات}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} شخص} other{{displayCount} لوگ}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} پیغام} other{{displayCount} پیغامات}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "پچھلے 24 گھنٹے",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "سرگرمی دیکھی جا رہی ہے…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "سرگرمی لوڈ نہیں ہو سکی۔",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "حال ہی میں کوئی پیغام نہیں آیا۔ سلام کہیں۔",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "براہ راست",
   "messagesRooms": "کمرے",
+  "messagesRoomsWithUnread": "کمرے ({badge})",
   "messagesPublicTestRooms": "عوامی آزمائشی کمرے",
   "messagesPublicTestDisclosure": "یہ آزمائشی کمرے عوامی ہیں۔ رسائی رکھنے والا کوئی بھی شخص آپ کے پیغامات پڑھ سکتا ہے۔",
   "messagesNoRooms": "ابھی کوئی کمرہ نہیں",
@@ -7194,5 +7542,57 @@
   "videoEditorLoopRepairProgress": "آپ کا لوپ سیدھا کیا جا رہا ہے…",
   "videoEditorLoopRepairTrimmed": "لوپ ہموار ہو گیا۔ {seconds} سیکنڈ ہٹا دیے گئے۔",
   "notificationFromDivine": "Divine کی طرف سے",
-  "announcementUnavailable": "یہ اعلان اب دستیاب نہیں ہے۔"
+  "announcementUnavailable": "یہ اعلان اب دستیاب نہیں ہے۔",
+  "creatorHighlightLabel": "آج کی آپ کی خاص جھلک",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "آج آپ کی بنائی ہوئی ویڈیوز: {count}۔",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "اس ہفتے میں آپ کا رنگ کچھ اور بڑھ گیا ہے۔",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "اس ہفتے تخلیق کے دن: {count}۔ بناتے رہیے۔",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز پر اب تک کے کل ویوز: {count}۔",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز میں سب سے زیادہ دیکھی جانے والی ویڈیو",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "ایک اور بنائیں",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "اپنے اعداد و شمار دیکھیں",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "ویڈیو دیکھیں",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

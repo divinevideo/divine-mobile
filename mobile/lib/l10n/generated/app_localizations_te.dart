@@ -2062,6 +2062,252 @@ class AppLocalizationsTe extends AppLocalizations {
   String get metadataSoundsLabel => 'శబ్దాలు';
 
   @override
+  String get metadataLinksLabel => 'లింక్‌లు';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'లింక్ స్టిక్కర్, $url తెరుస్తుంది';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'ప్రస్తావన స్టిక్కర్, ప్రొఫైల్ తెరుస్తుంది';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'హ్యాష్‌ట్యాగ్ స్టిక్కర్, #$hashtag తెరుస్తుంది';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel =>
+      'సౌండ్ స్టిక్కర్, సౌండ్‌ను తెరుస్తుంది';
+
+  @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'స్థల స్టిక్కర్, $placeని మ్యాప్‌లో తెరుస్తుంది';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'కౌంట్‌డౌన్ స్టిక్కర్, రిమైండర్ సెట్ చేస్తుంది';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'ప్రత్యుత్తర స్టిక్కర్, ఈ వీడియో దేనికి ప్రత్యుత్తరమో దాన్ని తెరుస్తుంది';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count రోజులు',
+      one: '$count రోజు',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'రిమైండర్ సెట్ అయింది. సమయం వచ్చినప్పుడు మీకు తెలియజేస్తాం.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'రిమైండర్ తీసివేయబడింది.';
+
+  @override
+  String get videoStickerCountdownOver => 'ఈ కౌంట్‌డౌన్ ముగిసింది.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'రిమైండర్ పొందడానికి Divine నోటిఫికేషన్‌లను ఆన్ చేయండి.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'సమయం వచ్చింది! మీరు సేవ్ చేసిన కౌంట్‌డౌన్ ఇప్పుడే ముగిసింది.';
+
+  @override
+  String get videoStickerQuizRightAnswer => 'సరైన సమాధానం';
+
+  @override
+  String get videoStickerQuizWrongAnswer => 'తప్పు సమాధానం';
+
+  @override
+  String get videoStickerPollSignInToVote => 'ఓటు వేయడానికి సైన్ ఇన్ చేయండి.';
+
+  @override
+  String get videoStickerPollNotReady =>
+      'ఇంకా కనెక్ట్ అవుతోంది. కొద్దిసేపటి తర్వాత మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoStickerPollVoteFailed =>
+      'మీ ఓటు చేరలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoStickerPollVotesArePublic =>
+      'ఓట్లు పబ్లిక్‌గా ఉంటాయి. మీరు ఏమి ఎంచుకున్నారో ఎవరైనా చూడగలరు.';
+
+  @override
+  String videoStickerPollVoteCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ఓట్లు',
+      one: '1 ఓటు',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerHint =>
+      'సమాధానం ఇవ్వడానికి ట్యాప్ చేయండి';
+
+  @override
+  String videoStickerQuestionAnswerSemanticLabel(String question) {
+    return 'సమాధానం: $question';
+  }
+
+  @override
+  String get videoStickerAddYoursButton => 'మీ వంతు';
+
+  @override
+  String videoStickerAddYoursJoined(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count మంది చేరారు',
+      one: '$count మంది చేరారు',
+      zero: 'మొదట మీరే చేరండి',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerAddYoursJoinedAtLeast(String count) {
+    return '$count మంది చేరారు';
+  }
+
+  @override
+  String get videoStickerAddYoursOpenSemanticLabel => 'ఎవరు చేరారో చూడండి';
+
+  @override
+  String videoStickerAddYoursJoinSemanticLabel(String prompt) {
+    return 'మీ వంతు: $prompt';
+  }
+
+  @override
+  String videoStickerRepliesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ప్రత్యుత్తరాలు',
+      one: '$count ప్రత్యుత్తరం',
+      zero: 'ఇంకా ప్రత్యుత్తరాలు లేవు',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesCountAtLeast(String count) {
+    return '$count ప్రత్యుత్తరాలు';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count వీడియో ప్రత్యుత్తరాలు చూడండి',
+      one: '$count వీడియో ప్రత్యుత్తరం చూడండి',
+      zero: 'వీడియో ప్రత్యుత్తరాలు, ఇంకా ఏవీ లేవు',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoStickerRepliesSemanticLabelAtLeast(String count) {
+    return '$count వీడియో ప్రత్యుత్తరాలు చూడండి';
+  }
+
+  @override
+  String get videoStickerQuestionSignIn =>
+      'సమాధానం ఇవ్వడానికి సైన్ ఇన్ చేయండి.';
+
+  @override
+  String get videoStickerQuestionUnavailable =>
+      'మీ ఖాతాకు ప్రశ్నలకు సమాధానం ఇవ్వడం అందుబాటులో లేదు.';
+
+  @override
+  String get videoStickerQuestionAnswerTitle => 'సమాధానం';
+
+  @override
+  String get videoStickerQuestionAnswerFieldLabel => 'మీ సమాధానం';
+
+  @override
+  String videoStickerQuestionAnswerPrivacyNote(String name) {
+    return 'మీ సమాధానం $nameకి మాత్రమే కనిపిస్తుంది. వారు దాన్ని మీ పేరు లేకుండా ఒక వీడియోలో పంచుకోవచ్చు.';
+  }
+
+  @override
+  String get videoStickerQuestionAnswerSend => 'పంపండి';
+
+  @override
+  String get videoStickerQuestionAnswerSent => 'సమాధానం పంపబడింది.';
+
+  @override
+  String get videoStickerQuestionAnswerTooLong =>
+      'ఆ సమాధానం పంపడానికి చాలా పొడవుగా ఉంది.';
+
+  @override
+  String get videoStickerQuestionAnswerFailed =>
+      'మీ సమాధానం చేరలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoStickerAddYoursSignIn => 'పాల్గొనడానికి సైన్ ఇన్ చేయండి.';
+
+  @override
+  String get videoStickerRepliesManageTitle => 'వీడియో ప్రత్యుత్తరాలు';
+
+  @override
+  String get videoStickerRepliesEmpty => 'ఇంకా వీడియో ప్రత్యుత్తరాలు లేవు.';
+
+  @override
+  String get videoStickerRepliesLoadFailed =>
+      'ప్రత్యుత్తరాలను లోడ్ చేయడం సాధ్యపడలేదు.';
+
+  @override
+  String get videoStickerRepliesRetry => 'మళ్లీ ప్రయత్నించండి';
+
+  @override
+  String get videoStickerRepliesPin => 'పిన్ చేయండి';
+
+  @override
+  String get videoStickerRepliesUnpin => 'పిన్ తీసివేయండి';
+
+  @override
+  String get videoStickerRepliesHide => 'దాచండి';
+
+  @override
+  String get videoStickerRepliesShow => 'చూపించండి';
+
+  @override
+  String get videoStickerRepliesPinned => 'పిన్ చేయబడింది';
+
+  @override
+  String get videoStickerRepliesHidden => 'దాచబడింది';
+
+  @override
+  String get videoStickerRepliesSaveFailed =>
+      'సేవ్ చేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String videoStickerRepliesWatchSemanticLabel(String name) {
+    return '$name ఇచ్చిన ప్రత్యుత్తరాన్ని చూడండి';
+  }
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'ఈ లింక్ Divine వెలుపల తెరుచుకుంటుంది. వెళ్లే ముందు చిరునామాను తనిఖీ చేయండి.';
+
+  @override
   String get metadataOriginalSound => 'అసలు ధ్వని';
 
   @override
@@ -4526,8 +4772,19 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get profileFeedError =>
-      'సర్వర్‌ని చేరుకోలేదు. మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.';
+  String get profileVideosLoadFailedTitle =>
+      'మీ వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు';
+
+  @override
+  String get profileVideosLoadFailedOtherTitle =>
+      'వీడియోలను లోడ్ చేయడం సాధ్యపడలేదు';
+
+  @override
+  String get profileVideosLoadFailedSubtitle =>
+      'మీ కనెక్షన్‌ని తనిఖీ చేసి, మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get profileVideosLoadFailedRetry => 'మళ్లీ ప్రయత్నించండి';
 
   @override
   String get profileFeedLoadMoreError =>
@@ -4861,6 +5118,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get routeInvalidSoundId => 'చెల్లని ధ్వని ID';
+
+  @override
+  String get routeInvalidQuestion => 'చెల్లని ప్రశ్న లింక్';
 
   @override
   String get routeInvalidCategory => 'చెల్లని వర్గం';
@@ -6267,6 +6527,19 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఈ రీల్‌కి ప్రత్యుత్తరం ఇవ్వండి';
 
   @override
+  String dmQuestionAnswerReceivedLabel(String question) {
+    return 'మీ ప్రశ్నకు సమాధానం ఇచ్చారు: $question';
+  }
+
+  @override
+  String dmQuestionAnswerSentLabel(String question) {
+    return 'మీరు సమాధానం ఇచ్చారు: $question';
+  }
+
+  @override
+  String get dmQuestionAnswerWithVideo => 'వీడియోతో సమాధానం ఇవ్వండి';
+
+  @override
   String get dmReelReplyViewChat => 'చాట్‌ని వీక్షించండి';
 
   @override
@@ -7005,21 +7278,19 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get videoClipSemanticValueSelected => 'ఎంచుకోబడింది';
-
-  @override
   String get videoClipSemanticValueNotSelected => 'ఎంచుకోబడలేదు';
 
   @override
   String get videoClipSemanticHintDisabled => 'నిలిపివేయబడింది';
 
   @override
-  String get videoClipSemanticHintSelect =>
-      'ఎంచుకోవడానికి నొక్కండి, ప్రివ్యూ చేయడానికి ఎక్కువసేపు నొక్కండి';
+  String get videoClipSemanticHintSelect => 'ఎంచుకోవడానికి నొక్కండి';
 
   @override
-  String get videoClipSemanticHintDeselect =>
-      'ఎంపికను తీసివేయడానికి నొక్కండి, ప్రివ్యూ చేయడానికి ఎక్కువసేపు నొక్కండి';
+  String get videoClipSemanticHintDeselect => 'ఎంపికను తీసివేయడానికి నొక్కండి';
+
+  @override
+  String get videoClipSemanticHintPreview => 'ప్రివ్యూ చేయడానికి నొక్కండి';
 
   @override
   String get routerInvalidCreator => 'చెల్లని సృష్టికర్త';
@@ -7909,6 +8180,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఈ డ్రాఫ్ట్‌లోని టెక్స్ట్ మరియు స్టిక్కర్‌లను సిద్ధం చేయడం సాధ్యపడలేదు. దాన్ని ఎడిటర్‌లో తెరిచి, ఆపై మళ్లీ పోస్ట్ చేయండి.';
 
   @override
+  String get publishErrorQuestionStickerRestricted =>
+      'మీ ఖాతా ప్రశ్న స్టిక్కర్‌ను పోస్ట్ చేయలేదు, ఎందుకంటే సమాధానాలు ప్రైవేట్ సందేశాలుగా వస్తాయి. దాన్ని తీసివేసి, మళ్లీ పోస్ట్ చేయండి.';
+
+  @override
   String get publishErrorTooManyDetachedClips =>
       'మీ పరికరం ఇన్ని వేరు చేసిన క్లిప్‌లను ఒకేసారి ఎగుమతి చేయలేదు. కొన్నింటిని తిరిగి టైమ్‌లైన్‌లో ఉంచి, మళ్లీ ప్రయత్నించండి.';
 
@@ -8545,6 +8820,11 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String notificationLikedTaggedVideo(String actorName) {
+    return '$actorName మిమ్మల్ని ట్యాగ్ చేసిన వీడియోను ఇష్టపడ్డారు';
+  }
+
+  @override
   String notificationGroupLikedYourComment(String actorName) {
     return '$actorNameమీ వ్యాఖ్యను ఇష్టపడ్డారు';
   }
@@ -8909,6 +9189,28 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String libraryTrashClipsRestored(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count క్లిప్‌లు పునరుద్ధరించబడ్డాయి',
+      one: 'క్లిప్ పునరుద్ధరించబడింది',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String libraryTrashClipsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count క్లిప్‌లు శాశ్వతంగా తొలగించబడ్డాయి',
+      one: 'క్లిప్ శాశ్వతంగా తొలగించబడింది',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get videoRecorderCloseLabel => 'వీడియో రికార్డర్‌ను మూసివేయండి';
 
   @override
@@ -9158,13 +9460,139 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectSparkles => 'మెరుపులు';
 
   @override
+  String get videoEditorEffectRain => 'వర్షం';
+
+  @override
+  String get videoEditorEffectLeaves => 'ఆకులు';
+
+  @override
+  String get videoEditorEffectBlossoms => 'పూరేకులు';
+
+  @override
+  String get videoEditorEffectBubbles => 'బుడగలు';
+
+  @override
+  String get videoEditorEffectBokeh => 'బోకే';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'స్వరాలు';
+
+  @override
+  String get videoEditorEffectStars => 'నక్షత్రాలు';
+
+  @override
+  String get videoEditorEffectFireflies => 'మిణుగురులు';
+
+  @override
+  String get videoEditorEffectEmbers => 'నిప్పుకణికలు';
+
+  @override
+  String get videoEditorEffectMoney => 'డబ్బు';
+
+  @override
+  String get videoEditorEffectBalloons => 'బెలూన్లు';
+
+  @override
   String get videoEditorEffectTiltShift => 'టిల్ట్-షిఫ్ట్';
 
   @override
   String get videoEditorEffectZoomBlur => 'జూమ్ బ్లర్';
 
   @override
+  String get videoEditorEffectSpinBlur => 'స్పిన్ బ్లర్';
+
+  @override
   String get videoEditorEffectComic => 'కామిక్';
+
+  @override
+  String get videoEditorEffectSwirl => 'సుడిగుండం';
+
+  @override
+  String get videoEditorEffectRipple => 'అలలు';
+
+  @override
+  String get videoEditorEffectFlutedGlass => 'ఫ్లూటెడ్ గ్లాస్';
+
+  @override
+  String get videoEditorEffectEightBit => '8-బిట్';
+
+  @override
+  String get videoEditorEffectAnaglyph => '3D కళ్లద్దాలు';
+
+  @override
+  String get videoEditorEffectRiso => 'రిసో ప్రింట్';
+
+  @override
+  String get videoEditorEffectTealOrange => 'టీల్ & ఆరెంజ్';
+
+  @override
+  String get videoEditorEffectWarmFilm => 'వెచ్చని ఫిల్మ్';
+
+  @override
+  String get videoEditorEffectSlideFilm => 'స్లైడ్ ఫిల్మ్';
+
+  @override
+  String get videoEditorEffectCoolFilm => 'చల్లని ఫిల్మ్';
+
+  @override
+  String get videoEditorEffectMatte => 'మ్యాట్';
+
+  @override
+  String get videoEditorEffectBleachBypass => 'బ్లీచ్ బైపాస్';
+
+  @override
+  String get videoEditorEffectCrossProcess => 'క్రాస్ ప్రాసెస్';
+
+  @override
+  String get videoEditorEffectGoldenHour => 'గోల్డెన్ అవర్';
+
+  @override
+  String get videoEditorEffectMoonlight => 'వెన్నెల';
+
+  @override
+  String get videoEditorEffectSilver => 'వెండి';
+
+  @override
+  String get videoEditorEffectCategoryRetro => 'రెట్రో';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'గ్లిచ్';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'వక్రీకరణ';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'కాంతి';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'కదలిక';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'కణాలు';
+
+  @override
+  String get videoEditorEffectCategoryLooks => 'లుక్స్';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'సహజం';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'ప్రకాశవంతం';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'వెచ్చని';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'చల్లని';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'వింటేజ్';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'నలుపు తెలుపు';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'రంగులు';
 
   @override
   String get videoEditorDropsSettingsTitle => 'బిందువుల సర్దుబాటు';
@@ -10918,6 +11346,12 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'ఎత్తు';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'పక్కకు';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'పై నుండి కిందికి';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'అనుకూలం';
 
   @override
@@ -11007,6 +11441,425 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorStickerSearchHint => 'స్టిక్కర్‌లను శోధించండి...';
+
+  @override
+  String get videoEditorInfoStickersTitle => 'సమాచారం';
+
+  @override
+  String get videoEditorSocialStickersTitle => 'సామాజిక';
+
+  @override
+  String get videoEditorSocialStickerMention => 'ప్రస్తావన';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'హ్యాష్‌ట్యాగ్';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'ధ్వని';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'మీపేరు';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'హ్యాష్‌ట్యాగ్';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'ఒకరిని ఎంచుకోండి';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'మీ పోస్ట్‌లో వారి ప్రస్తావన ఉంటుంది, వారికి నోటిఫికేషన్ వస్తుంది.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'హ్యాష్‌ట్యాగ్ టైప్ చేయండి';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'మీ పోస్ట్ హ్యాష్‌ట్యాగ్‌లకు కూడా జోడించబడుతుంది.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'పాట సాహిత్యంలో ఒక లైన్ (ఐచ్ఛికం)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'లింక్';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'వెబ్ చిరునామా';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'శీర్షిక (ఐచ్ఛికం)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'చిరునామా మీ పోస్ట్‌కు జోడించబడుతుంది.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'ఇది ఇంకా వెబ్ చిరునామా కాదు.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'ఇంటరాక్టివ్';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'కౌంట్‌డౌన్';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'వేసవి';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'మీరు దేనికి కౌంట్‌డౌన్ చేస్తున్నారు?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'వీక్షకులు మిగిలిన సమయాన్ని చూసి, రిమైండర్ పెట్టుకోవచ్చు.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'ఆ సమయం గడిచిపోయింది. కొత్తది ఎంచుకోండి.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'ప్రత్యుత్తరం';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'వీక్షకులు దాన్ని ట్యాప్ చేసి మీరు దేనికి ప్రత్యుత్తరం ఇస్తున్నారో చూస్తారు.';
+
+  @override
+  String get videoEditorSocialStickerPoll => 'పోల్';
+
+  @override
+  String get videoEditorSocialStickerQuiz => 'క్విజ్';
+
+  @override
+  String get videoEditorSocialStickerSlider => 'స్లయిడర్';
+
+  @override
+  String get videoEditorSocialStickerPollSampleQuestion => 'ఏది?';
+
+  @override
+  String get videoEditorSocialStickerPollSampleYes => 'అవును';
+
+  @override
+  String get videoEditorSocialStickerPollSampleNo => 'కాదు';
+
+  @override
+  String get videoEditorSocialStickerQuizSampleQuestion =>
+      'Vine ప్రారంభమైన సంవత్సరం…';
+
+  @override
+  String get videoEditorSocialStickerSliderSampleQuestion =>
+      'మీకు ఎంత ఆకలిగా ఉంది?';
+
+  @override
+  String get videoEditorSocialStickerPollQuestionHint => 'ఒక ప్రశ్న అడగండి';
+
+  @override
+  String videoEditorSocialStickerPollOptionHint(String number) {
+    return 'సమాధానం $number';
+  }
+
+  @override
+  String videoEditorSocialStickerPollRemoveOption(String number) {
+    return 'సమాధానం $number తీసివేయండి';
+  }
+
+  @override
+  String videoEditorSocialStickerQuizMarkRight(String number) {
+    return 'సమాధానం $numberని సరైనదిగా గుర్తించండి';
+  }
+
+  @override
+  String get videoEditorSocialStickerPollAddOption => 'సమాధానం జోడించండి';
+
+  @override
+  String get videoEditorSocialStickerPollNote =>
+      'వీక్షకులు ఓటు వేసిన తర్వాత ఫలితాలు చూస్తారు. ఓట్లు పబ్లిక్‌గా ఉంటాయి.';
+
+  @override
+  String get videoEditorSocialStickerQuizNote =>
+      'సరైన సమాధానాన్ని టిక్ చేయండి. వీక్షకులు ఒకటి ఎంచుకున్న తర్వాత దాన్ని చూస్తారు.';
+
+  @override
+  String get videoEditorSocialStickerSliderNote =>
+      'వీక్షకులు సమాధానం ఇవ్వడానికి ఎమోజీని లాగుతారు, సగటున అది ఎక్కడ ఆగిందో చూస్తారు.';
+
+  @override
+  String get videoEditorSocialStickerQuestion => 'ప్రశ్న';
+
+  @override
+  String get videoEditorSocialStickerAddYours => 'మీ వంతు';
+
+  @override
+  String get videoEditorSocialStickerReplies => 'ప్రత్యుత్తరాలు';
+
+  @override
+  String get videoEditorSocialStickerQuestionSample => 'నన్ను ఏదైనా అడగండి';
+
+  @override
+  String get videoEditorSocialStickerAddYoursSample =>
+      'మీ డెస్క్ సెటప్ చూపించండి';
+
+  @override
+  String get videoEditorSocialStickerRepliesSample =>
+      'వీడియోతో ప్రత్యుత్తరం ఇవ్వండి';
+
+  @override
+  String get videoEditorSocialStickerQuestionHint => 'మీ ప్రశ్న';
+
+  @override
+  String get videoEditorSocialStickerAddYoursPromptHint =>
+      'ప్రజలు ఏమి చూపించాలి?';
+
+  @override
+  String get videoEditorSocialStickerAddYoursHashtagHint => 'హ్యాష్‌ట్యాగ్';
+
+  @override
+  String get videoEditorSocialStickerRepliesTitleHint => 'శీర్షిక';
+
+  @override
+  String get videoEditorSocialStickerQuestionNote =>
+      'సమాధానాలు మీకు ప్రైవేట్ సందేశాలుగా వస్తాయి.';
+
+  @override
+  String get videoEditorSocialStickerAddYoursNote =>
+      'వీక్షకులు తమ సొంత వీడియోతో సమాధానం ఇస్తారు. ప్రతి సమాధానానికి ఈ హ్యాష్‌ట్యాగ్ వస్తుంది, అది మీ వీడియోకు లింక్ అవుతుంది.';
+
+  @override
+  String get videoEditorSocialStickerRepliesNote =>
+      'ఈ వీడియోకు వీడియోతో ఎవరు ప్రత్యుత్తరం ఇచ్చారో చూపిస్తుంది. వీక్షకులు దాన్ని ట్యాప్ చేసి ప్రత్యుత్తరాలను చూస్తారు.';
+
+  @override
+  String get videoEditorInteractiveCardAreaHint =>
+      'వీక్షకులు ట్యాప్ చేయగలిగేలా ఈ స్టిక్కర్ ఈ బాక్స్‌లోనే ఉంటుంది';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'స్వరం';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'రికార్డ్';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'క్యాసెట్';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'ఈక్వలైజర్';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'ప్లేయర్';
+
+  @override
+  String get videoEditorInfoStickerTime => 'సమయం';
+
+  @override
+  String get videoEditorInfoStickerDate => 'తేదీ';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'స్థలం';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'వాతావరణం';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'ఎత్తు';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'బ్యాటరీ';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'లేత';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'ముదురు';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'ఆకుపచ్చ';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'అవుట్‌లైన్';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'డిజిటల్';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'అనలాగ్';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'గ్లాస్';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'పసుపు';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'నియాన్';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'సాదా';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'స్థలం మార్చండి';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'ఈ పరికరంలో స్థల శోధన అందుబాటులో లేదు.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'రికార్డింగ్ · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'ఇప్పుడు · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'ఈరోజు · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'రోజుల లెక్కింపు';
+
+  @override
+  String get videoEditorInfoStickerSun => 'సూర్యుడు';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'చంద్రుడు';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC టైమర్';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'ఫిల్మ్';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'కామ్‌కార్డర్';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'రోజు $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return '$totalలో రోజు $day';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'రోజు';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'మొత్తం రోజులు (ఐచ్ఛికం)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'పిన్';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'జెండా';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'గ్లోబ్';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'మ్యాప్';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'అమావాస్య';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'పెరుగుతున్న నెలవంక';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'మొదటి పావు';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'పెరుగుతున్న చంద్రుడు';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'పౌర్ణమి';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'తగ్గుతున్న చంద్రుడు';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'చివరి పావు';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'తగ్గుతున్న నెలవంక';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'నగరం లేదా స్థలం కోసం వెతకండి';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'స్థలాలు ఏవీ కనుగొనబడలేదు';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'స్థలాల కోసం వెతకడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'మీ వీడియోలో స్థలం పేరు మాత్రమే ఉంటుంది, మీ ఖచ్చితమైన స్థానం ఎప్పుడూ ఉండదు.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'లోడ్ అవుతోంది…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'లోడ్ చేయడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'డేటా: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'పాత వీడియోలకు వాతావరణ సమాచారం లేదు, కాబట్టి ఇది ఇప్పటి వాతావరణం.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'ఎండ';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'స్పష్టమైన రాత్రి';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'పాక్షికంగా మేఘావృతం';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'మేఘావృతం';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'పొగమంచు';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'వర్షం';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'జల్లులు';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'మంచు';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'ఉరుములతో వర్షం';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'సమయాలు మీ ఫోన్ టైమ్ జోన్‌లో ఉన్నాయి.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'ఉష్ణోగ్రత';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'యూనిట్';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'బ్యాటరీ స్థాయి';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'స్టిక్కర్ జోడించండి';
 
   @override
   String get videoEditorSelectFontSemanticLabel => 'ఫాంట్‌ని ఎంచుకోండి';
@@ -12629,6 +13482,11 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"# జోడించండి$tag\"';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, మీ వీడియోలోని స్టిక్కర్ నుండి';
   }
 
   @override
@@ -14613,10 +15471,88 @@ class AppLocalizationsTe extends AppLocalizations {
   String get ideasDescriptionSix => 'దీన్ని ఇక్కడ వదిలేస్తున్నాను.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'గదులు, $displayCount చదవని సందేశాలు',
+      one: 'గదులు, $displayCount చదవని సందేశం',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'కొత్తవి: $displayCount',
+      one: 'కొత్తది: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount చదవని సందేశాలు',
+      one: '$displayCount చదవని సందేశం',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount మంది',
+      one: '$displayCount వ్యక్తి',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount సందేశాలు',
+      one: '$displayCount సందేశం',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'గత 24 గంటల్లో';
+
+  @override
+  String get messagesRoomLoading => 'చాట్‌లో చురుకుదనాన్ని చూస్తున్నాం…';
+
+  @override
+  String get messagesRoomLoadFailed =>
+      'చాట్‌లో చురుకుదనాన్ని లోడ్ చేయలేకపోయాం.';
+
+  @override
+  String get messagesRoomEmpty => 'ఇటీవల సందేశాలు లేవు. పలకరించండి.';
+
+  @override
   String get messagesDirect => 'నేరుగా';
 
   @override
   String get messagesRooms => 'గదులు';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'గదులు ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'బహిరంగ పరీక్ష గదులు';
@@ -14951,9 +15887,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -14974,11 +15907,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -15012,9 +15940,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -15077,4 +16002,76 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
+
+  @override
+  String get creatorHighlightLabel => 'ఈ రోజు మీ హైలైట్';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'ఈ రోజు మీరు సృష్టించిన వీడియోలు: $count.';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle =>
+      'ఈ వారంలో మీ ముద్ర మరికాస్త పెరిగింది.';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'ఈ వారం మీరు సృష్టించిన రోజులు: $count. ఇలాగే కొనసాగించండి.';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'ఈ వారం మీరు పోస్ట్ చేసిన వీడియోలకు ఇప్పటివరకు వచ్చిన మొత్తం వీక్షణలు: $countString.';
+  }
+
+  @override
+  String get creatorHighlightTopVideo =>
+      'ఈ వారం మీరు పోస్ట్ చేసిన వీడియోల్లో అత్యధికంగా చూసిన వీడియో';
+
+  @override
+  String get creatorHighlightCreate => 'మరొకటి సృష్టించండి';
+
+  @override
+  String get creatorHighlightAnalytics => 'మీ గణాంకాలను చూడండి';
+
+  @override
+  String get creatorHighlightWatch => 'వీడియో చూడండి';
 }

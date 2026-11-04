@@ -237,6 +237,24 @@ void main() {
       });
     });
 
+    group('remote record trigger', () {
+      test('stays connected when the camera is opened again', () async {
+        var presses = 0;
+        platform.shouldFail = false;
+        await service.initialize();
+        service.setOnRemoteRecordTrigger(() => presses++);
+
+        // Leaving the recorder disposes the camera, which drops every native
+        // callback; a volume key or Bluetooth shutter must still record after
+        // the camera comes back.
+        await service.dispose();
+        await service.initialize();
+        platform.onRemoteRecordTrigger!(RemoteRecordTrigger.volumeUp);
+
+        expect(presses, 1);
+      });
+    });
+
     group('onScreenFlashChanged', () {
       test('forwards native screen flash changes', () async {
         final changes = <bool>[];

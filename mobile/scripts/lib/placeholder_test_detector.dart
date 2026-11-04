@@ -376,7 +376,7 @@ class _PlaceholderVisitor extends RecursiveAstVisitor<void> {
     super.visitMethodInvocation(node);
   }
 
-  String _describe(Expression first) {
+  String _describe(Argument first) {
     final text = first.toSource().replaceAll(RegExp(r'\s+'), ' ');
     return text.length <= 70 ? text : '${text.substring(0, 67)}...';
   }
@@ -458,17 +458,18 @@ class _AssertionScan extends RecursiveAstVisitor<void> {
 /// real test. Under-reporting is recoverable; a false positive is not.
 bool isTautology(MethodInvocation node) {
   final positional = node.argumentList.arguments
-      .where((argument) => argument is! NamedExpression)
+      .whereType<Expression>()
       .toList();
   if (positional.length < 2) return false;
   final actual = positional[0];
   var matcher = positional[1];
 
   // `equals(<literal>)` is the literal for this purpose.
-  if (matcher is MethodInvocation &&
-      matcher.methodName.name == 'equals' &&
-      matcher.argumentList.arguments.length == 1) {
-    matcher = matcher.argumentList.arguments.single;
+  if (matcher case MethodInvocation(
+    methodName: SimpleIdentifier(name: 'equals'),
+    argumentList: ArgumentList(arguments: [final Expression only]),
+  )) {
+    matcher = only;
   }
 
   if (actual is BooleanLiteral) {

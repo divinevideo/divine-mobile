@@ -1,5 +1,75 @@
 {
   "@@locale": "zh",
+  "videoEditorSocialStickerPoll": "投票",
+  "videoEditorSocialStickerQuiz": "测验",
+  "videoEditorSocialStickerSlider": "滑块",
+  "videoEditorSocialStickerPollSampleQuestion": "选哪个？",
+  "videoEditorSocialStickerPollSampleYes": "是",
+  "videoEditorSocialStickerPollSampleNo": "否",
+  "videoEditorSocialStickerQuizSampleQuestion": "Vine 上线于…",
+  "videoEditorSocialStickerSliderSampleQuestion": "你有多饿？",
+  "videoEditorSocialStickerPollQuestionHint": "提个问题",
+  "videoEditorSocialStickerPollOptionHint": "答案 {number}",
+  "videoEditorSocialStickerPollRemoveOption": "移除答案 {number}",
+  "videoEditorSocialStickerQuizMarkRight": "将答案 {number} 设为正确答案",
+  "videoEditorSocialStickerPollAddOption": "添加答案",
+  "videoEditorSocialStickerPollNote": "观众投票后即可看到结果。投票是公开的。",
+  "videoEditorSocialStickerQuizNote": "勾选正确答案。观众作答后就能看到它。",
+  "videoEditorSocialStickerSliderNote": "观众拖动表情来作答，并能看到平均落在哪里。",
+  "videoStickerQuizRightAnswer": "正确答案",
+  "videoStickerQuizWrongAnswer": "错误答案",
+  "videoEditorSocialStickerQuestion": "提问",
+  "videoEditorSocialStickerAddYours": "轮到你了",
+  "videoEditorSocialStickerReplies": "回复",
+  "videoEditorSocialStickerQuestionSample": "随便问我",
+  "videoEditorSocialStickerAddYoursSample": "晒晒你的桌面布置",
+  "videoEditorSocialStickerRepliesSample": "用视频回复",
+  "videoEditorSocialStickerQuestionHint": "你的问题",
+  "videoEditorSocialStickerAddYoursPromptHint": "想让大家展示什么？",
+  "videoEditorSocialStickerAddYoursHashtagHint": "话题标签",
+  "videoEditorSocialStickerRepliesTitleHint": "标题",
+  "videoEditorSocialStickerQuestionNote": "回答会以私信的形式发给你。",
+  "videoEditorSocialStickerAddYoursNote": "观众用自己的视频来回应。每个回应都会带上这个话题标签，并链接回你的视频。",
+  "videoEditorSocialStickerRepliesNote": "显示谁用视频回复了这个视频。观众点一下就能观看这些回复。",
+  "videoEditorInteractiveCardAreaHint": "这个贴纸会留在这个框内，方便观众点按",
+  "videoStickerPollSignInToVote": "登录后才能投票。",
+  "videoStickerPollNotReady": "仍在连接中，请稍后再试。",
+  "videoStickerPollVoteFailed": "你的投票没有发送成功，请重试。",
+  "videoStickerPollVotesArePublic": "投票是公开的，任何人都能看到你的选择。",
+  "videoStickerPollVoteCount": "{count, plural, other{{count} 票}}",
+  "videoStickerQuestionAnswerHint": "点按回答",
+  "videoStickerQuestionAnswerSemanticLabel": "回答：{question}",
+  "videoStickerAddYoursButton": "轮到你了",
+  "videoStickerAddYoursJoined": "{count, plural, =0{来做第一个吧} =1{{count} 人已参与} other{{count} 人已参与}}",
+  "videoStickerAddYoursJoinedAtLeast": "{count} 人已参与",
+  "videoStickerAddYoursOpenSemanticLabel": "看看谁参与了",
+  "videoStickerAddYoursJoinSemanticLabel": "轮到你了：{prompt}",
+  "videoStickerRepliesCount": "{count, plural, =0{还没有回复} =1{{count} 条回复} other{{count} 条回复}}",
+  "videoStickerRepliesCountAtLeast": "{count} 条回复",
+  "videoStickerRepliesSemanticLabel": "{count, plural, =0{视频回复，暂无} =1{观看 {count} 条视频回复} other{观看 {count} 条视频回复}}",
+  "videoStickerRepliesSemanticLabelAtLeast": "观看 {count} 条视频回复",
+  "videoStickerQuestionSignIn": "登录后才能回答。",
+  "videoStickerQuestionUnavailable": "你的账号无法回答问题。",
+  "videoStickerQuestionAnswerTitle": "回答",
+  "videoStickerQuestionAnswerFieldLabel": "你的回答",
+  "videoStickerQuestionAnswerPrivacyNote": "只有 {name} 能看到你的回答。对方可能会在视频里分享它，但不会显示你的名字。",
+  "videoStickerQuestionAnswerSend": "发送",
+  "videoStickerQuestionAnswerSent": "回答已发送。",
+  "videoStickerQuestionAnswerTooLong": "回答太长，发不出去。",
+  "videoStickerQuestionAnswerFailed": "你的回答没有发送成功，请重试。",
+  "videoStickerAddYoursSignIn": "登录后才能参与。",
+  "videoStickerRepliesManageTitle": "视频回复",
+  "videoStickerRepliesEmpty": "还没有视频回复。",
+  "videoStickerRepliesLoadFailed": "无法加载回复。",
+  "videoStickerRepliesRetry": "再试一次",
+  "videoStickerRepliesPin": "置顶",
+  "videoStickerRepliesUnpin": "取消置顶",
+  "videoStickerRepliesHide": "隐藏",
+  "videoStickerRepliesShow": "显示",
+  "videoStickerRepliesPinned": "已置顶",
+  "videoStickerRepliesHidden": "已隐藏",
+  "videoStickerRepliesSaveFailed": "没能保存，再试一次。",
+  "videoStickerRepliesWatchSemanticLabel": "观看 {name} 的回复",
   "devOptionsClipRecovery": "片段恢复",
   "devOptionsClipRecoveryDescription": "查找存储在其他账号下的录制内容，以及已无任何记录引用的视频文件。",
   "devOptionsClipRecoveryScan": "扫描",
@@ -979,6 +1049,21 @@
   "metadataBadgeNotDivine": "非 Divine",
   "metadataBadgeHumanMade": "人类创作",
   "metadataSoundsLabel": "声音",
+  "metadataLinksLabel": "链接",
+  "videoStickerLinkSemanticLabel": "链接贴纸，打开 {url}",
+  "videoStickerMentionSemanticLabel": "提及贴纸，打开个人主页",
+  "videoStickerHashtagSemanticLabel": "话题标签贴纸，打开 #{hashtag}",
+  "videoStickerSoundSemanticLabel": "声音贴纸，打开声音",
+  "videoStickerPlaceSemanticLabel": "地点贴纸，在地图中打开 {place}",
+  "videoStickerCountdownSemanticLabel": "倒计时贴纸，设置提醒",
+  "videoStickerReplySemanticLabel": "回复贴纸，打开这个视频回复的内容",
+  "videoStickerCountdownDays": "{count, plural, other{{count} 天}}",
+  "videoStickerCountdownReminderSet": "提醒已设置，到时间我们会通知你。",
+  "videoStickerCountdownReminderRemoved": "提醒已移除。",
+  "videoStickerCountdownOver": "这个倒计时已经结束了。",
+  "videoStickerCountdownNotificationsOff": "打开 Divine 的通知才能收到提醒。",
+  "videoStickerCountdownReminderBody": "时间到！你保存的倒计时刚刚结束。",
+  "videoStickerLinkSheetBody": "此链接会在 Divine 之外打开。继续之前请先核对网址。",
   "metadataOriginalSound": "原声",
   "metadataVerificationLabel": "验证",
   "metadataDeviceAttestation": "设备证明",
@@ -2135,10 +2220,10 @@
       }
     }
   },
-  "profileFeedError": "连不上服务器。请检查网络连接后重试。",
-  "@profileFeedError": {
-    "description": "Full-screen message shown when an author's profile feed fails to load."
-  },
+  "profileVideosLoadFailedTitle": "无法加载你的视频",
+  "profileVideosLoadFailedOtherTitle": "无法加载视频",
+  "profileVideosLoadFailedSubtitle": "请检查网络连接后重试。",
+  "profileVideosLoadFailedRetry": "再试一次",
   "profileFeedLoadMoreError": "无法加载更多视频。下拉刷新试试。",
   "@profileFeedLoadMoreError": {
     "description": "Transient message shown when paginating an author's profile feed fails."
@@ -2335,6 +2420,7 @@
   "routeInvalidUserId": "无效的用户 ID",
   "routeInvalidVideoId": "无效的视频 ID",
   "routeInvalidSoundId": "无效的声音 ID",
+  "routeInvalidQuestion": "无效的提问链接",
   "routeInvalidCategory": "无效的分类",
   "routeNoVideosToDisplay": "没有可显示的视频",
   "routeGoHome": "回到首页",
@@ -3003,6 +3089,28 @@
   "@dmReelReplyComposerSemanticLabel": {
     "description": "Screen-reader label for the in-player reel reply text field."
   },
+  "dmQuestionAnswerReceivedLabel": "回答了你的问题：{question}",
+  "@dmQuestionAnswerReceivedLabel": {
+    "description": "Line above a message in a conversation that answers the question sticker on one of the viewer's videos. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerSentLabel": "你回答了：{question}",
+  "@dmQuestionAnswerSentLabel": {
+    "description": "Line above the viewer's own message in a conversation that answers someone's question sticker. {question} is what the sticker asks.",
+    "placeholders": {
+      "question": {
+        "type": "String"
+      }
+    }
+  },
+  "dmQuestionAnswerWithVideo": "用视频回答",
+  "@dmQuestionAnswerWithVideo": {
+    "description": "Button above an answer to the viewer's question sticker that opens the camera to reply with a video showing the question and the answer, without who wrote it."
+  },
   "dmReelReplyViewChat": "查看聊天",
   "@dmReelReplyViewChat": {
     "description": "Tappable action in the 'Sent · View chat' confirmation that opens the DM conversation."
@@ -3102,7 +3210,7 @@
   },
   "dmStatusNotSentToEveryone": "未发送给所有人",
   "@dmStatusNotSentToEveryone": {
-    "description": "Caption under a sent group DM bubble that reached some members but not all, after the sender stopped trying to reach the rest (Stop trying, or a delete for everyone that has not gone through). Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it."
+    "description": "Caption under a sent group DM bubble that reached some members but not all, after delivery to the rest stopped: the sender chose Stop trying, a delete for everyone has not gone through, or the app gave up on a member whose inbox could not be read once its retries ran out. Informational only: there is nothing to retry. Also read out by itself to screen readers when it appears, so it has to make sense with no sentence around it."
   },
   "inboxConversationActionsSheetLabel": "会话操作",
   "@inboxConversationActionsSheetLabel": {
@@ -3402,11 +3510,11 @@
     }
   },
   "videoClipSemanticValueSelectedAtPosition": "已选中，第 {position} 个",
-  "videoClipSemanticValueSelected": "已选中",
   "videoClipSemanticValueNotSelected": "未选中",
   "videoClipSemanticHintDisabled": "已禁用",
-  "videoClipSemanticHintSelect": "点按选择，长按预览",
-  "videoClipSemanticHintDeselect": "点按取消选择，长按预览",
+  "videoClipSemanticHintSelect": "点按选择",
+  "videoClipSemanticHintDeselect": "点按取消选择",
+  "videoClipSemanticHintPreview": "点按预览",
   "routerInvalidCreator": "无效的创作者",
   "routerInvalidHashtagRoute": "无效的话题标签路由",
   "categoryGalleryCouldNotLoadVideos": "视频加载失败",
@@ -3813,6 +3921,7 @@
   "publishErrorPermissionDenied": "Divine 没有上传权限。请在设置中检查应用权限后重试。",
   "publishErrorOutOfMemory": "设备内存不足。关掉一些应用后再试。",
   "publishErrorOverlaysUnavailable": "这份草稿上的文字和贴纸没能准备好。到编辑器里打开，然后重新发布。",
+  "publishErrorQuestionStickerRestricted": "你的账号不能发布提问贴纸，因为回答会以私信形式发来。请移除它，然后重新发布。",
   "publishErrorTooManyDetachedClips": "你的设备无法一次导出这么多已分离的片段。把其中几个放回时间线后再试。",
   "publishErrorDraftTooManyDetachedClips": "你的设备无法一次导出这么多已分离的片段。在编辑器里打开草稿，把其中几个放回时间线，然后重新发布。",
   "publishErrorUnknownServer": "未知服务器",
@@ -4224,6 +4333,14 @@
       }
     }
   },
+  "notificationLikedTaggedVideo": "{actorName} 点赞了一个标记了你的视频",
+  "@notificationLikedTaggedVideo": {
+    "placeholders": {
+      "actorName": {
+        "type": "String"
+      }
+    }
+  },
   "notificationGroupLikedYourComment": "{actorName} 点赞了你的评论",
   "@notificationGroupLikedYourComment": {
     "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",
@@ -4533,6 +4650,8 @@
     "description": "Confirmation-sheet title shown before permanently deleting every clip from trash."
   },
   "libraryTrashEmptyConfirmMessage": "这会立刻从回收站永久删除{count, plural, =1{1 个片段} other{{count} 个片段}}。",
+  "libraryTrashClipsRestored": "{count, plural, =1{已恢复片段} other{已恢复 {count} 个片段}}",
+  "libraryTrashClipsDeleted": "{count, plural, =1{已永久删除片段} other{已永久删除 {count} 个片段}}",
   "@libraryTrashEmptyConfirmMessage": {
     "description": "Confirmation-sheet subtitle shown before permanently deleting every clip from trash.",
     "placeholders": {
@@ -4638,9 +4757,51 @@
   "videoEditorEffectConfetti": "彩纸屑",
   "videoEditorEffectHearts": "爱心",
   "videoEditorEffectSparkles": "闪光",
+  "videoEditorEffectRain": "雨滴",
+  "videoEditorEffectLeaves": "落叶",
+  "videoEditorEffectBlossoms": "樱花",
+  "videoEditorEffectBubbles": "泡泡",
+  "videoEditorEffectBokeh": "光斑",
+  "videoEditorEffectMusicNotes": "音符",
+  "videoEditorEffectStars": "星星",
+  "videoEditorEffectFireflies": "萤火虫",
+  "videoEditorEffectEmbers": "火花",
+  "videoEditorEffectMoney": "钞票",
+  "videoEditorEffectBalloons": "气球",
   "videoEditorEffectTiltShift": "移轴",
   "videoEditorEffectZoomBlur": "变焦模糊",
+  "videoEditorEffectSpinBlur": "旋转模糊",
   "videoEditorEffectComic": "漫画",
+  "videoEditorEffectSwirl": "漩涡",
+  "videoEditorEffectRipple": "涟漪",
+  "videoEditorEffectFlutedGlass": "长虹玻璃",
+  "videoEditorEffectEightBit": "8 位",
+  "videoEditorEffectAnaglyph": "3D 眼镜",
+  "videoEditorEffectRiso": "孔版印刷",
+  "videoEditorEffectTealOrange": "青橙",
+  "videoEditorEffectWarmFilm": "暖调胶片",
+  "videoEditorEffectSlideFilm": "反转片",
+  "videoEditorEffectCoolFilm": "冷调胶片",
+  "videoEditorEffectMatte": "哑光",
+  "videoEditorEffectBleachBypass": "留银",
+  "videoEditorEffectCrossProcess": "交叉冲印",
+  "videoEditorEffectGoldenHour": "黄金时刻",
+  "videoEditorEffectMoonlight": "月光",
+  "videoEditorEffectSilver": "银盐黑白",
+  "videoEditorEffectCategoryRetro": "复古",
+  "videoEditorEffectCategoryGlitch": "故障",
+  "videoEditorEffectCategoryDistort": "扭曲",
+  "videoEditorEffectCategoryLight": "光影",
+  "videoEditorEffectCategoryMotion": "动感",
+  "videoEditorEffectCategoryParticles": "粒子",
+  "videoEditorEffectCategoryLooks": "调色",
+  "videoEditorFilterCategoryNatural": "自然",
+  "videoEditorFilterCategoryVibrant": "鲜艳",
+  "videoEditorFilterCategoryWarm": "暖色",
+  "videoEditorFilterCategoryCool": "冷色",
+  "videoEditorFilterCategoryVintage": "怀旧",
+  "videoEditorFilterCategoryBlackAndWhite": "黑白",
+  "videoEditorFilterCategoryTints": "色调",
   "videoEditorDropsSettingsTitle": "调节水滴",
   "videoEditorDropsCountLabel": "数量",
   "videoEditorDropsSizeLabel": "大小",
@@ -5386,6 +5547,8 @@
   "videoEditorLayerAnimationPulseTo": "缩小至",
   "videoEditorLayerAnimationWiggleAngle": "倾斜度",
   "videoEditorLayerAnimationBounceHeight": "高度",
+  "videoEditorLayerAnimationFlipSideways": "左右",
+  "videoEditorLayerAnimationFlipOver": "上下",
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },
@@ -5416,6 +5579,101 @@
   "videoEditorFeedPreviewContent": "避免把内容放在这些区域后面。",
   "videoEditorStickersDivineOriginals": "Divine 原创",
   "videoEditorStickerSearchHint": "搜索贴纸...",
+  "videoEditorInfoStickersTitle": "信息",
+  "videoEditorSocialStickersTitle": "社交",
+  "videoEditorSocialStickerMention": "提及",
+  "videoEditorSocialStickerHashtag": "话题标签",
+  "videoEditorSocialStickerSoundCredit": "声音",
+  "videoEditorSocialStickerMentionSample": "你的名字",
+  "videoEditorSocialStickerHashtagSample": "话题",
+  "videoEditorSocialStickerChoosePerson": "选择一个人",
+  "videoEditorSocialStickerMentionNote": "对方会在你的帖子中被提及，并收到通知。",
+  "videoEditorSocialStickerHashtagHint": "输入话题标签",
+  "videoEditorSocialStickerHashtagNote": "也会加到你帖子的话题标签里。",
+  "videoEditorSocialStickerLyricHint": "一句歌词（可选）",
+  "videoEditorSocialStickerLink": "链接",
+  "videoEditorSocialStickerLinkUrlHint": "网址",
+  "videoEditorSocialStickerLinkTitleHint": "标题（可选）",
+  "videoEditorSocialStickerLinkNote": "网址会添加到你的帖子里。",
+  "videoEditorSocialStickerLinkInvalid": "这还不是一个网址。",
+  "videoEditorInteractiveStickersTitle": "互动",
+  "videoEditorSocialStickerCountdown": "倒计时",
+  "videoEditorSocialStickerCountdownSample": "夏天",
+  "videoEditorSocialStickerCountdownTitleHint": "你在倒数什么？",
+  "videoEditorSocialStickerCountdownNote": "观众能看到剩余时间，还可以设置提醒。",
+  "videoEditorSocialStickerCountdownOver": "这个时间已经过了，选个新的吧。",
+  "videoEditorSocialStickerReply": "回复",
+  "videoEditorSocialStickerReplyNote": "观众点一下就能看到你在回复什么。",
+  "videoEditorSocialStickerSoundNote": "音符",
+  "videoEditorSocialStickerSoundVinyl": "黑胶唱片",
+  "videoEditorSocialStickerSoundCassette": "磁带",
+  "videoEditorSocialStickerSoundEqualizer": "均衡器",
+  "videoEditorSocialStickerSoundPlayer": "播放器",
+  "videoEditorInfoStickerTime": "时间",
+  "videoEditorInfoStickerDate": "日期",
+  "videoEditorInfoStickerLocation": "地点",
+  "videoEditorInfoStickerWeather": "天气",
+  "videoEditorInfoStickerAltitude": "海拔",
+  "videoEditorInfoStickerBattery": "电量",
+  "videoEditorInfoStickerStyleLight": "浅色",
+  "videoEditorInfoStickerStyleDark": "深色",
+  "videoEditorInfoStickerStyleBrand": "绿色",
+  "videoEditorInfoStickerStyleOutline": "描边",
+  "videoEditorInfoStickerStyleDigital": "数字",
+  "videoEditorInfoStickerStyleAnalog": "指针",
+  "videoEditorInfoStickerStyleGlass": "玻璃",
+  "videoEditorInfoStickerStyleHighlight": "黄色",
+  "videoEditorInfoStickerStyleNeon": "霓虹",
+  "videoEditorInfoStickerStylePlain": "简约",
+  "videoEditorInfoStickerChangePlace": "更换地点",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "此设备不支持地点搜索。",
+  "videoEditorInfoStickerRecordedValue": "拍摄时 · {value}",
+  "videoEditorInfoStickerNowValue": "现在 · {value}",
+  "videoEditorInfoStickerTodayValue": "今天 · {value}",
+  "videoEditorInfoStickerDayCount": "天数计数",
+  "videoEditorInfoStickerSun": "太阳",
+  "videoEditorInfoStickerMoon": "月亮",
+  "videoEditorInfoStickerRecTimer": "REC 计时",
+  "videoEditorInfoStickerStyleFilm": "胶片",
+  "videoEditorInfoStickerStyleCamcorder": "摄像机",
+  "videoEditorInfoStickerDayCountValue": "第 {day} 天",
+  "videoEditorInfoStickerDayCountOfValue": "第 {day} 天 / 共 {total} 天",
+  "videoEditorInfoStickerDayLabel": "天数",
+  "videoEditorInfoStickerDayTotalLabel": "总天数（可选）",
+  "videoEditorInfoStickerSymbolPin": "图钉",
+  "videoEditorInfoStickerSymbolFlag": "国旗",
+  "videoEditorInfoStickerSymbolGlobe": "地球仪",
+  "videoEditorInfoStickerSymbolMap": "地图",
+  "videoEditorInfoStickerMoonNew": "新月",
+  "videoEditorInfoStickerMoonWaxingCrescent": "蛾眉月",
+  "videoEditorInfoStickerMoonFirstQuarter": "上弦月",
+  "videoEditorInfoStickerMoonWaxingGibbous": "盈凸月",
+  "videoEditorInfoStickerMoonFull": "满月",
+  "videoEditorInfoStickerMoonWaningGibbous": "亏凸月",
+  "videoEditorInfoStickerMoonLastQuarter": "下弦月",
+  "videoEditorInfoStickerMoonWaningCrescent": "残月",
+  "videoEditorInfoStickerPlaceSearchHint": "搜索城市或地点",
+  "videoEditorInfoStickerPlaceNoResults": "没有找到地点",
+  "videoEditorInfoStickerPlaceSearchFailed": "无法搜索地点。请再试一次。",
+  "videoEditorInfoStickerPlacePrivacyNote": "视频里只会显示地点名称，绝不会包含你的精确位置。",
+  "videoEditorInfoStickerLoading": "加载中…",
+  "videoEditorInfoStickerLoadFailed": "无法加载。请再试一次。",
+  "videoEditorInfoStickerMetAttribution": "数据来自 MET Norway",
+  "videoEditorInfoStickerWeatherNow": "较早的视频没有天气数据，这里显示的是现在的天气。",
+  "videoEditorInfoStickerWeatherSunny": "晴",
+  "videoEditorInfoStickerWeatherClearNight": "晴朗的夜晚",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "晴间多云",
+  "videoEditorInfoStickerWeatherCloudy": "多云",
+  "videoEditorInfoStickerWeatherFog": "雾",
+  "videoEditorInfoStickerWeatherRain": "雨",
+  "videoEditorInfoStickerWeatherShowers": "阵雨",
+  "videoEditorInfoStickerWeatherSnow": "雪",
+  "videoEditorInfoStickerWeatherThunderstorm": "雷雨",
+  "videoEditorInfoStickerSunTimeZoneNote": "时间按你手机的时区显示。",
+  "videoEditorInfoStickerTemperatureLabel": "温度",
+  "videoEditorInfoStickerUnitLabel": "单位",
+  "videoEditorInfoStickerBatteryLevelLabel": "电池电量",
+  "videoEditorInfoStickerAdd": "添加贴纸",
   "videoEditorSelectFontSemanticLabel": "选择字体",
   "videoEditorFontUnknown": "未知",
   "videoEditorSplitPlayheadOutsideClip": "播放头必须在选中的片段内才能分割。",
@@ -6072,6 +6330,7 @@
       }
     }
   },
+  "videoMetadataTagsPickerStickerTag": "{tag}，来自视频中的贴纸",
   "authMinAgeNotice": "Divine Greenlight",
   "@authMinAgeNotice": {
     "description": "Welcome-screen Divine Greenlight label above the sign-in / create-account buttons."
@@ -7089,8 +7348,97 @@
   "ideasDescriptionFive": "只是想分享。",
   "ideasTitleSix": "今天的一小段",
   "ideasDescriptionSix": "把这个留在这里。",
+  "messagesRoomsUnreadLabel": "{count, plural, other{聊天室、{displayCount} 条未读消息}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, other{{displayCount} 条新消息}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, other{{displayCount} 条未读消息}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, other{{displayCount} 人}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, other{{displayCount} 条消息}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "过去24小时",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "正在查看动态…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "无法加载动态。",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "最近没有消息，打个招呼吧。",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "私信",
   "messagesRooms": "聊天室",
+  "messagesRoomsWithUnread": "聊天室 ({badge})",
   "messagesPublicTestRooms": "公开测试聊天室",
   "messagesPublicTestDisclosure": "这些测试聊天室是公开的。任何有访问权限的人都可以阅读你的消息。",
   "messagesNoRooms": "暂无聊天室",
@@ -7194,5 +7542,57 @@
   "videoEditorLoopRepairProgress": "正在对齐循环…",
   "videoEditorLoopRepairTrimmed": "循环已优化。已移除 {seconds} 秒。",
   "notificationFromDivine": "来自 Divine",
-  "announcementUnavailable": "此公告已不可用。"
+  "announcementUnavailable": "此公告已不可用。",
+  "creatorHighlightLabel": "你的今日亮点",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "你今天创作的视频：{count} 个。",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "这周又多了一点你的色彩。",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "本周创作天数：{count} 天。继续创作吧。",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "你本周发布的视频截至目前的总播放次数：{count} 次。",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "你本周发布的视频中播放次数最多的一条",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "再创作一个",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "查看你的数据",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "观看视频",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

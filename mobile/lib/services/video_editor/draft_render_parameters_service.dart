@@ -18,6 +18,8 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
@@ -27,8 +29,11 @@ import 'package:openvine/services/video_editor/video_editor_render_service.dart'
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:openvine/utils/editor_text_layer_bounds.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_view.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -230,6 +235,20 @@ class DraftRenderParametersService {
                 case final visualizer?) {
               return AudioVisualizerLayerView(data: visualizer);
             }
+            // Info and social stickers are drawn from their meta alone; their
+            // fonts are loaded before the capture, see [_prepareLayerContent].
+            if (InfoStickerData.isInfoStickerMeta(meta)) {
+              final info = InfoStickerData.fromMeta(meta);
+              return info == null
+                  ? const SizedBox.shrink()
+                  : InfoStickerView(data: info);
+            }
+            if (SocialStickerData.isSocialStickerMeta(meta)) {
+              final social = SocialStickerData.fromMeta(meta);
+              return social == null
+                  ? const SizedBox.shrink()
+                  : SocialStickerView(data: social);
+            }
             if (StickerGroupData.isStickerGroupMeta(meta)) {
               stickers.addAll(StickerGroupData.fromMeta(meta)?.stickers ?? []);
               return videoEditorStickerWidgetLoader(id, meta: meta);
@@ -402,9 +421,11 @@ class DraftRenderParametersService {
 
   /// Resolves everything the mounted layers need before they are captured.
   ///
-  /// Runs while the layers are mounted but before the capture frame, so both
-  /// halves land in the first build the rasterizer measures: the fonts the
-  /// text layers name, images for stickers.
+  /// Runs while the layers are mounted but before the capture frame, so all
+  /// of it lands in the first build the rasterizer measures: the fonts the
+  /// text layers name, images for stickers, the fonts and emoji info stickers
+  /// draw with, and the fonts of social stickers, their emoji font included,
+  /// and the picture of a reply sticker.
   Future<void> _prepareLayerContent(
     List<Layer> layers,
     List<StickerData> stickers,
@@ -416,7 +437,40 @@ class DraftRenderParametersService {
           .nonNulls,
     ),
     _precacheStickers(stickers),
+    _precacheReplyPictures(layers),
+    preloadInfoStickerContent(layers.map(InfoStickerData.of).nonNulls),
+    if (layers.any(SocialStickerData.isSocialStickerLayer))
+      preloadInfoStickerFonts(),
+    loadStickerEmojiFontFor([
+      for (final layer in layers)
+        if (SocialStickerData.of(layer) case final sticker?)
+          SocialStickerView.textOf(sticker),
+    ]),
   ]);
+
+  /// Loads the avatar or thumbnail of every reply sticker among [layers] into
+  /// the cache the sticker reads it from, so the capture does not take the
+  /// initial it shows meanwhile. One that cannot load keeps the initial.
+  Future<void> _precacheReplyPictures(List<Layer> layers) async {
+    final urls = {
+      for (final layer in layers) ?SocialStickerData.of(layer)?.replyImageUrl,
+    };
+    await Future.wait(
+      urls.map((url) async {
+        try {
+          await _resolveImage(
+            MediaCacheImageProvider(url, cacheManager: openVineImageCache),
+          );
+        } catch (error) {
+          Log.warning(
+            'Could not preload a reply sticker picture for render: $error',
+            name: _logName,
+            category: LogCategory.video,
+          );
+        }
+      }),
+    );
+  }
 
   /// Loads every sticker's image into the cache the sticker widget reads from.
   ///

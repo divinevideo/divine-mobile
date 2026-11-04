@@ -1,5 +1,5 @@
-// ABOUTME: Bottom sheet for sticker selection in the video editor.
-// ABOUTME: Features search functionality and a responsive grid of stickers.
+// ABOUTME: Bottom sheet for sticker selection in the video editor: rows of
+// ABOUTME: info, social and interactive stickers above a grid of stickers.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,21 +8,47 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show StickerData;
 import 'package:openvine/blocs/video_editor/sticker/video_editor_sticker_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_kind_row.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_kind_row.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 
-/// A bottom sheet that displays a searchable grid of stickers.
+/// A bottom sheet that displays the info, social and interactive stickers
+/// and a searchable grid of stickers.
 ///
-/// Returns the selected [StickerData] via `context.pop` when a sticker is
-/// tapped.
+/// Pops the selected [StickerData] when a sticker is tapped, the
+/// `InfoStickerKind` when an info sticker is, or the `SocialStickerKind`
+/// when a social sticker is.
 class VideoEditorStickerSheet extends StatelessWidget {
   const VideoEditorStickerSheet({
     this.enableSearchBar = false,
     super.key,
     this.scrollController,
+    this.soundCredit,
+    this.reply,
+    this.hasInteractiveCard = false,
+    this.canAskQuestion = true,
   });
 
   final ScrollController? scrollController;
   final bool enableSearchBar;
+
+  /// The credit for the video's sound, offered as a social sticker; `null`
+  /// when its sound has no title to credit.
+  final SocialStickerData? soundCredit;
+
+  /// The sticker showing what the video replies to, offered as an
+  /// interactive sticker; `null` when it replies to nothing.
+  final SocialStickerData? reply;
+
+  /// Whether the video has an interactive card already, a poll, quiz,
+  /// slider, question, Add yours or replies, which leaves them all out of
+  /// the interactive stickers: a video carries one.
+  final bool hasInteractiveCard;
+
+  /// Whether the account may ask a question, whose answers come as private
+  /// messages; see [InteractiveStickerKindRow.canAskQuestion].
+  final bool canAskQuestion;
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +63,53 @@ class VideoEditorStickerSheet extends StatelessWidget {
         slivers: [
           // Floating Search Bar Header
           if (enableSearchBar) const _SearchBar(),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const .fromLTRB(16, 16, 16, 12),
+              child: Text(
+                context.l10n.videoEditorInfoStickersTitle,
+                style: VineTheme.titleSmallFont(
+                  color: context.vineColors.onSurfaceMuted,
+                ),
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(child: InfoStickerKindRow()),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const .fromLTRB(16, 16, 16, 12),
+              child: Text(
+                context.l10n.videoEditorSocialStickersTitle,
+                style: VineTheme.titleSmallFont(
+                  color: context.vineColors.onSurfaceMuted,
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: SocialStickerKindRow(soundCredit: soundCredit),
+          ),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const .fromLTRB(16, 16, 16, 12),
+              child: Text(
+                context.l10n.videoEditorInteractiveStickersTitle,
+                style: VineTheme.titleSmallFont(
+                  color: context.vineColors.onSurfaceMuted,
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: InteractiveStickerKindRow(
+              reply: reply,
+              hasInteractiveCard: hasInteractiveCard,
+              canAskQuestion: canAskQuestion,
+            ),
+          ),
 
           SliverToBoxAdapter(
             child: Padding(

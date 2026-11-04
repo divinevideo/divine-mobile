@@ -15,6 +15,7 @@ import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_name_builder.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:openvine/widgets/linkified_text/selectable_linkified_text.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
 class ChatMessageTile extends ConsumerWidget {
@@ -116,8 +117,9 @@ class ChatMessageTile extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 4),
-                SelectableText(
-                  message.effectiveBody,
+                SelectableLinkifiedText(
+                  text: message.effectiveBody,
+                  mentionProfilePubkeys: message.mentionedPubkeys,
                   style: VineTheme.bodyLargeFont(
                     color: context.vineColors.primaryText,
                   ),

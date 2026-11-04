@@ -48,6 +48,8 @@ void main() {
 
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
+      // The signed default must carry the client tag whatever ran before.
+      Nip89ClientTag.resetForTest();
       prefs = await SharedPreferences.getInstance();
       keys = await SecureKeyContainer.generate();
       storage = _Keys();

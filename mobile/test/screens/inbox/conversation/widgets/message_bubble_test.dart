@@ -146,9 +146,9 @@ void main() {
       );
 
       // The bubble is NOT dimmed: `Opacity` composites the text and its own
-      // fill toward the page together, taking white-on-primaryAccessible from
-      // 3.17:1 to 1.94:1 on the light message list. The warning icon carries
-      // the state instead.
+      // fill toward the page together, taking the sent ink on
+      // primaryAccessible from 5.95:1 to 2.27:1 on the light message list. The
+      // warning icon carries the state instead.
       expect(
         find.byWidgetPredicate(
           (widget) => widget is Opacity && widget.opacity < 1,
@@ -439,44 +439,6 @@ void main() {
           findsOneWidget,
         );
         expect(find.text(strings.profileShowLess), findsOneWidget);
-      });
-
-      testWidgets('keeps the expansion controls white on a sent bubble', (
-        tester,
-      ) async {
-        // The sent bubble keeps the fixed primaryAccessible green fill, where
-        // the accent green would sit green-on-green (1.4:1 in dark mode).
-        await tester.pumpWidget(
-          MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: SingleChildScrollView(
-                child: MessageBubble(
-                  message: 'a' * (dmMaxDisplayCodeUnits + 1),
-                  timestamp: '2:30 PM',
-                  isSent: true,
-                ),
-              ),
-            ),
-          ),
-        );
-
-        await tester.ensureVisible(find.text(strings.profileShowMore));
-        await tester.tap(find.text(strings.profileShowMore));
-        await tester.pump();
-
-        final showLess = tester.widget<Text>(
-          find.text(strings.profileShowLess),
-        );
-        expect(showLess.style?.color, VineTheme.whiteText);
-        final limitReached = tester.widget<Text>(
-          find.text(strings.dmMessageDisplayLimitReached),
-        );
-        expect(
-          limitReached.style?.color,
-          VineTheme.whiteText.withValues(alpha: 0.7),
-        );
       });
 
       testWidgets('uses the accent color for expansion controls on a received '

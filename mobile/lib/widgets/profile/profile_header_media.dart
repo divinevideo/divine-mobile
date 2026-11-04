@@ -420,12 +420,89 @@ class _StatDivider extends StatelessWidget {
   }
 }
 
+/// [_ProfileAvatarWithColor] with the account's pending actions.
+///
+/// Builds the action list here rather than in the header, because only below
+/// the supporter scope is it known whether the account can still become a
+/// supporter. Tapping the label opens the account status for a restricted
+/// account, and the actions sheet otherwise.
+class _ProfileAvatarWithPendingActions extends StatelessWidget {
+  const _ProfileAvatarWithPendingActions({
+    required this.imageUrl,
+    required this.userIdHex,
+    required this.showSkeleton,
+    required this.profileColor,
+    required this.isOwnProfile,
+    required this.isAccountEnforced,
+    required this.isAnonymous,
+    required this.hasAnyProfileInfo,
+    required this.secureAccountPromptDismissal,
+    required this.supporterPromptDismissal,
+    required this.onShowActions,
+  });
+
+  final String? imageUrl;
+  final String userIdHex;
+  final bool showSkeleton;
+  final Color? profileColor;
+  final bool isOwnProfile;
+  final bool isAccountEnforced;
+  final bool isAnonymous;
+  final bool hasAnyProfileInfo;
+  final SecureAccountPromptDismissalStore secureAccountPromptDismissal;
+  final SupporterPromptDismissalStore supporterPromptDismissal;
+  final void Function(List<ProfileActionType> actions) onShowActions;
+
+  @override
+  Widget build(BuildContext context) {
+    // Only a server-confirmed non-supporter is invited; an unknown or loading
+    // membership shows nothing. The cubit is absent outside the owner's
+    // SupporterMembershipScope.
+    final isConfirmedNonSupporter = context.select<SupporterCubit?, bool>(
+      (cubit) {
+        final state = cubit?.state;
+        return state != null && !state.isSupporter && state.isConfirmedInactive;
+      },
+    );
+    final pendingActions =
+        ProfileActionType.pending(
+          isOwnProfile: isOwnProfile,
+          isAccountEnforced: isAccountEnforced,
+          isAnonymous: isAnonymous,
+          hasAnyProfileInfo: hasAnyProfileInfo,
+          canBecomeSupporter: isConfirmedNonSupporter,
+        ).where((action) {
+          return switch (action) {
+            ProfileActionType.secureAccount =>
+              !secureAccountPromptDismissal.isDismissed(),
+            ProfileActionType.becomeSupporter =>
+              !supporterPromptDismissal.isDismissed(),
+            ProfileActionType.accountRestricted ||
+            ProfileActionType.completeProfile => true,
+          };
+        }).toList();
+
+    return _ProfileAvatarWithColor(
+      imageUrl: imageUrl,
+      userIdHex: userIdHex,
+      showSkeleton: showSkeleton,
+      profileColor: profileColor,
+      pendingActions: pendingActions,
+      isOwnProfile: isOwnProfile,
+      onActionTap: pendingActions.isEmpty
+          ? null
+          : pendingActions.first == ProfileActionType.accountRestricted
+          ? () => context.push(RoutePaths.accountStatus)
+          : () => onShowActions(pendingActions),
+    );
+  }
+}
+
 /// Profile avatar with optional action label overlapping the bottom edge.
 ///
 /// When [pendingActions] is non-empty, a pill-shaped label (e.g. "Secure
-/// your account") is centred below the avatar. A red count badge appears
-/// on the label when more than one action is pending. Tapping either the
-/// avatar or the label triggers [onActionTap].
+/// your account") is centred below the avatar. A red badge on the label
+/// counts the pending actions. Tapping the label triggers [onActionTap].
 ///
 /// While [showSkeleton] is set the avatar is swapped for an [_AvatarBone] and
 /// the pending-action label is dropped, so neither is tappable during the
@@ -603,7 +680,7 @@ class _AvatarBone extends StatelessWidget {
 
 /// Pill-shaped label shown below the profile avatar for the highest-priority
 /// pending action. Displays an icon and text matching the action type, with
-/// an optional red badge when multiple actions are pending.
+/// a red badge counting the pending actions.
 class _ProfileActionLabel extends StatelessWidget {
   const _ProfileActionLabel({required this.action, required this.badgeCount});
 
@@ -625,11 +702,25 @@ class _ProfileActionLabel extends StatelessWidget {
         DivineIconName.pencilSimple,
         context.l10n.profileCompleteYourProfile,
       ),
+      // The supporter invitation carries the mascot instead of an icon.
+      ProfileActionType.becomeSupporter => (
+        null,
+        context.l10n.supporterJoinLabel,
+      ),
     };
 
-    final chip = action == ProfileActionType.accountRestricted
-        ? context.vineColors.accentChipOrange
-        : context.vineColors.accentChipYellow;
+    final chip = switch (action) {
+      ProfileActionType.accountRestricted =>
+        context.vineColors.accentChipOrange,
+      ProfileActionType.secureAccount ||
+      ProfileActionType.completeProfile => context.vineColors.accentChipYellow,
+      // A brand fill, the same in both appearances, paired as on primary
+      // buttons so the label stays legible.
+      ProfileActionType.becomeSupporter => const VineAccentChip(
+        container: VineTheme.primary,
+        onContainer: VineTheme.onPrimary,
+      ),
+    };
     final maxWidth = MediaQuery.sizeOf(context).width - 32;
 
     return Stack(
@@ -658,7 +749,10 @@ class _ProfileActionLabel extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             spacing: 8,
             children: [
-              DivineIcon(icon: icon, size: 16, color: chip.onContainer),
+              if (icon == null)
+                const _ProfileActionMascot()
+              else
+                DivineIcon(icon: icon, size: 16, color: chip.onContainer),
               Flexible(
                 child: Text(
                   label,
@@ -689,6 +783,52 @@ class _ProfileActionLabel extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// The Divine mascot on a pending-action pill. Decorative: the label beside it
+/// carries the meaning.
+///
+/// The drawing fills only ~73% of its square raster's height, so the image is
+/// drawn taller than its slot: the visible mascot then matches the label's line
+/// height while the slot, and so the pill, keeps the height of the others.
+class _ProfileActionMascot extends StatelessWidget {
+  const _ProfileActionMascot();
+
+  /// The mascot's raster, declared with the rest of `assets/icon/`.
+  static const asset = 'assets/icon/MascotCropped=yes.png';
+
+  /// The line height of [VineTheme.titleSmallFont], which the label uses.
+  static const _slotHeight = 20.0;
+  static const _drawnSize = 27.0;
+
+  /// The drawing sits above the raster's centre; this re-centres it.
+  static const _drawingOffset = Offset(0, 1);
+
+  @override
+  Widget build(BuildContext context) {
+    // Decode at the drawn size rather than the 769px source.
+    final cacheSize = (_drawnSize * MediaQuery.devicePixelRatioOf(context))
+        .round();
+    return ExcludeSemantics(
+      child: SizedBox(
+        width: _drawnSize,
+        height: _slotHeight,
+        child: OverflowBox(
+          maxHeight: _drawnSize,
+          child: Transform.translate(
+            offset: _drawingOffset,
+            child: Image.asset(
+              asset,
+              width: _drawnSize,
+              height: _drawnSize,
+              cacheWidth: cacheSize,
+              cacheHeight: cacheSize,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

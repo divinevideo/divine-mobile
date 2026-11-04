@@ -41,6 +41,7 @@ void main() {
     int createdAt = 1700000000,
     String? sendBatchId,
     String? environment,
+    String? recipientWrapEventId,
   }) {
     return OutgoingDm(
       id: id,
@@ -56,6 +57,7 @@ void main() {
       ownerPubkey: owner,
       sendBatchId: sendBatchId,
       environment: environment,
+      recipientWrapEventId: recipientWrapEventId,
     );
   }
 
@@ -1068,6 +1070,107 @@ void main() {
         );
 
         expect(retryable.map((e) => e.id), equals(['aaaa']));
+      });
+    });
+
+    group('getExhaustedHeldForOwner (#10012)', () {
+      test('returns failed rows held on a pool wrap whose retries are '
+          'spent, oldest first', () async {
+        await dao.enqueue(
+          makeDm(
+            id: 'spent-newer',
+            recipientStatus: OutgoingWrapStatus.failed,
+            retryCount: 6,
+            recipientWrapEventId: 'pool-wrap-2',
+            queuedAt: DateTime.utc(2026, 5, 3),
+          ),
+        );
+        await dao.enqueue(
+          makeDm(
+            id: 'spent',
+            recipientStatus: OutgoingWrapStatus.failed,
+            retryCount: 5,
+            recipientWrapEventId: 'pool-wrap',
+            queuedAt: DateTime.utc(2026, 5, 2),
+          ),
+        );
+        await dao.enqueue(
+          makeDm(
+            id: 'budget-left',
+            recipientStatus: OutgoingWrapStatus.failed,
+            retryCount: 4,
+            recipientWrapEventId: 'pool-wrap-3',
+          ),
+        );
+        await dao.enqueue(
+          makeDm(
+            id: 'not-held',
+            recipientStatus: OutgoingWrapStatus.failed,
+            retryCount: 5,
+          ),
+        );
+        await dao.enqueue(
+          makeDm(
+            id: 'still-pending',
+            retryCount: 5,
+            recipientWrapEventId: 'pool-wrap-4',
+          ),
+        );
+        await dao.enqueue(
+          makeDm(
+            id: 'stopped',
+            recipientStatus: OutgoingWrapStatus.cancelled,
+            selfStatus: OutgoingWrapStatus.cancelled,
+            retryCount: 5,
+            recipientWrapEventId: 'pool-wrap-5',
+          ),
+        );
+        await dao.enqueue(
+          makeDm(
+            id: 'other-owner',
+            owner: ownerB,
+            recipientStatus: OutgoingWrapStatus.failed,
+            retryCount: 5,
+            recipientWrapEventId: 'pool-wrap-6',
+          ),
+        );
+
+        final spent = await dao.getExhaustedHeldForOwner(
+          ownerPubkey: ownerA,
+          maxRetries: 5,
+        );
+
+        expect(spent.map((dm) => dm.id), equals(['spent', 'spent-newer']));
+      });
+
+      test('with an environment, leaves out rows queued in another one '
+          '(#10148)', () async {
+        for (final (id, environment) in [
+          ('production', 'production'),
+          ('staging', 'staging'),
+          ('unrecorded', null),
+        ]) {
+          await dao.enqueue(
+            makeDm(
+              id: id,
+              recipientStatus: OutgoingWrapStatus.failed,
+              retryCount: 5,
+              recipientWrapEventId: 'pool-$id',
+              environment: environment,
+            ),
+          );
+        }
+
+        final inStaging = await dao.getExhaustedHeldForOwner(
+          ownerPubkey: ownerA,
+          maxRetries: 5,
+          environment: 'staging',
+        );
+
+        expect(
+          inStaging.map((dm) => dm.id),
+          unorderedEquals(['staging', 'unrecorded']),
+        );
       });
     });
 

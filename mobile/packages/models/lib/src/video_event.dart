@@ -8,9 +8,15 @@ import 'dart:convert';
 import 'package:meta/meta.dart';
 import 'package:models/src/nip71_video_kinds.dart';
 import 'package:models/src/video_attribution.dart';
+import 'package:models/src/video_sticker_region.dart';
 import 'package:models/src/video_url_resolver.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:text_sanitizer/text_sanitizer.dart';
+
+/// The marker on the `r` tag of a web page a video links to, such as the
+/// page of a link sticker: `["r", <url>, "link"]`. An unmarked `r` tag is
+/// read as one of the video's own media URLs.
+const String videoLinkTagMarker = 'link';
 
 String? _usableThumbnailUrl(Object? value) {
   final url = value?.toString();
@@ -236,6 +242,8 @@ class VideoEvent {
     this.inspiredByPubkeys = const [],
     this.clipSourceCredits = const [],
     this.nostrEventTags = const [],
+    List<String>? linkUrls,
+    List<VideoStickerRegion>? stickerRegions,
     this.textTrackRef,
     this.textTrackRefs = const [],
     this.textTrackContent,
@@ -248,7 +256,10 @@ class VideoEvent {
     this.archiveAudioReuseEnabled = false,
     this.eventKind,
     this.sourceRelay,
-  }) : content = sanitizeUtf16(content),
+  }) : linkUrls = linkUrls ?? linkUrlsFromTags(nostrEventTags),
+       stickerRegions =
+           stickerRegions ?? VideoStickerRegion.fromTags(nostrEventTags),
+       content = sanitizeUtf16(content),
        title = sanitizeUtf16OrNull(title),
        altText = sanitizeUtf16OrNull(altText),
        authorName = sanitizeUtf16OrNull(authorName),
@@ -338,6 +349,11 @@ class VideoEvent {
       authorName: json['authorName'] as String?,
       authorAvatar: json['authorAvatar'] as String?,
       collaboratorPubkeys: stringList(json['collaboratorPubkeys']),
+      linkUrls: stringList(json['linkUrls']),
+      stickerRegions: [
+        for (final tag in (json['stickerRegions'] as List<dynamic>?) ?? [])
+          ?VideoStickerRegion.fromTag(stringList(tag)),
+      ],
       inspiredByVideo: json['inspiredByVideo'] == null
           ? null
           : InspiredByInfo.fromJson(
@@ -1062,6 +1078,42 @@ class VideoEvent {
     }
 
     return pubkeys;
+  }
+
+  /// The web pages the video links to, from its `r` tags marked
+  /// [videoLinkTagMarker], in order and each once.
+  ///
+  /// Kept as its own field, read from [nostrEventTags] when the video is
+  /// built, because a feed snapshot restored by [VideoEvent.fromJson] has no
+  /// tags left to read it from.
+  final List<String> linkUrls;
+
+  /// The stickers a viewer can tap on the video, from its `sticker` tags.
+  ///
+  /// Kept as its own field for the same reason as [linkUrls].
+  final List<VideoStickerRegion> stickerRegions;
+
+  /// The web pages [tags] link to: each `r` tag marked [videoLinkTagMarker],
+  /// in order and once.
+  ///
+  /// Only http and https addresses count: a link sticker accepts nothing
+  /// else, and a viewer is never handed another scheme to open.
+  static List<String> linkUrlsFromTags(List<List<String>> tags) {
+    final urls = <String>[];
+    for (final tag in tags) {
+      if (tag.length < 3 || tag[0] != 'r' || tag[2] != videoLinkTagMarker) {
+        continue;
+      }
+      final uri = Uri.tryParse(tag[1].trim());
+      if (uri == null ||
+          !(uri.isScheme('https') || uri.isScheme('http')) ||
+          uri.host.isEmpty) {
+        continue;
+      }
+      final url = uri.toString();
+      if (!urls.contains(url)) urls.add(url);
+    }
+    return urls;
   }
 
   /// The creator's audio-reuse marker without collapsing absent and false.
@@ -1863,6 +1915,8 @@ class VideoEvent {
     List<String>? inspiredByPubkeys,
     List<ClipSourceCredit>? clipSourceCredits,
     List<List<String>>? nostrEventTags,
+    List<String>? linkUrls,
+    List<VideoStickerRegion>? stickerRegions,
     String? textTrackRef,
     List<String>? textTrackRefs,
     String? textTrackContent,
@@ -1934,6 +1988,10 @@ class VideoEvent {
     inspiredByPubkeys: inspiredByPubkeys ?? this.inspiredByPubkeys,
     clipSourceCredits: clipSourceCredits ?? this.clipSourceCredits,
     nostrEventTags: nostrEventTags ?? this.nostrEventTags,
+    // New tags carry their own links.
+    linkUrls: linkUrls ?? (nostrEventTags == null ? this.linkUrls : null),
+    stickerRegions:
+        stickerRegions ?? (nostrEventTags == null ? this.stickerRegions : null),
     textTrackRef: textTrackRef ?? this.textTrackRef,
     textTrackRefs: textTrackRefs ?? this.textTrackRefs,
     textTrackLang: textTrackLang ?? this.textTrackLang,
@@ -2019,6 +2077,8 @@ class VideoEvent {
     'authorName': authorName,
     'authorAvatar': authorAvatar,
     'collaboratorPubkeys': collaboratorPubkeys,
+    'linkUrls': linkUrls,
+    'stickerRegions': [for (final region in stickerRegions) region.toTag()],
     'inspiredByVideo': inspiredByVideo?.toJson(),
     'inspiredByNpub': inspiredByNpub,
     'inspiredByPubkeys': inspiredByPubkeys,

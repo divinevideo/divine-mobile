@@ -33,7 +33,7 @@ void main() {
           (await db.customSelect('PRAGMA user_version').getSingle()).read<int>(
             'user_version',
           ),
-          30,
+          db.schemaVersion,
         );
         await db.close();
         db = AppDatabase.test(NativeDatabase(file));

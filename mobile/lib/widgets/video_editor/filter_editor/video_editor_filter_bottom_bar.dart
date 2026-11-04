@@ -1,162 +1,93 @@
-// ABOUTME: Bottom bar for the video editor filter selection.
-// ABOUTME: Displays a horizontal scrollable list of filter previews.
+// ABOUTME: Bottom bar of the video editor's filter editor: a category picker
+// ABOUTME: of preview tiles, each showing its filter on the first clip.
 
 import 'dart:io';
 
-import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
+import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/editor_filter_category.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/video_editor_category_picker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
-/// Bottom bar displaying filter options as thumbnail previews.
+/// Bottom bar of the filter editor: a [VideoEditorCategoryPicker] of the
+/// colour filters, one section per [EditorFilterCategory].
 ///
-/// Shows a horizontal scrollable list with "None" as the first option,
-/// followed by available filters. The selected filter is highlighted
-/// with a primary-colored border.
+/// Each tile shows its filter on the first clip's thumbnail, over the tune
+/// adjustments and blur already applied.
 class VideoEditorFilterBottomBar extends ConsumerWidget {
   const VideoEditorFilterBottomBar({super.key});
 
+  /// The height the editor reserves for the bar above the system navigation
+  /// bar.
+  static double heightOf(BuildContext context) =>
+      VideoEditorCategoryPicker.heightOf(context);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final clip = ref.watch(
-      clipManagerProvider.select((s) => s.firstClipOrNull),
+    final thumbnailPath = ref.watch(
+      clipManagerProvider.select((s) => s.firstClipOrNull?.thumbnailPath),
     );
-    if (clip == null) return const SizedBox.shrink();
-
-    final (filters, selectedFilter) = context.select(
-      (VideoEditorFilterBloc b) => (b.state.filters, b.state.selectedFilter),
+    final selectedName = context.select(
+      (VideoEditorFilterBloc b) => b.state.selectedFilter?.name,
     );
     final scope = VideoEditorScope.of(context);
     final stateManager = scope.editor?.stateManager;
-    final textScaler = MediaQuery.textScalerOf(
-      context,
-    ).clamp(maxScaleFactor: 1.25);
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(textScaler: textScaler),
-      child: ListView.separated(
-        scrollDirection: .horizontal,
-        padding: const .fromLTRB(16, 0, 16, 4),
-        itemCount: filters.length,
-        separatorBuilder: (_, index) {
-          // Add vertical divider after "None"
-          if (index == 0) {
-            return Padding(
-              padding: const .symmetric(horizontal: 8),
-              child: VerticalDivider(
-                color: VineTheme.onSurface.withValues(alpha: 0.3),
-                thickness: 1,
-                indent: 12,
-                endIndent: 12,
-              ),
-            );
-          }
-          return const SizedBox(width: 8);
-        },
-        itemBuilder: (context, index) {
-          final filter = filters[index];
-          final isSelected =
-              selectedFilter?.name == filter.name ||
-              (selectedFilter == null && filter == PresetFilters.none);
-          return _FilterItem(
-            filter: filter,
+    return VideoEditorCategoryPicker<EditorFilterCategory, FilterModel>(
+      sections: _sections,
+      categoryLabel: _categoryLabel,
+      isSelected: (filter) => filter.name == selectedName,
+      tileBuilder: (context, filter, isSelected) =>
+          VideoEditorCategoryPickerTile(
+            label: filter.name,
             isSelected: isSelected,
-            thumbnailPath: clip.thumbnailPath ?? '',
-            activeFilters: stateManager?.activeFilters.allMatrices ?? [],
-            activeTuneAdjustments: stateManager?.activeTuneAdjustments ?? [],
-            activeBlur: stateManager?.activeBlur ?? 0,
             onTap: () {
               context.read<VideoEditorFilterBloc>().add(
                 VideoEditorFilterSelected(filter),
               );
               scope.filterEditor?.setFilter(filter);
             },
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _FilterItem extends StatelessWidget {
-  const _FilterItem({
-    required this.filter,
-    required this.isSelected,
-    required this.thumbnailPath,
-    required this.activeFilters,
-    required this.activeTuneAdjustments,
-    required this.activeBlur,
-    required this.onTap,
-  });
-
-  final FilterModel filter;
-  final bool isSelected;
-  final String thumbnailPath;
-  final FilterMatrix activeFilters;
-  final List<TuneAdjustmentMatrix> activeTuneAdjustments;
-  final double activeBlur;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: filter.name,
-      button: true,
-      selected: isSelected,
-      child: GestureDetector(
-        onTap: onTap,
-        child: SizedBox(
-          width: 68,
-          child: Column(
-            mainAxisAlignment: .end,
-            spacing: 4,
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: context.vineColors.surfaceContainer,
-                  borderRadius: .circular(20),
-                  border: .all(
-                    color: isSelected
-                        ? context.vineColors.accentPositive
-                        : context.vineColors.outlineMuted,
-                    width: 2,
-                  ),
-                ),
-                child: ClipRRect(
-                  borderRadius: .circular(18),
-                  child: FilteredWidget(
-                    width: 52,
-                    height: 52,
+            preview: thumbnailPath == null || thumbnailPath.isEmpty
+                ? const SizedBox.expand()
+                : FilteredWidget(
+                    // Also the size the thumbnail is decoded at.
+                    width: VideoEditorCategoryPickerTile.previewSize,
+                    height: VideoEditorCategoryPickerTile.previewSize,
                     enableCachedSize: true,
-                    // In that scenario we don't need any special
-                    // configurations, so we just use the default one.
+                    // A preview needs none of the editor's configurations.
                     configs: const ProImageEditorConfigs(),
                     filters: filter.filters,
-                    tuneAdjustments: activeTuneAdjustments,
-                    blurFactor: activeBlur,
+                    tuneAdjustments: stateManager?.activeTuneAdjustments ?? [],
+                    blurFactor: stateManager?.activeBlur ?? 0,
                     fit: .cover,
                     image: EditorImage(file: File(thumbnailPath)),
                   ),
-                ),
-              ),
-              Text(
-                filter.name,
-                style: VineTheme.bodySmallFont(
-                  color: context.vineColors.onSurface,
-                ),
-                maxLines: 1,
-                textAlign: .center,
-                overflow: .ellipsis,
-              ),
-            ],
           ),
-        ),
-      ),
     );
   }
 }
+
+/// The filters of each category, in picker order.
+final Map<EditorFilterCategory, List<FilterModel>> _sections = {
+  for (final category in EditorFilterCategory.values)
+    category: category.filters,
+};
+
+/// The localized name of [category].
+String _categoryLabel(
+  BuildContext context,
+  EditorFilterCategory category,
+) => switch (category) {
+  EditorFilterCategory.natural => context.l10n.videoEditorFilterCategoryNatural,
+  EditorFilterCategory.vibrant => context.l10n.videoEditorFilterCategoryVibrant,
+  EditorFilterCategory.warm => context.l10n.videoEditorFilterCategoryWarm,
+  EditorFilterCategory.cool => context.l10n.videoEditorFilterCategoryCool,
+  EditorFilterCategory.vintage => context.l10n.videoEditorFilterCategoryVintage,
+  EditorFilterCategory.blackAndWhite =>
+    context.l10n.videoEditorFilterCategoryBlackAndWhite,
+  EditorFilterCategory.tints => context.l10n.videoEditorFilterCategoryTints,
+};
