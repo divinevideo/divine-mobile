@@ -37,11 +37,14 @@ class WebSocketRelayGateway
   var _reconnectAttempts = 0;
   var _connected = false;
   var _closed = false;
+  var _subscriptionRejected = false;
 
   @override
   bool get synchronized =>
       _connected &&
       !_closed &&
+      !_subscriptionRejected &&
+      _subs.isNotEmpty &&
       _subs.values.every((s) => s._historyEnded) &&
       !historyLimited;
 
@@ -273,6 +276,7 @@ class WebSocketRelayGateway
       case ['NOTICE', final String reason]:
         _failPublishes(StateError('Relay notice: $reason'));
       case ['CLOSED', final String id, final String reason]:
+        _subscriptionRejected = true;
         final subscription = _subs.remove(id);
         subscription?.failHistory(
           StateError('Relay closed subscription: $reason'),

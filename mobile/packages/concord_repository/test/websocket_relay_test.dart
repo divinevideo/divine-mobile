@@ -28,6 +28,34 @@ void main() {
     await relay.close();
   });
 
+  test(
+    'CLOSED never leaves an empty authority subscription set synchronized',
+    () async {
+      final frame = relay.nextFrame('REQ');
+      final rejected = Completer<void>();
+      final subscription = gateway
+          .subscribe({
+            'kinds': [1059],
+            'authors': ['11' * 32],
+          })
+          .listen(
+            (_) {},
+            onError: (Object error) {
+              expect(gateway.synchronized, isFalse);
+              rejected.complete();
+            },
+          );
+      final request = await frame;
+      relay.send(['EOSE', request[1]]);
+      await gateway.historyReady;
+      expect(gateway.synchronized, isTrue);
+      relay.send(['CLOSED', request[1], 'restricted']);
+      await rejected.future;
+      expect(gateway.synchronized, isFalse);
+      await subscription.cancel();
+    },
+  );
+
   group('publish', () {
     test('publish waits for matching positive OK', () async {
       final frame = relay.nextFrame('EVENT');
