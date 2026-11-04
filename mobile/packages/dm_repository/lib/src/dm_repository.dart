@@ -1720,6 +1720,13 @@ class DmRepository {
                     '${error.reason}; the DMs stay subscribed',
                     category: LogCategory.system,
                   );
+                  // The DMs' window can be saved past deletions nobody sent.
+                  // The debt walk reads them again, keeps a relay that
+                  // refused for now and settles one that refuses for good.
+                  catchUp.markCapped({
+                    for (final url in _relayUrlsReadBy(catchUp)) url: null,
+                  });
+                  _maybeCommitCatchUp(catchUp);
                   return;
                 }
                 Log.error(
@@ -3571,20 +3578,22 @@ class DmRepository {
   /// to. The debt walk sends the account's DM filter, which a relay the
   /// subscription was never sent to must not get.
   bool Function(String url) _relaysReadBy(_LiveCatchUp catchUp) {
-    final pool = {
-      for (final url in _nostrClient.configuredRelays)
-        normalizeRelayUrl(url) ?? url,
-    };
-    return (url) {
-      final normalized = normalizeRelayUrl(url) ?? url;
-      return pool.contains(normalized) ||
-          catchUp.inboxRelays.contains(normalized);
-    };
+    final relays = _relayUrlsReadBy(catchUp);
+    return (url) => relays.contains(normalizeRelayUrl(url) ?? url);
   }
+
+  /// The normalized URLs of the relays [catchUp]'s subscription reads; see
+  /// [_relaysReadBy].
+  Set<String> _relayUrlsReadBy(_LiveCatchUp catchUp) => {
+    for (final url in _nostrClient.configuredRelays)
+      normalizeRelayUrl(url) ?? url,
+    ...catchUp.inboxRelays,
+  };
 
   /// Durably records, for each of [capped], the part of the window it may
   /// have withheld at its result cap: from the `since:` [catchUp]'s
-  /// subscription asked from up to the oldest stamp it sent. Returns whether
+  /// subscription asked from up to the oldest stamp it sent, or the whole
+  /// window for a relay that refused the deletions REQ. Returns whether
   /// anything was recorded.
   ///
   /// Every REQ of the subscription, a reconnect's replay included, asks from
@@ -13941,8 +13950,10 @@ class _LiveCatchUp {
   /// Whether relays reported as possibly capped wait to be recorded.
   bool get hasCappedRelays => _cappedRelays.isNotEmpty;
 
-  /// Holds [relays] whose stored batch may have stopped at their result cap.
-  /// A first open holds none: the history drain reads below its window.
+  /// Holds [relays] whose stored batch may have stopped at their result cap,
+  /// or that refused the deletions REQ before sending one, which is recorded
+  /// with no bound. A first open holds none: the history drain reads below
+  /// its window.
   ///
   /// A relay the hold limit already recorded is reported again when its
   /// phase ends, for the same batch; a part of the window already recorded

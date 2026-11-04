@@ -585,6 +585,37 @@ void main() {
       await deleted(message);
       expect(relay.dmReqs, hasLength(1), reason: 'the DM REQ was opened again');
     });
+
+    test('leaves its window to the catch-up debt walk, which applies its '
+        'deletion before the DMs replay', () async {
+      final at = now();
+      await establish(at - 10 * _day);
+      final message = nip04('take this back', createdAt: at - 5 * _day);
+      final deletion = deletionOf([message.id], createdAt: at - 4 * _day);
+      final relay = _Relay()..stored.addAll([message, deletion]);
+      final repository = launch(relay);
+      addTearDown(repository.stopListening);
+
+      await repository.startListening();
+      relay.dmReqs.single
+        ..send(message)
+        ..end();
+      await stored(message);
+      await pumpEventQueue();
+      expect(
+        DmSyncState(prefs).newestWireSyncedAt(_owner),
+        message.createdAt,
+        reason: "the DMs' window is saved before the deletions are refused",
+      );
+      relay.deletionReqs.single.refuse('rate-limited: slow down');
+
+      await deleted(message);
+      expect(
+        relay.deletionReqs,
+        hasLength(1),
+        reason: 'no replay of the DMs asked for the deletions again',
+      );
+    });
   });
 
   group('live deletions across an account switch', () {
