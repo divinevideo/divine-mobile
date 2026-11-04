@@ -1,6 +1,6 @@
 # Scheduled Divine iOS beta builds and App Store submissions
 
-Status: proposed design, revision 3 (2026-11-04), checked against
+Status: proposed design, revision 4 (2026-11-04), checked against
 `divine-mobile` main at `dbdfe110beb018e27d085cad43b9951753b49027`. Nothing is
 enabled. Revision 2 (2026-11-03) planned six-hourly builds for both stores.
 This revision follows Rabble's restated requirements and the Codex review of
@@ -26,7 +26,27 @@ marketing version and the build that goes to review
 version-train rule from #9061). After this change CI chooses both, and anything
 that merges to `main` reaches App Store review within about a day. The merge
 queue, feature flags, and the livestream hold become the release gates. Rabble
-approves that change explicitly (see Decisions).
+explicitly accepted automatic production releases and the occasional escaped
+bug in exchange for release speed on 2026-11-04. This policy decision is resolved;
+it does not require another approval (see Release validation policy).
+
+## Release validation policy
+
+Rabble confirmed that existing unit and integration tests and agent code review
+provide sufficient validation for this release cadence. Production eligibility
+requires successful required CI on the exact source, the existing build-time
+checks, and the six-hour public TestFlight availability period. Existing code
+review and merge protections continue to apply.
+
+The availability period is elapsed exposure, not proof that a tester exercised
+every feature. Rabble accepts that tradeoff. No manual QA sign-off, runtime
+smoke suite, crash-rate threshold, or minimum tester-session count is required
+before automatic submission. Improvements to those tools may be separate work;
+they must not become a prerequisite for delivering or enabling this automation.
+
+Build failures, store rejections, unknown store states, and explicit release
+holds still follow the controls below. Acceptance of product bug risk does not
+authorize canceling a pending review or treating a failed check as successful.
 
 ## Changes from revision 2
 
@@ -43,6 +63,9 @@ approves that change explicitly (see Decisions).
   as a floor. A serialized coordinator doesn't need version reservations.
 - The App Store gate is checked every tick, not once at 23:47 UTC, and allows
   at most one submission in any 24 hours.
+- Revision 4 records Rabble's accepted release-validation policy, specifies
+  review-preserving Play commits for every publishing path, and makes shared
+  version allocation and publisher migration explicit prerequisites for phase 2.
 
 ## What constrains the design
 
@@ -309,18 +332,53 @@ the Codex review of revision 2 carry over:
   `google-play get-latest-build-number ... 2>/dev/null || true` falls back
   silently.
 - The Android version preflight must allow repeated internal builds of the
-  current train version with increasing `versionCode`. It should reject only a
-  `versionName` lower than the highest released to production. Revision 2's
-  "newer than every track" rule would block the second build of a version.
-- Every `edits.commit` passes `changesInReviewBehavior=ERROR_IF_IN_REVIEW`,
-  because the default cancels changes already in review
+  current train version with increasing `versionCode`. The marketing version
+  may equal the active train version; it must not go backwards from production.
+  Validate membership in the allocated train, and require a build identifier
+  above both live store state and existing reservations. Revision 2's "newer
+  than every track" rule would block the second build of a version. Regression
+  coverage must include two internal builds with the same marketing version and
+  different increasing build identifiers, followed by promotion of those exact
+  tested bytes. Use verified artifact/provenance versions; a Play track's release
+  name is not an authoritative manifest `versionName`.
+- Every `edits.commit`, including internal-track uploads, manual publishing,
+  production promotion, and retries, passes
+  `changesInReviewBehavior=ERROR_IF_IN_REVIEW`, because the default cancels
+  changes already in review
   ([edits.commit](https://developers.google.com/android-publisher/api-ref/rest/v3/edits/commit)).
+  Reading review state first does not close the race with a concurrent
+  submission. Verify that Codemagic's publisher and its pinned CLI pass this
+  option; if they do not, perform the edit commit through an explicit supported
+  API path. Treat `CHANGES_ALREADY_IN_REVIEW` as deferred work, preserving the
+  edit and review rather than retrying with cancellation enabled. Test the case
+  where a review starts between the status read and commit.
 - Internal-track uploads need no review, so hourly Android builds have no
-  Apple-style cap. Production promotion follows the same daily and waiting
-  rules.
-- When Play joins, the GitHub publisher takes the effective version from
-  provenance instead of pubspec, so direct downloads and the stores agree.
-  Codex flagged this version-ownership step as missing from revision 2.
+  Apple-style cap. They still perform a guarded edit commit: if Play refuses
+  that commit while another review is in progress, defer publication. Production
+  promotion follows the same daily and waiting rules.
+- **Version ownership and migration must land before phase 2 activation.** A
+  shared allocator owns new marketing versions and build reservations for
+  scheduled and manual store candidates and direct-distribution releases.
+  Pubspec remains the major/minor floor. Bootstrap from existing iOS trains,
+  live store/artifact versions, stable and beta tags, and existing provenance;
+  fail closed when those identities cannot be reconciled. Allocate once and
+  reuse the reservation on retries. Route manual builds through the same
+  allocator before enabling scheduled Play builds.
+- In that migration, `publish_github_release.py` and its callers use the
+  verified effective candidate version for publication and release-note
+  selection. Historical `--promote-from` tags retain their original version,
+  source, artifacts, and note-file mapping; retries never rewrite them. Existing
+  create-only provenance remains immutable. When an older record lacks an
+  effective-version field, resolve it from its existing verified release
+  identity rather than guessing from today's pubspec. Regression coverage must
+  include a manual release after iOS has advanced beyond pubspec, a historical
+  beta promotion, a publication retry, and concurrent manual/scheduled allocation.
+
+Phase 2 implementation order is: fail-closed Play lookups and compatible version
+validation; shared allocator and manual-build migration; publisher and note
+selection migration with historical compatibility; guarded Play publishing;
+then scheduled internal builds and production promotion. Each step must keep
+existing manual releases usable, and activation waits for this complete path.
 
 ## Not in this change
 
@@ -332,10 +390,9 @@ Out of scope:
 - An always-running repair agent.
 - Notifications.
 
-Codex also recommended launch, login, feed, and playback smoke checks before
-App Store submission. Maestro is staging-only and not yet reliable (#7504). A
-follow-up should gate App Store submission on a smoke run against a
-release-configured build.
+Runtime smoke tests and crash-rate gates are not prerequisites for this release
+automation. Rabble accepted the existing tests and code review as sufficient;
+see Release validation policy. Maestro's current limitations do not block it.
 
 ## Pull request sequence
 
@@ -376,6 +433,8 @@ Cases to test with fakes:
   acknowledged.
 - A submission was made in the trailing 24 hours.
 - No candidate has soaked, or the soak is measured from observed availability.
+- Passing CI and build checks plus the required availability period permit
+  submission without a separate runtime-smoke or manual-QA result.
 - Version derivation, including the pubspec floor and moving forward after a
   rejection.
 - An editable version record is reused.
@@ -388,9 +447,10 @@ Cases to test with fakes:
    Proposed: build hourly for internal testers and send the newest build public
    at most every four hours. The alternative builds only when a public slot is
    open, for about half the cost.
-2. **Automatic App Store submission from `main`,** with no person choosing the
-   build or the version. This retires the maintainer-confirms-version rule from
-   #9061.
+2. **Resolved: automatic App Store submission from `main`,** with no person
+   choosing the build or the version. Rabble accepted this release-speed
+   tradeoff and occasional escaped bugs on 2026-11-04. This retires the
+   maintainer-confirms-version rule from #9061; do not ask for approval again.
 3. **Spend:** about $700 to $1,000 a month on pay-as-you-go Codemagic, or one
    of three concurrent slots on the fixed plan.
 4. **Android and Play:** phase 2 (proposed) or now.
