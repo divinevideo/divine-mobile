@@ -1214,17 +1214,11 @@ class _SoundsContent extends StatelessWidget {
       controller: scrollController,
       slivers: [
         if (leading != null) SliverToBoxAdapter(child: leading),
-        SliverToBoxAdapter(
-          child: Divider(height: 1, color: context.vineColors.outlineDisabled),
-        ),
-
-        SliverList.separated(
+        SliverList.builder(
           // While more can load, one row after the sounds asks for them. A
           // list builds its rows only as they near the screen, so it asks
           // once the list is scrolled to its end.
           itemCount: sounds.length + (loadsMore ? 1 : 0),
-          separatorBuilder: (context, index) =>
-              Divider(height: 1, color: context.vineColors.outlineDisabled),
           itemBuilder: (context, index) {
             if (index == sounds.length) {
               return _LoadMoreRow(
