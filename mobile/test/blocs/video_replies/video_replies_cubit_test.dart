@@ -38,8 +38,11 @@ void main() {
         () => repository.saveCuration(
           any(),
           videoAddress: any(named: 'videoAddress'),
+          previous: any(named: 'previous'),
         ),
-      ).thenAnswer((_) async {});
+      ).thenAnswer(
+        (call) async => call.positionalArguments.first as RepliesCuration,
+      );
     });
 
     VideoRepliesCubit build() => VideoRepliesCubit(
@@ -204,6 +207,7 @@ void main() {
           () => repository.saveCuration(
             RepliesCuration(pinnedId: _hex(2)),
             videoAddress: _address,
+            previous: const RepliesCuration(),
           ),
         ).called(1),
       );
@@ -218,6 +222,35 @@ void main() {
     });
 
     group('hideToggled', () {
+      blocTest<VideoRepliesCubit, VideoRepliesState>(
+        'adopts the complete curation reconciled with another device',
+        setUp: () =>
+            when(
+              () => repository.saveCuration(
+                any(),
+                videoAddress: _address,
+                previous: const RepliesCuration(),
+              ),
+            ).thenAnswer(
+              (_) async => RepliesCuration(
+                hiddenIds: {_hex(1), _hex(3)},
+                pinnedId: _hex(2),
+              ),
+            ),
+        build: build,
+        seed: () => loaded,
+        act: (cubit) => cubit.hideToggled(_hex(1)),
+        skip: 1,
+        expect: () => [
+          loaded.copyWith(
+            curation: RepliesCuration(
+              hiddenIds: {_hex(1), _hex(3)},
+              pinnedId: _hex(2),
+            ),
+          ),
+        ],
+      );
+
       blocTest<VideoRepliesCubit, VideoRepliesState>(
         'hides a reply, then shows it again',
         build: build,
@@ -240,6 +273,7 @@ void main() {
           () => repository.saveCuration(
             any(),
             videoAddress: any(named: 'videoAddress'),
+            previous: any(named: 'previous'),
           ),
         ).thenThrow(const RepliesCurationException('blocked')),
         build: build,
@@ -258,6 +292,7 @@ void main() {
           () => repository.saveCuration(
             any(),
             videoAddress: any(named: 'videoAddress'),
+            previous: any(named: 'previous'),
           ),
         ).thenThrow(StateError('signer gone')),
         build: build,

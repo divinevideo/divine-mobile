@@ -1,6 +1,7 @@
 // ABOUTME: Reads a video's video replies and the answers to its Add yours, from
 // ABOUTME: Funnelcake or else the relays, and its creator's pins and hides.
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -21,7 +22,8 @@ typedef ResponsesEventSigner =
       int? createdAt,
     });
 
-/// A curation that could not be signed or that no relay took.
+/// A curation that could not be saved: the signed-in account changed or
+/// signed out, it could not be signed as that account, or no relay took it.
 class RepliesCurationException implements Exception {
   /// Creates the exception.
   const RepliesCurationException(this.message, {this.outcome});
@@ -36,8 +38,10 @@ class RepliesCurationException implements Exception {
   String toString() => 'RepliesCurationException: $message';
 }
 
-/// A creator's curation that could not be read: the relays timed out or none
-/// could be asked, and nothing came back.
+/// A creator's curation that could not be read in full: the relays timed out
+/// or none could be asked. [VideoResponsesRepository.fetchCuration] throws it
+/// only when nothing came back; [VideoResponsesRepository.saveCuration]
+/// throws it whatever came back.
 ///
 /// Kept apart from an empty curation, which means the creator pinned and hid
 /// nothing. Treating a failed read as empty would let the creator's next pin
@@ -105,11 +109,19 @@ class VideoResponsesRepository {
   final ResponsesEventSigner _signEvent;
   final FunnelcakeApiClient? _funnelcakeApiClient;
 
-  /// When the latest curation this read or signed for each video was signed,
-  /// by its `d` tag. Of two signed in the same second NIP-01 keeps the one
+  /// When the latest curation this read or signed for each account and video
+  /// was signed. Of two signed in the same second NIP-01 keeps the one
   /// with the lower id, so a quick pin and unpin could leave the relays
   /// holding the first; the next one is signed after it instead.
   final _curationSignedAt = <String, int>{};
+
+  /// The last save queued for each account and video; the next one waits for
+  /// it.
+  final _curationOperations = <String, Future<void>>{};
+
+  /// The newest authenticated curation read or saved for each account and
+  /// video, retained when a later read returns only older revisions.
+  final _knownCurations = <String, Event>{};
 
   /// The most responses one read from the relays asks for.
   static const int maxResponsesRead = 500;
@@ -379,49 +391,156 @@ class VideoResponsesRepository {
     required String creatorPubkey,
     required String videoAddress,
   }) async {
+    final dTag = RepliesCuration.dTagFor(videoAddress);
+    final key = '$creatorPubkey:$dTag';
     final (:events, :timedOut, :noRelays) = await _nostrClient
         .queryEventsDetailed([
           Filter(
             kinds: [RepliesCuration.kind],
             authors: [creatorPubkey],
-            d: [RepliesCuration.dTagFor(videoAddress)],
+            d: [dTag],
           ),
         ]);
-    if (events.isEmpty && (timedOut || noRelays)) {
+    final eligible = events
+        .where((event) => _isCurationBy(event, creatorPubkey, dTag))
+        .toList();
+    if (eligible.isEmpty && (timedOut || noRelays)) {
       throw RepliesCurationUnavailableException(
         noRelays ? 'No relay could be asked' : 'The relays did not answer',
       );
     }
-    final latest =
-        events.where((event) => event.pubkey == creatorPubkey).toList()
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final latest = [...eligible, ?_knownCurations[key]]
+      ..sort(_compareCurationRevisions);
     if (latest.firstOrNull case final newest?) {
-      _noteCurationSignedAt(
-        RepliesCuration.dTagFor(videoAddress),
-        newest.createdAt,
-      );
+      _rememberCuration(key, newest);
+      _noteCurationSignedAt(key, newest.createdAt);
     }
     return latest.map(RepliesCuration.fromEvent).nonNulls.firstOrNull ??
         const RepliesCuration();
   }
 
-  void _noteCurationSignedAt(String dTag, int createdAt) =>
-      _curationSignedAt[dTag] = math.max(
+  static bool _isCurationBy(Event event, String owner, String dTag) =>
+      event.pubkey == owner &&
+      event.kind == RepliesCuration.kind &&
+      event.dTagValue == dTag &&
+      event.isValid &&
+      event.isSigned;
+
+  static int _compareCurationRevisions(Event a, Event b) =>
+      a.createdAt != b.createdAt
+      ? b.createdAt.compareTo(a.createdAt)
+      : a.id.compareTo(b.id);
+
+  void _rememberCuration(String key, Event event) {
+    final known = _knownCurations[key];
+    if (known == null || _compareCurationRevisions(event, known) < 0) {
+      _knownCurations[key] = Event.fromJson(event.toJson());
+    }
+  }
+
+  void _noteCurationSignedAt(String key, int createdAt) =>
+      _curationSignedAt[key] = math.max(
         createdAt,
-        _curationSignedAt[dTag] ?? createdAt,
+        _curationSignedAt[key] ?? createdAt,
       );
 
-  /// Publishes [curation] of the replies to the video at [videoAddress] as
-  /// the signed-in account, its creator, replacing the one before: it is
-  /// signed after the last one this read or signed, even within a second.
+  /// Saves [curation], the creator's edit of [previous], for the replies to
+  /// the video at [videoAddress] as the signed-in account, and returns the
+  /// curation a relay took.
   ///
-  /// Throws a [RepliesCurationException] if it cannot be signed or no relay
-  /// takes it.
-  Future<void> saveCuration(
+  /// The edit is applied to the newest of the account's curations the relays
+  /// return and the newest this repository read or saved, so pins and hides on
+  /// another device are kept; with neither, it is applied to [previous]. It is
+  /// signed after the curation it replaces. Saves by the same account to the
+  /// same video run one at a time.
+  ///
+  /// Throws:
+  ///
+  /// * [RepliesCurationUnavailableException] if the read timed out or no
+  ///   relay could be asked, since a curation it missed may hold pins or
+  ///   hides this save would drop.
+  /// * [RepliesCurationException] if the account changes or signs out during
+  ///   the save, the curation cannot be signed as that account, or no relay
+  ///   takes it.
+  Future<RepliesCuration> saveCuration(
     RepliesCuration curation, {
     required String videoAddress,
+    required RepliesCuration previous,
+  }) {
+    final owner = _nostrClient.publicKey;
+    final key = '$owner:${RepliesCuration.dTagFor(videoAddress)}';
+    final tail = _curationOperations[key] ?? Future<void>.value();
+    final result = tail.then(
+      (_) => _saveCuration(
+        curation,
+        previous: previous,
+        videoAddress: videoAddress,
+        owner: owner,
+        key: key,
+      ),
+    );
+    // The next save waits for this one but not on its error, which the
+    // caller gets from `result`.
+    _curationOperations[key] = result.then((_) {}, onError: (_, _) {});
+    return result;
+  }
+
+  Future<RepliesCuration> _saveCuration(
+    RepliesCuration curation, {
+    required RepliesCuration previous,
+    required String videoAddress,
+    required String owner,
+    required String key,
   }) async {
+    _requireCurationOwner(owner);
     final dTag = RepliesCuration.dTagFor(videoAddress);
+    final read = await _nostrClient.queryEventsDetailed(
+      [
+        Filter(kinds: [RepliesCuration.kind], authors: [owner], d: [dTag]),
+      ],
+      useCache: false,
+      requireAllRelaysSettled: true,
+    );
+    _requireCurationOwner(owner);
+    if (read.timedOut || read.noRelays) {
+      throw const RepliesCurationUnavailableException(
+        'The latest curation could not be established',
+      );
+    }
+    final revisions = [
+      for (final event in read.events)
+        if (_isCurationBy(event, owner, dTag)) event,
+      ?_knownCurations[key],
+    ]..sort(_compareCurationRevisions);
+    final source = revisions.firstOrNull;
+    final latest = source == null
+        // With no authenticated source available, keep the caller's baseline.
+        ? previous
+        : RepliesCuration.fromEvent(source)!;
+    final hidden = {...latest.hiddenIds}
+      ..addAll(curation.hiddenIds.difference(previous.hiddenIds))
+      ..removeAll(previous.hiddenIds.difference(curation.hiddenIds));
+    final pinChanged = curation.pinnedId != previous.pinnedId;
+    var pinned = latest.pinnedId;
+    if (pinChanged) {
+      final requestedPin = curation.pinnedId;
+      if (requestedPin != null) {
+        // Pinning also shows this reply, including a hide learned in this read.
+        hidden.remove(requestedPin);
+        pinned = requestedPin;
+      } else if (latest.pinnedId == previous.pinnedId) {
+        // Clearing the old pin must not clear another device's different pin.
+        pinned = null;
+      }
+    }
+    final replacement = RepliesCuration(
+      pinnedId: hidden.contains(pinned) ? null : pinned,
+      hiddenIds: hidden,
+    );
+    if (source != null) {
+      _rememberCuration(key, source);
+      _noteCurationSignedAt(key, source.createdAt);
+    }
     final now = NostrTimestamp.now(
       driftTolerance: NostrTimestamp.getDriftToleranceForKind(
         RepliesCuration.kind,
@@ -429,19 +548,39 @@ class VideoResponsesRepository {
     );
     final event = await _signEvent(
       kind: RepliesCuration.kind,
-      content: '',
-      tags: curation.toTags(videoAddress),
-      createdAt: math.max(now, (_curationSignedAt[dTag] ?? 0) + 1),
+      content: source?.content ?? '',
+      tags: replacement.toTags(
+        videoAddress,
+        // The signer stamps attribution from the current setting, so the
+        // replaced curation's `client` tag is not carried forward (#8176).
+        sourceTags: source == null
+            ? null
+            : Nip89ClientTag.withoutClientTag(source.tags),
+      ),
+      createdAt: math.max(now, (_curationSignedAt[key] ?? 0) + 1),
     );
-    if (event == null) {
+    _requireCurationOwner(owner);
+    if (event == null || event.pubkey != owner) {
       throw const RepliesCurationException('Could not sign the curation');
     }
-    _noteCurationSignedAt(dTag, event.createdAt);
+    _noteCurationSignedAt(key, event.createdAt);
     final outcome = await _nostrClient.publishEventAwaitOk(event);
     if (outcome.failed) {
       throw RepliesCurationException(
         'No relay took the curation: ${outcome.summary}',
         outcome: outcome,
+      );
+    }
+    if (_isCurationBy(event, owner, dTag)) _rememberCuration(key, event);
+    return replacement;
+  }
+
+  void _requireCurationOwner(String owner) {
+    if (owner.isEmpty ||
+        _nostrClient.isDisposed ||
+        _nostrClient.publicKey != owner) {
+      throw const RepliesCurationException(
+        'The signed-in account changed or signed out',
       );
     }
   }

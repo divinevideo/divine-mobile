@@ -1,6 +1,8 @@
 // ABOUTME: Tests reading a video's video replies and the answers to its Add
 // ABOUTME: yours, from Funnelcake or the relays, and its creator's curation.
 
+import 'dart:async';
+
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -15,8 +17,9 @@ class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
 String _hex(int n) => n.toRadixString(16).padLeft(64, '0');
 
-final String _creator = _hex(1);
-final String _viewer = _hex(2);
+// Deterministic synthetic keys, used only by these tests.
+final String _creator = getPublicKey(_hex(1));
+final String _viewer = getPublicKey(_hex(2));
 final String _rootId = _hex(100);
 final String _rootAddress = '34236:$_creator:root-d';
 const _relay = 'wss://relay.divine.video';
@@ -97,18 +100,39 @@ Event _curationEvent({
   List<List<String>> tags = const [],
   String? pubkey,
   int kind = RepliesCuration.kind,
-}) => Event.fromJson({
-  'id': _hex(createdAt),
-  'pubkey': pubkey ?? _creator,
-  'created_at': createdAt,
-  'kind': kind,
-  'tags': [
-    ['d', RepliesCuration.dTagFor(_rootAddress)],
-    ...tags,
-  ],
-  'content': '',
-  'sig': '',
-});
+  List<List<String>>? sourceTags,
+  String content = '',
+}) => Event(
+  pubkey ?? _creator,
+  kind,
+  sourceTags ??
+      [
+        ['d', RepliesCuration.dTagFor(_rootAddress)],
+        ...tags,
+      ],
+  content,
+  createdAt: createdAt,
+)..sign(pubkey == _viewer ? _hex(2) : _hex(1));
+
+Event _ineligibleCuration(String reason, int createdAt) {
+  final event = _curationEvent(
+    createdAt: createdAt,
+    pubkey: reason == 'owner' ? _viewer : _creator,
+    kind: reason == 'kind' ? 1 : RepliesCuration.kind,
+    content: 'Unselected source',
+    sourceTags: [
+      if (reason == 'first coordinate') ['d', 'other-curation'],
+      ['d', RepliesCuration.dTagFor(_rootAddress)],
+      ['e', _hex(209), '', 'hidden'],
+      ['alt', 'Unselected metadata'],
+    ],
+  );
+  if (reason == 'signature') event.sig = '0' * 128;
+  if (reason == 'id') event.id = _hex(999);
+  // Signed as it was, then changed: the signature still matches the stale id.
+  if (reason == 'content') event.content = 'Altered after signing';
+  return event;
+}
 
 PublishOutcome _outcome({required bool accepted}) => PublishOutcome(
   eventId: _hex(5),
@@ -140,7 +164,10 @@ VideoStats _stats(
 void main() {
   late _MockNostrClient nostrClient;
   late _MockFunnelcakeApiClient funnelcake;
-  late List<({int kind, List<List<String>> tags, int? createdAt})> signed;
+  late List<
+    ({int kind, String content, List<List<String>> tags, int? createdAt})
+  >
+  signed;
   late Event? signedEvent;
 
   setUpAll(() {
@@ -166,7 +193,12 @@ void main() {
               required tags,
               createdAt,
             }) async {
-              signed.add((kind: kind, tags: tags, createdAt: createdAt));
+              signed.add((
+                kind: kind,
+                content: content,
+                tags: tags,
+                createdAt: createdAt,
+              ));
               return signedEvent;
             },
         funnelcakeApiClient: withFunnelcake ? funnelcake : null,
@@ -193,7 +225,11 @@ void main() {
     bool noRelays = false,
   }) =>
       when(
-        () => nostrClient.queryEventsDetailed(any()),
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
       ).thenAnswer(
         (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
       );
@@ -788,6 +824,45 @@ void main() {
     });
 
     group('fetchCuration', () {
+      for (final reason in [
+        'owner',
+        'kind',
+        'first coordinate',
+        'signature',
+        'id',
+        'content',
+      ]) {
+        test('ignores a source with an ineligible $reason', () async {
+          final invalid = _ineligibleCuration(reason, 2000);
+          if (reason == 'signature') {
+            expect(invalid.isValid, isTrue);
+            expect(invalid.sig, isNotEmpty);
+            expect(invalid.isSigned, isFalse);
+          }
+          if (reason == 'content') {
+            expect(invalid.isSigned, isTrue);
+            expect(invalid.isValid, isFalse);
+          }
+          curationAnswers([
+            invalid,
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(201), '', 'hidden'],
+              ],
+            ),
+          ]);
+
+          expect(
+            await repository().fetchCuration(
+              creatorPubkey: _creator,
+              videoAddress: _rootAddress,
+            ),
+            RepliesCuration(hiddenIds: {_hex(201)}),
+          );
+        });
+      }
+
       test("reads the creator's latest pins and hides", () async {
         curationAnswers([
           _curationEvent(
@@ -898,6 +973,876 @@ void main() {
     });
 
     group('saveCuration', () {
+      setUp(() {
+        when(() => nostrClient.publicKey).thenReturn(_creator);
+        when(() => nostrClient.isDisposed).thenReturn(false);
+        curationAnswers(const []);
+      });
+
+      for (final reason in [
+        'first coordinate',
+        'signature',
+        'id',
+        'content',
+      ]) {
+        test('does not adopt an ineligible source $reason', () async {
+          final invalid = _ineligibleCuration(
+            reason,
+            NostrTimestamp.now(driftTolerance: 0) + 100000,
+          );
+          curationAnswers([invalid]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          final reconciled = await repository().saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+
+          expect(reconciled, RepliesCuration(hiddenIds: {_hex(201)}));
+          expect(signed.single.content, isEmpty);
+          expect(signed.single.tags, [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['a', _rootAddress],
+            ['e', _hex(201), '', 'hidden'],
+          ]);
+          expect(signed.single.createdAt, lessThan(invalid.createdAt));
+        });
+      }
+
+      for (final newerRemote in [false, true]) {
+        test('remembers the newest authenticated source across reads '
+            '(newerRemote: $newerRemote)', () async {
+          final fetched = _curationEvent(
+            createdAt: 2000,
+            content: 'Fetched source',
+            tags: [
+              ['e', _hex(201), '', 'hidden'],
+              ['alt', 'Fetched metadata'],
+            ],
+          );
+          curationAnswers([fetched]);
+          final responses = repository();
+          final previous = await responses.fetchCuration(
+            creatorPubkey: _creator,
+            videoAddress: _rootAddress,
+          );
+          expect(previous.hiddenIds, {_hex(201)});
+          curationAnswers([
+            _curationEvent(
+              createdAt: newerRemote ? 3000 : 1000,
+              content: 'Relay source',
+              tags: [
+                ['e', _hex(202), '', 'hidden'],
+                ['alt', 'Relay metadata'],
+              ],
+            ),
+          ]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          final reconciled = await responses.saveCuration(
+            previous.hidden(_hex(203)),
+            videoAddress: _rootAddress,
+            previous: previous,
+          );
+
+          expect(reconciled.hiddenIds, {
+            if (newerRemote) _hex(202) else _hex(201),
+            _hex(203),
+          });
+          expect(
+            signed.single.content,
+            newerRemote ? 'Relay source' : 'Fetched source',
+          );
+          expect(
+            signed.single.tags,
+            contains(
+              equals([
+                'alt',
+                if (newerRemote) 'Relay metadata' else 'Fetched metadata',
+              ]),
+            ),
+          );
+        });
+      }
+
+      test('an ineligible fetched source sets no timestamp floor', () async {
+        final invalid = _ineligibleCuration(
+          'signature',
+          NostrTimestamp.now(driftTolerance: 0) + 100000,
+        );
+        curationAnswers([invalid]);
+        final responses = repository();
+        expect(
+          await responses.fetchCuration(
+            creatorPubkey: _creator,
+            videoAddress: _rootAddress,
+          ),
+          const RepliesCuration(),
+        );
+        curationAnswers(const []);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+
+        await responses.saveCuration(
+          RepliesCuration(hiddenIds: {_hex(201)}),
+          videoAddress: _rootAddress,
+          previous: const RepliesCuration(),
+        );
+
+        expect(signed.single.createdAt, lessThan(invalid.createdAt));
+        expect(signed.single.content, isEmpty);
+      });
+
+      test(
+        'remembered revisions keep the lowest tied id across reads',
+        () async {
+          final revisions = [
+            for (final id in [201, 202])
+              _curationEvent(
+                createdAt: 2000,
+                tags: [
+                  ['e', _hex(id), '', 'hidden'],
+                ],
+              ),
+          ]..sort((a, b) => a.id.compareTo(b.id));
+          final selected = RepliesCuration.fromEvent(revisions.first)!;
+          expect(selected.hiddenIds, hasLength(1));
+          curationAnswers(revisions.reversed.toList());
+          final responses = repository();
+          expect(
+            await responses.fetchCuration(
+              creatorPubkey: _creator,
+              videoAddress: _rootAddress,
+            ),
+            selected,
+          );
+          curationAnswers([revisions.last]);
+          expect(
+            await responses.fetchCuration(
+              creatorPubkey: _creator,
+              videoAddress: _rootAddress,
+            ),
+            selected,
+          );
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          expect(
+            await responses.saveCuration(
+              selected.hidden(_hex(203)),
+              videoAddress: _rootAddress,
+              previous: selected,
+            ),
+            selected.hidden(_hex(203)),
+          );
+        },
+      );
+
+      test('remembered fetched revisions stay with their owner', () async {
+        curationAnswers([
+          _curationEvent(
+            createdAt: 2000,
+            pubkey: _viewer,
+            tags: [
+              ['e', _hex(209), '', 'hidden'],
+            ],
+          ),
+        ]);
+        final responses = repository();
+        expect(
+          await responses.fetchCuration(
+            creatorPubkey: _viewer,
+            videoAddress: _rootAddress,
+          ),
+          RepliesCuration(hiddenIds: {_hex(209)}),
+        );
+        curationAnswers(const []);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+
+        expect(
+          await responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          ),
+          RepliesCuration(hiddenIds: {_hex(201)}),
+        );
+      });
+
+      for (final hasVideoHint in [false, true]) {
+        test('writes canonical coordinates and preserves source metadata '
+            '(videoHint: $hasVideoHint)', () async {
+          final videoTag = [
+            'a',
+            _rootAddress,
+            'wss://relay.example',
+            '',
+            'extra',
+          ];
+          final remote = _curationEvent(
+            createdAt: 1000,
+            content: 'Preserved content',
+            sourceTags: [
+              ['alt', 'Preserved metadata'],
+              ['d', RepliesCuration.dTagFor(_rootAddress), 'extra'],
+              ['d', 'other-curation'],
+              if (hasVideoHint) videoTag,
+              ['e', _hex(201), 'wss://relay.example', 'hidden', 'extra'],
+              ['e', _hex(205), '', 'foreign-marker'],
+            ],
+          );
+          curationAnswers([remote]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          await repository().saveCuration(
+            RepliesCuration(hiddenIds: {_hex(202)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+
+          expect(signed.single.content, 'Preserved content');
+          expect(signed.single.tags, [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            if (hasVideoHint) videoTag else ['a', _rootAddress],
+            ['alt', 'Preserved metadata'],
+            ['e', _hex(201), 'wss://relay.example', 'hidden', 'extra'],
+            ['e', _hex(205), '', 'foreign-marker'],
+            ['e', _hex(202), '', 'hidden'],
+          ]);
+        });
+      }
+
+      test('keeps the screen baseline when relays return no source', () async {
+        final previous = RepliesCuration(
+          pinnedId: _hex(201),
+          hiddenIds: {_hex(202)},
+        );
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+
+        final reconciled = await repository().saveCuration(
+          previous.hidden(_hex(203)),
+          videoAddress: _rootAddress,
+          previous: previous,
+        );
+
+        expect(
+          reconciled,
+          RepliesCuration(
+            pinnedId: _hex(201),
+            hiddenIds: {_hex(202), _hex(203)},
+          ),
+        );
+        expect(signed.single.tags, [
+          ['d', RepliesCuration.dTagFor(_rootAddress)],
+          ['a', _rootAddress],
+          ['e', _hex(201), '', 'pinned'],
+          ['e', _hex(202), '', 'hidden'],
+          ['e', _hex(203), '', 'hidden'],
+        ]);
+      });
+
+      for (final mismatch in ['owner', 'kind', 'coordinate']) {
+        test('ignores a newer curation with a different $mismatch', () async {
+          final current = _curationEvent(
+            createdAt: 1000,
+            tags: [
+              ['e', _hex(201), 'wss://relay.example', 'hidden'],
+            ],
+          );
+          final unrelated = _curationEvent(
+            createdAt: 2000,
+            pubkey: mismatch == 'owner' ? _viewer : _creator,
+            kind: mismatch == 'kind' ? 1 : RepliesCuration.kind,
+            sourceTags: [
+              <String>[],
+              ['alt', 'Unrelated curation'],
+              [
+                'd',
+                RepliesCuration.dTagFor(
+                  mismatch == 'coordinate'
+                      ? '34236:$_creator:other-video'
+                      : _rootAddress,
+                ),
+              ],
+              ['e', _hex(209), '', 'hidden'],
+            ],
+            content: 'unrelated-content',
+          );
+          curationAnswers([unrelated, current]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          final reconciled = await repository().saveCuration(
+            RepliesCuration(pinnedId: _hex(202)),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+
+          expect(
+            reconciled,
+            RepliesCuration(
+              pinnedId: _hex(202),
+              hiddenIds: {_hex(201)},
+            ),
+          );
+          expect(signed.single.content, isEmpty);
+          expect(signed.single.tags, [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['a', _rootAddress],
+            ['e', _hex(201), 'wss://relay.example', 'hidden'],
+            ['e', _hex(202), '', 'pinned'],
+          ]);
+        });
+      }
+
+      for (final newestFirst in [false, true]) {
+        test('edits the newest revision with the lowest tied event id '
+            '(newestFirst: $newestFirst)', () async {
+          final older = _curationEvent(
+            createdAt: 1000,
+            tags: [
+              ['e', _hex(201), '', 'hidden'],
+            ],
+          );
+          final first = _curationEvent(
+            createdAt: 2000,
+            tags: [
+              ['e', _hex(202), '', 'hidden'],
+            ],
+          );
+          final second = _curationEvent(
+            createdAt: 2000,
+            tags: [
+              ['e', _hex(203), 'wss://relay.example', 'hidden'],
+            ],
+          );
+          final ordered = [first, second]..sort((a, b) => a.id.compareTo(b.id));
+          final lowerId = ordered.first;
+          final higherId = ordered.last;
+          final selected = RepliesCuration.fromEvent(lowerId)!;
+          curationAnswers(
+            newestFirst
+                ? [lowerId, higherId, older]
+                : [older, higherId, lowerId],
+          );
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          final reconciled = await repository().saveCuration(
+            RepliesCuration(pinnedId: _hex(204)),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+
+          expect(
+            reconciled,
+            RepliesCuration(
+              pinnedId: _hex(204),
+              hiddenIds: selected.hiddenIds,
+            ),
+          );
+          expect(signed.single.tags, [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['a', _rootAddress],
+            ...lowerId.tags.skip(1),
+            ['e', _hex(204), '', 'pinned'],
+          ]);
+        });
+      }
+      test(
+        'reconciles remote hidden replies and preserves the complete source',
+        () async {
+          final remote = _curationEvent(
+            createdAt: 1000,
+            sourceTags: [
+              ['d', RepliesCuration.dTagFor(_rootAddress)],
+              ['a', _rootAddress],
+              ['e', _hex(201), 'wss://relay.example', 'hidden', 'extra'],
+              ['e', _hex(202), 'wss://relay.example', 'pinned'],
+              ['alt', 'Keep me'],
+              ['e', _hex(205), '', 'foreign-marker'],
+            ],
+            content: 'opaque-private-content',
+          );
+          curationAnswers([remote]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          final reconciled = await repository().saveCuration(
+            RepliesCuration(hiddenIds: {_hex(203)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+
+          expect(
+            reconciled,
+            RepliesCuration(
+              pinnedId: _hex(202),
+              hiddenIds: {_hex(201), _hex(203)},
+            ),
+          );
+          expect(signed.single.content, 'opaque-private-content');
+          expect(signed.single.tags, [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['a', _rootAddress],
+            ['e', _hex(201), 'wss://relay.example', 'hidden', 'extra'],
+            ['e', _hex(202), 'wss://relay.example', 'pinned'],
+            ['alt', 'Keep me'],
+            ['e', _hex(205), '', 'foreign-marker'],
+            ['e', _hex(203), '', 'hidden'],
+          ]);
+        },
+      );
+
+      for (final client in [
+        Nip89ClientTag.tag,
+        ['client', 'Another app'],
+      ]) {
+        test(
+          'leaves the source ${client[1]} client tag to the signer',
+          () async {
+            curationAnswers([
+              _curationEvent(
+                createdAt: 1000,
+                tags: [
+                  client,
+                  ['e', _hex(201), '', 'hidden'],
+                ],
+              ),
+            ]);
+            when(
+              () => nostrClient.publishEventAwaitOk(any()),
+            ).thenAnswer((_) async => _outcome(accepted: true));
+
+            await repository().saveCuration(
+              RepliesCuration(hiddenIds: {_hex(202)}),
+              videoAddress: _rootAddress,
+              previous: const RepliesCuration(),
+            );
+
+            expect(signed.single.tags, [
+              ['d', RepliesCuration.dTagFor(_rootAddress)],
+              ['a', _rootAddress],
+              ['e', _hex(201), '', 'hidden'],
+              ['e', _hex(202), '', 'hidden'],
+            ]);
+          },
+        );
+      }
+
+      for (final noRelays in [false, true]) {
+        test(
+          'refuses an incomplete nonempty read (noRelays: $noRelays)',
+          () async {
+            curationAnswers(
+              [
+                _curationEvent(
+                  createdAt: 1000,
+                  tags: [
+                    ['e', _hex(201), '', 'hidden'],
+                  ],
+                ),
+              ],
+              noRelays: noRelays,
+              timedOut: !noRelays,
+            );
+            when(
+              () => nostrClient.publishEventAwaitOk(any()),
+            ).thenAnswer((_) async => _outcome(accepted: true));
+
+            await expectLater(
+              repository().saveCuration(
+                RepliesCuration(hiddenIds: {_hex(203)}),
+                videoAddress: _rootAddress,
+                previous: const RepliesCuration(),
+              ),
+              throwsA(isA<RepliesCurationUnavailableException>()),
+            );
+            expect(signed, isEmpty);
+            verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+          },
+        );
+      }
+
+      test(
+        'waits for every relay and excludes cached curation events',
+        () async {
+          curationAnswers(const []);
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: [
+                _curationEvent(
+                  createdAt: 1000,
+                  tags: [
+                    ['e', _hex(201), '', 'hidden'],
+                  ],
+                ),
+              ],
+              timedOut: false,
+              noRelays: false,
+            ),
+          );
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          await repository().saveCuration(
+            RepliesCuration(pinnedId: _hex(202)),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+
+          expect(
+            signed.single.tags,
+            anyElement(equals(['e', _hex(201), '', 'hidden'])),
+          );
+        },
+      );
+
+      test(
+        'serializes the relay read through publication for concurrent edits',
+        () async {
+          curationAnswers(const []);
+          final publishing = Completer<void>();
+          final release = Completer<void>();
+          final published = <Event>[];
+          when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
+            call,
+          ) async {
+            published.add(call.positionalArguments.single as Event);
+            if (published.length == 1) {
+              publishing.complete();
+              await release.future;
+            }
+            return _outcome(accepted: true);
+          });
+          final responses = VideoResponsesRepository(
+            nostrClient: nostrClient,
+            signEvent:
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async =>
+                    Event(_creator, kind, tags, content, createdAt: createdAt)
+                      ..sign(_hex(1)),
+          );
+          final first = responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+          await publishing.future;
+          final second = responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(202)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+          await pumpEventQueue();
+          final overlapped = published.length > 1;
+          release.complete();
+          await Future.wait([first, second]);
+
+          expect(overlapped, isFalse);
+          expect(RepliesCuration.fromEvent(published.last)?.hiddenIds, {
+            _hex(201),
+            _hex(202),
+          });
+        },
+      );
+
+      test(
+        'shows only the requested reply while keeping remote hidden replies',
+        () async {
+          curationAnswers([
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(201), 'wss://relay.example', 'hidden'],
+                ['e', _hex(202), 'wss://other.example', 'hidden'],
+              ],
+            ),
+          ]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          final reconciled = await repository().saveCuration(
+            const RepliesCuration(),
+            videoAddress: _rootAddress,
+            previous: RepliesCuration(hiddenIds: {_hex(201)}),
+          );
+
+          expect(reconciled.hiddenIds, {_hex(202)});
+          expect(signed.single.tags, [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['a', _rootAddress],
+            ['e', _hex(202), 'wss://other.example', 'hidden'],
+          ]);
+        },
+      );
+
+      for (final hidePriorPin in [false, true]) {
+        test('clearing a prior pin preserves a different remote pin '
+            '(hide: $hidePriorPin)', () async {
+          curationAnswers([
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(201), 'wss://relay.example', 'pinned'],
+                ['e', _hex(203), 'wss://other.example', 'hidden'],
+              ],
+            ),
+          ]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+          final previous = RepliesCuration(pinnedId: _hex(202));
+
+          final reconciled = await repository().saveCuration(
+            hidePriorPin ? previous.hidden(_hex(202)) : previous.pinned(null),
+            videoAddress: _rootAddress,
+            previous: previous,
+          );
+
+          expect(
+            reconciled,
+            RepliesCuration(
+              pinnedId: _hex(201),
+              hiddenIds: {_hex(203), if (hidePriorPin) _hex(202)},
+            ),
+          );
+          expect(
+            signed.single.tags,
+            anyElement(
+              equals([
+                'e',
+                _hex(201),
+                'wss://relay.example',
+                'pinned',
+              ]),
+            ),
+          );
+        });
+      }
+
+      test(
+        'explicitly pinning a remotely hidden reply also shows it',
+        () async {
+          curationAnswers([
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(201), 'wss://relay.example', 'pinned'],
+                ['e', _hex(202), 'wss://relay.example', 'hidden'],
+                ['e', _hex(203), 'wss://other.example', 'hidden'],
+              ],
+            ),
+          ]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          final reconciled = await repository().saveCuration(
+            RepliesCuration(pinnedId: _hex(202)),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+
+          expect(
+            reconciled,
+            RepliesCuration(
+              pinnedId: _hex(202),
+              hiddenIds: {_hex(203)},
+            ),
+          );
+          expect(signed.single.tags, [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['a', _rootAddress],
+            ['e', _hex(203), 'wss://other.example', 'hidden'],
+            ['e', _hex(202), '', 'pinned'],
+          ]);
+        },
+      );
+
+      test(
+        'an unchanged prior pin does not undo a remote hide of that reply',
+        () async {
+          curationAnswers([
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(201), '', 'pinned'],
+                ['e', _hex(202), '', 'hidden'],
+                ['e', _hex(203), '', 'hidden'],
+              ],
+            ),
+          ]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+          final previous = RepliesCuration(pinnedId: _hex(202));
+
+          final reconciled = await repository().saveCuration(
+            previous.hidden(_hex(204)),
+            videoAddress: _rootAddress,
+            previous: previous,
+          );
+
+          expect(
+            reconciled,
+            RepliesCuration(
+              pinnedId: _hex(201),
+              hiddenIds: {_hex(202), _hex(203), _hex(204)},
+            ),
+          );
+        },
+      );
+
+      test('hiding a reply pinned on another device also unpins it', () async {
+        curationAnswers([
+          _curationEvent(
+            createdAt: 1000,
+            tags: [
+              ['e', _hex(201), '', 'pinned'],
+              ['e', _hex(203), '', 'hidden'],
+            ],
+          ),
+        ]);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+
+        final reconciled = await repository().saveCuration(
+          const RepliesCuration().hidden(_hex(201)),
+          videoAddress: _rootAddress,
+          previous: const RepliesCuration(),
+        );
+
+        expect(
+          reconciled,
+          RepliesCuration(hiddenIds: {_hex(201), _hex(203)}),
+        );
+        expect(
+          signed.single.tags,
+          isNot(anyElement(equals(['e', _hex(201), '', 'pinned']))),
+        );
+      });
+
+      test('refuses an account switch while the curation is signed', () async {
+        var currentOwner = _creator;
+        when(() => nostrClient.publicKey).thenAnswer((_) => currentOwner);
+        final responses = VideoResponsesRepository(
+          nostrClient: nostrClient,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async {
+                currentOwner = _viewer;
+                return signedEvent;
+              },
+        );
+
+        await expectLater(
+          responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          ),
+          throwsA(isA<RepliesCurationException>()),
+        );
+
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test('signs after the source its own read found, ahead of now', () async {
+        final ahead = NostrTimestamp.now(driftTolerance: 0) + 1000;
+        curationAnswers([_curationEvent(createdAt: ahead)]);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        signedEvent = _curationEvent(createdAt: ahead + 1);
+
+        await repository().saveCuration(
+          RepliesCuration(hiddenIds: {_hex(201)}),
+          videoAddress: _rootAddress,
+          previous: const RepliesCuration(),
+        );
+
+        expect(signed.single.createdAt, equals(ahead + 1));
+      });
+
+      test('refuses a signature belonging to a different account', () async {
+        signedEvent = _curationEvent(createdAt: 1000, pubkey: _viewer);
+
+        await expectLater(
+          repository().saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          ),
+          throwsA(isA<RepliesCurationException>()),
+        );
+
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test(
+        'refuses an account switch while the latest curation is loading',
+        () async {
+          var currentOwner = _creator;
+          when(() => nostrClient.publicKey).thenAnswer((_) => currentOwner);
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((_) async {
+            currentOwner = _viewer;
+            return (events: <Event>[], timedOut: false, noRelays: false);
+          });
+
+          await expectLater(
+            repository().saveCuration(
+              RepliesCuration(hiddenIds: {_hex(201)}),
+              videoAddress: _rootAddress,
+              previous: const RepliesCuration(),
+            ),
+            throwsA(isA<RepliesCurationException>()),
+          );
+
+          expect(signed, isEmpty);
+          verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        },
+      );
+
       test('signs and publishes the curation', () async {
         when(
           () => nostrClient.publishEventAwaitOk(any()),
@@ -906,6 +1851,7 @@ void main() {
         await repository().saveCuration(
           RepliesCuration(pinnedId: _hex(202)),
           videoAddress: _rootAddress,
+          previous: const RepliesCuration(),
         );
 
         expect(signed.single.kind, equals(RepliesCuration.kind));
@@ -927,11 +1873,15 @@ void main() {
           creatorPubkey: _creator,
           videoAddress: _rootAddress,
         );
+        // The save's own read finds nothing, so only the fetch can set the
+        // floor this asserts.
+        curationAnswers(const []);
         signedEvent = _curationEvent(createdAt: ahead + 1);
 
         await responses.saveCuration(
           const RepliesCuration(),
           videoAddress: _rootAddress,
+          previous: const RepliesCuration(),
         );
 
         expect(signed.single.createdAt, equals(ahead + 1));
@@ -948,11 +1898,13 @@ void main() {
         await responses.saveCuration(
           RepliesCuration(pinnedId: _hex(202)),
           videoAddress: _rootAddress,
+          previous: const RepliesCuration(),
         );
 
         await responses.saveCuration(
           const RepliesCuration(),
           videoAddress: _rootAddress,
+          previous: const RepliesCuration(),
         );
 
         expect(signed.last.createdAt, equals(signedEvent!.createdAt + 1));
@@ -965,6 +1917,7 @@ void main() {
           repository().saveCuration(
             const RepliesCuration(),
             videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
           ),
           throwsA(isA<RepliesCurationException>()),
         );
@@ -980,6 +1933,7 @@ void main() {
           repository().saveCuration(
             const RepliesCuration(),
             videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
           ),
           throwsA(
             isA<RepliesCurationException>()
@@ -991,6 +1945,214 @@ void main() {
                 ),
           ),
         );
+      });
+
+      test('unpinning the reply the relays still pin clears it', () async {
+        curationAnswers([
+          _curationEvent(
+            createdAt: 1000,
+            tags: [
+              ['e', _hex(201), 'wss://relay.example', 'pinned'],
+              ['e', _hex(203), '', 'hidden'],
+            ],
+          ),
+        ]);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        final previous = RepliesCuration(
+          pinnedId: _hex(201),
+          hiddenIds: {_hex(203)},
+        );
+
+        final reconciled = await repository().saveCuration(
+          previous.pinned(null),
+          videoAddress: _rootAddress,
+          previous: previous,
+        );
+
+        expect(reconciled, RepliesCuration(hiddenIds: {_hex(203)}));
+        expect(signed.single.tags, [
+          ['d', RepliesCuration.dTagFor(_rootAddress)],
+          ['a', _rootAddress],
+          ['e', _hex(203), '', 'hidden'],
+        ]);
+      });
+
+      test('hiding another reply keeps a remote unhide', () async {
+        curationAnswers([
+          _curationEvent(
+            createdAt: 1000,
+            tags: [
+              ['e', _hex(202), '', 'hidden'],
+            ],
+          ),
+        ]);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        final previous = RepliesCuration(hiddenIds: {_hex(201), _hex(202)});
+
+        final reconciled = await repository().saveCuration(
+          previous.hidden(_hex(203)),
+          videoAddress: _rootAddress,
+          previous: previous,
+        );
+
+        expect(reconciled, RepliesCuration(hiddenIds: {_hex(202), _hex(203)}));
+      });
+
+      group('queued saves', () {
+        late VideoResponsesRepository responses;
+
+        setUp(() {
+          responses = VideoResponsesRepository(
+            nostrClient: nostrClient,
+            signEvent:
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async =>
+                    Event(_creator, kind, tags, content, createdAt: createdAt)
+                      ..sign(_hex(1)),
+          );
+        });
+
+        test(
+          'a refused save neither blocks the next nor becomes its source',
+          () async {
+            var attempt = 0;
+            when(
+              () => nostrClient.publishEventAwaitOk(any()),
+            ).thenAnswer((_) async => _outcome(accepted: ++attempt > 1));
+
+            final first = responses.saveCuration(
+              RepliesCuration(hiddenIds: {_hex(201)}),
+              videoAddress: _rootAddress,
+              previous: const RepliesCuration(),
+            );
+            final second = responses.saveCuration(
+              RepliesCuration(hiddenIds: {_hex(202)}),
+              videoAddress: _rootAddress,
+              previous: const RepliesCuration(),
+            );
+
+            await expectLater(first, throwsA(isA<RepliesCurationException>()));
+            expect(await second, RepliesCuration(hiddenIds: {_hex(202)}));
+          },
+        );
+
+        test('a newer relay revision supersedes what it published', () async {
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+          await responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+          curationAnswers([
+            _curationEvent(
+              createdAt: NostrTimestamp.now(driftTolerance: 0) + 1000,
+              tags: [
+                ['e', _hex(201), '', 'hidden'],
+                ['e', _hex(205), '', 'hidden'],
+              ],
+            ),
+          ]);
+
+          final reconciled = await responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201), _hex(202)}),
+            videoAddress: _rootAddress,
+            previous: RepliesCuration(hiddenIds: {_hex(201)}),
+          );
+
+          expect(reconciled.hiddenIds, {_hex(201), _hex(202), _hex(205)});
+        });
+
+        test('what it published outranks an older relay revision', () async {
+          curationAnswers([
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(209), '', 'hidden'],
+              ],
+            ),
+          ]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+          final afterFirst = await responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+          expect(afterFirst.hiddenIds, {_hex(201), _hex(209)});
+
+          final reconciled = await responses.saveCuration(
+            afterFirst.hidden(_hex(202)),
+            videoAddress: _rootAddress,
+            previous: afterFirst,
+          );
+
+          expect(reconciled.hiddenIds, {_hex(201), _hex(202), _hex(209)});
+        });
+      });
+
+      test('refuses when signed out before anything is read', () async {
+        when(() => nostrClient.publicKey).thenReturn('');
+
+        await expectLater(
+          repository().saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          ),
+          throwsA(isA<RepliesCurationException>()),
+        );
+
+        verifyNever(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        );
+        expect(signed, isEmpty);
+      });
+
+      test('refuses when the client is disposed while signing', () async {
+        var disposed = false;
+        when(() => nostrClient.isDisposed).thenAnswer((_) => disposed);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        final responses = VideoResponsesRepository(
+          nostrClient: nostrClient,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async {
+                disposed = true;
+                return signedEvent;
+              },
+        );
+
+        await expectLater(
+          responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          ),
+          throwsA(isA<RepliesCurationException>()),
+        );
+
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
       });
     });
   });

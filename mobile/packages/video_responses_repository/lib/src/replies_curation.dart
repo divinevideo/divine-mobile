@@ -26,15 +26,8 @@ class RepliesCuration extends Equatable {
     String? pinnedId;
     final hiddenIds = <String>{};
     for (final tag in event.tags) {
-      if (tag.length < 4) continue;
-      final String id;
-      if (tag[0] == 'e' && NostrHexUtils.isValidEventId(tag[1].toLowerCase())) {
-        id = tag[1].toLowerCase();
-      } else if (tag[0] == 'a' && isAddress(tag[1])) {
-        id = tag[1];
-      } else {
-        continue;
-      }
+      final id = _keyIn(tag);
+      if (id == null) continue;
       switch (tag[3]) {
         case _pinnedMarker:
           pinnedId ??= id;
@@ -115,12 +108,74 @@ class RepliesCuration extends Equatable {
 
   /// The tags this curation is published with for the replies to the video
   /// at [videoAddress].
-  List<List<String>> toTags(String videoAddress) => [
-    ['d', dTagFor(videoAddress)],
-    ['a', videoAddress],
-    if (pinnedId case final id?) _replyTag(id, _pinnedMarker),
-    for (final id in hiddenIds) _replyTag(id, _hiddenMarker),
-  ];
+  ///
+  /// The first tag is the canonical `d` for [videoAddress], with a video
+  /// association alongside it; an existing association keeps its hints.
+  /// Other [sourceTags] are kept, including relay hints and extra elements,
+  /// except source `d` tags and pinned or hidden marks no longer made.
+  /// Newly added marks follow the preserved tags.
+  List<List<String>> toTags(
+    String videoAddress, {
+    List<List<String>>? sourceTags,
+  }) {
+    if (sourceTags == null) {
+      return [
+        ['d', dTagFor(videoAddress)],
+        ['a', videoAddress],
+        if (pinnedId case final id?) _replyTag(id, _pinnedMarker),
+        for (final id in hiddenIds) _replyTag(id, _hiddenMarker),
+      ];
+    }
+    final videoTag = sourceTags
+        .where(
+          (tag) => _isVideoAssociation(tag, videoAddress),
+        )
+        .firstOrNull;
+    final tags = <List<String>>[
+      ['d', dTagFor(videoAddress)],
+      List.of(videoTag ?? ['a', videoAddress]),
+    ];
+    final sourcedHidden = <String>{};
+    var sourcedPin = false;
+    for (final tag in sourceTags) {
+      if ((tag.isNotEmpty && tag[0] == 'd') ||
+          _isVideoAssociation(tag, videoAddress)) {
+        continue;
+      }
+      final key = _keyIn(tag);
+      if (key == null || (tag[3] != _pinnedMarker && tag[3] != _hiddenMarker)) {
+        tags.add(List.of(tag));
+      } else if (tag[3] == _pinnedMarker && key == pinnedId) {
+        tags.add(List.of(tag));
+        sourcedPin = true;
+      } else if (tag[3] == _hiddenMarker && hiddenIds.contains(key)) {
+        tags.add(List.of(tag));
+        sourcedHidden.add(key);
+      }
+    }
+    if (pinnedId case final id? when !sourcedPin) {
+      tags.add(_replyTag(id, _pinnedMarker));
+    }
+    for (final id in hiddenIds.difference(sourcedHidden)) {
+      tags.add(_replyTag(id, _hiddenMarker));
+    }
+    return tags;
+  }
+
+  static bool _isVideoAssociation(List<String> tag, String videoAddress) =>
+      tag.length >= 2 &&
+      tag[0] == 'a' &&
+      tag[1] == videoAddress &&
+      (tag.length < 4 || tag[3].isEmpty);
+
+  static String? _keyIn(List<String> tag) {
+    if (tag.length < 4) return null;
+    if (tag[0] == 'e' && NostrHexUtils.isValidEventId(tag[1].toLowerCase())) {
+      return tag[1].toLowerCase();
+    }
+    if (tag[0] == 'a' && isAddress(tag[1])) return tag[1];
+    return null;
+  }
 
   static List<String> _replyTag(String key, String marker) =>
       isAddress(key) ? ['a', key, '', marker] : ['e', key, '', marker];
