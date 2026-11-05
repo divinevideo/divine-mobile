@@ -18,14 +18,23 @@ void main() {
 
   group('captionPresetDisplayName', () {
     test('resolves a distinct localized name for every preset', () {
-      final names = [
-        for (final preset in CaptionStylePreset.presets)
-          captionPresetDisplayName(l10n, preset.id),
-      ];
+      // Two tiles with the same name can't be told apart, so this holds in
+      // every locale, not just English.
+      for (final locale in AppLocalizations.supportedLocales) {
+        final localized = lookupAppLocalizations(locale);
+        final names = [
+          for (final preset in CaptionStylePreset.presets)
+            captionPresetDisplayName(localized, preset.id),
+        ];
 
-      expect(names.toSet(), hasLength(CaptionStylePreset.presets.length));
-      for (final name in names) {
-        expect(name, isNotEmpty);
+        expect(
+          names.toSet(),
+          hasLength(CaptionStylePreset.presets.length),
+          reason: '$locale',
+        );
+        for (final name in names) {
+          expect(name, isNotEmpty, reason: '$locale');
+        }
       }
     });
 
