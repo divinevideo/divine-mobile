@@ -242,7 +242,6 @@ void main() {
       when(
         () => nostr.queryEventsDetailed(
           any(),
-          requireAllRelaysSettled: true,
         ),
       ).thenAnswer(
         (_) async => (
@@ -271,7 +270,6 @@ void main() {
           verify(
                 () => nostr.queryEventsDetailed(
                   captureAny(),
-                  requireAllRelaysSettled: true,
                 ),
               ).captured.single
               as List<Filter>;
@@ -302,7 +300,6 @@ void main() {
         when(
           () => nostr.queryEventsDetailed(
             any(),
-            requireAllRelaysSettled: true,
           ),
         ).thenAnswer(
           (_) async => (
@@ -360,7 +357,6 @@ void main() {
       when(
         () => nostr.queryEventsDetailed(
           any(),
-          requireAllRelaysSettled: true,
         ),
       ).thenAnswer((_) => replies.future);
       var completed = false;
@@ -401,7 +397,6 @@ void main() {
         when(
           () => nostr.queryEventsDetailed(
             any(),
-            requireAllRelaysSettled: true,
           ),
         ).thenAnswer((_) async {
           if (attempts++ == 0) {
@@ -451,7 +446,7 @@ void main() {
     });
 
     test(
-      'accepts an empty older reply page only after relays settle',
+      'accepts an empty page from answering relays without an all-relays veto',
       () async {
         stubComments(
           _commentsPage([_restComment('comment', 100)], hasMore: false),
@@ -459,7 +454,6 @@ void main() {
         when(
           () => nostr.queryEventsDetailed(
             any(),
-            requireAllRelaysSettled: true,
           ),
         ).thenAnswer(
           (_) async => (events: <Event>[], timedOut: false, noRelays: false),
@@ -509,7 +503,6 @@ void main() {
         when(
           () => nostr.queryEventsDetailed(
             any(),
-            requireAllRelaysSettled: true,
           ),
         ).thenAnswer(
           (_) async => (

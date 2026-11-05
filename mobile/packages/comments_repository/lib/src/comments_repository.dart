@@ -763,6 +763,10 @@ class CommentsRepository {
     required DateTime before,
   }) async {
     try {
+      // An answering relay can finish a normal scrolling read even when
+      // another user-configured relay is silent or refuses it. Unlike a
+      // destructive replacement, paging needs no all-relays veto. Actual
+      // timeout/no-participant reads below remain retryable.
       final result = await _nostrClient.queryEventsDetailed([
         Filter(
           kinds: const [EventKind.videoVertical],
@@ -777,7 +781,7 @@ class CommentsRepository {
             limit: limit,
             until: before.millisecondsSinceEpoch ~/ 1000,
           ),
-      ], requireAllRelaysSettled: true);
+      ]);
       if (result.timedOut || result.noRelays) {
         throw const LoadCommentsFailedException(
           'Older video reply page did not finish; retry without advancing',
