@@ -40,9 +40,20 @@ class ChatComposerState extends Equatable {
 }
 
 class ChatComposerCubit extends Cubit<ChatComposerState> {
-  ChatComposerCubit({required Future<bool> Function(String) send})
-    : _send = send,
-      super(const ChatComposerState());
+  ChatComposerCubit({
+    required Future<bool> Function(String) send,
+    ChatComposerState? initialState,
+  }) : _send = send,
+       super(
+         initialState == null
+             ? const ChatComposerState()
+             : ChatComposerState(
+                 text: initialState.text,
+                 mentions: initialState.mentions,
+                 selectionStart: initialState.selectionStart,
+                 selectionEnd: initialState.selectionEnd,
+               ),
+       );
 
   final Future<bool> Function(String) _send;
 

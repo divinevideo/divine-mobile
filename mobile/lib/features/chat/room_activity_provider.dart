@@ -3,11 +3,12 @@
 
 import 'package:concord_repository/concord_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/features/chat/concord_session.dart';
 import 'package:openvine/features/chat/concord_store.dart';
+import 'package:openvine/features/chat/room_catalog_provider.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
@@ -28,25 +29,36 @@ final Provider<RoomActivityRepository?> roomActivityRepositoryProvider =
       }
       final signer = auth.currentIdentity;
       if (signer == null) return null;
+      final catalog = currentConcordCatalog(ref);
+      if (catalog == null || !catalog.ready) return null;
       final database = ref.watch(databaseProvider);
       final activity = RoomActivityRepository(
         ownPubkey: account,
         channels: [
-          for (final community in const ChatState().communities)
+          for (final community in catalog.communities)
             for (final channel in community.channels)
               (() {
                 final store = DriftConcordStore(
                   dao: database.concordStoreDao,
                   account: account,
-                  scope: '$concordRelayUrl/$channel',
+                  scope: '${catalog.scope}/$channel',
                 );
-                final key = pocStreamKeyFor(channel);
+                final key = catalog.stream(channel);
+                final historicalKeys = catalog.outboxReadKeys(channel);
                 return RoomActivityChannel(
-                  channelId: pocChannelIdFor(channel),
+                  channelId: catalog.channelId(channel),
+                  epoch: catalog.epoch,
                   repository: buildConcordRepository(
                     pubkey: account,
                     signer: signer,
                     store: store,
+                    controlState: () => catalog.session?.control,
+                    historicalOutboxKeys: () => historicalKeys,
+                    canPublish: () =>
+                        catalog.canSend &&
+                        catalog.communities.any(
+                          (c) => c.channels.contains(channel),
+                        ),
                     signerForSend: () =>
                         auth.isAuthenticated &&
                             auth.currentPublicKeyHex == account
@@ -60,9 +72,20 @@ final Provider<RoomActivityRepository?> roomActivityRepositoryProvider =
               })(),
         ],
       );
+      final authorityChanges = catalog.session?.changes.listen(
+        (_) => activity.refreshModeration(),
+      );
+      final close = ref.read(accountStateWriteBarrierProvider).register(
+        account,
+        () async {
+          final closing = activity.close();
+          await authorityChanges?.cancel();
+          await closing;
+        },
+      );
       ref.onDispose(() {
         runDetached(
-          activity.close(),
+          close(),
           'close room activity',
           logName: 'RoomActivityRepository',
           category: LogCategory.system,

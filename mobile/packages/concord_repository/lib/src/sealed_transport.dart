@@ -413,3 +413,121 @@ Future<Map<String, dynamic>> sealRumorWithSigner({
     'created_at': rumor['created_at'],
   });
 }
+
+/// Opens a CORD-05 addressable invite bundle at the requested link coordinate.
+/// A valid signature alone cannot substitute for its expected author or d tag.
+Future<ConcordInviteBundle> openInviteBundle({
+  required Map<String, dynamic> event,
+  required String expectedSigner,
+  required List<int> token,
+  required int nowMs,
+}) async {
+  final tags = _validateEvent(event, signed: true);
+  if (event['kind'] != 33301 || event['pubkey'] != expectedSigner) {
+    throw const FormatException('Concord invite coordinate mismatch');
+  }
+  _verifyEvent(event, tags, 'invite');
+  final coordinates = tags.where((t) => t[0] == 'd').toList();
+  final markers = tags.where((t) => t[0] == 'vsk').toList();
+  if (coordinates.length != 1 ||
+      coordinates.single.length != 2 ||
+      coordinates.single[1] != '' ||
+      markers.length != 1 ||
+      markers.single.length != 2 ||
+      markers.single[1] != '6') {
+    throw const FormatException('Concord invite is revoked or invalid');
+  }
+  final decoded = jsonDecode(
+    await nip44Decrypt(
+      event['content'] as String,
+      inviteBundleKey(token),
+    ),
+  );
+  if (decoded is! Map<String, dynamic>) {
+    throw const FormatException('Invalid Concord invite bundle');
+  }
+  return ConcordInviteBundle.fromJson(decoded, nowMs: nowMs);
+}
+
+/// Authenticates a Concord carrier with independently held signer and read
+/// material. The seal proves authorship; callers enforce plane binding and
+/// owner-rooted authority before accepting its contents.
+Future<Map<String, dynamic>> openVerifiedStreamWrap({
+  required Map<String, dynamic> wrap,
+  required GroupKey readKey,
+  required String streamPubkey,
+}) async {
+  final tags = _validateEvent(wrap, signed: true);
+  if (wrap['kind'] != 1059 && wrap['kind'] != 21059 ||
+      wrap['pubkey'] != streamPubkey) {
+    throw const FormatException('Invalid Concord control stream');
+  }
+  _verifyEvent(wrap, tags, 'control-wrap');
+  final seal = _decodeEvent(
+    await nip44Decrypt(
+      wrap['content'] as String,
+      conversationKey(readKey.seedHex, readKey.pubkey),
+    ),
+  );
+  final sealTags = _validateEvent(seal, signed: true);
+  if (seal['kind'] != 20014 && seal['kind'] != 20013) {
+    throw const FormatException('Invalid Concord stream seal');
+  }
+  _verifyEvent(seal, sealTags, 'control-seal');
+  final rumor = _decodeEvent(
+    seal['kind'] == 20013
+        ? await nip44Decrypt(
+            seal['content'] as String,
+            conversationKey(readKey.seedHex, readKey.pubkey),
+          )
+        : seal['content'] as String,
+  );
+  final rumorTags = _validateEvent(rumor, signed: false);
+  if (rumor['pubkey'] != seal['pubkey'] ||
+      rumor['id'] !=
+          computeEventId(
+            pubkey: rumor['pubkey'] as String,
+            createdAt: rumor['created_at'] as int,
+            kind: rumor['kind'] as int,
+            tags: rumorTags,
+            content: rumor['content'] as String,
+          )) {
+    throw const FormatException('Invalid Concord control rumor');
+  }
+  final ms = rumorTags.where((tag) => tag.first == 'ms').firstOrNull;
+  if (ms != null &&
+      (ms.length < 2 || !RegExp(r'^(0|[1-9][0-9]{0,2})$').hasMatch(ms[1]))) {
+    throw const FormatException(
+      'Concord control has malformed millisecond tag',
+    );
+  }
+  return {
+    'rumorId': rumor['id'],
+    'author': seal['pubkey'],
+    'kind': rumor['kind'],
+    'content': rumor['content'],
+    'tags': rumorTags,
+    'createdAt': rumor['created_at'],
+    'sealKind': seal['kind'],
+  };
+}
+
+/// Control-plane specialization: only plaintext kind-3308 editions survive
+/// rewrapping across community epochs.
+Future<Map<String, dynamic>> openControlWrap({
+  required Map<String, dynamic> wrap,
+  required GroupKey readKey,
+  required String streamPubkey,
+}) async {
+  final opened = await openVerifiedStreamWrap(
+    wrap: wrap,
+    readKey: readKey,
+    streamPubkey: streamPubkey,
+  );
+  if (opened['kind'] != 3308 || opened['sealKind'] != 20014) {
+    throw const FormatException(
+      'Control editions require plaintext kind3308 seals',
+    );
+  }
+  return opened;
+}

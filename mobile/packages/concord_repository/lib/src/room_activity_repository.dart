@@ -56,7 +56,10 @@ class RoomActivityChannel {
     required this.store,
     required this.streamSeedHex,
     required this.streamPubkey,
+    this.epoch = 0,
   });
+
+  final int epoch;
 
   final String channelId;
   final ConcordRepository repository;
@@ -125,6 +128,12 @@ class RoomActivityRepository {
     if (!_closed) _changes.add(null);
   }
 
+  void refreshModeration() {
+    for (final source in _sources.values) {
+      source.channel.repository.refreshModeration();
+    }
+  }
+
   /// Starts independent rooms; a failed room remains individually retryable.
   Future<void> start() async {
     if (_closed) throw StateError('Room activity is closed');
@@ -174,7 +183,7 @@ class RoomActivityRepository {
       source.readIds = readIds;
       await source.channel.repository.startChannel(
         channelId: source.channel.channelId,
-        epoch: 0,
+        epoch: source.channel.epoch,
         streamSeedHex: source.channel.streamSeedHex,
         streamPubkey: source.channel.streamPubkey,
         now: _now,

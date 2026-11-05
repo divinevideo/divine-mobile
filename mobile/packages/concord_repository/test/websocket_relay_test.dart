@@ -28,6 +28,36 @@ void main() {
     await relay.close();
   });
 
+  group('subscribe authority synchronization', () {
+    test(
+      'CLOSED never leaves an empty authority subscription set synchronized',
+      () async {
+        final frame = relay.nextFrame('REQ');
+        final rejected = Completer<void>();
+        final subscription = gateway
+            .subscribe({
+              'kinds': [1059],
+              'authors': ['11' * 32],
+            })
+            .listen(
+              (_) {},
+              onError: (Object error) {
+                expect(gateway.synchronized, isFalse);
+                rejected.complete();
+              },
+            );
+        final request = await frame;
+        relay.send(['EOSE', request[1]]);
+        await gateway.historyReady;
+        expect(gateway.synchronized, isTrue);
+        relay.send(['CLOSED', request[1], 'restricted']);
+        await rejected.future;
+        expect(gateway.synchronized, isFalse);
+        await subscription.cancel();
+      },
+    );
+  });
+
   group('publish', () {
     test('publish waits for matching positive OK', () async {
       final frame = relay.nextFrame('EVENT');
@@ -248,10 +278,15 @@ void main() {
         var received = 0;
         var target = 1;
         var receivedTarget = Completer<void>();
-        final subscription = gateway.subscribe({'limit': 2}).listen((_) {
-          received++;
-          if (received == target) receivedTarget.complete();
-        });
+        final subscription = gateway
+            .subscribe({
+              'limit': 2,
+              'authors': ['11' * 32],
+            })
+            .listen((_) {
+              received++;
+              if (received == target) receivedTarget.complete();
+            });
         addTearDown(subscription.cancel);
         final request = await relay.nextFrame('REQ');
         final history = gateway.historyReady;
@@ -283,11 +318,21 @@ void main() {
           ..send(['EOSE', thirdRequest[1]]);
         await receivedTarget.future;
         expect(gateway.historyLimited, isTrue);
+        expect(
+          gateway.historyLimitedForAuthor('11' * 32),
+          isTrue,
+        );
+        expect(gateway.historyLimitedForAuthor('ff' * 32), isFalse);
 
         final finalReplay = relay.nextFrame('REQ');
         await relay.sockets.last.close();
         await finalReplay;
         expect(gateway.historyLimited, isTrue);
+        expect(
+          gateway.historyLimitedForAuthor('11' * 32),
+          isTrue,
+        );
+        expect(gateway.historyLimitedForAuthor('ff' * 32), isFalse);
       },
     );
 

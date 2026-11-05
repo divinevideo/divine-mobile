@@ -105,6 +105,16 @@ jobs:
         with:
           # Provenance tests verify the historical release baseline tree.
           fetch-depth: 0
+      # Release writer tests invoke the real Concord parser via Dart.
+      - name: Setup Flutter for configuration tests
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: "stable"
+          cache: true
+      - name: Install dependencies for configuration tests
+        working-directory: mobile
+        run: flutter pub get
       - name: Run CI configuration unit tests
         run: python3 -m unittest discover -s .github/scripts/tests
       - name: 🛍️ Verify update URLs match shipped store identifiers
@@ -316,6 +326,20 @@ jobs:
         # prints the same one. Package workflows remain independently pinned
         # by very_good_workflows and are outside this app-suite upgrade. #9138.
         run: dart pub global activate very_good_cli "$VERY_GOOD_CLI_VERSION"
+      - name: Verify configured public Rooms entry
+        if: ${{ matrix.shard == 0 }}
+        # These are synthetic compile inputs, never release defaults. Run before
+        # shard selection removes files needed by the configuration contract.
+        run: |
+          flutter test --no-pub \
+            --dart-define=CONCORD_INVITE_URL=https://synthetic.divine.video/invite/naddr1qvzqqqyzz5pzqa3zlfhrhy8te7zj88vela8yr6dqjq080glg47uy63dpwmyda7xkqqqq2555qw#BAABAA1yZWxheS5leGFtcGxl5rt54T31Jbh7GNqR4UiT4Q \
+            --dart-define=CONCORD_RELAY_URL=wss://synthetic.divine.video/relay \
+            --dart-define=FF_CONCORD_CHAT=false \
+            test/services/build_config_test.dart \
+            test/router/chat_routes_test.dart \
+            test/screens/inbox/messages/messages_home_page_test.dart \
+            test/features/chat/concord_session_test.dart \
+            --plain-name configured
       - name: 🔪 Reduce test/ to this shard
         # --optimization bundles every untagged test file into ONE suite, so
         # --concurrency=4 has nothing left to schedule once the 18 tagged files

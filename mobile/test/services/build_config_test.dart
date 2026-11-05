@@ -134,10 +134,14 @@ void main() {
       );
     });
 
-    test('concordChat is off by default and maps to FF_CONCORD_CHAT', () {
+    test('concordChat derives its default from the configured community', () {
       const config = BuildConfiguration();
 
-      expect(config.getDefault(FeatureFlag.concordChat), isFalse);
+      expect(
+        config.getDefault(FeatureFlag.concordChat),
+        const String.fromEnvironment('CONCORD_INVITE_URL').isNotEmpty ||
+            const bool.fromEnvironment('FF_CONCORD_CHAT'),
+      );
       expect(
         config.getEnvironmentKey(FeatureFlag.concordChat),
         equals('FF_CONCORD_CHAT'),

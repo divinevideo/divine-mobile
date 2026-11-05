@@ -8,8 +8,11 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/chat/concord_session.dart';
 import 'package:openvine/features/chat/room_activity_provider.dart';
+import 'package:openvine/features/chat/room_catalog_provider.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/feature_flags/services/build_configuration.dart';
+import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/moderation_presentation.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -126,7 +129,7 @@ void main() {
 
     Future<ProviderContainer> pumpPage(
       WidgetTester tester, {
-      bool enabled = true,
+      bool? enabled = true,
       bool restricted = false,
       String? account,
       RoomActivityRepository? activity,
@@ -134,11 +137,27 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           roomActivityRepositoryProvider.overrideWithValue(activity),
+          if (enabled == null)
+            concordRoomCatalogProvider.overrideWith(
+              (ref) => Stream.error(
+                StateError('synthetic configured authority unavailable'),
+              ),
+            ),
           authServiceProvider.overrideWithValue(_Auth(account)),
           sharedPreferencesProvider.overrideWithValue(prefs),
-          featureFlagStateProvider.overrideWithValue({
-            FeatureFlag.concordChat: enabled,
-          }),
+          if (enabled != null)
+            featureFlagStateProvider.overrideWithValue({
+              FeatureFlag.concordChat: enabled,
+            })
+          else
+            featureFlagServiceProvider.overrideWith((ref) {
+              final service = FeatureFlagService(
+                prefs,
+                const BuildConfiguration(),
+              );
+              ref.onDispose(service.dispose);
+              return service;
+            }),
           isDmRestrictedProvider.overrideWithValue(restricted),
           if (activity != null) ...[
             fetchUserProfileProvider(_peer).overrideWith((ref) async => null),
@@ -164,6 +183,35 @@ void main() {
         ),
       );
       return container;
+    }
+
+    for (final scenario in ['signed-in', 'signed-out', 'restricted']) {
+      testWidgets('configured build respects $scenario Rooms eligibility', (
+        tester,
+      ) async {
+        await prefs.setBool('ff_concordChat', false);
+        const configured = String.fromEnvironment('CONCORD_INVITE_URL');
+        const reviewer = bool.fromEnvironment('FF_CONCORD_CHAT');
+        await pumpPage(
+          tester,
+          enabled: null,
+          account: scenario == 'signed-out' ? null : _own,
+          restricted: scenario == 'restricted',
+        );
+        final l10n = tester.element(find.byType(MessagesHomePage)).l10n;
+        final visible =
+            scenario == 'signed-in' && (configured.isNotEmpty || reviewer);
+        expect(
+          find.text(l10n.messagesRooms),
+          visible ? findsOneWidget : findsNothing,
+        );
+        if (visible && configured.isNotEmpty) {
+          await tester.tap(find.text(l10n.messagesRooms));
+          await tester.pumpAndSettle();
+          expect(find.text(l10n.dmConversationLoadError), findsOneWidget);
+          expect(find.text(l10n.messagesPublicTestRooms), findsNothing);
+        }
+      });
     }
 
     for (final scenario in [

@@ -4,7 +4,9 @@
 /// tables, so existing DM behavior cannot be corrupted.
 library;
 
+export 'src/community_session.dart';
 export 'src/concord_repository.dart';
+export 'src/reports.dart';
 export 'src/room_activity_repository.dart';
 export 'src/sealed_chat_transport.dart';
 export 'src/sealed_transport.dart';

@@ -26240,6 +26240,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Watch video'**
   String get creatorHighlightWatch;
+
+  /// Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture.
+  ///
+  /// In en, this message translates to:
+  /// **'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.'**
+  String get messagesPublicRoomsDisclosure;
+
+  /// Status for an unconfirmed message encrypted with an earlier room epoch. It cannot be retried as its old carrier.
+  ///
+  /// In en, this message translates to:
+  /// **'This older message wasn’t confirmed. Restore it as a draft to send again.'**
+  String get messagesRoomRetiredDraft;
+
+  /// Copies a retained earlier-epoch message into the current room composer without publishing it.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore draft'**
+  String get messagesRoomRestoreDraft;
+
+  /// Deletes only this account's retained unconfirmed local room draft.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard draft'**
+  String get messagesRoomDiscardDraft;
 }
 
 class _AppLocalizationsDelegate

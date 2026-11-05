@@ -10,7 +10,14 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 class ChatCommunity {
-  const ChatCommunity(this.id, this.name, this.channels);
+  const ChatCommunity(
+    this.id,
+    this.name,
+    this.channels, {
+    this.channelNames = const {},
+  });
+  final Map<String, String> channelNames;
+  String channelName(String channel) => channelNames[channel] ?? channel;
   final String id;
   final String name;
   final List<String> channels;
@@ -28,6 +35,8 @@ const List<String> pocChatChannels = [pocChatDefaultChannel, 'introductions'];
 
 class ChatState {
   const ChatState({
+    this.account = '',
+    this.isTestCommunity = true,
     this.messages = const [],
     this.reactions = const {},
     this.communities = const [
@@ -45,7 +54,10 @@ class ChatState {
     this.sendFailed = false,
     this.loadFailed = false,
     this.pendingIds = const [],
+    this.retiredPendingIds = const [],
   });
+  final String account;
+  final bool isTestCommunity;
   final List<ChatMessage> messages;
   final Map<String, Map<String, int>> reactions;
   final List<ChatCommunity> communities;
@@ -57,6 +69,7 @@ class ChatState {
   final bool sendFailed;
   final bool loadFailed;
   final List<String> pendingIds;
+  final List<String> retiredPendingIds;
 
   ChatState copyWith({
     List<ChatMessage>? messages,
@@ -70,7 +83,10 @@ class ChatState {
     bool? sendFailed,
     bool? loadFailed,
     List<String>? pendingIds,
+    List<String>? retiredPendingIds,
   }) => ChatState(
+    account: account,
+    isTestCommunity: isTestCommunity,
     messages: messages ?? this.messages,
     reactions: reactions ?? this.reactions,
     communities: communities,
@@ -82,6 +98,7 @@ class ChatState {
     sendFailed: sendFailed ?? this.sendFailed,
     loadFailed: loadFailed ?? this.loadFailed,
     pendingIds: pendingIds ?? this.pendingIds,
+    retiredPendingIds: retiredPendingIds ?? this.retiredPendingIds,
   );
 }
 
@@ -97,7 +114,12 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     this.initialize,
     this.onRead,
     this.onRoomOpened,
-  }) : super(ChatState(loading: ownsRepository));
+    ChatState? initialState,
+    this.epoch = 0,
+    this.canSend,
+  }) : super(initialState ?? ChatState(loading: ownsRepository));
+  final int epoch;
+  final bool Function()? canSend;
   final ConcordRepository _repo;
 
   /// Starts mention alerts for the room [start] opens. A failure is logged and
@@ -144,7 +166,7 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
           channelId:
               channelIdFor?.call(state.selectedChannelId) ??
               state.selectedChannelId,
-          epoch: 0,
+          epoch: epoch,
           streamSeedHex: stream.seedHex,
           streamPubkey: stream.pubkey,
         );
@@ -180,7 +202,8 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
   /// Signed-in pubkey used as sealed rumor author (session identity).
   final String sealedAuthor;
 
-  /// Resolves only the public POC stream key. Real membership is not supported.
+  /// Resolves a channel's stream key: the deterministic POC key, or the
+  /// current-epoch key from verified community membership.
   final GroupKey Function(String channelId)? pocStreamForChannel;
   void refresh({required int now}) {
     final t = _repo.timeline(now: now);
@@ -190,6 +213,9 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
         messages: t.messages,
         reactions: t.reactions,
         pendingIds: pending,
+        retiredPendingIds: pending
+            .where(_repo.pendingRequiresDraftRestore)
+            .toList(),
         sendFailed:
             state.sendFailed &&
             !(state.pendingIds.isNotEmpty && pending.isEmpty),
@@ -232,7 +258,11 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     required String body,
     required int nowMilliseconds,
   }) async {
-    if (state.sending || state.loading || state.loadFailed || isClosed) {
+    if (state.sending ||
+        state.loading ||
+        state.loadFailed ||
+        isClosed ||
+        canSend?.call() == false) {
       return false;
     }
     final before = _repo.pendingIds.toSet();
@@ -254,6 +284,7 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
               .where(NostrKeyUtils.isValidKey)
               .toSet(),
           createdAt: now,
+          epoch: epoch,
           ms: nowMilliseconds % 1000,
           streamSeedHex: stream.seedHex,
           streamPubkey: stream.pubkey,
@@ -279,8 +310,19 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     return _repo.pendingIds.any((id) => !before.contains(id));
   }
 
+  Future<void> discardPendingDraft(String id) async {
+    await _repo.discardPendingDraft(id);
+    refresh(now: DateTime.now().millisecondsSinceEpoch ~/ 1000);
+  }
+
   Future<void> retry(String id) async {
-    if (state.sending || state.loading || state.loadFailed || isClosed) return;
+    if (state.sending ||
+        state.loading ||
+        state.loadFailed ||
+        isClosed ||
+        canSend?.call() == false) {
+      return;
+    }
     emitIfOpen(state.copyWith(sending: true, sendFailed: false));
     try {
       await _repo.retryPending(messageId: id);

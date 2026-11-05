@@ -147,6 +147,32 @@ refreshed 3.44.9 engine. Do not move the pin in one workflow independently.
 Patch commands take no `--flutter-version`. A patch is compiled against
 whatever version its release used, which Shorebird resolves from the release.
 
+## Public community Rooms configuration
+
+`CONCORD_INVITE_URL` and its paired secure `CONCORD_RELAY_URL` are optional
+build configuration available to the workflow, not command-line arguments or
+values stored in this repository. When supplied,
+the iOS/Android release jobs merge the pair into the private mode-0600 defines file
+before the normal Shorebird build and authenticated provenance record. BETA and
+PRODUCTION channels use the same path. macOS direct-download builds merge the pair into
+their existing private defines file. None of these steps prints the value.
+
+A configured invitation enables Rooms through the existing feature-flag default;
+no separate `FF_CONCORD_CHAT` or device developer switch is needed. Account and
+protected-minor restrictions still apply, and invalid configured membership shows
+an error instead of opening POC rooms. Without an invitation, the existing explicit
+reviewer `FF_CONCORD_CHAT` opt-in remains available.
+
+Patch jobs authenticate the original release record before deciding whether the
+pair belongs in their compile configuration. An older release without either
+key keeps both absent, even if today's workflow environment contains one. A release
+that recorded both requires the original values, and the existing fingerprint check
+rejects drift. This does not permit native/asset changes or bypass patch source,
+key, or provenance validation; a changed community configuration needs a new
+release. An invite-only original or a wrong compiled backend requires a full
+build. Both variables arm subsequent beta, production, and direct macOS builds
+until removed from the workflow environment.
+
 ## Cutting a release
 
 Run `ios-build` or `android-build` in Codemagic as usual. They now produce

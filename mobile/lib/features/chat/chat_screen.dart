@@ -12,18 +12,22 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/caption_mentions/caption_mentions_cubit.dart';
 import 'package:openvine/blocs/chat/chat_composer_cubit.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/features/chat/chat_draft_cache.dart';
 import 'package:openvine/features/chat/chat_message_tile.dart';
+import 'package:openvine/features/chat/concord_reports_provider.dart';
 import 'package:openvine/features/chat/public_room_notice.dart';
+import 'package:openvine/l10n/content_filter_reason_localizations.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mentions/mention_text_editing.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_input_bar.dart';
+import 'package:openvine/services/content_moderation_types.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/mentions/mention_overlay.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Native conversation for the Concord POC selected from Messages.
+/// Native conversation for a Concord room selected from Messages.
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
   static const String path = RoutePaths.chat;
@@ -39,6 +43,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   List<ChatMessage> _readSnapshot = const [];
   late final ChatComposerCubit _composer;
   late final CaptionMentionsCubit _mentions;
+  late final StreamSubscription<ChatComposerState> _draftSubscription;
 
   @override
   void initState() {
@@ -46,15 +51,41 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_scheduleCurrentRead);
     final chat = context.read<ChatCubit>();
+    final drafts = ref.read(chatDraftCacheProvider);
+    final draftKey = (
+      chat.state.account,
+      chat.state.selectedCommunityId,
+      chat.state.selectedChannelId,
+    );
+    final savedDraft = drafts[draftKey];
     _composer = ChatComposerCubit(
-      send: (body) => chat.send(
-        communityId: chat.state.selectedCommunityId,
-        channelId: chat.state.selectedChannelId,
-        author: '',
-        body: body,
-        nowMilliseconds: DateTime.now().millisecondsSinceEpoch,
+      initialState: savedDraft,
+      send: (body) async {
+        final sentText = _composer.state.text;
+        final accepted = await chat.send(
+          communityId: chat.state.selectedCommunityId,
+          channelId: chat.state.selectedChannelId,
+          author: '',
+          body: body,
+          nowMilliseconds: DateTime.now().millisecondsSinceEpoch,
+        );
+        // A send that finishes after this screen is gone can't clear the
+        // composer, so drop the sent draft here unless it was edited since.
+        if (accepted && drafts[draftKey]?.text == sentText) {
+          drafts.remove(draftKey);
+        }
+        return accepted;
+      },
+    );
+    _controller.value = TextEditingValue(
+      text: _composer.state.text,
+      selection: TextSelection.collapsed(
+        offset: _composer.state.selectionEnd ?? _composer.state.text.length,
       ),
     );
+    _draftSubscription = _composer.stream.listen((state) {
+      drafts[draftKey] = state;
+    });
     _mentions = CaptionMentionsCubit(
       profileRepositoryOf: () => ref.read(profileRepositoryProvider),
       candidatePubkeys: () => {
@@ -63,6 +94,46 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       },
     );
     _controller.addListener(_searchMentions);
+  }
+
+  Future<void> _report(ChatMessage message) async {
+    if (ref.read(concordReportsProvider) == null) return;
+    final reason = await VineBottomSheetSelectionMenu.show(
+      context: context,
+      title: Text(context.l10n.reportWhyReporting),
+      // Moderators get Divine's stable reason label, not the reporter's
+      // translated wording.
+      options: [
+        for (final choice in roomReportReasons)
+          VineBottomSheetSelectionOptionData(
+            label: context.l10n.reportReasonTitle(choice),
+            value: contentFilterReasonToNip32Label(choice),
+          ),
+      ],
+    );
+    if (reason == null || !mounted) return;
+    // A new catalog (a renamed room, say) rebuilds the provider while the
+    // sheet is open and ends the instance read before it.
+    final reports = ref.read(concordReportsProvider);
+    try {
+      if (reports == null) throw StateError('Room reports unavailable');
+      await reports.submit(
+        communityId: context.read<ChatCubit>().state.selectedCommunityId,
+        channelId: message.channelId,
+        rumorId: message.id,
+        reason: reason,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.reportReceivedThankYou)),
+        );
+      }
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(context.l10n.reportFailed)));
+      }
+    }
   }
 
   @override
@@ -142,6 +213,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
     _scrollController.dispose();
     _controller.removeListener(_searchMentions);
     unawaited(_mentions.close());
+    unawaited(_draftSubscription.cancel());
     unawaited(_composer.close());
     _controller.dispose();
     super.dispose();
@@ -199,7 +271,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '#${state.selectedChannelId}',
+                '#${community?.channelName(state.selectedChannelId) ?? state.selectedChannelId}',
                 style: VineTheme.titleMediumFont(
                   color: context.vineColors.primaryText,
                 ),
@@ -229,7 +301,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
             constraints: const BoxConstraints(maxWidth: 720),
             child: Column(
               children: [
-                const PublicRoomNotice(),
+                PublicRoomNotice(isTest: state.isTestCommunity),
                 if (state.loading) const DivineLinearProgressIndicator(),
                 if (state.loadFailed) ...[
                   Text(context.l10n.dmConversationLoadError),
@@ -252,7 +324,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     fit: StackFit.expand,
                     children: [
                       if (messages.isEmpty)
-                        _EmptyRoom(channel: state.selectedChannelId)
+                        _EmptyRoom(
+                          channel:
+                              community?.channelName(state.selectedChannelId) ??
+                              state.selectedChannelId,
+                        )
                       else
                         ListView.builder(
                           controller: _scrollController,
@@ -271,6 +347,41 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                                 message.id,
                               ),
                               sending: state.sending,
+                              onRestoreDraft:
+                                  state.retiredPendingIds.contains(message.id)
+                                  ? () {
+                                      final text = _controller.text.isEmpty
+                                          ? message.body
+                                          : '${_controller.text}\n${message.body}';
+                                      _controller.value = TextEditingValue(
+                                        text: text,
+                                        selection: TextSelection.collapsed(
+                                          offset: text.length,
+                                        ),
+                                      );
+                                    }
+                                  : null,
+                              onDiscardDraft:
+                                  state.retiredPendingIds.contains(message.id)
+                                  ? () => runDetached(
+                                      cubit.discardPendingDraft(message.id),
+                                      'discard retired room draft',
+                                      logName: 'ChatScreen',
+                                      category: LogCategory.ui,
+                                    )
+                                  : null,
+                              // Your own messages, sent or not, are not
+                              // something to report.
+                              onReport:
+                                  ref.watch(concordReportsProvider) == null ||
+                                      message.author == state.account
+                                  ? null
+                                  : () => runDetached(
+                                      _report(message),
+                                      'report room message',
+                                      logName: 'ChatScreen',
+                                      category: LogCategory.ui,
+                                    ),
                               onRetry: () => runDetached(
                                 cubit.retry(message.id),
                                 'retry room message',

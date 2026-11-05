@@ -258,3 +258,25 @@ String deriveMessageId(
 ) => sha256
     .convert(utf8.encode('concord/msg/v1:$streamId:$author:$createdAt:$body'))
     .toString();
+
+/// CORD-06 public recipient locator, matching concord-core recipientLocator.
+String recipientLocator(
+  String rotatorHex,
+  String recipientHex,
+  String scopeHex,
+  int newEpoch,
+) {
+  final rotator = hexToBytes(rotatorHex);
+  final recipient = hexToBytes(recipientHex);
+  if (rotator.length != 32 || recipient.length != 32) {
+    throw ArgumentError('concord: recipient identities must be 32 bytes');
+  }
+  return bytesToHex(
+    hkdfSeed(
+      concatBytes([rotator, recipient]),
+      'concord/recipient-pseudonym',
+      hexToBytes(scopeHex),
+      epoch: newEpoch,
+    ),
+  );
+}
