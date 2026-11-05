@@ -109,8 +109,8 @@ class VideoResponsesRepository {
   final ResponsesEventSigner _signEvent;
   final FunnelcakeApiClient? _funnelcakeApiClient;
 
-  /// When the latest curation this read or signed for each video was signed,
-  /// by its `d` tag. Of two signed in the same second NIP-01 keeps the one
+  /// When the latest curation this read or signed for each account and video
+  /// was signed. Of two signed in the same second NIP-01 keeps the one
   /// with the lower id, so a quick pin and unpin could leave the relays
   /// holding the first; the next one is signed after it instead.
   final _curationSignedAt = <String, int>{};
@@ -119,9 +119,9 @@ class VideoResponsesRepository {
   /// it.
   final _curationOperations = <String, Future<void>>{};
 
-  /// The last curation saved for each account and video, read beside the
-  /// relays in case none of them returns it yet.
-  final _publishedCurations = <String, Event>{};
+  /// The newest authenticated curation read or saved for each account and
+  /// video, retained when a later read returns only older revisions.
+  final _knownCurations = <String, Event>{};
 
   /// The most responses one read from the relays asks for.
   static const int maxResponsesRead = 500;
@@ -391,36 +391,57 @@ class VideoResponsesRepository {
     required String creatorPubkey,
     required String videoAddress,
   }) async {
+    final dTag = RepliesCuration.dTagFor(videoAddress);
+    final key = '$creatorPubkey:$dTag';
     final (:events, :timedOut, :noRelays) = await _nostrClient
         .queryEventsDetailed([
           Filter(
             kinds: [RepliesCuration.kind],
             authors: [creatorPubkey],
-            d: [RepliesCuration.dTagFor(videoAddress)],
+            d: [dTag],
           ),
         ]);
-    if (events.isEmpty && (timedOut || noRelays)) {
+    final eligible = events
+        .where((event) => _isCurationBy(event, creatorPubkey, dTag))
+        .toList();
+    if (eligible.isEmpty && (timedOut || noRelays)) {
       throw RepliesCurationUnavailableException(
         noRelays ? 'No relay could be asked' : 'The relays did not answer',
       );
     }
-    final latest =
-        events.where((event) => event.pubkey == creatorPubkey).toList()
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final latest = [...eligible, ?_knownCurations[key]]
+      ..sort(_compareCurationRevisions);
     if (latest.firstOrNull case final newest?) {
-      _noteCurationSignedAt(
-        RepliesCuration.dTagFor(videoAddress),
-        newest.createdAt,
-      );
+      _rememberCuration(key, newest);
+      _noteCurationSignedAt(key, newest.createdAt);
     }
     return latest.map(RepliesCuration.fromEvent).nonNulls.firstOrNull ??
         const RepliesCuration();
   }
 
-  void _noteCurationSignedAt(String dTag, int createdAt) =>
-      _curationSignedAt[dTag] = math.max(
+  static bool _isCurationBy(Event event, String owner, String dTag) =>
+      event.pubkey == owner &&
+      event.kind == RepliesCuration.kind &&
+      event.dTagValue == dTag &&
+      event.isValid &&
+      event.isSigned;
+
+  static int _compareCurationRevisions(Event a, Event b) =>
+      a.createdAt != b.createdAt
+      ? b.createdAt.compareTo(a.createdAt)
+      : a.id.compareTo(b.id);
+
+  void _rememberCuration(String key, Event event) {
+    final known = _knownCurations[key];
+    if (known == null || _compareCurationRevisions(event, known) < 0) {
+      _knownCurations[key] = Event.fromJson(event.toJson());
+    }
+  }
+
+  void _noteCurationSignedAt(String key, int createdAt) =>
+      _curationSignedAt[key] = math.max(
         createdAt,
-        _curationSignedAt[dTag] ?? createdAt,
+        _curationSignedAt[key] ?? createdAt,
       );
 
   /// Saves [curation], the creator's edit of [previous], for the replies to
@@ -428,7 +449,7 @@ class VideoResponsesRepository {
   /// curation a relay took.
   ///
   /// The edit is applied to the newest of the account's curations the relays
-  /// return and the one this repository last saved, so pins and hides made on
+  /// return and the newest this repository read or saved, so pins and hides on
   /// another device are kept; with neither, it is applied to [previous]. It is
   /// signed after the curation it replaces. Saves by the same account to the
   /// same video run one at a time.
@@ -486,25 +507,14 @@ class VideoResponsesRepository {
         'The latest curation could not be established',
       );
     }
-    final revisions =
-        [
-          for (final event in read.events)
-            if (event.pubkey == owner &&
-                event.kind == RepliesCuration.kind &&
-                event.tags.any(
-                  (tag) => tag.length >= 2 && tag[0] == 'd' && tag[1] == dTag,
-                ))
-              event,
-          ?_publishedCurations[key],
-        ]..sort(
-          (a, b) => a.createdAt != b.createdAt
-              ? b.createdAt.compareTo(a.createdAt)
-              : a.id.compareTo(b.id),
-        );
+    final revisions = [
+      for (final event in read.events)
+        if (_isCurationBy(event, owner, dTag)) event,
+      ?_knownCurations[key],
+    ]..sort(_compareCurationRevisions);
     final source = revisions.firstOrNull;
     final latest = source == null
-        // An absent relay source does not supersede what the screen loaded
-        // from cache; only an actual newer revision can replace that baseline.
+        // With no authenticated source available, keep the caller's baseline.
         ? previous
         : RepliesCuration.fromEvent(source)!;
     final hidden = {...latest.hiddenIds}
@@ -527,7 +537,10 @@ class VideoResponsesRepository {
       pinnedId: hidden.contains(pinned) ? null : pinned,
       hiddenIds: hidden,
     );
-    if (source != null) _noteCurationSignedAt(dTag, source.createdAt);
+    if (source != null) {
+      _rememberCuration(key, source);
+      _noteCurationSignedAt(key, source.createdAt);
+    }
     final now = NostrTimestamp.now(
       driftTolerance: NostrTimestamp.getDriftToleranceForKind(
         RepliesCuration.kind,
@@ -544,13 +557,13 @@ class VideoResponsesRepository {
             ? null
             : Nip89ClientTag.withoutClientTag(source.tags),
       ),
-      createdAt: math.max(now, (_curationSignedAt[dTag] ?? 0) + 1),
+      createdAt: math.max(now, (_curationSignedAt[key] ?? 0) + 1),
     );
     _requireCurationOwner(owner);
     if (event == null || event.pubkey != owner) {
       throw const RepliesCurationException('Could not sign the curation');
     }
-    _noteCurationSignedAt(dTag, event.createdAt);
+    _noteCurationSignedAt(key, event.createdAt);
     final outcome = await _nostrClient.publishEventAwaitOk(event);
     if (outcome.failed) {
       throw RepliesCurationException(
@@ -558,7 +571,7 @@ class VideoResponsesRepository {
         outcome: outcome,
       );
     }
-    _publishedCurations[key] = event;
+    if (_isCurationBy(event, owner, dTag)) _rememberCuration(key, event);
     return replacement;
   }
 

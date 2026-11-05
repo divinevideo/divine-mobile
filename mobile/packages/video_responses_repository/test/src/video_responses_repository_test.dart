@@ -17,8 +17,9 @@ class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
 String _hex(int n) => n.toRadixString(16).padLeft(64, '0');
 
-final String _creator = _hex(1);
-final String _viewer = _hex(2);
+// Deterministic synthetic keys, used only by these tests.
+final String _creator = getPublicKey(_hex(1));
+final String _viewer = getPublicKey(_hex(2));
 final String _rootId = _hex(100);
 final String _rootAddress = '34236:$_creator:root-d';
 const _relay = 'wss://relay.divine.video';
@@ -99,18 +100,37 @@ Event _curationEvent({
   List<List<String>> tags = const [],
   String? pubkey,
   int kind = RepliesCuration.kind,
-}) => Event.fromJson({
-  'id': _hex(createdAt),
-  'pubkey': pubkey ?? _creator,
-  'created_at': createdAt,
-  'kind': kind,
-  'tags': [
-    ['d', RepliesCuration.dTagFor(_rootAddress)],
-    ...tags,
-  ],
-  'content': '',
-  'sig': '',
-});
+  List<List<String>>? sourceTags,
+  String content = '',
+}) => Event(
+  pubkey ?? _creator,
+  kind,
+  sourceTags ??
+      [
+        ['d', RepliesCuration.dTagFor(_rootAddress)],
+        ...tags,
+      ],
+  content,
+  createdAt: createdAt,
+)..sign(pubkey == _viewer ? _hex(2) : _hex(1));
+
+Event _ineligibleCuration(String reason, int createdAt) {
+  final event = _curationEvent(
+    createdAt: createdAt,
+    pubkey: reason == 'owner' ? _viewer : _creator,
+    kind: reason == 'kind' ? 1 : RepliesCuration.kind,
+    content: 'Unselected source',
+    sourceTags: [
+      if (reason == 'first coordinate') ['d', 'other-curation'],
+      ['d', RepliesCuration.dTagFor(_rootAddress)],
+      ['e', _hex(209), '', 'hidden'],
+      ['alt', 'Unselected metadata'],
+    ],
+  );
+  if (reason == 'signature') event.sig = '0' * 128;
+  if (reason == 'id') event.id = _hex(999);
+  return event;
+}
 
 PublishOutcome _outcome({required bool accepted}) => PublishOutcome(
   eventId: _hex(5),
@@ -802,6 +822,40 @@ void main() {
     });
 
     group('fetchCuration', () {
+      for (final reason in [
+        'owner',
+        'kind',
+        'first coordinate',
+        'signature',
+        'id',
+      ]) {
+        test('ignores a source with an ineligible $reason', () async {
+          final invalid = _ineligibleCuration(reason, 2000);
+          if (reason == 'signature') {
+            expect(invalid.isValid, isTrue);
+            expect(invalid.sig, isNotEmpty);
+            expect(invalid.isSigned, isFalse);
+          }
+          curationAnswers([
+            invalid,
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(201), '', 'hidden'],
+              ],
+            ),
+          ]);
+
+          expect(
+            await repository().fetchCuration(
+              creatorPubkey: _creator,
+              videoAddress: _rootAddress,
+            ),
+            RepliesCuration(hiddenIds: {_hex(201)}),
+          );
+        });
+      }
+
       test("reads the creator's latest pins and hides", () async {
         curationAnswers([
           _curationEvent(
@@ -918,6 +972,245 @@ void main() {
         curationAnswers(const []);
       });
 
+      for (final reason in ['first coordinate', 'signature', 'id']) {
+        test('does not adopt an ineligible source $reason', () async {
+          final invalid = _ineligibleCuration(
+            reason,
+            NostrTimestamp.now(driftTolerance: 0) + 100000,
+          );
+          curationAnswers([invalid]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          final reconciled = await repository().saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+
+          expect(reconciled, RepliesCuration(hiddenIds: {_hex(201)}));
+          expect(signed.single.content, isEmpty);
+          expect(signed.single.tags, [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['a', _rootAddress],
+            ['e', _hex(201), '', 'hidden'],
+          ]);
+          expect(signed.single.createdAt, lessThan(invalid.createdAt));
+        });
+      }
+
+      for (final newerRemote in [false, true]) {
+        test('remembers the newest authenticated source across reads '
+            '(newerRemote: $newerRemote)', () async {
+          final fetched = _curationEvent(
+            createdAt: 2000,
+            content: 'Fetched source',
+            tags: [
+              ['e', _hex(201), '', 'hidden'],
+              ['alt', 'Fetched metadata'],
+            ],
+          );
+          curationAnswers([fetched]);
+          final responses = repository();
+          final previous = await responses.fetchCuration(
+            creatorPubkey: _creator,
+            videoAddress: _rootAddress,
+          );
+          expect(previous.hiddenIds, {_hex(201)});
+          curationAnswers([
+            _curationEvent(
+              createdAt: newerRemote ? 3000 : 1000,
+              content: 'Relay source',
+              tags: [
+                ['e', _hex(202), '', 'hidden'],
+                ['alt', 'Relay metadata'],
+              ],
+            ),
+          ]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          final reconciled = await responses.saveCuration(
+            previous.hidden(_hex(203)),
+            videoAddress: _rootAddress,
+            previous: previous,
+          );
+
+          expect(reconciled.hiddenIds, {
+            if (newerRemote) _hex(202) else _hex(201),
+            _hex(203),
+          });
+          expect(
+            signed.single.content,
+            newerRemote ? 'Relay source' : 'Fetched source',
+          );
+          expect(
+            signed.single.tags,
+            contains(
+              equals([
+                'alt',
+                if (newerRemote) 'Relay metadata' else 'Fetched metadata',
+              ]),
+            ),
+          );
+        });
+      }
+
+      test('an ineligible fetched source sets no timestamp floor', () async {
+        final invalid = _ineligibleCuration(
+          'signature',
+          NostrTimestamp.now(driftTolerance: 0) + 100000,
+        );
+        curationAnswers([invalid]);
+        final responses = repository();
+        expect(
+          await responses.fetchCuration(
+            creatorPubkey: _creator,
+            videoAddress: _rootAddress,
+          ),
+          const RepliesCuration(),
+        );
+        curationAnswers(const []);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+
+        await responses.saveCuration(
+          RepliesCuration(hiddenIds: {_hex(201)}),
+          videoAddress: _rootAddress,
+          previous: const RepliesCuration(),
+        );
+
+        expect(signed.single.createdAt, lessThan(invalid.createdAt));
+        expect(signed.single.content, isEmpty);
+      });
+
+      test(
+        'remembered revisions keep the lowest tied id across reads',
+        () async {
+          final revisions = [
+            for (final id in [201, 202])
+              _curationEvent(
+                createdAt: 2000,
+                tags: [
+                  ['e', _hex(id), '', 'hidden'],
+                ],
+              ),
+          ]..sort((a, b) => a.id.compareTo(b.id));
+          final selected = RepliesCuration.fromEvent(revisions.first)!;
+          expect(selected.hiddenIds, hasLength(1));
+          curationAnswers(revisions.reversed.toList());
+          final responses = repository();
+          expect(
+            await responses.fetchCuration(
+              creatorPubkey: _creator,
+              videoAddress: _rootAddress,
+            ),
+            selected,
+          );
+          curationAnswers([revisions.last]);
+          expect(
+            await responses.fetchCuration(
+              creatorPubkey: _creator,
+              videoAddress: _rootAddress,
+            ),
+            selected,
+          );
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          expect(
+            await responses.saveCuration(
+              selected.hidden(_hex(203)),
+              videoAddress: _rootAddress,
+              previous: selected,
+            ),
+            selected.hidden(_hex(203)),
+          );
+        },
+      );
+
+      test('remembered fetched revisions stay with their owner', () async {
+        curationAnswers([
+          _curationEvent(
+            createdAt: 2000,
+            pubkey: _viewer,
+            tags: [
+              ['e', _hex(209), '', 'hidden'],
+            ],
+          ),
+        ]);
+        final responses = repository();
+        expect(
+          await responses.fetchCuration(
+            creatorPubkey: _viewer,
+            videoAddress: _rootAddress,
+          ),
+          RepliesCuration(hiddenIds: {_hex(209)}),
+        );
+        curationAnswers(const []);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+
+        expect(
+          await responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          ),
+          RepliesCuration(hiddenIds: {_hex(201)}),
+        );
+      });
+
+      for (final hasVideoHint in [false, true]) {
+        test('writes canonical coordinates and preserves source metadata '
+            '(videoHint: $hasVideoHint)', () async {
+          final videoTag = [
+            'a',
+            _rootAddress,
+            'wss://relay.example',
+            '',
+            'extra',
+          ];
+          final remote = _curationEvent(
+            createdAt: 1000,
+            content: 'Preserved content',
+            sourceTags: [
+              ['alt', 'Preserved metadata'],
+              ['d', RepliesCuration.dTagFor(_rootAddress), 'extra'],
+              ['d', 'other-curation'],
+              if (hasVideoHint) videoTag,
+              ['e', _hex(201), 'wss://relay.example', 'hidden', 'extra'],
+              ['e', _hex(205), '', 'foreign-marker'],
+            ],
+          );
+          curationAnswers([remote]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+
+          await repository().saveCuration(
+            RepliesCuration(hiddenIds: {_hex(202)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+
+          expect(signed.single.content, 'Preserved content');
+          expect(signed.single.tags, [
+            ['d', RepliesCuration.dTagFor(_rootAddress)],
+            if (hasVideoHint) videoTag else ['a', _rootAddress],
+            ['alt', 'Preserved metadata'],
+            ['e', _hex(201), 'wss://relay.example', 'hidden', 'extra'],
+            ['e', _hex(205), '', 'foreign-marker'],
+            ['e', _hex(202), '', 'hidden'],
+          ]);
+        });
+      }
+
       test('keeps the screen baseline when relays return no source', () async {
         final previous = RepliesCuration(
           pinnedId: _hex(201),
@@ -957,15 +1250,12 @@ void main() {
               ['e', _hex(201), 'wss://relay.example', 'hidden'],
             ],
           );
-          final unrelated = Event.fromJson({
-            ..._curationEvent(
-              createdAt: 2000,
-              pubkey: mismatch == 'owner' ? _viewer : _creator,
-              kind: mismatch == 'kind' ? 1 : RepliesCuration.kind,
-            ).toJson(),
-            'tags': [
+          final unrelated = _curationEvent(
+            createdAt: 2000,
+            pubkey: mismatch == 'owner' ? _viewer : _creator,
+            kind: mismatch == 'kind' ? 1 : RepliesCuration.kind,
+            sourceTags: [
               <String>[],
-              ['d'],
               ['alt', 'Unrelated curation'],
               [
                 'd',
@@ -977,8 +1267,8 @@ void main() {
               ],
               ['e', _hex(209), '', 'hidden'],
             ],
-            'content': 'unrelated-content',
-          });
+            content: 'unrelated-content',
+          );
           curationAnswers([unrelated, current]);
           when(
             () => nostrClient.publishEventAwaitOk(any()),
@@ -1000,6 +1290,7 @@ void main() {
           expect(signed.single.content, isEmpty);
           expect(signed.single.tags, [
             ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['a', _rootAddress],
             ['e', _hex(201), 'wss://relay.example', 'hidden'],
             ['e', _hex(202), '', 'pinned'],
           ]);
@@ -1015,18 +1306,22 @@ void main() {
               ['e', _hex(201), '', 'hidden'],
             ],
           );
-          final higherId = _curationEvent(
+          final first = _curationEvent(
             createdAt: 2000,
             tags: [
               ['e', _hex(202), '', 'hidden'],
             ],
-          )..id = _hex(999);
-          final lowerId = _curationEvent(
+          );
+          final second = _curationEvent(
             createdAt: 2000,
             tags: [
               ['e', _hex(203), 'wss://relay.example', 'hidden'],
             ],
-          )..id = _hex(998);
+          );
+          final ordered = [first, second]..sort((a, b) => a.id.compareTo(b.id));
+          final lowerId = ordered.first;
+          final higherId = ordered.last;
+          final selected = RepliesCuration.fromEvent(lowerId)!;
           curationAnswers(
             newestFirst
                 ? [lowerId, higherId, older]
@@ -1046,12 +1341,13 @@ void main() {
             reconciled,
             RepliesCuration(
               pinnedId: _hex(204),
-              hiddenIds: {_hex(203)},
+              hiddenIds: selected.hiddenIds,
             ),
           );
           expect(signed.single.tags, [
             ['d', RepliesCuration.dTagFor(_rootAddress)],
-            ['e', _hex(203), 'wss://relay.example', 'hidden'],
+            ['a', _rootAddress],
+            ...lowerId.tags.skip(1),
             ['e', _hex(204), '', 'pinned'],
           ]);
         });
@@ -1059,9 +1355,9 @@ void main() {
       test(
         'reconciles remote hidden replies and preserves the complete source',
         () async {
-          final remote = Event.fromJson({
-            ..._curationEvent(createdAt: 1000).toJson(),
-            'tags': [
+          final remote = _curationEvent(
+            createdAt: 1000,
+            sourceTags: [
               ['d', RepliesCuration.dTagFor(_rootAddress)],
               ['a', _rootAddress],
               ['e', _hex(201), 'wss://relay.example', 'hidden', 'extra'],
@@ -1069,8 +1365,8 @@ void main() {
               ['alt', 'Keep me'],
               ['e', _hex(205), '', 'foreign-marker'],
             ],
-            'content': 'opaque-private-content',
-          });
+            content: 'opaque-private-content',
+          );
           curationAnswers([remote]);
           when(
             () => nostrClient.publishEventAwaitOk(any()),
@@ -1130,6 +1426,7 @@ void main() {
 
             expect(signed.single.tags, [
               ['d', RepliesCuration.dTagFor(_rootAddress)],
+              ['a', _rootAddress],
               ['e', _hex(201), '', 'hidden'],
               ['e', _hex(202), '', 'hidden'],
             ]);
@@ -1238,7 +1535,8 @@ void main() {
                   required tags,
                   createdAt,
                 }) async =>
-                    Event(_creator, kind, tags, content, createdAt: createdAt),
+                    Event(_creator, kind, tags, content, createdAt: createdAt)
+                      ..sign(_hex(1)),
           );
           final first = responses.saveCuration(
             RepliesCuration(hiddenIds: {_hex(201)}),
@@ -1289,6 +1587,7 @@ void main() {
           expect(reconciled.hiddenIds, {_hex(202)});
           expect(signed.single.tags, [
             ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['a', _rootAddress],
             ['e', _hex(202), 'wss://other.example', 'hidden'],
           ]);
         },
@@ -1370,6 +1669,7 @@ void main() {
           );
           expect(signed.single.tags, [
             ['d', RepliesCuration.dTagFor(_rootAddress)],
+            ['a', _rootAddress],
             ['e', _hex(203), 'wss://other.example', 'hidden'],
             ['e', _hex(202), '', 'pinned'],
           ]);
@@ -1662,6 +1962,7 @@ void main() {
         expect(reconciled, RepliesCuration(hiddenIds: {_hex(203)}));
         expect(signed.single.tags, [
           ['d', RepliesCuration.dTagFor(_rootAddress)],
+          ['a', _rootAddress],
           ['e', _hex(203), '', 'hidden'],
         ]);
       });
@@ -1702,7 +2003,8 @@ void main() {
                   required tags,
                   createdAt,
                 }) async =>
-                    Event(_creator, kind, tags, content, createdAt: createdAt),
+                    Event(_creator, kind, tags, content, createdAt: createdAt)
+                      ..sign(_hex(1)),
           );
         });
 

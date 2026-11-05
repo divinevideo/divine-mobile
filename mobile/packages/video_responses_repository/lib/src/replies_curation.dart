@@ -109,11 +109,11 @@ class RepliesCuration extends Equatable {
   /// The tags this curation is published with for the replies to the video
   /// at [videoAddress].
   ///
-  /// Given the [sourceTags] of the curation it replaces, every one of them is
-  /// kept as it is, relay hints and extra elements included, except the
-  /// pinned and hidden marks this curation no longer makes; marks it adds come
-  /// after them. [videoAddress] is not read then, so the `d` and `a` tags are
-  /// the source's.
+  /// The first tag is the canonical `d` for [videoAddress], with a video
+  /// association alongside it; an existing association keeps its hints.
+  /// Other [sourceTags] are kept, including relay hints and extra elements,
+  /// except source `d` tags and pinned or hidden marks no longer made.
+  /// Newly added marks follow the preserved tags.
   List<List<String>> toTags(
     String videoAddress, {
     List<List<String>>? sourceTags,
@@ -126,10 +126,22 @@ class RepliesCuration extends Equatable {
         for (final id in hiddenIds) _replyTag(id, _hiddenMarker),
       ];
     }
-    final tags = <List<String>>[];
+    final videoTag = sourceTags
+        .where(
+          (tag) => _isVideoAssociation(tag, videoAddress),
+        )
+        .firstOrNull;
+    final tags = <List<String>>[
+      ['d', dTagFor(videoAddress)],
+      List.of(videoTag ?? ['a', videoAddress]),
+    ];
     final sourcedHidden = <String>{};
     var sourcedPin = false;
     for (final tag in sourceTags) {
+      if ((tag.isNotEmpty && tag[0] == 'd') ||
+          _isVideoAssociation(tag, videoAddress)) {
+        continue;
+      }
       final key = _keyIn(tag);
       if (key == null || (tag[3] != _pinnedMarker && tag[3] != _hiddenMarker)) {
         tags.add(List.of(tag));
@@ -149,6 +161,12 @@ class RepliesCuration extends Equatable {
     }
     return tags;
   }
+
+  static bool _isVideoAssociation(List<String> tag, String videoAddress) =>
+      tag.length >= 2 &&
+      tag[0] == 'a' &&
+      tag[1] == videoAddress &&
+      (tag.length < 4 || tag[3].isEmpty);
 
   static String? _keyIn(List<String> tag) {
     if (tag.length < 4) return null;
