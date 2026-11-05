@@ -121,7 +121,8 @@ ArgParser _parser() {
     ..addOption(
       'created-at',
       help:
-          'Unix seconds for every event; defaults to now. A date in the '
+          'Newest event Unix seconds; each unique output is one second older. '
+          'Defaults to now. A date in the '
           "past keeps the import out of the relays' newest pages.",
     );
   parser.addCommand('upload')
@@ -174,27 +175,7 @@ Future<void> _catalog(Directory work, ArgResults args) async {
   final candidates = <SoundCandidate>[];
   try {
     if (source == 'all' || source == 'cc0') {
-      final commit = await _getJson(
-        client,
-        'https://api.github.com/repos/$cc0Repository/commits/main',
-      );
-      final sha = (commit! as Map<String, dynamic>)['sha'] as String;
-      final tree = await _getJson(
-        client,
-        'https://api.github.com/repos/$cc0Repository/git/trees/$sha'
-        '?recursive=1',
-      );
-      final files = [
-        for (final entry
-            in (tree! as Map<String, dynamic>)['tree'] as List<dynamic>)
-          if (entry is Map<String, dynamic> && entry['type'] == 'blob')
-            RepositoryFile(
-              path: entry['path'] as String,
-              blobSha: entry['sha'] as String,
-              size: entry['size'] as int? ?? 0,
-            ),
-      ];
-      final cc0 = cc0Candidates(files, commit: sha)
+      final cc0 = (await loadCc0Catalog(client))
           .where(
             (candidate) =>
                 packs.isEmpty ||
@@ -202,7 +183,9 @@ Future<void> _catalog(Directory work, ArgResults args) async {
           )
           .toList();
       candidates.addAll(limit == null ? cc0 : cc0.take(limit));
-      stdout.writeln('CC0: ${cc0.length} candidates at commit $sha');
+      stdout.writeln(
+        'CC0: ${cc0.length} candidates at commit $cc0VerifiedCommit',
+      );
     }
     if (source == 'all' || source == 'incompetech') {
       final pieces = await _getJson(client, incompetechPiecesUrl);
@@ -364,13 +347,20 @@ void _events(Directory work, ArgResults args) {
     final record = state.records[candidate.id];
     if (record?.status != ImportStatus.prepared) continue;
     if (!written.add(record!.outputSha256!)) continue;
+    final timestamp = createdAt - lines.length;
+    if (timestamp < 0) {
+      throw const _UsageError(
+        '--created-at is too small for all unique outputs; timestamps '
+        'must not precede Unix epoch.',
+      );
+    }
     lines.add(
       jsonEncode(
         buildUnsignedSoundEvent(
           candidate: candidate,
           record: record,
           blossomBase: blossom,
-          createdAt: createdAt,
+          createdAt: timestamp,
           pubkey: pubkey,
         ),
       ),
@@ -467,11 +457,6 @@ Future<void> _publish(Directory work, ArgResults args) async {
       if (line.trim().isNotEmpty) jsonDecode(line) as Map<String, dynamic>,
   ];
   final state = _state(work);
-  final uploaded = {
-    for (final record in state.records.values)
-      if (record.outputSha256 != null && record.uploadedTo.isNotEmpty)
-        record.outputSha256!,
-  };
   final interval = Duration(
     milliseconds: (double.parse(args['interval'] as String) * 1000).round(),
   );
@@ -486,6 +471,23 @@ Future<void> _publish(Directory work, ArgResults args) async {
             .cast<String, Map<String, dynamic>>()
       : <String, Map<String, dynamic>>{};
 
+  // Validate the entire cache selection before any relay can receive an event.
+  final effectiveEvents = <Map<String, dynamic>>[];
+  try {
+    for (final event in unsigned) {
+      final sha = fileHashesOf(event['tags'] as List<dynamic>).firstOrNull;
+      effectiveEvents.add(
+        soundEventForPublish(
+          event,
+          signedBySha[sha],
+          expectedPubkey: expected,
+        ),
+      );
+    }
+  } on FormatException catch (error) {
+    throw _UsageError(error.message);
+  }
+
   for (final url in relays) {
     final relay = await RelayConnection.open(url);
     try {
@@ -497,13 +499,17 @@ Future<void> _publish(Directory work, ArgResults args) async {
       var published = 0;
       var skipped = 0;
       var notUploaded = 0;
-      for (final event in unsigned) {
+      for (final (index, event) in unsigned.indexed) {
         final sha = fileHashesOf(event['tags'] as List<dynamic>).firstOrNull;
         if (sha == null || existing.contains(sha)) {
           skipped++;
           continue;
         }
-        if (!uploaded.contains(sha)) {
+        if (!isSoundPublishEligible(
+          effectiveEvents[index],
+          state.records.values,
+          expectedPubkey: expected,
+        )) {
           notUploaded++;
           continue;
         }

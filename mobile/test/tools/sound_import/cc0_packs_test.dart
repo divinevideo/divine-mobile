@@ -1,7 +1,11 @@
 // ABOUTME: Tests which files of the CC0 sound collection become import candidates
 // ABOUTME: and with which credit, kind and title.
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 import '../../../tools/sound_import/cc0_packs.dart';
 import '../../../tools/sound_import/sound_candidate.dart';
@@ -16,6 +20,43 @@ List<String> _ids(List<SoundCandidate> candidates) => [
 ];
 
 void main() {
+  group('loadCc0Catalog', () {
+    test('never applies verified pack rules to moving main', () async {
+      final requests = <String>[];
+      final client = MockClient((request) async {
+        requests.add(request.url.toString());
+        if (request.url.path.endsWith('/commits/main')) {
+          return http.Response(jsonEncode({'sha': 'f' * 40}), 200);
+        }
+        final pinned = request.url.path.contains('/$_commit');
+        return http.Response(
+          jsonEncode({
+            'tree': [
+              {
+                'type': 'blob',
+                'path': pinned
+                    ? 'kenney_casinoaudio/Audio/chipsHandle5.ogg'
+                    : 'kenney_unverified_future/audio.wav',
+                'sha': 'e' * 40,
+                'size': 10,
+              },
+            ],
+          }),
+          200,
+        );
+      });
+      addTearDown(client.close);
+      final candidates = await loadCc0Catalog(client);
+      expect(requests, [
+        'https://api.github.com/repos/$cc0Repository/git/trees/$_commit?recursive=1',
+      ]);
+      expect(_ids(candidates), [
+        'cc0:kenney_casinoaudio/Audio/chipsHandle5.ogg',
+      ]);
+      expect(candidates.single.downloadUrl, contains('/$_commit/'));
+      expect(candidates.single.sourcePage, contains('/$_commit/'));
+    });
+  });
   group('cc0Candidates', () {
     test('reads only packs whose licence was verified', () {
       final candidates = cc0Candidates([

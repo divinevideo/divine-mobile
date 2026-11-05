@@ -79,6 +79,11 @@ Only sources whose terms allow publishing the sounds as a library:
 - Music by Kevin MacLeod from incompetech (`pieces.json`), CC BY 4.0. Its credit is the one incompetech asks for: the title, "Kevin MacLeod (incompetech.com)", "Licensed under Creative Commons: By Attribution 4.0 License" and the licence link.
 - Not Freesound, Pixabay or the Sonniss bundles: their terms forbid this use.
 
+The CC0 catalog tree and all audio/source URLs are pinned to the verified
+revision `f2b6264f9ab89fabc266914c3654685d68c5a39b`, not upstream `main`.
+Changing `cc0VerifiedCommit` requires checking the pack licence policy again;
+new files on upstream `main` do not automatically inherit the verified terms.
+
 ### Event shape
 
 As in the table above, with these values:
@@ -110,9 +115,17 @@ dart run tools/import_free_sounds.dart publish --work-dir <dir> --relay <url> --
 
 1. `catalog` reads the two listings; nothing is downloaded.
 2. `prepare` downloads, one file every two seconds, and uses ffmpeg to trim edge silence (below -60 dBFS, keeping 50 ms before and 200 ms after the sound), bring the sound to -16 LUFS without lifting its true peak above -1.5 dBTP, and encode AAC (192 kbps for music, 128 kbps otherwise; mono stays mono). A silent file is rejected. It prepares 20 per run unless `--limit` or `--all` says otherwise: the full sources are about 12.5 GB from incompetech plus the CC0 packs, so a full run needs the maintainers' go and runs once.
-3. `events` writes the unsigned events to `events.jsonl`. A Blossom URL is the server and the file's SHA-256, so the events can be built before the upload. Give every event a `--created-at` in the past: thousands of events created now would fill the relays' newest pages, which older app versions show as New.
+3. `events` writes the unsigned events to `events.jsonl`. A Blossom URL is the server and the file's SHA-256, so the events can be built before the upload. `--created-at` is the newest timestamp: each subsequent unique output in catalog order is one second older. Duplicate outputs consume no timestamp. This allows `until`/`limit` relay pagination to reach the entire import. A base too small to keep every timestamp at or after the Unix epoch is rejected without replacing the events file. Choose a base in the past to keep the import out of the relays' newest pages, which older app versions show as New. Repeating with the same catalog, state and base produces the same events.
 4. `upload` asks the server for each file and uploads the missing ones with a BUD-02 authorization signed by the key in `SOUND_IMPORT_UPLOAD_NSEC`. Divine's own media servers need `--confirm-production`. Staging builds use the production media server too, so trying the library on staging needs that go as well.
 5. `publish` signs each event with the key in `SOUND_IMPORT_PUBLISHER_NSEC`, which must belong to `--expect-pubkey`, and sends the events the account has not published yet, found by their `x` tags. Each event is signed once and kept in `signed.json`, so every relay and every later run gets the same event.
+
+Publication requires the event's full content-addressed URL to match a server
+recorded in `uploadedTo` for that exact output SHA-256. An upload to another
+server does not qualify. This check also applies in dry runs and to the actual
+cached signed event, not just a regenerated unsigned event. A cached event
+for another account or file stops publication before connecting to any relay;
+use separate work directories for separate accounts. Regenerating unsigned
+events does not rewrite previously cached signatures or change retry event IDs.
 
 Keys come from the environment of the maintainer who runs the step and never go into the app, the repository or the work directory. `--dry-run` needs no key: `upload` only asks the server, `publish` only asks the relays.
 

@@ -7,6 +7,61 @@ import 'dart:io';
 
 import 'package:nostr_sdk/event.dart';
 
+import 'import_state.dart';
+
+/// Reuses a cached signed event rather than creating a new event id on retry.
+Map<String, dynamic> soundEventForPublish(
+  Map<String, dynamic> unsigned,
+  Map<String, dynamic>? cached, {
+  required String expectedPubkey,
+}) {
+  if (cached == null) return unsigned;
+  final unsignedHashes = fileHashesOf(unsigned['tags'] as List<dynamic>)
+      .toList();
+  final cachedHashes = fileHashesOf(cached['tags'] as List<dynamic>).toList();
+  if (cached['pubkey'] != expectedPubkey ||
+      unsignedHashes.length != 1 ||
+      cachedHashes.length != 1 ||
+      cachedHashes.single != unsignedHashes.single) {
+    throw const FormatException(
+      'Cached signed event does not match the publishing account and file. '
+      'Use a separate work directory for a different account or import.',
+    );
+  }
+  return cached;
+}
+
+/// Whether every full hash URL has a matching prepared record and upload server.
+/// Pass the cached signed event when one exists, not its unsigned replacement.
+bool isSoundPublishEligible(
+  Map<String, dynamic> event,
+  Iterable<ImportRecord> records, {
+  required String expectedPubkey,
+}) {
+  final pubkey = event['pubkey'];
+  if (pubkey != null && pubkey != '' && pubkey != expectedPubkey) return false;
+  final tags = event['tags'] as List<dynamic>;
+  final hashes = fileHashesOf(tags).toList();
+  if (hashes.length != 1 ||
+      !RegExp(r'^[0-9a-f]{64}$').hasMatch(hashes.single)) {
+    return false;
+  }
+  final sha = hashes.single;
+  final urls = [
+    for (final tag in tags.whereType<List<dynamic>>())
+      if (tag.length >= 2 && tag[0] == 'url') tag[1],
+  ];
+  if (urls.isEmpty) return false;
+  return urls.every(
+    (url) => records.any(
+      (record) =>
+          record.status == ImportStatus.prepared &&
+          record.outputSha256 == sha &&
+          record.uploadedTo.any((server) => url == '$server/$sha'),
+    ),
+  );
+}
+
 /// How many file hashes one relay query asks about.
 const _hashesPerQuery = 100;
 

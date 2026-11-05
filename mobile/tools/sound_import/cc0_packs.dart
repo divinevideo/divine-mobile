@@ -1,11 +1,50 @@
 // ABOUTME: Which packs of the CC0 sound collection the importer reads, who made
 // ABOUTME: them, and how their files become candidates. Only verified packs.
 
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:http/http.dart' as http;
+
 import 'sound_candidate.dart';
 import 'sound_titles.dart';
 
 /// The GitHub repository the CC0 effects are mirrored in.
 const cc0Repository = 'lavenderdotpet/CC0-Public-Domain-Sounds';
+
+/// Revision whose pack licence files were verified on 2026-11-04.
+/// Updating this pin requires rechecking the pack policy against that tree.
+const cc0VerifiedCommit = 'f2b6264f9ab89fabc266914c3654685d68c5a39b';
+
+/// Loads the repository listing used by the CC0 pack policy.
+Future<List<SoundCandidate>> loadCc0Catalog(http.Client client) async {
+  Future<Map<String, dynamic>> get(String path) async {
+    final url = Uri.parse('https://api.github.com/repos/$cc0Repository/$path');
+    final response = await client.get(
+      url,
+      headers: {
+        'User-Agent': 'DivineSoundImport/1.0 (+https://divine.video)',
+        'Accept': 'application/json',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw HttpException('GET $url answered ${response.statusCode}');
+    }
+    return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+  }
+
+  const sha = cc0VerifiedCommit;
+  final tree = await get('git/trees/$sha?recursive=1');
+  return cc0Candidates([
+    for (final entry in tree['tree'] as List<dynamic>)
+      if (entry is Map<String, dynamic> && entry['type'] == 'blob')
+        RepositoryFile(
+          path: entry['path'] as String,
+          blobSha: entry['sha'] as String,
+          size: entry['size'] as int? ?? 0,
+        ),
+  ], commit: sha);
+}
 
 /// A pack whose licence file names its original author and CC0.
 ///
