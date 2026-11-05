@@ -918,10 +918,13 @@ class RepostsRepository {
   /// holds a `d` tag, so the `e` filter is skipped rather than sent when
   /// [eventId] is a `d` tag.
   ///
-  /// Filters out reposts deleted via Kind 5 deletion events from their
-  /// author, and reposters hidden by the injected block filter
-  /// (blocked/muted users). Pubkeys are deduplicated and ordered by
-  /// repost recency, most recent first.
+  /// Considers only the newest 500 reposts, however many a popular video has,
+  /// so the relay work stays bounded: each repost filter carries that limit,
+  /// and deletions are looked up by the ids of those reposts alone. Filters
+  /// out reposts deleted via Kind 5 deletion events from their author, and
+  /// reposters hidden by the injected block filter (blocked/muted users), so
+  /// fewer than 500 pubkeys can come back. Pubkeys are deduplicated and
+  /// ordered by repost recency, most recent first.
   ///
   /// Parameters:
   /// - [eventId]: Hex event ID of the target event, or — for an addressable
@@ -945,9 +948,18 @@ class RepostsRepository {
       // only ever come back empty, and [addressableId] is what finds those
       // reposts.
       final filters = <Filter>[
-        if (keyIsValid(eventId)) Filter(kinds: repostKinds, e: [eventId]),
+        if (keyIsValid(eventId))
+          Filter(
+            kinds: repostKinds,
+            e: [eventId],
+            limit: _defaultRepostFetchLimit,
+          ),
         if (addressableId != null && addressableId.isNotEmpty)
-          Filter(kinds: repostKinds, a: [addressableId]),
+          Filter(
+            kinds: repostKinds,
+            a: [addressableId],
+            limit: _defaultRepostFetchLimit,
+          ),
       ];
       final results = await Future.wait([
         for (final filter in filters) _nostrClient.queryEvents([filter]),
@@ -964,13 +976,21 @@ class RepostsRepository {
         return <String>[];
       }
 
-      final reposterPubkeys = repostsById.values
-          .map((event) => event.pubkey)
-          .toSet()
-          .toList();
+      // The newest 500 overall lie within the union of each filter's newest
+      // 500. Reposts have one-second resolution and `sort` is not stable, so
+      // ties fall to the lowest id, as NIP-01 orders a limited answer, and the
+      // cut does not depend on arrival order.
+      final newestReposts =
+          (repostsById.values.toList()..sort((a, b) {
+                final byRecency = b.createdAt.compareTo(a.createdAt);
+                return byRecency != 0 ? byRecency : a.id.compareTo(b.id);
+              }))
+              .take(_defaultRepostFetchLimit)
+              .toList();
       final deletionFilter = Filter(
         kinds: const [EventKind.eventDeletion],
-        authors: reposterPubkeys,
+        e: [for (final repost in newestReposts) repost.id],
+        limit: newestReposts.length,
       );
       final deletionEvents = await _nostrClient.queryEvents([deletionFilter]);
 
@@ -987,15 +1007,10 @@ class RepostsRepository {
         }
       }
 
-      final liveReposts =
-          repostsById.values
-              .where((event) => !deletedRepostIds.contains(event.id))
-              .toList()
-            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
       final orderedPubkeys = <String>[];
       final seen = <String>{};
-      for (final event in liveReposts) {
+      for (final event in newestReposts) {
+        if (deletedRepostIds.contains(event.id)) continue;
         if (_blockFilter?.call(event.pubkey) ?? false) continue;
         if (seen.add(event.pubkey)) {
           orderedPubkeys.add(event.pubkey);

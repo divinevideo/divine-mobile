@@ -185,7 +185,8 @@ class VideoEngagementBloc
   /// One page of the engagement list.
   ///
   /// Reposters carry no cursor: they are served from relays in a single
-  /// page, so [VideoEngagementState.hasMore] stays false for that type.
+  /// page holding at most the newest 500 reposts, so
+  /// [VideoEngagementState.hasMore] stays false for that type.
   Future<({List<String> pubkeys, String? nextCursor})> _fetchPage({
     String? cursor,
   }) async {
