@@ -22,7 +22,8 @@ typedef ResponsesEventSigner =
       int? createdAt,
     });
 
-/// A curation that could not be signed or that no relay took.
+/// A curation that could not be saved: the signed-in account changed or
+/// signed out, it could not be signed as that account, or no relay took it.
 class RepliesCurationException implements Exception {
   /// Creates the exception.
   const RepliesCurationException(this.message, {this.outcome});
@@ -37,8 +38,10 @@ class RepliesCurationException implements Exception {
   String toString() => 'RepliesCurationException: $message';
 }
 
-/// A creator's curation that could not be read: the relays timed out or none
-/// could be asked, and nothing came back.
+/// A creator's curation that could not be read in full: the relays timed out
+/// or none could be asked. [VideoResponsesRepository.fetchCuration] throws it
+/// only when nothing came back; [VideoResponsesRepository.saveCuration]
+/// throws it whatever came back.
 ///
 /// Kept apart from an empty curation, which means the creator pinned and hid
 /// nothing. Treating a failed read as empty would let the creator's next pin
@@ -111,7 +114,13 @@ class VideoResponsesRepository {
   /// with the lower id, so a quick pin and unpin could leave the relays
   /// holding the first; the next one is signed after it instead.
   final _curationSignedAt = <String, int>{};
+
+  /// The last save queued for each account and video; the next one waits for
+  /// it.
   final _curationOperations = <String, Future<void>>{};
+
+  /// The last curation saved for each account and video, read beside the
+  /// relays in case none of them returns it yet.
   final _publishedCurations = <String, Event>{};
 
   /// The most responses one read from the relays asks for.
@@ -414,11 +423,24 @@ class VideoResponsesRepository {
         _curationSignedAt[dTag] ?? createdAt,
       );
 
-  /// Applies the change from [previous] to [curation] over the latest relay
-  /// source, returning the complete curation accepted by a relay.
+  /// Saves [curation], the creator's edit of [previous], for the replies to
+  /// the video at [videoAddress] as the signed-in account, and returns the
+  /// curation a relay took.
   ///
-  /// The read, delta and publication share a coordinate queue. Inconclusive
-  /// reads refuse the write rather than dropping unseen pins or hidden replies.
+  /// The edit is applied to the newest of the account's curations the relays
+  /// return and the one this repository last saved, so pins and hides made on
+  /// another device are kept; with neither, it is applied to [previous]. It is
+  /// signed after the curation it replaces. Saves by the same account to the
+  /// same video run one at a time.
+  ///
+  /// Throws:
+  ///
+  /// * [RepliesCurationUnavailableException] if the read timed out or no
+  ///   relay could be asked, since a curation it missed may hold pins or
+  ///   hides this save would drop.
+  /// * [RepliesCurationException] if the account changes or signs out during
+  ///   the save, the curation cannot be signed as that account, or no relay
+  ///   takes it.
   Future<RepliesCuration> saveCuration(
     RepliesCuration curation, {
     required String videoAddress,
@@ -436,6 +458,8 @@ class VideoResponsesRepository {
         key: key,
       ),
     );
+    // The next save waits for this one but not on its error, which the
+    // caller gets from `result`.
     _curationOperations[key] = result.then((_) {}, onError: (_, _) {});
     return result;
   }
@@ -542,7 +566,9 @@ class VideoResponsesRepository {
     if (owner.isEmpty ||
         _nostrClient.isDisposed ||
         _nostrClient.publicKey != owner) {
-      throw const RepliesCurationException('The signing account changed');
+      throw const RepliesCurationException(
+        'The signed-in account changed or signed out',
+      );
     }
   }
 }

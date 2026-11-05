@@ -18,7 +18,9 @@ typedef RepliesWarnings = List<VideoEvent> Function(List<VideoEvent> replies);
 ///
 /// Every reply is listed, so the creator can hide it, each with the warnings
 /// [RepliesWarnings] puts on it. A change shows at once and is saved behind
-/// it; one that cannot be saved goes back to what it was.
+/// it; once saved, the page shows the curation that was published, with pins
+/// and hides made on another device merged in, and one that cannot be saved
+/// goes back to what it was.
 class VideoRepliesCubit extends Cubit<VideoRepliesState>
     with CloseGuardedEmit<VideoRepliesState> {
   VideoRepliesCubit({

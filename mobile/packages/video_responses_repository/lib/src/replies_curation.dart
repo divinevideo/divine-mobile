@@ -106,8 +106,14 @@ class RepliesCuration extends Equatable {
     return [shown.removeAt(pinnedIndex), ...shown];
   }
 
-  /// The tags for [videoAddress], preserving untouched [sourceTags] when
-  /// replacing an existing curation, including extra member positions.
+  /// The tags this curation is published with for the replies to the video
+  /// at [videoAddress].
+  ///
+  /// Given the [sourceTags] of the curation it replaces, every one of them is
+  /// kept as it is, relay hints and extra elements included, except the
+  /// pinned and hidden marks this curation no longer makes; marks it adds come
+  /// after them. [videoAddress] is not read then, so the `d` and `a` tags are
+  /// the source's.
   List<List<String>> toTags(
     String videoAddress, {
     List<List<String>>? sourceTags,
