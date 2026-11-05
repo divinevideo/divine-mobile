@@ -2023,6 +2023,179 @@ void main() {
         expect(sent.single.single.e, isNull);
       });
 
+      group('bounds the relay work for a popular video', () {
+        const repostFetchLimit = 500;
+
+        // Full-length synthetic ids: 32 bytes of hex, like the real ones.
+        String reposterPubkey(int i) =>
+            'bb${i.toRadixString(16).padLeft(62, '0')}';
+        String repostEventId(int i) =>
+            'ee${i.toRadixString(16).padLeft(62, '0')}';
+
+        // 600 reposts, newest first, split across the `e` and `a` filters so
+        // that their union is larger than the bound. Index 0 is the newest.
+        ({List<Event> byEventId, List<Event> byCoordinate}) popularVideo() {
+          final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          final byEventId = <Event>[];
+          final byCoordinate = <Event>[];
+          for (var i = 0; i < 600; i++) {
+            final isEvenIndex = i.isEven;
+            final event = createReposterEvent(
+              id: repostEventId(i),
+              pubkey: reposterPubkey(i),
+              kind: EventKind.genericRepost,
+              createdAt: now - i,
+              tags: [
+                if (isEvenIndex) ['e', testEventId],
+                if (!isEvenIndex) ['a', testAddressableId],
+              ],
+            );
+            (isEvenIndex ? byEventId : byCoordinate).add(event);
+          }
+          return (byEventId: byEventId, byCoordinate: byCoordinate);
+        }
+
+        test('asks each relay for at most the newest 500 reposts on both '
+            'the event and the coordinate', () async {
+          wireQueryEvents();
+
+          final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+          await repository.fetchEventReposters(
+            eventId: testEventId,
+            addressableId: testAddressableId,
+          );
+
+          final repostFilters = verify(
+            () => mockNostrClient.queryEvents(captureAny()),
+          ).captured.cast<List<Filter>>().map((sent) => sent.single).toList();
+
+          expect(repostFilters, hasLength(2));
+          expect(
+            repostFilters.map((filter) => filter.limit),
+            everyElement(repostFetchLimit),
+          );
+        });
+
+        test('looks up deletions by the ids and authors of the newest 500 '
+            'reposts only', () async {
+          final video = popularVideo();
+          wireQueryEvents(
+            eFilterEvents: video.byEventId,
+            aFilterEvents: video.byCoordinate,
+          );
+
+          final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+          await repository.fetchEventReposters(
+            eventId: testEventId,
+            addressableId: testAddressableId,
+          );
+
+          final deletionFilter =
+              verify(
+                    () => mockNostrClient.queryEvents(captureAny()),
+                  ).captured
+                  .cast<List<Filter>>()
+                  .map((sent) => sent.single)
+                  .singleWhere(
+                    (filter) =>
+                        filter.kinds?.contains(EventKind.eventDeletion) ??
+                        false,
+                  );
+
+          expect(
+            deletionFilter.e,
+            unorderedEquals([for (var i = 0; i < 500; i++) repostEventId(i)]),
+          );
+          expect(
+            deletionFilter.authors,
+            unorderedEquals([for (var i = 0; i < 500; i++) reposterPubkey(i)]),
+          );
+          expect(deletionFilter.limit, equals(repostFetchLimit));
+        });
+
+        test('returns at most the newest 500 reposters when the relays '
+            'answer with more', () async {
+          final video = popularVideo();
+          wireQueryEvents(
+            eFilterEvents: video.byEventId,
+            aFilterEvents: video.byCoordinate,
+          );
+
+          final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+          final result = await repository.fetchEventReposters(
+            eventId: testEventId,
+            addressableId: testAddressableId,
+          );
+
+          expect(result, [for (var i = 0; i < 500; i++) reposterPubkey(i)]);
+        });
+
+        test('breaks ties at the cut by lowest id, whatever order the relay '
+            'answers in', () async {
+          final sameSecond = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          // Highest id first, so neither arrival order nor a stable sort
+          // would put the lowest ids at the front.
+          wireQueryEvents(
+            eFilterEvents: [
+              for (var i = 599; i >= 0; i--)
+                createReposterEvent(
+                  id: repostEventId(i),
+                  pubkey: reposterPubkey(i),
+                  kind: EventKind.genericRepost,
+                  createdAt: sameSecond,
+                  tags: [
+                    ['e', testEventId],
+                  ],
+                ),
+            ],
+          );
+
+          final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+          final result = await repository.fetchEventReposters(
+            eventId: testEventId,
+          );
+
+          expect(result, [for (var i = 0; i < 500; i++) reposterPubkey(i)]);
+        });
+
+        test('counts the cap before deletions, so a deleted repost is not '
+            'replaced by an older one', () async {
+          final video = popularVideo();
+          final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          wireQueryEvents(
+            eFilterEvents: video.byEventId,
+            aFilterEvents: video.byCoordinate,
+            deletionEvents: [
+              createReposterEvent(
+                id: repostEventId(3).replaceFirst('ee', 'dd'),
+                pubkey: reposterPubkey(3),
+                kind: EventKind.eventDeletion,
+                createdAt: now,
+                tags: [
+                  ['e', repostEventId(3)],
+                ],
+              ),
+            ],
+          );
+
+          final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+          final result = await repository.fetchEventReposters(
+            eventId: testEventId,
+            addressableId: testAddressableId,
+          );
+
+          expect(result, [
+            for (var i = 0; i < 500; i++)
+              if (i != 3) reposterPubkey(i),
+          ]);
+        });
+      });
+
       test('returns empty list when no reposts exist', () async {
         wireQueryEvents();
 
@@ -2255,7 +2428,62 @@ void main() {
       );
 
       test(
-        'ignores deletions whose author does not own the targeted repost',
+        'keeps a repost when someone other than its author asks to delete it',
+        () async {
+          final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          // Full-length synthetic ids. The deletion lookup names every
+          // reposter in the window, so another reposter's kind 5 comes back
+          // from the relay and only the author check keeps it from hiding
+          // someone else's repost.
+          final repostId = 'c3' * 32;
+          final author = 'a1' * 32;
+          final otherReposter = 'b2' * 32;
+          wireQueryEvents(
+            eFilterEvents: [
+              createReposterEvent(
+                id: repostId,
+                pubkey: author,
+                kind: EventKind.genericRepost,
+                createdAt: now,
+                tags: [
+                  ['e', testEventId],
+                ],
+              ),
+              createReposterEvent(
+                id: 'c4' * 32,
+                pubkey: otherReposter,
+                kind: EventKind.genericRepost,
+                createdAt: now - 20,
+                tags: [
+                  ['e', testEventId],
+                ],
+              ),
+            ],
+            deletionEvents: [
+              createReposterEvent(
+                id: 'd4' * 32,
+                pubkey: otherReposter,
+                kind: EventKind.eventDeletion,
+                createdAt: now - 10,
+                tags: [
+                  ['e', repostId],
+                ],
+              ),
+            ],
+          );
+
+          final repository = RepostsRepository(nostrClient: mockNostrClient);
+
+          final result = await repository.fetchEventReposters(
+            eventId: testEventId,
+          );
+
+          expect(result, equals([author, otherReposter]));
+        },
+      );
+
+      test(
+        'ignores a deletion tag that carries no event id',
         () async {
           final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
           wireQueryEvents(
@@ -2271,9 +2499,8 @@ void main() {
               ),
             ],
             deletionEvents: [
-              // Different author trying to delete authorA's repost.
               createReposterEvent(
-                id: 'fraud_deletion',
+                id: 'malformed_deletion',
                 pubkey: 'authorA',
                 kind: EventKind.eventDeletion,
                 createdAt: now - 10,
