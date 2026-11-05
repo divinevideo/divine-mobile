@@ -21,6 +21,12 @@ typedef PublishedVideosByFileHash = Future<List<VideoEvent>> Function(
   String sha256,
 );
 
+/// Whether the server verifies the video event `eventId` as an archived Vine.
+///
+/// The answer is about that exact event, so another revision of the same
+/// address does not inherit it. Throws when the verification cannot be asked.
+typedef IsVerifiedArchive = Future<bool> Function(String eventId);
+
 /// A Divine post whose exact file a received clip turned out to be.
 class PublishedClipSource {
   /// Creates a [PublishedClipSource].
@@ -62,10 +68,12 @@ class PublishedClipSourceResolver {
     required Uri mediaServer,
     required PublishedVideosByAuthor videosByAuthor,
     required PublishedVideosByFileHash videosByFileHash,
+    required IsVerifiedArchive isVerifiedArchive,
     http.Client Function()? httpClientFactory,
   }) : _mediaServer = mediaServer,
        _videosByAuthor = videosByAuthor,
        _videosByFileHash = videosByFileHash,
+       _isVerifiedArchive = isVerifiedArchive,
        _httpClientFactory = httpClientFactory ?? http.Client.new;
 
   /// Upper bound on the provenance request.
@@ -83,6 +91,7 @@ class PublishedClipSourceResolver {
   final Uri _mediaServer;
   final PublishedVideosByAuthor _videosByAuthor;
   final PublishedVideosByFileHash _videosByFileHash;
+  final IsVerifiedArchive _isVerifiedArchive;
   final http.Client Function() _httpClientFactory;
 
   /// Returns who published the file with SHA-256 [sha256], or null when the
@@ -101,17 +110,19 @@ class PublishedClipSourceResolver {
   }
 
   /// Returns the archived Vine whose post names the file with SHA-256
-  /// [sha256], or null when no Vine post names it.
+  /// [sha256], or null when no verified Vine post names it.
   ///
   /// An archived Vine carries no C2PA credential, since it was filmed before
   /// Divine existed, and the media server may name the archive's importer
   /// rather than the viner as its owner. Its post names the file in an `x`
-  /// tag and says it is a Vine, which is what adding it to clips from the
-  /// feed relies on too. When several Vine posts name the file, the oldest
-  /// is taken.
+  /// tag and says it is a Vine, but anyone can write both tags, so a post
+  /// counts only once the server verifies that exact event as an archived
+  /// Vine. Posts are checked oldest first and the first verified one is
+  /// taken.
   ///
-  /// Throws a [PublishedClipSourceLookupException] when the relays cannot be
-  /// asked, since a null answer would then turn a real Vine away.
+  /// Throws a [PublishedClipSourceLookupException] when the relays or the
+  /// verification cannot be asked, since a null answer would then turn a
+  /// real Vine away.
   Future<VideoEvent?> findArchivedVine(String sha256) async {
     final hash = sha256.toLowerCase();
     final List<VideoEvent> videos;
@@ -120,14 +131,22 @@ class PublishedClipSourceResolver {
     } on Exception catch (error) {
       throw PublishedClipSourceLookupException('$error');
     }
-    VideoEvent? oldest;
-    for (final video in videos) {
-      if (!video.isOriginalVine || video.sha256?.toLowerCase() != hash) {
-        continue;
+    final candidates = {
+      for (final video in videos)
+        if (video.isOriginalVine && video.sha256?.toLowerCase() == hash)
+          video.id: video,
+    }.values.toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    for (final video in candidates) {
+      final bool verified;
+      try {
+        verified = await _isVerifiedArchive(video.id);
+      } on Exception catch (error) {
+        throw PublishedClipSourceLookupException('$error');
       }
-      if (oldest == null || video.createdAt < oldest.createdAt) oldest = video;
+      if (verified) return video;
     }
-    return oldest;
+    return null;
   }
 
   Future<({String owner, int uploadedAt})?> _fetchUpload(String sha256) async {

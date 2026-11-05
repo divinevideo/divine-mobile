@@ -27,13 +27,17 @@ VideoEvent _post({required String id, required String sha256}) => VideoEvent(
   sha256: sha256,
 );
 
+const _otherAuthor =
+    'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+
 VideoEvent _vine({
   required String id,
   required String sha256,
   int createdAt = 1458771798,
+  String pubkey = _owner,
 }) => VideoEvent(
   id: id,
-  pubkey: _owner,
+  pubkey: pubkey,
   createdAt: createdAt,
   content: '',
   timestamp: DateTime.fromMillisecondsSinceEpoch(
@@ -60,6 +64,7 @@ void main() {
     late List<({String pubkey, int limit, int? before})> authorQueries;
 
     late List<String> hashQueries;
+    late List<String> verifyQueries;
 
     PublishedClipSourceResolver buildResolver({
       required http.Response Function() respond,
@@ -67,10 +72,13 @@ void main() {
       Object? authorError,
       List<VideoEvent> hashVideos = const [],
       Object? hashError,
+      Set<String> verifiedEventIds = const {},
+      Object? verifyError,
     }) {
       requested = [];
       authorQueries = [];
       hashQueries = [];
+      verifyQueries = [];
       return PublishedClipSourceResolver(
         mediaServer: Uri.parse('https://media.divine.video'),
         httpClientFactory: () => MockClient((request) async {
@@ -86,6 +94,11 @@ void main() {
           hashQueries.add(sha256);
           if (hashError != null) throw hashError;
           return hashVideos;
+        },
+        isVerifiedArchive: (eventId) async {
+          verifyQueries.add(eventId);
+          if (verifyError != null) throw verifyError;
+          return verifiedEventIds.contains(eventId);
         },
       );
     }
@@ -167,24 +180,72 @@ void main() {
     group('findArchivedVine', () {
       http.Response unused() => throw StateError('no provenance request');
 
-      test('returns the oldest Vine post that names the file', () async {
-        final claim = _post(id: 'f' * 64, sha256: _sha256);
-        final vine = _vine(id: 'e' * 64, sha256: _sha256);
-        final laterVine = _vine(
-          id: 'd' * 64,
-          sha256: _sha256,
-          createdAt: 1772932336,
-        );
+      test(
+        'returns the oldest verified Vine post that names the file',
+        () async {
+          final claim = _post(id: 'f' * 64, sha256: _sha256);
+          final vine = _vine(id: 'e' * 64, sha256: _sha256);
+          final laterVine = _vine(
+            id: 'd' * 64,
+            sha256: _sha256,
+            createdAt: 1772932336,
+          );
+          final resolver = buildResolver(
+            respond: unused,
+            hashVideos: [claim, laterVine, vine],
+            verifiedEventIds: {vine.id, laterVine.id},
+          );
+
+          final found = await resolver.findArchivedVine(_sha256.toUpperCase());
+
+          expect(found, same(vine));
+          expect(hashQueries, equals([_sha256]));
+          expect(verifyQueries, equals([vine.id]));
+          expect(requested, isEmpty);
+        },
+      );
+
+      test(
+        'ignores unverified posts naming the file, whatever their age',
+        () async {
+          final vine = _vine(id: 'e' * 64, sha256: _sha256);
+          final selfTagged = _vine(
+            id: 'c' * 64,
+            sha256: _sha256,
+            createdAt: 1300000000,
+            pubkey: _otherAuthor,
+          );
+          final resolver = buildResolver(
+            respond: unused,
+            hashVideos: [selfTagged, vine],
+            verifiedEventIds: {vine.id},
+          );
+
+          expect(await resolver.findArchivedVine(_sha256), same(vine));
+          expect(verifyQueries, equals([selfTagged.id, vine.id]));
+        },
+      );
+
+      test('is null when no Vine post naming the file is verified', () async {
         final resolver = buildResolver(
           respond: unused,
-          hashVideos: [claim, laterVine, vine],
+          hashVideos: [_vine(id: 'e' * 64, sha256: _sha256)],
         );
 
-        final found = await resolver.findArchivedVine(_sha256.toUpperCase());
+        expect(await resolver.findArchivedVine(_sha256), isNull);
+      });
 
-        expect(found, same(vine));
-        expect(hashQueries, equals([_sha256]));
-        expect(requested, isEmpty);
+      test('throws when the archive verification cannot be asked', () async {
+        final resolver = buildResolver(
+          respond: unused,
+          hashVideos: [_vine(id: 'e' * 64, sha256: _sha256)],
+          verifyError: Exception('the API did not answer'),
+        );
+
+        await expectLater(
+          resolver.findArchivedVine(_sha256),
+          throwsA(isA<PublishedClipSourceLookupException>()),
+        );
       });
 
       test(
@@ -196,6 +257,7 @@ void main() {
           );
 
           expect(await resolver.findArchivedVine(_sha256), isNull);
+          expect(verifyQueries, isEmpty);
         },
       );
 
