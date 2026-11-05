@@ -98,11 +98,7 @@ enum LoopPcm {
             return pcm.ramped(loopFrames: loopFrames, decodedFrames: decodedFrames)
         }
 
-        // A lap shorter than the tail window is measured across all of it.
-        let tailLevel = pcm.rms(
-            from: max(0, loopFrames - pcm.frames(tailMs)),
-            until: loopFrames
-        )
+        let tailLevel = pcm.rms(from: loopFrames - pcm.frames(tailMs), until: loopFrames)
         let spare = decodedFrames - loopFrames
         let crossfade = min(pcm.frames(crossfadeMs), loopFrames)
         if tailLevel <= silentLevel {
