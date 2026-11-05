@@ -9211,6 +9211,21 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'روشنی کا رساؤ';
 
   @override
+  String get videoEditorEffectLightRays => 'روشنی کی کرنیں';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'اینامورفک';
+
+  @override
+  String get videoEditorEffectPrism => 'منشور';
+
+  @override
+  String get videoEditorEffectWindowLight => 'کھڑکی کی روشنی';
+
+  @override
+  String get videoEditorEffectSpotlight => 'اسپاٹ لائٹ';
+
+  @override
   String get videoEditorEffectSnow => 'برف';
 
   @override

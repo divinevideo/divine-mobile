@@ -9433,6 +9433,21 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Wyciek światła';
 
   @override
+  String get videoEditorEffectLightRays => 'Promienie światła';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Anamorficzny';
+
+  @override
+  String get videoEditorEffectPrism => 'Pryzmat';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Światło z okna';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Reflektor';
+
+  @override
   String get videoEditorEffectSnow => 'Śnieg';
 
   @override

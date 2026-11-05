@@ -8680,6 +8680,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectLightLeak => '漏光';
 
   @override
+  String get videoEditorEffectLightRays => '光束';
+
+  @override
+  String get videoEditorEffectAnamorphic => '变形镜头';
+
+  @override
+  String get videoEditorEffectPrism => '棱镜';
+
+  @override
+  String get videoEditorEffectWindowLight => '窗光';
+
+  @override
+  String get videoEditorEffectSpotlight => '聚光灯';
+
+  @override
   String get videoEditorEffectSnow => '雪花';
 
   @override

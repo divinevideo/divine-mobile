@@ -573,6 +573,7 @@ flutter:
   # picker.
   shaders:
     - shaders/anaglyph.frag
+    - shaders/anamorphic.frag
     - shaders/chroma_key.frag
     - shaders/comic.frag
     - shaders/drops.frag
@@ -581,13 +582,17 @@ flutter:
     - shaders/fluted_glass.frag
     - shaders/light_leak.frag
     - shaders/light_leak_transition.frag
+    - shaders/light_rays.frag
     - shaders/look.frag
     - shaders/particles.frag
+    - shaders/prism.frag
     - shaders/ripple.frag
     - shaders/riso.frag
     - shaders/spin_blur.frag
+    - shaders/spotlight.frag
     - shaders/swirl.frag
     - shaders/tilt_shift.frag
+    - shaders/window_light.frag
     - shaders/zoom_blur.frag
 
   # An image asset can refer to one or more resolution-specific "variants", see

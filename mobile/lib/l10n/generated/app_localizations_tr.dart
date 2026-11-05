@@ -9128,6 +9128,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Işık Sızıntısı';
 
   @override
+  String get videoEditorEffectLightRays => 'Işık Huzmeleri';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Anamorfik';
+
+  @override
+  String get videoEditorEffectPrism => 'Prizma';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Pencere Işığı';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Spot Işık';
+
+  @override
   String get videoEditorEffectSnow => 'Kar';
 
   @override

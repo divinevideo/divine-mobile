@@ -9118,6 +9118,21 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Kebocoran Cahaya';
 
   @override
+  String get videoEditorEffectLightRays => 'Sinar Cahaya';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Anamorfik';
+
+  @override
+  String get videoEditorEffectPrism => 'Prisma';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Cahaya Jendela';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Lampu Sorot';
+
+  @override
   String get videoEditorEffectSnow => 'Salju';
 
   @override

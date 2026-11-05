@@ -26,6 +26,11 @@
 		EB372E11C2741863261D5FF4 /* SwirlVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 715D6E5659F04EC57C302EAE /* SwirlVideoEffect.swift */; };
 		5B915AFFF6946D0B5618AAE1 /* RippleVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9916875E6F93F6EC0C193663 /* RippleVideoEffect.swift */; };
 		C6EE28CDADF84677B9B0832C /* FlutedGlassVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77358128B37775028E0C5A8D /* FlutedGlassVideoEffect.swift */; };
+		E643D7ED41609CAECBDE60D9 /* LightRaysVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98DCCD1B4FE91217318DA362 /* LightRaysVideoEffect.swift */; };
+		8FCB8EEF354AACD2B31528B4 /* AnamorphicVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90591D699B2A7411E10B64AF /* AnamorphicVideoEffect.swift */; };
+		B2B586EE5CCD311F6254F28B /* PrismVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F966BB2EC250CD1C802A17C /* PrismVideoEffect.swift */; };
+		5B34EF0EC032F94546434F93 /* WindowLightVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11DB5B1E40BB62C8BB5272A8 /* WindowLightVideoEffect.swift */; };
+		7C15B588550C1F31D73B4FE8 /* SpotlightVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 191C6E2CE4D3064EA7A219C0 /* SpotlightVideoEffect.swift */; };
 		B9B5C812774B10BFFDB3B6B4 /* EightBitVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = B88A20642EA46A86199B5636 /* EightBitVideoEffect.swift */; };
 		A02F891F3B3263D54D54ADED /* AnaglyphVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DA314775520081EF37670FE /* AnaglyphVideoEffect.swift */; };
 		2E4C63F3BB9F74C5994D2BC2 /* RisoVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B0E391A2AD90BB4C5B817CC /* RisoVideoEffect.swift */; };
@@ -123,6 +128,11 @@
 		715D6E5659F04EC57C302EAE /* SwirlVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SwirlVideoEffect.swift; sourceTree = "<group>"; };
 		9916875E6F93F6EC0C193663 /* RippleVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RippleVideoEffect.swift; sourceTree = "<group>"; };
 		77358128B37775028E0C5A8D /* FlutedGlassVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FlutedGlassVideoEffect.swift; sourceTree = "<group>"; };
+		98DCCD1B4FE91217318DA362 /* LightRaysVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LightRaysVideoEffect.swift; sourceTree = "<group>"; };
+		90591D699B2A7411E10B64AF /* AnamorphicVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnamorphicVideoEffect.swift; sourceTree = "<group>"; };
+		6F966BB2EC250CD1C802A17C /* PrismVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PrismVideoEffect.swift; sourceTree = "<group>"; };
+		11DB5B1E40BB62C8BB5272A8 /* WindowLightVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WindowLightVideoEffect.swift; sourceTree = "<group>"; };
+		191C6E2CE4D3064EA7A219C0 /* SpotlightVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SpotlightVideoEffect.swift; sourceTree = "<group>"; };
 		B88A20642EA46A86199B5636 /* EightBitVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EightBitVideoEffect.swift; sourceTree = "<group>"; };
 		6DA314775520081EF37670FE /* AnaglyphVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnaglyphVideoEffect.swift; sourceTree = "<group>"; };
 		6B0E391A2AD90BB4C5B817CC /* RisoVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RisoVideoEffect.swift; sourceTree = "<group>"; };
@@ -329,6 +339,11 @@
 				715D6E5659F04EC57C302EAE /* SwirlVideoEffect.swift */,
 				9916875E6F93F6EC0C193663 /* RippleVideoEffect.swift */,
 				77358128B37775028E0C5A8D /* FlutedGlassVideoEffect.swift */,
+				98DCCD1B4FE91217318DA362 /* LightRaysVideoEffect.swift */,
+				90591D699B2A7411E10B64AF /* AnamorphicVideoEffect.swift */,
+				6F966BB2EC250CD1C802A17C /* PrismVideoEffect.swift */,
+				11DB5B1E40BB62C8BB5272A8 /* WindowLightVideoEffect.swift */,
+				191C6E2CE4D3064EA7A219C0 /* SpotlightVideoEffect.swift */,
 				B88A20642EA46A86199B5636 /* EightBitVideoEffect.swift */,
 				6DA314775520081EF37670FE /* AnaglyphVideoEffect.swift */,
 				6B0E391A2AD90BB4C5B817CC /* RisoVideoEffect.swift */,
@@ -773,6 +788,11 @@
 				EB372E11C2741863261D5FF4 /* SwirlVideoEffect.swift in Sources */,
 				5B915AFFF6946D0B5618AAE1 /* RippleVideoEffect.swift in Sources */,
 				C6EE28CDADF84677B9B0832C /* FlutedGlassVideoEffect.swift in Sources */,
+				E643D7ED41609CAECBDE60D9 /* LightRaysVideoEffect.swift in Sources */,
+				8FCB8EEF354AACD2B31528B4 /* AnamorphicVideoEffect.swift in Sources */,
+				B2B586EE5CCD311F6254F28B /* PrismVideoEffect.swift in Sources */,
+				5B34EF0EC032F94546434F93 /* WindowLightVideoEffect.swift in Sources */,
+				7C15B588550C1F31D73B4FE8 /* SpotlightVideoEffect.swift in Sources */,
 				B9B5C812774B10BFFDB3B6B4 /* EightBitVideoEffect.swift in Sources */,
 				A02F891F3B3263D54D54ADED /* AnaglyphVideoEffect.swift in Sources */,
 				2E4C63F3BB9F74C5994D2BC2 /* RisoVideoEffect.swift in Sources */,

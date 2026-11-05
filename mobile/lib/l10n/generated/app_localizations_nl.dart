@@ -9254,6 +9254,21 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Lichtlek';
 
   @override
+  String get videoEditorEffectLightRays => 'Lichtstralen';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Anamorf';
+
+  @override
+  String get videoEditorEffectPrism => 'Prisma';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Raamlicht';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Schijnwerper';
+
+  @override
   String get videoEditorEffectSnow => 'Sneeuw';
 
   @override

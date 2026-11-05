@@ -164,6 +164,10 @@ typedef ShaderTile = ({String asset, List<double> values});
 /// Seconds into the particles at which their tiles show them.
 const _particlesTileSeconds = 3.0;
 
+/// Seconds into the prism at which its tile shows it, when the rainbow lies
+/// well inside the corner.
+const _prismTileSeconds = 6.0;
+
 /// The tile of [type], or `null` for an effect whose tile is drawn otherwise.
 ///
 /// Each shows the effect at full strength. The fisheye's value is the
@@ -178,6 +182,26 @@ ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
   dropsVideoEffectId => (asset: 'shaders/drops.frag', values: _dropsTileValues),
   lightLeakVideoEffectId => (
     asset: 'shaders/light_leak.frag',
+    values: const [1.0, 0.0],
+  ),
+  lightRaysVideoEffectId => (
+    asset: 'shaders/light_rays.frag',
+    values: const [1.0, 0.0],
+  ),
+  anamorphicVideoEffectId => (
+    asset: 'shaders/anamorphic.frag',
+    values: const [1.0],
+  ),
+  prismVideoEffectId => (
+    asset: 'shaders/prism.frag',
+    values: const [1.0, _prismTileSeconds],
+  ),
+  windowLightVideoEffectId => (
+    asset: 'shaders/window_light.frag',
+    values: const [1.0, 0.0],
+  ),
+  spotlightVideoEffectId => (
+    asset: 'shaders/spotlight.frag',
     values: const [1.0, 0.0],
   ),
   snowVideoEffectId => (
@@ -425,6 +449,11 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
     fisheyeVideoEffectId => context.l10n.videoEditorEffectFisheye,
     dropsVideoEffectId => context.l10n.videoEditorEffectDrops,
     lightLeakVideoEffectId => context.l10n.videoEditorEffectLightLeak,
+    lightRaysVideoEffectId => context.l10n.videoEditorEffectLightRays,
+    anamorphicVideoEffectId => context.l10n.videoEditorEffectAnamorphic,
+    prismVideoEffectId => context.l10n.videoEditorEffectPrism,
+    windowLightVideoEffectId => context.l10n.videoEditorEffectWindowLight,
+    spotlightVideoEffectId => context.l10n.videoEditorEffectSpotlight,
     snowVideoEffectId => context.l10n.videoEditorEffectSnow,
     confettiVideoEffectId => context.l10n.videoEditorEffectConfetti,
     heartsVideoEffectId => context.l10n.videoEditorEffectHearts,

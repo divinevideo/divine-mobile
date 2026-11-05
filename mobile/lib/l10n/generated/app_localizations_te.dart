@@ -9469,6 +9469,21 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'కాంతి లీక్';
 
   @override
+  String get videoEditorEffectLightRays => 'కాంతి కిరణాలు';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'అనామార్ఫిక్';
+
+  @override
+  String get videoEditorEffectPrism => 'ప్రిజం';
+
+  @override
+  String get videoEditorEffectWindowLight => 'కిటికీ కాంతి';
+
+  @override
+  String get videoEditorEffectSpotlight => 'స్పాట్‌లైట్';
+
+  @override
   String get videoEditorEffectSnow => 'మంచు';
 
   @override
