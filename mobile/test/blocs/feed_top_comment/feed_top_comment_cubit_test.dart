@@ -61,6 +61,9 @@ void main() {
 
     void stubComments(List<Comment> comments) {
       when(
+        () => commentsRepository.findAuthorDeletedComments(any()),
+      ).thenAnswer((_) async => <String>{});
+      when(
         () => commentsRepository.loadComments(
           rootEventId: any(named: 'rootEventId'),
           rootEventKind: any(named: 'rootEventKind'),
@@ -94,6 +97,106 @@ void main() {
     );
 
     group('load', () {
+      group('author deletions', () {
+        const deletedId =
+            '5555555555555555555555555555555555555555555555555555555555555555';
+        const keptId =
+            '6666666666666666666666666666666666666666666666666666666666666666';
+
+        blocTest<FeedTopCommentCubit, FeedTopCommentState>(
+          'does not feature an author-deleted comment from a stale read',
+          setUp: () {
+            stubComments([_comment(deletedId), _comment(keptId)]);
+            stubUpvotes({deletedId: 20, keptId: 1});
+            when(
+              () => commentsRepository.findAuthorDeletedComments(any()),
+            ).thenAnswer((_) async => {deletedId});
+          },
+          build: buildCubit,
+          act: (cubit) => cubit.load(),
+          skip: 1,
+          expect: () => [
+            isA<FeedTopCommentState>()
+                .having((s) => s.status, 'status', FeedTopCommentStatus.ready)
+                .having((s) => s.topComment?.id, 'topComment', keptId),
+          ],
+        );
+
+        blocTest<FeedTopCommentCubit, FeedTopCommentState>(
+          'is empty when every candidate was author-deleted',
+          setUp: () {
+            stubComments([_comment(deletedId)]);
+            stubUpvotes({deletedId: 20});
+            when(
+              () => commentsRepository.findAuthorDeletedComments(any()),
+            ).thenAnswer((_) async => {deletedId});
+          },
+          build: buildCubit,
+          act: (cubit) => cubit.load(),
+          skip: 1,
+          expect: () => [
+            isA<FeedTopCommentState>()
+                .having((s) => s.status, 'status', FeedTopCommentStatus.empty)
+                .having((s) => s.topComment, 'topComment', isNull),
+          ],
+        );
+
+        blocTest<FeedTopCommentCubit, FeedTopCommentState>(
+          'does not count an author-deleted reply toward engagement',
+          setUp: () {
+            stubComments([
+              _comment(keptId),
+              _comment(
+                deletedId,
+                content: '',
+                replyToEventId: keptId,
+              ),
+              _comment(_bob),
+            ]);
+            stubUpvotes({_bob: 1});
+            when(
+              () => commentsRepository.findAuthorDeletedComments(any()),
+            ).thenAnswer((_) async => {deletedId});
+          },
+          build: buildCubit,
+          act: (cubit) => cubit.load(),
+          skip: 1,
+          expect: () => [
+            isA<FeedTopCommentState>().having(
+              (s) => s.topComment?.id,
+              'topComment',
+              _bob,
+            ),
+          ],
+        );
+
+        test('stops loading if closed during the deletion lookup', () async {
+          final deletions = Completer<Set<String>>();
+          stubComments([_comment(keptId)]);
+          stubUpvotes({keptId: 1});
+          when(
+            () => commentsRepository.findAuthorDeletedComments(any()),
+          ).thenAnswer((_) => deletions.future);
+          final cubit = buildCubit();
+          final loading = cubit.load();
+          await pumpEventQueue();
+          verify(
+            () => commentsRepository.findAuthorDeletedComments(any()),
+          ).called(1);
+          await cubit.close();
+          deletions.complete({});
+          await loading;
+
+          verifyNever(
+            () => likesRepository.getVoteCounts(
+              any(),
+              addressableIds: any(named: 'addressableIds'),
+            ),
+          );
+          expect(cubit.state.status, FeedTopCommentStatus.loading);
+        });
+      });
+
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
         'selects the most upvoted comment',
         setUp: () {

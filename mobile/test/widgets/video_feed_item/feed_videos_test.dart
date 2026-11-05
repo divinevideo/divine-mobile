@@ -21,6 +21,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/codec_heavy_surface/codec_heavy_surface_cubit.dart';
 import 'package:openvine/blocs/feed_loading_moderation/feed_loading_moderation_cubit.dart';
 import 'package:openvine/blocs/feed_loading_moderation/feed_loading_moderation_state.dart';
+import 'package:openvine/blocs/feed_reactions/feed_reactions_cubit.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_state.dart';
@@ -3441,6 +3442,106 @@ void main() {
   // Pagination flush (didUpdateWidget)
   // -------------------------------------------------------------------------
   group('pagination flush', () {
+    for (final reactionsInitiallyEnabled in [false, true]) {
+      testWidgets(
+        'reactions cancel queued Auto wrap without disabling its preference '
+        '(initially enabled: $reactionsInitiallyEnabled)',
+        (
+          tester,
+        ) async {
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          final reactions = FeedReactionsCubit(sharedPreferences: prefs);
+          if (reactionsInitiallyEnabled) {
+            await reactions.setEnabled(enabled: true);
+          }
+          final auto = FeedAutoAdvanceCubit()..setEnabled(enabled: true);
+          addTearDown(reactions.close);
+          addTearDown(auto.close);
+          final container = ProviderContainer(
+            overrides: _buildOverrides().cast(),
+          );
+          addTearDown(container.dispose);
+          final video = _makeVideo();
+          final nextVideo = _makeVideo(
+            id: '7777777777777777777777777777777777777777777777777777777777777777',
+          );
+          var loading = true;
+          late StateSetter rebuildState;
+          final playback = _MockVideoPlaybackStatusCubit()
+            ..stub(PlaybackStatus.ready, video.id);
+          final volume = _MockVideoVolumeCubit()..stub();
+          addTearDown(playback.close);
+          addTearDown(volume.close);
+
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: MultiBlocProvider(
+                  providers: [
+                    BlocProvider<FeedAutoAdvanceCubit>.value(value: auto),
+                    BlocProvider<FeedReactionsCubit>.value(value: reactions),
+                    BlocProvider<VideoPlaybackStatusCubit>.value(
+                      value: playback,
+                    ),
+                    BlocProvider<VideoVolumeCubit>.value(value: volume),
+                  ],
+                  child: Scaffold(
+                    body: StatefulBuilder(
+                      builder: (context, setState) {
+                        rebuildState = setState;
+                        return FeedVideos(
+                          videos: [video, nextVideo],
+                          currentIndex: 1,
+                          onNearEnd: () {},
+                          hasMore: loading,
+                          isLoadingMore: loading,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pump(const Duration(seconds: 4));
+          final feed = tester.state<InfiniteVideoFeedState>(
+            find.byType(InfiniteVideoFeed),
+          );
+          expect(feed.currentIndex, 1);
+          auto.markPendingPaginationAdvance();
+          expect(auto.state.pendingPaginationAdvance, isTrue);
+          await reactions.setEnabled(enabled: true);
+          await tester.pump();
+          if (!reactionsInitiallyEnabled) {
+            expect(auto.state.pendingPaginationAdvance, isFalse);
+          }
+          rebuildState(() => loading = false);
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 4));
+
+          expect(feed.currentIndex, 1);
+          expect(auto.state.enabled, isTrue);
+          expect(auto.state.pendingPaginationAdvance, isFalse);
+
+          await reactions.setEnabled(enabled: false);
+          await tester.pump();
+          final widget = tester.widget<InfiniteVideoFeed>(
+            find.byType(InfiniteVideoFeed),
+          );
+          widget.onVideoLoopCompleted!(1);
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 4));
+          expect(feed.currentIndex, 0);
+          await tester.pumpWidget(const SizedBox());
+          await tester.pump(const Duration(seconds: 4));
+        },
+      );
+    }
+
     testWidgets('does not throw when hasMore and isLoadingMore change', (
       tester,
     ) async {

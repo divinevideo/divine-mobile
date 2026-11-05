@@ -71,7 +71,16 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
         rootAddressableId: _rootAddressableId,
         limit: commentPageSize,
       );
-      comments = thread.comments;
+      if (isClosed) return;
+      // Read sources can still serve author-deleted comments. The repository
+      // validates NIP-09 requests and fails open when the relay cannot answer.
+      final deleted = await _commentsRepository.findAuthorDeletedComments(
+        thread.comments,
+      );
+      if (isClosed) return;
+      comments = thread.comments
+          .where((comment) => !deleted.contains(comment.id))
+          .toList();
     } on CommentsRepositoryException catch (error, stackTrace) {
       _fail(error, stackTrace, isExpected: true);
       return;

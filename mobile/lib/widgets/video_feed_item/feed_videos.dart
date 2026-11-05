@@ -289,6 +289,10 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
     // pending auto-advance that was waiting on more content.
     if (widget.hasMore != oldWidget.hasMore ||
         widget.isLoadingMore != oldWidget.isLoadingMore) {
+      if (context.read<FeedReactionsCubit?>()?.state ?? false) {
+        _autoAdvanceCubit.clearPendingPaginationAdvance();
+        return;
+      }
       final currentIndex = _feedKey.currentState?.currentIndex ?? 0;
       continueFeedAutoAdvanceAfterPagination(
         cubit: _autoAdvanceCubit,
@@ -390,6 +394,13 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         );
     return MultiBlocListener(
       listeners: [
+        if (context.read<FeedReactionsCubit?>() case final reactionsCubit?)
+          BlocListener<FeedReactionsCubit, bool>(
+            bloc: reactionsCubit,
+            listenWhen: (previous, current) => !previous && current,
+            listener: (_, _) =>
+                _autoAdvanceCubit.clearPendingPaginationAdvance(),
+          ),
         BlocListener<VideoVolumeCubit, VideoVolumeState>(
           // Sync volume when hardware buttons change system volume.
           listener: (_, state) {

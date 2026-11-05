@@ -433,6 +433,9 @@ void main() {
       commentsRepository = _MockCommentsRepository();
       likesRepository = _MockLikesRepository();
       when(
+        () => commentsRepository.findAuthorDeletedComments(any()),
+      ).thenAnswer((_) async => <String>{});
+      when(
         () => commentsRepository.loadComments(
           rootEventId: any(named: 'rootEventId'),
           rootEventKind: any(named: 'rootEventKind'),
