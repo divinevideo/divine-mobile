@@ -210,7 +210,7 @@ class PeopleListMembersPreview extends StatelessWidget {
                       ),
                       DivineIcon(
                         icon: DivineIconName.caretRight,
-                        color: context.vineColors.primaryText,
+                        color: context.vineColors.accentBrand,
                       ),
                     ],
                   ),
