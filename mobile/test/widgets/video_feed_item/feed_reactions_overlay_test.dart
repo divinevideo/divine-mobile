@@ -6,6 +6,7 @@ import 'package:comments_repository/comments_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:material_ui/material_ui.dart';
@@ -125,16 +126,50 @@ void main() {
         expect(find.bySemanticsLabel(l10n.feedReactionDismiss), findsNothing);
       });
 
-      testWidgets('the top comment with who posted it', (tester) async {
+      testWidgets('the top comment in a white bubble, its author below', (
+        tester,
+      ) async {
         when(() => cubit.state).thenReturn(_visibleState);
         await tester.pumpWidget(buildSubject());
         await tester.pump();
 
-        expect(find.text(_topComment.content), findsOneWidget);
+        final comment = find.text(_topComment.content);
+        final authorName = find.text(UserProfile.generatedNameFor(_commenter));
+        expect(comment, findsOneWidget);
         expect(find.byType(UserAvatar), findsOneWidget);
+        expect(authorName, findsOneWidget);
+
+        final bubble = find.ancestor(
+          of: comment,
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is DecoratedBox &&
+                w.decoration is BoxDecoration &&
+                (w.decoration as BoxDecoration).color ==
+                    FeedReactionsOverlayLayout.bubbleColor,
+          ),
+        );
+        expect(bubble, findsOneWidget);
         expect(
-          find.text(UserProfile.generatedNameFor(_commenter)),
-          findsOneWidget,
+          (tester.widget<DecoratedBox>(bubble).decoration as BoxDecoration)
+              .borderRadius,
+          BorderRadius.circular(FeedReactionsOverlayLayout.bubbleRadius),
+        );
+
+        final tail = find.byType(SvgPicture);
+        expect(tail, findsOneWidget);
+        final bubbleRect = tester.getRect(bubble);
+        final tailRect = tester.getRect(tail);
+        expect(tailRect.top, bubbleRect.bottom);
+        expect(
+          tailRect.left,
+          bubbleRect.left + FeedReactionsOverlayLayout.tailInset,
+        );
+        expect(tailRect.size, const Size(22, 16));
+
+        expect(
+          tester.getRect(authorName).top,
+          greaterThanOrEqualTo(tailRect.bottom),
         );
       });
 
@@ -212,9 +247,11 @@ void main() {
           final gradientRect = tester.getRect(gradient);
           final screen = tester.getRect(find.byType(FeedReactionsOverlay));
           expect(solidRect.top, screen.top);
+          final authorRect = tester.getRect(find.byType(UserAvatar));
+          expect(commentRect.bottom, lessThan(authorRect.top));
           expect(
             solidRect.bottom,
-            commentRect.bottom + FeedReactionsOverlayLayout.solidBelowComment,
+            authorRect.bottom + FeedReactionsOverlayLayout.solidBelowContent,
           );
           expect(gradientRect.top, solidRect.bottom);
           expect(gradientRect.bottom, screen.bottom);
@@ -268,9 +305,8 @@ void main() {
 
           // Low on the screen, inside the gradient.
           await tester.tapAt(const Offset(200, 500));
-          // Beside the comment, inside the solid part.
-          final comment = tester.getRect(find.text(_topComment.content));
-          await tester.tapAt(Offset(comment.left + 2, comment.bottom + 8));
+          // Above the comment, inside the solid part.
+          await tester.tapAt(const Offset(200, 40));
 
           verify(() => cubit.dismiss()).called(2);
         },

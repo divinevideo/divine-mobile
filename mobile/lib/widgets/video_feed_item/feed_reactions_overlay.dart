@@ -5,6 +5,7 @@ import 'package:comments_repository/comments_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide NIP71VideoKinds;
@@ -231,7 +232,7 @@ class _ReactionContent extends StatelessWidget {
                       FeedReactionsOverlayLayout.sidePadding,
                       top,
                       FeedReactionsOverlayLayout.sidePadding,
-                      FeedReactionsOverlayLayout.solidBelowComment,
+                      FeedReactionsOverlayLayout.solidBelowContent,
                     ),
                     child: _TopCommentContent(video: video),
                   ),
@@ -283,10 +284,10 @@ class _TopCommentContent extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
+          spacing: FeedReactionsOverlayLayout.gapBelowBubble,
           children: [
+            _SpeechBubble(content: comment.content.trim()),
             _TopCommentAuthor(authorPubkey: comment.authorPubkey),
-            const SizedBox(height: 8),
-            _TopCommentText(content: comment.content.trim()),
           ],
         ),
       ),
@@ -319,6 +320,54 @@ class _TopCommentContent extends StatelessWidget {
   }
 }
 
+/// White speech bubble holding the top comment, its tail hanging from the
+/// bottom edge near the left, towards the author row below.
+class _SpeechBubble extends StatelessWidget {
+  const _SpeechBubble({required this.content});
+
+  final String content;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: FeedReactionsOverlayLayout.bubbleColor,
+            borderRadius: BorderRadius.circular(
+              FeedReactionsOverlayLayout.bubbleRadius,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: FeedReactionsOverlayLayout.bubbleHorizontalPadding,
+              vertical: FeedReactionsOverlayLayout.bubbleVerticalPadding,
+            ),
+            child: _TopCommentText(content: content),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(
+            left: FeedReactionsOverlayLayout.tailInset,
+          ),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: ExcludeSemantics(
+              child: SvgPicture.asset(
+                FeedReactionsOverlayLayout.tailAsset,
+                width: FeedReactionsOverlayLayout.tailWidth,
+                height: FeedReactionsOverlayLayout.tailHeight,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// The top comment's text, with mentions, links and hashtags rendered as
 /// the comments sheet renders them, at headline size.
 ///
@@ -331,10 +380,12 @@ class _TopCommentText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseStyle = VineTheme.headlineLargeFont(color: VineTheme.whiteText);
-    // Drawn over video, so the sheet's dark-appearance link colour is fixed
-    // rather than adaptive.
-    final linkColor = VineTheme.darkColors.link;
+    final baseStyle = VineTheme.headlineLargeFont(
+      color: FeedReactionsOverlayLayout.bubbleTextColor,
+    );
+    // The bubble is white whatever the appearance, so the sheet's link colour
+    // for a light surface is fixed rather than adaptive.
+    final linkColor = VineTheme.lightColors.link;
     return LinkifiedText(
       text: content,
       style: baseStyle,
@@ -406,12 +457,28 @@ abstract final class FeedReactionsOverlayLayout {
 
   static const double sidePadding = 16;
 
+  /// The speech bubble around the comment; white like its tail asset.
+  static const Color bubbleColor = VineTheme.whiteText;
+  static const Color bubbleTextColor = VineTheme.primaryDarkGreen;
+  static const double bubbleRadius = 24;
+  static const double bubbleHorizontalPadding = 20;
+  static const double bubbleVerticalPadding = 16;
+
+  /// The bubble's tail, from the design, and its offset from the left edge.
+  static const tailAsset = 'assets/reactions/bubble_tail.svg';
+  static const double tailWidth = 22;
+  static const double tailHeight = 16;
+  static const double tailInset = 28;
+
+  /// Space between the bubble's tail and the author row.
+  static const double gapBelowBubble = 8;
+
   /// Darkens the video behind the comment: solid down to the end of the
   /// comment, then a gradient to fully transparent at the bottom.
   static const Color scrim = VineTheme.scrim70;
 
-  /// Solid scrim kept below the comment before the gradient starts.
-  static const double solidBelowComment = 16;
+  /// Solid scrim kept below the author row before the gradient starts.
+  static const double solidBelowContent = 16;
 
   static const double authorAvatarSize = 24;
 
