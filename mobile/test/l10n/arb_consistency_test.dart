@@ -613,6 +613,12 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
+  // Verify: renewing a sign-in link in place; translation debt.
+  'verifyConnectSignInLifetime',
+  'verifySignInAgain',
+  'verifySignInAgainSemanticLabel',
+  'verifyStatusAccountChanged',
+  'verifyStatusSignInExpired',
   // Real public community Rooms privacy notice.
   'messagesPublicRoomsDisclosure',
   'messagesRoomRetiredDraft',

@@ -51,6 +51,56 @@ void main() {
       expect(platform.oauth, isNull);
     });
 
+    test('reads how many days a sign-in link lasts', () {
+      final platform = VerifierPlatform.fromJson('bluesky', const {
+        'label': 'Bluesky',
+        'supported': true,
+        'oauth': true,
+        'signin_expires_after_days': 30,
+      });
+
+      expect(platform.signinExpiresAfterDays, equals(30));
+    });
+
+    test('leaves the lifetime unknown when the entry has none', () {
+      final platform = VerifierPlatform.fromJson('bluesky', const {
+        'label': 'Bluesky',
+        'supported': true,
+        'oauth': true,
+      });
+
+      expect(platform.signinExpiresAfterDays, isNull);
+    });
+
+    test('ignores a lifetime that is not a positive int', () {
+      for (final value in <Object?>[0, -1, -30, '30', 30.5, true, null]) {
+        final platform = VerifierPlatform.fromJson('bluesky', {
+          'label': 'Bluesky',
+          'supported': true,
+          'oauth': true,
+          'signin_expires_after_days': value,
+        });
+
+        expect(platform.signinExpiresAfterDays, isNull, reason: '$value');
+      }
+    });
+
+    test('tells apart platforms that differ only in lifetime', () {
+      const a = VerifierPlatform(
+        key: 'bluesky',
+        label: 'Bluesky',
+        supported: true,
+        signinExpiresAfterDays: 30,
+      );
+      const b = VerifierPlatform(
+        key: 'bluesky',
+        label: 'Bluesky',
+        supported: true,
+      );
+
+      expect(a, isNot(equals(b)));
+    });
+
     test('treats an oauth value that is not a bool as unknown', () {
       for (final value in <Object?>['false', 0, 1, 'true', null, <String>[]]) {
         final platform = VerifierPlatform.fromJson('twitter', {

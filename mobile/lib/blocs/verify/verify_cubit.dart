@@ -49,6 +49,7 @@ class VerifyCubit extends Cubit<VerifyState> {
           claims: claims.claims,
           verifiedKeys: claims.verifiedKeys,
           verifierReachable: claims.verifierReachable,
+          signInCodes: claims.signInCodes,
           platforms: platforms,
         ),
       );
@@ -73,17 +74,25 @@ class VerifyCubit extends Cubit<VerifyState> {
   /// staring at a list that does not contain what they just linked. It is
   /// shown as verified because the connect flow only publishes claims the
   /// verifier had already confirmed. The next [load] reconciles.
-  void claimLinked(IdentityClaim claim) {
+  ///
+  /// [replacing] is the sign-in link a renewal under another handle took the
+  /// place of: the connect flow published the new claim instead of it, so its
+  /// row goes too. Both keys lose any reason the verifier gave for a lapsed
+  /// sign-in.
+  void claimLinked(IdentityClaim claim, {IdentityClaim? replacing}) {
     final key = VerifyState.keyOf(claim);
+    final dropped = {key, if (replacing != null) VerifyState.keyOf(replacing)};
     emit(
       state.copyWith(
         status: VerifyStatus.ready,
         claims: [
           for (final existing in state.claims)
-            if (VerifyState.keyOf(existing) != key) existing,
+            if (!dropped.contains(VerifyState.keyOf(existing))) existing,
           claim,
         ],
         verifiedKeys: {...state.verifiedKeys, key},
+        signInCodes: {...state.signInCodes}
+          ..removeWhere((lapsedKey, _) => dropped.contains(lapsedKey)),
         clearError: true,
       ),
     );
@@ -108,6 +117,7 @@ class VerifyCubit extends Cubit<VerifyState> {
               if (VerifyState.keyOf(existing) != key) existing,
           ],
           verifiedKeys: {...state.verifiedKeys}..remove(key),
+          signInCodes: {...state.signInCodes}..remove(key),
           clearRemoving: true,
         ),
       );

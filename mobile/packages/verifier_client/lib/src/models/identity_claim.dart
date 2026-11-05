@@ -61,10 +61,14 @@ class IdentityClaim extends Equatable {
   /// matches what the verifier's web UI writes, so a claim linked on one
   /// surface re-verifies on the other.
   ///
-  /// That cache expires after 24 hours. Once it does, the claim falls
-  /// through to the platform's proof check, which cannot resolve this
-  /// sentinel — so an OAuth link has to be renewed to stay verified. This is
-  /// service-side behaviour, identical on web.
+  /// The verifier keeps a confirmed sign-in for the lifetime it reports.
+  /// After that it answers the claim unverified with the reason code
+  /// `signin_expired`; it does not fall through to a proof-post check, which
+  /// could not resolve this sentinel anyway. Bluesky is the exception: the
+  /// verifier first tries the account's identity-link record, and the claim
+  /// can verify that way. Otherwise an OAuth link has to be renewed by
+  /// signing in again to stay verified. This is service-side behaviour,
+  /// identical on web.
   static const String oauthProof = 'oauth';
 
   static final RegExp _hexPubkeyPattern = RegExp(r'^[0-9a-fA-F]+$');

@@ -14088,8 +14088,22 @@ class AppLocalizationsUr extends AppLocalizations {
   String get verifyStatusUnverified => 'غیر تصدیق شدہ';
 
   @override
+  String get verifyStatusSignInExpired => 'Sign-in expired';
+
+  @override
+  String get verifyStatusAccountChanged => 'Account changed';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return '$platform اکاؤنٹ $identity کا جوڑ ختم کریں';
+  }
+
+  @override
+  String get verifySignInAgain => 'Sign in again';
+
+  @override
+  String verifySignInAgainSemanticLabel(String platform, String identity) {
+    return 'Sign in again to $platform account $identity';
   }
 
   @override
@@ -14112,6 +14126,17 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get verifyOneTapBadge => 'ایک ٹیپ';
+
+  @override
+  String verifyConnectSignInLifetime(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '$days day',
+    );
+    return 'Sign-in links last $_temp0. After that, sign in again to keep the link.';
+  }
 
   @override
   String verifyConnectOauthExplainer(String platform) {

@@ -10996,6 +10996,14 @@
   "@verifyStatusUnverified": {
     "description": "Pill on a linked account the verification service did not confirm."
   },
+  "verifyStatusSignInExpired": "Sign-in expired",
+  "@verifyStatusSignInExpired": {
+    "description": "Pill on an account linked by signing in when no current sign-in verifies it: it lapsed, was unlinked, or was never confirmed."
+  },
+  "verifyStatusAccountChanged": "Account changed",
+  "@verifyStatusAccountChanged": {
+    "description": "Pill on a linked account whose handle now points to a different account than the one that signed in."
+  },
   "verifyUnlinkSemanticLabel": "Unlink {platform} account {identity}",
   "@verifyUnlinkSemanticLabel": {
     "description": "Screen reader label for the button that removes a linked account.",
@@ -11007,6 +11015,24 @@
       "identity": {
         "type": "String",
         "example": "octocat"
+      }
+    }
+  },
+  "verifySignInAgain": "Sign in again",
+  "@verifySignInAgain": {
+    "description": "Button on an account linked by signing in that no longer verifies. Opens the connect screen to sign in again, renewing the link without unlinking it first."
+  },
+  "verifySignInAgainSemanticLabel": "Sign in again to {platform} account {identity}",
+  "@verifySignInAgainSemanticLabel": {
+    "description": "Screen reader label for the button that renews a linked account by signing in to it again.",
+    "placeholders": {
+      "platform": {
+        "type": "String",
+        "example": "Twitter / X"
+      },
+      "identity": {
+        "type": "String",
+        "example": "jack"
       }
     }
   },
@@ -11047,6 +11073,16 @@
   "verifyOneTapBadge": "One tap",
   "@verifyOneTapBadge": {
     "description": "Small marker on platforms that can be linked by signing in, without posting a proof."
+  },
+  "verifyConnectSignInLifetime": "Sign-in links last {days, plural, =1{{days} day} other{{days} days}}. After that, sign in again to keep the link.",
+  "@verifyConnectSignInLifetime": {
+    "description": "Notice under the sign-in explainer on the connect screen, saying how long a sign-in link lasts. Shown only when the verifier reports a lifetime for that platform; platforms whose links last until unlinked omit it, so the notice is not shown there.",
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "example": "30"
+      }
+    }
   },
   "verifyConnectOauthExplainer": "Sign in to {platform} and we'll handle the rest. Nothing gets posted.",
   "@verifyConnectOauthExplainer": {

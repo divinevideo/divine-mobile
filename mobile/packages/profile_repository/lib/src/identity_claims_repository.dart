@@ -10,6 +10,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show Event, Filter;
 import 'package:profile_repository/src/identity_event_selection.dart';
+import 'package:profile_repository/src/sign_in_lapse.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:verifier_client/verifier_client.dart';
 
@@ -81,6 +82,7 @@ class IdentityClaimStatus {
     required this.claims,
     required this.verifiedKeys,
     required this.verifierReachable,
+    this.signInCodes = const {},
   });
 
   /// Every claim on the identity event, in tag order.
@@ -94,6 +96,16 @@ class IdentityClaimStatus {
   /// [verifiedKeys] may then lack an answer rather than a positive verdict, so
   /// UI should say "could not check" rather than "not verified".
   final bool verifierReachable;
+
+  /// The sign-in reason codes the verifier gave, under the same lowercased
+  /// `platform:identity` key as [verifiedKeys].
+  ///
+  /// Holds only claims the verifier judged negative with a sign-in reason
+  /// code. That is a conclusive answer about that one claim, so it holds even
+  /// when [verifierReachable] is false because of another claim. A proof-post
+  /// claim on a platform with sign-in can carry one too, so check the claim's
+  /// proof before reading an entry as a lapsed sign-in link.
+  final Map<String, SignInLapse> signInCodes;
 
   /// Whether [claim] carries a positive verdict.
   bool isVerified(IdentityClaim claim) => verifiedKeys.contains(
@@ -120,6 +132,7 @@ class _VerificationOutcome {
     required this.verified,
     this.inconclusiveKeys = const {},
     this.confirmedNegativeKeys = const {},
+    this.signInCodes = const {},
   });
 
   final List<IdentityClaim> verified;
@@ -134,6 +147,9 @@ class _VerificationOutcome {
   /// negative with a conclusive result. Honored even inside an inconclusive
   /// batch, where they must still drop their claim.
   final Set<String> confirmedNegativeKeys;
+
+  /// Why a sign-in stopped counting, for the confirmed negatives that say.
+  final Map<String, SignInLapse> signInCodes;
 }
 
 class _PublishedIdentityTags {
@@ -351,8 +367,16 @@ class IdentityClaimsRepository {
   }
 
   /// [resolveClaims], also reporting whether a claim the verifier could not
-  /// check is left out of the result, so it shows without a verdict.
-  Future<({List<IdentityClaim> claims, bool unchecked})> _resolveClaims({
+  /// check is left out of the result, so it shows without a verdict, and why
+  /// any sign-in it judged stopped counting.
+  Future<
+    ({
+      List<IdentityClaim> claims,
+      bool unchecked,
+      Map<String, SignInLapse> signInCodes,
+    })
+  >
+  _resolveClaims({
     required String pubkey,
     required List<List<String>> freshTags,
     required CachedVerifiedClaims? cached,
@@ -362,12 +386,20 @@ class IdentityClaimsRepository {
     if (cached != null && cached.isFresh) {
       final verifiedSet = cached.claims.toSet();
       if (freshClaims.every(verifiedSet.contains)) {
-        return (claims: freshClaims, unchecked: false);
+        return (
+          claims: freshClaims,
+          unchecked: false,
+          signInCodes: const <String, SignInLapse>{},
+        );
       }
     }
     final outcome = await _verifyClaims(pubkey: pubkey, claims: freshClaims);
     if (!outcome.inconclusive) {
-      return (claims: outcome.verified, unchecked: false);
+      return (
+        claims: outcome.verified,
+        unchecked: false,
+        signInCodes: outcome.signInCodes,
+      );
     }
     final kept = _preserveKnownGoodClaims(
       freshClaims: freshClaims,
@@ -376,7 +408,12 @@ class IdentityClaimsRepository {
     );
     final keptKeys = {for (final claim in kept) _identityKeyOf(claim)};
     final unchecked = !keptKeys.containsAll(outcome.inconclusiveKeys);
-    return (claims: kept, unchecked: unchecked);
+    // A sign-in code is a confirmed negative, so [kept] never holds its claim.
+    return (
+      claims: kept,
+      unchecked: unchecked,
+      signInCodes: outcome.signInCodes,
+    );
   }
 
   /// Reads [pubkey]'s claims together with the verifier's verdict on each.
@@ -404,6 +441,7 @@ class IdentityClaimsRepository {
           for (final claim in resolved.claims) _identityKeyOf(claim),
         },
         verifierReachable: !resolved.unchecked,
+        signInCodes: resolved.signInCodes,
       );
     } on VerifierClientException {
       return IdentityClaimStatus(
@@ -572,7 +610,14 @@ class IdentityClaimsRepository {
   /// Builds and signs the identity event that links [claim], without
   /// publishing it. [confirmBinding] goes on the new claim's tag as a fourth
   /// value, for a sign-in the verifier confirms before it is published
-  /// (#10119). [replacingIdentity] is as for [publishClaim].
+  /// (#10119). [replacingIdentity] names another identity on the same
+  /// platform whose tag the event drops in this claim's place: the form sent
+  /// to the verifier, as for [publishClaim], or a sign-in link being renewed.
+  ///
+  /// With [replaceOnlySignIn], [replacingIdentity] is replaced only when every
+  /// tag under it on the event is a sign-in link: renewing a sign-in must not
+  /// drop a proof-post link it was pointed at. Otherwise the claim is added
+  /// beside it, and [SignedIdentityClaim.replacedKey] is null.
   ///
   /// Throws:
   ///
@@ -584,10 +629,11 @@ class IdentityClaimsRepository {
     IdentityClaim claim, {
     String? confirmBinding,
     String? replacingIdentity,
+    bool replaceOnlySignIn = false,
   }) async {
     final base = await _currentIdentityEventBase(claim.pubkey, forWrite: true);
     final key = _identityKeyOf(claim);
-    final replacedKey = replacingIdentity == null
+    final namedKey = replacingIdentity == null
         ? null
         : _identityKeyOf(
             IdentityClaim(
@@ -597,6 +643,11 @@ class IdentityClaimsRepository {
               proof: claim.proof,
             ),
           );
+    final replacedKey =
+        namedKey != null &&
+            (!replaceOnlySignIn || _linksOnlyBySignIn(base.tags, namedKey))
+        ? namedKey
+        : null;
     final droppedKeys = {key, ?replacedKey};
     final tags = [
       for (final tag in base.tags)
@@ -621,6 +672,17 @@ class IdentityClaimsRepository {
       claimKey: key,
       replacedKey: replacedKey,
     );
+  }
+
+  // Whether [tags] link the account under [key] by signing in and by nothing
+  // else: dropping the key drops every tag under it, a proof post included.
+  static bool _linksOnlyBySignIn(List<List<String>> tags, String key) {
+    final proofs = [
+      for (final tag in tags)
+        if (_tagIdentityKeyOrNull(tag) == key) tag[2],
+    ];
+    return proofs.isNotEmpty &&
+        proofs.every((proof) => proof == IdentityClaim.oauthProof);
   }
 
   /// Publishes an identity event [signClaim] signed, and returns its `i` tags.
@@ -1334,6 +1396,11 @@ class IdentityClaimsRepository {
         if (!r.verified && !r.isInconclusive)
           '${r.platform.toLowerCase()}:${r.identity.toLowerCase()}',
     };
+    final signInCodes = <String, SignInLapse>{
+      for (final r in results)
+        if (signInLapseFromCode(r.code) case final lapse? when !r.verified)
+          '${r.platform.toLowerCase()}:${r.identity.toLowerCase()}': lapse,
+    };
     final verified = claims
         .where((c) => verifiedKeys.contains(_identityKeyOf(c)))
         .toList();
@@ -1348,6 +1415,7 @@ class IdentityClaimsRepository {
       verified: verified,
       inconclusiveKeys: inconclusiveKeys,
       confirmedNegativeKeys: confirmedNegativeKeys,
+      signInCodes: signInCodes,
     );
   }
 
@@ -1510,8 +1578,10 @@ class SignedIdentityClaim {
   /// The `platform:identity` key of the claim it adds.
   final String claimKey;
 
-  /// The key of a claim saved under the form sent to the verifier, which the
-  /// event drops; counted as removed once the event is published.
+  /// The key of another claim the event drops in this claim's place: the form
+  /// sent to the verifier, or the renewed sign-in link. Null when none was
+  /// named or, with `replaceOnlySignIn`, when no sign-in tag under it was
+  /// dropped. Counted as removed once the event is published.
   final String? replacedKey;
 
   /// The event as the verifier receives it.

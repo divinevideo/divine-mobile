@@ -10,7 +10,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
 import 'package:openvine/blocs/verify/verify_cubit.dart';
+import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/observability/crash_reporter.dart';
@@ -104,6 +106,8 @@ void main() {
       // The loading indicator animates forever, so states that render one
       // cannot settle.
       bool settle = true,
+      // Whether this device can run a sign-in; off unless a test is about it.
+      bool oauthUsable = false,
     }) async {
       when(() => cubit.state).thenReturn(state);
       // Mounted at the production paths: the view pushes the connect flow by
@@ -115,7 +119,7 @@ void main() {
             path: VerifyPage.path,
             builder: (context, _) => BlocProvider<VerifyCubit>.value(
               value: cubit,
-              child: const VerifyView(),
+              child: VerifyView(oauthUsable: oauthUsable),
             ),
             routes: [
               GoRoute(
@@ -125,9 +129,24 @@ void main() {
                   body: Column(
                     children: [
                       Text('connect ${state.pathParameters['platform']}'),
+                      if (state.uri.queryParameters['replacing']
+                          case final replacing?)
+                        Text('replacing $replacing'),
                       TextButton(
-                        onPressed: () => context.pop(linkedMastodon),
+                        onPressed: () => context.pop<VerifyConnectResult>((
+                          linked: linkedMastodon,
+                          replacedIdentity: null,
+                        )),
                         child: const Text('finish link'),
+                      ),
+                      // A renewal that replaced the link it was opened for.
+                      TextButton(
+                        onPressed: () => context.pop<VerifyConnectResult>((
+                          linked: linkedMastodon,
+                          replacedIdentity:
+                              state.uri.queryParameters['replacing'],
+                        )),
+                        child: const Text('finish renewal'),
                       ),
                     ],
                   ),
@@ -162,6 +181,10 @@ void main() {
         VerifierPlatform(key: 'mastodon', label: 'Mastodon', supported: true),
       ],
       bool verifierReachable = true,
+      // The verifier's reason the sign-in link stopped counting.
+      Map<String, SignInLapse> signInCodes = const {
+        'twitter:jack': SignInLapse.expired,
+      },
       String? removingKey,
     }) {
       return VerifyState(
@@ -170,6 +193,7 @@ void main() {
         verifiedKeys: verifiedKeys,
         platforms: platforms,
         verifierReachable: verifierReachable,
+        signInCodes: signInCodes,
         removingKey: removingKey,
       );
     }
@@ -217,13 +241,90 @@ void main() {
     });
 
     testWidgets('marks each link verified or not', (tester) async {
-      await pump(tester, ready());
+      await pump(tester, ready(signInCodes: const {}));
 
       expect(find.text('octocat'), findsOneWidget);
       expect(find.text('jack'), findsOneWidget);
       expect(find.text(l10n.verifyStatusVerified), findsOneWidget);
       expect(find.text(l10n.verifyStatusUnverified), findsOneWidget);
       expect(find.text(l10n.verifyVerifierUnreachable), findsNothing);
+    });
+
+    group('verdict pill', () {
+      testWidgets('says a sign-in expired', (tester) async {
+        await pump(tester, ready());
+
+        expect(find.text(l10n.verifyStatusSignInExpired), findsOneWidget);
+        expect(find.text(l10n.verifyStatusUnverified), findsNothing);
+        expect(find.text(l10n.verifyStatusVerified), findsOneWidget);
+      });
+
+      testWidgets('says the account changed', (tester) async {
+        await pump(
+          tester,
+          ready(
+            signInCodes: const {'twitter:jack': SignInLapse.accountChanged},
+          ),
+        );
+
+        expect(find.text(l10n.verifyStatusAccountChanged), findsOneWidget);
+        expect(find.text(l10n.verifyStatusSignInExpired), findsNothing);
+      });
+
+      testWidgets('says not verified when the verifier gave no reason', (
+        tester,
+      ) async {
+        await pump(tester, ready(signInCodes: const {}));
+
+        expect(find.text(l10n.verifyStatusUnverified), findsOneWidget);
+        expect(find.text(l10n.verifyStatusSignInExpired), findsNothing);
+        expect(find.text(l10n.verifyStatusAccountChanged), findsNothing);
+      });
+
+      testWidgets('says why even where sign-in is off for the platform', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          ready(
+            platforms: const [
+              VerifierPlatform(key: 'github', label: 'GitHub', supported: true),
+              VerifierPlatform(
+                key: 'twitter',
+                label: 'Twitter / X',
+                supported: true,
+                oauth: false,
+              ),
+            ],
+          ),
+          oauthUsable: true,
+        );
+
+        expect(find.text(l10n.verifyStatusSignInExpired), findsOneWidget);
+        expect(find.text(l10n.verifySignInAgain), findsNothing);
+      });
+
+      testWidgets('keeps a proof-post link on not verified', (tester) async {
+        // The verifier can send an account-changed code for a proof-post
+        // claim on a sign-in platform; only sign-in rows say why.
+        const proofPostTwitter = IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'twitter',
+          identity: 'jack',
+          proof: 'abc',
+        );
+        await pump(
+          tester,
+          ready(
+            claims: const [proofPostTwitter],
+            verifiedKeys: const {},
+            signInCodes: const {'twitter:jack': SignInLapse.accountChanged},
+          ),
+        );
+
+        expect(find.text(l10n.verifyStatusUnverified), findsOneWidget);
+        expect(find.text(l10n.verifyStatusAccountChanged), findsNothing);
+      });
     });
 
     testWidgets('says the verdicts are unknown when the verifier is down', (
@@ -534,6 +635,115 @@ void main() {
 
       expect(find.text('connect mastodon'), findsOneWidget);
     });
+
+    group('sign in again', () {
+      testWidgets('is offered on a sign-in link that no longer verifies', (
+        tester,
+      ) async {
+        await pump(tester, ready(), oauthUsable: true);
+
+        expect(
+          find.bySemanticsLabel(
+            l10n.verifySignInAgainSemanticLabel('Twitter / X', 'jack'),
+          ),
+          findsOneWidget,
+        );
+        // Not on the proof-post link, which verifies.
+        expect(find.text(l10n.verifySignInAgain), findsOneWidget);
+      });
+
+      testWidgets('is offered while another link could not be checked', (
+        tester,
+      ) async {
+        // GitHub's check was inconclusive; the sign-in's lapse still stands.
+        await pump(
+          tester,
+          ready(verifiedKeys: const {}, verifierReachable: false),
+          oauthUsable: true,
+        );
+
+        expect(find.text(l10n.verifyVerifierUnreachable), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(
+            l10n.verifySignInAgainSemanticLabel('Twitter / X', 'jack'),
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('is not offered when the verifier gave no sign-in reason', (
+        tester,
+      ) async {
+        await pump(tester, ready(signInCodes: const {}), oauthUsable: true);
+
+        expect(find.text('jack'), findsOneWidget);
+        expect(find.text(l10n.verifySignInAgain), findsNothing);
+      });
+
+      testWidgets('is not offered where this device cannot sign in', (
+        tester,
+      ) async {
+        await pump(tester, ready());
+
+        expect(find.text(l10n.verifySignInAgain), findsNothing);
+      });
+
+      testWidgets('is not offered while an unlink is in flight', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          ready(removingKey: 'github:octocat'),
+          oauthUsable: true,
+          settle: false,
+        );
+
+        expect(find.text(l10n.verifySignInAgain), findsNothing);
+      });
+
+      testWidgets('opens the connect flow to replace that link', (
+        tester,
+      ) async {
+        await pump(tester, ready(), oauthUsable: true);
+
+        await tester.tap(find.text(l10n.verifySignInAgain));
+        await tester.pumpAndSettle();
+
+        expect(find.text('connect twitter'), findsOneWidget);
+        expect(find.text('replacing jack'), findsOneWidget);
+      });
+
+      testWidgets('swaps the renewed link out once the flow replaced it', (
+        tester,
+      ) async {
+        await pump(tester, ready(), oauthUsable: true);
+
+        await tester.tap(find.text(l10n.verifySignInAgain));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('finish renewal'));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => cubit.claimLinked(linkedMastodon, replacing: _twitter),
+        ).called(1);
+      });
+
+      testWidgets('keeps the renewed link when the flow replaced nothing', (
+        tester,
+      ) async {
+        // A proof post linked from the renewal flow publishes beside the
+        // link, so its row has to stay.
+        await pump(tester, ready(), oauthUsable: true);
+
+        await tester.tap(find.text(l10n.verifySignInAgain));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('finish link'));
+        await tester.pumpAndSettle();
+
+        verifyNever(() => cubit.claimLinked(any(), replacing: _twitter));
+        verify(() => cubit.claimLinked(linkedMastodon)).called(1);
+      });
+    });
   });
 
   group(VerifyPage, () {
@@ -584,6 +794,79 @@ void main() {
 
       verify(() => repository.claimsWithVerdicts(_pubkey)).called(1);
       expect(find.text('octocat'), findsOneWidget);
+    });
+
+    group('sign in again', () {
+      // A sign-in link the verifier says expired, on a platform with sign-in
+      // on.
+      setUp(() {
+        when(repository.supportedPlatforms).thenAnswer(
+          (_) async => const [
+            VerifierPlatform(
+              key: 'twitter',
+              label: 'Twitter / X',
+              supported: true,
+            ),
+          ],
+        );
+        when(() => repository.claimsWithVerdicts(any())).thenAnswer(
+          (_) async => const IdentityClaimStatus(
+            claims: [_twitter],
+            verifiedKeys: {},
+            verifierReachable: true,
+            signInCodes: {'twitter:jack': SignInLapse.expired},
+          ),
+        );
+      });
+
+      Future<void> pumpPage(
+        WidgetTester tester, {
+        required bool deviceSupportsOAuth,
+      }) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              identityClaimsRepositoryProvider.overrideWithValue(repository),
+              authServiceProvider.overrideWithValue(
+                createMockAuthService(
+                  authState: AuthState.authenticated,
+                  currentPublicKeyHex: _pubkey,
+                ),
+              ),
+              currentAuthStateProvider.overrideWithValue(
+                AuthState.authenticated,
+              ),
+              appOAuthSupportProvider.overrideWith(
+                (ref) async => deviceSupportsOAuth,
+              ),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: VineTheme.theme,
+              home: const VerifyPage(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('is offered where the device can finish a sign-in', (
+        tester,
+      ) async {
+        await pumpPage(tester, deviceSupportsOAuth: true);
+
+        expect(find.text(l10n.verifySignInAgain), findsOneWidget);
+      });
+
+      testWidgets("is not offered where the device can't finish one", (
+        tester,
+      ) async {
+        await pumpPage(tester, deviceSupportsOAuth: false);
+
+        expect(find.text('jack'), findsOneWidget);
+        expect(find.text(l10n.verifySignInAgain), findsNothing);
+      });
     });
   });
 }

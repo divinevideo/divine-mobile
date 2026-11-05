@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:analytics/analytics.dart';
+import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -31,6 +32,9 @@ class _MockIdentityClaimsRepository extends Mock
 class _MockAnalyticsEventSink extends Mock implements AnalyticsEventSink {}
 
 class _MockSignedIdentityClaim extends Mock implements SignedIdentityClaim {}
+
+class _MockVerifyConnectCubit extends MockCubit<VerifyConnectState>
+    implements VerifyConnectCubit {}
 
 /// Collects what the screen hands to screen readers.
 List<Object?> _captureAnnouncements(WidgetTester tester) {
@@ -82,6 +86,7 @@ void main() {
       WidgetTester tester, {
       required String platformKey,
       bool deviceSupportsOAuth = true,
+      String? replacingIdentity,
     }) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -107,7 +112,10 @@ void main() {
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: VineTheme.theme,
-            home: VerifyConnectPage(platformKey: platformKey),
+            home: VerifyConnectPage(
+              platformKey: platformKey,
+              replacingIdentity: replacingIdentity,
+            ),
           ),
         ),
       );
@@ -162,6 +170,27 @@ void main() {
       await pump(tester, platformKey: 'bluesky');
 
       expect(signInButton('bluesky'), findsOneWidget);
+    });
+
+    testWidgets('fills in the handle of the link it renews', (tester) async {
+      when(
+        () => repository.startingPlatform('bluesky'),
+      ).thenReturn(blueskyOn);
+      when(
+        () => repository.platform('bluesky'),
+      ).thenAnswer((_) => Completer<VerifierPlatform>().future);
+
+      await pump(
+        tester,
+        platformKey: 'bluesky',
+        replacingIdentity: 'alice.bsky.social',
+      );
+
+      // Shown in the field the sign-in reads it from, not only held behind it.
+      expect(
+        find.widgetWithText(TextField, 'alice.bsky.social'),
+        findsOneWidget,
+      );
     });
 
     testWidgets("keeps sign-in hidden where the device can't finish it", (
@@ -592,6 +621,515 @@ void main() {
       await pump(tester, oauthAvailable: true);
 
       expect(find.text('divine.bsky.social'), findsOneWidget);
+    });
+  });
+
+  group('$VerifyConnectView signing in again', () {
+    const twitterOAuth = VerifierPlatform(
+      key: 'twitter',
+      label: 'Twitter / X',
+      supported: true,
+      oauth: true,
+    );
+    const blueskyOAuth = VerifierPlatform(
+      key: 'bluesky',
+      label: 'Bluesky',
+      supported: true,
+      oauth: true,
+    );
+    late VerifyConnectCubit cubit;
+
+    tearDown(() async {
+      await cubit.close();
+    });
+
+    Future<AppLocalizations> pump(
+      WidgetTester tester, {
+      required VerifierPlatform platform,
+      required bool oauthAvailable,
+      String? replacingIdentity,
+      IdentityClaimsRepository? repository,
+    }) async {
+      cubit = VerifyConnectCubit(
+        repository: repository ?? _MockIdentityClaimsRepository(),
+        pubkey: _pubkey,
+        platform: platform,
+        oauthReturnUrl: _returnUrl,
+        analytics: const NoOpAnalyticsEventSink(),
+        launchOAuth: (_) async => null,
+        replacingIdentity: replacingIdentity,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: VineTheme.theme,
+          home: BlocProvider<VerifyConnectCubit>.value(
+            value: cubit,
+            child: VerifyConnectView(
+              npub: _npub,
+              oauthAvailable: oauthAvailable,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      return lookupAppLocalizations(const Locale('en'));
+    }
+
+    testWidgets('shows only the sign-in when sign-in can run', (tester) async {
+      final l10n = await pump(
+        tester,
+        platform: twitterOAuth,
+        oauthAvailable: true,
+        replacingIdentity: 'jack',
+      );
+
+      expect(find.text(l10n.verifyConnectOauthCta('Twitter / X')), findsOne);
+      expect(find.text(l10n.verifyConnectProofCta), findsNothing);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsNothing);
+      expect(find.text(l10n.verifyConnectProofTitle), findsNothing);
+    });
+
+    testWidgets("keeps Bluesky's handle field, filled in", (tester) async {
+      final l10n = await pump(
+        tester,
+        platform: blueskyOAuth,
+        oauthAvailable: true,
+        replacingIdentity: 'alice.bsky.social',
+      );
+
+      expect(find.byKey(const ValueKey('verify-identity-field')), findsOne);
+      expect(find.text('alice.bsky.social'), findsOneWidget);
+      expect(find.text(l10n.verifyConnectProofCta), findsNothing);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsNothing);
+    });
+
+    testWidgets('keeps the proof form where the app cannot sign in', (
+      tester,
+    ) async {
+      // iOS below 17.4: the page would be blank without it.
+      final l10n = await pump(
+        tester,
+        platform: twitterOAuth,
+        oauthAvailable: false,
+        replacingIdentity: 'jack',
+      );
+
+      expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
+    });
+
+    testWidgets('keeps the proof form where the platform has no sign-in', (
+      tester,
+    ) async {
+      final l10n = await pump(
+        tester,
+        platform: _telegram,
+        oauthAvailable: true,
+        replacingIdentity: 'jack',
+      );
+
+      expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
+    });
+
+    testWidgets('keeps the proof form where sign-in is turned off', (
+      tester,
+    ) async {
+      // What the verifier reports with sign-in off, and what a platform
+      // still loading from /platforms reports.
+      const twitterOff = VerifierPlatform(
+        key: 'twitter',
+        label: 'Twitter / X',
+        supported: true,
+        oauth: false,
+      );
+      final l10n = await pump(
+        tester,
+        platform: twitterOff,
+        oauthAvailable: true,
+        replacingIdentity: 'jack',
+      );
+
+      expect(
+        find.text(l10n.verifyConnectOauthCta('Twitter / X')),
+        findsNothing,
+      );
+      expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
+    });
+
+    testWidgets('brings the proof form back when sign-in turns out to be off', (
+      tester,
+    ) async {
+      // Sign-in was on when the list was read; the verifier answers 503
+      // from the start request, so the sign-in button can only keep failing.
+      final repository = _MockIdentityClaimsRepository();
+      when(
+        () => repository.startSignIn(
+          platform: any(named: 'platform'),
+          pubkey: any(named: 'pubkey'),
+          returnUrl: any(named: 'returnUrl'),
+          startCheck: any(named: 'startCheck'),
+          handle: any(named: 'handle'),
+        ),
+      ).thenAnswer((_) async => null);
+      final l10n = await pump(
+        tester,
+        platform: twitterOAuth,
+        oauthAvailable: true,
+        replacingIdentity: 'jack',
+        repository: repository,
+      );
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsNothing);
+
+      await tester.tap(find.text(l10n.verifyConnectOauthCta('Twitter / X')));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.verifyErrorOauthUnavailable), findsOneWidget);
+      expect(
+        find.text(l10n.verifyConnectOauthCta('Twitter / X')),
+        findsNothing,
+      );
+      expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
+    });
+
+    testWidgets('brings the proof form back when sign-in fails to start', (
+      tester,
+    ) async {
+      // Not a 503, so the verifier still says sign-in is on: the button stays
+      // for a retry, and the proof post is the way forward if it keeps failing.
+      final repository = _MockIdentityClaimsRepository();
+      when(
+        () => repository.startSignIn(
+          platform: any(named: 'platform'),
+          pubkey: any(named: 'pubkey'),
+          returnUrl: any(named: 'returnUrl'),
+          startCheck: any(named: 'startCheck'),
+          handle: any(named: 'handle'),
+        ),
+      ).thenThrow(const VerifierApiException(500, 'returned 500'));
+      final l10n = await pump(
+        tester,
+        platform: twitterOAuth,
+        oauthAvailable: true,
+        replacingIdentity: 'jack',
+        repository: repository,
+      );
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsNothing);
+
+      await tester.tap(find.text(l10n.verifyConnectOauthCta('Twitter / X')));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(l10n.verifyErrorOauthFailed), findsOneWidget);
+      expect(find.text(l10n.verifyConnectOauthCta('Twitter / X')), findsOne);
+      expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
+    });
+
+    group('once a sign-in fails to start', () {
+      late _MockIdentityClaimsRepository repository;
+
+      setUp(() {
+        repository = _MockIdentityClaimsRepository();
+        when(
+          () => repository.startSignIn(
+            platform: any(named: 'platform'),
+            pubkey: any(named: 'pubkey'),
+            returnUrl: any(named: 'returnUrl'),
+            startCheck: any(named: 'startCheck'),
+            handle: any(named: 'handle'),
+          ),
+        ).thenThrow(const VerifierApiException(500, 'returned 500'));
+      });
+
+      TextField identityField(WidgetTester tester) => tester.widget<TextField>(
+        find.descendant(
+          of: find.byKey(const ValueKey('verify-identity-field')),
+          matching: find.byType(TextField),
+        ),
+      );
+
+      testWidgets('fixes the handle to the one being renewed', (tester) async {
+        final l10n = await pump(
+          tester,
+          platform: twitterOAuth,
+          oauthAvailable: true,
+          replacingIdentity: 'jack',
+          repository: repository,
+        );
+        await tester.tap(find.text(l10n.verifyConnectOauthCta('Twitter / X')));
+        await tester.pump();
+        await tester.pump();
+
+        await tester.enterText(
+          find.byKey(const ValueKey('verify-proof-field')),
+          'https://x.com/other/status/1',
+        );
+        await tester.pump();
+
+        expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+        expect(identityField(tester).enabled, isFalse);
+        expect(identityField(tester).controller!.text, equals('jack'));
+      });
+
+      testWidgets('shows the renewed Bluesky handle, not one typed before', (
+        tester,
+      ) async {
+        final l10n = await pump(
+          tester,
+          platform: blueskyOAuth,
+          oauthAvailable: true,
+          replacingIdentity: 'alice.bsky.social',
+          repository: repository,
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('verify-identity-field')),
+          'bob.bsky.social',
+        );
+        await tester.tap(find.text(l10n.verifyConnectOauthCta('Bluesky')));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+        expect(identityField(tester).enabled, isFalse);
+        expect(
+          identityField(tester).controller!.text,
+          equals('alice.bsky.social'),
+        );
+      });
+
+      testWidgets('leaves the handle editable on a plain connect', (
+        tester,
+      ) async {
+        final l10n = await pump(
+          tester,
+          platform: blueskyOAuth,
+          oauthAvailable: true,
+          repository: repository,
+        );
+        await tester.enterText(
+          find.byKey(const ValueKey('verify-identity-field')),
+          'bob.bsky.social',
+        );
+        await tester.tap(find.text(l10n.verifyConnectOauthCta('Bluesky')));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+        expect(identityField(tester).enabled, isTrue);
+        expect(
+          identityField(tester).controller!.text,
+          equals('bob.bsky.social'),
+        );
+      });
+    });
+
+    testWidgets(
+      'keeps the Bluesky handle editable when the verifier refuses it',
+      (
+        tester,
+      ) async {
+        // A 400 is the verifier refusing the handle, not a sign-in that cannot
+        // start: the person corrects it and signs in again.
+        final repository = _MockIdentityClaimsRepository();
+        when(
+          () => repository.startSignIn(
+            platform: any(named: 'platform'),
+            pubkey: any(named: 'pubkey'),
+            returnUrl: any(named: 'returnUrl'),
+            startCheck: any(named: 'startCheck'),
+            handle: any(named: 'handle'),
+          ),
+        ).thenThrow(const VerifierApiException(400, 'returned 400'));
+        final l10n = await pump(
+          tester,
+          platform: blueskyOAuth,
+          oauthAvailable: true,
+          replacingIdentity: 'alice.bsky.social',
+          repository: repository,
+        );
+        await tester.tap(find.text(l10n.verifyConnectOauthCta('Bluesky')));
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text(l10n.verifyErrorOauthFailed), findsOneWidget);
+        expect(find.text(l10n.verifyConnectProofCta), findsNothing);
+        expect(find.byKey(const ValueKey('verify-proof-field')), findsNothing);
+        final field = tester.widget<TextField>(
+          find.descendant(
+            of: find.byKey(const ValueKey('verify-identity-field')),
+            matching: find.byType(TextField),
+          ),
+        );
+        expect(field.enabled, isTrue);
+        expect(field.controller!.text, equals('alice.bsky.social'));
+      },
+    );
+
+    testWidgets('fixes the handle where a renewal can only post a proof', (
+      tester,
+    ) async {
+      // iOS below 17.4: the proof post is all there is, and it is made for
+      // the renewed handle whatever the field holds.
+      await pump(
+        tester,
+        platform: _bluesky,
+        oauthAvailable: false,
+        replacingIdentity: 'alice.bsky.social',
+      );
+
+      final field = tester.widget<TextField>(
+        find.descendant(
+          of: find.byKey(const ValueKey('verify-identity-field')),
+          matching: find.byType(TextField),
+        ),
+      );
+      expect(field.enabled, isFalse);
+      expect(field.controller!.text, equals('alice.bsky.social'));
+    });
+
+    testWidgets('keeps the proof form when not signing in again', (
+      tester,
+    ) async {
+      final l10n = await pump(
+        tester,
+        platform: twitterOAuth,
+        oauthAvailable: true,
+      );
+
+      expect(find.text(l10n.verifyConnectOauthCta('Twitter / X')), findsOne);
+      expect(find.text(l10n.verifyConnectProofCta), findsOneWidget);
+      expect(find.byKey(const ValueKey('verify-proof-field')), findsOne);
+    });
+  });
+
+  group('$VerifyConnectView sign-in lifetime notice', () {
+    const lasting30 = VerifierPlatform(
+      key: 'bluesky',
+      label: 'Bluesky',
+      supported: true,
+      oauth: true,
+      signinExpiresAfterDays: 30,
+    );
+    late VerifyConnectCubit cubit;
+
+    tearDown(() async {
+      await cubit.close();
+    });
+
+    Future<AppLocalizations> pump(
+      WidgetTester tester, {
+      required VerifierPlatform platform,
+      bool oauthAvailable = true,
+      String? replacingIdentity,
+    }) async {
+      cubit = VerifyConnectCubit(
+        repository: _MockIdentityClaimsRepository(),
+        pubkey: _pubkey,
+        platform: platform,
+        oauthReturnUrl: _returnUrl,
+        analytics: const NoOpAnalyticsEventSink(),
+        launchOAuth: (_) async => null,
+        replacingIdentity: replacingIdentity,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: VineTheme.theme,
+          home: BlocProvider<VerifyConnectCubit>.value(
+            value: cubit,
+            child: VerifyConnectView(
+              npub: _npub,
+              oauthAvailable: oauthAvailable,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      return lookupAppLocalizations(const Locale('en'));
+    }
+
+    testWidgets('says how many days the verifier reports', (tester) async {
+      final l10n = await pump(tester, platform: lasting30);
+
+      expect(
+        find.text(l10n.verifyConnectSignInLifetime(30)),
+        findsOneWidget,
+      );
+      // The absence tests look the notice up by this key, so it has to be
+      // on the notice for them to mean anything.
+      expect(
+        find.byKey(const ValueKey('verify-signin-lifetime')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('uses the singular for one day', (tester) async {
+      final l10n = await pump(
+        tester,
+        platform: const VerifierPlatform(
+          key: 'bluesky',
+          label: 'Bluesky',
+          supported: true,
+          oauth: true,
+          signinExpiresAfterDays: 1,
+        ),
+      );
+
+      expect(find.text(l10n.verifyConnectSignInLifetime(1)), findsOneWidget);
+      // The one-day wording is its own, not the plural with a 1 in it.
+      expect(
+        l10n.verifyConnectSignInLifetime(1),
+        isNot(l10n.verifyConnectSignInLifetime(2).replaceAll('2', '1')),
+      );
+    });
+
+    testWidgets('shows nothing when the verifier reports no lifetime', (
+      tester,
+    ) async {
+      final l10n = await pump(
+        tester,
+        platform: const VerifierPlatform(
+          key: 'bluesky',
+          label: 'Bluesky',
+          supported: true,
+          oauth: true,
+        ),
+      );
+
+      expect(find.text(l10n.verifyConnectOauthCta('Bluesky')), findsOne);
+      expect(
+        find.byKey(const ValueKey('verify-signin-lifetime')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('shows nothing when sign-in is not showing', (tester) async {
+      await pump(tester, platform: lasting30, oauthAvailable: false);
+
+      expect(
+        find.byKey(const ValueKey('verify-signin-lifetime')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('shows while signing in again', (tester) async {
+      final l10n = await pump(
+        tester,
+        platform: lasting30,
+        replacingIdentity: 'alice.bsky.social',
+      );
+
+      expect(
+        find.text(l10n.verifyConnectSignInLifetime(30)),
+        findsOneWidget,
+      );
     });
   });
 
@@ -1069,6 +1607,102 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(VerifyConnectView), findsNothing);
+    });
+  });
+
+  group('$VerifyConnectView once linked', () {
+    const linked = IdentityClaim(
+      pubkey: _pubkey,
+      platform: 'twitter',
+      identity: 'jack_renamed',
+      proof: IdentityClaim.oauthProof,
+    );
+    const twitter = VerifierPlatform(
+      key: 'twitter',
+      label: 'Twitter / X',
+      supported: true,
+    );
+
+    // Pushed from a stand-in dashboard that keeps what the flow hands back.
+    Future<VerifyConnectResult?> linkAndReturn(
+      WidgetTester tester,
+      VerifyConnectState linkedState,
+    ) async {
+      final cubit = _MockVerifyConnectCubit();
+      const editing = VerifyConnectState(platform: twitter);
+      whenListen(
+        cubit,
+        Stream.value(linkedState),
+        initialState: editing,
+      );
+      VerifyConnectResult? result;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, _) => TextButton(
+              onPressed: () async {
+                result = await context.push<VerifyConnectResult>('/connect');
+              },
+              child: const Text('open'),
+            ),
+            routes: [
+              GoRoute(
+                path: 'connect',
+                builder: (_, _) => BlocProvider<VerifyConnectCubit>.value(
+                  value: cubit,
+                  child: const VerifyConnectView(npub: _npub),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: VineTheme.theme,
+          routerConfig: router,
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      return result;
+    }
+
+    testWidgets('hands back the claim and the handle it replaced', (
+      tester,
+    ) async {
+      final result = await linkAndReturn(
+        tester,
+        const VerifyConnectState(
+          platform: twitter,
+          status: VerifyConnectStatus.linked,
+          linkedClaim: linked,
+          replacedIdentity: 'jack',
+        ),
+      );
+
+      expect(result?.linked, equals(linked));
+      expect(result?.replacedIdentity, equals('jack'));
+    });
+
+    testWidgets('hands back no replaced handle when none was replaced', (
+      tester,
+    ) async {
+      final result = await linkAndReturn(
+        tester,
+        const VerifyConnectState(
+          platform: twitter,
+          status: VerifyConnectStatus.linked,
+          linkedClaim: linked,
+        ),
+      );
+
+      expect(result?.linked, equals(linked));
+      expect(result?.replacedIdentity, isNull);
     });
   });
 }

@@ -102,7 +102,10 @@ class VerifyConnectState extends Equatable {
     this.error,
     this.errorAttempt = 0,
     this.linkedClaim,
+    this.replacedIdentity,
+    this.replacingIdentity,
     this.signedInAccount,
+    this.signInFailedToStart = false,
   });
 
   /// The platform being linked.
@@ -129,6 +132,41 @@ class VerifyConnectState extends Equatable {
   /// actually published, rather than from a relay reread that may not serve
   /// the event back yet.
   final IdentityClaim? linkedClaim;
+
+  /// The handle of the sign-in link [linkedClaim] took the place of, when a
+  /// renewal replaced one. Null when nothing was replaced, so the dashboard
+  /// keeps that link's row.
+  final String? replacedIdentity;
+
+  /// The handle of the sign-in link this flow renews, fixed when the flow
+  /// opens. Null on a plain connect.
+  final String? replacingIdentity;
+
+  /// Whether this flow renews a sign-in link rather than adding a new one.
+  bool get isReplacing => replacingIdentity != null;
+
+  /// Whether a sign-in in this flow failed to start or to launch.
+  ///
+  /// A Bluesky start the verifier refused with a 4xx does not count: that
+  /// start takes the typed handle, which the person can correct and try
+  /// again. The other starts take no handle, so a 4xx there counts.
+  ///
+  /// Stays set for the rest of the flow, so a renewal that cannot start a
+  /// sign-in keeps the proof post on offer while the sign-in can be retried.
+  final bool signInFailedToStart;
+
+  /// Whether this flow renews by signing in alone, so the proof post is not
+  /// offered beside a sign-in that can run.
+  bool get renewsBySignInOnly => isReplacing && !signInFailedToStart;
+
+  /// Whether the handle is fixed to [replacingIdentity]: a renewal whose
+  /// sign-in failed to start, so the proof post is on offer.
+  ///
+  /// A platform keeps one link, so a renewal must take that link's place
+  /// rather than add a second link under another handle. The proof post
+  /// holds to the renewed handle in every renewal (see [normalizedInput]);
+  /// this lock also keeps a Bluesky sign-in retry on the handle shown.
+  bool get identityLocked => isReplacing && signInFailedToStart;
 
   /// The account a sign-in returned, shown for the person to approve.
   final String? signedInAccount;
@@ -171,9 +209,13 @@ class VerifyConnectState extends Equatable {
   ///
   /// Computed rather than written back into the fields: rewriting what someone
   /// pasted while they are still looking at it is worse than accepting it.
+  ///
+  /// A renewal's proof post is always for [replacingIdentity], whatever
+  /// [identity] holds, so its tag replaces the renewed link under the same
+  /// key instead of sitting beside it.
   VerifyProofInput get normalizedInput => normalizeVerifyProof(
     platform: platform.key,
-    identity: identity,
+    identity: replacingIdentity ?? identity,
     proof: proof,
   );
 
@@ -205,7 +247,10 @@ class VerifyConnectState extends Equatable {
     VerifyConnectError? error,
     int? errorAttempt,
     IdentityClaim? linkedClaim,
+    String? replacedIdentity,
+    String? replacingIdentity,
     String? signedInAccount,
+    bool? signInFailedToStart,
     bool clearError = false,
     bool clearSignedInAccount = false,
   }) {
@@ -217,9 +262,12 @@ class VerifyConnectState extends Equatable {
       error: clearError ? null : (error ?? this.error),
       errorAttempt: errorAttempt ?? this.errorAttempt,
       linkedClaim: linkedClaim ?? this.linkedClaim,
+      replacedIdentity: replacedIdentity ?? this.replacedIdentity,
+      replacingIdentity: replacingIdentity ?? this.replacingIdentity,
       signedInAccount: clearSignedInAccount
           ? null
           : (signedInAccount ?? this.signedInAccount),
+      signInFailedToStart: signInFailedToStart ?? this.signInFailedToStart,
     );
   }
 
@@ -232,6 +280,9 @@ class VerifyConnectState extends Equatable {
     error,
     errorAttempt,
     linkedClaim,
+    replacedIdentity,
+    replacingIdentity,
     signedInAccount,
+    signInFailedToStart,
   ];
 }

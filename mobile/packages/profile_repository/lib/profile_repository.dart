@@ -12,5 +12,6 @@ export 'src/profile_reader.dart';
 export 'src/profile_repository.dart';
 export 'src/progressive_search_result.dart';
 export 'src/search_cancellation_token.dart';
+export 'src/sign_in_lapse.dart';
 export 'src/username_availability_result.dart';
 export 'src/username_claim_result.dart';

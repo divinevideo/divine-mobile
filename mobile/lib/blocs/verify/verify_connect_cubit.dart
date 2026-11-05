@@ -18,6 +18,13 @@ import 'package:unified_logger/unified_logger.dart';
 
 part 'verify_connect_state.dart';
 
+/// What a finished connect flow hands back: the claim it published and, when
+/// it renewed a sign-in link under another handle, that handle.
+typedef VerifyConnectResult = ({
+  IdentityClaim linked,
+  String? replacedIdentity,
+});
+
 /// Opens an OAuth authorization URL and returns its HTTPS callback.
 ///
 /// A `null` callback means the user closed or cancelled the browser session.
@@ -31,6 +38,11 @@ typedef VerifyOAuthLauncher = Future<Uri?> Function(Uri authorizationUrl);
 class VerifyConnectCubit extends Cubit<VerifyConnectState>
     with CloseGuardedEmit<VerifyConnectState> {
   /// Creates a [VerifyConnectCubit] for [platform].
+  ///
+  /// [replacingIdentity] is the handle of a sign-in link being renewed: the
+  /// form starts with it, and a sign-in that returns another handle on the
+  /// same platform replaces that link rather than sitting beside it, as long
+  /// as sign-in is all that links that handle.
   VerifyConnectCubit({
     required IdentityClaimsRepository repository,
     required String pubkey,
@@ -38,6 +50,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     required VerifyOAuthLauncher launchOAuth,
     required String oauthReturnUrl,
     required AnalyticsEventSink analytics,
+    String? replacingIdentity,
     Random? random,
     Future<void> Function(Duration)? wait,
   }) : _repository = repository,
@@ -47,7 +60,13 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
        _oauthReturnUrl = oauthReturnUrl,
        _random = random ?? Random.secure(),
        _wait = wait,
-       super(VerifyConnectState(platform: platform));
+       super(
+         VerifyConnectState(
+           platform: platform,
+           identity: replacingIdentity ?? '',
+           replacingIdentity: replacingIdentity,
+         ),
+       );
 
   final IdentityClaimsRepository _repository;
   final String _pubkey;
@@ -97,8 +116,12 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     emitIfOpen(state.copyWith(platform: platform));
   }
 
-  /// Records the account handle the user is claiming.
+  /// Records the account handle the user is claiming. Ignored once the handle
+  /// is locked to the link being renewed.
   void identityChanged(String identity) {
+    // A Bluesky sign-in retry starts from this field, so a typed handle would
+    // start a sign-in under another account than the one shown.
+    if (state.identityLocked) return;
     emit(state.copyWith(identity: identity.trim(), clearError: true));
   }
 
@@ -116,7 +139,8 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
 
     // A pasted post link has to be taken apart before it is sent: most
     // verifiers rebuild the URL from the handle and a bare id, so a link in
-    // the proof field looks up a URL that cannot exist.
+    // the proof field looks up a URL that cannot exist. In a renewal it is
+    // for the renewed handle, so the post replaces that link.
     final input = state.normalizedInput;
     if (input.problem != null) {
       return _fail(switch (input.problem!) {
@@ -252,13 +276,44 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
       if (isClosed) return;
       addError(error, stackTrace);
       return _fail(VerifyConnectError.verifierUnreachable);
+    } on VerifierApiException catch (error, stackTrace) {
+      if (isClosed) return;
+      addError(error, stackTrace);
+      // Only Bluesky's start takes what the person typed. There a 4xx (such
+      // as a handle the verifier cannot resolve) keeps the handle editable
+      // and the proof post hidden, so the person can correct it and sign in
+      // again. The other starts take no handle, so a 4xx leaves nothing to
+      // correct and counts as a failed start.
+      final refused =
+          platform == 'bluesky' &&
+          error.statusCode >= 400 &&
+          error.statusCode < 500;
+      return _fail(
+        VerifyConnectError.oauthFailed,
+        signInFailedToStart: !refused,
+      );
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);
-      return _fail(VerifyConnectError.oauthFailed);
+      return _fail(VerifyConnectError.oauthFailed, signInFailedToStart: true);
     }
     if (isClosed) return;
     if (authorizationUrl == null) {
+      // The verifier has sign-in off (it can change after the list was
+      // read). Say so in the platform too, so the screen drops the button
+      // that can only fail again and offers the proof post instead.
+      final platform = state.platform;
+      emit(
+        state.copyWith(
+          platform: VerifierPlatform(
+            key: platform.key,
+            label: platform.label,
+            supported: platform.supported,
+            oauth: false,
+            signinExpiresAfterDays: platform.signinExpiresAfterDays,
+          ),
+        ),
+      );
       return _fail(VerifyConnectError.oauthUnavailable);
     }
 
@@ -268,7 +323,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);
-      return _fail(VerifyConnectError.oauthFailed);
+      return _fail(VerifyConnectError.oauthFailed, signInFailedToStart: true);
     }
     if (isClosed) return;
     if (callback == null) {
@@ -346,6 +401,10 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
           pending.code,
           pending.startCheck,
         ),
+        replacingIdentity: _replacedBy(pending.claim),
+        // The handle came in on a route anyone can open, so only a sign-in
+        // link under it is replaced, never a proof-post link.
+        replaceOnlySignIn: state.isReplacing,
       );
       if (_superseded(pending)) return;
       if (!pending.confirmed) {
@@ -407,6 +466,10 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
         status: VerifyConnectStatus.linked,
         identity: pending.claim.identity,
         linkedClaim: pending.claim,
+        // Named only when the published event dropped that link.
+        replacedIdentity: pending.signed?.replacedKey == null
+            ? null
+            : state.replacingIdentity,
         clearSignedInAccount: true,
       ),
     );
@@ -480,6 +543,17 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
       _random.nextInt(256).toRadixString(16).padLeft(2, '0'),
   ].join();
 
+  // The renewed link's handle when [claim] is another handle; null when it is
+  // the same one, whose tag the signed event replaces anyway. Naming it as
+  // replaced too would count the new link as removed.
+  String? _replacedBy(IdentityClaim claim) {
+    final replacing = state.replacingIdentity;
+    if (replacing == null) return null;
+    return replacing.toLowerCase() == claim.identity.toLowerCase()
+        ? null
+        : replacing;
+  }
+
   static String _bareHandle(String typed) =>
       typed.trim().replaceFirst(RegExp('^@'), '').trim();
 
@@ -539,15 +613,19 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
   );
 
   // Back to editing, so any sign-in waiting for approval goes too.
-  void _fail(VerifyConnectError error) {
+  void _fail(VerifyConnectError error, {bool signInFailedToStart = false}) {
     if (isClosed) return;
     _pending = null;
     emit(
       state.copyWith(
         status: VerifyConnectStatus.editing,
+        // A renewal locks its handle once the proof post is on offer, so a
+        // handle typed before then goes back to the renewed one.
+        identity: signInFailedToStart ? state.replacingIdentity : null,
         error: error,
         errorAttempt: state.errorAttempt + 1,
         clearSignedInAccount: true,
+        signInFailedToStart: signInFailedToStart ? true : null,
       ),
     );
   }

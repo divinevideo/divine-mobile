@@ -17,6 +17,7 @@ class VerifierPlatform extends Equatable {
     required this.label,
     required this.supported,
     this.oauth,
+    this.signinExpiresAfterDays,
   });
 
   /// Parses one entry of the `platforms` map returned by `GET /platforms`.
@@ -29,6 +30,13 @@ class VerifierPlatform extends Equatable {
       // back to [oauthPlatforms] rather than failing the whole list.
       oauth: switch (json['oauth']) {
         final bool value => value,
+        _ => null,
+      },
+      // A count of days is a positive int; anything else is read as no
+      // answer, so a malformed value hides the notice rather than showing a
+      // wrong number.
+      signinExpiresAfterDays: switch (json['signin_expires_after_days']) {
+        final int value when value > 0 => value,
         _ => null,
       },
     );
@@ -54,6 +62,13 @@ class VerifierPlatform extends Equatable {
   /// flag.
   final bool? oauth;
 
+  /// How many days a sign-in link lasts before it needs signing in again.
+  ///
+  /// Null when the verifier does not report one: platforms whose links last
+  /// until unlinked, platforms without a sign-in, and a verifier older than
+  /// the field.
+  final int? signinExpiresAfterDays;
+
   /// Whether this platform can be linked through an OAuth login instead of a
   /// proof post.
   ///
@@ -78,5 +93,11 @@ class VerifierPlatform extends Equatable {
   };
 
   @override
-  List<Object?> get props => [key, label, supported, oauth];
+  List<Object?> get props => [
+    key,
+    label,
+    supported,
+    oauth,
+    signinExpiresAfterDays,
+  ];
 }

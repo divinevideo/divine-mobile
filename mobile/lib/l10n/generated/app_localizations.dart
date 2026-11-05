@@ -23637,11 +23637,35 @@ abstract class AppLocalizations {
   /// **'Not verified'**
   String get verifyStatusUnverified;
 
+  /// Pill on an account linked by signing in when no current sign-in verifies it: it lapsed, was unlinked, or was never confirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in expired'**
+  String get verifyStatusSignInExpired;
+
+  /// Pill on a linked account whose handle now points to a different account than the one that signed in.
+  ///
+  /// In en, this message translates to:
+  /// **'Account changed'**
+  String get verifyStatusAccountChanged;
+
   /// Screen reader label for the button that removes a linked account.
   ///
   /// In en, this message translates to:
   /// **'Unlink {platform} account {identity}'**
   String verifyUnlinkSemanticLabel(String platform, String identity);
+
+  /// Button on an account linked by signing in that no longer verifies. Opens the connect screen to sign in again, renewing the link without unlinking it first.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in again'**
+  String get verifySignInAgain;
+
+  /// Screen reader label for the button that renews a linked account by signing in to it again.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in again to {platform} account {identity}'**
+  String verifySignInAgainSemanticLabel(String platform, String identity);
 
   /// Title of the sheet confirming an account unlink. {platform} is the platform's display name.
   ///
@@ -23672,6 +23696,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'One tap'**
   String get verifyOneTapBadge;
+
+  /// Notice under the sign-in explainer on the connect screen, saying how long a sign-in link lasts. Shown only when the verifier reports a lifetime for that platform; platforms whose links last until unlinked omit it, so the notice is not shown there.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in links last {days, plural, =1{{days} day} other{{days} days}}. After that, sign in again to keep the link.'**
+  String verifyConnectSignInLifetime(int days);
 
   /// Explains the sign-in route for linking a platform. Reassures that nothing is posted to the account.
   ///

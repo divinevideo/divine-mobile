@@ -14230,8 +14230,22 @@ class AppLocalizationsPt extends AppLocalizations {
   String get verifyStatusUnverified => 'Não verificada';
 
   @override
+  String get verifyStatusSignInExpired => 'Sign-in expired';
+
+  @override
+  String get verifyStatusAccountChanged => 'Account changed';
+
+  @override
   String verifyUnlinkSemanticLabel(String platform, String identity) {
     return 'Desvincular a conta $platform $identity';
+  }
+
+  @override
+  String get verifySignInAgain => 'Sign in again';
+
+  @override
+  String verifySignInAgainSemanticLabel(String platform, String identity) {
+    return 'Sign in again to $platform account $identity';
   }
 
   @override
@@ -14254,6 +14268,17 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get verifyOneTapBadge => 'Um toque';
+
+  @override
+  String verifyConnectSignInLifetime(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '$days day',
+    );
+    return 'Sign-in links last $_temp0. After that, sign in again to keep the link.';
+  }
 
   @override
   String verifyConnectOauthExplainer(String platform) {

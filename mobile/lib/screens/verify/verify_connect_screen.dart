@@ -24,7 +24,11 @@ import 'package:unified_logger/unified_logger.dart';
 /// Route host for linking a single platform.
 class VerifyConnectPage extends ConsumerWidget {
   /// Creates a [VerifyConnectPage] for [platformKey].
-  const VerifyConnectPage({required this.platformKey, super.key});
+  const VerifyConnectPage({
+    required this.platformKey,
+    this.replacingIdentity,
+    super.key,
+  });
 
   /// Route name used by GoRouter.
   static const routeName = 'verify-connect';
@@ -34,6 +38,9 @@ class VerifyConnectPage extends ConsumerWidget {
 
   /// NIP-39 platform key being linked.
   final String platformKey;
+
+  /// Handle of the sign-in link this flow renews, if it renews one.
+  final String? replacingIdentity;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -65,7 +72,7 @@ class VerifyConnectPage extends ConsumerWidget {
     }
 
     return BlocProvider(
-      key: ValueKey((repository, pubkey, platformKey)),
+      key: ValueKey((repository, pubkey, platformKey, replacingIdentity)),
       create: (_) {
         // Starts from the answer the platform list was drawn from, so this
         // screen offers the sign-in the list did. While that answer is being
@@ -74,6 +81,7 @@ class VerifyConnectPage extends ConsumerWidget {
           repository: repository,
           pubkey: pubkey,
           platform: repository.startingPlatform(platformKey),
+          replacingIdentity: replacingIdentity,
           launchOAuth: launchAppOAuth,
           oauthReturnUrl: appOAuthCallbackUrl,
           // A plain Provider whose identity never changes, so it is read
@@ -144,7 +152,12 @@ class VerifyConnectView extends StatelessWidget {
     if (state.status == VerifyConnectStatus.linked) {
       // Hand the claim back rather than a bare flag, so the dashboard can draw
       // the new row from what was published instead of waiting on relays.
-      context.pop(state.linkedClaim);
+      final linked = state.linkedClaim;
+      context.pop<VerifyConnectResult>(
+        linked == null
+            ? null
+            : (linked: linked, replacedIdentity: state.replacedIdentity),
+      );
       return;
     }
     final error = state.error;
@@ -249,6 +262,15 @@ class _ConnectForm extends StatelessWidget {
     // they were, so a proof linked meanwhile would be dropped once that
     // sign-in is published.
     final inputsEnabled = !state.isBusy && signedInAccount == null;
+    // Signing in again is the sign-in alone; the proof post adds nothing to
+    // it. Kept when sign-in cannot run here (iOS below 17.4, a platform
+    // without it, the list still loading, or a sign-in that failed to
+    // start), else the page leaves nothing that can work.
+    final showProof = !(state.renewsBySignInOnly && showOAuth);
+    // A renewal's proof post is made for the renewed handle, so while it is
+    // on offer the field shows that handle and cannot be changed: a post
+    // under another handle would add a second link beside the lapsed one.
+    final lockedIdentity = showProof ? state.replacingIdentity : null;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -262,20 +284,34 @@ class _ConnectForm extends StatelessWidget {
               color: context.vineColors.mutedText,
             ),
           ),
+          // Shown only when the verifier reports a lifetime for this
+          // platform. Platforms whose links last until unlinked omit the
+          // field, and then no notice shows.
+          if (state.platform.signinExpiresAfterDays case final days?) ...[
+            const SizedBox(height: 8),
+            Text(
+              l10n.verifyConnectSignInLifetime(days),
+              key: const ValueKey('verify-signin-lifetime'),
+              style: VineTheme.bodySmallFont(
+                color: context.vineColors.mutedText,
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           if (state.platform.key == 'bluesky') ...[
             // Same key as the copy in the proof block below: this field moves
             // between the two when appOAuthSupportProvider resolves, and the
-            // key is what carries the typed handle across the move. It has to
-            // sit on the child the list matches, not on the DivineTextField
-            // inside — keying the inner field leaves this element to be
-            // rebuilt by position, which loses the text anyway. It stays while
+            // key is what keeps the field, its focus and cursor across the
+            // move. It has to sit on the child the list matches, not on the
+            // DivineTextField inside — keying the inner field leaves this
+            // element to be rebuilt by position as a new field. It stays while
             // a sign-in waits for the same reason: a cancel brings back the
             // start button, and the handle has to still be in the field.
             _IdentityField(
               key: const ValueKey('verify-identity-field'),
               state: state,
               enabled: inputsEnabled,
+              lockedIdentity: lockedIdentity,
             ),
             const SizedBox(height: 12),
           ],
@@ -322,86 +358,126 @@ class _ConnectForm extends StatelessWidget {
             const SizedBox(height: 24),
           ],
         ],
-        _SectionLabel(l10n.verifyConnectProofTitle),
-        // Bluesky's note says a sign-in above is all it takes, which reads
-        // wrong while the card above still asks to link the account.
-        if (!(signedInAccount != null && state.platform.key == 'bluesky')) ...[
-          Text(
-            verifyProofExplainer(l10n, state.platform.key),
-            style: VineTheme.bodyMediumFont(
-              color: context.vineColors.mutedText,
+        if (showProof) ...[
+          _SectionLabel(l10n.verifyConnectProofTitle),
+          // Bluesky's note says a sign-in above is all it takes, which reads
+          // wrong while the card above still asks to link the account.
+          if (!(signedInAccount != null &&
+              state.platform.key == 'bluesky')) ...[
+            Text(
+              verifyProofExplainer(l10n, state.platform.key),
+              style: VineTheme.bodyMediumFont(
+                color: context.vineColors.mutedText,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-        ],
-        _NpubCard(npub: npub),
-        const SizedBox(height: 16),
-        // Skipped when the pasted link already carries the account, and when
-        // the OAuth block above is already asking for it.
-        if (state.needsIdentityInput &&
-            !(showOAuth && state.platform.key == 'bluesky')) ...[
-          _IdentityField(
-            key: const ValueKey('verify-identity-field'),
-            state: state,
+            const SizedBox(height: 12),
+          ],
+          _NpubCard(npub: npub),
+          const SizedBox(height: 16),
+          // Skipped when the pasted link already carries the account, and when
+          // the OAuth block above is already asking for it.
+          if (state.needsIdentityInput &&
+              !(showOAuth && state.platform.key == 'bluesky')) ...[
+            _IdentityField(
+              key: const ValueKey('verify-identity-field'),
+              state: state,
+              enabled: inputsEnabled,
+              lockedIdentity: lockedIdentity,
+            ),
+            const SizedBox(height: 12),
+          ],
+          // Keyed because the account field above is inserted and removed as
+          // the typed proof starts and stops parsing. Without a key the list
+          // matches these children by position, so the shift hands this slot
+          // to a different widget, the field is rebuilt from scratch, and the
+          // text and the keyboard go with it.
+          DivineTextField(
+            key: const ValueKey('verify-proof-field'),
+            labelText: l10n.verifyProofLabel,
+            hintText: verifyProofHint(state.platform.key),
+            filled: true,
             enabled: inputsEnabled,
+            textInputAction: .send,
+            keyboardType: TextInputType.url,
+            textCapitalization: TextCapitalization.none,
+            autocorrect: false,
+            onChanged: context.read<VerifyConnectCubit>().proofChanged,
+            onSubmitted: (_) => !inputsEnabled || !state.canSubmitProof
+                ? null
+                : context.read<VerifyConnectCubit>().submitProof(),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          DivineButton(
+            label: l10n.verifyConnectProofCta,
+            expanded: true,
+            // A sign-in being linked shows its own progress above.
+            isLoading:
+                signedInAccount == null &&
+                (state.status == VerifyConnectStatus.verifying ||
+                    state.status == VerifyConnectStatus.publishing),
+            onPressed: !inputsEnabled || !state.canSubmitProof
+                ? null
+                : context.read<VerifyConnectCubit>().submitProof,
+          ),
         ],
-        // Keyed because the account field above is inserted and removed as the
-        // typed proof starts and stops parsing. Without a key the list matches
-        // these children by position, so the shift hands this slot to a
-        // different widget, the field is rebuilt from scratch, and the text and
-        // the keyboard go with it.
-        DivineTextField(
-          key: const ValueKey('verify-proof-field'),
-          labelText: l10n.verifyProofLabel,
-          hintText: verifyProofHint(state.platform.key),
-          filled: true,
-          enabled: inputsEnabled,
-          textInputAction: .send,
-          keyboardType: TextInputType.url,
-          textCapitalization: TextCapitalization.none,
-          autocorrect: false,
-          onChanged: context.read<VerifyConnectCubit>().proofChanged,
-          onSubmitted: (_) => !inputsEnabled || !state.canSubmitProof
-              ? null
-              : context.read<VerifyConnectCubit>().submitProof(),
-        ),
-        const SizedBox(height: 16),
-        DivineButton(
-          label: l10n.verifyConnectProofCta,
-          expanded: true,
-          // A sign-in being linked shows its own progress above.
-          isLoading:
-              signedInAccount == null &&
-              (state.status == VerifyConnectStatus.verifying ||
-                  state.status == VerifyConnectStatus.publishing),
-          onPressed: !inputsEnabled || !state.canSubmitProof
-              ? null
-              : context.read<VerifyConnectCubit>().submitProof,
-        ),
       ],
     );
   }
 }
 
-class _IdentityField extends StatelessWidget {
+class _IdentityField extends StatefulWidget {
   const _IdentityField({
     required this.state,
     required this.enabled,
+    this.lockedIdentity,
     super.key,
   });
 
   final VerifyConnectState state;
   final bool enabled;
 
+  /// The handle this field is fixed to, shown and not editable. Null while
+  /// the handle can be typed.
+  final String? lockedIdentity;
+
+  @override
+  State<_IdentityField> createState() => _IdentityFieldState();
+}
+
+class _IdentityFieldState extends State<_IdentityField> {
+  // Seeded from the cubit's handle when this field is built, which is the
+  // linked one when a sign-in is renewed. From then on the typing feeds the
+  // cubit.
+  late final _controller = TextEditingController(
+    text: widget.lockedIdentity ?? widget.state.identity,
+  );
+
+  @override
+  void didUpdateWidget(_IdentityField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The field outlives the lock coming on (Bluesky keeps it across a failed
+    // start), so a handle typed before then is replaced by the locked one.
+    final locked = widget.lockedIdentity;
+    if (locked != null && _controller.text != locked) {
+      _controller.text = locked;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final platformKey = widget.state.platform.key;
     return DivineTextField(
-      labelText: verifyIdentityFieldLabel(context.l10n, state.platform.key),
-      hintText: verifyIdentityHint(state.platform.key),
+      controller: _controller,
+      labelText: verifyIdentityFieldLabel(context.l10n, platformKey),
+      hintText: verifyIdentityHint(platformKey),
       filled: true,
-      enabled: enabled,
+      enabled: widget.enabled && widget.lockedIdentity == null,
       textInputAction: .next,
       textCapitalization: TextCapitalization.none,
       onChanged: context.read<VerifyConnectCubit>().identityChanged,

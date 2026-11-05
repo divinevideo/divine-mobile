@@ -1541,6 +1541,168 @@ void main() {
         expect(status.isVerified(status.claims.first), isTrue);
         expect(status.verifierReachable, isTrue);
       });
+
+      group('reports why a sign-in stopped counting', () {
+        test('records a sign-in the verifier says expired', () async {
+          when(() => client.verifyBatch(any())).thenAnswer(
+            (_) async => const [
+              VerificationResult(
+                platform: 'github',
+                identity: 'octocat',
+                verified: true,
+                checkedAt: 100,
+                cached: false,
+              ),
+              VerificationResult(
+                platform: 'twitter',
+                identity: 'jack',
+                verified: false,
+                checkedAt: 100,
+                cached: false,
+                error: 'No current sign-in verifies this account.',
+                code: 'signin_expired',
+              ),
+            ],
+          );
+
+          final status = await repo.claimsWithVerdicts(_pubkey);
+
+          expect(
+            status.signInCodes,
+            equals({'twitter:jack': SignInLapse.expired}),
+          );
+        });
+
+        test(
+          'records a sign-in whose handle moved to another account',
+          () async {
+            stubIdentityEvents([
+              _event(
+                id: _eventId(11),
+                kind: 10011,
+                tags: [
+                  ['i', 'bluesky:Alice.bsky.social', 'oauth'],
+                ],
+              ),
+            ]);
+            when(() => client.verifyBatch(any())).thenAnswer(
+              (_) async => const [
+                VerificationResult(
+                  platform: 'bluesky',
+                  identity: 'Alice.bsky.social',
+                  verified: false,
+                  checkedAt: 100,
+                  cached: false,
+                  code: 'signin_account_changed',
+                ),
+              ],
+            );
+
+            final status = await repo.claimsWithVerdicts(_pubkey);
+
+            // Keyed the same way as the verified keys, lowercased.
+            expect(
+              status.signInCodes,
+              equals({'bluesky:alice.bsky.social': SignInLapse.accountChanged}),
+            );
+          },
+        );
+
+        test(
+          'records nothing for a failure that is not about a sign-in',
+          () async {
+            when(() => client.verifyBatch(any())).thenAnswer(
+              (_) async => const [
+                VerificationResult(
+                  platform: 'github',
+                  identity: 'octocat',
+                  verified: false,
+                  checkedAt: 100,
+                  cached: false,
+                  code: 'proof_not_found',
+                ),
+                // An older verifier gives no code at all.
+                VerificationResult(
+                  platform: 'twitter',
+                  identity: 'jack',
+                  verified: false,
+                  checkedAt: 100,
+                  cached: false,
+                ),
+              ],
+            );
+
+            final status = await repo.claimsWithVerdicts(_pubkey);
+
+            expect(status.verifiedKeys, isEmpty);
+            expect(status.signInCodes, isEmpty);
+          },
+        );
+
+        test('records nothing for a claim that verified', () async {
+          // Not a shape the verifier sends today; a verified answer wins over
+          // any code that rides along with it.
+          when(() => client.verifyBatch(any())).thenAnswer(
+            (_) async => const [
+              VerificationResult(
+                platform: 'github',
+                identity: 'octocat',
+                verified: true,
+                checkedAt: 100,
+                cached: false,
+              ),
+              VerificationResult(
+                platform: 'twitter',
+                identity: 'jack',
+                verified: true,
+                checkedAt: 100,
+                cached: false,
+                code: 'signin_expired',
+              ),
+            ],
+          );
+
+          final status = await repo.claimsWithVerdicts(_pubkey);
+
+          expect(status.isVerified(status.claims.last), isTrue);
+          expect(status.signInCodes, isEmpty);
+        });
+
+        test(
+          'still records it when another claim could not be checked',
+          () async {
+            when(() => client.verifyBatch(any())).thenAnswer(
+              (_) async => const [
+                VerificationResult(
+                  platform: 'github',
+                  identity: 'octocat',
+                  verified: false,
+                  checkedAt: 100,
+                  cached: false,
+                  error: "GitHub couldn't be checked right now.",
+                  code: 'temporarily_unavailable',
+                ),
+                VerificationResult(
+                  platform: 'twitter',
+                  identity: 'jack',
+                  verified: false,
+                  checkedAt: 100,
+                  cached: false,
+                  code: 'signin_expired',
+                ),
+              ],
+            );
+
+            final status = await repo.claimsWithVerdicts(_pubkey);
+
+            expect(status.verifierReachable, isFalse);
+            expect(
+              status.signInCodes,
+              equals({'twitter:jack': SignInLapse.expired}),
+            );
+          },
+        );
+      });
     });
 
     group('verifyClaim', () {
@@ -2392,6 +2554,89 @@ void main() {
             ),
           ),
           throwsA(isA<IdentityClaimNotSignedException>()),
+        );
+      });
+
+      group('signClaim renewing a sign-in link', () {
+        const renewed = IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'twitter',
+          identity: 'jack_renamed',
+          proof: IdentityClaim.oauthProof,
+        );
+
+        Future<SignedIdentityClaim> renew(List<List<String>> tags) {
+          stubIdentityEvents([
+            _event(id: _eventId(10), kind: 10011, tags: tags),
+          ]);
+          return repo.signClaim(
+            renewed,
+            confirmBinding: 'b',
+            replacingIdentity: 'jack',
+            replaceOnlySignIn: true,
+          );
+        }
+
+        test('drops the earlier handle when it is a sign-in link', () async {
+          final signed = await renew([
+            ['i', 'twitter:jack', 'oauth'],
+            ['i', 'github:octocat', 'abc'],
+          ]);
+
+          expect(
+            signedTags,
+            equals([
+              ['i', 'github:octocat', 'abc'],
+              ['i', 'twitter:jack_renamed', 'oauth', 'b'],
+            ]),
+          );
+          expect(signed.replacedKey, equals('twitter:jack'));
+        });
+
+        test('keeps the earlier handle when it is a proof-post link', () async {
+          final signed = await renew([
+            ['i', 'twitter:jack', 'https://x.com/jack/status/1'],
+          ]);
+
+          expect(
+            signedTags!.first,
+            equals(['i', 'twitter:jack', 'https://x.com/jack/status/1']),
+          );
+          expect(signed.replacedKey, isNull);
+        });
+
+        test(
+          'keeps a proof-post link that sits beside a sign-in link under it',
+          () async {
+            // Another client can write both tags for one handle; replacing
+            // the key would drop the post along with the sign-in.
+            final signed = await renew([
+              ['i', 'twitter:jack', 'oauth'],
+              ['i', 'twitter:jack', 'https://x.com/jack/status/1'],
+            ]);
+
+            expect(
+              signedTags,
+              equals([
+                ['i', 'twitter:jack', 'oauth'],
+                ['i', 'twitter:jack', 'https://x.com/jack/status/1'],
+                ['i', 'twitter:jack_renamed', 'oauth', 'b'],
+              ]),
+            );
+            expect(signed.replacedKey, isNull);
+          },
+        );
+
+        test(
+          'replaces nothing when the earlier handle is not linked',
+          () async {
+            final signed = await renew([
+              ['i', 'github:octocat', 'abc'],
+            ]);
+
+            expect(signedTags, hasLength(2));
+            expect(signed.replacedKey, isNull);
+          },
         );
       });
     });
