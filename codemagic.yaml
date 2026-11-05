@@ -1811,3 +1811,66 @@ workflows:
       - ~/.maestro/tests/**/screen-hierarchy/**
       - ~/.maestro/tests/**/logs/maestro.log
       - ~/.maestro/tests/**/commands.json
+
+  # Manual, run once (dry run first) before builds allocate identities from the
+  # release ledger. Reads live store data and writes only to the provenance
+  # repository's allocations/ tree, create-only.
+  release-identity-bootstrap:
+    name: Release identity bootstrap
+    working_directory: mobile
+    max_build_duration: 15
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: API key for Codemagic # Setup in Codemagic UI
+    inputs:
+      DRY_RUN:
+        description: YES prints what would be recorded and writes nothing. Run YES first, then NO.
+        type: choice
+        default: "YES"
+        options:
+          - "YES"
+          - "NO"
+    environment:
+      groups:
+        - google_play_credentials
+        - github_credentials
+    triggering:
+      events: []
+    scripts:
+      - name: Bootstrap release identity ledger
+        script: |
+          set -euo pipefail
+          APP_STORE_APP_ID=6747959501 # co.openvine.app
+          LOOKUP_LOG=$(mktemp)
+          ASC_VERSIONS_JSON=$(mktemp)
+          PLAY_TRACK_JSON=$(mktemp)
+          trap 'rm -f "$LOOKUP_LOG" "$ASC_VERSIONS_JSON" "$PLAY_TRACK_JSON"' EXIT
+          # Fail closed: a partial store view would seed the ledger below the
+          # numbers the stores already hold.
+          if ! app-store-connect apps app-store-versions "$APP_STORE_APP_ID" \
+            --platform IOS --json > "$ASC_VERSIONS_JSON" 2>"$LOOKUP_LOG"; then
+            echo "ERROR: could not read the App Store versions."
+            if [ -s "$LOOKUP_LOG" ]; then
+              echo "       App Store Connect lookup output:"
+              sed 's/^/       /' "$LOOKUP_LOG"
+            fi
+            exit 1
+          fi
+          : > "$LOOKUP_LOG"
+          if ! google-play tracks get --package-name co.openvine.app \
+            --track production --json > "$PLAY_TRACK_JSON" 2>"$LOOKUP_LOG"; then
+            echo "ERROR: could not read the Google Play production track."
+            if [ -s "$LOOKUP_LOG" ]; then
+              echo "       Google Play lookup output:"
+              sed 's/^/       /' "$LOOKUP_LOG"
+            fi
+            exit 1
+          fi
+          DRY_RUN_FLAG=
+          if [ "${{ inputs.DRY_RUN }}" = "YES" ]; then
+            DRY_RUN_FLAG=--dry-run
+          fi
+          python3 scripts/release_identity.py bootstrap \
+            --app-store-versions "$ASC_VERSIONS_JSON" \
+            --play-production-track "$PLAY_TRACK_JSON" \
+            $DRY_RUN_FLAG

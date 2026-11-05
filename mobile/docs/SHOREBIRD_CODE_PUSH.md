@@ -410,6 +410,27 @@ patch.
 
 Promotion to `stable` happens only after this validation succeeds.
 
+### Release identity ledger
+
+The release identity ledger lives in the `allocations/` tree of
+`divinevideo/divine-release-provenance`:
+
+- `allocations/builds/<platform>/<n>.json` reserves build number `n` for a platform.
+- `allocations/keys/...` is the key index for those reservations.
+- `allocations/claims/<version>/<channel>.json` claims a version for a channel.
+- `allocations/bootstrap.json` marks that the ledger has been seeded.
+
+Every write is create-only: an existing file is never overwritten, so two
+runs cannot hand out the same number. `mobile/scripts/release_identity.py`
+owns these paths.
+
+Before builds start allocating from the ledger (a later pull request), seed it
+once from the live store data with the manual Codemagic workflow
+`release-identity-bootstrap`. It defaults to `DRY_RUN=YES`, which writes
+nothing. Run it as a dry run first, check the output, then run it again with
+`DRY_RUN=NO`. It fails closed if either store lookup (App Store Connect
+versions, Google Play production track) errors.
+
 ### A patch targets a release version, not a channel
 
 TestFlight build `1.0.9+247` and App Store build `1.0.9+247` are the same

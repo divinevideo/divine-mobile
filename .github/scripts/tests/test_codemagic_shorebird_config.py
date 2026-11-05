@@ -644,7 +644,13 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
     def test_shorebird_workflows_define_every_variable_their_scripts_read(self) -> None:
         resolved = self._resolved_config()
 
-        for name in ("ios-build", "android-build", "ios-patch", "android-patch"):
+        for name in (
+            "ios-build",
+            "android-build",
+            "ios-patch",
+            "android-patch",
+            "release-identity-bootstrap",
+        ):
             workflow = resolved["workflows"][name]
             declared = set(workflow["environment"].get("vars") or {})
             scripts = "\n".join(
@@ -655,6 +661,54 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             for variable in ("FLUTTER_VERSION", "SHOREBIRD_PLATFORM"):
                 if re.search(rf"\${{?{variable}}}?\b", scripts):
                     self.assertIn(variable, declared, f"{name} reads ${variable} without declaring it")
+
+    def _bootstrap_script(self) -> str:
+        workflow = self._resolved_config()["workflows"]["release-identity-bootstrap"]
+        return "\n".join(
+            step.get("script", "") for step in workflow["scripts"] if isinstance(step, dict)
+        )
+
+    def test_bootstrap_workflow_is_manual_and_defaults_to_dry_run(self) -> None:
+        workflow = self._resolved_config()["workflows"]["release-identity-bootstrap"]
+
+        self.assertEqual(workflow["instance_type"], "mac_mini_m2")
+        self.assertEqual(workflow["max_build_duration"], 15)
+        self.assertEqual(workflow["working_directory"], "mobile")
+        self.assertEqual(workflow["triggering"], {"events": []})
+        self.assertEqual(
+            workflow["integrations"]["app_store_connect"], "API key for Codemagic"
+        )
+        self.assertEqual(
+            workflow["environment"]["groups"],
+            ["google_play_credentials", "github_credentials"],
+        )
+        dry_run = workflow["inputs"]["DRY_RUN"]
+        self.assertEqual(dry_run["type"], "choice")
+        self.assertEqual(dry_run["default"], "YES")
+        self.assertEqual(dry_run["options"], ["YES", "NO"])
+        script = self._bootstrap_script()
+        self.assertIn("set -euo pipefail", script)
+        self.assertIn("${{ inputs.DRY_RUN }}", script)
+        self.assertIn("release_identity.py", script)
+        self.assertIn("bootstrap", script)
+        self.assertIn("--dry-run", script)
+
+    def test_bootstrap_fetches_both_stores_fail_closed(self) -> None:
+        script = self._bootstrap_script()
+
+        self.assertNotIn("|| true", script)
+        self.assertNotIn("2>/dev/null", script)
+        for lookup in (
+            "app-store-connect apps app-store-versions",
+            "google-play tracks get",
+        ):
+            self.assertIn(lookup, script)
+            start = script.index(lookup)
+            self.assertIn("if ! ", script[max(0, start - 10) : start])
+            self.assertIn("exit 1", script[start : start + 600])
+        self.assertIn("6747959501", script)
+        self.assertIn("--package-name co.openvine.app", script)
+        self.assertIn("--track production", script)
 
     def test_ios_build_workflows_select_the_ads_measurement_free_product(self) -> None:
         # #7303: firebase_analytics links FirebaseAnalyticsCore — no IDFA
