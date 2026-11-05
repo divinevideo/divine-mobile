@@ -66,6 +66,7 @@ UserList _buildList({
   String name = 'Close Friends',
   List<String> pubkeys = const [],
   bool isEditable = true,
+  bool isPublic = true,
   String? nostrEventId,
 }) {
   final now = DateTime.utc(2025);
@@ -76,6 +77,7 @@ UserList _buildList({
     createdAt: now,
     updatedAt: now,
     isEditable: isEditable,
+    isPublic: isPublic,
     nostrEventId: nostrEventId,
   );
 }
@@ -136,9 +138,9 @@ Future<void> _pumpPushedListRoute(
         },
       ),
       GoRoute(
-        path: '${UserListPeopleScreen.path}/add-people',
+        path: '${UserListPeopleScreen.path}/members',
         builder: (context, state) =>
-            const Scaffold(body: Center(child: Text('Add people picker'))),
+            const Scaffold(body: Center(child: Text('Members screen'))),
       ),
     ],
   );
@@ -246,11 +248,18 @@ void main() {
         );
       });
 
-      testWidgets('offers Share to a signed-out viewer', (tester) async {
+      testWidgets('offers Share alone to a signed-out viewer', (tester) async {
         await pumpShareableList(tester);
 
         expect(find.byType(ShareListButton), findsOneWidget);
-        expect(findByTooltip(l10n.listShareAction), findsOneWidget);
+        // Nobody to follow as, so Share takes the whole row.
+        expect(find.byType(FollowListButton), findsNothing);
+        final screenWidth =
+            tester.view.physicalSize.width / tester.view.devicePixelRatio;
+        expect(
+          tester.getSize(find.byType(ShareListButton)).width,
+          screenWidth - 32,
+        );
       });
 
       testWidgets('shares the public web address before following', (
@@ -272,7 +281,7 @@ void main() {
         );
         await pumpShareableList(tester);
 
-        await tester.tap(findByTooltip(l10n.listShareAction));
+        await tester.tap(find.byType(ShareListButton));
         await tester.pump();
         await tester.pump();
 
@@ -895,7 +904,7 @@ void main() {
       ) async {
         await pumpDiscovered(tester);
 
-        expect(findByTooltip(l10n.listShareAction), findsOneWidget);
+        expect(find.byType(ShareListButton), findsOneWidget);
         final followRight = tester
             .getTopRight(find.byType(FollowListButton))
             .dx;
@@ -944,7 +953,9 @@ void main() {
         expect(find.text('Mine'), findsOneWidget);
         expect(find.byType(ListAuthorByline), findsNothing);
         expect(find.byType(FollowListButton), findsNothing);
-        expect(find.byType(ShareListButton), findsNothing);
+        // Your own public list offers Manage people and Share instead.
+        expect(find.text(l10n.peopleListsManagePeopleButton), findsOneWidget);
+        expect(find.byType(ShareListButton), findsOneWidget);
         verifyNever(
           () => repository.watchFollowedLists(
             viewerPubkey: any(named: 'viewerPubkey'),
@@ -1187,6 +1198,9 @@ void main() {
         );
         await tester.pump();
         await tester.pump();
+        // The header's Follow reads the stored follows a frame after the
+        // grid lays its header out.
+        await tester.pump();
       }
 
       testWidgets("opens the report sheet from someone else's list", (
@@ -1202,15 +1216,11 @@ void main() {
           ownerPubkey: _otherOwnerPubkey,
         );
 
-        expect(
-          find.byWidgetPredicate((widget) => widget is PopupMenuButton),
-          findsOneWidget,
-        );
         expect(find.byType(FollowListButton), findsOneWidget);
         expect(find.byType(ShareListButton), findsOneWidget);
         await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
         await tester.pumpAndSettle();
-        expect(find.text(l10n.peopleListsAddPeopleTooltip), findsNothing);
+        expect(find.text(l10n.peopleListsManagePeopleButton), findsNothing);
         expect(find.text(l10n.listEditInfoAction), findsNothing);
         expect(find.text(l10n.listDeleteAction), findsNothing);
         await tester.tap(find.text(l10n.listReportAction));
@@ -1228,11 +1238,6 @@ void main() {
         await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
         await tester.pumpAndSettle();
 
-        expect(
-          find.byWidgetPredicate((widget) => widget is PopupMenuButton),
-          findsNothing,
-        );
-        expect(find.text(l10n.peopleListsAddPeopleTooltip), findsOneWidget);
         expect(find.text(l10n.listEditInfoAction), findsOneWidget);
         // The owner's own actions are there; reporting is not.
         expect(find.text(l10n.listDeleteAction), findsOneWidget);
@@ -1426,7 +1431,28 @@ void main() {
       verifyZeroInteractions(repository);
     });
 
-    testWidgets('add people option opens the picker', (tester) async {
+    testWidgets('a private list of yours offers Manage people alone', (
+      tester,
+    ) async {
+      final bloc = _MockPeopleListsBloc();
+      final list = _buildList(id: 'secret', name: 'Secret', isPublic: false);
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: _ownerPubkey,
+          lists: [list],
+        ),
+      );
+
+      await _pumpPushedListRoute(tester, bloc: bloc, list: list);
+
+      expect(find.text(l10n.peopleListsManagePeopleButton), findsOneWidget);
+      expect(find.byType(ShareListButton), findsNothing);
+    });
+
+    testWidgets('Manage people opens the members screen', (tester) async {
       final bloc = _MockPeopleListsBloc();
       final list = _buildList(id: 'punk-friends', name: 'Punk Friends');
       whenListen(
@@ -1441,14 +1467,10 @@ void main() {
 
       await _pumpPushedListRoute(tester, bloc: bloc, list: list);
 
-      await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.bySemanticsIdentifier('people_list_add_people_option'),
-      );
+      await tester.tap(find.text(l10n.peopleListsManagePeopleButton));
       await tester.pumpAndSettle();
 
-      expect(find.text('Add people picker'), findsOneWidget);
+      expect(find.text('Members screen'), findsOneWidget);
     });
 
     testWidgets('hides the owner actions when current list is read-only', (

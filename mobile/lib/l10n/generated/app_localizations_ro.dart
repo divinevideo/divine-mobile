@@ -5496,7 +5496,10 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'Distribuie lista';
+  String get listShareButton => 'Partajează';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Gestionează persoanele';
 
   @override
   String get listShareFailed => 'N-am putut distribui lista. Mai încearcă.';

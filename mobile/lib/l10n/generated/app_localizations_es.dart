@@ -5398,7 +5398,10 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'Compartir lista';
+  String get listShareButton => 'Compartir';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Gestionar personas';
 
   @override
   String get listShareFailed =>

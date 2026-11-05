@@ -5422,7 +5422,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'Share list';
+  String get listShareButton => 'Share';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Manage people';
 
   @override
   String get listShareFailed => 'Couldn\'t share this list. Try again.';

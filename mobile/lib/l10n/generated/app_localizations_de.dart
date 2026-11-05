@@ -5411,7 +5411,10 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'Liste teilen';
+  String get listShareButton => 'Teilen';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Personen verwalten';
 
   @override
   String get listShareFailed =>

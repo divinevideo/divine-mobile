@@ -5264,7 +5264,10 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'Bagikan daftar';
+  String get listShareButton => 'Bagikan';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Kelola orang';
 
   @override
   String get listShareFailed => 'Daftar ini gagal dibagikan. Coba lagi.';

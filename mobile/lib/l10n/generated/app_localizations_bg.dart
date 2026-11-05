@@ -5398,7 +5398,10 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'Сподели списъка';
+  String get listShareButton => 'Сподели';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Управление на хората';
 
   @override
   String get listShareFailed =>

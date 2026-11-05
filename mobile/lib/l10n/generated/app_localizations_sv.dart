@@ -5335,7 +5335,10 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'Dela lista';
+  String get listShareButton => 'Dela';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Hantera personer';
 
   @override
   String get listShareFailed => 'Kunde inte dela listan. Försök igen.';
