@@ -14169,10 +14169,47 @@ void main() {
         when(
           () => mockFunnelcakeClient.getVideosByIds(any()),
         ).thenAnswer((_) async => [rowFor(idFor(1))]);
+        when(
+          () => mockFunnelcakeClient.getVideoStats(idFor(2)),
+        ).thenAnswer((_) async => null);
 
         final rows = await repo.getVideoStatsByIds([idFor(1), idFor(2)]);
 
         expect(rows!.keys, [idFor(1)]);
+      });
+
+      test('checks omitted bulk rows through exact-event stats', () async {
+        final omitted = rowFor(idFor(2));
+        when(
+          () => mockFunnelcakeClient.getVideosByIds(any()),
+        ).thenAnswer((_) async => [rowFor(idFor(1))]);
+        when(
+          () => mockFunnelcakeClient.getVideoStats(idFor(2)),
+        ).thenAnswer((_) async => omitted);
+
+        final rows = await repo.getVideoStatsByIds([idFor(1), idFor(2)]);
+
+        expect(rows![idFor(2)], same(omitted));
+        expect(rows[idFor(2)]!.isVerifiedArchive, isTrue);
+        verify(
+          () => mockFunnelcakeClient.getVideoStats(idFor(2)),
+        ).called(1);
+        verifyNever(() => mockFunnelcakeClient.getVideoStats(idFor(1)));
+      });
+
+      test('propagates an omitted row stats lookup failure', () async {
+        const failure = FunnelcakeException('stats unavailable');
+        when(
+          () => mockFunnelcakeClient.getVideosByIds(any()),
+        ).thenAnswer((_) async => []);
+        when(
+          () => mockFunnelcakeClient.getVideoStats(idFor(1)),
+        ).thenThrow(failure);
+
+        await expectLater(
+          repo.getVideoStatsByIds([idFor(1)]),
+          throwsA(same(failure)),
+        );
       });
 
       test('asks nothing for no ids', () async {

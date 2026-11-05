@@ -3552,8 +3552,9 @@ class VideosRepository {
   /// Fetches the REST rows for [eventIds], keyed by event id, in as few
   /// requests as the server allows.
   ///
-  /// Ids the server has no row for are absent from the map. Returns null if
-  /// Funnelcake API is unavailable.
+  /// Bulk results apply feed visibility filters, so an omitted id is checked
+  /// through exact-event stats before being treated as missing. Ids neither
+  /// endpoint knows are absent. Returns null if Funnelcake API is unavailable.
   ///
   /// Throws [FunnelcakeException] subtypes on API errors.
   Future<Map<String, VideoStats>?> getVideoStatsByIds(
@@ -3569,6 +3570,11 @@ class VideosRepository {
       final batch = await client.getVideosByIds(eventIds.sublist(start, end));
       for (final row in batch) {
         rows[row.id] = row;
+      }
+      for (final id in eventIds.sublist(start, end)) {
+        if (rows.containsKey(id)) continue;
+        final row = await client.getVideoStats(id);
+        if (row != null) rows[id] = row;
       }
     }
     return rows;
