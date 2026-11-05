@@ -763,7 +763,7 @@ class CommentsRepository {
     required DateTime before,
   }) async {
     try {
-      final events = await _nostrClient.queryEvents([
+      final result = await _nostrClient.queryEventsDetailed([
         Filter(
           kinds: const [EventKind.videoVertical],
           uppercaseE: [rootEventId],
@@ -777,8 +777,13 @@ class CommentsRepository {
             limit: limit,
             until: before.millisecondsSinceEpoch ~/ 1000,
           ),
-      ]);
-      final unique = {for (final event in events) event.id: event};
+      ], requireAllRelaysSettled: true);
+      if (result.timedOut || result.noRelays) {
+        throw const LoadCommentsFailedException(
+          'Older video reply page did not finish; retry without advancing',
+        );
+      }
+      final unique = {for (final event in result.events) event.id: event};
       return VideoResponsesResponse(
         videos: const [],
         rows: [for (final event in unique.values) event.toJson()],

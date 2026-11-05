@@ -239,8 +239,17 @@ void main() {
 
     test('pages replies by time while keeping comments on REST', () async {
       stubComments(_commentsPage([_restComment('older-comment', 100)]));
-      when(() => nostr.queryEvents(any())).thenAnswer(
-        (_) async => [Event.fromJson(_replyRow('older-reply', 150))],
+      when(
+        () => nostr.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: true,
+        ),
+      ).thenAnswer(
+        (_) async => (
+          events: [Event.fromJson(_replyRow('older-reply', 150))],
+          timedOut: false,
+          noRelays: false,
+        ),
       );
 
       final thread = await repository.loadComments(
@@ -259,7 +268,12 @@ void main() {
       expect(thread.nextOffset, 11);
       expect(thread.hasExactTotal, isFalse);
       final filters =
-          verify(() => nostr.queryEvents(captureAny())).captured.single
+          verify(
+                () => nostr.queryEventsDetailed(
+                  captureAny(),
+                  requireAllRelaysSettled: true,
+                ),
+              ).captured.single
               as List<Filter>;
       expect(filters, hasLength(2));
       expect(filters.every((f) => f.kinds!.single == 34236), isTrue);
@@ -285,8 +299,17 @@ void main() {
         final first = await load();
         expect(first.nextOffset, 0);
         expect(first.comments.map((c) => _label(c.id)), ['first-reply']);
-        when(() => nostr.queryEvents(any())).thenAnswer(
-          (_) async => [Event.fromJson(_replyRow('last-reply', 150))],
+        when(
+          () => nostr.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: [Event.fromJson(_replyRow('last-reply', 150))],
+            timedOut: false,
+            noRelays: false,
+          ),
         );
 
         final next = await repository.loadComments(
@@ -332,8 +355,14 @@ void main() {
         videoRepliesBootstrapGrace: Duration.zero,
       );
       stubComments(_commentsPage([_restComment('comment', 100)]));
-      final replies = Completer<List<Event>>();
-      when(() => nostr.queryEvents(any())).thenAnswer((_) => replies.future);
+      final replies =
+          Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+      when(
+        () => nostr.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: true,
+        ),
+      ).thenAnswer((_) => replies.future);
       var completed = false;
       final pending = repository
           .loadComments(
@@ -350,7 +379,11 @@ void main() {
 
       await pumpEventQueue();
       final completedBeforeReplies = completed;
-      replies.complete([Event.fromJson(_replyRow('reply', 150))]);
+      replies.complete((
+        events: [Event.fromJson(_replyRow('reply', 150))],
+        timedOut: false,
+        noRelays: false,
+      ));
       final thread = await pending;
 
       expect(completedBeforeReplies, isFalse);
@@ -365,10 +398,20 @@ void main() {
       () async {
         stubComments(_commentsPage([_restComment('comment', 100)]));
         var attempts = 0;
-        when(() => nostr.queryEvents(any())).thenAnswer((_) async {
-          if (attempts++ == 0)
+        when(
+          () => nostr.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer((_) async {
+          if (attempts++ == 0) {
             throw TimeoutException('relay did not reach EOSE');
-          return [Event.fromJson(_replyRow('reply', 150))];
+          }
+          return (
+            events: [Event.fromJson(_replyRow('reply', 150))],
+            timedOut: false,
+            noRelays: false,
+          );
         });
         Future<CommentThread> loadOlder() => repository.loadComments(
           rootEventId: _rootId,
@@ -406,6 +449,88 @@ void main() {
         ),
       );
     });
+
+    test(
+      'accepts an empty older reply page only after relays settle',
+      () async {
+        stubComments(
+          _commentsPage([_restComment('comment', 100)], hasMore: false),
+        );
+        when(
+          () => nostr.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+        );
+
+        final thread = await repository.loadComments(
+          rootEventId: _rootId,
+          rootEventKind: _rootKind,
+          before: DateTime.fromMillisecondsSinceEpoch(200000),
+          offset: 10,
+          includeVideoReplies: true,
+        );
+
+        expect(thread.comments.map((c) => _label(c.id)), ['comment']);
+        expect(thread.nextOffset, 11);
+        expect(thread.hasMore, isFalse);
+      },
+    );
+
+    for (final scenario in [
+      (
+        name: 'timed-out empty',
+        timedOut: true,
+        noRelays: false,
+        partial: false,
+      ),
+      (
+        name: 'timed-out partial',
+        timedOut: true,
+        noRelays: false,
+        partial: true,
+      ),
+      (
+        name: 'relay-less cached',
+        timedOut: false,
+        noRelays: true,
+        partial: true,
+      ),
+    ]) {
+      test('does not consume a ${scenario.name} older reply page', () async {
+        stubComments(_commentsPage([_restComment('comment', 100)]));
+        final events = <Event>[
+          if (scenario.partial) Event.fromJson(_replyRow('partial', 175)),
+        ];
+        // The list-only API returns partial/cache rows without a failure.
+        when(() => nostr.queryEvents(any())).thenAnswer((_) async => events);
+        when(
+          () => nostr.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: events,
+            timedOut: scenario.timedOut,
+            noRelays: scenario.noRelays,
+          ),
+        );
+
+        await expectLater(
+          repository.loadComments(
+            rootEventId: _rootId,
+            rootEventKind: _rootKind,
+            before: DateTime.fromMillisecondsSinceEpoch(200000),
+            offset: 10,
+            includeVideoReplies: true,
+          ),
+          throwsA(isA<LoadCommentsFailedException>()),
+        );
+      });
+    }
 
     test('shows the comments without waiting for slow video replies', () async {
       stubComments(_commentsPage([_restComment('comment', 1000)]));
