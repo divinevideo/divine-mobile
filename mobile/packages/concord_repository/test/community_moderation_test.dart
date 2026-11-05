@@ -25,7 +25,7 @@ void main() {
     test(
       'retained history honors bans and cited moderator removals',
       () async {
-        final fixture = readConcordFixture('community-moderation.json');
+        final fixture = readConcordFixture('community-interop.json');
         final event = fixture['bundleEvent'] as Map<String, dynamic>;
         final fragment = ConcordInviteFragment.decode(
           Uri.parse(fixture['inviteUrl'] as String).fragment,
@@ -84,6 +84,28 @@ void main() {
         for (final name in ['chatEvent', 'bannedChatEvent']) {
           await first.ingestSealedWrap(fixture[name] as Map<String, dynamic>);
         }
+        for (final name in [
+          'plaintextChatEvent',
+          'misboundChatEvent',
+          'epochMisboundChatEvent',
+          'unprivilegedDeleteEvent',
+          'uncitedModeratorDeleteEvent',
+          'citedUnprivilegedDeleteEvent',
+        ]) {
+          await first.ingestSealedWrap(fixture[name] as Map<String, dynamic>);
+        }
+        expect(
+          first.timeline(now: 1793761700).messages.single.id,
+          ((fixture['expected'] as Map)['message'] as Map)['id'],
+        );
+        for (final name in [
+          'ownerChatEvent',
+          'adminChatEvent',
+          'moderatorDeletesOwnerEvent',
+          'moderatorDeletesAdminEvent',
+        ]) {
+          await first.ingestSealedWrap(fixture[name] as Map<String, dynamic>);
+        }
         final unaffectedAuthor = schnorr.getPublicKey('33' * 32);
         final tags = <List<String>>[
           ['channel', channel],
@@ -118,13 +140,17 @@ void main() {
             streamPubkey: stream.pubkey,
           ),
         );
-        expect(first.timeline(now: 1793761700).messages.length, 2);
+        expect(first.timeline(now: 1793761700).messages.length, 4);
         await first.ingestSealedWrap(
           fixture['moderatorDeleteEvent'] as Map<String, dynamic>,
         );
         expect(
-          first.timeline(now: 1793761700).messages.single.body,
-          'Unaffected message',
+          first.timeline(now: 1793761700).messages.map((m) => m.id).toSet(),
+          {
+            unaffected['id'],
+            (fixture['expected'] as Map)['ownerMessageId'],
+            (fixture['expected'] as Map)['adminMessageId'],
+          },
         );
         await first.close();
         final restored = repo();
@@ -135,8 +161,12 @@ void main() {
           streamPubkey: stream.pubkey,
         );
         expect(
-          restored.timeline(now: 1793761700).messages.single.body,
-          'Unaffected message',
+          restored.timeline(now: 1793761700).messages.map((m) => m.id).toSet(),
+          {
+            unaffected['id'],
+            (fixture['expected'] as Map)['ownerMessageId'],
+            (fixture['expected'] as Map)['adminMessageId'],
+          },
         );
         await restored.close();
       },

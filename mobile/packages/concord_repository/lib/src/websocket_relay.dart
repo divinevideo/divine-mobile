@@ -8,7 +8,11 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 /// Web and native Nostr transport for the explicitly configured Concord relay.
 /// A publication succeeds only after the relay accepts its event ID.
 class WebSocketRelayGateway
-    implements RelayGateway, RelayHistoryStatus, RelaySynchronizationStatus {
+    implements
+        RelayGateway,
+        RelayHistoryStatus,
+        RelayScopedHistoryStatus,
+        RelaySynchronizationStatus {
   WebSocketRelayGateway(
     this.url, {
     this.connectionTimeout = const Duration(seconds: 10),
@@ -45,8 +49,7 @@ class WebSocketRelayGateway
       !_closed &&
       !_subscriptionRejected &&
       _subs.isNotEmpty &&
-      _subs.values.every((s) => s._historyEnded) &&
-      !historyLimited;
+      _subs.values.every((s) => s._historyEnded);
 
   @override
   Future<void> get historyReady {
@@ -59,6 +62,13 @@ class WebSocketRelayGateway
   @override
   bool get historyLimited =>
       _subs.values.any((subscription) => subscription.historyLimited);
+
+  @override
+  bool historyLimitedForAuthor(String pubkey) => _subs.values.any(
+    (subscription) =>
+        (subscription.filter['authors'] as List?)?.contains(pubkey) == true &&
+        subscription.historyLimited,
+  );
 
   Future<void> connect() {
     if (_closed) return Future.error(StateError('Relay gateway is closed'));

@@ -1,13 +1,13 @@
 {
   "sourceRevision": "3febf95aef198828fc156b08e2bda4b873e55f2a",
-  "communityId": "d514ee2744d40d88c0aa70db92b33aa7d61d45f606ef7ced895014faea452ca1",
-  "owner": "9a2f8039ce2e27d50015d2c9e45be258a538235116dbe23f9f9225703dfe99a9",
+  "communityId": "6c55f434df73928c4522a85ff8952132c48068ef3388ba819f10eb8c206ee05b",
+  "owner": "e6835f928006e00b74ea8164cdaa5fef1c9cd85d57e80ca7f3017de4c04fca40",
   "cases": [
     {
       "name": "singleton-compacted-v3",
       "opened": [
         {
-          "author": "9a2f8039ce2e27d50015d2c9e45be258a538235116dbe23f9f9225703dfe99a9",
+          "author": "e6835f928006e00b74ea8164cdaa5fef1c9cd85d57e80ca7f3017de4c04fca40",
           "kind": 3308,
           "sealKind": 20014,
           "content": "{\"name\":\"new\",\"private\":false}",
@@ -29,8 +29,8 @@
               "d5b48db17a10912935b81edfb8bd12ad6a3ad4913fb4623684b1f3ee47a966bf"
             ]
           ],
-          "rumorId": "12bad823805ff31f0de8742691d28e905f99f63f0d26de13a892e997bc0e7462",
-          "createdAt": 1793762192
+          "rumorId": "f1bb82876a3af3435be450530fe2e8e902428350215f348013f3a698111a48ab",
+          "createdAt": 1793767798
         }
       ],
       "priorHeads": {},
@@ -50,7 +50,7 @@
       "name": "mixed-snapshot-entities",
       "opened": [
         {
-          "author": "9a2f8039ce2e27d50015d2c9e45be258a538235116dbe23f9f9225703dfe99a9",
+          "author": "e6835f928006e00b74ea8164cdaa5fef1c9cd85d57e80ca7f3017de4c04fca40",
           "kind": 3308,
           "sealKind": 20014,
           "content": "{\"name\":\"old\",\"private\":false}",
@@ -68,11 +68,11 @@
               "1"
             ]
           ],
-          "rumorId": "b8003e3a1e058089b310047fd7b620ab97e3983458a2bf903da41050a9c7feb5",
-          "createdAt": 1793762192
+          "rumorId": "2ce9f6c6fe443685f8670d77da290c94512be0940a35f2ebee0aaa3050b92755",
+          "createdAt": 1793767798
         },
         {
-          "author": "9a2f8039ce2e27d50015d2c9e45be258a538235116dbe23f9f9225703dfe99a9",
+          "author": "e6835f928006e00b74ea8164cdaa5fef1c9cd85d57e80ca7f3017de4c04fca40",
           "kind": 3308,
           "sealKind": 20014,
           "content": "{\"name\":\"new\",\"private\":false}",
@@ -94,11 +94,11 @@
               "d5b48db17a10912935b81edfb8bd12ad6a3ad4913fb4623684b1f3ee47a966bf"
             ]
           ],
-          "rumorId": "12bad823805ff31f0de8742691d28e905f99f63f0d26de13a892e997bc0e7462",
-          "createdAt": 1793762192
+          "rumorId": "f1bb82876a3af3435be450530fe2e8e902428350215f348013f3a698111a48ab",
+          "createdAt": 1793767798
         },
         {
-          "author": "9a2f8039ce2e27d50015d2c9e45be258a538235116dbe23f9f9225703dfe99a9",
+          "author": "e6835f928006e00b74ea8164cdaa5fef1c9cd85d57e80ca7f3017de4c04fca40",
           "kind": 3308,
           "sealKind": 20014,
           "content": "{\"name\":\"snapshot\",\"relays\":[]}",
@@ -109,7 +109,7 @@
             ],
             [
               "eid",
-              "d514ee2744d40d88c0aa70db92b33aa7d61d45f606ef7ced895014faea452ca1"
+              "6c55f434df73928c4522a85ff8952132c48068ef3388ba819f10eb8c206ee05b"
             ],
             [
               "ev",
@@ -120,13 +120,13 @@
               "3434343434343434343434343434343434343434343434343434343434343434"
             ]
           ],
-          "rumorId": "d3e2db4b35eae08ce03c460bdb6137395847e045b4fd6752a84bbf7c9516af69",
-          "createdAt": 1793762192
+          "rumorId": "f782a67fa80120b6541e11d8fca873b63633fc5e09e09a953b98eced0d7e9186",
+          "createdAt": 1793767798
         }
       ],
       "priorHeads": {},
       "snapshotRumorIds": [
-        "d3e2db4b35eae08ce03c460bdb6137395847e045b4fd6752a84bbf7c9516af69"
+        "f782a67fa80120b6541e11d8fca873b63633fc5e09e09a953b98eced0d7e9186"
       ],
       "expected": {
         "heads": {
@@ -134,9 +134,9 @@
             "version": "1",
             "hash": "8726fb6d46e1fe6c4ebcdaebcbccde909e17f1f1b1c0c35a682f4d8e5e873dd0"
           },
-          "d514ee2744d40d88c0aa70db92b33aa7d61d45f606ef7ced895014faea452ca1": {
+          "6c55f434df73928c4522a85ff8952132c48068ef3388ba819f10eb8c206ee05b": {
             "version": "3",
-            "hash": "bf0229ec5694f5449fbde1ece8470f8a09a2a923e2518c77fb91142efe496213"
+            "hash": "e3b1cca4d88648f415fecfef30c24231b542a6eec920b4ea4750e8bfce054c5c"
           }
         },
         "incomplete": [
@@ -149,7 +149,7 @@
       "name": "ban-refold-with-prior-floor",
       "opened": [
         {
-          "author": "9a2f8039ce2e27d50015d2c9e45be258a538235116dbe23f9f9225703dfe99a9",
+          "author": "e6835f928006e00b74ea8164cdaa5fef1c9cd85d57e80ca7f3017de4c04fca40",
           "kind": 3308,
           "sealKind": 20014,
           "content": "{\"role_id\":\"5656565656565656565656565656565656565656565656565656565656565656\",\"name\":\"Admin\",\"position\":1,\"permissions\":\"2943\",\"scope\":{\"kind\":\"server\"},\"color\":0}",
@@ -167,14 +167,14 @@
               "1"
             ]
           ],
-          "rumorId": "ef257e88f521c740311b6ebdfb09819ec24b45b5e1c7417aadb3c39ac9f23e34",
-          "createdAt": 1793762192
+          "rumorId": "73dfbdb5e728e4f9c019fdf988b0fe27fd9ec8319dd5f23e101af54efcb8720e",
+          "createdAt": 1793767798
         },
         {
-          "author": "9a2f8039ce2e27d50015d2c9e45be258a538235116dbe23f9f9225703dfe99a9",
+          "author": "e6835f928006e00b74ea8164cdaa5fef1c9cd85d57e80ca7f3017de4c04fca40",
           "kind": 3308,
           "sealKind": 20014,
-          "content": "{\"member\":\"fd74af8256e9f0013039d69674087469862c54ca8940c8d5b8d4f5d243a5130d\",\"role_ids\":[\"5656565656565656565656565656565656565656565656565656565656565656\"]}",
+          "content": "{\"member\":\"569c5db86b70d94c0ab5c51fc5e98ae945a19a94733a3157ae0c95f56b6c4671\",\"role_ids\":[\"5656565656565656565656565656565656565656565656565656565656565656\"]}",
           "tags": [
             [
               "vsk",
@@ -182,18 +182,18 @@
             ],
             [
               "eid",
-              "093876b0ec7fdde149be357d8ccb82d00aa5c6e8bcf21e1bc7a91dd842e227df"
+              "ba7b85307b69ca204d68d13e725876339d5d40f0819d7e787f92ba7977900366"
             ],
             [
               "ev",
               "1"
             ]
           ],
-          "rumorId": "d25e01b70f6892c9e0a7d420496c1b02e62ca665b90f31c36c21d01939375bf2",
-          "createdAt": 1793762192
+          "rumorId": "7972da9af0906232e9b146692f850d2f6de8c508af4f0be089a5cf8668aa2cb4",
+          "createdAt": 1793767798
         },
         {
-          "author": "fd74af8256e9f0013039d69674087469862c54ca8940c8d5b8d4f5d243a5130d",
+          "author": "569c5db86b70d94c0ab5c51fc5e98ae945a19a94733a3157ae0c95f56b6c4671",
           "kind": 3308,
           "sealKind": 20014,
           "content": "{\"name\":\"member-channel\",\"private\":false}",
@@ -212,19 +212,19 @@
             ],
             [
               "vac",
-              "093876b0ec7fdde149be357d8ccb82d00aa5c6e8bcf21e1bc7a91dd842e227df",
+              "ba7b85307b69ca204d68d13e725876339d5d40f0819d7e787f92ba7977900366",
               "1",
-              "1a33d2a49ce565cbc37b29d99db6ab85e3c5aeb80adf41df886bfee0c105daeb"
+              "683bbdeb97a3ec7706fa0f3827b7904925c8559f39dad00f97928baf12eb715b"
             ]
           ],
-          "rumorId": "dfbae0705fa63801c928635bf6f006185d25e3b3900380c3609cb551a2145e52",
-          "createdAt": 1793762192
+          "rumorId": "537f95ba189a398faa591ab692b6b6befec895b7d9725cc8f539cc6c5dfc069e",
+          "createdAt": 1793767798
         },
         {
-          "author": "9a2f8039ce2e27d50015d2c9e45be258a538235116dbe23f9f9225703dfe99a9",
+          "author": "e6835f928006e00b74ea8164cdaa5fef1c9cd85d57e80ca7f3017de4c04fca40",
           "kind": 3308,
           "sealKind": 20014,
-          "content": "[\"fd74af8256e9f0013039d69674087469862c54ca8940c8d5b8d4f5d243a5130d\"]",
+          "content": "[\"569c5db86b70d94c0ab5c51fc5e98ae945a19a94733a3157ae0c95f56b6c4671\"]",
           "tags": [
             [
               "vsk",
@@ -232,22 +232,18 @@
             ],
             [
               "eid",
-              "2dd448585b8d8b9e82fcb45cdbdbdae4b21fac1f7e5a44e2a0ad47d6cc6f1aeb"
+              "6acc40b1aa607a7d83c91d4e0d6bcfb3518383ef0757a074667f0bc458b86530"
             ],
             [
               "ev",
               "1"
             ]
           ],
-          "rumorId": "0ad18371f91d62351047fcd4cbf947c7a52d39861832c92d4e97cc3d5758787f",
-          "createdAt": 1793762192
+          "rumorId": "37c2d876aec51c88c5f6f07a76447bfbb4ab0d7391b88f96fcc1632206617adb",
+          "createdAt": 1793767798
         }
       ],
       "priorHeads": {
-        "093876b0ec7fdde149be357d8ccb82d00aa5c6e8bcf21e1bc7a91dd842e227df": {
-          "version": "1",
-          "hash": "1a33d2a49ce565cbc37b29d99db6ab85e3c5aeb80adf41df886bfee0c105daeb"
-        },
         "1212121212121212121212121212121212121212121212121212121212121212": {
           "version": "1",
           "hash": "a914cdf3f20744accb88e1c009c1d81ae44b1f833540fa0642f9d29e526803bd"
@@ -255,28 +251,169 @@
         "5656565656565656565656565656565656565656565656565656565656565656": {
           "version": "1",
           "hash": "6ccbf0671afdd13f69079f0dbd83da7c89a05a29f9e5ce6f1b84e94cd8a43f4c"
+        },
+        "ba7b85307b69ca204d68d13e725876339d5d40f0819d7e787f92ba7977900366": {
+          "version": "1",
+          "hash": "683bbdeb97a3ec7706fa0f3827b7904925c8559f39dad00f97928baf12eb715b"
         }
       },
       "snapshotRumorIds": [],
       "expected": {
         "heads": {
-          "093876b0ec7fdde149be357d8ccb82d00aa5c6e8bcf21e1bc7a91dd842e227df": {
-            "version": "1",
-            "hash": "1a33d2a49ce565cbc37b29d99db6ab85e3c5aeb80adf41df886bfee0c105daeb"
-          },
-          "2dd448585b8d8b9e82fcb45cdbdbdae4b21fac1f7e5a44e2a0ad47d6cc6f1aeb": {
-            "version": "1",
-            "hash": "a39af46ef84005e4e0d9c4c53de2a7bcf05c083eb6a7748965d4c067ff103f27"
-          },
           "5656565656565656565656565656565656565656565656565656565656565656": {
             "version": "1",
             "hash": "6ccbf0671afdd13f69079f0dbd83da7c89a05a29f9e5ce6f1b84e94cd8a43f4c"
+          },
+          "6acc40b1aa607a7d83c91d4e0d6bcfb3518383ef0757a074667f0bc458b86530": {
+            "version": "1",
+            "hash": "a174351509123cfd61c3cfc49d94feb3c874798df0386f529920c00010aa8380"
+          },
+          "ba7b85307b69ca204d68d13e725876339d5d40f0819d7e787f92ba7977900366": {
+            "version": "1",
+            "hash": "683bbdeb97a3ec7706fa0f3827b7904925c8559f39dad00f97928baf12eb715b"
           }
         },
         "incomplete": [],
         "banned": [
-          "fd74af8256e9f0013039d69674087469862c54ca8940c8d5b8d4f5d243a5130d"
+          "569c5db86b70d94c0ab5c51fc5e98ae945a19a94733a3157ae0c95f56b6c4671"
         ]
+      }
+    },
+    {
+      "name": "snapshot-head-over-older-edition",
+      "opened": [
+        {
+          "author": "e6835f928006e00b74ea8164cdaa5fef1c9cd85d57e80ca7f3017de4c04fca40",
+          "kind": 3308,
+          "sealKind": 20014,
+          "content": "{\"name\":\"original\",\"relays\":[]}",
+          "tags": [
+            [
+              "vsk",
+              "0"
+            ],
+            [
+              "eid",
+              "6c55f434df73928c4522a85ff8952132c48068ef3388ba819f10eb8c206ee05b"
+            ],
+            [
+              "ev",
+              "1"
+            ]
+          ],
+          "rumorId": "14403e34f1fcdd6b0c942017e15f3ad1a57e27dfe2da25b6b8e934b6aa214287",
+          "createdAt": 1793767798
+        },
+        {
+          "author": "e6835f928006e00b74ea8164cdaa5fef1c9cd85d57e80ca7f3017de4c04fca40",
+          "kind": 3308,
+          "sealKind": 20014,
+          "content": "{\"name\":\"snapshot\",\"relays\":[]}",
+          "tags": [
+            [
+              "vsk",
+              "0"
+            ],
+            [
+              "eid",
+              "6c55f434df73928c4522a85ff8952132c48068ef3388ba819f10eb8c206ee05b"
+            ],
+            [
+              "ev",
+              "3"
+            ],
+            [
+              "ep",
+              "3434343434343434343434343434343434343434343434343434343434343434"
+            ]
+          ],
+          "rumorId": "f782a67fa80120b6541e11d8fca873b63633fc5e09e09a953b98eced0d7e9186",
+          "createdAt": 1793767798
+        }
+      ],
+      "priorHeads": {},
+      "snapshotRumorIds": [
+        "f782a67fa80120b6541e11d8fca873b63633fc5e09e09a953b98eced0d7e9186"
+      ],
+      "expected": {
+        "heads": {
+          "6c55f434df73928c4522a85ff8952132c48068ef3388ba819f10eb8c206ee05b": {
+            "version": "3",
+            "hash": "e3b1cca4d88648f415fecfef30c24231b542a6eec920b4ea4750e8bfce054c5c"
+          }
+        },
+        "incomplete": [],
+        "banned": []
+      }
+    },
+    {
+      "name": "prior-floor-vouches-for-unchained-head",
+      "opened": [
+        {
+          "author": "e6835f928006e00b74ea8164cdaa5fef1c9cd85d57e80ca7f3017de4c04fca40",
+          "kind": 3308,
+          "sealKind": 20014,
+          "content": "{\"name\":\"old\",\"private\":false}",
+          "tags": [
+            [
+              "vsk",
+              "2"
+            ],
+            [
+              "eid",
+              "1212121212121212121212121212121212121212121212121212121212121212"
+            ],
+            [
+              "ev",
+              "1"
+            ]
+          ],
+          "rumorId": "2ce9f6c6fe443685f8670d77da290c94512be0940a35f2ebee0aaa3050b92755",
+          "createdAt": 1793767798
+        },
+        {
+          "author": "e6835f928006e00b74ea8164cdaa5fef1c9cd85d57e80ca7f3017de4c04fca40",
+          "kind": 3308,
+          "sealKind": 20014,
+          "content": "{\"name\":\"new\",\"private\":false}",
+          "tags": [
+            [
+              "vsk",
+              "2"
+            ],
+            [
+              "eid",
+              "1212121212121212121212121212121212121212121212121212121212121212"
+            ],
+            [
+              "ev",
+              "3"
+            ],
+            [
+              "ep",
+              "d5b48db17a10912935b81edfb8bd12ad6a3ad4913fb4623684b1f3ee47a966bf"
+            ]
+          ],
+          "rumorId": "f1bb82876a3af3435be450530fe2e8e902428350215f348013f3a698111a48ab",
+          "createdAt": 1793767798
+        }
+      ],
+      "priorHeads": {
+        "1212121212121212121212121212121212121212121212121212121212121212": {
+          "version": "3",
+          "hash": "2d9e6990f2169713c326003ab27a986c5cc2a81c1514d3ed1e0c7d135743f127"
+        }
+      },
+      "snapshotRumorIds": [],
+      "expected": {
+        "heads": {
+          "1212121212121212121212121212121212121212121212121212121212121212": {
+            "version": "3",
+            "hash": "2d9e6990f2169713c326003ab27a986c5cc2a81c1514d3ed1e0c7d135743f127"
+          }
+        },
+        "incomplete": [],
+        "banned": []
       }
     }
   ]

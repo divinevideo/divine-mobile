@@ -115,10 +115,29 @@ void main() {
         );
         expect(folded.canManageMessages(expected['member'] as String), isFalse);
         expect(folded.name, 'Synthetic shared community');
+        for (final raw in fixture['unauthorizedControlEvents'] as List) {
+          editions.add(
+            ConcordEdition.parse(
+              await openControlWrap(
+                wrap: raw as Map<String, dynamic>,
+                readKey: key,
+                streamPubkey: bundle.controlPubkey!,
+              ),
+            ),
+          );
+        }
         final reversed = foldCommunityControl(
           editions.reversed.toList(),
           communityId: bundle.communityId,
           owner: bundle.owner,
+        );
+        expect(reversed.incomplete, isEmpty);
+        expect(
+          {
+            for (final head in reversed.heads.entries)
+              head.key: head.value.hash,
+          },
+          {for (final head in folded.heads.entries) head.key: head.value.hash},
         );
         expect(reversed.publicChannels.map((c) => c.name).toSet(), {
           'general',

@@ -55,6 +55,7 @@ class ConcordCommunitySession {
       control!.name != null &&
       control!.publicChannels.isNotEmpty &&
       control!.incomplete.isEmpty &&
+      !_controlHistoryLimited &&
       !control!.banned.contains(account);
 
   void _notify() {
@@ -93,7 +94,6 @@ class ConcordCommunitySession {
               'kinds': [33301],
               'authors': [linkSigner],
               '#d': [''],
-              'limit': 2,
             })
             .listen((event) {
               if (!_loaded) {
@@ -227,7 +227,7 @@ class ConcordCommunitySession {
       _watchTerminalSignals();
       await (relay as RelayHistoryStatus).historyReady;
       await _work;
-      if ((relay as RelayHistoryStatus).historyLimited) {
+      if (_controlHistoryLimited) {
         throw StateError('Community control history is incomplete');
       }
       _refold();
@@ -289,7 +289,7 @@ class ConcordCommunitySession {
                 } on FormatException {
                   return;
                 }
-                await _checkSignals();
+                if (_loaded) await _checkSignals();
               }),
               onError: _fail,
             ),
@@ -297,8 +297,87 @@ class ConcordCommunitySession {
     }
   }
 
+  bool get _controlHistoryLimited => switch (relay) {
+    final RelayScopedHistoryStatus status => status.historyLimitedForAuthor(
+      bundle!.controlPubkey ??
+          controlReadKey(
+            bundle!.communityRoot,
+            bundle!.communityId,
+            bundle!.rootEpoch,
+          ).pubkey,
+    ),
+    final RelayHistoryStatus status => status.historyLimited,
+    _ => true,
+  };
+
+  // CORD-06 groups by rotator/scope/new epoch/previous commitment. Missing
+  // chunks are never a removal; every held chunk must also cite one authority.
+  bool _completeRotation(Map<String, dynamic> candidate) {
+    String? field(Map<String, dynamic> event, String name) =>
+        (event['tags'] as List)
+            .cast<List<String>>()
+            .where((t) => t.isNotEmpty && t[0] == name)
+            .firstOrNull
+            ?.elementAtOrNull(1);
+    List<String>? chunk(Map<String, dynamic> event) => (event['tags'] as List)
+        .cast<List<String>>()
+        .where((t) => t.isNotEmpty && t[0] == 'chunk')
+        .firstOrNull;
+    final decimal = RegExp(r'^(0|[1-9][0-9]*)$');
+    final firstChunk = chunk(candidate);
+    final countText = firstChunk?.elementAtOrNull(2) ?? '1';
+    if (!decimal.hasMatch(countText)) return false;
+    final count = int.tryParse(countText);
+    if (count == null || count < 1) return false;
+    final indices = <int>{};
+    final citation = ConcordCitation.fromTags(
+      (candidate['tags'] as List).cast<List<String>>(),
+    );
+    String citationKey(ConcordCitation? value) =>
+        value == null ? '' : '${value.entityId}:${value.version}:${value.hash}';
+    for (final event in _signals) {
+      if (event['kind'] != 3303 ||
+          event['sealKind'] != 20013 ||
+          event['author'] != candidate['author'] ||
+          field(event, 'scope') != field(candidate, 'scope') ||
+          field(event, 'newepoch') != field(candidate, 'newepoch') ||
+          field(event, 'prevcommit') != field(candidate, 'prevcommit')) {
+        continue;
+      }
+      final coordinate = chunk(event);
+      final indexText = coordinate?.elementAtOrNull(1) ?? '1';
+      final totalText = coordinate?.elementAtOrNull(2) ?? '1';
+      if (!decimal.hasMatch(indexText) || !decimal.hasMatch(totalText)) {
+        continue;
+      }
+      final index = int.tryParse(indexText);
+      if (int.tryParse(totalText) != count ||
+          index == null ||
+          index < 1 ||
+          index > count) {
+        continue;
+      }
+      try {
+        jsonDecode(event['content'] as String);
+      } on FormatException {
+        continue;
+      }
+      if (field(event, 'prevepoch') != field(candidate, 'prevepoch') ||
+          citationKey(
+                ConcordCitation.fromTags(
+                  (event['tags'] as List).cast<List<String>>(),
+                ),
+              ) !=
+              citationKey(citation)) {
+        return false;
+      }
+      indices.add(index);
+    }
+    return indices.length == count;
+  }
+
   Future<void> _checkSignals() async {
-    if (control == null) return;
+    if (control == null || control!.incomplete.isNotEmpty) return;
     for (final signal in _signals) {
       final tags = (signal['tags'] as List).cast<List<String>>();
       String? tag(String n) => tags
@@ -323,7 +402,8 @@ class ConcordCommunitySession {
               epochKeyCommitment(bundle!.rootEpoch, bundle!.communityRoot) &&
           !control!.banned.contains(author) &&
           control!.permits(author, 16) &&
-          control!.citationSatisfied(author, citation);
+          control!.citationSatisfied(author, citation) &&
+          _completeRotation(signal);
       if (!dissolved && !rotation) continue;
       await store.put(
         'community-stop',
@@ -405,7 +485,7 @@ class ConcordCommunitySession {
     // Replay can deliver a newer head before its predecessor. Readiness closes
     // publication while the fold is incomplete, without poisoning later replay.
     if (_loaded) _acceptedHeads = {...control!.heads};
-    if (_signals.isNotEmpty) _enqueue(_checkSignals);
+    if (_loaded && _signals.isNotEmpty) _enqueue(_checkSignals);
     _notify();
   }
 

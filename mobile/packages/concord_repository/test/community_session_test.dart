@@ -8,7 +8,8 @@ import 'package:test/test.dart';
 
 import 'fixture_reader.dart';
 
-class _Relay implements RelayGateway, RelayHistoryStatus {
+class _Relay
+    implements RelayGateway, RelayHistoryStatus, RelayScopedHistoryStatus {
   _Relay(this.events);
   final List<Map<String, dynamic>> events;
   final pending = <Future<void>>[];
@@ -17,6 +18,9 @@ class _Relay implements RelayGateway, RelayHistoryStatus {
   final controllers = <StreamController<Map<String, dynamic>>>[];
   @override
   bool historyLimited = false;
+  bool controlLimited = false;
+  @override
+  bool historyLimitedForAuthor(String pubkey) => controlLimited;
   @override
   Future<void> get historyReady => Future.wait(pending);
   @override
@@ -84,10 +88,10 @@ class _DelayedStore extends InMemoryConcordStore {
 }
 
 class _ReplayCommunity {
-  static final owner = schnorr.getPublicKey('31' * 32);
-  static final id = deriveCommunityId(owner, '32' * 32);
-  static final channel = '53' * 32;
-  static final read = controlReadKey('42' * 32, id, 0);
+  static final String owner = schnorr.getPublicKey('31' * 32);
+  static final String id = deriveCommunityId(owner, '32' * 32);
+  static final String channel = '53' * 32;
+  static final GroupKey read = controlReadKey('42' * 32, id, 0);
   static String channelContent(int version) =>
       jsonEncode({'name': 'room-$version', 'private': false});
   static String hash(int version) => editionHash(
@@ -266,6 +270,148 @@ void main() {
         }
       },
     );
+    test(
+      'unrelated history limits do not hide complete control authority',
+      () async {
+        final relay = _Relay(events())..historyLimited = true;
+        final s = session(
+          relay,
+          expected['member'] as String,
+          InMemoryConcordStore('34' * 32),
+        );
+        await s.start();
+        expect(s.ready, isTrue);
+        expect(relay.filters.first.containsKey('limit'), isFalse);
+        relay.controlLimited = true;
+        expect(s.canPublish, isFalse);
+        await s.close();
+        await relay.close();
+      },
+    );
+    test(
+      'terminal signals use current bootstrap authority, not cached grants',
+      () async {
+        final bootstrap = await _ReplayCommunity.bootstrap(fragment);
+        final moderator = schnorr.getPublicKey('65' * 32);
+        final role = '66' * 32;
+        final grant = grantLocator(_ReplayCommunity.id, moderator);
+        final grantContent = jsonEncode({
+          'member': moderator,
+          'role_ids': [role],
+        });
+        final grantHash = editionHash(grant, 1, null, grantContent);
+        final granted = [
+          ...bootstrap,
+          await _ReplayCommunity.edition(
+            role,
+            '1',
+            jsonEncode({
+              'role_id': role,
+              'position': 1,
+              'permissions': '16',
+            }),
+          ),
+          await _ReplayCommunity.edition(grant, '3', grantContent),
+        ];
+        final store = InMemoryConcordStore('67' * 32);
+        ConcordCommunitySession make(_Relay relay) => ConcordCommunitySession(
+          relay: relay,
+          store: store,
+          linkSigner: bootstrap.first['pubkey'] as String,
+          fragment: fragment,
+          account: 'aa' * 32,
+          nowMs: () => 0,
+        );
+        final originalRelay = _Relay(granted);
+        final original = make(originalRelay);
+        await original.start();
+        expect(original.control!.permits(moderator, 16), isTrue);
+        await original.close();
+        await originalRelay.close();
+        final group = groupKey(
+          'concord/base-rekey-pseudonym',
+          '42' * 32,
+          _ReplayCommunity.id,
+          epoch: 1,
+        );
+        final tags = <List<String>>[
+          ['scope', '00' * 32],
+          ['prevepoch', '0'],
+          ['newepoch', '1'],
+          ['prevcommit', epochKeyCommitment(0, '42' * 32)],
+          ['vac', grant, '1', grantHash],
+        ];
+        final rumor = <String, dynamic>{
+          'kind': 3303,
+          'pubkey': moderator,
+          'created_at': 1,
+          'tags': tags,
+          'content': '[]',
+          'id': computeEventId(
+            pubkey: moderator,
+            createdAt: 1,
+            kind: 3303,
+            tags: tags,
+            content: '[]',
+          ),
+        };
+        final signal = await wrapSeal(
+          seal: await sealRumor(
+            rumor: rumor,
+            sealKind: 20013,
+            streamSeedHex: group.seedHex,
+            streamPubkey: group.pubkey,
+            authorSecretHex: '65' * 32,
+          ),
+          streamSeedHex: group.seedHex,
+          streamPubkey: group.pubkey,
+        );
+        final currentRelay = _Relay([
+          signal,
+          ...granted,
+          await _ReplayCommunity.edition(
+            grant,
+            '3',
+            jsonEncode({'member': moderator, 'role_ids': <String>[]}),
+            version: 2,
+            previous: grantHash,
+          ),
+        ]);
+        final current = make(currentRelay);
+        await current.start();
+        expect(current.control!.permits(moderator, 16), isFalse);
+        expect(current.canPublish, isTrue);
+        expect(await store.get('community-stop'), isNull);
+        await current.close();
+        await currentRelay.close();
+      },
+    );
+    test(
+      'newest signed revocation marker wins over an older live invite',
+      () async {
+        final revoked = fixture['revokedBundleEvent'] as Map<String, dynamic>;
+        final relay = _Relay([
+          fixture['revokedLiveBundleEvent'] as Map<String, dynamic>,
+          revoked,
+          ...(fixture['controlEvents'] as List).cast<Map<String, dynamic>>(),
+        ]);
+        final s = ConcordCommunitySession(
+          relay: relay,
+          store: InMemoryConcordStore('68' * 32),
+          linkSigner: revoked['pubkey'] as String,
+          fragment: ConcordInviteFragment.decode(
+            Uri.parse(fixture['revokedInviteUrl'] as String).fragment,
+          ),
+          account: expected['member'] as String,
+          nowMs: () => 0,
+        );
+        await expectLater(s.start(), throwsFormatException);
+        expect(s.bundle, isNull);
+        expect(s.canPublish, isFalse);
+        await s.close();
+        await relay.close();
+      },
+    );
     test('a missing invite cannot open deterministic POC rooms', () async {
       final relay = _Relay([]);
       final s = session(
@@ -288,6 +434,11 @@ void main() {
           'baseRekeyEvents',
           'dissolvedEvents',
           'impostorDissolvedEvents',
+          'impostorRekeyEvents',
+          'halfPublishedRekeyEvents',
+          'forgedAuthorDissolvedEvents',
+          'replayedDissolvedEvents',
+          'zeroEidDissolvedEvents',
         ]) {
           final relay = _Relay([
             bundleEvent,
@@ -305,7 +456,7 @@ void main() {
             account: (lifecycle['expected'] as Map)['member'] as String,
             nowMs: () => 0,
           );
-          if (name == 'impostorDissolvedEvents') {
+          if (name != 'baseRekeyEvents' && name != 'dissolvedEvents') {
             await s.start();
             expect(s.canPublish, isTrue);
           } else {

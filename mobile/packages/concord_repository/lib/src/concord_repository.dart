@@ -21,6 +21,12 @@ abstract interface class RelayHistoryStatus {
   bool get historyLimited;
 }
 
+/// Limit state for an authority stream, independent of unrelated subscriptions.
+abstract interface class RelayScopedHistoryStatus
+    implements RelayHistoryStatus {
+  bool historyLimitedForAuthor(String pubkey);
+}
+
 /// Current transport catch-up state; a previous EOSE does not authorize
 /// writes while a reconnect is still fetching fresh authority.
 abstract interface class RelaySynchronizationStatus {
