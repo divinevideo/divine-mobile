@@ -9,6 +9,7 @@ import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/text_effects.dart';
+import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerBackgroundMode;
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
@@ -54,6 +55,16 @@ void main() {
         for (final animation in preset.leave) {
           expect(animation.phase, equals(pve.AnimationPhase.animateOut));
         }
+      }
+    });
+
+    test('every preset renders with an editor catalogue font', () {
+      // A burned-in caption layer keeps only its font family name. The
+      // editor and the publish rasterizer register just the catalogue fonts
+      // a restored layer names (preloadEditorTextFonts), so a preset font
+      // outside the catalogue would bake in the platform default instead.
+      for (final preset in CaptionStylePreset.presets) {
+        expect(googleFontFamilyName(preset.font), isNotNull, reason: preset.id);
       }
     });
 
