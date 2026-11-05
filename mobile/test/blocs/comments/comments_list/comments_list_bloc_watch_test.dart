@@ -142,6 +142,40 @@ void main() {
       });
     });
 
+    test('does not resurrect a comment deleted while its batch is held', () {
+      fakeAsync((fake) {
+        final deletions = StreamController<CommentDeletion>.broadcast();
+        when(
+          () => repository.watchCommentDeletions(
+            rootEventId: any(named: 'rootEventId'),
+            includeVideoReplies: any(named: 'includeVideoReplies'),
+          ),
+        ).thenAnswer((_) => deletions.stream);
+        final bloc = createBloc()..add(const CommentsLoadRequested());
+        fake.flushMicrotasks();
+        onEose!();
+        fake.flushMicrotasks();
+
+        final comment = _comment(1);
+        watch.add(comment);
+        fake.flushMicrotasks();
+        expect(bloc.state.commentsById, isEmpty, reason: 'batch is held');
+        deletions.add(
+          CommentDeletion(
+            commentId: comment.id,
+            requesterPubkey: comment.authorPubkey,
+          ),
+        );
+        fake.flushMicrotasks();
+        fake.elapse(const Duration(seconds: 1));
+
+        expect(bloc.state.commentsById, isEmpty);
+        expect(bloc.state.newCommentIds, isEmpty);
+        unawaited(bloc.close());
+        unawaited(deletions.close());
+      });
+    });
+
     test('takes in nothing once it is closed', () {
       fakeAsync((fake) {
         final bloc = createBloc()..add(const CommentsLoadRequested());

@@ -641,7 +641,11 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           )
           .listen(
             (deletion) {
-              if (!isClosed) add(CommentDeletionReceived(deletion));
+              // Preserve arrival order across the batched comment stream and
+              // the unbatched deletion stream. Otherwise a held comment can
+              // arrive after its deletion was ignored for not being listed.
+              _commentStreamSubscription?.flush();
+              addIfOpen(CommentDeletionReceived(deletion));
             },
             onError: (Object e) {
               Log.warning(
