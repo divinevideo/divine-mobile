@@ -149,6 +149,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           status: CommentsStatus.success,
           commentsById: commentsById,
           hasMoreContent: hasMore,
+          nextOffset: thread.nextOffset,
           replyCountsByCommentId: computeReplyCounts(commentsById),
         ),
       );
@@ -223,6 +224,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         rootAddressableId: state.rootAddressableId,
         limit: _pageSize,
         before: cursor,
+        offset: state.nextOffset ?? 0,
         includeVideoReplies: _includeVideoReplies,
       );
 
@@ -236,6 +238,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         state.copyWith(
           commentsById: allCommentsById,
           isLoadingMore: false,
+          nextOffset: thread.nextOffset,
           hasMoreContent: _hasMoreContent(
             loadedCount: allCommentsById.length,
             lastBatchCount: thread.comments.length,
