@@ -2391,6 +2391,9 @@ class BadgeRepository {
       tags: tags,
       createdAt: createdAt,
     );
+    // Before the null check: a signer that gives up because the user signed
+    // out is a refused edit, not a signing failure.
+    if (expectedPubkey != null) _ensureCurrentPubkey(expectedPubkey);
     if (event == null) {
       throw BadgeSigningException('Could not sign $label event');
     }
@@ -2400,12 +2403,8 @@ class BadgeRepository {
         'Badge subscription edit was superseded',
       );
     }
-
-    if (expectedPubkey != null) {
-      _ensureCurrentPubkey(expectedPubkey);
-      if (event.pubkey != expectedPubkey) {
-        throw StateError('The $label event was signed by a different account');
-      }
+    if (expectedPubkey != null && event.pubkey != expectedPubkey) {
+      throw StateError('The $label event was signed by a different account');
     }
     if (createdAt != null && event.createdAt != createdAt) {
       throw StateError(

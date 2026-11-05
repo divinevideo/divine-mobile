@@ -3813,6 +3813,34 @@ void main() {
         verifyNever(() => nostrClient.publishEventAwaitOk(any()));
       });
 
+      test('a sign-out while signing is a refused edit', () async {
+        String? owner = _pubkey(1);
+        repository = BadgeRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: preferences,
+          currentPubkey: () => owner,
+          signer: () => dismissalSigner,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async {
+                // The session ends while a remote signer is working, and it
+                // gives up rather than signing.
+                owner = null;
+                return null;
+              },
+        );
+        stubRead();
+
+        await expectLater(
+          repository.acceptAward(award(coordinate, 122)),
+          throwsA(isA<ProfileBadgesWriteRefusedException>()),
+        );
+      });
+
       test(
         'an account switch during the read cannot publish its result',
         () async {
