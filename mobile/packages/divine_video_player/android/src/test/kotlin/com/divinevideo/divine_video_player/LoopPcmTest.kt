@@ -171,6 +171,29 @@ class LoopPcmTest {
     }
 
     @Test
+    fun `blends a lap shorter than the crossfade across all of it`() {
+        // A one- or two-frame clip, as stop motion records. A crossfade longer
+        // than the lap ended the blend part-way, so the lap's last sample
+        // wrapped into material it did not lead into; on Apple the same rule
+        // wrote past the loop and crashed the app.
+        val loopFrames = sampleRate / 20 // 50 ms, half the crossfade
+        val prepared = LoopPcm.prepare(
+            samples = tone(frames = loopFrames + sampleRate / 4),
+            channels = 1,
+            sampleRate = sampleRate,
+            loopUs = 50_000L,
+        )!!
+
+        assertTrue(prepared.blendedFromPastTheLoop)
+        assertEquals(loopFrames, prepared.fadeFrames)
+        // The tone carries on across the wrap one ordinary step at a time.
+        assertTrue(
+            "seam step should be one tone step, was ${seamStep(prepared, 1)}",
+            seamStep(prepared, 1) <= 101,
+        )
+    }
+
+    @Test
     fun `carries a lap with nothing past its loop point on from earlier in it`() {
         // The decode ends exactly at the loop point. Ramping both ends to
         // silence removed the click and left a gap at every restart.

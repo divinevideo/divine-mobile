@@ -9,6 +9,7 @@ import Foundation
 enum LoopPcm {
 
     /// Blend length at the seam, when there is live material past the loop.
+    /// A shorter lap is blended across all of it.
     static let crossfadeMs = 100.0
 
     /// Blend length at a seam carried on from earlier in the lap.
@@ -99,7 +100,7 @@ enum LoopPcm {
 
         let tailLevel = pcm.rms(from: loopFrames - pcm.frames(tailMs), until: loopFrames)
         let spare = decodedFrames - loopFrames
-        let crossfade = pcm.frames(crossfadeMs)
+        let crossfade = min(pcm.frames(crossfadeMs), loopFrames)
         if tailLevel <= silentLevel {
             let fade = min(crossfade, spare)
             if fade <= 0 {

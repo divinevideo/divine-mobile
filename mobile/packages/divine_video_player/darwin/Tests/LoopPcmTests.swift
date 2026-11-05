@@ -9,6 +9,7 @@ enum LoopPcmTests {
 
     static func main() {
         blendsWithWhatFollowsTheLoopPoint()
+        blendsALapShorterThanTheCrossfadeAcrossAllOfIt()
         carriesOnFromTheLapWhenNothingLiveFollows()
         keepsAHeadOfDigitalSilence()
         rampsADecodeThatEndsBeforeTheLoop()
@@ -31,6 +32,31 @@ enum LoopPcmTests {
         for channel in 0..<2 {
             precondition(seamStep(prepared, channel: channel) <= maxToneStep + 1e-4)
         }
+    }
+
+    /// A lap shorter than the crossfade — a one- or two-frame clip, as stop
+    /// motion records — is blended across all of it. A crossfade longer than
+    /// the lap wrote past the end of the loop and crashed the app on every
+    /// open of a draft holding such a clip.
+    static func blendsALapShorterThanTheCrossfadeAcrossAllOfIt() {
+        let short = 2_205  // 50 ms, half the crossfade
+        let live = LoopPcm.prepare(
+            samples: tone(frames: short + 8_820, channels: 2),
+            channels: 2, sampleRate: rate, loopFrames: short, startFrame: 0
+        )!
+        precondition(live.blendedFromPastTheLoop)
+        precondition(live.fadeFrames == short)
+        precondition(live.samples.count == short * 2)
+        for channel in 0..<2 {
+            precondition(seamStep(live, channel: channel) <= maxToneStep * 1.1)
+        }
+
+        let silentTail = LoopPcm.prepare(
+            samples: [Float](repeating: 0, count: short) + tone(frames: 8_820, channels: 1),
+            channels: 1, sampleRate: rate, loopFrames: short, startFrame: 0
+        )!
+        precondition(silentTail.fadeFrames == short)
+        precondition(silentTail.samples.count == short)
     }
 
     /// A track that stops dead at the loop point — the decoder ringing out

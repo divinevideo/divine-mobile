@@ -11,7 +11,10 @@ package com.divinevideo.divine_video_player
  */
 internal object LoopPcm {
 
-    /** Blend length at the seam, when there is material to blend with. */
+    /**
+     * Blend length at the seam, when there is material to blend with. A
+     * shorter lap is blended across all of it.
+     */
     const val CROSSFADE_MS = 100L
 
     /** Fallback when there is not: long enough to kill the click, no more. */
@@ -149,7 +152,7 @@ internal object LoopPcm {
         val pcm = Pcm(placed, channels, sampleRate)
         val tailRms = pcm.rms(loopFrames - pcm.frames(TAIL_MS), loopFrames)
         val spare = decodedFrames - loopFrames
-        val crossfade = pcm.frames(CROSSFADE_MS)
+        val crossfade = minOf(pcm.frames(CROSSFADE_MS), loopFrames)
         // A lap that ends in silence has nothing to carry across its seam.
         if (tailRms <= SILENT_RMS) {
             val fade = minOf(crossfade, spare)
