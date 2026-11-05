@@ -325,6 +325,73 @@ void main() {
       expect(limits, equals([50, 100]));
     });
 
+    test('waits beyond the bootstrap grace for an older reply page', () async {
+      repository = CommentsRepository(
+        nostrClient: nostr,
+        funnelcakeApiClient: funnel,
+        videoRepliesBootstrapGrace: Duration.zero,
+      );
+      stubComments(_commentsPage([_restComment('comment', 100)]));
+      final replies = Completer<List<Event>>();
+      when(() => nostr.queryEvents(any())).thenAnswer((_) => replies.future);
+      var completed = false;
+      final pending = repository
+          .loadComments(
+            rootEventId: _rootId,
+            rootEventKind: _rootKind,
+            before: DateTime.fromMillisecondsSinceEpoch(200000),
+            offset: 10,
+            includeVideoReplies: true,
+          )
+          .then((thread) {
+            completed = true;
+            return thread;
+          });
+
+      await pumpEventQueue();
+      final completedBeforeReplies = completed;
+      replies.complete([Event.fromJson(_replyRow('reply', 150))]);
+      final thread = await pending;
+
+      expect(completedBeforeReplies, isFalse);
+      expect(
+        thread.comments.map((c) => _label(c.id)),
+        unorderedEquals(['comment', 'reply']),
+      );
+    });
+
+    test(
+      'fails an unread older reply page so the same window can retry',
+      () async {
+        stubComments(_commentsPage([_restComment('comment', 100)]));
+        var attempts = 0;
+        when(() => nostr.queryEvents(any())).thenAnswer((_) async {
+          if (attempts++ == 0)
+            throw TimeoutException('relay did not reach EOSE');
+          return [Event.fromJson(_replyRow('reply', 150))];
+        });
+        Future<CommentThread> loadOlder() => repository.loadComments(
+          rootEventId: _rootId,
+          rootEventKind: _rootKind,
+          before: DateTime.fromMillisecondsSinceEpoch(200000),
+          offset: 10,
+          includeVideoReplies: true,
+        );
+
+        await expectLater(
+          loadOlder(),
+          throwsA(isA<LoadCommentsFailedException>()),
+        );
+        final retried = await loadOlder();
+
+        expect(retried.nextOffset, 11);
+        expect(
+          retried.comments.map((c) => _label(c.id)),
+          unorderedEquals(['comment', 'reply']),
+        );
+      },
+    );
+
     test('asks nothing about video replies while they are off', () async {
       stubComments(_commentsPage([_restComment('comment', 1000)]));
 

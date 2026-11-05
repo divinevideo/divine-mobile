@@ -257,13 +257,8 @@ class CommentsRepository {
       if ((before == null || offset > 0 || includeVideoReplies) &&
           (_funnelcakeApiClient?.isAvailable ?? false)) {
         try {
-          final videoReplies = includeVideoReplies
-              ? _loadVideoReplies(
-                  rootEventId: rootEventId,
-                  rootAddressableId: rootAddressableId,
-                  limit: limit,
-                  before: before,
-                )
+          final videoReplies = includeVideoReplies && before == null
+              ? _loadRestVideoReplies(rootEventId: rootEventId, limit: limit)
               : Future<VideoResponsesResponse?>.value();
           final response = await _funnelcakeApiClient!.getVideoComments(
             videoId: rootEventId,
@@ -286,10 +281,17 @@ class CommentsRepository {
                   offset: offset,
                   rootAddressableId: rootAddressableId,
                 ),
-                await videoReplies.timeout(
-                  _videoRepliesBootstrapGrace,
-                  onTimeout: () => null,
-                ),
+                includeVideoReplies && before != null
+                    ? await _loadOlderVideoReplies(
+                        rootEventId: rootEventId,
+                        rootAddressableId: rootAddressableId,
+                        limit: limit,
+                        before: before,
+                      )
+                    : await videoReplies.timeout(
+                        _videoRepliesBootstrapGrace,
+                        onTimeout: () => null,
+                      ),
                 rootEventId,
                 rootEventKind,
                 rootAddressableId,
@@ -752,15 +754,14 @@ class CommentsRepository {
 
   /// REST supplies the first reply page; older replies still use the relay's
   /// time cursor while text comments keep REST's revision-aware offset.
-  Future<VideoResponsesResponse?> _loadVideoReplies({
+  /// Unlike first paint, paging must wait for both sources or fail without
+  /// advancing either cursor: the live backfill cannot cover this old window.
+  Future<VideoResponsesResponse> _loadOlderVideoReplies({
     required String rootEventId,
     required String? rootAddressableId,
     required int limit,
-    required DateTime? before,
+    required DateTime before,
   }) async {
-    if (before == null) {
-      return _loadRestVideoReplies(rootEventId: rootEventId, limit: limit);
-    }
     try {
       final events = await _nostrClient.queryEvents([
         Filter(
@@ -784,9 +785,10 @@ class CommentsRepository {
         total: unique.length,
         hasMore: unique.length >= limit,
       );
-    } on Exception {
-      // The optional reply source must not discard a successful REST page.
-      return null;
+    } on Exception catch (e) {
+      throw LoadCommentsFailedException(
+        'Failed to load older video replies: $e',
+      );
     }
   }
 
