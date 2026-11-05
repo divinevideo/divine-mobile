@@ -18,7 +18,9 @@ import 'package:reposts_repository/src/reposts_repository_reportable_sites.dart'
 import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Default limit for fetching user reposts from relays.
+/// Most repost events one relay query asks for: a user's own reposts, and
+/// the reposts of one video that [RepostsRepository.fetchEventReposters]
+/// lists.
 const _defaultRepostFetchLimit = 500;
 
 /// Callback to check if the device is currently online
