@@ -3747,6 +3747,112 @@ void main() {
         );
       });
 
+      test('keeps each row as the server sent it, beside its video', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer(
+          (_) async => http.Response(
+            '''
+{
+  "data": [
+    {
+      "id": "abc123def456",
+      "pubkey": "$testPubkey",
+      "created_at": 1700000000,
+      "kind": 34236,
+      "d_tag": "reply-1",
+      "content": "",
+      "tags": [["E", "root-event"], ["summary", "A summary"]],
+      "video_url": "https://example.com/video.mp4"
+    },
+    {"id": "", "video_url": ""}
+  ],
+  "total": 1,
+  "pagination": {"has_more": false}
+}
+''',
+            200,
+          ),
+        );
+
+        final page = await client.getVideoResponses(
+          videoId: 'root-d',
+          type: VideoResponseType.replies,
+        );
+
+        expect(page.rows, hasLength(1));
+        expect(page.rows.single['content'], equals(''));
+        expect(
+          page.rows.single['tags'],
+          equals([
+            ['E', 'root-event'],
+            ['summary', 'A summary'],
+          ]),
+        );
+      });
+
+      test('keeps the event of a row that nests it beside its stats', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer(
+          (_) async => http.Response(
+            '''
+{
+  "data": [
+    {
+      "event": {
+        "id": "abc123def456",
+        "pubkey": "$testPubkey",
+        "created_at": 1700000000,
+        "kind": 34236,
+        "content": "caption",
+        "tags": [["E", "root-event"]],
+        "video_url": "https://example.com/video.mp4"
+      },
+      "stats": {"reactions": 3}
+    }
+  ],
+  "total": 1
+}
+''',
+            200,
+          ),
+        );
+
+        final page = await client.getVideoResponses(
+          videoId: 'root-d',
+          type: VideoResponseType.replies,
+        );
+
+        // The row's event, whichever shape the server sent it in.
+        expect(page.rows.single['id'], equals('abc123def456'));
+        expect(page.rows.single['content'], equals('caption'));
+        expect(page.rows.single.containsKey('stats'), isFalse);
+      });
+
+      test('says whether the server has more than this page', () async {
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response(responsesJson, 200));
+
+        final more = await client.getVideoResponses(
+          videoId: 'root-d',
+          type: VideoResponseType.replies,
+        );
+
+        when(
+          () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+        ).thenAnswer((_) async => http.Response('{"data": []}', 200));
+
+        final last = await client.getVideoResponses(
+          videoId: 'root-d',
+          type: VideoResponseType.replies,
+        );
+
+        expect(more.hasMore, isTrue);
+        expect(last.hasMore, isFalse);
+      });
+
       test('asks for a chain by its hashtag', () async {
         when(
           () => mockHttpClient.get(any(), headers: any(named: 'headers')),
