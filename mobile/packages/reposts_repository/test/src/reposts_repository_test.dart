@@ -2077,8 +2077,8 @@ void main() {
           );
         });
 
-        test('looks up deletions by the ids of the newest 500 reposts, '
-            'not by every reposter', () async {
+        test('looks up deletions by the ids and authors of the newest 500 '
+            'reposts only', () async {
           final video = popularVideo();
           wireQueryEvents(
             eFilterEvents: video.byEventId,
@@ -2108,7 +2108,10 @@ void main() {
             deletionFilter.e,
             unorderedEquals([for (var i = 0; i < 500; i++) repostEventId(i)]),
           );
-          expect(deletionFilter.authors, isNull);
+          expect(
+            deletionFilter.authors,
+            unorderedEquals([for (var i = 0; i < 500; i++) reposterPubkey(i)]),
+          );
           expect(deletionFilter.limit, equals(repostFetchLimit));
         });
 
@@ -2428,12 +2431,13 @@ void main() {
         'keeps a repost when someone other than its author asks to delete it',
         () async {
           final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-          // Full-length synthetic ids. The deletion lookup is keyed on the
-          // repost id alone, so a stranger's kind 5 comes back from the relay
-          // and only the author check keeps it from hiding the repost.
+          // Full-length synthetic ids. The deletion lookup names every
+          // reposter in the window, so another reposter's kind 5 comes back
+          // from the relay and only the author check keeps it from hiding
+          // someone else's repost.
           final repostId = 'c3' * 32;
           final author = 'a1' * 32;
-          final stranger = 'b2' * 32;
+          final otherReposter = 'b2' * 32;
           wireQueryEvents(
             eFilterEvents: [
               createReposterEvent(
@@ -2445,11 +2449,20 @@ void main() {
                   ['e', testEventId],
                 ],
               ),
+              createReposterEvent(
+                id: 'c4' * 32,
+                pubkey: otherReposter,
+                kind: EventKind.genericRepost,
+                createdAt: now - 20,
+                tags: [
+                  ['e', testEventId],
+                ],
+              ),
             ],
             deletionEvents: [
               createReposterEvent(
                 id: 'd4' * 32,
-                pubkey: stranger,
+                pubkey: otherReposter,
                 kind: EventKind.eventDeletion,
                 createdAt: now - 10,
                 tags: [
@@ -2465,7 +2478,7 @@ void main() {
             eventId: testEventId,
           );
 
-          expect(result, equals([author]));
+          expect(result, equals([author, otherReposter]));
         },
       );
 

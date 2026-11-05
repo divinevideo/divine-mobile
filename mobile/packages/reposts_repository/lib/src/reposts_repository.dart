@@ -920,11 +920,11 @@ class RepostsRepository {
   ///
   /// Considers only the newest 500 reposts, however many a popular video has,
   /// so the relay work stays bounded: each repost filter carries that limit,
-  /// and deletions are looked up by the ids of those reposts alone. Filters
-  /// out reposts deleted via Kind 5 deletion events from their author, and
-  /// reposters hidden by the injected block filter (blocked/muted users), so
-  /// fewer than 500 pubkeys can come back. Pubkeys are deduplicated and
-  /// ordered by repost recency, most recent first.
+  /// and deletions are looked up by the ids and authors of those reposts
+  /// alone. Filters out reposts deleted via Kind 5 deletion events from their
+  /// author, and reposters hidden by the injected block filter (blocked/muted
+  /// users), so fewer than 500 pubkeys can come back. Pubkeys are
+  /// deduplicated and ordered by repost recency, most recent first.
   ///
   /// Parameters:
   /// - [eventId]: Hex event ID of the target event, or — for an addressable
@@ -987,8 +987,12 @@ class RepostsRepository {
               }))
               .take(_defaultRepostFetchLimit)
               .toList();
+      // Only a repost's own author can delete it. Naming the authors keeps a
+      // stranger's kind 5s from filling the limit and pushing a real deletion
+      // out of the answer.
       final deletionFilter = Filter(
         kinds: const [EventKind.eventDeletion],
+        authors: {for (final repost in newestReposts) repost.pubkey}.toList(),
         e: [for (final repost in newestReposts) repost.id],
         limit: newestReposts.length,
       );
