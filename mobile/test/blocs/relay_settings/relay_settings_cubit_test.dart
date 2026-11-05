@@ -321,8 +321,7 @@ void main() {
         ).called(1);
         verify(
           () => relayListRepository.publishConfiguredRelayList(
-            addedRelay: any(named: 'addedRelay'),
-            removedRelay: any(named: 'removedRelay'),
+            removedRelay: 'wss://b.example',
           ),
         ).called(1);
       },
@@ -435,8 +434,7 @@ void main() {
         ).called(1);
         verify(
           () => relayListRepository.publishConfiguredRelayList(
-            addedRelay: any(named: 'addedRelay'),
-            removedRelay: any(named: 'removedRelay'),
+            addedRelay: 'wss://relay.staging.divine.video',
           ),
         ).called(1);
       },
