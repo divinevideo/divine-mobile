@@ -34,15 +34,11 @@ extension ProofModeHelpers on VideoEvent {
     }
   }
 
-  /// Should show ProofMode badge
-  /// Original Vines always get the Vine badge, never the ProofMode badge
+  /// Should show ProofMode badge.
+  ///
+  /// Archive Vines funnelcake verifies never show it. A self-applied
+  /// `platform=vine` tag does not count as verification.
   bool get shouldShowProofModeBadge {
-    return hasProofMode && !isOriginalVine;
-  }
-
-  /// Should show original Vine badge
-  /// Original Vines always show the Vine badge regardless of proof tags
-  bool get shouldShowVineBadge {
-    return isOriginalVine;
+    return hasProofMode && !isVerifiedArchive;
   }
 }

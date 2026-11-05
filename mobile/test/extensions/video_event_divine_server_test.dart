@@ -122,7 +122,15 @@ void main() {
       expect(video.shouldShowNotDivineBadge, isTrue);
     });
 
-    test('returns false for vintage vine', () {
+    test('returns false for an archive Vine funnelcake verifies', () {
+      final video = _createVideoWithUrl(
+        'https://example.com/video.mp4',
+      ).copyWith(rawTags: const {'platform': 'vine'}, isVerifiedArchive: true);
+      expect(video.shouldShowNotDivineBadge, isFalse);
+    });
+
+    test('returns true for an external video with only a self-applied '
+        'platform=vine tag', () {
       final event = Event.fromJson({
         'id':
             'aaaa1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
@@ -140,7 +148,8 @@ void main() {
             'cccc1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab',
       });
       final video = VideoEvent.fromNostrEvent(event);
-      expect(video.shouldShowNotDivineBadge, isFalse);
+      expect(video.isOriginalVine, isTrue);
+      expect(video.shouldShowNotDivineBadge, isTrue);
     });
   });
 
