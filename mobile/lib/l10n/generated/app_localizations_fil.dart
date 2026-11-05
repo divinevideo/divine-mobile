@@ -5416,7 +5416,10 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'I-share ang list';
+  String get listShareButton => 'I-share';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Pamahalaan ang mga tao';
 
   @override
   String get listShareFailed => 'Hindi na-share ang list na ito. Subukan ulit.';

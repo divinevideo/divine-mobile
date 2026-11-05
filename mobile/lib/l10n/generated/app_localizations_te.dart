@@ -5562,7 +5562,10 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'షేర్ జాబితా';
+  String get listShareButton => 'భాగస్వామ్యం చేయండి';
+
+  @override
+  String get peopleListsManagePeopleButton => 'వ్యక్తులను నిర్వహించండి';
 
   @override
   String get listShareFailed =>

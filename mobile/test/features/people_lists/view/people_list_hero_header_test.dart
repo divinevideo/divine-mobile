@@ -5,6 +5,7 @@ import 'package:openvine/features/people_lists/view/people_list_hero_header.dart
 import 'package:openvine/features/people_lists/view/people_list_member_avatar.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/widgets/list_action_buttons.dart';
 import 'package:openvine/widgets/list_author_byline.dart';
 import 'package:riverpod/misc.dart' show Override;
 
@@ -25,6 +26,7 @@ Future<void> _pumpHeader(
   double? totalLoops,
   String? authorPubkey,
   VoidCallback? onAuthorTap,
+  List<Widget> actions = const [],
   double textScale = 1,
   TextDirection textDirection = TextDirection.ltr,
   List<Override> overrides = const [],
@@ -54,6 +56,7 @@ Future<void> _pumpHeader(
                 totalLoops: totalLoops,
                 authorPubkey: authorPubkey,
                 onAuthorTap: onAuthorTap,
+                actions: actions,
               ),
             ),
           ),
@@ -289,6 +292,37 @@ void main() {
           ),
           findsNothing,
         );
+      });
+    });
+
+    group('action buttons', () {
+      testWidgets('sit in the last row, under the members preview', (
+        tester,
+      ) async {
+        await _pumpHeader(
+          tester,
+          previewPubkeys: _members(3),
+          onViewAll: () {},
+          actions: const [SizedBox(key: Key('action'), height: 48)],
+        );
+
+        expect(find.byType(ListActionButtons), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.byKey(const Key('action'))).dy,
+          greaterThan(
+            tester.getBottomLeft(find.byType(PeopleListMembersPreview)).dy,
+          ),
+        );
+      });
+
+      testWidgets('leave no row when there are none', (tester) async {
+        await _pumpHeader(
+          tester,
+          previewPubkeys: _members(3),
+          onViewAll: () {},
+        );
+
+        expect(find.byType(ListActionButtons), findsNothing);
       });
     });
 

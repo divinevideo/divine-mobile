@@ -3690,7 +3690,14 @@
       }
     }
   },
-  "listShareAction": "Share list",
+  "listShareButton": "Share",
+  "@listShareButton": {
+    "description": "Button in a list's header that shares the list's web address."
+  },
+  "peopleListsManagePeopleButton": "Manage people",
+  "@peopleListsManagePeopleButton": {
+    "description": "Button in the owner's people-list header that opens the members screen to add or remove people."
+  },
   "listShareFailed": "Couldn't share this list. Try again.",
   "listSave": "Save",
   "listContinue": "Continue",

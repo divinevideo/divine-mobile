@@ -24,6 +24,7 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/utils/share_list_link.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/list_action_buttons.dart';
 import 'package:openvine/widgets/list_author_byline.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
 import 'package:openvine/widgets/list_owner_action_tile.dart';
@@ -34,7 +35,7 @@ import 'package:openvine/widgets/share_list_button.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Owner actions offered by the `...` bottom sheet.
-enum _CuratedListAction { editInfo, managePosts, share, delete, report }
+enum _CuratedListAction { editInfo, delete, report }
 
 class CuratedListFeedScreen extends ConsumerStatefulWidget {
   /// Route name for this screen.
@@ -173,8 +174,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
           if (isOwned)
             DiVineAppBarAction(
               icon: SvgIconSource(DivineIconName.dotsThree.assetPath),
-              onPressed: () =>
-                  _showOwnerActions(canManagePosts: canManagePosts),
+              onPressed: _showOwnerActions,
               tooltip: context.l10n.curatedListActionsTooltip,
             )
           else if (reportTarget != null)
@@ -187,20 +187,32 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
               tooltip: context.l10n.curatedListActionsTooltip,
             ),
         ],
-        customActions: [
-          // Not owned in the store does not mean someone else's: a link can
-          // run ahead of sync, and Search opens an unclaimed draft under the
-          // viewer's own pubkey.
-          if (!isOwned && !_isViewer(widget.authorPubkey))
-            FollowListButton(
-              isFollowing: isSubscribed,
-              isBusy: _isTogglingSubscription,
-              onPressed: _toggleSubscription,
-            ),
-          if (!isOwned && isShareable) ShareListButton(onPressed: _shareList),
-        ],
       );
     }
+
+    // Someone else's private list opens only from a raw address and its
+    // videos are sealed to its author, so there is nothing to follow or share.
+    final isOthersPrivateList = !isOwned && list != null && !list.isPublic;
+    final headerButtons = <Widget>[
+      if (isOwned)
+        DivineButton(
+          label: context.l10n.listManageVideosAction,
+          type: DivineButtonType.secondary,
+          leadingIcon: DivineIconName.pencilSimple,
+          expanded: true,
+          onPressed: canManagePosts ? _enterManageMode : null,
+        ),
+      // Not owned in the store does not mean someone else's: a link can
+      // run ahead of sync, and Search opens an unclaimed draft under the
+      // viewer's own pubkey.
+      if (!isOwned && !_isViewer(widget.authorPubkey) && !isOthersPrivateList)
+        FollowListButton(
+          isFollowing: isSubscribed,
+          isBusy: _isTogglingSubscription,
+          onPressed: _toggleSubscription,
+        ),
+      if (isShareable) ShareListButton(onPressed: _shareList),
+    ];
 
     final scaffold = Scaffold(
       // One surface for app bar, hero, and grid — the design renders the
@@ -288,6 +300,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
                         : widget.authorPubkey ?? list?.pubkey,
                     isPublic: list?.isPublic,
                     onAuthorTap: _openAuthorProfile,
+                    actions: headerButtons,
                   ),
                 ),
               ],
@@ -520,12 +533,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
       .service
       ?.getListById(_cacheListId);
 
-  Future<void> _showOwnerActions({required bool canManagePosts}) async {
-    final list = _localList();
-    // Sharing needs an author pubkey for the canonical URL, so a public
-    // list without one must not offer a no-op sheet entry.
-    final isShareable = (list?.isPublic ?? false) && list?.pubkey != null;
-
+  Future<void> _showOwnerActions() async {
     final action = await VineBottomSheet.show<_CuratedListAction>(
       context: context,
       expanded: false,
@@ -537,20 +545,6 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
           icon: DivineIconName.info,
           action: _CuratedListAction.editInfo,
         ),
-        ListOwnerActionTile(
-          identifier: 'list_manage_posts_option',
-          label: context.l10n.listManageVideosAction,
-          icon: DivineIconName.pencilSimple,
-          action: _CuratedListAction.managePosts,
-          enabled: canManagePosts,
-        ),
-        if (isShareable)
-          ListOwnerActionTile(
-            identifier: 'list_share_option',
-            label: context.l10n.listShareAction,
-            icon: DivineIconName.share,
-            action: _CuratedListAction.share,
-          ),
         ListOwnerActionTile(
           identifier: 'list_delete_option',
           label: context.l10n.listDeleteAction,
@@ -567,10 +561,6 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     switch (action) {
       case _CuratedListAction.editInfo:
         await _editList();
-      case _CuratedListAction.managePosts:
-        _enterManageMode();
-      case _CuratedListAction.share:
-        await _shareList();
       case _CuratedListAction.delete:
         await _confirmDeleteList();
       case _CuratedListAction.report:
@@ -758,7 +748,8 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
 }
 
 /// Hero block scrolled with the grid: list title, the creator's byline,
-/// video count, description and, for an owned list, its visibility.
+/// video count, description, for an owned list its visibility, and the
+/// list's action buttons.
 class _ListHeroHeader extends StatelessWidget {
   const _ListHeroHeader({
     required this.name,
@@ -767,6 +758,7 @@ class _ListHeroHeader extends StatelessWidget {
     this.authorPubkey,
     this.isPublic,
     this.onAuthorTap,
+    this.actions = const [],
   });
 
   final String name;
@@ -780,6 +772,9 @@ class _ListHeroHeader extends StatelessWidget {
   final bool? isPublic;
 
   final ValueChanged<String>? onAuthorTap;
+
+  /// Buttons sharing the header's last row, right above the grid.
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
@@ -824,6 +819,11 @@ class _ListHeroHeader extends StatelessWidget {
               style: VineTheme.bodySmallFont(
                 color: context.vineColors.secondaryText,
               ),
+            ),
+          if (actions.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: ListActionButtons(buttons: actions),
             ),
         ],
       ),

@@ -9037,11 +9037,17 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{Couldn\'t remove 1 video. Try again.} other{Couldn\'t remove {count} videos. Try again.}}'**
   String listRemoveVideosFailure(int count);
 
-  /// No description provided for @listShareAction.
+  /// Button in a list's header that shares the list's web address.
   ///
   /// In en, this message translates to:
-  /// **'Share list'**
-  String get listShareAction;
+  /// **'Share'**
+  String get listShareButton;
+
+  /// Button in the owner's people-list header that opens the members screen to add or remove people.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage people'**
+  String get peopleListsManagePeopleButton;
 
   /// No description provided for @listShareFailed.
   ///

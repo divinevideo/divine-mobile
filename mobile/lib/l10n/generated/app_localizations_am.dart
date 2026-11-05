@@ -5249,7 +5249,10 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'ዝርዝር አጋራ';
+  String get listShareButton => 'አጋራ';
+
+  @override
+  String get peopleListsManagePeopleButton => 'ሰዎችን አስተዳድር';
 
   @override
   String get listShareFailed => 'ይህን ዝርዝር ማጋራት አልተቻለም። እንደገና ይሞክሩ።';

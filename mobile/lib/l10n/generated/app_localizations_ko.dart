@@ -5083,7 +5083,10 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => '목록 공유';
+  String get listShareButton => '공유';
+
+  @override
+  String get peopleListsManagePeopleButton => '사람 관리';
 
   @override
   String get listShareFailed => '이 목록을 공유하지 못했어요. 다시 시도해 주세요.';

@@ -5063,7 +5063,10 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'リストを共有';
+  String get listShareButton => 'シェア';
+
+  @override
+  String get peopleListsManagePeopleButton => 'ユーザーを管理';
 
   @override
   String get listShareFailed => 'リストを共有できなかった。もう一度試してね。';

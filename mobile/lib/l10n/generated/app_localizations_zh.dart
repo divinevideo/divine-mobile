@@ -5037,7 +5037,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => '分享列表';
+  String get listShareButton => '分享';
+
+  @override
+  String get peopleListsManagePeopleButton => '管理成员';
 
   @override
   String get listShareFailed => '无法分享此列表，请重试。';

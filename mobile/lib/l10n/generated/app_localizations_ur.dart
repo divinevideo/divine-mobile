@@ -5388,7 +5388,10 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'فہرست شیئر کریں';
+  String get listShareButton => 'شیئر';
+
+  @override
+  String get peopleListsManagePeopleButton => 'لوگوں کا نظم کریں';
 
   @override
   String get listShareFailed => 'یہ فہرست شیئر نہیں ہو سکی۔ دوبارہ کوشش کریں۔';

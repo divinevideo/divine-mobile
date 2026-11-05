@@ -5323,7 +5323,10 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'Listeyi paylaş';
+  String get listShareButton => 'Paylaş';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Kişileri yönet';
 
   @override
   String get listShareFailed => 'Bu liste paylaşılamadı. Tekrar dene.';

@@ -5464,7 +5464,10 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'Partager la liste';
+  String get listShareButton => 'Partager';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Gérer les personnes';
 
   @override
   String get listShareFailed => 'Impossible de partager cette liste. Réessaie.';

@@ -5380,7 +5380,10 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get listShareAction => 'Kongsi senarai';
+  String get listShareButton => 'Kongsi';
+
+  @override
+  String get peopleListsManagePeopleButton => 'Urus orang';
 
   @override
   String get listShareFailed => 'Senarai ini tidak dapat dikongsi. Cuba lagi.';
