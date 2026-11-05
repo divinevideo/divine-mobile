@@ -1624,9 +1624,10 @@ class VideoEvent {
 
   /// Original Vine: Check if this appears to be a recovered original Vine.
   ///
-  /// The meaning of `platform` differs by ingestion path, so this is a
-  /// compatibility signal rather than authoritative archive provenance.
-  /// #8466 tracks replacing it.
+  /// The meaning of `platform` differs by ingestion path, and any publisher
+  /// can write the tag, so this is a display signal rather than archive
+  /// provenance. Decisions that rely on provenance (badges, filters, credit,
+  /// audio reuse) read [isVerifiedArchive] instead.
   bool get isOriginalVine {
     return rawTags['platform'] == 'vine';
   }
