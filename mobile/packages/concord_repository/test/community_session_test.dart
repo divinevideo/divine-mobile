@@ -343,6 +343,7 @@ class _Community {
     List<String>? recipients,
     int chunkIndex = 1,
     int chunkCount = 1,
+    int grantVersion = 1,
   }) async {
     final rekey = groupKey(
       'concord/base-rekey-pseudonym',
@@ -358,7 +359,12 @@ class _Community {
         ['prevepoch', '0'],
         ['newepoch', '1'],
         ['prevcommit', epochKeyCommitment(0, root)],
-        ['vac', grantLocator(communityId, moderator), '1', grantHash],
+        [
+          'vac',
+          grantLocator(communityId, moderator),
+          '$grantVersion',
+          grantHash,
+        ],
         ['chunk', '$chunkIndex', '$chunkCount'],
       ],
       jsonEncode([
@@ -991,6 +997,81 @@ void main() {
         await nextRelay.close();
       },
     );
+    test(
+      'a rotation from a moderator whose demotion is still missing cannot '
+      'stop a loaded device',
+      () async {
+        final c = _Community();
+        final store = InMemoryConcordStore(_Community.member);
+        final grantId = grantLocator(c.communityId, c.moderator);
+        final grant = await c.edition('3', grantId, {
+          'member': c.moderator,
+          'role_ids': [_Community.roleId],
+        });
+        final relay = _Relay([
+          await c.invite(),
+          await c.metadata('Divine'),
+          (await c.edition('2', _Community.channelId, {
+            'name': 'general',
+          })).wrap,
+          (await c.edition('1', _Community.roleId, {
+            'role_id': _Community.roleId,
+            'position': 1,
+            'permissions': 16,
+          })).wrap,
+          grant.wrap,
+        ]);
+        final s = c.session(relay, store);
+        await s.start();
+        expect(s.ready, isTrue);
+        // The demotion is v2; v3 arrives first, so the held gap keeps the v1
+        // grant and the fold still reports the moderator's ban permission.
+        final demotion = await c.edition(
+          '3',
+          grantId,
+          {'member': c.moderator, 'role_ids': <String>[]},
+          version: 2,
+          previous: grant.hash,
+        );
+        final after = await c.edition(
+          '3',
+          grantId,
+          {'member': c.moderator, 'role_ids': <String>[]},
+          version: 3,
+          previous: demotion.hash,
+        );
+        final gap = s.changes.first;
+        relay.receive(after.wrap);
+        await gap.timeout(const Duration(seconds: 10));
+        expect(s.control!.incomplete, isNotEmpty);
+        expect(s.control!.permits(c.moderator, 16), isTrue);
+        // Session work runs in order, so the change from re-delivering the
+        // gapped edition lands only after the rotation has been checked.
+        final checked = s.changes.first;
+        relay
+          ..receive(await c.moderatorRotation(grant.hash))
+          ..receive(after.wrap);
+        await checked.timeout(const Duration(seconds: 10));
+        expect(await store.get('community-stop'), isNull);
+        expect(s.failure, isNull);
+        final complete = s.changes.firstWhere(
+          (_) => s.control!.incomplete.isEmpty,
+        );
+        relay.receive(demotion.wrap);
+        await complete.timeout(const Duration(seconds: 10));
+        // The completed fold queues a signal check; the next re-delivery's
+        // change lands after it.
+        final rechecked = s.changes.first;
+        relay.receive(after.wrap);
+        await rechecked.timeout(const Duration(seconds: 10));
+        expect(s.control!.permits(c.moderator, 16), isFalse);
+        expect(await store.get('community-stop'), isNull);
+        expect(s.failure, isNull);
+        expect(s.ready, isTrue);
+        await s.close();
+        await relay.close();
+      },
+    );
   });
   group('Delegated base rotations', () {
     test('require every protected recipient across complete chunks', () async {
@@ -1062,6 +1143,99 @@ void main() {
         await session.close();
         await relay.close();
       }
+    });
+    test('may leave out a lower-ranked grant holder', () async {
+      final c = _Community();
+      final lower = schnorr.getPublicKey('d6' * 32);
+      final lowerRole = 'd7' * 32;
+      final grant = await c.edition(
+        '3',
+        grantLocator(c.communityId, c.moderator),
+        {
+          'member': c.moderator,
+          'role_ids': [_Community.roleId],
+        },
+      );
+      final relay = _Relay([
+        await c.invite(),
+        await c.metadata('Divine'),
+        (await c.edition('2', _Community.channelId, {'name': 'general'})).wrap,
+        (await c.edition('1', _Community.roleId, {
+          'role_id': _Community.roleId,
+          'position': 2,
+          'permissions': '16',
+        })).wrap,
+        (await c.edition('1', lowerRole, {
+          'role_id': lowerRole,
+          'position': 3,
+          'permissions': '0',
+        })).wrap,
+        grant.wrap,
+        (await c.edition('3', grantLocator(c.communityId, lower), {
+          'member': lower,
+          'role_ids': [lowerRole],
+        })).wrap,
+        // The moderator outranks `lower`, so it may rotate them out.
+        await c.moderatorRotation(
+          grant.hash,
+          recipients: [c.owner, c.moderator],
+        ),
+      ]);
+      final store = InMemoryConcordStore(_Community.member);
+      final session = c.session(relay, store);
+      await expectLater(session.start(), throwsStateError);
+      expect(await store.get('community-stop'), isNotNull);
+      await session.close();
+      await relay.close();
+    });
+    test('do not combine chunks that cite different grant editions', () async {
+      final c = _Community();
+      final grantId = grantLocator(c.communityId, c.moderator);
+      final content = {
+        'member': c.moderator,
+        'role_ids': [_Community.roleId],
+      };
+      final grant = await c.edition('3', grantId, content);
+      // An unchanged regrant: both citations are satisfied on their own.
+      final regrant = await c.edition(
+        '3',
+        grantId,
+        content,
+        version: 2,
+        previous: grant.hash,
+      );
+      final relay = _Relay([
+        await c.invite(),
+        await c.metadata('Divine'),
+        (await c.edition('2', _Community.channelId, {'name': 'general'})).wrap,
+        (await c.edition('1', _Community.roleId, {
+          'role_id': _Community.roleId,
+          'position': 1,
+          'permissions': '16',
+        })).wrap,
+        grant.wrap,
+        regrant.wrap,
+        await c.moderatorRotation(
+          grant.hash,
+          recipients: [c.owner],
+          chunkCount: 2,
+        ),
+        await c.moderatorRotation(
+          regrant.hash,
+          recipients: [c.moderator],
+          chunkIndex: 2,
+          chunkCount: 2,
+          grantVersion: 2,
+        ),
+      ]);
+      final store = InMemoryConcordStore(_Community.member);
+      final session = c.session(relay, store);
+      await session.start();
+      expect(session.control!.permits(c.moderator, 16), isTrue);
+      expect(session.canPublish, isTrue);
+      expect(await store.get('community-stop'), isNull);
+      await session.close();
+      await relay.close();
     });
   });
   group('ConcordCommunitySession.close', () {
