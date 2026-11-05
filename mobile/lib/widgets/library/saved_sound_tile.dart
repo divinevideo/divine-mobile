@@ -285,7 +285,7 @@ class _SavedSoundListTile extends StatelessWidget {
       cover: cover,
       isCoverPending: isCoverPending,
       colorSeed: sound.id,
-      isCommunitySound: !audio.isDivine && audio.attributionEventId != null,
+      isCommunitySound: audio.isCommunitySound,
       isActive: isActive,
       isPlaying: isPlaying,
       unavailableReason: unavailableReason,

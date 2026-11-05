@@ -864,6 +864,45 @@ void main() {
       );
     });
 
+    group('withoutLibrarySounds', () {
+      test("drops the library accounts' sounds, not their videos'", () {
+        final library = SoundsRepository(
+          nostrClient: mockNostrClient,
+          librarySoundPublishers: const {testPubkey1},
+        );
+        addTearDown(library.dispose);
+        final imported = AudioEvent(
+          id: testEventId1,
+          pubkey: testPubkey1,
+          createdAt: 1,
+        );
+        final fromVideo = AudioEvent(
+          id: testEventId2,
+          pubkey: testPubkey1,
+          createdAt: 1,
+          sourceVideoReference: '34236:$testPubkey1:clip',
+        );
+        final community = AudioEvent(
+          id: '3' * 64,
+          pubkey: testPubkey2,
+          createdAt: 1,
+        );
+
+        expect(library.withoutLibrarySounds([imported, fromVideo, community]), [
+          fromVideo,
+          community,
+        ]);
+      });
+
+      test('keeps every sound when no library account is set', () {
+        final sounds = [
+          AudioEvent(id: testEventId1, pubkey: testPubkey1, createdAt: 1),
+        ];
+
+        expect(repository.withoutLibrarySounds(sounds), same(sounds));
+      });
+    });
+
     group('blocked authors', () {
       late _MockFunnelcakeApiClient funnelcake;
       late SoundsRepository blocking;

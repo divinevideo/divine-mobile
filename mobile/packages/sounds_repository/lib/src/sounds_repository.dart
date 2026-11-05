@@ -44,11 +44,13 @@ class SoundsRepository {
     SoundLibraryApiClient? soundLibraryApiClient,
     FunnelcakeApiClient? funnelcakeApiClient,
     Set<String> divineSoundPublishers = const {},
+    Set<String> librarySoundPublishers = const {},
     bool Function(String pubkey)? blockFilter,
   }) : _nostrClient = nostrClient,
        _soundLibraryApiClient = soundLibraryApiClient,
        _funnelcakeApiClient = funnelcakeApiClient,
        _divineSoundPublishers = divineSoundPublishers,
+       _librarySoundPublishers = librarySoundPublishers,
        _blockFilter = blockFilter;
 
   /// Default cap on the Divine library sounds one [fetchDivineSounds] pulls.
@@ -110,6 +112,10 @@ class SoundsRepository {
 
   /// The accounts that publish Divine's own sounds; see [fetchDivineSounds].
   final Set<String> _divineSoundPublishers;
+
+  /// The accounts that publish the imported sound library; see
+  /// [withoutLibrarySounds].
+  final Set<String> _librarySoundPublishers;
 
   /// Whether the viewer blocked or muted the author with the given pubkey;
   /// see [withoutBlockedAuthors]. Asked on every call, so it follows the
@@ -352,6 +358,22 @@ class SoundsRepository {
       for (final sound in _processAndCacheEvents(events))
         if (sound.sourceVideoReference == null) sound,
     ]);
+  }
+
+  /// [sounds] without the imported library: those a library account signed
+  /// that were not taken from a video.
+  ///
+  /// The library holds thousands of freely licensed sounds, published at
+  /// once, so New and For you leave them out rather than show nothing else.
+  /// Search and Popular keep them. Keeps the order of [sounds].
+  List<AudioEvent> withoutLibrarySounds(List<AudioEvent> sounds) {
+    if (_librarySoundPublishers.isEmpty) return sounds;
+    return [
+      for (final sound in sounds)
+        if (!_librarySoundPublishers.contains(sound.pubkey) ||
+            sound.sourceVideoReference != null)
+          sound,
+    ];
   }
 
   /// [sounds] without those by authors the viewer blocked or muted.

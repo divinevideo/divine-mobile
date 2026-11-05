@@ -77,9 +77,7 @@ class AudioListTile extends StatelessWidget {
         cover: cover,
         isCoverPending: isCoverPending,
         colorSeed: audio.id,
-        // Divine's own and private sounds sit in the same lists as ones
-        // anybody published, so those say where they come from.
-        isCommunitySound: !audio.isDivine && audio.attributionEventId != null,
+        isCommunitySound: audio.isCommunitySound,
         isActive: isSelected,
         isPlaying: isPlaying,
         unavailableReason: isUnavailable
