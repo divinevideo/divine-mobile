@@ -35,10 +35,10 @@ enum LoopPcmTests {
         }
     }
 
-    /// A lap shorter than the crossfade — a one- or two-frame clip, as stop
-    /// motion records — is blended across all of it. A crossfade longer than
-    /// the lap wrote past the end of the loop and crashed the app on every
-    /// open of a draft holding such a clip.
+    /// A lap shorter than the crossfade — a clip trimmed or split that short —
+    /// is blended across all of it when that much sound follows its loop
+    /// point. A crossfade longer than the lap wrote past the end of the loop
+    /// and crashed the app whenever such a lap was looped.
     static func blendsALapShorterThanTheCrossfadeAcrossAllOfIt() {
         let short = 2_205  // 50 ms, half the crossfade
         let live = LoopPcm.prepare(

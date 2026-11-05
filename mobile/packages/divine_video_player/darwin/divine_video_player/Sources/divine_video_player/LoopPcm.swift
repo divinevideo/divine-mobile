@@ -8,8 +8,8 @@ import Foundation
 /// heard rather than seen in a log, so the two sides are kept rule for rule.
 enum LoopPcm {
 
-    /// Blend length at the seam, when there is live material past the loop.
-    /// A shorter lap is blended across all of it.
+    /// Longest blend at the seam, when there is material past the loop to
+    /// blend with; never longer than the lap itself.
     static let crossfadeMs = 100.0
 
     /// Blend length at a seam carried on from earlier in the lap.

@@ -12,8 +12,8 @@ package com.divinevideo.divine_video_player
 internal object LoopPcm {
 
     /**
-     * Blend length at the seam, when there is material to blend with. A
-     * shorter lap is blended across all of it.
+     * Longest blend at the seam, when there is material to blend with; never
+     * longer than the lap itself.
      */
     const val CROSSFADE_MS = 100L
 
