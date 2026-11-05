@@ -11711,6 +11711,23 @@ void main() {
       );
 
       test(
+        'reads 500 events naming the file, so newer posts naming it cannot '
+        'crowd out the oldest',
+        () async {
+          stubRead();
+
+          await repository.getVideosByFileHash(hash);
+
+          final filters =
+              verify(
+                    () => mockNostrClient.queryEventsDetailed(captureAny()),
+                  ).captured.single
+                  as List<Filter>;
+          expect(filters.single.limit, equals(500));
+        },
+      );
+
+      test(
         'returns nothing when the relays know no video with the file',
         () async {
           stubRead();
@@ -14103,6 +14120,72 @@ void main() {
           );
         },
       );
+    });
+
+    group('getVideoStatsByIds', () {
+      late MockFunnelcakeApiClient mockFunnelcakeClient;
+      late VideosRepository repo;
+
+      String idFor(int index) => index.toRadixString(16).padLeft(64, '0');
+
+      VideoStats rowFor(String id) => VideoStats.fromJson({
+        'id': id,
+        'pubkey': 'c' * 64,
+        'created_at': 1458771798,
+        'kind': 34236,
+        'd_tag': id,
+        'verified_archive': true,
+        'archive_provenance_available': true,
+      });
+
+      setUp(() {
+        mockFunnelcakeClient = MockFunnelcakeApiClient();
+        when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+        repo = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: mockFunnelcakeClient,
+        );
+      });
+
+      test('splits the ids into requests the server accepts', () async {
+        final ids = List.generate(150, idFor);
+        when(() => mockFunnelcakeClient.getVideosByIds(any())).thenAnswer(
+          (invocation) async => [
+            for (final id in invocation.positionalArguments.single as List)
+              rowFor(id as String),
+          ],
+        );
+
+        final rows = await repo.getVideoStatsByIds(ids);
+
+        expect(rows!.keys, unorderedEquals(ids));
+        final batches = verify(
+          () => mockFunnelcakeClient.getVideosByIds(captureAny()),
+        ).captured.cast<List<String>>();
+        expect(batches.map((batch) => batch.length), [100, 50]);
+      });
+
+      test('leaves out ids the server has no row for', () async {
+        when(
+          () => mockFunnelcakeClient.getVideosByIds(any()),
+        ).thenAnswer((_) async => [rowFor(idFor(1))]);
+
+        final rows = await repo.getVideoStatsByIds([idFor(1), idFor(2)]);
+
+        expect(rows!.keys, [idFor(1)]);
+      });
+
+      test('asks nothing for no ids', () async {
+        expect(await repo.getVideoStatsByIds(const []), isEmpty);
+        verifyNever(() => mockFunnelcakeClient.getVideosByIds(any()));
+      });
+
+      test('returns null when the API is unavailable', () async {
+        when(() => mockFunnelcakeClient.isAvailable).thenReturn(false);
+
+        expect(await repo.getVideoStatsByIds([idFor(1)]), isNull);
+        verifyNever(() => mockFunnelcakeClient.getVideosByIds(any()));
+      });
     });
 
     group('getBulkVideoStats', () {
