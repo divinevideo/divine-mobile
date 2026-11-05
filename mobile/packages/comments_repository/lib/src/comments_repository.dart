@@ -4,6 +4,7 @@
 // chronologically.
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:comments_repository/src/blocked_comment_filter.dart';
 import 'package:comments_repository/src/exceptions.dart';
@@ -20,6 +21,17 @@ const int _deletionKind = EventKind.eventDeletion;
 
 /// Default limit for comment queries.
 const _defaultLimit = 100;
+
+/// The most video replies funnelcake returns in one page.
+const _maxVideoRepliesPerRequest = 100;
+
+/// The latest second a [DateTime] can hold.
+const _latestDateSeconds = 8640000000000;
+
+/// How long the first page waits for video replies once the REST comments have
+/// answered. A slow answer must not hold up first paint: the live watch
+/// backfills them (#5087).
+const _defaultVideoRepliesBootstrapGrace = Duration(seconds: 1);
 
 /// Relay hint used for diVine mention `p` tags.
 const _divineRelayHint = 'wss://relay.divine.video';
@@ -70,20 +82,25 @@ class CommentsRepository {
   /// - [clock]: Injectable time source for the recently-posted-comment
   ///   self-heal window (see [_recentlyPostedComments]). Defaults to
   ///   [DateTime.now]; override in tests for deterministic TTL behaviour.
+  /// - [videoRepliesBootstrapGrace]: How long the first page waits for video
+  ///   replies after the REST comments have answered (default one second).
   CommentsRepository({
     required NostrClient nostrClient,
     FunnelcakeApiClient? funnelcakeApiClient,
     BlockedCommentFilter? blockFilter,
     DateTime Function()? clock,
+    Duration videoRepliesBootstrapGrace = _defaultVideoRepliesBootstrapGrace,
   }) : _nostrClient = nostrClient,
        _funnelcakeApiClient = funnelcakeApiClient,
        _blockFilter = blockFilter,
-       _now = clock ?? DateTime.now;
+       _now = clock ?? DateTime.now,
+       _videoRepliesBootstrapGrace = videoRepliesBootstrapGrace;
 
   final NostrClient _nostrClient;
   final FunnelcakeApiClient? _funnelcakeApiClient;
   final BlockedCommentFilter? _blockFilter;
   final DateTime Function() _now;
+  final Duration _videoRepliesBootstrapGrace;
 
   /// In-memory cache of comment counts keyed by root event ID.
   ///
@@ -184,6 +201,10 @@ class CommentsRepository {
   /// Default page size for author comment queries.
   static const _authorCommentsLimit = 50;
 
+  /// The most stored events that [watchComments] backfills from a relay per
+  /// root tag before it goes live. Older ones come with the pages.
+  static const watchBackfillLimit = 100;
+
   /// Loads comments for a root event and returns them in a flat list.
   ///
   /// This is a one-shot query that returns all comments organized
@@ -208,6 +229,13 @@ class CommentsRepository {
   ///   asks REST for that page even when [before] is set, because the relay
   ///   cannot see comments scoped to a superseded revision of an edited
   ///   video. If REST fails, the page is read from the relay with [before].
+  /// - [includeVideoReplies]: Whether Kind 34236 video replies are part of the
+  ///   thread. Funnelcake's comments are kind 1111 only, so on the REST first
+  ///   page the replies are asked of its video replies endpoint beside the
+  ///   comments and merged in, and counted in the total. The page waits for
+  ///   them at most `videoRepliesBootstrapGrace` after the comments answer;
+  ///   without an answer it is the comments alone and the live watch backfills
+  ///   the replies. Later pages and the relay fallback query both kinds.
   ///
   /// Returns a [CommentThread] containing:
   /// - All comments in chronological order
@@ -228,6 +256,9 @@ class CommentsRepository {
       if ((before == null || offset > 0) &&
           (_funnelcakeApiClient?.isAvailable ?? false)) {
         try {
+          final videoReplies = includeVideoReplies
+              ? _loadRestVideoReplies(rootEventId: rootEventId, limit: limit)
+              : Future<VideoResponsesResponse?>.value();
           final response = await _funnelcakeApiClient!.getVideoComments(
             videoId: rootEventId,
             limit: limit,
@@ -241,12 +272,21 @@ class CommentsRepository {
           );
           if (response != null) {
             final restThread = _dropDeletedComments(
-              _buildThreadFromRestComments(
-                response,
+              _mergeVideoReplies(
+                _buildThreadFromRestComments(
+                  response,
+                  rootEventId,
+                  rootEventKind,
+                  offset: offset,
+                  rootAddressableId: rootAddressableId,
+                ),
+                await videoReplies.timeout(
+                  _videoRepliesBootstrapGrace,
+                  onTimeout: () => null,
+                ),
                 rootEventId,
                 rootEventKind,
-                offset: offset,
-                rootAddressableId: rootAddressableId,
+                rootAddressableId,
               ),
             );
             // Merge the user's own just-posted comment when the REST index has
@@ -680,6 +720,142 @@ class CommentsRepository {
     _recentlyPostedComments.removeWhere((_, pending) => pending.isEmpty);
   }
 
+  /// Reads the video replies to a video from funnelcake, or `null` when it
+  /// cannot be asked.
+  ///
+  /// The REST comments are kind 1111 only, so the replies come from their own
+  /// endpoint. Without it the live watch still backfills them, only later.
+  Future<VideoResponsesResponse?> _loadRestVideoReplies({
+    required String rootEventId,
+    required int limit,
+  }) async {
+    try {
+      return await _funnelcakeApiClient!.getVideoResponses(
+        videoId: rootEventId,
+        type: VideoResponseType.replies,
+        limit: min(limit, _maxVideoRepliesPerRequest),
+      );
+    } on FunnelcakeException {
+      return null;
+    }
+  }
+
+  /// Puts [replies] on [restThread], the page the REST comments made.
+  ///
+  /// A page is a window of the thread, newest first, and paging resumes from
+  /// the oldest comment in it. When either source has more beyond what it
+  /// returned, anything older than the oldest it returned is left out so the
+  /// window has no hole that paging would step over; the rest comes with the
+  /// next page.
+  CommentThread _mergeVideoReplies(
+    CommentThread restThread,
+    VideoResponsesResponse? replies,
+    String rootEventId,
+    int rootEventKind,
+    String? rootAddressableId,
+  ) {
+    if (replies == null) return restThread;
+
+    final known = {for (final comment in restThread.comments) comment.id};
+    final replyComments = [
+      for (final row in replies.rows)
+        ?_videoReplyRowToComment(
+          row,
+          rootEventId,
+          rootEventKind,
+          rootAddressableId,
+        ),
+    ].where((reply) => !known.contains(reply.id)).toList();
+
+    DateTime? floor;
+    if (restThread.hasMore ?? false) {
+      floor = _oldest(restThread.comments);
+    }
+    if (replies.hasMore) {
+      final oldestReply = _oldest(replyComments);
+      if (oldestReply != null &&
+          (floor == null || oldestReply.isAfter(floor))) {
+        floor = oldestReply;
+      }
+    }
+
+    final window = floor;
+    final commentMap = {
+      for (final comment in [...restThread.comments, ...replyComments])
+        if (window == null || !comment.createdAt.isBefore(window))
+          comment.id: comment,
+    };
+    return _buildThreadFromComments(commentMap, rootEventId).copyWith(
+      totalCount: restThread.totalCount + replies.total,
+      hasMore: replies.hasMore ? true : restThread.hasMore,
+      hasExactTotal: restThread.hasExactTotal,
+    );
+  }
+
+  DateTime? _oldest(List<Comment> comments) => comments.isEmpty
+      ? null
+      : comments
+            .map((c) => c.createdAt)
+            .reduce((a, b) => a.isBefore(b) ? a : b);
+
+  /// Reads a row of funnelcake's video replies the way a relay's event is
+  /// read, so a reply reads the same whichever copy arrives first.
+  ///
+  /// The row is the server's word and carries no signature, so it is checked
+  /// before it is trusted: a video, to this video, with ids and a time that
+  /// are what an event has. Anything else is `null` and costs the page
+  /// nothing.
+  Comment? _videoReplyRowToComment(
+    Map<String, dynamic> row,
+    String rootEventId,
+    int rootEventKind,
+    String? rootAddressableId,
+  ) {
+    final id = _rowHex(row['id']);
+    final pubkey = _rowHex(row['pubkey']);
+    final createdAt = row['created_at'];
+    final tags = row['tags'];
+    if (id == null ||
+        pubkey == null ||
+        row['kind'] != EventKind.videoVertical ||
+        createdAt is! num ||
+        !createdAt.isFinite ||
+        createdAt < 0 ||
+        createdAt > _latestDateSeconds ||
+        tags is! List<dynamic>) {
+      return null;
+    }
+    final event = Event.fromJson({
+      'id': id,
+      'pubkey': pubkey,
+      'created_at': createdAt.toInt(),
+      'kind': EventKind.videoVertical,
+      'tags': [
+        for (final tag in tags)
+          if (tag is List<dynamic>) [for (final part in tag) '$part'],
+      ],
+      'content': row['content']?.toString() ?? '',
+    });
+    if (!_eventMatchesRoot(event, rootEventId, rootAddressableId)) return null;
+    return _eventToComment(event, rootEventId, rootEventKind);
+  }
+
+  /// An id or pubkey of a row as 64 lowercase hex characters, or `null`.
+  ///
+  /// Funnelcake sends text, or on some endpoints the ASCII codes of it.
+  String? _rowHex(Object? raw) {
+    final text = switch (raw) {
+      final String value => value,
+      final List<dynamic> codes
+          when codes.every((code) => code is int && code >= 0 && code < 128) =>
+        String.fromCharCodes(codes.cast<int>()),
+      _ => null,
+    };
+    return text != null && _hexPubkeyPattern.hasMatch(text)
+        ? text.toLowerCase()
+        : null;
+  }
+
   /// Merges any retained just-posted comments for [rootEventId] into [thread]
   /// when the fetched thread does not already contain them (#5598).
   ///
@@ -793,8 +969,12 @@ class CommentsRepository {
 
   /// Watches for new comments in real-time via a persistent Nostr subscription.
   ///
-  /// Opens a subscription for Kind 1111 events matching the root event,
-  /// returning a [Stream<Comment>] that emits each new comment as it arrives.
+  /// Opens a subscription for Kind 1111 events (and Kind 34236 video replies
+  /// when [includeVideoReplies]) matching the root event, returning a
+  /// [Stream<Comment>] that emits each new comment as it arrives.
+  ///
+  /// The relay first sends what it has stored, newest first, at most
+  /// [watchBackfillLimit] events per root tag; [onEose] fires when it is done.
   ///
   /// Parameters:
   /// - [rootEventId]: The ID of the root event to watch comments for
@@ -802,6 +982,7 @@ class CommentsRepository {
   /// - [rootAddressableId]: Optional addressable identifier (format:
   ///   `kind:pubkey:d-tag`). When provided, subscribes to both E and A tags.
   /// - [since]: Only receive comments created after this time
+  /// - [includeVideoReplies]: Whether Kind 34236 video replies are watched too
   ///
   /// Returns a [Stream<Comment>] that emits new comments as they arrive.
   /// Call [stopWatchingComments] to close the subscription.
@@ -820,17 +1001,23 @@ class CommentsRepository {
           ? since.millisecondsSinceEpoch ~/ 1000
           : null;
 
+      // One newest-first set per root tag, kinds together: the oldest event
+      // held sets where paging resumes, so the backfill must not reach back
+      // further for one kind than for the other.
+      final kinds = _threadKinds(includeVideoReplies: includeVideoReplies);
       final filters = <Filter>[
         Filter(
-          kinds: _threadKinds(includeVideoReplies: includeVideoReplies),
+          kinds: kinds,
           uppercaseE: [rootEventId],
           since: sinceTimestamp,
+          limit: watchBackfillLimit,
         ),
         if (rootAddressableId != null && rootAddressableId.isNotEmpty)
           Filter(
-            kinds: _threadKinds(includeVideoReplies: includeVideoReplies),
+            kinds: kinds,
             uppercaseA: [rootAddressableId],
             since: sinceTimestamp,
+            limit: watchBackfillLimit,
           ),
       ];
 
@@ -1424,11 +1611,12 @@ class CommentsRepository {
         createdAt: DateTime.fromMillisecondsSinceEpoch(
           restComment.createdAt * 1000,
         ),
-        // The REST payload carries Kind 34236 video replies too, so the same
-        // coordinate/kind the relay path derives must be derived here — this
-        // path is REST-first and serves the first page in production (#6124).
-        // `kind` defaults to 0 when the payload omits it; map that back to
-        // null so the vote handler still falls back to Kind 1111.
+        // Funnelcake's comments are kind 1111 only today, so this is null for
+        // them. It is derived all the same, as the relay path does, so a
+        // comments read model that widens to video replies votes with their
+        // own coordinate and kind (#6124). `kind` defaults to 0 when the
+        // payload omits it; map that back to null so the vote handler still
+        // falls back to Kind 1111.
         eventKind: restComment.kind > 0 ? restComment.kind : null,
         addressableId: _ownAddressableId(
           kind: restComment.kind,
