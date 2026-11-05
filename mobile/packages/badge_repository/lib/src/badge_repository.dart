@@ -2291,11 +2291,20 @@ class BadgeRepository {
           }
         }
         index++;
-      } else if (!(source?.isLegacyProfileBadges == true &&
-          tag.length >= 2 &&
-          tag[0] == 'd' &&
-          tag[1] == 'profile_badges')) {
-        tags.add(List<String>.of(tag));
+      } else {
+        // An a or e tag outside a pair names no badge. Copied verbatim it can
+        // fuse with a neighbour into a pin the user never made, once the pair
+        // between them is removed.
+        final unpairedBadgeTag =
+            tag.length >= 2 && (tag[0] == 'a' || tag[0] == 'e');
+        final legacyIdentifier =
+            source?.isLegacyProfileBadges == true &&
+            tag.length >= 2 &&
+            tag[0] == 'd' &&
+            tag[1] == 'profile_badges';
+        if (!unpairedBadgeTag && !legacyIdentifier) {
+          tags.add(List<String>.of(tag));
+        }
       }
     }
     for (final ref in refs) {

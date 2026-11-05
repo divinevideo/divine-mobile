@@ -3413,6 +3413,36 @@ void main() {
       }
 
       test(
+        'removing a badge cannot fuse unpaired tags into a new pin',
+        () async {
+          stubRead(
+            events: [
+              _event(
+                id: _eventId(140),
+                pubkey: _pubkey(1),
+                kind: EventKind.profileBadges,
+                tags: [
+                  ['a', '30009:${_pubkey(3)}:orphan'],
+                  ['a', coordinate],
+                  ['e', _eventId(122)],
+                  ['e', _eventId(141)],
+                ],
+              ),
+            ],
+          );
+
+          await repository.removeAward(award(coordinate, 122));
+
+          final published = lastSignedEvent()!;
+          expect(
+            Nip58BadgeParser.parseProfileBadges(published)!.badges,
+            isEmpty,
+          );
+          expect(published.tags, isEmpty);
+        },
+      );
+
+      test(
         'migrates the newest legacy list while preserving its data',
         () async {
           final legacy = _event(
