@@ -419,8 +419,9 @@ class BadgeRepository {
   /// Divine's relay refuses `created_at` more than 60 s ahead, a stricter
   /// relay may refuse sooner, and this device's clock is not the relay's.
   /// Unlike bookmarks, a write that would need more is refused rather than
-  /// published at the cap: a capped list would lose to the source it read,
-  /// dropping the change the user just made.
+  /// published at the cap: a capped list would lose to the source it read, or
+  /// to an earlier attempt that may already be live, dropping the change the
+  /// user just made.
   static const _profileBadgeFutureBudgetSeconds = 30;
 
   /// Null leaves awards unfiltered, which is what an anonymous or test
