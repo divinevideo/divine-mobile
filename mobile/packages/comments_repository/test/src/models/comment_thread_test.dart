@@ -168,6 +168,14 @@ void main() {
         expect(copy.rootEventId, equals(original.rootEventId));
       });
 
+      test('creates copy with updated nextOffset', () {
+        final copy = original.copyWith(nextOffset: 50);
+
+        expect(copy.nextOffset, equals(50));
+        expect(original.nextOffset, isNull);
+        expect(copy.rootEventId, equals(original.rootEventId));
+      });
+
       test('creates copy with updated commentCache', () {
         final newComment = Comment(
           id: 'id2',
@@ -226,6 +234,13 @@ void main() {
         expect(thread1, isNot(equals(thread2)));
       });
 
+      test('threads that differ only by nextOffset are not equal', () {
+        const first = CommentThread(rootEventId: 'root', nextOffset: 50);
+        const second = CommentThread(rootEventId: 'root', nextOffset: 100);
+
+        expect(first, isNot(equals(second)));
+      });
+
       test('props includes all fields', () {
         final comment = Comment(
           id: 'id',
@@ -252,6 +267,7 @@ void main() {
             null,
             true,
             {'id': comment},
+            null,
           ]),
         );
       });
