@@ -156,8 +156,6 @@ void main() {
 
   setUp(() {
     nostrClient = _MockNostrClient();
-    when(() => nostrClient.publicKey).thenReturn(_creator);
-    when(() => nostrClient.isDisposed).thenReturn(false);
     funnelcake = _MockFunnelcakeApiClient();
     signed = [];
     signedEvent = _curationEvent(createdAt: 9000);
@@ -914,7 +912,11 @@ void main() {
     });
 
     group('saveCuration', () {
-      setUp(() => curationAnswers(const []));
+      setUp(() {
+        when(() => nostrClient.publicKey).thenReturn(_creator);
+        when(() => nostrClient.isDisposed).thenReturn(false);
+        curationAnswers(const []);
+      });
 
       test('keeps the screen baseline when relays return no source', () async {
         final previous = RepliesCuration(
@@ -1249,7 +1251,7 @@ void main() {
             videoAddress: _rootAddress,
             previous: const RepliesCuration(),
           );
-          await Future<void>.delayed(Duration.zero);
+          await pumpEventQueue();
           final overlapped = published.length > 1;
           release.complete();
           await Future.wait([first, second]);
