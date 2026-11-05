@@ -9,18 +9,26 @@ import 'package:test/test.dart';
 import 'fixture_reader.dart';
 
 class _Relay
-    implements RelayGateway, RelayHistoryStatus, RelayScopedHistoryStatus {
+    implements
+        RelayGateway,
+        RelayHistoryStatus,
+        RelayScopedHistoryStatus,
+        RelaySynchronizationStatus {
   _Relay(this.events);
   final List<Map<String, dynamic>> events;
   final pending = <Future<void>>[];
   int publications = 0;
+  @override
+  bool synchronized = true;
   final filters = <Map<String, dynamic>>[];
   final controllers = <StreamController<Map<String, dynamic>>>[];
   @override
   bool historyLimited = false;
   bool controlLimited = false;
+  final limitedAuthors = <String>{};
   @override
-  bool historyLimitedForAuthor(String pubkey) => controlLimited;
+  bool historyLimitedForAuthor(String pubkey) =>
+      controlLimited || limitedAuthors.contains(pubkey);
   @override
   Future<void> get historyReady => Future.wait(pending);
   @override
@@ -63,6 +71,25 @@ class _Relay
       await c.close();
     }
   }
+}
+
+class _NoHistoryRelay implements RelayGateway {
+  _NoHistoryRelay(this.delegate);
+  final _Relay delegate;
+  @override
+  Stream<Map<String, dynamic>> subscribe(Map<String, dynamic> filter) =>
+      delegate.subscribe(filter);
+  @override
+  Future<void> publish(Map<String, dynamic> event) => delegate.publish(event);
+}
+
+class _UnscopedHistoryRelay extends _NoHistoryRelay
+    implements RelayHistoryStatus {
+  _UnscopedHistoryRelay(super.delegate);
+  @override
+  bool get historyLimited => delegate.historyLimited;
+  @override
+  Future<void> get historyReady => delegate.historyReady;
 }
 
 class _OutboxCipher implements StreamCipher {
@@ -501,6 +528,134 @@ void main() {
         await relay.close();
       },
     );
+    test(
+      'saturated terminal history prevents bootstrap and publication',
+      () async {
+        final bootstrap = await _ReplayCommunity.bootstrap(fragment);
+        final authors = [
+          groupKey('concord/dissolved', _ReplayCommunity.id, '00' * 32).pubkey,
+          groupKey(
+            'concord/base-rekey-pseudonym',
+            '42' * 32,
+            _ReplayCommunity.id,
+            epoch: 1,
+          ).pubkey,
+        ];
+        for (final author in authors) {
+          final relay = _Relay(bootstrap)..limitedAuthors.add(author);
+          final s = ConcordCommunitySession(
+            relay: relay,
+            store: InMemoryConcordStore('67' * 32),
+            linkSigner: bootstrap.first['pubkey'] as String,
+            fragment: fragment,
+            account: 'aa' * 32,
+            nowMs: () => 0,
+          );
+          await expectLater(
+            s.start(),
+            throwsA(
+              isA<StateError>().having(
+                (error) => error.message,
+                'message',
+                contains('history is incomplete'),
+              ),
+            ),
+          );
+          expect(s.ready, isFalse);
+          expect(s.canPublish, isFalse);
+          await s.close();
+          await relay.close();
+        }
+      },
+    );
+
+    test(
+      'terminal saturation after bootstrap closes readiness and notifies',
+      () async {
+        final bootstrap = await _ReplayCommunity.bootstrap(fragment);
+        final authors = [
+          groupKey('concord/dissolved', _ReplayCommunity.id, '00' * 32).pubkey,
+          groupKey(
+            'concord/base-rekey-pseudonym',
+            '42' * 32,
+            _ReplayCommunity.id,
+            epoch: 1,
+          ).pubkey,
+        ];
+        for (final author in authors) {
+          final relay = _Relay(bootstrap);
+          final s = ConcordCommunitySession(
+            relay: relay,
+            store: InMemoryConcordStore('67' * 32),
+            linkSigner: bootstrap.first['pubkey'] as String,
+            fragment: fragment,
+            account: 'aa' * 32,
+            nowMs: () => 0,
+          );
+          await s.start();
+          expect(s.canPublish, isTrue);
+          relay.synchronized = false;
+          expect(s.canPublish, isFalse);
+          final changed = s.changes.first.timeout(const Duration(seconds: 2));
+          relay.limitedAuthors.add(author);
+          relay
+            ..receive({'pubkey': author, 'kind': 1059})
+            ..synchronized = true;
+          await changed;
+          expect(s.ready, isFalse);
+          expect(s.canPublish, isFalse);
+          expect(s.failure, isNull);
+          await s.close();
+          await relay.close();
+        }
+      },
+    );
+
+    test(
+      'unrelated author saturation does not block required history',
+      () async {
+        final bootstrap = await _ReplayCommunity.bootstrap(fragment);
+        final relay = _Relay(bootstrap)
+          ..historyLimited = true
+          ..limitedAuthors.add(bootstrap.first['pubkey'] as String);
+        final s = ConcordCommunitySession(
+          relay: relay,
+          store: InMemoryConcordStore('67' * 32),
+          linkSigner: bootstrap.first['pubkey'] as String,
+          fragment: fragment,
+          account: 'aa' * 32,
+          nowMs: () => 0,
+        );
+        await s.start();
+        expect(s.ready, isTrue);
+        expect(s.canPublish, isTrue);
+        await s.close();
+        await relay.close();
+      },
+    );
+
+    test('unknown and unscoped limited history stay closed', () async {
+      for (final unknown in [true, false]) {
+        final relay = _Relay(events())..historyLimited = true;
+        final RelayGateway gateway = unknown
+            ? _NoHistoryRelay(relay)
+            : _UnscopedHistoryRelay(relay);
+        final s = ConcordCommunitySession(
+          relay: gateway,
+          store: InMemoryConcordStore('67' * 32),
+          linkSigner: event['pubkey'] as String,
+          fragment: fragment,
+          account: expected['member'] as String,
+          nowMs: () => 0,
+        );
+        await expectLater(s.start(), throwsStateError);
+        expect(s.ready, isFalse);
+        expect(s.canPublish, isFalse);
+        await s.close();
+        await relay.close();
+      }
+    });
+
     test(
       'terminal signals use current bootstrap authority, not cached grants',
       () async {

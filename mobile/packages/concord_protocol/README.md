@@ -18,6 +18,9 @@ Without `CONCORD_INVITE_URL`, existing disposable POC rooms remain available.
 When it is set, Rooms resolves the standard CORD-05 kind-33301 invitation and
 shows only authenticated public channel definitions. Invalid invitations,
 incomplete authority and banned membership fail closed, with no POC fallback.
+A full control or lifecycle history window also keeps Rooms unavailable until
+complete history can be established; the client cannot infer completeness from
+a full window.
 The bridge's approved import policy determines which Discord channels appear.
 Private channel definitions are excluded from this native public-room view.
 

@@ -38,6 +38,8 @@ class ConcordCommunitySession {
   Object? failure;
   bool _closed = false;
   bool _loaded = false;
+  bool _reportedTerminalHistoryLimit = false;
+  final _terminalAuthors = <String>{};
   int _pending = 0;
   bool get canPublish =>
       ready &&
@@ -56,6 +58,7 @@ class ConcordCommunitySession {
       control!.publicChannels.isNotEmpty &&
       control!.incomplete.isEmpty &&
       !_controlHistoryLimited &&
+      !_terminalHistoryLimited &&
       !control!.banned.contains(account);
 
   void _notify() {
@@ -230,6 +233,9 @@ class ConcordCommunitySession {
       if (_controlHistoryLimited) {
         throw StateError('Community control history is incomplete');
       }
+      if (_terminalHistoryLimited) {
+        throw StateError('Community lifecycle history is incomplete');
+      }
       _refold();
       if (control?.name == null || control!.publicChannels.isEmpty) {
         throw StateError('Community has no verified public rooms');
@@ -269,6 +275,7 @@ class ConcordCommunitySession {
       epoch: held.rootEpoch + 1,
     );
     for (final group in [dissolved, rekey]) {
+      _terminalAuthors.add(group.pubkey);
       _subscriptions.add(
         relay
             .subscribe({
@@ -277,20 +284,30 @@ class ConcordCommunitySession {
               'limit': 10000,
             })
             .listen(
-              (wrap) => _enqueue(() async {
-                try {
-                  _signals.add(
-                    await openVerifiedStreamWrap(
-                      wrap: wrap,
-                      readKey: group,
-                      streamPubkey: group.pubkey,
-                    ),
-                  );
-                } on FormatException {
-                  return;
+              (wrap) {
+                // A raw history limit can be reached by a carrier that does not
+                // open. Observers must still see readiness close on replay.
+                if (_loaded &&
+                    !_reportedTerminalHistoryLimit &&
+                    _terminalHistoryLimited) {
+                  _reportedTerminalHistoryLimit = true;
+                  _notify();
                 }
-                if (_loaded) await _checkSignals();
-              }),
+                _enqueue(() async {
+                  try {
+                    _signals.add(
+                      await openVerifiedStreamWrap(
+                        wrap: wrap,
+                        readKey: group,
+                        streamPubkey: group.pubkey,
+                      ),
+                    );
+                  } on FormatException {
+                    return;
+                  }
+                  if (_loaded) await _checkSignals();
+                });
+              },
               onError: _fail,
             ),
       );
@@ -305,6 +322,16 @@ class ConcordCommunitySession {
             bundle!.communityId,
             bundle!.rootEpoch,
           ).pubkey,
+    ),
+    final RelayHistoryStatus status => status.historyLimited,
+    _ => true,
+  };
+
+  // A full terminal window cannot prove that an older lifecycle signal is
+  // absent. Limit checks are scoped to the terminal streams we subscribe to.
+  bool get _terminalHistoryLimited => switch (relay) {
+    final RelayScopedHistoryStatus status => _terminalAuthors.any(
+      status.historyLimitedForAuthor,
     ),
     final RelayHistoryStatus status => status.historyLimited,
     _ => true,
