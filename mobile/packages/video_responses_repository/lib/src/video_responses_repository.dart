@@ -479,7 +479,9 @@ class VideoResponsesRepository {
         );
     final source = revisions.firstOrNull;
     final latest = source == null
-        ? const RepliesCuration()
+        // An absent relay source does not supersede what the screen loaded
+        // from cache; only an actual newer revision can replace that baseline.
+        ? previous
         : RepliesCuration.fromEvent(source)!;
     final hidden = {...latest.hiddenIds}
       ..addAll(curation.hiddenIds.difference(previous.hiddenIds))

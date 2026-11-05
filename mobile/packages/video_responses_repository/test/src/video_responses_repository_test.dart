@@ -916,6 +916,37 @@ void main() {
     group('saveCuration', () {
       setUp(() => curationAnswers(const []));
 
+      test('keeps the screen baseline when relays return no source', () async {
+        final previous = RepliesCuration(
+          pinnedId: _hex(201),
+          hiddenIds: {_hex(202)},
+        );
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+
+        final reconciled = await repository().saveCuration(
+          previous.hidden(_hex(203)),
+          videoAddress: _rootAddress,
+          previous: previous,
+        );
+
+        expect(
+          reconciled,
+          RepliesCuration(
+            pinnedId: _hex(201),
+            hiddenIds: {_hex(202), _hex(203)},
+          ),
+        );
+        expect(signed.single.tags, [
+          ['d', RepliesCuration.dTagFor(_rootAddress)],
+          ['a', _rootAddress],
+          ['e', _hex(201), '', 'pinned'],
+          ['e', _hex(202), '', 'hidden'],
+          ['e', _hex(203), '', 'hidden'],
+        ]);
+      });
+
       for (final mismatch in ['owner', 'kind', 'coordinate']) {
         test('ignores a newer curation with a different $mismatch', () async {
           final current = _curationEvent(
