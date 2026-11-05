@@ -648,6 +648,21 @@ class BootstrapTest(unittest.TestCase):
             },
         )
 
+    def test_bootstrap_marker_lists_only_this_runs_claims(self) -> None:
+        old = "allocations/claims/1.0.20/app-store.json"
+        ledger = MemoryLedgerStore({old: {}})
+        paths = bootstrap(
+            ledger=ledger,
+            ios_store_versions=[v("1.0.20"), v("1.0.27")],
+            android_version_codes=[],
+            now=NOW,
+            dry_run=False,
+        )
+        new = ["allocations/claims/1.0.27/app-store.json"]
+        self.assertEqual(ledger.files[BOOTSTRAP_PATH]["claims"], new)
+        self.assertEqual(paths, new + [BOOTSTRAP_PATH])
+        self.assertEqual(ledger.creates[-1], BOOTSTRAP_PATH)
+
     def test_bootstrap_with_marker_present_repairs_claims_only(self) -> None:
         ledger = MemoryLedgerStore(dict(BOOT))
         paths = bootstrap(
