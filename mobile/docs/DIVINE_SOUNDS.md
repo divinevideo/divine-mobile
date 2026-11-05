@@ -61,8 +61,64 @@ Publishing a sound again with the same `divine_sound` id replaces the link; the 
 - Older app versions show the published events in New and in search as ordinary community sounds, beside their shipped copies.
 - Popular counts only videos posted by versions that reference the events.
 
+## The imported library
+
+Besides the curated sounds above, Divine publishes a library of freely licensed effects and music, thousands of sounds at once. It is signed by its own account, in `kSoundLibraryPublisherPubkeys` (`lib/config/official_accounts.dart`), not by a Divine sound account, so the bulk does not take the Divine boost:
+
+- `AudioEvent.isLibrary` (`lib/extensions/divine_sound_extensions.dart`) marks it, by signer and without an `a` tag, as `isDivine` does.
+- New and For you leave it out (`SoundsRepository.withoutLibrarySounds`); search and Popular keep it. It shows without the community mark.
+- A library sound picked for the boost is published again by a Divine sound account.
+- The set is empty until the account exists, and the app behaves as before.
+- Funnelcake's search boost (`SEARCH_DIVINE_SOUND_PUBKEYS`) should not list the library account either.
+
+### Sources
+
+Only sources whose terms allow publishing the sounds as a library:
+
+- CC0 effects from `lavenderdotpet/CC0-Public-Domain-Sounds`, only from packs whose own licence file names the original author: Kenney (`kenney_*`, `sci-fi-sounds`), Ben Burnes (`BB_*`, `bb - *`, `Micro Pack - *`), The Motion Monkey (`MMRetroArcadeSoundsPack1_0_5`) and Team Forbidden (`warfork-cc0`, without its trailer voice-overs). Folders without a licence file are left out. `tools/sound_import/cc0_packs.dart` lists the packs, their credits and kinds.
+- Music by Kevin MacLeod from incompetech (`pieces.json`), CC BY 4.0. Its credit is the one incompetech asks for: the title, "Kevin MacLeod (incompetech.com)", "Licensed under Creative Commons: By Attribution 4.0 License" and the licence link.
+- Not Freesound, Pixabay or the Sonniss bundles: their terms forbid this use.
+
+### Event shape
+
+As in the table above, with these values:
+
+| Tag | Value |
+|---|---|
+| `m` | `audio/mp4` (AAC) |
+| `source` | The track's incompetech page, or the file in the CC0 repository at the commit it was read from |
+| `creator`, `creator_url` | The original author |
+| `license`, `license_url` | `CC0 1.0` or `CC BY 4.0`, with the Creative Commons URL |
+| `t` | `music` or `sfx`, then pack and folder words or incompetech's feel and instruments (at most five). Pure speech gets no kind tag |
+| `i`, `k` | `isrc:<ISRC>` and `isrc` for incompetech music, in NIP-73's shape for external ids; ISRC is not in its table yet |
+| `summary` | incompetech's description |
+| `alt` | `Sound: <title>` |
+
+`content` holds the readable credit, in English, and a line `Edited: …` naming what preparing changed (edge silence trimmed, loudness normalized), as CC BY 4.0 asks for an adapted file. The encoded file carries the title, artist and credit in its own metadata too.
+
+### Importing
+
+`tools/import_free_sounds.dart` runs the import in five steps, from `mobile/`. Each keeps its state in the work directory and resumes where it stopped:
+
+```bash
+dart run tools/import_free_sounds.dart catalog --work-dir <dir>
+dart run tools/import_free_sounds.dart prepare --work-dir <dir> --limit 20
+dart run tools/import_free_sounds.dart events --work-dir <dir> --blossom <server> --created-at <unix seconds>
+dart run tools/import_free_sounds.dart upload --work-dir <dir> --blossom <server> --dry-run
+dart run tools/import_free_sounds.dart publish --work-dir <dir> --relay <url> --expect-pubkey <hex> --dry-run
+```
+
+1. `catalog` reads the two listings; nothing is downloaded.
+2. `prepare` downloads, one file every two seconds, and uses ffmpeg to trim edge silence (below -60 dBFS, keeping 50 ms before and 200 ms after the sound), bring the sound to -16 LUFS without lifting its true peak above -1.5 dBTP, and encode AAC (192 kbps for music, 128 kbps otherwise; mono stays mono). A silent file is rejected. It prepares 20 per run unless `--limit` or `--all` says otherwise: the full sources are about 12.5 GB from incompetech plus the CC0 packs, so a full run needs the maintainers' go and runs once.
+3. `events` writes the unsigned events to `events.jsonl`. A Blossom URL is the server and the file's SHA-256, so the events can be built before the upload. Give every event a `--created-at` in the past: thousands of events created now would fill the relays' newest pages, which older app versions show as New.
+4. `upload` asks the server for each file and uploads the missing ones with a BUD-02 authorization signed by the key in `SOUND_IMPORT_UPLOAD_NSEC`. Divine's own media servers need `--confirm-production`. Staging builds use the production media server too, so trying the library on staging needs that go as well.
+5. `publish` signs each event with the key in `SOUND_IMPORT_PUBLISHER_NSEC`, which must belong to `--expect-pubkey`, and sends the events the account has not published yet, found by their `x` tags. Each event is signed once and kept in `signed.json`, so every relay and every later run gets the same event.
+
+Keys come from the environment of the maintainer who runs the step and never go into the app, the repository or the work directory. `--dry-run` needs no key: `upload` only asks the server, `publish` only asks the relays.
+
 ## Open decisions
 
-- **Signing account.** HQ is configured. A dedicated sound account keeps HQ's own posts apart; changing it is one line in `official_accounts.dart` and needs a release, like the other official sets.
+- **Signing account.** HQ is configured. A dedicated sound account keeps HQ's own posts apart; changing it is one line in `official_accounts.dart` and needs a release, like the other official sets. The imported library has its own account, decided 2026-11-04; its pubkey goes into `kSoundLibraryPublisherPubkeys` once it exists.
+- **Browsing the library.** New and For you leave the library out, so it is reached through search and Popular. A picker list that shows it by kind, without a search, is not built yet.
 - **Tag schema.** `divine_sound` and the use of `music`/`sfx` should be confirmed before the first publish. The app also reads the effect synonyms above.
 - **The shipped set.** Once the library is published, the app can ship a small starter set and load the rest from the network.
