@@ -9665,6 +9665,36 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => 'Con dấu';
 
   @override
+  String get videoEditorCaptionsPresetOutline => 'Viền chữ';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => 'Tiêu điểm';
+
+  @override
+  String get videoEditorCaptionsPresetHype => 'Sôi động';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => 'Tối giản';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => 'Bút nhớ dòng';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => 'Phát sáng';
+
+  @override
+  String get videoEditorCaptionsPresetComic => 'Truyện tranh';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => 'Kẹo';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => 'Arcade';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => 'Điện ảnh';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => 'Mở trình chỉnh sửa chữ';
 
   @override

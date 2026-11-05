@@ -9267,6 +9267,36 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => '스탬프';
 
   @override
+  String get videoEditorCaptionsPresetOutline => '외곽선';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => '스포트라이트';
+
+  @override
+  String get videoEditorCaptionsPresetHype => '하이프';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => '미니멀';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => '형광펜';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => '글로우';
+
+  @override
+  String get videoEditorCaptionsPresetComic => '코믹';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => '캔디';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => '아케이드';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => '시네마';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => '텍스트 편집기 열기';
 
   @override

@@ -9728,6 +9728,36 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => 'ختم';
 
   @override
+  String get videoEditorCaptionsPresetOutline => 'محدد';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => 'بقعة ضوء';
+
+  @override
+  String get videoEditorCaptionsPresetHype => 'حماس';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => 'بسيط';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => 'قلم فسفوري';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => 'توهج';
+
+  @override
+  String get videoEditorCaptionsPresetComic => 'كوميك';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => 'حلوى';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => 'أركيد';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => 'سينما';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => 'فتح محرر النص';
 
   @override

@@ -7075,6 +7075,46 @@
   "videoEditorCaptionsPresetHandwritten": "Handwritten",
   "videoEditorCaptionsPresetSerif": "Serif",
   "videoEditorCaptionsPresetStamp": "Stamp",
+  "videoEditorCaptionsPresetOutline": "Outline",
+  "@videoEditorCaptionsPresetOutline": {
+    "description": "Name of the built-in caption style: heavy white text with a dark outline, no background."
+  },
+  "videoEditorCaptionsPresetSpotlight": "Spotlight",
+  "@videoEditorCaptionsPresetSpotlight": {
+    "description": "Name of the built-in caption style: outlined text that lights up each word as it is spoken."
+  },
+  "videoEditorCaptionsPresetHype": "Hype",
+  "@videoEditorCaptionsPresetHype": {
+    "description": "Name of the built-in caption style: loud cartoon-style text with a thick outline that lights up each word as it is spoken."
+  },
+  "videoEditorCaptionsPresetMinimal": "Minimal",
+  "@videoEditorCaptionsPresetMinimal": {
+    "description": "Name of the built-in caption style: plain white text with a soft shadow, no background."
+  },
+  "videoEditorCaptionsPresetHighlighter": "Highlighter",
+  "@videoEditorCaptionsPresetHighlighter": {
+    "description": "Name of the built-in caption style: black text on a yellow box, like a highlighter pen. Must differ from the Marker style name."
+  },
+  "videoEditorCaptionsPresetGlow": "Glow",
+  "@videoEditorCaptionsPresetGlow": {
+    "description": "Name of the built-in caption style: white text with a colored glow around it. Must differ from the Neon style name."
+  },
+  "videoEditorCaptionsPresetComic": "Comic",
+  "@videoEditorCaptionsPresetComic": {
+    "description": "Name of the built-in caption style: comic-book lettering in yellow with a thick outline."
+  },
+  "videoEditorCaptionsPresetCandy": "Candy",
+  "@videoEditorCaptionsPresetCandy": {
+    "description": "Name of the built-in caption style: rounded text on a pink box that bounces in."
+  },
+  "videoEditorCaptionsPresetArcade": "Arcade",
+  "@videoEditorCaptionsPresetArcade": {
+    "description": "Name of the built-in caption style: blocky video-game lettering in bright green with an outline."
+  },
+  "videoEditorCaptionsPresetCinema": "Cinema",
+  "@videoEditorCaptionsPresetCinema": {
+    "description": "Name of the built-in caption style: film subtitles with a thin outline and a soft shadow."
+  },
   "videoEditorOpenTextSemanticLabel": "Open text editor",
   "videoEditorOpenDrawSemanticLabel": "Open draw editor",
   "videoEditorOpenBlurSemanticLabel": "Blur or pixelate part of the video",

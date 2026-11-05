@@ -9493,6 +9493,36 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => 'ማህተም';
 
   @override
+  String get videoEditorCaptionsPresetOutline => 'ጠርዝ';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => 'ስፖትላይት';
+
+  @override
+  String get videoEditorCaptionsPresetHype => 'ሃይፕ';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => 'ቀላል';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => 'ማድመቂያ';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => 'ፍካት';
+
+  @override
+  String get videoEditorCaptionsPresetComic => 'ኮሚክ';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => 'ከረሜላ';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => 'አርኬድ';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => 'ሲኒማ';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => 'የጽሑፍ አርታዒን ክፈት';
 
   @override

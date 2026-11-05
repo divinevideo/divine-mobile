@@ -9167,6 +9167,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => '印章';
 
   @override
+  String get videoEditorCaptionsPresetOutline => '描边';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => '聚光灯';
+
+  @override
+  String get videoEditorCaptionsPresetHype => '燃爆';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => '极简';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => '荧光笔';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => '发光';
+
+  @override
+  String get videoEditorCaptionsPresetComic => '漫画';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => '糖果';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => '街机';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => '电影';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => '打开文字编辑器';
 
   @override

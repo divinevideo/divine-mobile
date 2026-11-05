@@ -9629,6 +9629,36 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => 'Damga';
 
   @override
+  String get videoEditorCaptionsPresetOutline => 'Kontur';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => 'Spot ışığı';
+
+  @override
+  String get videoEditorCaptionsPresetHype => 'Coşku';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => 'Minimal';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => 'Fosforlu kalem';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => 'Parıltı';
+
+  @override
+  String get videoEditorCaptionsPresetComic => 'Çizgi roman';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => 'Şeker';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => 'Arcade';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => 'Sinema';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => 'Metin düzenleyiciyi aç';
 
   @override

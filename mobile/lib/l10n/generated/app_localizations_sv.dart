@@ -9708,6 +9708,36 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => 'Stämpel';
 
   @override
+  String get videoEditorCaptionsPresetOutline => 'Kontur';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => 'Strålkastare';
+
+  @override
+  String get videoEditorCaptionsPresetHype => 'Hype';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => 'Minimal';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => 'Överstrykning';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => 'Glöd';
+
+  @override
+  String get videoEditorCaptionsPresetComic => 'Serie';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => 'Godis';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => 'Arkad';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => 'Bio';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => 'Öppna textredigerare';
 
   @override

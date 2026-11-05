@@ -9928,6 +9928,36 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => 'Ștampilă';
 
   @override
+  String get videoEditorCaptionsPresetOutline => 'Contur';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => 'Reflector';
+
+  @override
+  String get videoEditorCaptionsPresetHype => 'Hype';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => 'Minimal';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => 'Evidențiator';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => 'Strălucire';
+
+  @override
+  String get videoEditorCaptionsPresetComic => 'Comic';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => 'Bomboană';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => 'Arcade';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => 'Cinema';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => 'Deschide editorul de text';
 
   @override

@@ -47,6 +47,16 @@ class CaptionCustomSelection extends CaptionStyleSelection {
 String captionPresetDisplayName(AppLocalizations l10n, String presetId) =>
     switch (presetId) {
       'karaoke' => l10n.videoEditorCaptionsPresetKaraoke,
+      'outline' => l10n.videoEditorCaptionsPresetOutline,
+      'spotlight' => l10n.videoEditorCaptionsPresetSpotlight,
+      'hype' => l10n.videoEditorCaptionsPresetHype,
+      'minimal' => l10n.videoEditorCaptionsPresetMinimal,
+      'highlighter' => l10n.videoEditorCaptionsPresetHighlighter,
+      'glow' => l10n.videoEditorCaptionsPresetGlow,
+      'comic' => l10n.videoEditorCaptionsPresetComic,
+      'candy' => l10n.videoEditorCaptionsPresetCandy,
+      'arcade' => l10n.videoEditorCaptionsPresetArcade,
+      'cinema' => l10n.videoEditorCaptionsPresetCinema,
       'pop' => l10n.videoEditorCaptionsPresetPop,
       'zoom' => l10n.videoEditorCaptionsPresetZoom,
       'spring' => l10n.videoEditorCaptionsPresetSpring,
