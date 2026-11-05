@@ -199,10 +199,12 @@ void main() {
     }
 
     Future<void> openOwnerPicker(WidgetTester tester) async {
+      // Owners reach the add-people picker through Manage and the roster.
       expect(find.byTooltip(strings.peopleListsActionsTooltip), findsOneWidget);
-      await tester.tap(find.byTooltip(strings.peopleListsActionsTooltip));
+      await tester.tap(find.text(strings.listManageButton));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(strings.peopleListsAddPeopleTooltip));
+      expect(find.byType(PeopleListMembersScreen), findsOneWidget);
+      await tester.tap(find.byTooltip(strings.peopleListsAddPeopleTooltip));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.byType(AddPeopleToListScreen), findsOneWidget);
