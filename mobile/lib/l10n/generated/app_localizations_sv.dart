@@ -5379,6 +5379,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get listShareButton => 'Dela';
 
   @override
+  String get listManageButton => 'Hantera';
+
+  @override
   String get peopleListsManagePeopleButton => 'Hantera personer';
 
   @override

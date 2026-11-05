@@ -5383,6 +5383,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get listShareButton => 'Kongsi';
 
   @override
+  String get listManageButton => 'Urus';
+
+  @override
   String get peopleListsManagePeopleButton => 'Urus orang';
 
   @override

@@ -954,7 +954,10 @@ void main() {
         expect(find.byType(ListAuthorByline), findsNothing);
         expect(find.byType(FollowListButton), findsNothing);
         // Your own public list offers Manage people and Share instead.
-        expect(find.text(l10n.peopleListsManagePeopleButton), findsOneWidget);
+        expect(
+          find.widgetWithText(DivineButton, l10n.listManageButton),
+          findsOneWidget,
+        );
         expect(find.byType(ShareListButton), findsOneWidget);
         verifyNever(
           () => repository.watchFollowedLists(
@@ -1220,7 +1223,10 @@ void main() {
         expect(find.byType(ShareListButton), findsOneWidget);
         await tester.tap(find.byTooltip(l10n.peopleListsActionsTooltip));
         await tester.pumpAndSettle();
-        expect(find.text(l10n.peopleListsManagePeopleButton), findsNothing);
+        expect(
+          find.widgetWithText(DivineButton, l10n.listManageButton),
+          findsNothing,
+        );
         expect(find.text(l10n.listEditInfoAction), findsNothing);
         expect(find.text(l10n.listDeleteAction), findsNothing);
         await tester.tap(find.text(l10n.listReportAction));
@@ -1448,7 +1454,10 @@ void main() {
 
       await _pumpPushedListRoute(tester, bloc: bloc, list: list);
 
-      expect(find.text(l10n.peopleListsManagePeopleButton), findsOneWidget);
+      expect(
+        find.widgetWithText(DivineButton, l10n.listManageButton),
+        findsOneWidget,
+      );
       expect(find.byType(ShareListButton), findsNothing);
     });
 
@@ -1467,7 +1476,14 @@ void main() {
 
       await _pumpPushedListRoute(tester, bloc: bloc, list: list);
 
-      await tester.tap(find.text(l10n.peopleListsManagePeopleButton));
+      final manage = tester.widget<DivineButton>(
+        find.widgetWithText(DivineButton, l10n.listManageButton),
+      );
+      expect(manage.leadingIcon, DivineIconName.users);
+      expect(manage.semanticLabel, l10n.peopleListsManagePeopleButton);
+      await tester.tap(
+        find.widgetWithText(DivineButton, l10n.listManageButton),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Members screen'), findsOneWidget);

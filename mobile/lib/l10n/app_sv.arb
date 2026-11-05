@@ -1805,6 +1805,7 @@
   "profileListsEmpty": "Inga listor än. Skapa en för looparna du vill hålla ihop.",
   "listEditTitle": "Redigera lista",
   "listShareButton": "Dela",
+  "listManageButton": "Hantera",
   "peopleListsManagePeopleButton": "Hantera personer",
   "listShareFailed": "Kunde inte dela listan. Försök igen.",
   "listSave": "Spara",

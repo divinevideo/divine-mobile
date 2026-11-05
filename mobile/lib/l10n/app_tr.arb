@@ -1802,6 +1802,7 @@
   "profileListsEmpty": "Henüz liste yok. Bir arada tutmak istediğin döngüler için bir tane oluştur.",
   "listEditTitle": "Listeyi düzenle",
   "listShareButton": "Paylaş",
+  "listManageButton": "Yönet",
   "peopleListsManagePeopleButton": "Kişileri yönet",
   "listShareFailed": "Bu liste paylaşılamadı. Tekrar dene.",
   "listSave": "Kaydet",

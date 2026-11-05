@@ -1805,6 +1805,7 @@
   "profileListsEmpty": "Nog geen lijsten. Maak er een voor de loops die je bij elkaar wilt houden.",
   "listEditTitle": "Lijst bewerken",
   "listShareButton": "Delen",
+  "listManageButton": "Beheren",
   "peopleListsManagePeopleButton": "Mensen beheren",
   "listShareFailed": "Kon deze lijst niet delen. Probeer het opnieuw.",
   "listSave": "Opslaan",

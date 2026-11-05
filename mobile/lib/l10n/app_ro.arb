@@ -1805,6 +1805,7 @@
   "profileListsEmpty": "Încă n-ai liste. Fă una pentru buclele pe care vrei să le ții împreună.",
   "listEditTitle": "Editează lista",
   "listShareButton": "Partajează",
+  "listManageButton": "Gestionează",
   "peopleListsManagePeopleButton": "Gestionează persoanele",
   "listShareFailed": "N-am putut distribui lista. Mai încearcă.",
   "listSave": "Salvează",

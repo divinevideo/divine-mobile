@@ -1802,6 +1802,7 @@
   "profileListsEmpty": "Belum ada daftar. Bikin satu untuk loop yang mau kamu simpan bareng.",
   "listEditTitle": "Edit daftar",
   "listShareButton": "Bagikan",
+  "listManageButton": "Kelola",
   "peopleListsManagePeopleButton": "Kelola orang",
   "listShareFailed": "Daftar ini gagal dibagikan. Coba lagi.",
   "listSave": "Simpan",

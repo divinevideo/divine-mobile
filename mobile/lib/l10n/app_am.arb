@@ -2240,6 +2240,7 @@
   "profileListsEmpty": "እስካሁን ዝርዝር የለም። አብረው እንዲቆዩ የሚፈልጓቸውን ሉፖች የሚያሰባስብ ዝርዝር ይፍጠሩ።",
   "listEditTitle": "ዝርዝር አርትዕ",
   "listShareButton": "አጋራ",
+  "listManageButton": "አስተዳድር",
   "peopleListsManagePeopleButton": "ሰዎችን አስተዳድር",
   "listShareFailed": "ይህን ዝርዝር ማጋራት አልተቻለም። እንደገና ይሞክሩ።",
   "listSave": "አስቀምጥ",

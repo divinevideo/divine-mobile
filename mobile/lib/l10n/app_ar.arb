@@ -1795,6 +1795,7 @@
   "profileListsEmpty": "لا توجد قوائم بعد. أنشئ واحدة للمقاطع التي تريد جمعها معًا.",
   "listEditTitle": "تعديل القائمة",
   "listShareButton": "مشاركة",
+  "listManageButton": "إدارة",
   "peopleListsManagePeopleButton": "إدارة الأشخاص",
   "listShareFailed": "تعذّرت مشاركة هذه القائمة. حاول مرة أخرى.",
   "listSave": "حفظ",

@@ -1805,6 +1805,7 @@
   "profileListsEmpty": "Ancora nessuna lista. Creane una per i loop che vuoi tenere insieme.",
   "listEditTitle": "Modifica lista",
   "listShareButton": "Condividi",
+  "listManageButton": "Gestisci",
   "peopleListsManagePeopleButton": "Gestisci persone",
   "listShareFailed": "Impossibile condividere questa lista. Riprova.",
   "listSave": "Salva",

@@ -2556,6 +2556,7 @@
   "profileListsEmpty": "Chưa có danh sách nào. Tạo một cái cho những loop bạn muốn để chung.",
   "listEditTitle": "Sửa danh sách",
   "listShareButton": "Chia sẻ",
+  "listManageButton": "Quản lý",
   "peopleListsManagePeopleButton": "Quản lý người",
   "listShareFailed": "Không chia sẻ được danh sách này. Thử lại nhé.",
   "listSave": "Lưu",

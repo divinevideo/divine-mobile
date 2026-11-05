@@ -1805,6 +1805,7 @@
   "profileListsEmpty": "Nie masz jeszcze list. Stwórz jedną dla pętli, które chcesz trzymać razem.",
   "listEditTitle": "Edytuj listę",
   "listShareButton": "Udostępnij",
+  "listManageButton": "Zarządzaj",
   "peopleListsManagePeopleButton": "Zarządzaj osobami",
   "listShareFailed": "Nie udało się udostępnić tej listy. Spróbuj ponownie.",
   "listSave": "Zapisz",

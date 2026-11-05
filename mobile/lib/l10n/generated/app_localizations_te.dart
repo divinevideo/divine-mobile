@@ -5565,6 +5565,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get listShareButton => 'భాగస్వామ్యం చేయండి';
 
   @override
+  String get listManageButton => 'నిర్వహించండి';
+
+  @override
   String get peopleListsManagePeopleButton => 'వ్యక్తులను నిర్వహించండి';
 
   @override

@@ -5538,6 +5538,9 @@ class AppLocalizationsPl extends AppLocalizations {
   String get listShareButton => 'Udostępnij';
 
   @override
+  String get listManageButton => 'Zarządzaj';
+
+  @override
   String get peopleListsManagePeopleButton => 'Zarządzaj osobami';
 
   @override

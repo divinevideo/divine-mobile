@@ -9043,7 +9043,13 @@ abstract class AppLocalizations {
   /// **'Share'**
   String get listShareButton;
 
-  /// Button in the owner's people-list header that opens the members screen to add or remove people.
+  /// Short label of the owner's Manage button in a list header; its icon and screen-reader label say whether it manages videos or people.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage'**
+  String get listManageButton;
+
+  /// Screen-reader label of the owner's Manage button in a people-list header, which opens the members screen to add or remove people.
   ///
   /// In en, this message translates to:
   /// **'Manage people'**

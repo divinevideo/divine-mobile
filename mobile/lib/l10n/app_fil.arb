@@ -1376,6 +1376,7 @@
   "profileListsEmpty": "Wala pang list. Gumawa ng isa para sa mga loop na gusto mong pagsama-samahin.",
   "listEditTitle": "I-edit ang list",
   "listShareButton": "I-share",
+  "listManageButton": "Pamahalaan",
   "peopleListsManagePeopleButton": "Pamahalaan ang mga tao",
   "listShareFailed": "Hindi na-share ang list na ito. Subukan ulit.",
   "listSave": "I-save",

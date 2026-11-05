@@ -5377,6 +5377,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get listShareButton => 'مشاركة';
 
   @override
+  String get listManageButton => 'إدارة';
+
+  @override
   String get peopleListsManagePeopleButton => 'إدارة الأشخاص';
 
   @override

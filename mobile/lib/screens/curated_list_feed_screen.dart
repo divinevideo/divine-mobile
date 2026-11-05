@@ -196,9 +196,10 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
     final headerButtons = <Widget>[
       if (isOwned)
         DivineButton(
-          label: context.l10n.listManageVideosAction,
+          label: context.l10n.listManageButton,
+          semanticLabel: context.l10n.listManageVideosAction,
           type: DivineButtonType.secondary,
-          leadingIcon: DivineIconName.pencilSimple,
+          leadingIcon: DivineIconName.play,
           expanded: true,
           onPressed: canManagePosts ? _enterManageMode : null,
         ),
