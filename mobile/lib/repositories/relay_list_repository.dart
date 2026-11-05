@@ -74,6 +74,26 @@ class RelayListPublishResult {
 
 final _relayListWrites = Expando<Future<void>>();
 
+/// The source accepted by an indexer before it necessarily appears in reads.
+/// Bootstrap and settings share it as well as their serialization queue.
+Event? readAcceptedRelayList(SharedPreferences preferences, String pubkey) {
+  final encoded = preferences.getString('relay_list_last_accepted_$pubkey');
+  return encoded == null
+      ? null
+      : Event.fromJson(jsonDecode(encoded) as Map<String, dynamic>);
+}
+
+/// Retains an accepted source across client recreation and process restarts.
+Future<void> storeAcceptedRelayList(
+  SharedPreferences preferences,
+  Event event,
+) async {
+  await preferences.setString(
+    'relay_list_last_accepted_${event.pubkey}',
+    jsonEncode(event.toJson()),
+  );
+}
+
 /// Serializes every kind-10002 read/write on a client, including bootstrap.
 Future<T> serializeRelayListWrite<T>(
   NostrClient client,
@@ -210,14 +230,6 @@ class RelayListRepository {
   }
 
   String _pendingKey(String pubkey) => 'relay_list_publish_pending_$pubkey';
-  String _acceptedKey(String pubkey) => 'relay_list_last_accepted_$pubkey';
-
-  Event? _lastAccepted(String pubkey) {
-    final encoded = _sharedPreferences.getString(_acceptedKey(pubkey));
-    return encoded == null
-        ? null
-        : Event.fromJson(jsonDecode(encoded) as Map<String, dynamic>);
-  }
 
   void _putDelta(Map<String, bool> pending, String url, bool present) {
     pending.removeWhere((known, _) => relayUrlsEquivalent(known, url));
@@ -240,7 +252,10 @@ class RelayListRepository {
       throw StateError('Cannot replace a relay list after an incomplete read');
     }
     Event? base;
-    for (final event in [...read.events, ?_lastAccepted(pubkey)]) {
+    for (final event in [
+      ...read.events,
+      ?readAcceptedRelayList(_sharedPreferences, pubkey),
+    ]) {
       if (event.pubkey != pubkey || event.kind != EventKind.relayListMetadata) {
         continue;
       }
@@ -328,10 +343,7 @@ class RelayListRepository {
     }
 
     // Relay acceptance can precede serving the event, even across a restart.
-    await _sharedPreferences.setString(
-      _acceptedKey(pubkey),
-      jsonEncode(signed.toJson()),
-    );
+    await storeAcceptedRelayList(_sharedPreferences, signed);
     final npub = Nip19.encodePubKey(pubkey);
     await _relayDiscoveryService.clearCache(npub);
     Log.info(

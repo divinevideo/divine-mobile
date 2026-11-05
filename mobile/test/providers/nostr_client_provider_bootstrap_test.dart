@@ -8,6 +8,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -27,6 +28,7 @@ void main() {
     late List<String> targets;
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
       client = _MockNostrClient();
       event = Event('0' * 64, 10002, [
         ['r', primaryRelay],

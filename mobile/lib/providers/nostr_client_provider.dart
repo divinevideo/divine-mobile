@@ -20,6 +20,7 @@ import 'package:openvine/services/nostr_service_factory.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/relay_statistics_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'nostr_client_provider.g.dart';
@@ -826,6 +827,12 @@ class NostrService extends _$NostrService {
         tempRelays: targetRelays,
       );
       if (read.noRelays || read.timedOut) return false;
+      final preferences = await SharedPreferences.getInstance();
+      final accepted = readAcceptedRelayList(preferences, event.pubkey);
+      if (accepted?.pubkey == event.pubkey &&
+          accepted?.kind == EventKind.relayListMetadata) {
+        return true;
+      }
       if (read.events.any(
         (existing) =>
             existing.pubkey == event.pubkey &&
@@ -848,6 +855,8 @@ class NostrService extends _$NostrService {
           name: 'NostrService',
           category: LogCategory.system,
         );
+      } else {
+        await storeAcceptedRelayList(preferences, event);
       }
       return acceptedByIndexer;
     });

@@ -8,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/environment_config.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/repositories/relay_list_repository.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -374,6 +375,76 @@ void main() {
         expect((await settings).status, RelayListPublishStatus.published);
       },
     );
+
+    test(
+      'bootstrap does not replace an accepted settings list before echo',
+      () async {
+        await buildRepository().publishConfiguredRelayList(
+          addedRelay: 'wss://chosen.example',
+        );
+        final bootstrap = await signer.signEvent(
+          Event(
+            pubkey,
+            10002,
+            [
+              ['r', 'wss://relay.divine.video'],
+            ],
+            '',
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 10,
+          ),
+        );
+
+        expect(
+          await NostrService.bootstrapCallbackFor(nostrClient)(
+            bootstrap!,
+            EnvironmentConfig.production.indexerRelays,
+          ),
+          isTrue,
+        );
+        final events = verify(
+          () => nostrClient.publishEventAwaitOk(
+            captureAny(),
+            targetRelays: any(named: 'targetRelays'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).captured.cast<Event>();
+        expect(events, hasLength(1));
+        expect(events.single.tags, [
+          ['r', 'wss://chosen.example'],
+        ]);
+      },
+    );
+
+    test('settings preserves an accepted bootstrap list before echo', () async {
+      final bootstrap = await signer.signEvent(
+        Event(pubkey, 10002, [
+          ['r', 'wss://bootstrap.example'],
+        ], ''),
+      );
+      expect(
+        await NostrService.bootstrapCallbackFor(nostrClient)(
+          bootstrap!,
+          EnvironmentConfig.production.indexerRelays,
+        ),
+        isTrue,
+      );
+      await buildRepository().publishConfiguredRelayList(
+        addedRelay: 'wss://chosen.example',
+      );
+      final events = verify(
+        () => nostrClient.publishEventAwaitOk(
+          captureAny(),
+          targetRelays: any(named: 'targetRelays'),
+          timeout: any(named: 'timeout'),
+        ),
+      ).captured.cast<Event>();
+      expect(events, hasLength(2));
+      expect(events.last.tags, [
+        ['r', 'wss://bootstrap.example'],
+        ['r', 'wss://chosen.example'],
+      ]);
+      expect(events.last.createdAt, greaterThan(events.first.createdAt));
+    });
 
     test(
       'serializes reads and retains a just-accepted addition before relay echo',
