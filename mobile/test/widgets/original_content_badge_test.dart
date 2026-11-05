@@ -79,7 +79,8 @@ void main() {
     });
 
     test(
-      'VideoEvent.shouldShowOriginalBadge returns false for vintage vines',
+      'VideoEvent.shouldShowOriginalBadge returns false for verified archive '
+      'vines',
       () {
         // Arrange - Create a vintage recovered vine with loop count
         final event = Event.fromJson({
@@ -96,7 +97,9 @@ void main() {
           'sig': 'sig1234567890abcdef',
         });
 
-        final videoEvent = VideoEvent.fromNostrEvent(event);
+        final videoEvent = VideoEvent.fromNostrEvent(
+          event,
+        ).copyWith(isVerifiedArchive: true);
 
         // Assert - should NOT show Original badge (vintage vines get their own badge)
         expect(videoEvent.shouldShowNotDivineBadge, false);

@@ -2340,6 +2340,7 @@ void main() {
       Map<String, dynamic> response({
         Object? verifiedArchive,
         Object? rolloutEnabled,
+        Object? provenanceAvailable,
       }) => {
         'id': 'a' * 64,
         'pubkey': 'b' * 64,
@@ -2350,6 +2351,7 @@ void main() {
         'video_url': 'https://example.com/video.mp4',
         'verified_archive': verifiedArchive,
         'archive_audio_reuse_enabled': rolloutEnabled,
+        'archive_provenance_available': provenanceAvailable,
       };
 
       test('parses typed Funnelcake authority fields', () {
@@ -2387,6 +2389,38 @@ void main() {
         expect(video.isVerifiedArchive, isFalse);
         expect(video.archiveAudioReuseEnabled, isFalse);
       });
+
+      test('a verified row is known, whatever availability says', () {
+        final video = VideoStats.fromJson(
+          response(verifiedArchive: true),
+        ).toVideoEvent();
+
+        expect(video.isVerifiedArchive, isTrue);
+        expect(video.isArchiveVerificationUnknown, isFalse);
+      });
+
+      test('an unverified row is known while provenance is available', () {
+        final video = VideoStats.fromJson(
+          response(verifiedArchive: false, provenanceAvailable: true),
+        ).toVideoEvent();
+
+        expect(video.isVerifiedArchive, isFalse);
+        expect(video.isArchiveVerificationUnknown, isFalse);
+      });
+
+      for (final (label, available) in [
+        ('says provenance is unavailable', false),
+        ('does not say whether provenance is available', null),
+      ]) {
+        test('an unverified row is unknown when the server $label', () {
+          final video = VideoStats.fromJson(
+            response(verifiedArchive: false, provenanceAvailable: available),
+          ).toVideoEvent();
+
+          expect(video.isVerifiedArchive, isFalse);
+          expect(video.isArchiveVerificationUnknown, isTrue);
+        });
+      }
     });
 
     group('toString', () {

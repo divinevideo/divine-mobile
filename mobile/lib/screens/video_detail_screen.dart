@@ -218,7 +218,7 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
       return _HiddenReason.divineHostedOnly;
     }
     if (!video.hasProofMode &&
-        !video.isOriginalVine &&
+        !video.countsAsArchiveVine &&
         ref.read(videoProvenanceFilterServiceProvider).showVerifiedOnly) {
       return _HiddenReason.verifiedOnly;
     }

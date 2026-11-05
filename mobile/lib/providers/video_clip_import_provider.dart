@@ -10,12 +10,14 @@ import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 part 'video_clip_import_provider.g.dart';
 
 @riverpod
 VideoClipImportService videoClipImportService(Ref ref) {
   final mediaCache = ref.watch(mediaCacheProvider);
+  final videosRepository = ref.watch(videosRepositoryProvider);
 
   return VideoClipImportService(
     clipLibraryService: ref.watch(clipLibraryServiceProvider),
@@ -39,8 +41,26 @@ VideoClipImportService videoClipImportService(Ref ref) {
     extractLastFrame: VideoThumbnailService.extractLastFrame,
     publishedSourceResolver: PublishedClipSourceResolver(
       mediaServer: Uri.parse(ref.watch(currentEnvironmentProvider).blossomUrl),
-      videosByAuthor: ref.watch(videosRepositoryProvider).getVideosByAuthor,
-      videosByFileHash: ref.watch(videosRepositoryProvider).getVideosByFileHash,
+      videosByAuthor: videosRepository.getVideosByAuthor,
+      videosByFileHash: videosRepository.getVideosByFileHash,
+      isVerifiedArchive: verifiedArchiveLookup(videosRepository),
     ),
   );
 }
+
+/// Answers [IsVerifiedArchive] from the event's REST stats row, which the
+/// server classifies against that exact event.
+///
+/// No row, or an API that is not configured, answers false, so the file is
+/// not credited. A failed request throws, and so does a row the server could
+/// not check against its archive ([ArchiveVerificationUnavailableException]),
+/// so the import reports a lookup it could not make rather than "not a Vine".
+IsVerifiedArchive verifiedArchiveLookup(VideosRepository repository) =>
+    (eventId) async {
+      final stats = await repository.getVideoStats(eventId);
+      if (stats == null) return false;
+      if (stats.isArchiveVerificationUnknown) {
+        throw ArchiveVerificationUnavailableException(eventId);
+      }
+      return stats.isVerifiedArchive;
+    };

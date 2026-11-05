@@ -21,7 +21,7 @@ The current mobile implementation lives here:
 ## Important High-Level Rules
 
 1. The UI effectively shows one primary status badge per video.
-2. `Original Vine` wins over all proof badges.
+2. An archive Vine the server verifies (`verified_archive`) wins over all proof badges. While a row says the server could not check its archive, a `platform: vine` tag stands in (see `Original`).
 3. A low AI score can promote an otherwise proofless video to `Human Made`.
 4. A high AI score can show `Possibly AI-Generated`, but only when the video is not already proof-backed.
 5. Plain proofless Divine-hosted videos do not get a visible badge anymore.
@@ -51,20 +51,21 @@ It has four visual tiers, but the visible text is always `Human Made`:
 
 ### 2. `Original`
 
-Rendered by `OriginalVineBadge`.
-
 Trigger:
 
-- `video.isOriginalVine == true`
+- `video.countsAsArchiveVine == true`: the REST `verified_archive` field is `true`, or the row says the server could not check its archive and the event carries `platform: vine`.
+- A row could not be checked when `verified_archive` is `false` and `archive_provenance_available` is not `true`. Funnelcake answers `false` for every row while its archive snapshot is missing or expired, so that `false` is not a real answer.
+- Relay-delivered events carry neither field, so they count as not verified, not as unknown.
 
 Meaning:
 
-- recovered original Vine / archive content
+- an archive Vine the server has matched to its verified archive record
 
 Important:
 
-- This suppresses `Human Made` and `Not Divine Hosted`
-- If an archive Vine also has proof tags, mobile still shows `Original`, not `Human Made`
+- A `platform: vine` tag on its own is not a trigger, except on a row the server could not check
+- A verified archive Vine shows neither `Human Made` nor `Not Divine Hosted`, even when it also has proof tags
+- Mobile's badge row (`MetadataBadgesRow`) renders no separate `Original` chip; the status shows as that suppression
 
 ### 3. `Not Divine Hosted`
 
@@ -74,7 +75,7 @@ Trigger:
 
 - not hosted on `divine.video`
 - no proof-backed badge
-- not an original Vine
+- not an archive Vine under `video.countsAsArchiveVine` (server-verified, or tagged while the server could not check)
 - no low-score AI promotion
 - no high-score AI warning
 
@@ -131,6 +132,14 @@ Do not do this:
 Do this:
 
 - require `platform: vine`
+
+`platform: vine` is author-supplied, so it marks a classic for display only (feed membership, the comments archive notice, square clip imports). Badge and trust decisions read the REST `verified_archive` field (`video.isVerifiedArchive`) instead:
+
+- The verified-only source preference and `Human Made` and `Not Divine Hosted` suppression use `video.countsAsArchiveVine`, which lets the tag stand in only while a row says the server could not check its archive.
+- The OG Viner badge learns only from `verified_archive: true`.
+- A received clip counts as an archived Vine only when a post naming the file is verified; when the server could not check, the import reports a lookup it could not make.
+
+Relay-delivered events never carry either field.
 
 There is also an original-date helper:
 
@@ -203,7 +212,7 @@ Use this order.
    b. by hash
    c. if still null and Divine-hosted, by moderation status service
 
-2. If Original Vine:
+2. If archive Vine (`verified_archive`, or `platform: vine` on a row the server could not check):
    show Original
    stop
 
@@ -235,7 +244,6 @@ Use this order.
 
 In code terms, current mobile behavior is implemented by these booleans:
 
-- `video.shouldShowVineBadge`
 - `video.shouldShowProofModeBadge`
 - `hasAIScanBadge`
 - `isPossiblyAI`
@@ -263,14 +271,14 @@ Each item is shown as pass/fail based on whether the corresponding field exists.
 
 ## Current Edge Cases To Preserve
 
-### Original Vine beats proof
+### Verified archive Vine beats proof
 
-If a video somehow has both:
+If a video has both:
 
-- `platform: vine`
+- `verified_archive: true`
 - proof tags
 
-mobile still shows `Original`, not `Human Made`.
+mobile still shows no `Human Made` badge. A video with proof tags and only a `platform: vine` tag shows `Human Made`, unless its row says the server could not check its archive.
 
 ### Low AI score promotes proofless videos
 
@@ -303,13 +311,22 @@ Do not use:
 
 as the primary archive badge trigger.
 
-Only `platform: vine` makes a video an Original Vine.
+Only the server's `verified_archive` flag makes a video an Original Vine for badges. `platform: vine` alone does not, except on a row the server could not check.
 
 ## Recommended Web Pseudocode
 
 ```ts
 function resolveBadge(video, aiResult) {
-  if (video.rawTags?.platform === "vine") {
+  // Only a REST row can be unchecked: a relay-delivered event carries neither
+  // field and counts as not verified.
+  const archiveUnchecked =
+    video.fromRestApi === true &&
+    video.verifiedArchive !== true &&
+    video.archiveProvenanceAvailable !== true;
+  if (
+    video.verifiedArchive === true ||
+    (archiveUnchecked && video.platform === "vine")
+  ) {
     return { kind: "original_vine" };
   }
 
@@ -360,8 +377,8 @@ This is specific to the comments empty state and independent of whether the orig
 
 If the web agent only remembers five things, they should be these:
 
-1. `platform: vine` is the only trusted Original Vine signal.
-2. Original Vine suppresses all other badge types.
+1. The server's `verified_archive` flag is the trusted Original Vine signal; `platform: vine` is display-only, and stands in only on a row whose `archive_provenance_available` is not `true`.
+2. A verified archive Vine suppresses all other badge types.
 3. Proof-backed videos show `Human Made`.
 4. Proofless videos with AI score `< 0.5` also show `Human Made` in silver.
 5. Proofless Divine-hosted videos have no visible badge unless AI or proof pushes them into a stronger trust state.

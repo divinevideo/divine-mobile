@@ -27,16 +27,18 @@ class VideoSourceVisibilityPolicy {
   /// media can sit on ours, so satisfying one axis says nothing about the
   /// other.
   ///
-  /// Original Vine archive videos are exempt from [verifiedOnly]: they
-  /// predate content credentials by a decade, and without the exemption the
-  /// preference would hide ~97% of the catalogue.
+  /// Archive Vines are exempt from [verifiedOnly]: they predate content
+  /// credentials by a decade, and without the exemption the preference would
+  /// hide ~97% of the catalogue. Funnelcake's verification decides which
+  /// videos those are ([VideoEvent.countsAsArchiveVine]); a `platform=vine`
+  /// tag stands in only while funnelcake cannot check its archive.
   static bool isHiddenBySourcePreferences(
     VideoEvent video, {
     required bool divineHostedOnly,
     required bool verifiedOnly,
   }) {
     if (divineHostedOnly && !video.isFromDivineServer) return true;
-    if (verifiedOnly && !video.hasProofMode && !video.isOriginalVine) {
+    if (verifiedOnly && !video.hasProofMode && !video.countsAsArchiveVine) {
       return true;
     }
     return false;

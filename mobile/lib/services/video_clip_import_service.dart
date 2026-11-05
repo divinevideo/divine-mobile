@@ -247,11 +247,12 @@ class VideoClipImportService {
   ///
   /// An archived Vine carries no C2PA credential, so a received one is told
   /// apart from other footage without proof by its SHA-256: it must be the
-  /// file a published Vine post names (see
-  /// [PublishedClipSourceResolver.findArchivedVine]).
+  /// file a Vine post names, and the server must verify that post as an
+  /// archived Vine (see [PublishedClipSourceResolver.findArchivedVine]).
   ///
-  /// Throws a [PublishedClipSourceLookupException] when the relays cannot be
-  /// asked, and whatever reading [source] throws when it cannot be read.
+  /// Throws a [PublishedClipSourceLookupException] when the relays or the
+  /// verification cannot be asked, and whatever reading [source] throws when
+  /// it cannot be read.
   Future<models.VideoEvent?> findArchivedVine(File source) async {
     final resolver = _publishedSourceResolver;
     if (resolver == null) return null;
@@ -260,7 +261,7 @@ class VideoClipImportService {
 
   /// Imports an archived Vine received in a direct message into the library.
   ///
-  /// It is added only when [source] is the exact file of a published Vine
+  /// It is added only when [source] is the exact file of a verified Vine
   /// post (see [findArchivedVine]), so it is the same footage adding that
   /// post to clips from the feed brings in, and it is stored the same way:
   /// crediting the viner, linked to the post, without a proof record. Any

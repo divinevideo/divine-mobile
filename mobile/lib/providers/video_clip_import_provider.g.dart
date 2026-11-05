@@ -55,4 +55,4 @@ final class VideoClipImportServiceProvider
 }
 
 String _$videoClipImportServiceHash() =>
-    r'7bc255e732e92d62a8b10c01f760e83ec6aacb58';
+    r'f8ea4a5e730f2fd4fc9b182b75bc1d6f25d4519a';

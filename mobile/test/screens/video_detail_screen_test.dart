@@ -454,6 +454,74 @@ void main() {
         );
       });
 
+      testWidgets(
+        'blames the provenance setting for a video that only tags itself '
+        'a Vine',
+        (tester) async {
+          stubHidden(
+            createTestVideoEvent(
+              id: 'self_tagged_video',
+              videoUrl: 'https://cdn.divine.video/abc.mp4',
+              rawTags: const {'platform': 'vine'},
+            ),
+          );
+          final provenanceFilter = _MockVideoProvenanceFilterService();
+          when(() => provenanceFilter.showVerifiedOnly).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(
+              extraOverrides: [
+                videoProvenanceFilterServiceProvider.overrideWithValue(
+                  provenanceFilter,
+                ),
+              ],
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.text(l10n.videoDetailHiddenByProvenanceFilterBody),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
+        'does not blame the provenance setting for a tagged Vine funnelcake '
+        'could not check',
+        (tester) async {
+          stubHidden(
+            createTestVideoEvent(
+              id: 'unchecked_vine',
+              videoUrl: 'https://cdn.divine.video/abc.mp4',
+              rawTags: const {'platform': 'vine'},
+            ).copyWith(isArchiveVerificationUnknown: true),
+          );
+          final provenanceFilter = _MockVideoProvenanceFilterService();
+          when(() => provenanceFilter.showVerifiedOnly).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(
+              extraOverrides: [
+                videoProvenanceFilterServiceProvider.overrideWithValue(
+                  provenanceFilter,
+                ),
+              ],
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.text(l10n.videoDetailHiddenByProvenanceFilterBody),
+            findsNothing,
+          );
+          expect(
+            find.text(l10n.videoDetailHiddenByContentFilterBody),
+            findsOneWidget,
+          );
+        },
+      );
+
       testWidgets('offers both a settings route and a per-video override', (
         tester,
       ) async {

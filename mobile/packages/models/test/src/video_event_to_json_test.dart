@@ -186,6 +186,7 @@ const _expectedKeys = <String>{
   'moderationLabels',
   'proofSummary',
   'isVerifiedArchive',
+  'isArchiveVerificationUnknown',
   'archiveAudioReuseEnabled',
   'eventKind',
   'sourceRelay',
@@ -231,6 +232,7 @@ const _excludedDerivedGetters = <String>{
   'isVerifiedWeb',
   'hasBasicProof',
   'isOriginalVine',
+  'countsAsArchiveVine',
   'hasUnknownOriginalDate',
   'isOriginalContent',
   'width',
@@ -421,6 +423,22 @@ void main() {
       expect(restored.proofSummary, equals(original.proofSummary));
       expect(restored.isVerifiedArchive, isTrue);
       expect(restored.archiveAudioReuseEnabled, isTrue);
+    });
+
+    test('round-trips an archive check the server could not make', () {
+      final original = VideoEvent(
+        id: 'a' * 64,
+        pubkey: 'b' * 64,
+        createdAt: 1700000000,
+        content: '',
+        timestamp: DateTime.utc(2023, 11, 14),
+        isArchiveVerificationUnknown: true,
+      );
+
+      final restored = VideoEvent.fromJson(original.toJson());
+
+      expect(restored.isArchiveVerificationUnknown, isTrue);
+      expect(restored.isVerifiedArchive, isFalse);
     });
 
     test('hydrates addressableDTag from rawTags for older cache entries', () {
