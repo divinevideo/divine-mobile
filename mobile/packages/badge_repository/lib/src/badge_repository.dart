@@ -2089,10 +2089,18 @@ class BadgeRepository {
         'Could not confirm the latest profile badges from relays',
       );
     }
+    // The replacement re-signs this list's content and unknown tags, so the
+    // source must carry the owner's own signature whatever verification
+    // policy the relay pool applied to the read.
     return _preferPublishedProfileBadges(
       owner,
       _newestParsedProfileBadges(
-        result.events.where((event) => event.pubkey == owner).toList(),
+        result.events
+            .where(
+              (event) =>
+                  event.pubkey == owner && event.isValid && event.isSigned,
+            )
+            .toList(),
       ),
     );
   }

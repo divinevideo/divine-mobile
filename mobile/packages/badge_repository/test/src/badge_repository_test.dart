@@ -3349,20 +3349,22 @@ void main() {
         test('${remove ? 'removing' : 'accepting'} keeps the fresh relay list '
             'and unknown data', () async {
           // Ordinary display reads still return an empty stale snapshot.
-          final source = _event(
-            id: _eventId(120),
-            pubkey: _pubkey(1),
-            kind: EventKind.profileBadges,
-            content: 'opaque profile badge data',
-            tags: [
-              ['custom', 'keep me'],
-              ['a', retainedCoordinate, 'wss://definition.example'],
-              ['e', _eventId(121), 'wss://award.example', 'extra'],
-              if (remove) ...[
-                ['a', coordinate],
-                ['e', _eventId(122)],
+          final source = _signed(
+            _event(
+              id: _eventId(120),
+              pubkey: _pubkey(1),
+              kind: EventKind.profileBadges,
+              content: 'opaque profile badge data',
+              tags: [
+                ['custom', 'keep me'],
+                ['a', retainedCoordinate, 'wss://definition.example'],
+                ['e', _eventId(121), 'wss://award.example', 'extra'],
+                if (remove) ...[
+                  ['a', coordinate],
+                  ['e', _eventId(122)],
+                ],
               ],
-            ],
+            ),
           );
           stubRead(events: [source]);
 
@@ -3417,16 +3419,18 @@ void main() {
         () async {
           stubRead(
             events: [
-              _event(
-                id: _eventId(140),
-                pubkey: _pubkey(1),
-                kind: EventKind.profileBadges,
-                tags: [
-                  ['a', '30009:${_pubkey(3)}:orphan'],
-                  ['a', coordinate],
-                  ['e', _eventId(122)],
-                  ['e', _eventId(141)],
-                ],
+              _signed(
+                _event(
+                  id: _eventId(140),
+                  pubkey: _pubkey(1),
+                  kind: EventKind.profileBadges,
+                  tags: [
+                    ['a', '30009:${_pubkey(3)}:orphan'],
+                    ['a', coordinate],
+                    ['e', _eventId(122)],
+                    ['e', _eventId(141)],
+                  ],
+                ),
               ),
             ],
           );
@@ -3442,21 +3446,72 @@ void main() {
         },
       );
 
+      test('replaces only a list the owner actually signed', () async {
+        final genuine = _signed(
+          _event(
+            id: _eventId(150),
+            pubkey: _pubkey(1),
+            kind: EventKind.profileBadges,
+            tags: [
+              ['a', retainedCoordinate],
+              ['e', _eventId(121)],
+            ],
+          ),
+        );
+        // A relay exempted from signature checks can serve the owner's pubkey
+        // with a correct id but someone else's signature...
+        final wronglySigned = Event(
+          _pubkey(1),
+          EventKind.profileBadges,
+          [
+            ['expiration', '1'],
+          ],
+          'chosen by the relay',
+          createdAt: 2000,
+        )..sign(_eventId(103));
+        // ...or a real signature over an id that no longer matches the body.
+        final tampered = Event.fromJson({
+          ..._signed(
+            _event(
+              id: _eventId(152),
+              pubkey: _pubkey(1),
+              kind: EventKind.profileBadges,
+              createdAt: 3000,
+            ),
+          ).toJson(),
+          'content': 'rewritten by the relay',
+        });
+        stubRead(events: [wronglySigned, tampered, genuine]);
+
+        await repository.acceptAward(award(coordinate, 122));
+
+        final published = lastSignedEvent()!;
+        expect(published.content, isEmpty);
+        expect(published.tags, [
+          ['a', retainedCoordinate],
+          ['e', _eventId(121)],
+          ['a', coordinate],
+          ['e', _eventId(122)],
+        ]);
+      });
+
       test(
         'migrates the newest legacy list while preserving its data',
         () async {
-          final legacy = _event(
-            id: _eventId(125),
-            pubkey: _pubkey(1),
-            kind: EventKind.badgeSet,
-            createdAt: 2000,
-            content: 'legacy opaque data',
-            tags: [
-              ['d', 'profile_badges'],
-              ['custom', 'legacy metadata'],
-              ['a', retainedCoordinate, 'wss://definition.example'],
-              ['e', _eventId(121), 'wss://award.example'],
-            ],
+          final legacy = _signed(
+            _event(
+              id: _eventId(125),
+              pubkey: _pubkey(1),
+              kind: EventKind.badgeSet,
+              createdAt: 2000,
+              content: 'legacy opaque data',
+              tags: [
+                ['d', 'profile_badges'],
+                ['custom', 'legacy metadata'],
+                ['a', retainedCoordinate, 'wss://definition.example'],
+                ['e', _eventId(121), 'wss://award.example'],
+              ],
+            ),
           );
           when(
             () => nostrClient.queryEventsDetailed(
@@ -3470,10 +3525,12 @@ void main() {
               events: [
                 for (final filter in filters)
                   if (filter.kinds!.contains(EventKind.profileBadges))
-                    _profileBadgesEvent(
-                      id: _eventId(126),
-                      pubkey: _pubkey(1),
-                      tags: [],
+                    _signed(
+                      _profileBadgesEvent(
+                        id: _eventId(126),
+                        pubkey: _pubkey(1),
+                        tags: [],
+                      ),
                     )
                   else if (filter.kinds!.contains(EventKind.badgeSet) &&
                       filter.d!.contains('profile_badges'))
@@ -3721,18 +3778,25 @@ void main() {
         () async {
           await repository.acceptAward(award(firstCoordinate, 130));
           remote = [
-            _profileBadgesEvent(
-              id: '0' * 64,
-              pubkey: _pubkey(1),
-              createdAt: attempts.single.createdAt,
-              tags: [
-                ['a', firstCoordinate],
-                ['e', _eventId(130)],
-                ['a', remoteCoordinate],
-                ['e', _eventId(131)],
-              ],
+            _signed(
+              _profileBadgesEvent(
+                id: '0' * 64,
+                pubkey: _pubkey(1),
+                createdAt: attempts.single.createdAt,
+                tags: [
+                  ['a', firstCoordinate],
+                  ['e', _eventId(130)],
+                  ['a', remoteCoordinate],
+                  ['e', _eventId(131)],
+                ],
+              ),
             ),
           ];
+          // The remote list must sort first on the tie for this to test it.
+          expect(
+            remote.single.id.compareTo(attempts.single.id),
+            lessThan(0),
+          );
 
           await repository.acceptAward(award(nextCoordinate, 132));
 
@@ -3751,11 +3815,13 @@ void main() {
         'signs strictly after a relay revision within the clock budget',
         () async {
           remote = [
-            _profileBadgesEvent(
-              id: _eventId(133),
-              pubkey: _pubkey(1),
-              createdAt: now + 10,
-              tags: [],
+            _signed(
+              _profileBadgesEvent(
+                id: _eventId(133),
+                pubkey: _pubkey(1),
+                createdAt: now + 10,
+                tags: [],
+              ),
             ),
           ];
 
@@ -3787,11 +3853,13 @@ void main() {
               ),
         );
         remote = [
-          _profileBadgesEvent(
-            id: _eventId(136),
-            pubkey: _pubkey(1),
-            createdAt: now + 10,
-            tags: [],
+          _signed(
+            _profileBadgesEvent(
+              id: _eventId(136),
+              pubkey: _pubkey(1),
+              createdAt: now + 10,
+              tags: [],
+            ),
           ),
         ];
 
@@ -3826,11 +3894,13 @@ void main() {
 
       test('refuses a source beyond the bounded future clock window', () async {
         remote = [
-          _profileBadgesEvent(
-            id: _eventId(134),
-            pubkey: _pubkey(1),
-            createdAt: now + 3600,
-            tags: [],
+          _signed(
+            _profileBadgesEvent(
+              id: _eventId(134),
+              pubkey: _pubkey(1),
+              createdAt: now + 3600,
+              tags: [],
+            ),
           ),
         ];
 
@@ -3851,13 +3921,15 @@ void main() {
         definitionCoordinate: '30009:${_pubkey(2)}:daily-diviner',
         recipients: [_pubkey(1)],
       );
-      final existingProfileBadges = _profileBadgesEvent(
-        id: _eventId(6),
-        pubkey: _pubkey(1),
-        tags: [
-          ['a', '30009:${_pubkey(3)}:weekly-diviner'],
-          ['e', _eventId(7)],
-        ],
+      final existingProfileBadges = _signed(
+        _profileBadgesEvent(
+          id: _eventId(6),
+          pubkey: _pubkey(1),
+          tags: [
+            ['a', '30009:${_pubkey(3)}:weekly-diviner'],
+            ['e', _eventId(7)],
+          ],
+        ),
       );
       _stubQueries(nostrClient, {
         'profileCurrent:${_pubkey(1)}': [existingProfileBadges],
@@ -3886,15 +3958,17 @@ void main() {
         definitionCoordinate: '30009:${_pubkey(2)}:daily-diviner',
         recipients: [_pubkey(1)],
       );
-      final existingProfileBadges = _profileBadgesEvent(
-        id: _eventId(9),
-        pubkey: _pubkey(1),
-        tags: [
-          ['a', '30009:${_pubkey(2)}:daily-diviner'],
-          ['e', _eventId(8)],
-          ['a', '30009:${_pubkey(3)}:weekly-diviner'],
-          ['e', _eventId(10)],
-        ],
+      final existingProfileBadges = _signed(
+        _profileBadgesEvent(
+          id: _eventId(9),
+          pubkey: _pubkey(1),
+          tags: [
+            ['a', '30009:${_pubkey(2)}:daily-diviner'],
+            ['e', _eventId(8)],
+            ['a', '30009:${_pubkey(3)}:weekly-diviner'],
+            ['e', _eventId(10)],
+          ],
+        ),
       );
       _stubQueries(nostrClient, {
         'profileCurrent:${_pubkey(1)}': [existingProfileBadges],
@@ -3924,15 +3998,17 @@ void main() {
           definitionCoordinate: coordinate,
           recipients: [_pubkey(1)],
         );
-        final existingProfileBadges = _profileBadgesEvent(
-          id: _eventId(12),
-          pubkey: _pubkey(1),
-          tags: [
-            ['a', coordinate],
-            ['e', _eventId(8)],
-            ['a', '30009:${_pubkey(3)}:weekly-diviner'],
-            ['e', _eventId(10)],
-          ],
+        final existingProfileBadges = _signed(
+          _profileBadgesEvent(
+            id: _eventId(12),
+            pubkey: _pubkey(1),
+            tags: [
+              ['a', coordinate],
+              ['e', _eventId(8)],
+              ['a', '30009:${_pubkey(3)}:weekly-diviner'],
+              ['e', _eventId(10)],
+            ],
+          ),
         );
         _stubQueries(nostrClient, {
           'profileCurrent:${_pubkey(1)}': [existingProfileBadges],
@@ -3956,14 +4032,16 @@ void main() {
         _stubQueries(nostrClient, {
           'awarded': const [],
           'profileCurrent:${_pubkey(1)}': [
-            _profileBadgesEvent(
-              id: _eventId(50),
-              pubkey: _pubkey(1),
-              createdAt: 4000,
-              tags: [
-                ['a', coordinate],
-                ['e', _eventId(51)],
-              ],
+            _signed(
+              _profileBadgesEvent(
+                id: _eventId(50),
+                pubkey: _pubkey(1),
+                createdAt: 4000,
+                tags: [
+                  ['a', coordinate],
+                  ['e', _eventId(51)],
+                ],
+              ),
             ),
           ],
         });
@@ -4920,13 +4998,15 @@ void main() {
           definitionCoordinate: coordinate,
           recipients: [_pubkey(1)],
         );
-        final existingProfileBadges = _profileBadgesEvent(
-          id: _eventId(43),
-          pubkey: _pubkey(1),
-          tags: [
-            ['a', coordinate],
-            ['e', _eventId(42), 'wss://relay.divine.video'],
-          ],
+        final existingProfileBadges = _signed(
+          _profileBadgesEvent(
+            id: _eventId(43),
+            pubkey: _pubkey(1),
+            tags: [
+              ['a', coordinate],
+              ['e', _eventId(42), 'wss://relay.divine.video'],
+            ],
+          ),
         );
         _stubQueries(nostrClient, {
           'profileCurrent:${_pubkey(1)}': [existingProfileBadges],
@@ -4956,13 +5036,15 @@ void main() {
       );
       _stubQueries(nostrClient, {
         'profileCurrent:${_pubkey(1)}': [
-          _profileBadgesEvent(
-            id: _eventId(46),
-            pubkey: _pubkey(1),
-            tags: [
-              ['a', coordinate],
-              ['e', _eventId(44)],
-            ],
+          _signed(
+            _profileBadgesEvent(
+              id: _eventId(46),
+              pubkey: _pubkey(1),
+              tags: [
+                ['a', coordinate],
+                ['e', _eventId(44)],
+              ],
+            ),
           ),
         ],
       });
@@ -5125,25 +5207,29 @@ void main() {
           definitionCoordinate: '30009:${_pubkey(2)}:daily-diviner',
           recipients: [_pubkey(1)],
         );
-        final olderProfileBadges = _event(
-          id: _eventId(48),
-          pubkey: _pubkey(1),
-          kind: EventKind.profileBadges,
-          createdAt: 500,
-          tags: [
-            ['a', '30009:${_pubkey(3)}:older-badge'],
-            ['e', _eventId(49)],
-          ],
+        final olderProfileBadges = _signed(
+          _event(
+            id: _eventId(48),
+            pubkey: _pubkey(1),
+            kind: EventKind.profileBadges,
+            createdAt: 500,
+            tags: [
+              ['a', '30009:${_pubkey(3)}:older-badge'],
+              ['e', _eventId(49)],
+            ],
+          ),
         );
-        final newerProfileBadges = _event(
-          id: _eventId(50),
-          pubkey: _pubkey(1),
-          kind: EventKind.profileBadges,
-          createdAt: 2000,
-          tags: [
-            ['a', '30009:${_pubkey(3)}:newer-badge'],
-            ['e', _eventId(51)],
-          ],
+        final newerProfileBadges = _signed(
+          _event(
+            id: _eventId(50),
+            pubkey: _pubkey(1),
+            kind: EventKind.profileBadges,
+            createdAt: 2000,
+            tags: [
+              ['a', '30009:${_pubkey(3)}:newer-badge'],
+              ['e', _eventId(51)],
+            ],
+          ),
         );
         _stubQueries(nostrClient, {
           'profileCurrent:${_pubkey(1)}': [
@@ -5402,11 +5488,13 @@ void main() {
         _stubQueries(nostrClient, {
           'awarded': [award],
           'profileCurrent:${_pubkey(1)}': [
-            _profileBadgesEvent(
-              id: _eventId(71),
-              pubkey: _pubkey(1),
-              tags: const [],
-              createdAt: 500,
+            _signed(
+              _profileBadgesEvent(
+                id: _eventId(71),
+                pubkey: _pubkey(1),
+                tags: const [],
+                createdAt: 500,
+              ),
             ),
           ],
         });
@@ -6775,13 +6863,15 @@ void main() {
             ),
           ],
           'profileCurrent:${_pubkey(1)}': [
-            _profileBadgesEvent(
-              id: _eventId(68),
-              pubkey: _pubkey(1),
-              tags: [
-                ['a', coordinate.value],
-                ['e', _eventId(67)],
-              ],
+            _signed(
+              _profileBadgesEvent(
+                id: _eventId(68),
+                pubkey: _pubkey(1),
+                tags: [
+                  ['a', coordinate.value],
+                  ['e', _eventId(67)],
+                ],
+              ),
             ),
           ],
         });
@@ -6806,13 +6896,15 @@ void main() {
         // so the retry finds no award to revoke and must still get there.
         _stubQueries(nostrClient, {
           'profileCurrent:${_pubkey(1)}': [
-            _profileBadgesEvent(
-              id: _eventId(69),
-              pubkey: _pubkey(1),
-              tags: [
-                ['a', coordinate.value],
-                ['e', _eventId(67)],
-              ],
+            _signed(
+              _profileBadgesEvent(
+                id: _eventId(69),
+                pubkey: _pubkey(1),
+                tags: [
+                  ['a', coordinate.value],
+                  ['e', _eventId(67)],
+                ],
+              ),
             ),
           ],
         });
@@ -7425,6 +7517,21 @@ BadgeAwardViewData _byCoordinate(
   return awards.firstWhere(
     (award) => award.definitionCoordinate == coordinate,
   );
+}
+
+/// [event] as its author's test key really signs it, the way a relay serves a
+/// list the owner published. The fixture's own id is replaced by the real one.
+Event _signed(Event event) {
+  final seed = _pubkeys.entries
+      .firstWhere((entry) => entry.value == event.pubkey)
+      .key;
+  return Event(
+    event.pubkey,
+    event.kind,
+    event.tags,
+    event.content,
+    createdAt: event.createdAt,
+  )..sign(_eventId(seed + 100));
 }
 
 String _eventId(int seed) => seed.toRadixString(16).padLeft(64, '0');
