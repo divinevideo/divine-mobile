@@ -1629,6 +1629,102 @@ void main() {
           ),
         );
       });
+
+      test('unpinning the reply the relays still pin clears it', () async {
+        curationAnswers([
+          _curationEvent(
+            createdAt: 1000,
+            tags: [
+              ['e', _hex(201), 'wss://relay.example', 'pinned'],
+              ['e', _hex(203), '', 'hidden'],
+            ],
+          ),
+        ]);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        final previous = RepliesCuration(
+          pinnedId: _hex(201),
+          hiddenIds: {_hex(203)},
+        );
+
+        final reconciled = await repository().saveCuration(
+          previous.pinned(null),
+          videoAddress: _rootAddress,
+          previous: previous,
+        );
+
+        expect(reconciled, RepliesCuration(hiddenIds: {_hex(203)}));
+        expect(signed.single.tags, [
+          ['d', RepliesCuration.dTagFor(_rootAddress)],
+          ['e', _hex(203), '', 'hidden'],
+        ]);
+      });
+
+      test('hiding another reply keeps a remote unhide', () async {
+        curationAnswers([
+          _curationEvent(
+            createdAt: 1000,
+            tags: [
+              ['e', _hex(202), '', 'hidden'],
+            ],
+          ),
+        ]);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        final previous = RepliesCuration(hiddenIds: {_hex(201), _hex(202)});
+
+        final reconciled = await repository().saveCuration(
+          previous.hidden(_hex(203)),
+          videoAddress: _rootAddress,
+          previous: previous,
+        );
+
+        expect(reconciled, RepliesCuration(hiddenIds: {_hex(202), _hex(203)}));
+      });
+
+      group('queued saves', () {
+        late VideoResponsesRepository responses;
+
+        setUp(() {
+          responses = VideoResponsesRepository(
+            nostrClient: nostrClient,
+            signEvent:
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async =>
+                    Event(_creator, kind, tags, content, createdAt: createdAt),
+          );
+        });
+
+        test(
+          'a refused save neither blocks the next nor becomes its source',
+          () async {
+            var attempt = 0;
+            when(
+              () => nostrClient.publishEventAwaitOk(any()),
+            ).thenAnswer((_) async => _outcome(accepted: ++attempt > 1));
+
+            final first = responses.saveCuration(
+              RepliesCuration(hiddenIds: {_hex(201)}),
+              videoAddress: _rootAddress,
+              previous: const RepliesCuration(),
+            );
+            final second = responses.saveCuration(
+              RepliesCuration(hiddenIds: {_hex(202)}),
+              videoAddress: _rootAddress,
+              previous: const RepliesCuration(),
+            );
+
+            await expectLater(first, throwsA(isA<RepliesCurationException>()));
+            expect(await second, RepliesCuration(hiddenIds: {_hex(202)}));
+          },
+        );
+      });
     });
   });
 
