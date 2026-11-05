@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
@@ -35,6 +36,20 @@ class _ObservedMembership extends Fake implements ConcordCommunitySession {
 
 void main() {
   group('ConcordRoomCatalog', () {
+    test('configured catalog failure never resolves to the POC catalog', () {
+      final result = resolveConcordCatalog(
+        AsyncError<ConcordRoomCatalog>(
+          StateError('synthetic membership failure'),
+          StackTrace.current,
+        ),
+      );
+      if (concordInviteUrl.isNotEmpty) {
+        expect(result, isNull);
+      } else {
+        expect(result!.isReal, isFalse);
+      }
+    });
+
     test(
       'catalog observation survives transient authority incompleteness',
       () async {

@@ -25,8 +25,8 @@ List<RouteBase> chatRoutes(Ref ref) => [
 /// Sends `/chat` home unless [FeatureFlag.concordChat] is on and the account
 /// may message.
 ///
-/// The POC signs with the account's real key into a stream anyone can read,
-/// so a build that has not opted in must not open it. Accounts under the
+/// A configured public community or reviewer opt-in supplies the build
+/// default. Accounts under the
 /// protected-minor messaging restriction stay out even with the flag on, the
 /// same way the DM screens keep them out of group messages.
 String? chatRedirectIfUnavailable(Ref ref) {

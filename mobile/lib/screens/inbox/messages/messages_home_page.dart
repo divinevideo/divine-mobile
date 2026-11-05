@@ -1,5 +1,5 @@
 // ABOUTME: Wires account-scoped Direct / Rooms navigation into Messages.
-// ABOUTME: Keeps the Concord POC behind its existing internal access gate.
+// ABOUTME: Keeps public Rooms behind build, account and messaging restrictions.
 
 import 'package:concord_repository/concord_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -35,7 +35,7 @@ class MessagesHomePage extends ConsumerWidget {
       isFeatureEnabledProvider(FeatureFlag.concordChat),
     );
     final restricted = ref.watch(isDmRestrictedProvider);
-    // Do not instantiate chat state or new navigation when the POC is disabled.
+    // Do not instantiate chat state or new navigation when Rooms is disabled.
     if (!enabled || restricted || account == null || account.isEmpty) {
       return direct;
     }

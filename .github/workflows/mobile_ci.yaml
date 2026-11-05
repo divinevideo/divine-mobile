@@ -316,6 +316,19 @@ jobs:
         # prints the same one. Package workflows remain independently pinned
         # by very_good_workflows and are outside this app-suite upgrade. #9138.
         run: dart pub global activate very_good_cli "$VERY_GOOD_CLI_VERSION"
+      - name: Verify configured public Rooms entry
+        if: ${{ matrix.shard == 0 }}
+        # These are synthetic compile inputs, never release defaults. Run before
+        # shard selection removes files needed by the configuration contract.
+        run: |
+          flutter test --no-pub \
+            --dart-define=CONCORD_INVITE_URL=https://synthetic.invalid/public-community \
+            --dart-define=FF_CONCORD_CHAT=false \
+            test/services/build_config_test.dart \
+            test/router/chat_routes_test.dart \
+            test/screens/inbox/messages/messages_home_page_test.dart \
+            test/features/chat/concord_session_test.dart \
+            --plain-name configured
       - name: 🔪 Reduce test/ to this shard
         # --optimization bundles every untagged test file into ONE suite, so
         # --concurrency=4 has nothing left to schedule once the 18 tagged files

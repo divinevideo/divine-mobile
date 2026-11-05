@@ -8,9 +8,12 @@ import 'package:go_router/go_router.dart';
 import 'package:openvine/features/chat/chat_page.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/feature_flags/services/build_configuration.dart';
+import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/routes/chat_routes.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeBuildContext extends Fake implements BuildContext {}
 
@@ -24,6 +27,35 @@ class _RoomRequest extends Fake implements GoRouterState {
 
 void main() {
   group('chatRedirectIfUnavailable', () {
+    test('configured builds open Rooms without a device opt-in and retain restrictions', () async {
+      SharedPreferences.setMockInitialValues({'ff_concordChat': false});
+      final prefs = await SharedPreferences.getInstance();
+      final service = FeatureFlagService(prefs, const BuildConfiguration());
+      addTearDown(service.dispose);
+      await service.initialize();
+      final enabled =
+          const String.fromEnvironment('CONCORD_INVITE_URL').isNotEmpty ||
+          const bool.fromEnvironment('FF_CONCORD_CHAT');
+      for (final restricted in [false, true]) {
+        final redirectProvider = Provider<String?>(chatRedirectIfUnavailable);
+        final container = ProviderContainer(
+          overrides: [
+            featureFlagServiceProvider.overrideWithValue(service),
+            isDmRestrictedProvider.overrideWithValue(restricted),
+          ],
+        );
+        addTearDown(container.dispose);
+        expect(
+          container.read(isFeatureEnabledProvider(FeatureFlag.concordChat)),
+          enabled,
+        );
+        expect(
+          container.read(redirectProvider),
+          enabled && !restricted ? null : VideoFeedPage.pathForIndex(0),
+        );
+      }
+    });
+
     String? redirectWith({
       required bool chatEnabled,
       required bool dmRestricted,
