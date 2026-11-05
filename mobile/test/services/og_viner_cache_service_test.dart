@@ -1,6 +1,7 @@
 // ABOUTME: Tests the device-scoped cache of pubkeys known to be OG Viners.
 // ABOUTME: Covers verified-only learning, persistence and the v1 discard.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,7 @@ import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/services/og_viner_cache_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 const _ogPubkey =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -20,6 +22,22 @@ const _selfTaggedPubkey =
 List<String> _stored(SharedPreferences prefs) =>
     (jsonDecode(prefs.getString(ogVinerPubkeysCacheKey)!) as List)
         .cast<String>();
+
+class _HeldCacheWrite extends InMemorySharedPreferencesStore {
+  _HeldCacheWrite() : super.empty();
+
+  final entered = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (key == 'flutter.$ogVinerStagingPubkeysCacheKey') {
+      entered.complete();
+      await release.future;
+    }
+    return super.setValue(valueType, key, value);
+  }
+}
 
 void main() {
   group(OgVinerCacheService, () {
@@ -71,6 +89,44 @@ void main() {
         ]);
 
         expect(notifications, equals(1));
+      });
+
+      test('finishes an in-flight save under its original environment key '
+          'without notifying after disposal', () async {
+        SharedPreferences.setMockInitialValues({});
+        final originalStore = SharedPreferencesStorePlatform.instance;
+        final store = _HeldCacheWrite();
+        SharedPreferencesStorePlatform.instance = store;
+        addTearDown(() {
+          SharedPreferencesStorePlatform.instance = originalStore;
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final service = OgVinerCacheService(
+          prefs: prefs,
+          storageKey: ogVinerStagingPubkeysCacheKey,
+        );
+        var notifications = 0;
+        service.addListener(() => notifications++);
+
+        final learning = service.learnFromVideos([
+          _video(pubkey: _ogPubkey, verifiedArchive: true),
+        ]);
+        final learningCompleted = expectLater(learning, completion(equals(1)));
+        await store.entered.future;
+        expect(await store.getAll(), isEmpty);
+        expect(notifications, equals(0));
+
+        service.dispose();
+        store.release.complete();
+        await learningCompleted;
+
+        expect(notifications, equals(0));
+        expect(
+          await store.getAll(),
+          equals({
+            'flutter.$ogVinerStagingPubkeysCacheKey': jsonEncode([_ogPubkey]),
+          }),
+        );
       });
 
       test('writes nothing when every author is already known', () async {

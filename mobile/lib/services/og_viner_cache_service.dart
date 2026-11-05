@@ -69,6 +69,13 @@ class OgVinerCacheService extends ChangeNotifier {
   final SharedPreferences? _prefs;
   final String _storageKey;
   final Set<String> _pubkeys = {};
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 
   /// Whether [pubkey] has been seen on a video funnelcake verifies as an
   /// archived Vine.
@@ -96,7 +103,7 @@ class OgVinerCacheService extends ChangeNotifier {
     if (added == 0) return 0;
 
     await _save();
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     return added;
   }
 
