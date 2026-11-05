@@ -1,4 +1,4 @@
-// ABOUTME: Publishes the user's configured relay set as NIP-65 kind:10002.
+// ABOUTME: Applies relay-settings edits to the user's NIP-65 kind:10002 list.
 // ABOUTME: Keeps relay-list event construction and retry state out of UI/BLoC.
 
 import 'dart:async';
