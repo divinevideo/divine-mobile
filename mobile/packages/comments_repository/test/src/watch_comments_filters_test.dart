@@ -1,5 +1,5 @@
 // ABOUTME: Tests for the filters CommentsRepository.watchComments subscribes
-// ABOUTME: with: a bounded backfill, and video replies on their own filter.
+// ABOUTME: with: a bounded backfill, and comments and video replies in one.
 
 import 'dart:async';
 
