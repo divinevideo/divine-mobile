@@ -1724,6 +1724,116 @@ void main() {
             expect(await second, RepliesCuration(hiddenIds: {_hex(202)}));
           },
         );
+
+        test('a newer relay revision supersedes what it published', () async {
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+          await responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+          curationAnswers([
+            _curationEvent(
+              createdAt: NostrTimestamp.now(driftTolerance: 0) + 1000,
+              tags: [
+                ['e', _hex(201), '', 'hidden'],
+                ['e', _hex(205), '', 'hidden'],
+              ],
+            ),
+          ]);
+
+          final reconciled = await responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201), _hex(202)}),
+            videoAddress: _rootAddress,
+            previous: RepliesCuration(hiddenIds: {_hex(201)}),
+          );
+
+          expect(reconciled.hiddenIds, {_hex(201), _hex(202), _hex(205)});
+        });
+
+        test('what it published outranks an older relay revision', () async {
+          curationAnswers([
+            _curationEvent(
+              createdAt: 1000,
+              tags: [
+                ['e', _hex(209), '', 'hidden'],
+              ],
+            ),
+          ]);
+          when(
+            () => nostrClient.publishEventAwaitOk(any()),
+          ).thenAnswer((_) async => _outcome(accepted: true));
+          final afterFirst = await responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          );
+          expect(afterFirst.hiddenIds, {_hex(201), _hex(209)});
+
+          final reconciled = await responses.saveCuration(
+            afterFirst.hidden(_hex(202)),
+            videoAddress: _rootAddress,
+            previous: afterFirst,
+          );
+
+          expect(reconciled.hiddenIds, {_hex(201), _hex(202), _hex(209)});
+        });
+      });
+
+      test('refuses when signed out before anything is read', () async {
+        when(() => nostrClient.publicKey).thenReturn('');
+
+        await expectLater(
+          repository().saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          ),
+          throwsA(isA<RepliesCurationException>()),
+        );
+
+        verifyNever(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        );
+        expect(signed, isEmpty);
+      });
+
+      test('refuses when the client is disposed while signing', () async {
+        var disposed = false;
+        when(() => nostrClient.isDisposed).thenAnswer((_) => disposed);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        final responses = VideoResponsesRepository(
+          nostrClient: nostrClient,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async {
+                disposed = true;
+                return signedEvent;
+              },
+        );
+
+        await expectLater(
+          responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          ),
+          throwsA(isA<RepliesCurationException>()),
+        );
+
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
       });
     });
   });
