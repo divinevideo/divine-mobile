@@ -1,3 +1,4 @@
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
@@ -293,6 +294,27 @@ void main() {
           findsNothing,
         );
       });
+    });
+
+    testWidgets("View all's chevron is the brand accent, its label is not", (
+      tester,
+    ) async {
+      await _pumpHeader(tester, previewPubkeys: _members(3), onViewAll: () {});
+
+      final colors = tester
+          .element(find.byType(PeopleListHeroHeader))
+          .vineColors;
+      final caret = tester.widget<DivineIcon>(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is DivineIcon && widget.icon == DivineIconName.caretRight,
+        ),
+      );
+      expect(caret.color, colors.accentBrand);
+      final label = tester.widget<Text>(
+        find.text(l10n.peopleListsViewAllMembers),
+      );
+      expect(label.style?.color, colors.primaryText);
     });
 
     group('action buttons', () {
