@@ -1561,6 +1561,9 @@ void main() {
           creatorPubkey: _creator,
           videoAddress: _rootAddress,
         );
+        // The save's own read finds nothing, so only the fetch can set the
+        // floor this asserts.
+        curationAnswers(const []);
         signedEvent = _curationEvent(createdAt: ahead + 1);
 
         await responses.saveCuration(
