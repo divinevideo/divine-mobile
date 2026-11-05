@@ -64,7 +64,7 @@ class PeopleListHeroHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final description = this.description?.trim();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, kListHeroBottomPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 8,

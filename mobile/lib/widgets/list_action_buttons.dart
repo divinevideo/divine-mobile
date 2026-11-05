@@ -6,6 +6,10 @@ import 'package:flutter/widgets.dart';
 /// Gap between the buttons of a [ListActionButtons] row.
 const kListActionButtonsSpacing = 12.0;
 
+/// Space between a list page's hero header and the video grid beneath it,
+/// shared by the video-list and people-list pages.
+const kListHeroBottomPadding = 20.0;
+
 /// [buttons] side by side, each taking an equal share of the width; a lone
 /// button takes all of it, and no buttons draw nothing.
 class ListActionButtons extends StatelessWidget {

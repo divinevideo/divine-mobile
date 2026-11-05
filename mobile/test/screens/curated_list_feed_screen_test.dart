@@ -18,6 +18,7 @@ import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
 import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/list_action_buttons.dart';
 import 'package:openvine/widgets/list_author_byline.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/share_list_button.dart';
@@ -997,6 +998,14 @@ void main() {
         final share = tester.getRect(find.byType(ShareListButton));
         expect(share.left, greaterThan(manage.right));
         expect(share.width, manage.width);
+        // The same gap above the grid as the people-list page.
+        expect(
+          tester
+                  .getTopLeft(find.bySemanticsIdentifier('video_thumbnail_0'))
+                  .dy -
+              share.bottom,
+          kListHeroBottomPadding,
+        );
         expect(find.byType(FollowListButton), findsNothing);
         final manageButton = tester.widget<DivineButton>(manageVideosButton());
         expect(manageButton.type, DivineButtonType.secondary);
