@@ -191,6 +191,17 @@ class LoopPcmTest {
             "seam step should be one tone step, was ${seamStep(prepared, 1)}",
             seamStep(prepared, 1) <= 101,
         )
+
+        // A lap that ends in silence takes the other blend, capped the same way.
+        val silentTail = LoopPcm.prepare(
+            samples = ShortArray(loopFrames) + tone(frames = sampleRate / 4),
+            channels = 1,
+            sampleRate = sampleRate,
+            loopUs = 50_000L,
+        )!!
+
+        assertTrue(silentTail.blendedFromPastTheLoop)
+        assertEquals(loopFrames, silentTail.fadeFrames)
     }
 
     @Test
