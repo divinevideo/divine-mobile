@@ -73,12 +73,6 @@ class ChatPage extends ConsumerWidget {
         signer == null) {
       return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
     }
-    final shared = repositoryBuilder == null
-        ? ref.watch(roomActivityRepositoryProvider)
-        : null;
-    if (repositoryBuilder == null && shared == null) {
-      return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
-    }
     final catalogState = ref.watch(concordRoomCatalogProvider);
     final catalog = resolveConcordCatalog(catalogState);
     if (catalog == null || !catalog.ready) {
@@ -86,6 +80,14 @@ class ChatPage extends ConsumerWidget {
         return const Center(child: DivineCircularProgressIndicator());
       }
       return RouteErrorScreen(message: context.l10n.dmConversationLoadError);
+    }
+    // The shared repository exists only once the catalog is ready, so check it
+    // after the catalog's loading and load-error states.
+    final shared = repositoryBuilder == null
+        ? ref.watch(roomActivityRepositoryProvider)
+        : null;
+    if (repositoryBuilder == null && shared == null) {
+      return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
     }
     final communities = catalog.communities;
     if (communities.isEmpty) {
