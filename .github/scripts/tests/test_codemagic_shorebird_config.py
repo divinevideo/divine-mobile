@@ -1,6 +1,8 @@
 import json
 import re
 import subprocess
+import shlex
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -620,6 +622,73 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             self.assertNotIn("- *write_shorebird_people_list_defines", workflow)
             self.assertLess(workflow.index("- *write_shorebird_dart_defines"), workflow.index("- *fetch_and_verify_shorebird_provenance"))
             self.assertLess(workflow.index("- *fetch_and_verify_shorebird_provenance"), workflow.index("- *prepare_patch_source"))
+
+    def test_configured_rooms_compile_contract_precedes_shard_file_removal(self) -> None:
+        start = self.mobile_ci_contents.index("- name: Verify configured public Rooms entry")
+        end = self.mobile_ci_contents.index("- name:", start + 1)
+        contract = self.mobile_ci_contents[start:end]
+        self.assertIn("matrix.shard == 0", contract)
+        self.assertIn("--dart-define=CONCORD_INVITE_URL=https://synthetic.invalid/", contract)
+        self.assertIn("--dart-define=FF_CONCORD_CHAT=false", contract)
+        self.assertIn("test/services/build_config_test.dart", contract)
+        self.assertIn("test/router/chat_routes_test.dart", contract)
+        self.assertIn("test/screens/inbox/messages/messages_home_page_test.dart", contract)
+        self.assertIn("test/features/chat/concord_session_test.dart", contract)
+        self.assertLess(start, self.mobile_ci_contents.index("- name: 🔪 Reduce test/"))
+
+    def test_store_and_beta_release_scripts_forward_optional_invite_privately(self) -> None:
+        workflows = self._resolved_config()["workflows"]
+        required = ["ZENDESK_APP_ID", "ZENDESK_CLIENT_ID", "ZENDESK_URL",
+                    "PROOFMODE_SIGNING_SERVER_ENDPOINT", "PROOFMODE_SIGNING_SERVER_TOKEN"]
+        helper = CODEMAGIC_PATH.parent / "mobile/scripts/write_concord_release_defines.rb"
+        for name in ("ios-build", "android-build"):
+            for channel in ("BETA", "PRODUCTION"):
+                for invite in (None, "https://synthetic.invalid/community#synthetic-token"):
+                    with self.subTest(workflow=name, channel=channel, configured=invite is not None):
+                        scripts = [step["script"] for step in workflows[name]["scripts"]
+                                   if step["name"] in ("Write Shorebird dart-defines",
+                                        "Write optional public community configuration")]
+                        self.assertEqual(2, len(scripts))
+                        script = "\n".join(scripts).replace("${{ inputs.DEFAULT_ENV }}", "PRODUCTION")
+                        script = script.replace("ruby scripts/write_concord_release_defines.rb",
+                                                "ruby " + shlex.quote(str(helper)))
+                        environment = {key: "synthetic-required-value" for key in required}
+                        environment["RELEASE_CHANNEL"] = channel
+                        if invite is not None:
+                            environment["CONCORD_INVITE_URL"] = invite
+                        with tempfile.TemporaryDirectory() as directory:
+                            result = subprocess.run(["bash", "-c", "set -euo pipefail\n" + script],
+                                cwd=directory, env=environment, text=True, capture_output=True, check=False)
+                            self.assertEqual(0, result.returncode, result.stderr)
+                            output = Path(directory) / "build/shorebird/dart_defines.json"
+                            actual = json.loads(output.read_text())
+                            self.assertEqual("PRODUCTION", actual["DEFAULT_ENV"])
+                            self.assertEqual(set(required), set(actual) - {"DEFAULT_ENV", "CONCORD_INVITE_URL"})
+                            self.assertEqual(invite, actual.get("CONCORD_INVITE_URL"))
+                            self.assertEqual(0o600, output.stat().st_mode & 0o777)
+                            self.assertNotIn("synthetic", result.stdout + result.stderr)
+
+    def test_concord_release_and_patch_defines_follow_original_release_shape(self) -> None:
+        base = self._definition_block("write_shorebird_dart_defines")
+        self.assertNotIn("CONCORD_INVITE_URL", base)
+        release = self._definition_block("write_shorebird_concord_defines")
+        self.assertIn("ruby scripts/write_concord_release_defines.rb", release)
+        self.assertIn("--output build/shorebird/dart_defines.json", release)
+        patch = self._definition_block("fetch_and_verify_shorebird_provenance")
+        self.assertLess(patch.index("shorebird_provenance_store.sh fetch"), patch.index("concord-required"))
+        self.assertLess(patch.index("concord-required"), patch.index("write_concord_release_defines.rb"))
+        self.assertLess(patch.index("write_concord_release_defines.rb"), patch.index("shorebird_provenance.rb verify"))
+        self.assertIn('--required', patch)
+        for name, build in [("ios-build", "build_ios"), ("android-build", "build_aab")]:
+            workflow = self._workflow_block(name)
+            self.assertLess(workflow.index("*write_shorebird_dart_defines"), workflow.index("*write_shorebird_concord_defines"))
+            self.assertLess(workflow.index("*write_shorebird_concord_defines"), workflow.index("*" + build))
+            self.assertLess(workflow.index("*" + build), workflow.index("*emit_shorebird_provenance"))
+        for name in ("ios-patch", "android-patch"):
+            self.assertNotIn("*write_shorebird_concord_defines", self._workflow_block(name))
+        macos = self._definition_block("build_macos")
+        self.assertIn("ruby scripts/write_concord_release_defines.rb", macos)
+        self.assertIn("--output build/public_people_list_defines.json", macos)
 
     def test_prepare_patch_source_fails_closed(self) -> None:
         # Codemagic does not abort a multi-line script when a command fails, so

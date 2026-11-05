@@ -19,6 +19,8 @@
 # 6 - DEFAULT_ENV is configured via build inputs (dropdown) when starting a build
 #   - Options: PRODUCTION, STAGING, POC
 #   - Defaults to PRODUCTION for automatic builds
+# Optional CONCORD_INVITE_URL enables public Rooms in release builds. Provide it
+# to the workflow environment; it is merged into private defines, never logged.
 # 7 - Create environment variable group "proofmode_credentials" with:
 #   - PROOFMODE_SIGNING_SERVER_ENDPOINT
 #   - PROOFMODE_SIGNING_SERVER_TOKEN
@@ -250,6 +252,12 @@ definitions:
         )
         File.chmod(0o600, 'build/shorebird/dart_defines.json')
         RUBY
+    - &write_shorebird_concord_defines
+      name: Write optional public community configuration
+      script: |
+        set -euo pipefail
+        ruby scripts/write_concord_release_defines.rb \
+          --output build/shorebird/dart_defines.json
     - &write_shorebird_people_list_defines
       name: Write Shorebird public-list policy
       script: |
@@ -326,6 +334,17 @@ definitions:
             --github-repository "$CM_REPO_SLUG"
         elif [ "$PUBLIC_PEOPLE_LIST_POLICY_REQUIRED" != "false" ]; then
           echo "ERROR: could not establish the release's public-list policy shape."
+          exit 1
+        fi
+        CONCORD_INVITE_REQUIRED=$(ruby scripts/shorebird_provenance.rb concord-required \
+          --platform "$SHOREBIRD_PLATFORM" \
+          --release-version "${{ inputs.RELEASE_VERSION }}" \
+          --record "$PROVENANCE_PATH")
+        if [ "$CONCORD_INVITE_REQUIRED" = "true" ]; then
+          ruby scripts/write_concord_release_defines.rb \
+            --output build/shorebird/dart_defines.json --required
+        elif [ "$CONCORD_INVITE_REQUIRED" != "false" ]; then
+          echo "ERROR: could not establish the release's public community configuration shape."
           exit 1
         fi
         ruby scripts/shorebird_provenance.rb verify \
@@ -565,12 +584,15 @@ definitions:
     - &build_macos
       name: Build macOS app
       script: |
+        set -euo pipefail
         # This workflow packages a DMG for direct download. It does not provision
         # a macOS signing identity/profile in Codemagic, so disable signing for
         # the CI build and handle signing/notarization separately when needed.
         python3 scripts/write_public_people_list_defines.py \
           --output build/public_people_list_defines.json \
           --github-repository "$CM_REPO_SLUG"
+        ruby scripts/write_concord_release_defines.rb \
+          --output build/public_people_list_defines.json
         env CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO flutter build macos --release \
           --dart-define-from-file=build/public_people_list_defines.json \
           --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
@@ -1072,6 +1094,7 @@ workflows:
       - *prepare_ios_spm_packages
       - *pod_install
       - *write_shorebird_dart_defines
+      - *write_shorebird_concord_defines
       - *write_shorebird_people_list_defines
       - *build_ios
       - *emit_shorebird_provenance
@@ -1196,6 +1219,7 @@ workflows:
       - *write_shorebird_public_key
       - *preflight_shorebird_android_release
       - *write_shorebird_dart_defines
+      - *write_shorebird_concord_defines
       - *write_shorebird_people_list_defines
       - *build_apk
       - *precache_shorebird_android_artifacts

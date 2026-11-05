@@ -131,7 +131,7 @@ class ShorebirdProvenanceTest(unittest.TestCase):
             capture_output=True,
         )
 
-    def prepare_patch_policy(self, policy: str = "[]") -> subprocess.CompletedProcess[str]:
+    def prepare_patch_policy(self, policy: str = "[]", invite: str = "") -> subprocess.CompletedProcess[str]:
         # Execute the actual Codemagic gate with the real Ruby authenticator and
         # policy writer. Only the already-fetched record and temporary output
         # paths replace remote/build inputs; no network operation is needed.
@@ -152,11 +152,52 @@ class ShorebirdProvenanceTest(unittest.TestCase):
                 "SHOREBIRD_PLATFORM": "ios",
                 "CM_REPO_SLUG": "divinevideo/divine-mobile",
                 POLICY_NAME: policy,
+                "CONCORD_INVITE_URL": invite,
             },
             check=False,
             text=True,
             capture_output=True,
         )
+
+    def test_legacy_patch_ignores_current_invite_and_retains_exact_shape(self) -> None:
+        baseline = self.defines.read_bytes()
+        self.assertEqual(0, self.emit().returncode)
+        result = self.prepare_patch_policy(invite="https://synthetic.invalid/current#token")
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(baseline, self.defines.read_bytes())
+        self.assertEqual(0, self.verify().returncode)
+
+    def test_configured_patch_requires_exact_invite_and_keeps_values_private(self) -> None:
+        invite = "https://synthetic.invalid/release#synthetic-token"
+        original = json.loads(self.defines.read_text())
+        self.defines.write_text(json.dumps({**original, "CONCORD_INVITE_URL": invite}))
+        self.assertEqual(0, self.emit().returncode)
+        self.assertNotIn(invite, self.record.read_text())
+        self.defines.write_text(json.dumps(original))
+        missing = self.prepare_patch_policy()
+        self.assertNotEqual(0, missing.returncode)
+        self.assertEqual(original, json.loads(self.defines.read_text()))
+        prepared = self.prepare_patch_policy(invite=invite)
+        self.assertEqual(0, prepared.returncode, prepared.stderr)
+        self.assertEqual(invite, json.loads(self.defines.read_text())["CONCORD_INVITE_URL"])
+        self.assertEqual(0, self.verify().returncode)
+        drift = self.prepare_patch_policy(invite="https://synthetic.invalid/changed#token")
+        self.assertEqual(0, drift.returncode, drift.stderr)
+        rejected = self.verify()
+        self.assertNotEqual(0, rejected.returncode)
+        self.assertIn("CONCORD_INVITE_URL", rejected.stderr)
+        self.assertNotIn("synthetic.invalid", missing.stdout + missing.stderr +
+            prepared.stdout + prepared.stderr + rejected.stdout + rejected.stderr)
+
+    def test_unsigned_record_cannot_select_concord_patch_shape(self) -> None:
+        baseline = self.defines.read_bytes()
+        self.assertEqual(0, self.emit().returncode)
+        record = json.loads(self.record.read_text())
+        record["config_fingerprints"]["CONCORD_INVITE_URL"] = "0" * 64
+        self.record.write_text(json.dumps(record))
+        result = self.prepare_patch_policy(invite="https://synthetic.invalid/forged#token")
+        self.assertNotEqual(0, result.returncode)
+        self.assertEqual(baseline, self.defines.read_bytes())
 
     def test_legacy_release_keeps_policy_absent_from_actual_patch_defines(self) -> None:
         baseline = self.defines.read_bytes()
