@@ -272,6 +272,8 @@ void main() {
         },
         build: createBloc,
         act: (b) => b.add(const CommentsLoadRequested()),
+        // The live comment is handed over when the batch window closes.
+        wait: const Duration(milliseconds: 200),
         verify: (b) {
           expect(b.state.commentsById.length, 51);
           expect(b.state.hasMoreContent, isTrue);
@@ -596,18 +598,64 @@ void main() {
       );
     });
 
-    group('NewCommentReceived', () {
+    group('NewCommentsBatchReceived', () {
       blocTest<CommentsListBloc, CommentsListState>(
         'adds new comment and bumps newCommentCount after backfill',
         build: createBloc,
         seed: () => const CommentsListState(status: CommentsStatus.success),
         act: (b) {
           b.add(const CommentsInitialBackfillCompleted());
-          b.add(NewCommentReceived(makeComment(validId('c1'))));
+          b.add(NewCommentsBatchReceived([makeComment(validId('c1'))]));
         },
         verify: (b) {
           expect(b.state.commentsById.length, 1);
           expect(b.state.newCommentCount, 1);
+        },
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'gives each echo in one batch its own placeholder',
+        build: createBloc,
+        seed: () {
+          Comment pending(String id) => Comment(
+            id: id,
+            content: 'same words',
+            authorPubkey: validId('me'),
+            createdAt: DateTime.now(),
+            rootEventId: validId('root'),
+            rootAuthorPubkey: validId('author'),
+          );
+          return CommentsListState(
+            status: CommentsStatus.success,
+            commentsById: {
+              'pending_comment_1': pending('pending_comment_1'),
+              'pending_comment_2': pending('pending_comment_2'),
+            },
+          );
+        },
+        act: (b) {
+          b.add(const CommentsInitialBackfillCompleted());
+          b.add(
+            NewCommentsBatchReceived([
+              makeComment(
+                validId('first'),
+                content: 'same words',
+                authorPubkey: validId('me'),
+              ),
+              makeComment(
+                validId('second'),
+                content: 'same words',
+                authorPubkey: validId('me'),
+              ),
+            ]),
+          );
+        },
+        verify: (b) {
+          expect(b.state.commentsById.keys, [
+            validId('first'),
+            validId('second'),
+          ]);
+          expect(b.state.newCommentCount, 0);
         },
       );
 
@@ -631,13 +679,13 @@ void main() {
         act: (b) {
           b.add(const CommentsInitialBackfillCompleted());
           b.add(
-            NewCommentReceived(
+            NewCommentsBatchReceived([
               makeComment(
                 validId('confirmed'),
                 content: 'echo me',
                 authorPubkey: validId('me'),
               ),
-            ),
+            ]),
           );
         },
         verify: (b) {
@@ -661,7 +709,8 @@ void main() {
           status: CommentsStatus.success,
           commentsById: {validId('c1'): makeComment(validId('c1'))},
         ),
-        act: (b) => b.add(NewCommentReceived(makeComment(validId('c1')))),
+        act: (b) =>
+            b.add(NewCommentsBatchReceived([makeComment(validId('c1'))])),
         expect: () => isEmpty,
       );
 
@@ -679,7 +728,7 @@ void main() {
           },
         ),
         act: (b) => b.add(
-          NewCommentReceived(
+          NewCommentsBatchReceived([
             makeComment(
               validId('c1'),
               content: 'REST video reply',
@@ -689,7 +738,7 @@ void main() {
               videoDuration: 6,
               videoBlurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
             ).copyWith(stickerTags: [_replyStickerTag]),
-          ),
+          ]),
         ),
         verify: (b) {
           final comment = b.state.commentsById[validId('c1')]!;
@@ -719,7 +768,8 @@ void main() {
         // Backfill not yet complete — these comments are part of the initial
         // relay sweep, not live updates the user hasn't seen yet.
         seed: () => const CommentsListState(status: CommentsStatus.success),
-        act: (b) => b.add(NewCommentReceived(makeComment(validId('c1')))),
+        act: (b) =>
+            b.add(NewCommentsBatchReceived([makeComment(validId('c1'))])),
         verify: (b) {
           expect(b.state.commentsById.length, 1);
           expect(b.state.newCommentCount, 0);
@@ -732,11 +782,11 @@ void main() {
         seed: () => const CommentsListState(status: CommentsStatus.success),
         act: (b) {
           // Pre-EOSE: backlog comment, no bump.
-          b.add(NewCommentReceived(makeComment(validId('backlog'))));
+          b.add(NewCommentsBatchReceived([makeComment(validId('backlog'))]));
           // EOSE.
           b.add(const CommentsInitialBackfillCompleted());
           // Post-EOSE: live comment, bumps the pill.
-          b.add(NewCommentReceived(makeComment(validId('live'))));
+          b.add(NewCommentsBatchReceived([makeComment(validId('live'))]));
         },
         verify: (b) {
           expect(b.state.commentsById.length, 2);
@@ -1176,8 +1226,8 @@ void main() {
 
           await bloc.close();
 
-          // Emit AFTER close — the throttleListen onData wrapper guards on
-          // !isClosed and silently drops. Must not throw "Cannot add events
+          // Emit AFTER close — closing cancels the batched subscription, so
+          // nothing is held or handed over. Must not throw "Cannot add events
           // after close" on the bloc.
           expect(() {
             streamController.add(makeComment(validId('late')));

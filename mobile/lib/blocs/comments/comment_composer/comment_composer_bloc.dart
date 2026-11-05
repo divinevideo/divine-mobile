@@ -196,7 +196,7 @@ class CommentComposerBloc
 
     // 1. Optimistic placeholder — the listener bridges this to ListBloc which
     // inserts it into commentsById before the publish returns. Reconciled on
-    // success (confirm), failure (rollback), or relay-echo (NewCommentReceived
+    // success (confirm), failure (rollback), or relay-echo (NewCommentsBatchReceived
     // matches placeholder by author+content and swaps in-place).
     final placeholderId =
         '$commentPlaceholderIdPrefix${DateTime.now().microsecondsSinceEpoch}';

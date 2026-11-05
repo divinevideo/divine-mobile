@@ -5,9 +5,9 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:meta/meta.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/blocs/comments/comments_list/batched_subscription.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/blocs/comments/comments_list/reportable_sites.dart';
-import 'package:openvine/blocs/comments/comments_list/throttled_subscription.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -47,7 +47,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     on<CommentsLoadRequested>(_onLoadRequested);
     on<CommentsLoadMoreRequested>(_onLoadMoreRequested);
     on<CommentsSortModeChanged>(_onSortModeChanged);
-    on<NewCommentReceived>(_onNewCommentReceived);
+    on<NewCommentsBatchReceived>(_onNewCommentsBatchReceived);
     on<CommentsInitialBackfillCompleted>(_onInitialBackfillCompleted);
     on<NewCommentsAcknowledged>(_onNewCommentsAcknowledged);
     on<CommentsListErrorCleared>(_onErrorCleared);
@@ -69,10 +69,10 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   /// the top without that comment.
   static const _maxCommentsLoadedForFocus = 500;
 
-  /// Maximum number of real-time comments to accept per second.
-  /// Beyond this rate the stream is paused briefly to avoid UI thrashing
-  /// on viral videos.
-  static const _maxCommentsPerSecond = 10;
+  /// How long real-time comments are gathered before they reach the state.
+  /// A burst becomes one update, so the UI changes at most ten times a second
+  /// on a viral video and no comment is dropped.
+  static const _commentBatchWindow = Duration(milliseconds: 100);
 
   /// Optional initial total count from video metadata or interactions state.
   /// Used to accurately determine hasMoreContent instead of page size heuristic.
@@ -80,7 +80,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
 
   final CommentsRepository _commentsRepository;
   final bool _includeVideoReplies;
-  StreamSubscription<Comment>? _commentStreamSubscription;
+  BatchedSubscription<Comment>? _commentStreamSubscription;
   StreamSubscription<CommentDeletion>? _commentDeletionSubscription;
 
   /// Records a [CommentsRepositoryException] in the unified log (matrix-NO,
@@ -330,66 +330,85 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     emit(state.copyWith(clearScrollTo: true));
   }
 
-  void _onNewCommentReceived(
-    NewCommentReceived event,
+  void _onNewCommentsBatchReceived(
+    NewCommentsBatchReceived event,
+    Emitter<CommentsListState> emit,
+  ) => _takeInComments(event.comments, emit);
+
+  /// Takes real-time [incoming] comments into the store with one state update.
+  void _takeInComments(
+    List<Comment> incoming,
     Emitter<CommentsListState> emit,
   ) {
-    final comment = event.comment;
+    final store = Map<String, Comment>.from(state.commentsById);
+    // Pending placeholders are few; a batch looks through them, not the store.
+    final placeholders = [
+      for (final entry in store.entries)
+        if (entry.key.startsWith(commentPlaceholderIdPrefix)) entry.value,
+    ];
+    final newIds = <String>{};
+    var changed = false;
+    var added = false;
 
-    // Skip if already in the map by id (relay echo of a confirmed comment),
-    // unless the echo carries video metadata missing from the REST bootstrap
-    // copy. In that case, upgrade in place so a REST-loaded video reply can
-    // render as soon as the relay echo arrives.
-    // Blocked/muted authors are already filtered by the repository's
-    // watchComments stream, so no additional check is needed here.
-    final existingComment = state.commentsById[comment.id];
-    if (existingComment != null) {
-      if (!existingComment.hasVideo && comment.hasVideo) {
-        _emitStore(
-          emit,
-          Map<String, Comment>.from(state.commentsById)
-            ..[comment.id] = existingComment.copyWith(
-              videoUrl: comment.videoUrl,
-              thumbnailUrl: comment.thumbnailUrl,
-              videoDimensions: comment.videoDimensions,
-              videoDuration: comment.videoDuration,
-              videoBlurhash: comment.videoBlurhash,
-              stickerTags: comment.stickerTags,
-            ),
-        );
+    for (final comment in incoming) {
+      // Skip if already in the map by id (relay echo of a confirmed comment),
+      // unless the echo carries video metadata missing from the REST bootstrap
+      // copy. In that case, upgrade in place so a REST-loaded video reply can
+      // render as soon as the relay echo arrives.
+      // Blocked/muted authors are already filtered by the repository's
+      // watchComments stream, so no additional check is needed here.
+      final existingComment = store[comment.id];
+      if (existingComment != null) {
+        if (!existingComment.hasVideo && comment.hasVideo) {
+          store[comment.id] = existingComment.copyWith(
+            videoUrl: comment.videoUrl,
+            thumbnailUrl: comment.thumbnailUrl,
+            videoDimensions: comment.videoDimensions,
+            videoDuration: comment.videoDuration,
+            videoBlurhash: comment.videoBlurhash,
+            stickerTags: comment.stickerTags,
+          );
+          changed = true;
+        }
+        continue;
       }
-      return;
+
+      // Optimistic-post reconciliation: if a pending placeholder matches this
+      // relay echo by author + content, swap it for the canonical comment so
+      // the user sees their own post settle into its real id without a
+      // duplicate row. Counter does not bump because the placeholder was
+      // already on screen.
+      final placeholder = placeholders
+          .where(
+            (existing) =>
+                existing.authorPubkey == comment.authorPubkey &&
+                existing.content == comment.content,
+          )
+          .firstOrNull;
+
+      if (placeholder != null) {
+        store.remove(placeholder.id);
+        placeholders.remove(placeholder);
+      }
+      store[comment.id] = comment;
+      if (state.isBackfillComplete && placeholder == null) {
+        newIds.add(comment.id);
+      }
+      changed = true;
+      added = true;
     }
 
-    // Optimistic-post reconciliation: if a pending placeholder matches this
-    // relay echo by author + content, swap it for the canonical comment so
-    // the user sees their own post settle into its real id without a
-    // duplicate row. Counter does not bump because the placeholder was
-    // already on screen.
-    String? placeholderToReplace;
-    for (final entry in state.commentsById.entries) {
-      final existing = entry.value;
-      if (existing.id.startsWith(commentPlaceholderIdPrefix) &&
-          existing.authorPubkey == comment.authorPubkey &&
-          existing.content == comment.content) {
-        placeholderToReplace = entry.key;
-        break;
-      }
-    }
-
-    final updated = Map<String, Comment>.from(state.commentsById);
-    if (placeholderToReplace != null) updated.remove(placeholderToReplace);
-    updated[comment.id] = comment;
-    final isReplacingPlaceholder = placeholderToReplace != null;
-
+    if (!changed) return;
     emit(
       state.copyWith(
-        status: CommentsStatus.success,
-        commentsById: updated,
-        replyCountsByCommentId: computeReplyCounts(updated),
-        newCommentIds: state.isBackfillComplete && !isReplacingPlaceholder
-            ? {...state.newCommentIds, comment.id}
-            : state.newCommentIds,
+        status: added ? CommentsStatus.success : state.status,
+        commentsById: store,
+        replyCountsByCommentId: computeReplyCounts(store),
+        // The pill counts only new comments that are still listed.
+        newCommentIds: {
+          ...state.newCommentIds,
+          ...newIds,
+        }.where(store.containsKey).toSet(),
       ),
     );
   }
@@ -461,8 +480,8 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     OptimisticCommentConfirmed event,
     Emitter<CommentsListState> emit,
   ) {
-    // Race-safe: if the relay echo arrived first via NewCommentReceived, the
-    // confirmed id is already present in the store and the placeholder has
+    // Race-safe: if the relay echo arrived first via NewCommentsBatchReceived,
+    // the confirmed id is already present in the store and the placeholder has
     // been swapped out. Just clean up any leftover placeholder.
     if (state.commentsById.containsKey(event.confirmed.id)) {
       if (!state.commentsById.containsKey(event.placeholderId)) return;
@@ -575,7 +594,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   ///
   /// Called from [_onLoadRequested] after the initial load so the REST-backed
   /// first paint is not blocked by relay backfill. Routes incoming comments
-  /// through [NewCommentReceived].
+  /// through [NewCommentsBatchReceived].
   Future<void> _startWatchingComments() async {
     // Detached on purpose: the replacement subscription does not depend on the
     // old one finishing teardown, and awaiting here suspends between reading
@@ -594,16 +613,18 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         rootAddressableId: state.rootAddressableId,
         includeVideoReplies: _includeVideoReplies,
         onEose: () {
-          if (!isClosed) add(const CommentsInitialBackfillCompleted());
+          // The stored comments are still in the open window; take them in
+          // first, or the backfill would be called complete before they
+          // arrive and they would read as new.
+          _commentStreamSubscription?.flush();
+          addIfOpen(const CommentsInitialBackfillCompleted());
         },
       );
 
-      _commentStreamSubscription = throttledListen(
+      _commentStreamSubscription = batchedListen(
         stream,
-        maxPerSecond: _maxCommentsPerSecond,
-        onData: (comment) {
-          if (!isClosed) add(NewCommentReceived(comment));
-        },
+        window: _commentBatchWindow,
+        onBatch: (comments) => addIfOpen(NewCommentsBatchReceived(comments)),
         onError: (Object e) {
           Log.warning(
             'Comment watch stream error: $e',
