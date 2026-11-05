@@ -24,6 +24,27 @@ const dropsVideoEffectId = 'divine.drops';
 /// the native `LightLeakVideoEffect` on Android, iOS and macOS.
 const lightLeakVideoEffectId = 'divine.lightLeak';
 
+/// The id Divine's light rays are registered under with pro_video_editor, by
+/// the native `LightRaysVideoEffect` on Android, iOS and macOS.
+const lightRaysVideoEffectId = 'divine.lightRays';
+
+/// The id Divine's anamorphic streaks are registered under with
+/// pro_video_editor, by the native `AnamorphicVideoEffect` on Android, iOS
+/// and macOS.
+const anamorphicVideoEffectId = 'divine.anamorphic';
+
+/// The id Divine's prism rainbow is registered under with pro_video_editor, by
+/// the native `PrismVideoEffect` on Android, iOS and macOS.
+const prismVideoEffectId = 'divine.prism';
+
+/// The id Divine's window light is registered under with pro_video_editor, by
+/// the native `WindowLightVideoEffect` on Android, iOS and macOS.
+const windowLightVideoEffectId = 'divine.windowLight';
+
+/// The id Divine's spotlight is registered under with pro_video_editor, by the
+/// native `SpotlightVideoEffect` on Android, iOS and macOS.
+const spotlightVideoEffectId = 'divine.spotlight';
+
 /// The ids Divine's falling and floating particles are registered under with
 /// pro_video_editor, one per style, all drawn by the native
 /// `ParticlesVideoEffect` on Android, iOS and macOS.
@@ -183,6 +204,26 @@ class EditorEffectType {
   /// picture, without changing how bright it is.
   static const lightLeak = EditorEffectType.custom(lightLeakVideoEffectId);
 
+  /// Light rays: shafts of warm light fall from a sun just above the top edge,
+  /// through the gaps between the bright parts of the picture.
+  static const lightRays = EditorEffectType.custom(lightRaysVideoEffectId);
+
+  /// Anamorphic: highlights throw long, thin blue streaks to both sides, as
+  /// through an anamorphic cinema lens.
+  static const anamorphic = EditorEffectType.custom(anamorphicVideoEffectId);
+
+  /// Prism: a rainbow drifts across the top-right corner, as when a prism is
+  /// held in front of the lens.
+  static const prism = EditorEffectType.custom(prismVideoEffectId);
+
+  /// Window light: slanted stripes of warm light, as through a venetian blind,
+  /// slide slowly across the picture.
+  static const windowLight = EditorEffectType.custom(windowLightVideoEffectId);
+
+  /// Spotlight: the picture is dimmed, and two stage lights wander slowly
+  /// over it.
+  static const spotlight = EditorEffectType.custom(spotlightVideoEffectId);
+
   /// Snow: soft flakes fall over the picture.
   static const snow = EditorEffectType.custom(snowVideoEffectId);
 
@@ -306,6 +347,11 @@ class EditorEffectType {
     fisheye,
     drops,
     lightLeak,
+    lightRays,
+    anamorphic,
+    prism,
+    windowLight,
+    spotlight,
     snow,
     rain,
     leaves,
@@ -380,7 +426,12 @@ class EditorEffectType {
       swirlVideoEffectId ||
       rippleVideoEffectId ||
       flutedGlassVideoEffectId => EditorEffectCategory.distort,
-      lightLeakVideoEffectId => EditorEffectCategory.light,
+      lightLeakVideoEffectId ||
+      lightRaysVideoEffectId ||
+      anamorphicVideoEffectId ||
+      prismVideoEffectId ||
+      windowLightVideoEffectId ||
+      spotlightVideoEffectId => EditorEffectCategory.light,
       echoVideoEffectId ||
       zoomBlurVideoEffectId ||
       spinBlurVideoEffectId => EditorEffectCategory.motion,

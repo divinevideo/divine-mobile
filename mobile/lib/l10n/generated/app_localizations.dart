@@ -15419,6 +15419,36 @@ abstract class AppLocalizations {
   /// **'Light Leak'**
   String get videoEditorEffectLightLeak;
 
+  /// Name of a video effect: shafts of warm light fall from a sun just above the top of the picture, through the gaps between trees, windows or hair (also called god rays).
+  ///
+  /// In en, this message translates to:
+  /// **'Light Rays'**
+  String get videoEditorEffectLightRays;
+
+  /// Name of a video effect: bright lights such as lamps and headlights throw long, thin blue horizontal streaks, as through an anamorphic cinema lens. Use the film-making term for this lens if the language has one.
+  ///
+  /// In en, this message translates to:
+  /// **'Anamorphic'**
+  String get videoEditorEffectAnamorphic;
+
+  /// Name of a video effect: a rainbow band falls across a corner of the picture, as when a glass prism is held in front of the camera lens.
+  ///
+  /// In en, this message translates to:
+  /// **'Prism'**
+  String get videoEditorEffectPrism;
+
+  /// Name of a video effect: slanted stripes of warm light, as through a venetian blind, slide slowly across the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Window Light'**
+  String get videoEditorEffectWindowLight;
+
+  /// Name of a video effect: the picture is dimmed and round stage spotlights wander slowly over it.
+  ///
+  /// In en, this message translates to:
+  /// **'Spotlight'**
+  String get videoEditorEffectSpotlight;
+
   /// Name of a video effect: snowflakes fall over the picture.
   ///
   /// In en, this message translates to:

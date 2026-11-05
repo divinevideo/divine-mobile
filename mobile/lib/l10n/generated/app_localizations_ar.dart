@@ -9232,6 +9232,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'تسرّب الضوء';
 
   @override
+  String get videoEditorEffectLightRays => 'أشعة الضوء';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'أنامورفيك';
+
+  @override
+  String get videoEditorEffectPrism => 'منشور';
+
+  @override
+  String get videoEditorEffectWindowLight => 'ضوء النافذة';
+
+  @override
+  String get videoEditorEffectSpotlight => 'بقعة ضوء';
+
+  @override
   String get videoEditorEffectSnow => 'ثلج';
 
   @override

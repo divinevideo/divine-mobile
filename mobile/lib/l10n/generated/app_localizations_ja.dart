@@ -8757,6 +8757,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectLightLeak => '光漏れ';
 
   @override
+  String get videoEditorEffectLightRays => '光芒';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'アナモルフィック';
+
+  @override
+  String get videoEditorEffectPrism => 'プリズム';
+
+  @override
+  String get videoEditorEffectWindowLight => '窓の光';
+
+  @override
+  String get videoEditorEffectSpotlight => 'スポットライト';
+
+  @override
   String get videoEditorEffectSnow => '雪';
 
   @override

@@ -9274,6 +9274,21 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Light Leak';
 
   @override
+  String get videoEditorEffectLightRays => 'Light Rays';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Anamorphic';
+
+  @override
+  String get videoEditorEffectPrism => 'Prism';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Window Light';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Spotlight';
+
+  @override
   String get videoEditorEffectSnow => 'Niyebe';
 
   @override

@@ -9167,6 +9167,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Rò sáng';
 
   @override
+  String get videoEditorEffectLightRays => 'Tia sáng';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Anamorphic';
+
+  @override
+  String get videoEditorEffectPrism => 'Lăng kính';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Ánh sáng cửa sổ';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Đèn rọi';
+
+  @override
   String get videoEditorEffectSnow => 'Tuyết';
 
   @override

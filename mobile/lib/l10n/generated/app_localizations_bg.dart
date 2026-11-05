@@ -9297,6 +9297,21 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Светлинен отблясък';
 
   @override
+  String get videoEditorEffectLightRays => 'Светлинни лъчи';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Анаморфен';
+
+  @override
+  String get videoEditorEffectPrism => 'Призма';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Светлина от прозорец';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Прожектор';
+
+  @override
   String get videoEditorEffectSnow => 'Сняг';
 
   @override

@@ -15,6 +15,7 @@ import android.window.OnBackInvokedCallback
 import co.openvine.app.proofmode.HardwareAttestationNotarizationProvider
 import co.openvine.app.videoeffects.AdjustVideoEffect
 import co.openvine.app.videoeffects.AnaglyphVideoEffect
+import co.openvine.app.videoeffects.AnamorphicVideoEffect
 import co.openvine.app.videoeffects.ComicVideoEffect
 import co.openvine.app.videoeffects.DropsVideoEffect
 import co.openvine.app.videoeffects.EchoVideoEffect
@@ -22,13 +23,17 @@ import co.openvine.app.videoeffects.EightBitVideoEffect
 import co.openvine.app.videoeffects.FisheyeVideoEffect
 import co.openvine.app.videoeffects.FlutedGlassVideoEffect
 import co.openvine.app.videoeffects.LightLeakVideoEffect
+import co.openvine.app.videoeffects.LightRaysVideoEffect
 import co.openvine.app.videoeffects.LookVideoEffect
 import co.openvine.app.videoeffects.ParticlesVideoEffect
+import co.openvine.app.videoeffects.PrismVideoEffect
 import co.openvine.app.videoeffects.RippleVideoEffect
 import co.openvine.app.videoeffects.RisoVideoEffect
 import co.openvine.app.videoeffects.SpinBlurVideoEffect
+import co.openvine.app.videoeffects.SpotlightVideoEffect
 import co.openvine.app.videoeffects.SwirlVideoEffect
 import co.openvine.app.videoeffects.TiltShiftVideoEffect
+import co.openvine.app.videoeffects.WindowLightVideoEffect
 import co.openvine.app.videoeffects.ZoomBlurVideoEffect
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -118,6 +123,11 @@ class MainActivity : FlutterFragmentActivity() {
         FisheyeVideoEffect.register()
         DropsVideoEffect.register()
         LightLeakVideoEffect.register()
+        LightRaysVideoEffect.register()
+        AnamorphicVideoEffect.register()
+        PrismVideoEffect.register()
+        WindowLightVideoEffect.register()
+        SpotlightVideoEffect.register()
         ParticlesVideoEffect.register()
         TiltShiftVideoEffect.register()
         SwirlVideoEffect.register()

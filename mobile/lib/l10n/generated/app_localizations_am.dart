@@ -9000,6 +9000,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'የብርሃን ፍሰት';
 
   @override
+  String get videoEditorEffectLightRays => 'የብርሃን ጨረሮች';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'አናሞርፊክ';
+
+  @override
+  String get videoEditorEffectPrism => 'ፕሪዝም';
+
+  @override
+  String get videoEditorEffectWindowLight => 'የመስኮት ብርሃን';
+
+  @override
+  String get videoEditorEffectSpotlight => 'ስፖትላይት';
+
+  @override
   String get videoEditorEffectSnow => 'በረዶ';
 
   @override

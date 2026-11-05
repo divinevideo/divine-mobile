@@ -1746,10 +1746,11 @@ final class DropsVideoEffectTests: XCTestCase {
   }
 }
 
-/// Light leak, particles, tilt-shift, swirl, ripple, fluted glass, zoom blur,
-/// spin blur, comic, 8-bit, 3D glasses and riso print are drawn with Metal
-/// kernels on iOS and macOS (`ShaderVideoEffect`), and with the same shaders in
-/// GLSL on Android and in the effects picker (`shaders/*.frag`). These tests
+/// Light leak, light rays, anamorphic, prism, window light, spotlight,
+/// particles, tilt-shift, swirl, ripple, fluted glass, zoom blur, spin blur,
+/// comic, 8-bit, 3D glasses and riso print are drawn with Metal kernels on iOS
+/// and macOS (`ShaderVideoEffect`), and with the same shaders in GLSL on
+/// Android and in the effects picker (`shaders/*.frag`). These tests
 /// check every pixel each kernel draws against its shader's formulas computed
 /// here on the CPU, so a change to one copy that is not made to the others
 /// fails, and so does a kernel that reads its textures upside down.
@@ -1811,6 +1812,65 @@ final class ShaderVideoEffectTests: XCTestCase {
       }
       let difference = compare(effect, seconds: seconds, expected)
       // Half-float textures round to about 0.0005.
+      XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity), \(seconds) s")
+    }
+  }
+
+  func testLightRaysDrawWhatTheAndroidShaderDraws() {
+    for (intensity, seconds) in [(1.0, 0.0), (0.6, 4.2)] {
+      let effect = LightRaysVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.lightRays(px, py, intensity: intensity, seconds: seconds)
+      }
+      let difference = compare(effect, seconds: seconds, expected)
+      // 32 filtered taps, each weighed by how far it is above a threshold,
+      // add up the GPU's filtering and half-float rounding, as the zoom
+      // blur's do; a change to the sun, the reach or the weights moves far
+      // more.
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity), \(seconds) s")
+    }
+  }
+
+  func testAnamorphicDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = AnamorphicVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.anamorphic(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity)")
+    }
+  }
+
+  func testPrismDrawsWhatTheAndroidShaderDraws() {
+    for (intensity, seconds) in [(1.0, 6.0), (0.55, 13.1)] {
+      let effect = PrismVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.prism(px, py, intensity: intensity, seconds: seconds)
+      }
+      let difference = compare(effect, seconds: seconds, expected)
+      XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity), \(seconds) s")
+    }
+  }
+
+  func testWindowLightDrawsWhatTheAndroidShaderDraws() {
+    for (intensity, seconds) in [(1.0, 0.0), (0.7, 3.7)] {
+      let effect = WindowLightVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.windowLight(px, py, intensity: intensity, seconds: seconds)
+      }
+      let difference = compare(effect, seconds: seconds, expected)
+      XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity), \(seconds) s")
+    }
+  }
+
+  func testSpotlightDrawsWhatTheAndroidShaderDraws() {
+    for (intensity, seconds) in [(1.0, 0.0), (0.65, 9.4)] {
+      let effect = SpotlightVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.spotlight(px, py, intensity: intensity, seconds: seconds)
+      }
+      let difference = compare(effect, seconds: seconds, expected)
       XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity), \(seconds) s")
     }
   }
@@ -1959,6 +2019,11 @@ final class ShaderVideoEffectTests: XCTestCase {
   func testLeavesTheFrameAloneAtNoIntensity() {
     let effects: [ShaderVideoEffect] = [
       LightLeakVideoEffect(params: ["intensity": 0]),
+      LightRaysVideoEffect(params: ["intensity": 0]),
+      AnamorphicVideoEffect(params: ["intensity": 0]),
+      PrismVideoEffect(params: ["intensity": 0]),
+      WindowLightVideoEffect(params: ["intensity": 0]),
+      SpotlightVideoEffect(params: ["intensity": 0]),
       ParticlesVideoEffect(style: .snow, params: ["intensity": 0]),
       TiltShiftVideoEffect(params: ["intensity": 0]),
       SwirlVideoEffect(params: ["intensity": 0]),
@@ -2129,6 +2194,151 @@ final class ShaderVideoEffectTests: XCTestCase {
       color[k] = 1 - (1 - base[k]) * (1 - leak)
     }
     return color
+  }
+
+  private func lightRays(_ px: Double, _ py: Double, intensity: Double, seconds t: Double)
+    -> [Double]
+  {
+    let w = Double(width)
+    let h = Double(height)
+    let l: Double = max(w, h)
+    let towardsX: Double = w * path(0.3, 0.25, 0.23, 0.8, t) - px
+    let towardsY: Double = h * 1.06 - py
+    let jitter: Double = noise(px, py)
+    var rays = [Double](repeating: 0, count: 3)
+    for i in 0..<32 {
+      let share: Double = (Double(i) + jitter) / 32
+      let reach: Double = 0.5 * share
+      let c: [Double] = tap(px + towardsX * reach, py + towardsY * reach)
+      let highlight: Double = smoothstep(0.7, 1, luma(c))
+      let weight: Double = highlight * (1 - share)
+      for k in 0..<3 { rays[k] += c[k] * weight }
+    }
+    let dx: Double = towardsX / l
+    let dy: Double = towardsY / l
+    let sunGlow: Double = exp(-5 * (dx * dx + dy * dy))
+    let warm: [Double] = [1.0, 0.86, 0.62]
+    let base: [Double] = tap(px, py)
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let glow: Double = warm[k] * (rays[k] * (2.0 / 16) + 0.35 * sunGlow)
+      let lit: Double = clamp(glow * intensity)
+      out[k] = 1 - (1 - base[k]) * (1 - lit)
+    }
+    return out
+  }
+
+  private func anamorphic(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let reach: Double = (0.08 + 0.17 * intensity) * Double(width)
+    let threshold: Double = 0.85 - 0.1 * intensity
+    let jitter: Double = noise(px, py)
+    var streak: Double = 0
+    for i in 0..<48 {
+      let x: Double = 2 * (Double(i) + jitter) / 48 - 1
+      let w: Double = 1 - abs(x)
+      let above: Double = max(luma(tap(px + x * reach, py)) - threshold, 0)
+      let h: Double = above / (1 - threshold)
+      streak += h * h * w * w
+    }
+    streak *= 3.0 / 48
+    let blue: [Double] = [0.3, 0.62, 1.0]
+    let base: [Double] = tap(px, py)
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let lit: Double = clamp(blue[k] * 5 * streak * intensity)
+      out[k] = 1 - (1 - base[k]) * (1 - lit)
+    }
+    return out
+  }
+
+  private func prism(_ px: Double, _ py: Double, intensity: Double, seconds t: Double)
+    -> [Double]
+  {
+    let w = Double(width)
+    let h = Double(height)
+    let l: Double = max(w, h)
+    let across: Double = 0.45 * px / w + 0.55 * py / h
+    let centre: Double = path(0.72, 0.06, 0.31, 1.3, t)
+    let bandWidth: Double = path(0.14, 0.02, 0.23, 0.4, t)
+    let b: Double = (across - centre) / bandWidth
+    let band: Double = 1 - smoothstep(0.55, 1, abs(b))
+    let hue: Double = 0.375 * (b + 1)
+    let nx: Double = 0.45 / w
+    let ny: Double = 0.55 / h
+    let norm: Double = hypot(nx, ny)
+    let push: Double = 0.008 * l * intensity * band
+    let sx: Double = nx / norm * push
+    let sy: Double = ny / norm * push
+    let red: Double = tap(px + sx, py + sy)[0]
+    let green: Double = tap(px, py)[1]
+    let blue: Double = tap(px - sx, py - sy)[2]
+    let base: [Double] = [red, green, blue]
+    let offsets: [Double] = [1.0, 0.6667, 0.3333]
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let rainbow: Double = clamp(abs(fract(hue + offsets[k]) * 6 - 3) - 1)
+      let lit: Double = clamp(rainbow * 0.75 * band * intensity)
+      out[k] = 1 - (1 - base[k]) * (1 - lit)
+    }
+    return out
+  }
+
+  private func windowLight(_ px: Double, _ py: Double, intensity: Double, seconds t: Double)
+    -> [Double]
+  {
+    let w = Double(width)
+    let h = Double(height)
+    let s: Double = min(w, h)
+    let slats: Double = fract((py + 0.45 * px) / (0.12 * s) - 0.11 * t)
+    let rise: Double = smoothstep(0, 0.12, slats)
+    let fall: Double = 1 - smoothstep(0.42, 0.56, slats)
+    let dx: Double = (px / w - 0.58) * 1.3
+    let dy: Double = py / h - 0.6
+    let window: Double = 1 - smoothstep(0.25, 0.75, hypot(dx, dy))
+    let lit: Double = rise * fall * window
+    let warm: [Double] = [0.7, 0.5, 0.22]
+    let shade: Double = 1 - 0.35 * intensity
+    let base: [Double] = tap(px, py)
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let bright: Double = 1 + intensity * warm[k]
+      out[k] = clamp(base[k] * (shade + (bright - shade) * lit))
+    }
+    return out
+  }
+
+  /// A spotlight's strength at a pixel: a flat top and a short, soft edge.
+  private func spot(_ px: Double, _ py: Double, _ cx: Double, _ cy: Double, _ reach: Double)
+    -> Double
+  {
+    let dx: Double = (px - cx) / reach
+    let dy: Double = (py - cy) / reach
+    let r2: Double = dx * dx + dy * dy
+    return exp(-r2 * r2 * r2)
+  }
+
+  private func spotlight(_ px: Double, _ py: Double, intensity: Double, seconds t: Double)
+    -> [Double]
+  {
+    let w = Double(width)
+    let h = Double(height)
+    let l: Double = max(w, h)
+    let warmX: Double = w * path(0.5, 0.28, 0.41, 0.3, t)
+    let warmY: Double = h * path(0.56, 0.2, 0.53, 1.7, t)
+    let coolX: Double = w * path(0.5, 0.3, 0.33, 3.4, t)
+    let coolY: Double = h * path(0.44, 0.22, 0.47, 0.6, t)
+    let warm: Double = spot(px, py, warmX, warmY, 0.2 * l)
+    let cool: Double = spot(px, py, coolX, coolY, 0.17 * l)
+    let warmColor: [Double] = [1.12, 1.04, 0.9]
+    let coolColor: [Double] = [0.92, 0.98, 1.12]
+    let dark: Double = 0.8 * intensity
+    let base: [Double] = tap(px, py)
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let lit: Double = max(warmColor[k] * warm, coolColor[k] * cool)
+      out[k] = clamp(base[k] * (1 - dark + dark * lit))
+    }
+    return out
   }
 
   private func hash3(_ px: Double, _ py: Double) -> [Double] {

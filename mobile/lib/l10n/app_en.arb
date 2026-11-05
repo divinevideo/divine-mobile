@@ -6624,6 +6624,26 @@
   "@videoEditorEffectLightLeak": {
     "description": "Name of a video effect: warm light washes in from the edges of the picture and drifts across it, as when stray light fogs a strip of film."
   },
+  "videoEditorEffectLightRays": "Light Rays",
+  "@videoEditorEffectLightRays": {
+    "description": "Name of a video effect: shafts of warm light fall from a sun just above the top of the picture, through the gaps between trees, windows or hair (also called god rays)."
+  },
+  "videoEditorEffectAnamorphic": "Anamorphic",
+  "@videoEditorEffectAnamorphic": {
+    "description": "Name of a video effect: bright lights such as lamps and headlights throw long, thin blue horizontal streaks, as through an anamorphic cinema lens. Use the film-making term for this lens if the language has one."
+  },
+  "videoEditorEffectPrism": "Prism",
+  "@videoEditorEffectPrism": {
+    "description": "Name of a video effect: a rainbow band falls across a corner of the picture, as when a glass prism is held in front of the camera lens."
+  },
+  "videoEditorEffectWindowLight": "Window Light",
+  "@videoEditorEffectWindowLight": {
+    "description": "Name of a video effect: slanted stripes of warm light, as through a venetian blind, slide slowly across the picture."
+  },
+  "videoEditorEffectSpotlight": "Spotlight",
+  "@videoEditorEffectSpotlight": {
+    "description": "Name of a video effect: the picture is dimmed and round stage spotlights wander slowly over it."
+  },
   "videoEditorEffectSnow": "Snow",
   "@videoEditorEffectSnow": {
     "description": "Name of a video effect: snowflakes fall over the picture."
