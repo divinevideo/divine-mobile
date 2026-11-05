@@ -831,6 +831,34 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         )
         self.assertEqual(expected_tree, result.stdout.strip())
 
+    def test_ci_config_job_bootstraps_real_invite_parser_before_tests(self) -> None:
+        job = json.loads(subprocess.run(
+            ["ruby", "-ryaml", "-rjson", "-e",
+             "puts JSON.generate(YAML.safe_load_file(ARGV[0]).fetch('jobs').fetch('ci-config-tests'))",
+             str(MOBILE_CI_PATH)],
+            check=True, text=True, capture_output=True,
+        ).stdout)
+        self.assertNotIn("if", job)
+        steps = job["steps"]
+        setup_steps = [i for i, step in enumerate(steps)
+                       if step.get("uses", "").startswith("subosito/flutter-action@")]
+        pub_get_steps = [i for i, step in enumerate(steps)
+                         if step.get("run") == "flutter pub get" and
+                         step.get("working-directory") == "mobile"]
+        test_steps = [i for i, step in enumerate(steps)
+                      if step.get("run") == "python3 -m unittest discover -s .github/scripts/tests"]
+        self.assertEqual(1, len(setup_steps), "Flutter must be installed on the clean runner")
+        self.assertEqual(1, len(pub_get_steps), "The app package map must be generated")
+        self.assertEqual(1, len(test_steps), "Configuration tests must run")
+        setup, pub_get, tests = setup_steps[0], pub_get_steps[0], test_steps[0]
+        self.assertLess(setup, pub_get)
+        self.assertLess(pub_get, tests)
+        self.assertNotIn("if", steps[setup])
+        self.assertNotIn("if", steps[pub_get])
+        self.assertNotIn("if", steps[tests])
+        expected = re.search(r'^flutter = "([^"]+)"$', self.mise_contents, re.MULTILINE).group(1)
+        self.assertEqual(expected, steps[setup]["with"]["flutter-version"])
+
     def test_ci_config_job_fetches_history_for_release_tree_verification(self) -> None:
         job_start = self.mobile_ci_contents.index("  ci-config-tests:")
         next_job = self.mobile_ci_contents.index("\n  generated-files:", job_start)
