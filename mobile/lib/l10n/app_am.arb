@@ -6353,5 +6353,9 @@
   "creatorHighlightWatch": "ቪዲዮውን ይመልከቱ",
   "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "badgeSubscribedAction": "ተከትለዋል",
+  "badgeSubscribeAction": "ባጁን ተከተል",
+  "badgeAcceptedHoldersTitle": "ባጁን የተቀበሉ",
+  "badgeSubscriptionLoadError": "የባጅ ምዝገባዎችዎን መጫን አልተቻለም። እንደገና ይሞክሩ።"
 }

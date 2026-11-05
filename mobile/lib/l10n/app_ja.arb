@@ -6300,5 +6300,9 @@
   "creatorHighlightWatch": "動画を見る",
   "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "badgeSubscribedAction": "購読中",
+  "badgeSubscribeAction": "バッジを購読",
+  "badgeAcceptedHoldersTitle": "バッジを承認した人",
+  "badgeSubscriptionLoadError": "バッジの購読を読み込めませんでした。もう一度お試しください。"
 }

@@ -48,6 +48,7 @@ String labelForExploreTabName(
   exploreListsTabName =>
     shellTitle ? l10n.navExploreLists : l10n.exploreTabLists,
   exploreChallengesTabName => l10n.challengeTitle,
+  exploreBadgesTabName => l10n.badgesTitle,
   exploreAppsTabName => l10n.exploreTabIntegratedApps,
   _ => l10n.navExplore,
 };

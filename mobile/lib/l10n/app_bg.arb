@@ -6417,5 +6417,9 @@
   "creatorHighlightWatch": "Гледай видеото",
   "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "badgeSubscribedAction": "Абониран",
+  "badgeSubscribeAction": "Абониране за значката",
+  "badgeAcceptedHoldersTitle": "Приели значката",
+  "badgeSubscriptionLoadError": "Абонаментите ви за значки не можаха да се заредят. Опитайте отново."
 }

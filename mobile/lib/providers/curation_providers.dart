@@ -29,6 +29,20 @@ FunnelcakeApiClient funnelcakeApiClient(Ref ref) {
     configuredRelays: nostrService.configuredRelays,
     fallbackBaseUrl: environmentConfig.apiBaseUrl,
   );
+  return _createFunnelcakeClient(ref, baseUrl);
+}
+
+/// Badge catalogues rely on this trusted API's server-side signature checks.
+/// Account relay preferences must not select the catalogue's HTTP origin.
+final Provider<FunnelcakeApiClient> badgeCatalogueApiClientProvider =
+    Provider.autoDispose<FunnelcakeApiClient>(
+      (ref) => _createFunnelcakeClient(
+        ref,
+        ref.watch(currentEnvironmentProvider).apiBaseUrl,
+      ),
+    );
+
+FunnelcakeApiClient _createFunnelcakeClient(Ref ref, String baseUrl) {
   // Injecting the client makes the API client a non-owner, so the close that
   // its own dispose() would have done has to happen here instead.
   final httpClient = ref.watch(instrumentedHttpClientFactoryProvider)();

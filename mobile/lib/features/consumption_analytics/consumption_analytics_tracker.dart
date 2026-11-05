@@ -88,6 +88,7 @@ class ConsumptionAnalyticsTracker {
         ViewTrafficSource.discoveryClassic ||
         ViewTrafficSource.discoveryForYou ||
         ViewTrafficSource.discoveryPopular ||
+        ViewTrafficSource.discoveryBadges ||
         ViewTrafficSource.discoveryFeatured =>
           ProductAnalyticsV2Surface.discovery,
         ViewTrafficSource.share ||
@@ -119,6 +120,7 @@ class ConsumptionAnalyticsTracker {
       ViewTrafficSource.profile => ProductAnalyticsV2FeedType.profile,
       ViewTrafficSource.share => ProductAnalyticsV2FeedType.share,
       ViewTrafficSource.search => ProductAnalyticsV2FeedType.search,
+      ViewTrafficSource.discoveryBadges ||
       ViewTrafficSource.unknown => ProductAnalyticsV2FeedType.unknown,
     };
   }

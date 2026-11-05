@@ -6300,5 +6300,9 @@
   "creatorHighlightWatch": "Urmărește videoclipul",
   "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "badgeSubscribedAction": "Abonat",
+  "badgeSubscribeAction": "Abonează-te la insignă",
+  "badgeAcceptedHoldersTitle": "Persoane care au acceptat insigna",
+  "badgeSubscriptionLoadError": "Abonamentele tale la insigne nu au putut fi încărcate. Încearcă din nou."
 }

@@ -5846,5 +5846,9 @@
   "creatorHighlightWatch": "동영상 보기",
   "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "badgeSubscribedAction": "구독 중",
+  "badgeSubscribeAction": "배지 구독",
+  "badgeAcceptedHoldersTitle": "배지를 수락한 사람",
+  "badgeSubscriptionLoadError": "배지 구독을 불러오지 못했어요. 다시 시도해 주세요."
 }

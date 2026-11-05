@@ -6300,5 +6300,9 @@
   "creatorHighlightWatch": "Regarde la vidéo",
   "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "badgeSubscribedAction": "Abonné",
+  "badgeSubscribeAction": "S’abonner au badge",
+  "badgeAcceptedHoldersTitle": "Titulaires ayant accepté le badge",
+  "badgeSubscriptionLoadError": "Impossible de charger tes abonnements aux badges. Réessaie."
 }

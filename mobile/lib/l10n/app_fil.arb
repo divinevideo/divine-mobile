@@ -5320,5 +5320,9 @@
   "creatorHighlightWatch": "Panoorin ang video",
   "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "badgeSubscribedAction": "Naka-subscribe",
+  "badgeSubscribeAction": "Mag-subscribe sa badge",
+  "badgeAcceptedHoldersTitle": "Mga tumanggap ng badge",
+  "badgeSubscriptionLoadError": "Hindi ma-load ang iyong mga subscription sa badge. Subukan muli."
 }

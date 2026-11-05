@@ -7,11 +7,13 @@ import 'package:badge_repository/badge_repository.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
+import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -39,6 +41,8 @@ class _HeldBadgeStore extends InMemorySharedPreferencesStore {
     return super.setValue(valueType, key, value);
   }
 }
+
+class _MockFunnelcakeClient extends Mock implements FunnelcakeApiClient {}
 
 void main() {
   group('badge account erasure', () {
@@ -80,8 +84,13 @@ void main() {
           );
           final auth = _Auth();
           when(() => auth.currentPublicKeyHex).thenReturn(owner);
+          when(() => auth.authStateStream)
+              .thenAnswer((_) => const Stream.empty());
           final container = ProviderContainer(
             overrides: [
+              badgeCatalogueApiClientProvider.overrideWithValue(
+                _MockFunnelcakeClient(),
+              ),
               authServiceProvider.overrideWithValue(auth),
               nostrServiceProvider.overrideWithValue(client),
               sharedPreferencesProvider.overrideWithValue(prefs),
@@ -129,6 +138,7 @@ void main() {
               required kind,
               required content,
               required tags,
+              createdAt,
             }) async => null,
           );
           await reopened.loadAwardedBadges();

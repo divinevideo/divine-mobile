@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:clock/clock.dart';
+
 import 'count_response.dart';
 import 'event.dart';
 import 'event_kind.dart';
@@ -390,7 +392,7 @@ class Nostr {
       tempRelays: tempRelays,
       relayTypes: relayTypes,
       sendAfterAuth: sendAfterAuth,
-      deadline: deadline ?? DateTime.now().add(timeout),
+      deadline: deadline ?? clock.now().add(timeout),
       requireAllRelaysSettled: requireAllRelaysSettled,
       maxCollectedEvents: maxCollectedEvents,
       maxCollectedBytes: maxCollectedBytes,
@@ -498,7 +500,7 @@ class Nostr {
         );
 
     while (pages < maxPages) {
-      final now = DateTime.now();
+      final now = clock.now();
       if (deadline != null && !now.isBefore(deadline)) break;
       var pageDeadline = now.add(pageTimeout);
       if (deadline != null && deadline.isBefore(pageDeadline)) {
@@ -581,7 +583,7 @@ class Nostr {
       tempRelays: tempRelays,
       relayTypes: relayTypes,
       sendAfterAuth: sendAfterAuth,
-      deadline: DateTime.now().add(timeout),
+      deadline: clock.now().add(timeout),
       requireAllRelaysSettled: requireAllRelaysSettled,
     );
     final noRelaysParticipated = read.result.endedBy == QueryEnd.noRelay;
@@ -672,7 +674,7 @@ class Nostr {
     // the relays, so the outcome is the deadline's with no relay in it — the
     // same answer the timer below would have given.
     final subscriptionId = id ?? StringUtil.rndSecureNameStr(16);
-    final now = DateTime.now();
+    final now = clock.now();
     if (!deadline.isAfter(now)) {
       // The pool files a completion line for every read it sees; this one
       // it never will, so the line is filed here — under [clientScope],
@@ -731,7 +733,7 @@ class Nostr {
 
     // A deadline already past fires at once: a Timer treats it as zero.
     final deadlineTimer = Timer(
-      deadline.difference(DateTime.now()),
+      deadline.difference(clock.now()),
       endAtDeadline,
     );
     try {

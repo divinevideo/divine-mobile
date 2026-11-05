@@ -12,7 +12,7 @@ class FunnelcakeException implements Exception {
   /// The lower-level error that caused this exception, when one was wrapped.
   ///
   /// Contract: only some wrap sites populate this today — currently the
-  /// author-videos and user-sounds fetches. A wrap site that does not pass
+  /// author-videos, user-sounds and badge-definitions fetches. A site without
   /// `cause:` leaves it null, and callers classifying failures by cause (for
   /// example creator analytics' connection-vs-server copy) silently fall back
   /// to their generic verdict for those endpoints. Populate the field before

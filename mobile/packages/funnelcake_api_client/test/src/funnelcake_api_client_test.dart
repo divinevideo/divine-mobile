@@ -2,6 +2,7 @@
 // ABOUTME: Tests API calls, error handling, and edge cases.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
@@ -744,6 +745,284 @@ void main() {
           throwsA(isA<FunnelcakeTimeoutException>()),
         );
       });
+    });
+
+    group('getVideosByAuthors', () {
+      for (final failure in [503, 429, 'transport']) {
+        test('retries idempotent author POST after $failure', () async {
+          var attempts = 0;
+          when(
+            () => mockHttpClient.post(
+              any(),
+              headers: any(named: 'headers'),
+              body: any(named: 'body'),
+            ),
+          ).thenAnswer((_) async {
+            if (attempts++ == 0) {
+              if (failure == 'transport') throw const SocketException('reset');
+              return http.Response('', failure as int);
+            }
+            return http.Response(
+              '{"data":[],"pagination":{"has_more":false}}',
+              200,
+            );
+          });
+          final page = await client.getVideosByAuthors(authors: [testPubkey]);
+          expect(page.videos, isEmpty);
+          expect(page.hasMore, isFalse);
+          expect(attempts, 2);
+        });
+      }
+
+      test(
+        'posts 200 full authors at a fixed URL and preserves legacy pagination',
+        () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer(
+            (_) async => throw StateError('Author chunks must use JSON POST'),
+          );
+          when(
+            () => mockHttpClient.post(
+              any(),
+              headers: any(named: 'headers'),
+              body: any(named: 'body'),
+            ),
+          ).thenAnswer(
+            (_) async => http.Response('''
+{
+  "data": [{
+    "id": "feed123",
+    "pubkey": "$testPubkey",
+    "created_at": 1700000000,
+    "kind": 34236,
+    "d_tag": "feed-1",
+    "title": "Feed Video",
+    "thumbnail": "https://example.com/thumb.jpg",
+    "video_url": "https://example.com/video.mp4",
+    "reactions": 0,
+    "comments": 0,
+    "reposts": 0,
+    "engagement_score": 0,
+    "moderation_labels": ["violence"]
+  }],
+  "pagination": {"has_more": true, "next_cursor": "t:1700000000"}
+}
+''', 200),
+          );
+
+          final authors = List.generate(
+            200,
+            (index) => (index + 1).toRadixString(16).padLeft(64, '0'),
+          );
+          final page = await client.getVideosByAuthors(
+            authors: authors,
+            limit: 25,
+            offset: 50,
+            before: 1700000100,
+          );
+
+          final captured = verify(
+            () => mockHttpClient.post(
+              captureAny(),
+              headers: captureAny(named: 'headers'),
+              body: captureAny(named: 'body'),
+            ),
+          ).captured;
+          final uri = captured[0] as Uri;
+          final headers = captured[1] as Map<String, String>;
+          final body = jsonDecode(captured[2] as String);
+          expect(uri.toString(), '$testBaseUrl/api/v2/videos/by-authors');
+          expect(uri.queryParameters, isEmpty);
+          expect(headers['Content-Type'], 'application/json');
+          expect(headers['Accept'], 'application/json');
+          expect(body, {
+            'authors': authors,
+            'sort': 'recent',
+            'limit': 25,
+            'offset': 50,
+            'before': 1700000100,
+            'nsfw': 'show',
+            'moderation_profile': FunnelcakeApiClient.defaultModerationProfile,
+          });
+          verifyNever(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          );
+          expect(page.videos.single.moderationLabels, ['violence']);
+          expect(page.hasMore, isTrue);
+          expect(page.nextCursor, 't:1700000000');
+        },
+      );
+
+      test(
+        'keeps opaque cursor and requested sort exact in the JSON body',
+        () async {
+          when(
+            () => mockHttpClient.post(
+              any(),
+              headers: any(named: 'headers'),
+              body: any(named: 'body'),
+            ),
+          ).thenAnswer((_) async => http.Response('[]', 200));
+          const cursor = 't:1700000000|event/+?cursor==%opaque';
+          final page = await client.getVideosByAuthors(
+            authors: [testPubkey],
+            sort: 'popular',
+            limit: 100,
+            offset: 200,
+            before: 1700000100,
+            cursor: cursor,
+          );
+          final captured = verify(
+            () => mockHttpClient.post(
+              captureAny(),
+              headers: any(named: 'headers'),
+              body: captureAny(named: 'body'),
+            ),
+          ).captured;
+          expect(
+            captured[0].toString(),
+            '$testBaseUrl/api/v2/videos/by-authors',
+          );
+          expect(jsonDecode(captured[1] as String), {
+            'authors': [testPubkey],
+            'sort': 'popular',
+            'limit': 100,
+            'offset': 200,
+            'before': 1700000100,
+            'cursor': cursor,
+            'nsfw': 'show',
+            'moderation_profile': FunnelcakeApiClient.defaultModerationProfile,
+          });
+          expect(page.videos, isEmpty);
+          expect(page.serverItemCount, 0);
+        },
+      );
+
+      test('preserves defaults and omits absent pagination fields', () async {
+        when(
+          () => mockHttpClient.post(
+            any(),
+            headers: any(named: 'headers'),
+            body: any(named: 'body'),
+          ),
+        ).thenAnswer((_) async => http.Response('[]', 200));
+        await client.getVideosByAuthors(authors: [testPubkey]);
+        final body =
+            verify(
+                  () => mockHttpClient.post(
+                    any(),
+                    headers: any(named: 'headers'),
+                    body: captureAny(named: 'body'),
+                  ),
+                ).captured.single
+                as String;
+        expect(jsonDecode(body), {
+          'authors': [testPubkey],
+          'sort': 'recent',
+          'limit': 50,
+          'offset': 0,
+          'nsfw': 'show',
+          'moderation_profile': FunnelcakeApiClient.defaultModerationProfile,
+        });
+      });
+
+      for (final authorCount in [0, 201]) {
+        test('rejects $authorCount authors before making a request', () async {
+          await expectLater(
+            client.getVideosByAuthors(
+              authors: List.filled(authorCount, testPubkey),
+            ),
+            throwsA(isA<FunnelcakeException>()),
+          );
+          verifyZeroInteractions(mockHttpClient);
+        });
+      }
+
+      for (final statusCode in [404, 503]) {
+        test('surfaces POST $statusCode without GET fallback', () async {
+          when(
+            () => mockHttpClient.post(
+              any(),
+              headers: any(named: 'headers'),
+              body: any(named: 'body'),
+            ),
+          ).thenAnswer((_) async => http.Response('unavailable', statusCode));
+          await expectLater(
+            client.getVideosByAuthors(authors: [testPubkey]),
+            throwsA(
+              isA<FunnelcakeApiException>().having(
+                (error) => error.statusCode,
+                'statusCode',
+                statusCode,
+              ),
+            ),
+          );
+          verify(
+            () => mockHttpClient.post(
+              any(),
+              headers: any(named: 'headers'),
+              body: any(named: 'body'),
+            ),
+          ).called(statusCode == 503 ? FunnelcakeApiClient.maxGetAttempts : 1);
+          verifyNever(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          );
+        });
+      }
+
+      test('preserves typed POST timeout failures', () async {
+        when(
+          () => mockHttpClient.post(
+            any(),
+            headers: any(named: 'headers'),
+            body: any(named: 'body'),
+          ),
+        ).thenAnswer((_) async => throw TimeoutException('controlled timeout'));
+        await expectLater(
+          client.getVideosByAuthors(authors: [testPubkey]),
+          throwsA(isA<FunnelcakeTimeoutException>()),
+        );
+      });
+    });
+
+    group('getBadgeHolderPreview', () {
+      test(
+        'reads the first indexed award page and encodes the d tag',
+        () async {
+          when(
+            () => mockHttpClient.get(any(), headers: any(named: 'headers')),
+          ).thenAnswer(
+            (_) async => http.Response(
+              '{"holders":["$testPubkey"],"next_cursor":"more"}',
+              200,
+            ),
+          );
+
+          final holders = await client.getBadgeHolderPreview(
+            creatorPubkey: testPubkey,
+            dTag: 'art/day',
+          );
+
+          final uri =
+              verify(
+                    () => mockHttpClient.get(
+                      captureAny(),
+                      headers: any(named: 'headers'),
+                    ),
+                  ).captured.single
+                  as Uri;
+          expect(uri.pathSegments, [
+            'api',
+            'badges',
+            testPubkey,
+            'art/day',
+            'holders',
+          ]);
+          expect(uri.queryParameters['limit'], '10');
+          expect(holders, [testPubkey]);
+        },
+      );
     });
 
     group('getHomeFeed', () {

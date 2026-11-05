@@ -6300,5 +6300,9 @@
   "creatorHighlightWatch": "Titta på videon",
   "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "badgeSubscribedAction": "Prenumererar",
+  "badgeSubscribeAction": "Prenumerera på märket",
+  "badgeAcceptedHoldersTitle": "Personer som godkänt märket",
+  "badgeSubscriptionLoadError": "Det gick inte att läsa in dina märkprenumerationer. Försök igen."
 }

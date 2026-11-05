@@ -6300,5 +6300,9 @@
   "creatorHighlightWatch": "Tonton video",
   "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "badgeSubscribedAction": "Diikuti",
+  "badgeSubscribeAction": "Ikuti lencana",
+  "badgeAcceptedHoldersTitle": "Pemegang lencana yang menerima",
+  "badgeSubscriptionLoadError": "Langganan lencana kamu tidak dapat dimuat. Coba lagi."
 }

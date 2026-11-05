@@ -464,6 +464,7 @@ void main() {
 
       final provider = MediaCacheImageProvider(url, cacheManager: cacheManager);
       final errors = <Object>[];
+      final errorReported = Completer<void>();
       final completer = provider.loadImage(provider, (buffer, {getTargetSize}) {
         throw StateError('decode should not run for an empty file');
       });
@@ -473,12 +474,12 @@ void main() {
         },
         onError: (error, stackTrace) {
           errors.add(error);
+          errorReported.complete();
         },
       );
 
       completer.addListener(listener);
-      await Future<void>.delayed(Duration.zero);
-      await Future<void>.delayed(Duration.zero);
+      await errorReported.future.timeout(const Duration(seconds: 5));
 
       expect(errors, hasLength(1));
       expect(errors.single, isA<StateError>());

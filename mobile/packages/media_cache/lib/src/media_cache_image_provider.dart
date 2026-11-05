@@ -12,7 +12,10 @@ import 'package:media_cache/src/media_cache_manager.dart';
 typedef _SimpleDecoderCallback =
     Future<ui.Codec> Function(ui.ImmutableBuffer buffer);
 
-/// Loads images through [MediaCacheManager] with cancellation-aware downloads.
+/// Loads native images through the cancellation-aware [MediaCacheManager].
+///
+/// Web uses the browser loader, including HTML image fallback for origins that
+/// cannot expose image bytes through CORS, without opening a native cache file.
 @immutable
 class MediaCacheImageProvider extends ImageProvider<MediaCacheImageProvider> {
   /// Creates a provider that resolves [url] through [cacheManager].
@@ -51,6 +54,16 @@ class MediaCacheImageProvider extends ImageProvider<MediaCacheImageProvider> {
     MediaCacheImageProvider key,
     ImageDecoderCallback decode,
   ) {
+    if (kIsWeb) {
+      final browserImage = NetworkImage(
+        key.url,
+        scale: key.scale,
+        headers: key.authHeaders,
+        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+      );
+      return browserImage.loadImage(browserImage, decode);
+    }
+
     final loadHandle = _ImageLoadHandle();
     return MultiFrameImageStreamCompleter(
       codec: _loadAsync(key, loadHandle, decode: decode),
