@@ -3623,8 +3623,8 @@ void main() {
         final first = repository.acceptAward(award(coordinate, 122));
         await firstPublishStarted.future;
         final second = repository.acceptAward(award(retainedCoordinate, 123));
-        // Drain microtasks so an incorrectly concurrent read can start.
-        await Future<void>.delayed(Duration.zero);
+        // Drain the event queue so an incorrectly concurrent read can start.
+        await pumpEventQueue();
         expect(readCount, 1);
         firstPublishFinished.complete();
         await Future.wait([first, second]);
@@ -3652,6 +3652,137 @@ void main() {
           ['a', retainedCoordinate],
           ['e', _eventId(123)],
         ]);
+      });
+
+      test('a failed read releases the edit queued behind it', () async {
+        final firstRead = Completer<void>();
+        var reads = 0;
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer((_) async {
+          final read = ++reads;
+          if (read == 1) await firstRead.future;
+          return (events: <Event>[], timedOut: read == 1, noRelays: false);
+        });
+
+        final first = expectLater(
+          repository.acceptAward(award(coordinate, 122)),
+          throwsA(isA<ProfileBadgesWriteRefusedException>()),
+        );
+        final second = repository.acceptAward(award(retainedCoordinate, 123));
+        await pumpEventQueue();
+        firstRead.complete();
+        await first;
+        await second;
+
+        expect(reads, 2);
+        expect(lastSignedEvent()!.tags, [
+          ['a', retainedCoordinate],
+          ['e', _eventId(123)],
+        ]);
+      });
+
+      test('queues every edit made before the first is acknowledged', () async {
+        final thirdCoordinate = '30009:${_pubkey(3)}:third-badge';
+        final firstPublish = Completer<void>();
+        final published = <Event>[];
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
+          invocation,
+        ) async {
+          final event = invocation.positionalArguments.single as Event;
+          published.add(event);
+          if (published.length == 1) await firstPublish.future;
+          return _acceptedPublishOutcome(event);
+        });
+
+        final edits = [
+          repository.acceptAward(award(coordinate, 122)),
+          repository.acceptAward(award(retainedCoordinate, 123)),
+          repository.acceptAward(award(thirdCoordinate, 124)),
+        ];
+        await pumpEventQueue();
+        firstPublish.complete();
+        await Future.wait(edits);
+
+        expect(published, hasLength(3));
+        expect(published.last.tags, [
+          ['a', coordinate],
+          ['e', _eventId(122)],
+          ['a', retainedCoordinate],
+          ['e', _eventId(123)],
+          ['a', thirdCoordinate],
+          ['e', _eventId(124)],
+        ]);
+      });
+
+      test('ignores a list published by another account', () async {
+        stubRead(
+          events: [
+            _signed(
+              _event(
+                id: _eventId(155),
+                pubkey: _pubkey(3),
+                kind: EventKind.profileBadges,
+                createdAt: 2000,
+                content: 'someone else',
+                tags: [
+                  ['a', retainedCoordinate],
+                  ['e', _eventId(121)],
+                ],
+              ),
+            ),
+          ],
+        );
+
+        await repository.acceptAward(award(coordinate, 122));
+
+        final published = lastSignedEvent()!;
+        expect(published.content, isEmpty);
+        expect(published.tags, [
+          ['a', coordinate],
+          ['e', _eventId(122)],
+        ]);
+      });
+
+      test('an account switch while signing cannot publish', () async {
+        var owner = _pubkey(1);
+        repository = BadgeRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: preferences,
+          currentPubkey: () => owner,
+          signer: () => dismissalSigner,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async {
+                // The signer answers for the account it was asked about, but
+                // the user switched accounts while it was working.
+                owner = _pubkey(4);
+                return _event(
+                  id: _eventId(156),
+                  pubkey: _pubkey(1),
+                  kind: kind,
+                  tags: tags,
+                  content: content,
+                  createdAt: createdAt ?? 1000,
+                );
+              },
+        );
+        stubRead();
+
+        await expectLater(
+          repository.acceptAward(award(coordinate, 122)),
+          throwsA(isA<ProfileBadgesWriteRefusedException>()),
+        );
+
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
       });
 
       test(
@@ -3696,7 +3827,7 @@ void main() {
               noRelays: false,
             );
           });
-          // Also hold the old read so this detects the account race before the fix.
+          // Hold the cached display read too, so a write built on it is caught.
           when(() => nostrClient.queryEvents(any())).thenAnswer((_) async {
             if (!readStarted.isCompleted) readStarted.complete();
             return readFinished.future;
@@ -3710,6 +3841,8 @@ void main() {
           readFinished.complete([]);
           await mutation;
 
+          // The new account's signer is never asked to sign the old list.
+          expect(lastSignedEvent(), isNull);
           verifyNever(() => nostrClient.publishEventAwaitOk(any()));
         },
       );
@@ -3892,13 +4025,32 @@ void main() {
         expect(attempts.last.createdAt, greaterThan(attempts.first.createdAt));
       });
 
+      test('signs after a source near the end of the clock window', () async {
+        remote = [
+          _signed(
+            _profileBadgesEvent(
+              id: _eventId(137),
+              pubkey: _pubkey(1),
+              createdAt: now + 58,
+              tags: [],
+            ),
+          ),
+        ];
+
+        await repository.acceptAward(award(nextCoordinate, 132));
+
+        expect(attempts.single.createdAt, now + 59);
+      });
+
       test('refuses a source beyond the bounded future clock window', () async {
+        // A few seconds past the window, so a clock tick during the test
+        // cannot carry the source back inside it.
         remote = [
           _signed(
             _profileBadgesEvent(
               id: _eventId(134),
               pubkey: _pubkey(1),
-              createdAt: now + 3600,
+              createdAt: now + 65,
               tags: [],
             ),
           ),
@@ -3911,6 +4063,32 @@ void main() {
 
         expect(attempts, isEmpty);
         verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test('stops advancing retries once the clock window is spent', () async {
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer(
+          (call) async => _rejectedPublishOutcome(
+            call.positionalArguments.single as Event,
+          ),
+        );
+
+        ProfileBadgesWriteRefusedException? refusal;
+        for (var attempt = 0; attempt < 200 && refusal == null; attempt++) {
+          try {
+            await repository.acceptAward(award(firstCoordinate, 130));
+          } on BadgePublishException {
+            // Rejected everywhere; the next attempt has to stamp later.
+          } on ProfileBadgesWriteRefusedException catch (error) {
+            refusal = error;
+          }
+        }
+
+        expect(refusal, isNotNull);
+        final windowEnd = DateTime.now().millisecondsSinceEpoch ~/ 1000 + 60;
+        expect(
+          attempts.map((event) => event.createdAt),
+          everyElement(lessThanOrEqualTo(windowEnd)),
+        );
       });
     });
 
