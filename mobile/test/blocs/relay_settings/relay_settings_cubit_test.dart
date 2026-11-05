@@ -47,7 +47,10 @@ void main() {
         () => nostr.removeRelay(any(), source: any(named: 'source')),
       ).thenAnswer((_) async => true);
       when(
-        relayListRepository.publishConfiguredRelayList,
+        () => relayListRepository.publishConfiguredRelayList(
+          addedRelay: any(named: 'addedRelay'),
+          removedRelay: any(named: 'removedRelay'),
+        ),
       ).thenAnswer((_) async => const RelayListPublishResult.published());
       when(nostr.forceReconnectAll).thenAnswer(
         (_) async => ForceReconnectOutcome.completed,
@@ -189,7 +192,11 @@ void main() {
             source: RelayAddSource.user,
           ),
         ).called(1);
-        verify(relayListRepository.publishConfiguredRelayList).called(1);
+        verify(
+          () => relayListRepository.publishConfiguredRelayList(
+            addedRelay: 'wss://added.example',
+          ),
+        ).called(1);
       },
     );
 
@@ -207,7 +214,12 @@ void main() {
       },
       expect: () => [const RelaySettingsState()],
       verify: (_) {
-        verifyNever(relayListRepository.publishConfiguredRelayList);
+        verifyNever(
+          () => relayListRepository.publishConfiguredRelayList(
+            addedRelay: any(named: 'addedRelay'),
+            removedRelay: any(named: 'removedRelay'),
+          ),
+        );
       },
     );
 
@@ -230,7 +242,12 @@ void main() {
         const RelaySettingsState(relays: ['wss://pending.example']),
       ],
       verify: (_) {
-        verify(relayListRepository.publishConfiguredRelayList).called(1);
+        verify(
+          () => relayListRepository.publishConfiguredRelayList(
+            addedRelay: any(named: 'addedRelay'),
+            removedRelay: any(named: 'removedRelay'),
+          ),
+        ).called(1);
       },
     );
 
@@ -238,7 +255,12 @@ void main() {
       'addRelay returns local-only when publish fails after local save',
       setUp: () {
         when(() => nostr.configuredRelays).thenReturn(['wss://added.example']);
-        when(relayListRepository.publishConfiguredRelayList).thenAnswer(
+        when(
+          () => relayListRepository.publishConfiguredRelayList(
+            addedRelay: any(named: 'addedRelay'),
+            removedRelay: any(named: 'removedRelay'),
+          ),
+        ).thenAnswer(
           (_) async => RelayListPublishResult.failed(
             StateError('no indexer accepted'),
             StackTrace.current,
@@ -297,7 +319,11 @@ void main() {
             source: RelayRemoveSource.user,
           ),
         ).called(1);
-        verify(relayListRepository.publishConfiguredRelayList).called(1);
+        verify(
+          () => relayListRepository.publishConfiguredRelayList(
+            removedRelay: 'wss://b.example',
+          ),
+        ).called(1);
       },
     );
 
@@ -320,7 +346,12 @@ void main() {
         const RelaySettingsState(relays: ['wss://a.example']),
       ],
       verify: (_) {
-        verifyNever(relayListRepository.publishConfiguredRelayList);
+        verifyNever(
+          () => relayListRepository.publishConfiguredRelayList(
+            addedRelay: any(named: 'addedRelay'),
+            removedRelay: any(named: 'removedRelay'),
+          ),
+        );
       },
     );
 
@@ -342,7 +373,12 @@ void main() {
       },
       expect: () => [const RelaySettingsState()],
       verify: (_) {
-        verify(relayListRepository.publishConfiguredRelayList).called(1);
+        verify(
+          () => relayListRepository.publishConfiguredRelayList(
+            addedRelay: any(named: 'addedRelay'),
+            removedRelay: any(named: 'removedRelay'),
+          ),
+        ).called(1);
       },
     );
 
@@ -351,7 +387,12 @@ void main() {
       seed: () => const RelaySettingsState(relays: ['wss://gone.example']),
       setUp: () {
         when(() => nostr.configuredRelays).thenReturn(const []);
-        when(relayListRepository.publishConfiguredRelayList).thenAnswer(
+        when(
+          () => relayListRepository.publishConfiguredRelayList(
+            addedRelay: any(named: 'addedRelay'),
+            removedRelay: any(named: 'removedRelay'),
+          ),
+        ).thenAnswer(
           (_) async => RelayListPublishResult.failed(
             StateError('no indexer accepted'),
             StackTrace.current,
@@ -391,7 +432,11 @@ void main() {
             source: RelayAddSource.user,
           ),
         ).called(1);
-        verify(relayListRepository.publishConfiguredRelayList).called(1);
+        verify(
+          () => relayListRepository.publishConfiguredRelayList(
+            addedRelay: 'wss://relay.staging.divine.video',
+          ),
+        ).called(1);
       },
     );
 
@@ -428,7 +473,12 @@ void main() {
             source: RelayAddSource.user,
           ),
         ).called(1);
-        verify(relayListRepository.publishConfiguredRelayList).called(1);
+        verify(
+          () => relayListRepository.publishConfiguredRelayList(
+            addedRelay: any(named: 'addedRelay'),
+            removedRelay: any(named: 'removedRelay'),
+          ),
+        ).called(1);
       },
     );
 
@@ -441,7 +491,12 @@ void main() {
         when(
           () => nostr.configuredRelays,
         ).thenReturn(['wss://relay.staging.divine.video']);
-        when(relayListRepository.publishConfiguredRelayList).thenAnswer(
+        when(
+          () => relayListRepository.publishConfiguredRelayList(
+            addedRelay: any(named: 'addedRelay'),
+            removedRelay: any(named: 'removedRelay'),
+          ),
+        ).thenAnswer(
           (_) async => RelayListPublishResult.failed(
             StateError('no indexer accepted'),
             StackTrace.current,

@@ -1,7 +1,9 @@
-// ABOUTME: Publishes the user's configured relay set as NIP-65 kind:10002.
+// ABOUTME: Applies relay-settings edits to the user's NIP-65 kind:10002 list.
 // ABOUTME: Keeps relay-list event construction and retry state out of UI/BLoC.
 
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -70,6 +72,43 @@ class RelayListPublishResult {
   };
 }
 
+final _relayListWrites = Expando<Future<void>>();
+
+/// The source accepted by an indexer before it necessarily appears in reads.
+/// Bootstrap and settings share it as well as their serialization queue.
+Event? readAcceptedRelayList(SharedPreferences preferences, String pubkey) {
+  final encoded = preferences.getString('relay_list_last_accepted_$pubkey');
+  return encoded == null
+      ? null
+      : Event.fromJson(jsonDecode(encoded) as Map<String, dynamic>);
+}
+
+/// Retains an accepted source across client recreation and process restarts.
+Future<void> storeAcceptedRelayList(
+  SharedPreferences preferences,
+  Event event,
+) async {
+  await preferences.setString(
+    'relay_list_last_accepted_${event.pubkey}',
+    jsonEncode(event.toJson()),
+  );
+}
+
+/// Serializes every kind-10002 read/write on a client, including bootstrap.
+Future<T> serializeRelayListWrite<T>(
+  NostrClient client,
+  Future<T> Function() operation,
+) {
+  final result = (_relayListWrites[client] ?? Future<void>.value()).then(
+    (_) => operation(),
+  );
+  _relayListWrites[client] = result.then<void>(
+    (_) {},
+    onError: (Object _, StackTrace _) {},
+  );
+  return result;
+}
+
 class RelayListRepository {
   RelayListRepository({
     required NostrClient nostrClient,
@@ -89,9 +128,37 @@ class RelayListRepository {
   final SharedPreferences _sharedPreferences;
   final List<DiscoveredRelay> Function() _discoveredRelays;
 
-  Future<RelayListPublishResult> publishConfiguredRelayList() async {
+  /// Applies the explicit settings edit to a fresh relay list, or to the
+  /// environment relay when no list exists yet. Calls without an edit replay
+  /// stored edits, or conservatively add configured relays when none are
+  /// stored; absence from this device's connection pool never implies the user
+  /// removed a relay on another client.
+  Future<RelayListPublishResult> publishConfiguredRelayList({
+    String? addedRelay,
+    String? removedRelay,
+  }) {
     final pubkey = _nostrClient.publicKey;
-    if (!_nostrClient.hasKeys || pubkey.isEmpty) {
+    final configured = List<String>.of(_nostrClient.configuredRelays);
+    return serializeRelayListWrite(
+      _nostrClient,
+      () => _publishConfiguredRelayList(
+        pubkey,
+        configured,
+        addedRelay: addedRelay,
+        removedRelay: removedRelay,
+      ),
+    );
+  }
+
+  Future<RelayListPublishResult> _publishConfiguredRelayList(
+    String pubkey,
+    List<String> configured, {
+    String? addedRelay,
+    String? removedRelay,
+  }) async {
+    if (!_nostrClient.hasKeys ||
+        pubkey.isEmpty ||
+        _nostrClient.publicKey != pubkey) {
       return const RelayListPublishResult.skippedNoKeys();
     }
 
@@ -106,9 +173,25 @@ class RelayListRepository {
     }
 
     try {
-      final result = await _publishForPubkey(pubkey);
+      final pending = _pending(pubkey);
+      if (addedRelay != null) {
+        _putDelta(pending, addedRelay, true);
+      } else if (removedRelay != null) {
+        _putDelta(pending, removedRelay, false);
+      } else if (pending.isEmpty) {
+        for (final relay in configured) {
+          _putDelta(pending, relay, true);
+        }
+      }
+      await _sharedPreferences.setString(
+        _pendingKey(pubkey),
+        jsonEncode(pending),
+      );
+      await _markDirty(pubkey);
+      final result = await _publishForPubkey(pubkey, pending);
       if (result.synced) {
         await _clearDirty(pubkey);
+        await _sharedPreferences.remove(_pendingKey(pubkey));
       } else if (result.localOnly) {
         await _markDirty(pubkey);
       }
@@ -139,14 +222,92 @@ class RelayListRepository {
   }
 
   bool isDirty(String pubkey) =>
-      _sharedPreferences.getBool(_dirtyKey(pubkey)) ?? false;
+      (_sharedPreferences.getBool(_dirtyKey(pubkey)) ?? false) ||
+      _sharedPreferences.containsKey(_pendingKey(pubkey));
 
-  Future<RelayListPublishResult> _publishForPubkey(String pubkey) async {
+  Map<String, bool> _pending(String pubkey) {
+    final encoded = _sharedPreferences.getString(_pendingKey(pubkey));
+    if (encoded == null) return {};
+    return Map<String, bool>.from(jsonDecode(encoded) as Map);
+  }
+
+  String _pendingKey(String pubkey) => 'relay_list_publish_pending_$pubkey';
+
+  void _putDelta(Map<String, bool> pending, String url, bool present) {
+    pending.removeWhere((known, _) => relayUrlsEquivalent(known, url));
+    pending[url] = present;
+  }
+
+  Future<RelayListPublishResult> _publishForPubkey(
+    String pubkey,
+    Map<String, bool> pending,
+  ) async {
+    final read = await _nostrClient.queryEventsDetailed(
+      [
+        Filter(authors: [pubkey], kinds: [EventKind.relayListMetadata]),
+      ],
+      useCache: false,
+      requireAllRelaysSettled: true,
+      tempRelays: _environment.indexerRelays,
+    );
+    if (read.noRelays || read.timedOut) {
+      throw StateError('Cannot replace a relay list after an incomplete read');
+    }
+    Event? base;
+    for (final event in [
+      ...read.events,
+      ?readAcceptedRelayList(_sharedPreferences, pubkey),
+    ]) {
+      if (event.pubkey != pubkey || event.kind != EventKind.relayListMetadata) {
+        continue;
+      }
+      if (base == null ||
+          event.createdAt > base.createdAt ||
+          (event.createdAt == base.createdAt &&
+              event.id.compareTo(base.id) < 0)) {
+        base = event;
+      }
+    }
+    // With no list anywhere, start from the one bootstrap publishes, so an
+    // edit never advertises a list without the relay Divine writes to.
+    final source =
+        base?.tags ??
+        [
+          ['r', _environment.relayUrl],
+        ];
+    final tags = [
+      for (final tag in source)
+        if (!(tag.length >= 2 &&
+            tag[0] == 'r' &&
+            pending.entries.any(
+              (edit) => !edit.value && relayUrlsEquivalent(edit.key, tag[1]),
+            )))
+          List<String>.of(tag),
+    ];
+    for (final edit in pending.entries) {
+      if (!edit.value ||
+          tags.any(
+            (tag) =>
+                tag.length >= 2 &&
+                tag[0] == 'r' &&
+                relayUrlsEquivalent(tag[1], edit.key),
+          )) {
+        continue;
+      }
+      tags.add(_buildRelayTags([edit.key]).single);
+    }
+    if (_nostrClient.publicKey != pubkey) {
+      throw StateError('Account changed during relay-list read');
+    }
     final unsigned = Event(
       pubkey,
       EventKind.relayListMetadata,
-      _buildRelayTags(_nostrClient.configuredRelays),
-      '',
+      tags,
+      base?.content ?? '',
+      createdAt: math.max(
+        DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        (base?.createdAt ?? 0) + 1,
+      ),
     );
 
     final Event? signed;
@@ -164,7 +325,10 @@ class RelayListRepository {
       return RelayListPublishResult.failed(e, stackTrace);
     }
 
-    if (signed == null || signed.sig.isEmpty) {
+    if (signed == null ||
+        signed.sig.isEmpty ||
+        signed.pubkey != pubkey ||
+        _nostrClient.publicKey != pubkey) {
       return RelayListPublishResult.failed(
         StateError('Signer returned an unsigned kind:10002 event'),
         StackTrace.current,
@@ -187,6 +351,8 @@ class RelayListRepository {
       );
     }
 
+    // Relay acceptance can precede serving the event, even across a restart.
+    await storeAcceptedRelayList(_sharedPreferences, signed);
     final npub = Nip19.encodePubKey(pubkey);
     await _relayDiscoveryService.clearCache(npub);
     Log.info(

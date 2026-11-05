@@ -28,8 +28,10 @@ class _MockNostrService extends Mock implements NostrClient {}
 /// the assertions stay about the screen.
 class _FakeRelayListRepository implements RelayListRepository {
   @override
-  Future<RelayListPublishResult> publishConfiguredRelayList() async =>
-      const RelayListPublishResult.published();
+  Future<RelayListPublishResult> publishConfiguredRelayList({
+    String? addedRelay,
+    String? removedRelay,
+  }) async => const RelayListPublishResult.published();
 
   @override
   Future<RelayListPublishResult> retryDirtyPublish() async =>
@@ -41,11 +43,13 @@ class _FakeRelayListRepository implements RelayListRepository {
 
 class _FailingRelayListRepository extends _FakeRelayListRepository {
   @override
-  Future<RelayListPublishResult> publishConfiguredRelayList() async =>
-      RelayListPublishResult.failed(
-        StateError('no indexer accepted'),
-        StackTrace.current,
-      );
+  Future<RelayListPublishResult> publishConfiguredRelayList({
+    String? addedRelay,
+    String? removedRelay,
+  }) async => RelayListPublishResult.failed(
+    StateError('no indexer accepted'),
+    StackTrace.current,
+  );
 }
 
 class _MockRelayCapabilityService extends Mock

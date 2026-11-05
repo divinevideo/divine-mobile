@@ -22,8 +22,8 @@ typedef UserRelaysDiscoveredCallback = void Function(
 /// relay list on behalf of the user (because indexer discovery returned empty).
 ///
 /// The event is already signed. The implementer publishes it through the
-/// active [NostrClient] to [targetRelays] and reports success/failure via the
-/// returned future.
+/// active [NostrClient] to [targetRelays], unless a complete read finds a
+/// list discovery missed, and returns true once the account has a list.
 typedef BootstrapRelayListCallback = Future<bool> Function(
   Event event,
   List<String> targetRelays,

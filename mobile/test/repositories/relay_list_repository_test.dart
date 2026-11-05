@@ -1,11 +1,14 @@
 // ABOUTME: Tests for NIP-65 kind:10002 relay-list publishing.
 // ABOUTME: Covers marker preservation, indexer acceptance, cache, and retry state.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/environment_config.dart';
+import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/repositories/relay_list_repository.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -41,6 +44,16 @@ void main() {
     pubkey = (await signer.getPublicKey())!;
     discoveredRelays = const [];
 
+    when(
+      () => nostrClient.queryEventsDetailed(
+        any(),
+        useCache: false,
+        requireAllRelaysSettled: true,
+        tempRelays: any(named: 'tempRelays'),
+      ),
+    ).thenAnswer(
+      (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+    );
     when(() => nostrClient.hasKeys).thenReturn(true);
     when(() => nostrClient.publicKey).thenReturn(pubkey);
     when(() => nostrClient.signer).thenReturn(signer);
@@ -123,6 +136,417 @@ void main() {
           () => relayDiscoveryService.clearCache(Nip19.encodePubKey(pubkey)),
         ).called(1);
         expect(buildRepository().isDirty(pubkey), isFalse);
+      },
+    );
+
+    test('preserves unseen relay entries and opaque event data', () async {
+      final remote = Event(
+        pubkey,
+        EventKind.relayListMetadata,
+        [
+          ['r', 'wss://remote.example', 'write', 'opaque-extension'],
+          ['client', 'another-client'],
+        ],
+        'opaque-content',
+        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      );
+      when(
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          useCache: false,
+          requireAllRelaysSettled: true,
+          tempRelays: any(named: 'tempRelays'),
+        ),
+      ).thenAnswer(
+        (_) async => (events: [remote], timedOut: false, noRelays: false),
+      );
+
+      await buildRepository().publishConfiguredRelayList();
+
+      final event =
+          verify(
+                () => nostrClient.publishEventAwaitOk(
+                  captureAny(),
+                  targetRelays: any(named: 'targetRelays'),
+                  timeout: any(named: 'timeout'),
+                ),
+              ).captured.single
+              as Event;
+      expect(event.tags, containsAll(remote.tags));
+      expect(event.content, remote.content);
+      expect(event.createdAt, greaterThan(remote.createdAt));
+    });
+
+    test(
+      'refuses a partial relay read even when it returned an event',
+      () async {
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+            tempRelays: any(named: 'tempRelays'),
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: [Event(pubkey, EventKind.relayListMetadata, [], '')],
+            timedOut: true,
+            noRelays: false,
+          ),
+        );
+
+        final result = await buildRepository().publishConfiguredRelayList();
+
+        expect(result.status, RelayListPublishStatus.failed);
+        verifyNever(
+          () => nostrClient.publishEventAwaitOk(
+            any(),
+            targetRelays: any(named: 'targetRelays'),
+            timeout: any(named: 'timeout'),
+          ),
+        );
+      },
+    );
+
+    test(
+      'removes only the selected relay and preserves every other tag',
+      () async {
+        final remote = Event(pubkey, 10002, [
+          ['r', 'wss://removed.example', 'read'],
+          ['r', 'wss://remote.example', 'write', 'extension'],
+          ['opaque', 'value'],
+        ], 'private-content');
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+            tempRelays: any(named: 'tempRelays'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: [remote], timedOut: false, noRelays: false),
+        );
+
+        await buildRepository().publishConfiguredRelayList(
+          removedRelay: 'wss://removed.example',
+        );
+
+        final event =
+            verify(
+                  () => nostrClient.publishEventAwaitOk(
+                    captureAny(),
+                    targetRelays: any(named: 'targetRelays'),
+                    timeout: any(named: 'timeout'),
+                  ),
+                ).captured.single
+                as Event;
+        expect(event.tags, remote.tags.skip(1).toList());
+        expect(event.content, remote.content);
+      },
+    );
+
+    test(
+      'adds only the requested relay without publishing automatic connections',
+      () async {
+        final remote = Event(pubkey, 10002, [
+          ['r', 'wss://remote.example', 'read', 'opaque'],
+        ], 'opaque');
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+            tempRelays: any(named: 'tempRelays'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: [remote], timedOut: false, noRelays: false),
+        );
+        await buildRepository().publishConfiguredRelayList(
+          addedRelay: 'wss://added.example',
+        );
+        final event =
+            verify(
+                  () => nostrClient.publishEventAwaitOk(
+                    captureAny(),
+                    targetRelays: any(named: 'targetRelays'),
+                    timeout: any(named: 'timeout'),
+                  ),
+                ).captured.single
+                as Event;
+        expect(event.tags, [
+          ...remote.tags,
+          ['r', 'wss://added.example'],
+        ]);
+      },
+    );
+
+    test(
+      'starts a first list from the environment relay when none exists',
+      () async {
+        await buildRepository().publishConfiguredRelayList(
+          addedRelay: 'wss://added.example',
+        );
+
+        final event =
+            verify(
+                  () => nostrClient.publishEventAwaitOk(
+                    captureAny(),
+                    targetRelays: any(named: 'targetRelays'),
+                    timeout: any(named: 'timeout'),
+                  ),
+                ).captured.single
+                as Event;
+        expect(event.tags, [
+          ['r', EnvironmentConfig.production.relayUrl],
+          ['r', 'wss://added.example'],
+        ]);
+      },
+    );
+
+    test(
+      'does not publish an empty list when removing from an account without '
+      'one',
+      () async {
+        await buildRepository().publishConfiguredRelayList(
+          removedRelay: 'wss://fallback.example',
+        );
+
+        final event =
+            verify(
+                  () => nostrClient.publishEventAwaitOk(
+                    captureAny(),
+                    targetRelays: any(named: 'targetRelays'),
+                    timeout: any(named: 'timeout'),
+                  ),
+                ).captured.single
+                as Event;
+        expect(event.tags, [
+          ['r', EnvironmentConfig.production.relayUrl],
+        ]);
+      },
+    );
+
+    test(
+      'retains an accepted addition across restart before relay echo',
+      () async {
+        await buildRepository().publishConfiguredRelayList(
+          addedRelay: 'wss://one.example',
+        );
+        await buildRepository().publishConfiguredRelayList(
+          addedRelay: 'wss://two.example',
+        );
+        final events = verify(
+          () => nostrClient.publishEventAwaitOk(
+            captureAny(),
+            targetRelays: any(named: 'targetRelays'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).captured.cast<Event>();
+        expect(events.last.tags, [
+          ['r', EnvironmentConfig.production.relayUrl],
+          ['r', 'wss://one.example'],
+          ['r', 'wss://two.example'],
+        ]);
+      },
+    );
+
+    test('durable retry applies removal to the latest remote list', () async {
+      final remote = Event(pubkey, 10002, [
+        ['r', 'wss://removed.example'],
+        ['r', 'wss://remote.example', 'read'],
+      ], 'opaque');
+      var inconclusive = true;
+      when(
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          useCache: false,
+          requireAllRelaysSettled: true,
+          tempRelays: any(named: 'tempRelays'),
+        ),
+      ).thenAnswer(
+        (_) async =>
+            (events: [remote], timedOut: inconclusive, noRelays: false),
+      );
+      final first = buildRepository();
+      expect(
+        (await first.publishConfiguredRelayList(
+          removedRelay: 'wss://removed.example',
+        )).status,
+        RelayListPublishStatus.failed,
+      );
+      inconclusive = false;
+      final second = buildRepository();
+      expect(
+        (await second.retryDirtyPublish()).status,
+        RelayListPublishStatus.published,
+      );
+      final event =
+          verify(
+                () => nostrClient.publishEventAwaitOk(
+                  captureAny(),
+                  targetRelays: any(named: 'targetRelays'),
+                  timeout: any(named: 'timeout'),
+                ),
+              ).captured.single
+              as Event;
+      expect(event.tags, [
+        ['r', 'wss://remote.example', 'read'],
+      ]);
+      expect(second.isDirty(pubkey), isFalse);
+    });
+
+    test(
+      'settings waits for another relay writer on the same client',
+      () async {
+        final entered = Completer<void>();
+        final release = Completer<void>();
+        final bootstrap = serializeRelayListWrite(nostrClient, () async {
+          entered.complete();
+          await release.future;
+        });
+        await entered.future;
+        final settings = buildRepository().publishConfiguredRelayList(
+          addedRelay: 'wss://added.example',
+        );
+        await pumpEventQueue();
+        verifyNever(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+            tempRelays: any(named: 'tempRelays'),
+          ),
+        );
+        release.complete();
+        await bootstrap;
+        expect((await settings).status, RelayListPublishStatus.published);
+      },
+    );
+
+    test(
+      'bootstrap does not replace an accepted settings list before echo',
+      () async {
+        await buildRepository().publishConfiguredRelayList(
+          addedRelay: 'wss://chosen.example',
+        );
+        final bootstrap = await signer.signEvent(
+          Event(
+            pubkey,
+            10002,
+            [
+              ['r', 'wss://relay.divine.video'],
+            ],
+            '',
+            createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 10,
+          ),
+        );
+
+        expect(
+          await NostrService.bootstrapCallbackFor(nostrClient)(
+            bootstrap!,
+            EnvironmentConfig.production.indexerRelays,
+          ),
+          isTrue,
+        );
+        final events = verify(
+          () => nostrClient.publishEventAwaitOk(
+            captureAny(),
+            targetRelays: any(named: 'targetRelays'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).captured.cast<Event>();
+        expect(events, hasLength(1));
+        expect(events.single.tags, [
+          ['r', EnvironmentConfig.production.relayUrl],
+          ['r', 'wss://chosen.example'],
+        ]);
+      },
+    );
+
+    test('settings preserves an accepted bootstrap list before echo', () async {
+      final bootstrap = await signer.signEvent(
+        Event(pubkey, 10002, [
+          ['r', 'wss://bootstrap.example'],
+        ], ''),
+      );
+      expect(
+        await NostrService.bootstrapCallbackFor(nostrClient)(
+          bootstrap!,
+          EnvironmentConfig.production.indexerRelays,
+        ),
+        isTrue,
+      );
+      await buildRepository().publishConfiguredRelayList(
+        addedRelay: 'wss://chosen.example',
+      );
+      final events = verify(
+        () => nostrClient.publishEventAwaitOk(
+          captureAny(),
+          targetRelays: any(named: 'targetRelays'),
+          timeout: any(named: 'timeout'),
+        ),
+      ).captured.cast<Event>();
+      expect(events, hasLength(2));
+      expect(events.last.tags, [
+        ['r', 'wss://bootstrap.example'],
+        ['r', 'wss://chosen.example'],
+      ]);
+      expect(events.last.createdAt, greaterThan(events.first.createdAt));
+    });
+
+    test(
+      'serializes reads and retains a just-accepted addition before relay echo',
+      () async {
+        final firstRead =
+            Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+        final readStarted = Completer<void>();
+        var reads = 0;
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+            tempRelays: any(named: 'tempRelays'),
+          ),
+        ).thenAnswer((_) {
+          reads++;
+          if (reads == 1) readStarted.complete();
+          return reads == 1
+              ? firstRead.future
+              : Future.value((
+                  events: <Event>[],
+                  timedOut: false,
+                  noRelays: false,
+                ));
+        });
+        final repository = buildRepository();
+        final first = repository.publishConfiguredRelayList(
+          addedRelay: 'wss://one.example',
+        );
+        final second = repository.publishConfiguredRelayList(
+          addedRelay: 'wss://two.example',
+        );
+        await readStarted.future;
+        expect(reads, 1);
+        firstRead.complete((
+          events: <Event>[],
+          timedOut: false,
+          noRelays: false,
+        ));
+        await Future.wait([first, second]);
+        final events = verify(
+          () => nostrClient.publishEventAwaitOk(
+            captureAny(),
+            targetRelays: any(named: 'targetRelays'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).captured.cast<Event>();
+        expect(events.last.tags, [
+          ['r', EnvironmentConfig.production.relayUrl],
+          ['r', 'wss://one.example'],
+          ['r', 'wss://two.example'],
+        ]);
+        expect(events.last.createdAt, greaterThan(events.first.createdAt));
       },
     );
 
