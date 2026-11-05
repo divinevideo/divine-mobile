@@ -75,7 +75,7 @@ Trigger:
 
 - not hosted on `divine.video`
 - no proof-backed badge
-- not an archive Vine the server verifies (`video.isVerifiedArchive`)
+- not an archive Vine under `video.countsAsArchiveVine` (server-verified, or tagged while the server could not check)
 - no low-score AI promotion
 - no high-score AI warning
 
