@@ -215,6 +215,35 @@ baseline, Flutter version, exact Shorebird CLI revision, and keyed fingerprints
 of every dart-define. The record contains no dart-define values. If recording
 fails, treat the release build as incomplete and do not patch that release.
 
+### Release identity ledger
+
+The release identity ledger lives in the `allocations/` tree of
+`divinevideo/divine-release-provenance`:
+
+- `allocations/builds/<platform>/<n>.json` reserves build number `n` for a platform.
+- `allocations/keys/...` is the key index for those reservations.
+- `allocations/claims/<version>/<channel>.json` claims a version for a channel.
+- `allocations/bootstrap.json` marks that the ledger has been seeded.
+
+Every write is create-only: an existing file is never overwritten, so two
+runs cannot hand out the same number. `mobile/scripts/release_identity.py`
+owns these paths.
+
+Before builds start allocating from the ledger (a later pull request), seed it
+once from the live store data with the manual Codemagic workflow
+`release-identity-bootstrap`. It defaults to `DRY_RUN=YES`, which writes
+nothing. Run it as a dry run first, check the output, then run it again with
+`DRY_RUN=NO`. It fails closed if either store lookup (App Store Connect
+versions, Google Play production track) errors.
+
+The dry run lists the ledger files a real run would create (`would create:`);
+the real run prints the same list under `created:`. `ledger already
+bootstrapped; nothing to create` means nothing is missing. If a Play
+production version code cannot be mapped to a version, the run stops before
+writing anything and names the code; add
+`releases/android/<version>+<code>.json` provenance or
+`allocations/builds/android/<code>.json` with a `"version"` string, then rerun.
+
 ## Shipping a patch
 
 Shorebird is an emergency repair path, not a second feature-delivery channel.
@@ -409,35 +438,6 @@ is only linked by `shorebird release`, so a debug build can never validate a
 patch.
 
 Promotion to `stable` happens only after this validation succeeds.
-
-### Release identity ledger
-
-The release identity ledger lives in the `allocations/` tree of
-`divinevideo/divine-release-provenance`:
-
-- `allocations/builds/<platform>/<n>.json` reserves build number `n` for a platform.
-- `allocations/keys/...` is the key index for those reservations.
-- `allocations/claims/<version>/<channel>.json` claims a version for a channel.
-- `allocations/bootstrap.json` marks that the ledger has been seeded.
-
-Every write is create-only: an existing file is never overwritten, so two
-runs cannot hand out the same number. `mobile/scripts/release_identity.py`
-owns these paths.
-
-Before builds start allocating from the ledger (a later pull request), seed it
-once from the live store data with the manual Codemagic workflow
-`release-identity-bootstrap`. It defaults to `DRY_RUN=YES`, which writes
-nothing. Run it as a dry run first, check the output, then run it again with
-`DRY_RUN=NO`. It fails closed if either store lookup (App Store Connect
-versions, Google Play production track) errors.
-
-The dry run lists the ledger files a real run would create (`would create:`);
-the real run prints the same list under `created:`. `ledger already
-bootstrapped; nothing to create` means nothing is missing. If a Play
-production version code cannot be mapped to a version, the run stops before
-writing anything and names the code; add
-`releases/android/<version>+<code>.json` provenance or
-`allocations/builds/android/<code>.json` with a `"version"` string, then rerun.
 
 ### A patch targets a release version, not a channel
 
