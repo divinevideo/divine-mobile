@@ -412,7 +412,13 @@ class BadgeRepository {
   final BadgeDismissalSync _dismissalSync;
   Future<void>? _profileBadgeWriteTail;
   final _profileBadgeAttemptedAt = <String, int>{};
-  static const _profileBadgeFutureBudgetSeconds = 60;
+
+  /// How far past this device's clock a profile badge list may be stamped.
+  ///
+  /// The same pool-wide margin as `BookmarksRepository.maxPublishFutureSkew`:
+  /// Divine's relay refuses `created_at` more than 60 s ahead, a stricter
+  /// relay may refuse sooner, and this device's clock is not the relay's.
+  static const _profileBadgeFutureBudgetSeconds = 30;
 
   /// Null leaves awards unfiltered, which is what an anonymous or test
   /// repository wants — there is no blocklist to consult.
@@ -2265,7 +2271,10 @@ class BadgeRepository {
 
   int _nextProfileBadgeTimestamp(String owner, Nip58ProfileBadges? source) {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    var timestamp = now;
+    // Start from the signer's usual backdate, which absorbs a device clock
+    // that runs a little fast; only a newer source pushes the stamp later.
+    var timestamp =
+        now - NostrTimestamp.getDriftToleranceForKind(EventKind.profileBadges);
     final latest = source?.event.createdAt;
     if (latest != null && latest >= timestamp) timestamp = latest + 1;
     final attempted = _profileBadgeAttemptedAt[owner];

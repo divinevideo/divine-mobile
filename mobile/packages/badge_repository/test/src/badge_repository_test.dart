@@ -3941,7 +3941,7 @@ void main() {
           remote = [
             _signed(
               _profileBadgesEvent(
-                id: '0' * 64,
+                id: _eventId(138),
                 pubkey: _pubkey(1),
                 createdAt: attempts.single.createdAt,
                 tags: [
@@ -4053,13 +4053,23 @@ void main() {
         expect(attempts.last.createdAt, greaterThan(attempts.first.createdAt));
       });
 
+      test('backdates a list that no newer revision has to follow', () async {
+        await repository.acceptAward(award(nextCoordinate, 132));
+
+        // Allow for the clock ticking once between setUp and the write.
+        expect(
+          attempts.single.createdAt,
+          inInclusiveRange(now - 30, now - 29),
+        );
+      });
+
       test('signs after a source near the end of the clock window', () async {
         remote = [
           _signed(
             _profileBadgesEvent(
               id: _eventId(137),
               pubkey: _pubkey(1),
-              createdAt: now + 58,
+              createdAt: now + 28,
               tags: [],
             ),
           ),
@@ -4067,7 +4077,7 @@ void main() {
 
         await repository.acceptAward(award(nextCoordinate, 132));
 
-        expect(attempts.single.createdAt, now + 59);
+        expect(attempts.single.createdAt, now + 29);
       });
 
       test('refuses a source beyond the bounded future clock window', () async {
@@ -4078,7 +4088,7 @@ void main() {
             _profileBadgesEvent(
               id: _eventId(134),
               pubkey: _pubkey(1),
-              createdAt: now + 65,
+              createdAt: now + 35,
               tags: [],
             ),
           ),
@@ -4112,7 +4122,7 @@ void main() {
         }
 
         expect(refusal, isNotNull);
-        final windowEnd = DateTime.now().millisecondsSinceEpoch ~/ 1000 + 60;
+        final windowEnd = DateTime.now().millisecondsSinceEpoch ~/ 1000 + 30;
         expect(
           attempts.map((event) => event.createdAt),
           everyElement(lessThanOrEqualTo(windowEnd)),
