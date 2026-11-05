@@ -564,13 +564,30 @@ class AudioEvent {
   /// Whether this audio is a bundled sound (from app assets).
   bool get isBundled => id.startsWith('${bundledMarker}_');
 
-  /// Whether its publisher gave it no title of its own: none at all, or the
-  /// [originalSoundTitle] a shared video sound gets by default.
+  /// Whether its publisher gave it no title of its own: none at all, the
+  /// [originalSoundTitle] a shared video sound gets by default, or that
+  /// title followed by " - " and anything after it, which is how the app
+  /// names a shared sound after its creator ("Original sound - @name").
   bool get hasDefaultTitle {
-    final title = this.title?.trim() ?? '';
+    final title = this.title?.trim().toLowerCase() ?? '';
+    final defaultTitle = originalSoundTitle.toLowerCase();
     return title.isEmpty ||
-        title.toLowerCase() == originalSoundTitle.toLowerCase();
+        title == defaultTitle ||
+        title.startsWith('$defaultTitle - ');
   }
+
+  /// Whether this looks like a video's own audio, shared when the video was
+  /// posted and left as it was: [hasDefaultTitle], credited to no [source],
+  /// and neither [isBundled] nor [isExternalProviderSound].
+  ///
+  /// Judged from the title and credit alone; [sourceVideoReference] is not
+  /// read. Most of these are someone talking over their video, so the sound
+  /// lists hold them back until another account has used one.
+  bool get isAutoSharedOriginal =>
+      !isBundled &&
+      !isExternalProviderSound &&
+      hasDefaultTitle &&
+      (source?.trim().isEmpty ?? true);
 
   /// Whether this audio is a draft-local imported file.
   bool get isLocalImport => id.startsWith('${localImportMarker}_');

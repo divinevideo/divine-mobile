@@ -160,7 +160,7 @@ String _$soundsRepositoryHash() => r'ee1eabdb6858cd033616241484cd49192481c3ac';
 /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
 /// it fills a screen.
 ///
-/// Unnamed sounds nobody reused are left out
+/// Unnamed sounds no other account used are left out
 /// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
 ///
 /// Usage:
@@ -176,7 +176,7 @@ final trendingSoundsProvider = TrendingSoundsProvider._();
 /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
 /// it fills a screen.
 ///
-/// Unnamed sounds nobody reused are left out
+/// Unnamed sounds no other account used are left out
 /// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
 ///
 /// Usage:
@@ -190,7 +190,7 @@ final class TrendingSoundsProvider
   /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
   /// it fills a screen.
   ///
-  /// Unnamed sounds nobody reused are left out
+  /// Unnamed sounds no other account used are left out
   /// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
   ///
   /// Usage:
@@ -223,7 +223,7 @@ String _$trendingSoundsHash() => r'308f904cb163b67176bf6635d34eddd65ee18fc6';
 /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
 /// it fills a screen.
 ///
-/// Unnamed sounds nobody reused are left out
+/// Unnamed sounds no other account used are left out
 /// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
 ///
 /// Usage:
@@ -253,14 +253,15 @@ abstract class _$TrendingSounds extends $AsyncNotifier<PagedSounds> {
 /// Community sounds matching a free-text [query].
 ///
 /// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
-/// for reach plus the in-memory cache for partial and title matches — so this
-/// is a thin pass-through. Blank queries resolve to an empty list without a
-/// round trip; the caller shows the trending list instead of searching.
+/// for reach plus the in-memory cache for partial and title matches, and a
+/// reuse lookup that ranks unnamed sounds last — so this is a thin
+/// pass-through. Blank queries resolve to an empty list without a round
+/// trip; the caller shows the trending list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
-/// distinct string, so feeding it raw keystrokes is one relay query per
-/// character.
+/// distinct string, so feeding it raw keystrokes is up to two relay queries
+/// per character.
 ///
 /// Usage:
 /// ```dart
@@ -273,14 +274,15 @@ final soundSearchResultsProvider = SoundSearchResultsFamily._();
 /// Community sounds matching a free-text [query].
 ///
 /// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
-/// for reach plus the in-memory cache for partial and title matches — so this
-/// is a thin pass-through. Blank queries resolve to an empty list without a
-/// round trip; the caller shows the trending list instead of searching.
+/// for reach plus the in-memory cache for partial and title matches, and a
+/// reuse lookup that ranks unnamed sounds last — so this is a thin
+/// pass-through. Blank queries resolve to an empty list without a round
+/// trip; the caller shows the trending list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
-/// distinct string, so feeding it raw keystrokes is one relay query per
-/// character.
+/// distinct string, so feeding it raw keystrokes is up to two relay queries
+/// per character.
 ///
 /// Usage:
 /// ```dart
@@ -298,14 +300,15 @@ final class SoundSearchResultsProvider
   /// Community sounds matching a free-text [query].
   ///
   /// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
-  /// for reach plus the in-memory cache for partial and title matches — so this
-  /// is a thin pass-through. Blank queries resolve to an empty list without a
-  /// round trip; the caller shows the trending list instead of searching.
+  /// for reach plus the in-memory cache for partial and title matches, and a
+  /// reuse lookup that ranks unnamed sounds last — so this is a thin
+  /// pass-through. Blank queries resolve to an empty list without a round
+  /// trip; the caller shows the trending list instead of searching.
   ///
   /// Auto-disposed, so the per-query cache does not outlive the search field
   /// that opened it. Give it a debounced query: one instance is created per
-  /// distinct string, so feeding it raw keystrokes is one relay query per
-  /// character.
+  /// distinct string, so feeding it raw keystrokes is up to two relay queries
+  /// per character.
   ///
   /// Usage:
   /// ```dart
@@ -361,14 +364,15 @@ String _$soundSearchResultsHash() =>
 /// Community sounds matching a free-text [query].
 ///
 /// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
-/// for reach plus the in-memory cache for partial and title matches — so this
-/// is a thin pass-through. Blank queries resolve to an empty list without a
-/// round trip; the caller shows the trending list instead of searching.
+/// for reach plus the in-memory cache for partial and title matches, and a
+/// reuse lookup that ranks unnamed sounds last — so this is a thin
+/// pass-through. Blank queries resolve to an empty list without a round
+/// trip; the caller shows the trending list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
-/// distinct string, so feeding it raw keystrokes is one relay query per
-/// character.
+/// distinct string, so feeding it raw keystrokes is up to two relay queries
+/// per character.
 ///
 /// Usage:
 /// ```dart
@@ -389,14 +393,15 @@ final class SoundSearchResultsFamily extends $Family
   /// Community sounds matching a free-text [query].
   ///
   /// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
-  /// for reach plus the in-memory cache for partial and title matches — so this
-  /// is a thin pass-through. Blank queries resolve to an empty list without a
-  /// round trip; the caller shows the trending list instead of searching.
+  /// for reach plus the in-memory cache for partial and title matches, and a
+  /// reuse lookup that ranks unnamed sounds last — so this is a thin
+  /// pass-through. Blank queries resolve to an empty list without a round
+  /// trip; the caller shows the trending list instead of searching.
   ///
   /// Auto-disposed, so the per-query cache does not outlive the search field
   /// that opened it. Give it a debounced query: one instance is created per
-  /// distinct string, so feeding it raw keystrokes is one relay query per
-  /// character.
+  /// distinct string, so feeding it raw keystrokes is up to two relay queries
+  /// per character.
   ///
   /// Usage:
   /// ```dart

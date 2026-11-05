@@ -778,9 +778,85 @@ void main() {
         expect(titled(' original SOUND ').hasDefaultTitle, isTrue);
       });
 
+      test('is true for the default title naming its creator', () {
+        expect(titled('Original sound - @rabble').hasDefaultTitle, isTrue);
+        expect(titled(' ORIGINAL Sound - @rabble ').hasDefaultTitle, isTrue);
+      });
+
       test('is false for a named sound', () {
         expect(titled('Original sound remix').hasDefaultTitle, isFalse);
+        expect(titled('Original sound-ish').hasDefaultTitle, isFalse);
         expect(titled('Wednesday My Dudes').hasDefaultTitle, isFalse);
+      });
+    });
+
+    group('isAutoSharedOriginal', () {
+      AudioEvent sound({
+        String id = 'id',
+        String? title = AudioEvent.originalSoundTitle,
+        String? source,
+        AudioExternalSource? externalSource,
+      }) => AudioEvent(
+        id: id,
+        pubkey: '',
+        createdAt: 1700000000,
+        title: title,
+        source: source,
+        externalSource: externalSource,
+      );
+
+      test('is true for a video sound left untitled and uncredited', () {
+        expect(sound().isAutoSharedOriginal, isTrue);
+        expect(sound(title: null).isAutoSharedOriginal, isTrue);
+        expect(sound(source: '  ').isAutoSharedOriginal, isTrue);
+      });
+
+      test('is true for the title the app publishes for a video sound', () {
+        expect(
+          sound(title: 'Original sound - @rabble').isAutoSharedOriginal,
+          isTrue,
+        );
+      });
+
+      test('is false for a sound its publisher named', () {
+        expect(
+          sound(title: 'Rain on a tin roof').isAutoSharedOriginal,
+          isFalse,
+        );
+      });
+
+      test('is false for a sound credited to a source', () {
+        expect(
+          sound(source: 'https://example.com/track').isAutoSharedOriginal,
+          isFalse,
+        );
+      });
+
+      test('is false for a bundled sound', () {
+        expect(
+          sound(id: '${AudioEvent.bundledMarker}_rain').isAutoSharedOriginal,
+          isFalse,
+        );
+      });
+
+      test('is false for an external provider sound', () {
+        final providerSound = sound(
+          externalSource: AudioExternalSource(
+            provider: 'freesound',
+            providerSoundId: '502915',
+            providerName: 'Freesound',
+            license: AudioLicenseMetadata(
+              type: 'cc0',
+              name: 'Creative Commons 0',
+              url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+              allowsCommercialUse: true,
+              allowsDerivatives: true,
+              requiresAttribution: false,
+            ),
+          ),
+        );
+
+        expect(providerSound.isAutoSharedOriginal, isFalse);
       });
     });
 

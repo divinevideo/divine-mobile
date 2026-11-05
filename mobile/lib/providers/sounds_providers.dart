@@ -76,8 +76,8 @@ SoundsRepository soundsRepository(Ref ref) {
   return repository;
 }
 
-/// How many sounds a page of a relay list asks for. Four in five of the
-/// newest are unnamed sounds nobody reused, which the lists leave out, so a
+/// How many sounds a page of a relay list asks for. Most of the newest are
+/// unnamed sounds no other account used, which the lists leave out, so a
 /// page asks for twice the usual to keep enough to fill the screen.
 const _relayPageSize = 100;
 
@@ -92,7 +92,7 @@ const _pagesLoadedUnasked = 5;
 /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
 /// it fills a screen.
 ///
-/// Unnamed sounds nobody reused are left out
+/// Unnamed sounds no other account used are left out
 /// ([SoundsRepository.withoutUnusedOriginals]); a search still finds them.
 ///
 /// Usage:
@@ -129,14 +129,15 @@ class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
 /// Community sounds matching a free-text [query].
 ///
 /// [SoundsRepository.searchSounds] owns the composition — a relay `#t` query
-/// for reach plus the in-memory cache for partial and title matches — so this
-/// is a thin pass-through. Blank queries resolve to an empty list without a
-/// round trip; the caller shows the trending list instead of searching.
+/// for reach plus the in-memory cache for partial and title matches, and a
+/// reuse lookup that ranks unnamed sounds last — so this is a thin
+/// pass-through. Blank queries resolve to an empty list without a round
+/// trip; the caller shows the trending list instead of searching.
 ///
 /// Auto-disposed, so the per-query cache does not outlive the search field
 /// that opened it. Give it a debounced query: one instance is created per
-/// distinct string, so feeding it raw keystrokes is one relay query per
-/// character.
+/// distinct string, so feeding it raw keystrokes is up to two relay queries
+/// per character.
 ///
 /// Usage:
 /// ```dart
@@ -440,11 +441,11 @@ mixin _LoadsMoreSounds {
   /// [_screenfulOfSounds], rather than when it is scrolled to its end.
   ///
   /// A relay page may keep only a handful: most of the newest sounds are
-  /// unnamed uploads nobody reused, which the lists leave out. A list loaded
-  /// behind another tab would show that handful, and only ask for more once
-  /// opened. It stops after [_pagesLoadedUnasked], so a stretch of nothing
-  /// but left-out sounds does not page through the whole relay. Called from
-  /// `build`.
+  /// unnamed uploads no other account used, which the lists leave out. A
+  /// list loaded behind another tab would show that handful, and only ask
+  /// for more once opened. It stops after [_pagesLoadedUnasked], so a
+  /// stretch of nothing but left-out sounds does not page through the whole
+  /// relay. Called from `build`.
   void _fillAScreen() {
     final ref = this.ref;
     listenSelf((_, next) {

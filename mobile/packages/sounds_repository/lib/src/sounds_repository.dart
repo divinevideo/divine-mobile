@@ -6,6 +6,7 @@
 import 'dart:async';
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:meta/meta.dart';
 import 'package:models/models.dart'
     show AudioEvent, NIP71VideoKinds, VideoEvent, audioEventKind, searchTermsOf;
 import 'package:nostr_client/nostr_client.dart';
@@ -367,73 +368,141 @@ class SoundsRepository {
     ];
   }
 
-  /// [sounds] without the ones nobody picked up: a sound that kept its
-  /// default title ([AudioEvent.hasDefaultTitle]) and that no video uses but
-  /// the one it was taken from.
+  /// [sounds] without the ones nobody picked up: a video's own audio left
+  /// untitled and uncredited ([AudioEvent.isAutoSharedOriginal]) that no
+  /// other account has used in a video.
   ///
-  /// Those are the audio of someone's video, shared by default, and make up
-  /// most of the newest sounds while rarely being worth reusing. One that
-  /// another video uses has shown otherwise and stays, as does every sound
-  /// its publisher named. Keeps the order of [sounds].
+  /// Those are shared by default when a video is posted and make up most of
+  /// the newest sounds while rarely being worth reusing. One that another
+  /// account used has shown otherwise and stays, as does every sound its
+  /// publisher named or credited. Videos by the sound's own publisher, the
+  /// one it was taken from included, do not count. Keeps the order of
+  /// [sounds].
   ///
-  /// Costs one relay query, for the videos that reference the unnamed
-  /// sounds. When it fails, or runs out of time and so may have missed the
-  /// videos that reuse one, the sounds come back unchanged, since a list with
-  /// them beats no list.
+  /// Costs one relay query when [sounds] holds any, for the videos that
+  /// reference them. When that lookup throws an [Exception], times out,
+  /// reaches no relay or fills its [maxBatchedUsageCountScan] limit, and so
+  /// may have missed the videos that reuse one, the sounds come back
+  /// unchanged, since a list with them beats no list. Anything that is not an
+  /// [Exception] propagates. A relay that stays silent past the settle window,
+  /// refuses the request or drops its connection does not count as a
+  /// timeout: the answer then lacks that relay's videos and is used as it is.
   Future<List<AudioEvent>> withoutUnusedOriginals(
     List<AudioEvent> sounds,
   ) async {
-    final unnamed = {
-      for (final sound in sounds)
-        if (sound.hasDefaultTitle && !sound.isBundled) sound.id: sound,
-    };
-    if (unnamed.isEmpty) return sounds;
+    final originals = _autoSharedOriginalsIn(sounds);
+    if (originals.isEmpty) return sounds;
 
+    final reused = await _usedByOtherAccounts(originals);
+    if (reused == null) return sounds;
+    return [
+      for (final sound in sounds)
+        if (!originals.containsKey(sound.id) || reused.contains(sound.id))
+          sound,
+    ];
+  }
+
+  /// [sounds] in their order, except that a video's own audio left untitled
+  /// and uncredited ([AudioEvent.isAutoSharedOriginal]) follows the rest
+  /// unless another account has used it in a video.
+  ///
+  /// How [searchSounds] lists such sounds rather than leave them out
+  /// ([withoutUnusedOriginals]), so that the sounds their publishers named
+  /// or credited come first. Costs one relay query when [sounds] holds any.
+  /// When that lookup cannot tell, as [withoutUnusedOriginals] describes,
+  /// every one of them follows the rest: they are ranked down, not hidden.
+  @visibleForTesting
+  Future<List<AudioEvent>> withUnusedOriginalsLast(
+    List<AudioEvent> sounds,
+  ) async {
+    final originals = _autoSharedOriginalsIn(sounds);
+    if (originals.isEmpty) return sounds;
+
+    final reused = await _usedByOtherAccounts(originals) ?? const {};
+    return _originalsLast(sounds, originals, reused: reused);
+  }
+
+  /// [sounds] with those of [originals] not in [reused] moved after the rest,
+  /// each group keeping its order.
+  List<AudioEvent> _originalsLast(
+    List<AudioEvent> sounds,
+    Map<String, AudioEvent> originals, {
+    Set<String> reused = const {},
+  }) {
+    bool unused(AudioEvent sound) =>
+        originals.containsKey(sound.id) && !reused.contains(sound.id);
+    return [
+      ...sounds.where((sound) => !unused(sound)),
+      ...sounds.where(unused),
+    ];
+  }
+
+  Map<String, AudioEvent> _autoSharedOriginalsIn(List<AudioEvent> sounds) => {
+    for (final sound in sounds)
+      if (sound.isAutoSharedOriginal) sound.id: sound,
+  };
+
+  /// The ids of [originals] that a video by an account other than the
+  /// sound's own uses, or `null` when the lookup threw an [Exception], timed
+  /// out, reached no relay or filled its limit, and so may have missed some.
+  Future<Set<String>?> _usedByOtherAccounts(
+    Map<String, AudioEvent> originals,
+  ) async {
     final ({List<Event> events, bool timedOut, bool noRelays}) read;
     try {
       read = await _nostrClient.queryEventsDetailed([
         Filter(
           kinds: const [NIP71VideoKinds.addressableShortVideo],
-          e: unnamed.keys.toList(),
+          e: originals.keys.toList(),
           limit: maxBatchedUsageCountScan,
         ),
       ]);
-    } on Object catch (e) {
+    } on Exception catch (e, stackTrace) {
       Log.warning(
-        'Could not tell which unnamed sounds are reused, keeping them: $e',
+        'Reuse lookup for ${originals.length} unnamed sounds failed: $e',
         name: 'SoundsRepository',
         category: LogCategory.api,
+        error: e,
+        stackTrace: stackTrace,
       );
-      return sounds;
+      return null;
     }
-    if (read.timedOut || read.noRelays) {
+    if (read.noRelays) {
       Log.warning(
-        'Could not tell in time which unnamed sounds are reused, keeping them',
+        'Reuse lookup for ${originals.length} unnamed sounds reached no relay',
         name: 'SoundsRepository',
         category: LogCategory.api,
       );
-      return sounds;
+      return null;
+    }
+    if (read.timedOut) {
+      Log.warning(
+        'Reuse lookup for ${originals.length} unnamed sounds timed out',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+      return null;
+    }
+    // The limit covers the whole batch and relays send the newest videos
+    // first, so a full answer may stop before the one that reuses a sound.
+    if (read.events.length >= maxBatchedUsageCountScan) {
+      Log.warning(
+        'Reuse lookup for ${originals.length} unnamed sounds filled its '
+        '$maxBatchedUsageCountScan-video limit, so it may have missed some',
+        name: 'SoundsRepository',
+        category: LogCategory.api,
+      );
+      return null;
     }
 
-    final reused = <String>{};
-    for (final video in read.events) {
-      final dTag = video.tags
-          .where((tag) => tag.length >= 2 && tag[0] == 'd')
-          .map((tag) => tag[1])
-          .firstOrNull;
-      final address = '${video.kind}:${video.pubkey}:$dTag';
-      for (final tag in video.tags) {
-        if (tag.length < 2 || tag[0] != 'e') continue;
-        final sound = unnamed[tag[1]];
-        if (sound != null && sound.sourceVideoReference != address) {
-          reused.add(sound.id);
-        }
-      }
-    }
-    return [
-      for (final sound in sounds)
-        if (!unnamed.containsKey(sound.id) || reused.contains(sound.id)) sound,
-    ];
+    return {
+      for (final video in read.events)
+        for (final tag in video.tags)
+          if (tag.length >= 2 && tag[0] == 'e')
+            if (originals[tag[1]] case final sound?
+                when sound.pubkey != video.pubkey)
+              sound.id,
+    };
   }
 
   /// Fetch sounds by a specific creator pubkey.
@@ -505,11 +574,21 @@ class SoundsRepository {
   /// them. Returns an empty list without querying when [query] holds no
   /// searchable term.
   ///
+  /// Newest first, except that a video's own audio left untitled and
+  /// uncredited that no other account used follows the rest
+  /// ([withUnusedOriginalsLast]): a search still finds those, after the
+  /// sounds their publishers named or credited. Telling them apart costs a
+  /// second relay query, for up to [maxBatchedUsageCountScan] videos, when
+  /// the matches hold any.
+  ///
   /// Best-effort on the relay half: a query that throws an [Exception] is
   /// logged and the cached matches are returned anyway, since a search over a
   /// partial index is already partial and fewer results read better than an
-  /// error over a list the user can see is there. Anything that is not an
-  /// [Exception] still propagates. Results are cached like any other fetch.
+  /// error over a list the user can see is there. When the tag query throws,
+  /// times out or reaches no relay, the second query is skipped and every
+  /// unnamed match follows the rest, as it does when that query cannot tell.
+  /// Anything that is not an [Exception] still propagates, from either
+  /// query. Results are cached like any other fetch.
   Future<List<AudioEvent>> searchSounds(
     String query, {
     int limit = maxSearchResults,
@@ -529,8 +608,11 @@ class SoundsRepository {
         if (sound.matchesSearch(query)) sound.id: sound,
     };
 
+    var relayAnswered = true;
     try {
-      final events = await _nostrClient.queryEvents([
+      // The same read as queryEvents, which reports a timeout or an empty
+      // relay set only through these flags rather than by throwing.
+      final read = await _nostrClient.queryEventsDetailed([
         Filter(
           kinds: const [audioEventKind],
           m: audioMimeTypes,
@@ -538,10 +620,12 @@ class SoundsRepository {
           limit: limit,
         ),
       ]);
-      for (final sound in _processAndCacheEvents(events)) {
+      relayAnswered = !read.timedOut && !read.noRelays;
+      for (final sound in _processAndCacheEvents(read.events)) {
         if (sound.matchesSearch(query)) matches[sound.id] = sound;
       }
     } on Exception catch (e) {
+      relayAnswered = false;
       Log.error(
         'Error searching sounds by tag: $e',
         name: 'SoundsRepository',
@@ -549,8 +633,13 @@ class SoundsRepository {
       );
     }
 
-    final results = withoutBlockedAuthors(matches.values.toList())
+    final newestFirst = withoutBlockedAuthors(matches.values.toList())
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    // Relays that just failed or ran out the search would most likely do the
+    // same to the reuse lookup, so the unnamed sounds go last without it.
+    final results = relayAnswered
+        ? await withUnusedOriginalsLast(newestFirst)
+        : _originalsLast(newestFirst, _autoSharedOriginalsIn(newestFirst));
 
     Log.debug(
       'Sound search for ${terms.length} term(s) matched ${results.length}',
