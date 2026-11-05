@@ -37,8 +37,8 @@ enum LoopPcmTests {
 
     /// A lap shorter than the crossfade — a clip trimmed or split that short —
     /// is blended across all of it when that much sound follows its loop
-    /// point. A crossfade longer than the lap wrote past the end of the loop
-    /// and crashed the app whenever such a lap was looped.
+    /// point. Uncapped, the blend ran as far as that sound did, up to 100 ms,
+    /// so it wrote past the end of the loop and crashed the app.
     static func blendsALapShorterThanTheCrossfadeAcrossAllOfIt() {
         let short = 2_205  // 50 ms, half the crossfade
         let live = LoopPcm.prepare(
@@ -56,6 +56,7 @@ enum LoopPcmTests {
             samples: [Float](repeating: 0, count: short) + tone(frames: 8_820, channels: 1),
             channels: 1, sampleRate: rate, loopFrames: short, startFrame: 0
         )!
+        precondition(silentTail.blendedFromPastTheLoop)
         precondition(silentTail.fadeFrames == short)
         precondition(silentTail.samples.count == short)
     }
