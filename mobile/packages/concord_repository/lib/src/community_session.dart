@@ -329,6 +329,7 @@ class ConcordCommunitySession {
     if (!decimal.hasMatch(countText)) return false;
     final count = int.tryParse(countText);
     if (count == null || count < 1) return false;
+    int? groupCount;
     final indices = <int>{};
     final citation = ConcordCitation.fromTags(
       (candidate['tags'] as List).cast<List<String>>(),
@@ -341,7 +342,8 @@ class ConcordCommunitySession {
           event['author'] != candidate['author'] ||
           field(event, 'scope') != field(candidate, 'scope') ||
           field(event, 'newepoch') != field(candidate, 'newepoch') ||
-          field(event, 'prevcommit') != field(candidate, 'prevcommit')) {
+          field(event, 'prevcommit')?.toLowerCase() !=
+              field(candidate, 'prevcommit')?.toLowerCase()) {
         continue;
       }
       final coordinate = chunk(event);
@@ -351,10 +353,12 @@ class ConcordCommunitySession {
         continue;
       }
       final index = int.tryParse(indexText);
-      if (int.tryParse(totalText) != count ||
+      final total = int.tryParse(totalText);
+      if (total == null ||
+          total < 1 ||
           index == null ||
           index < 1 ||
-          index > count) {
+          index > total) {
         continue;
       }
       try {
@@ -362,6 +366,11 @@ class ConcordCommunitySession {
       } on FormatException {
         continue;
       }
+      // The kernel takes the count from the first parsed chunk in a group;
+      // a later one-chunk event cannot complete an earlier two-chunk set.
+      groupCount ??= total;
+      if (groupCount != count) return false;
+      if (total != groupCount) continue;
       if (field(event, 'prevepoch') != field(candidate, 'prevepoch') ||
           citationKey(
                 ConcordCitation.fromTags(
@@ -398,7 +407,7 @@ class ConcordCommunitySession {
           tag('scope') == '00' * 32 &&
           tag('prevepoch') == '${bundle!.rootEpoch}' &&
           tag('newepoch') == '${bundle!.rootEpoch + 1}' &&
-          tag('prevcommit') ==
+          tag('prevcommit')?.toLowerCase() ==
               epochKeyCommitment(bundle!.rootEpoch, bundle!.communityRoot) &&
           !control!.banned.contains(author) &&
           control!.permits(author, 16) &&

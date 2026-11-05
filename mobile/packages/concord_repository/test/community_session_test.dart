@@ -613,12 +613,17 @@ void main() {
       () async {
         final lifecycle = readConcordFixture('community-lifecycle.json');
         final bundleEvent = lifecycle['bundleEvent'] as Map<String, dynamic>;
+        lifecycle['halfThenCompleteRekeyEvents'] = [
+          ...(lifecycle['halfPublishedRekeyEvents'] as List),
+          ...(lifecycle['baseRekeyEvents'] as List),
+        ];
         for (final name in [
           'baseRekeyEvents',
           'dissolvedEvents',
           'impostorDissolvedEvents',
           'impostorRekeyEvents',
           'halfPublishedRekeyEvents',
+          'halfThenCompleteRekeyEvents',
           'forgedAuthorDissolvedEvents',
           'replayedDissolvedEvents',
           'zeroEidDissolvedEvents',
