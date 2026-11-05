@@ -129,6 +129,8 @@ Event _ineligibleCuration(String reason, int createdAt) {
   );
   if (reason == 'signature') event.sig = '0' * 128;
   if (reason == 'id') event.id = _hex(999);
+  // Signed as it was, then changed: the signature still matches the stale id.
+  if (reason == 'content') event.content = 'Altered after signing';
   return event;
 }
 
@@ -828,6 +830,7 @@ void main() {
         'first coordinate',
         'signature',
         'id',
+        'content',
       ]) {
         test('ignores a source with an ineligible $reason', () async {
           final invalid = _ineligibleCuration(reason, 2000);
@@ -835,6 +838,10 @@ void main() {
             expect(invalid.isValid, isTrue);
             expect(invalid.sig, isNotEmpty);
             expect(invalid.isSigned, isFalse);
+          }
+          if (reason == 'content') {
+            expect(invalid.isSigned, isTrue);
+            expect(invalid.isValid, isFalse);
           }
           curationAnswers([
             invalid,
@@ -972,7 +979,12 @@ void main() {
         curationAnswers(const []);
       });
 
-      for (final reason in ['first coordinate', 'signature', 'id']) {
+      for (final reason in [
+        'first coordinate',
+        'signature',
+        'id',
+        'content',
+      ]) {
         test('does not adopt an ineligible source $reason', () async {
           final invalid = _ineligibleCuration(
             reason,
