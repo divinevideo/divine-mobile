@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
+import 'package:openvine/services/published_clip_source_resolver.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
@@ -12,13 +13,17 @@ class _MockVideosRepository extends Mock implements VideosRepository {}
 const _eventId =
     'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 
-VideoStats _row({required bool verifiedArchive}) => VideoStats.fromJson({
+VideoStats _row({
+  required bool verifiedArchive,
+  bool provenanceAvailable = true,
+}) => VideoStats.fromJson({
   'id': _eventId,
   'pubkey': 'a' * 64,
   'created_at': 1458771798,
   'kind': 34236,
   'd_tag': 'vine-id',
   'verified_archive': verifiedArchive,
+  'archive_provenance_available': provenanceAvailable,
 });
 
 void main() {
@@ -41,6 +46,17 @@ void main() {
       ).thenAnswer((_) async => _row(verifiedArchive: false));
 
       expect(await verifiedArchiveLookup(repository)(_eventId), isFalse);
+    });
+
+    test('throws when the server could not check its archive', () async {
+      when(() => repository.getVideoStats(_eventId)).thenAnswer(
+        (_) async => _row(verifiedArchive: false, provenanceAvailable: false),
+      );
+
+      await expectLater(
+        verifiedArchiveLookup(repository)(_eventId),
+        throwsA(isA<ArchiveVerificationUnavailableException>()),
+      );
     });
 
     test('is false when the server has no row for the event', () async {

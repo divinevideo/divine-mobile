@@ -52,7 +52,15 @@ VideoClipImportService videoClipImportService(Ref ref) {
 /// server classifies against that exact event.
 ///
 /// No row, or an API that is not configured, answers false, so the file is
-/// not credited. A failed request throws.
+/// not credited. A failed request throws, and so does a row the server could
+/// not check against its archive ([ArchiveVerificationUnavailableException]),
+/// so the import reports a lookup it could not make rather than "not a Vine".
 IsVerifiedArchive verifiedArchiveLookup(VideosRepository repository) =>
-    (eventId) async =>
-        (await repository.getVideoStats(eventId))?.isVerifiedArchive ?? false;
+    (eventId) async {
+      final stats = await repository.getVideoStats(eventId);
+      if (stats == null) return false;
+      if (stats.isArchiveVerificationUnknown) {
+        throw ArchiveVerificationUnavailableException(eventId);
+      }
+      return stats.isVerifiedArchive;
+    };

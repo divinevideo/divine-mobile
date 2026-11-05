@@ -24,8 +24,25 @@ typedef PublishedVideosByFileHash = Future<List<VideoEvent>> Function(
 /// Whether the server verifies the video event `eventId` as an archived Vine.
 ///
 /// The answer is about that exact event, so another revision of the same
-/// address does not inherit it. Throws when the verification cannot be asked.
+/// address does not inherit it. Throws when the verification cannot be asked,
+/// or when the server says it could not check its archive
+/// ([ArchiveVerificationUnavailableException]).
 typedef IsVerifiedArchive = Future<bool> Function(String eventId);
+
+/// The server could not check an event against its archive, so its answer is
+/// neither yes nor no.
+class ArchiveVerificationUnavailableException implements Exception {
+  /// Creates an [ArchiveVerificationUnavailableException] for [eventId].
+  const ArchiveVerificationUnavailableException(this.eventId);
+
+  /// The event that could not be checked.
+  final String eventId;
+
+  @override
+  String toString() =>
+      'ArchiveVerificationUnavailableException: the archive could not check '
+      '$eventId';
+}
 
 /// A Divine post whose exact file a received clip turned out to be.
 class PublishedClipSource {
