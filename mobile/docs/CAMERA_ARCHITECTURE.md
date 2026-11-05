@@ -83,7 +83,7 @@ Shutter surfaces that combine tap-to-toggle and long-press-to-record must route 
 
 ### Start
 
-A shutter tap dispatches `VideoRecorderRecordingToggleRequested`, which becomes `VideoRecorderRecordingStartRequested` or `VideoRecorderRecordingStopRequested`. Both run with `sequential()`, so each is a FIFO queue. In stop motion the toggle captures a still instead (see [Modes](#modes)).
+A shutter tap dispatches `VideoRecorderRecordingToggleRequested`, which becomes `VideoRecorderRecordingStartRequested` or `VideoRecorderRecordingStopRequested`. Both run with `sequential()`, so each is a FIFO queue. In stop motion the toggle captures a still instead, or starts and stops the interval loop when a timer is set (see [Modes](#modes)).
 
 A toggle is ignored while the camera is switching. A start is ignored while navigation has locked recording, while another take is starting or stopping, and in Classic once less than 30 ms of the recording limit is left.
 
@@ -106,7 +106,7 @@ A second stop result for a file that was already stopped is dropped, so one take
 
 `VideoRecorderMode` lists the modes in mode-wheel order: Capture, Stop Motion, Lip Sync, Chroma Key, Classic, Upload. Its getters (`hasRecordingLimit`, `hasVideoEditor`, `capturesStills`, `needsLiveChromaKey`, `supportsCountdownTimer`, `supportsVideoStabilization`, `supportsGhostFrame`, `supportGridLines`, `defaultAspectRatio`) decide what the recorder offers; the per-mode UI is in `lib/widgets/video_recorder/modes/`.
 
-- **Stop Motion** captures stills with `CameraService.capturePhoto`. [`StopMotionSessionStore`](../lib/services/video_recorder/stop_motion_session_store.dart) mirrors each still into the clip library as it is shot and hands the session to the clip manager on assemble.
+- **Stop Motion** captures stills with `CameraService.capturePhoto`. [`StopMotionSessionStore`](../lib/services/video_recorder/stop_motion_session_store.dart) mirrors each still into the clip library as it is shot and hands the session to the clip manager on assemble. Its timer (off, 2 s, 3 s, 5 s) repeats instead of delaying a start (#6626): a shutter tap starts a loop that counts down, takes a still, beeps once it has landed and counts down again, with the screen kept awake. The next countdown starts only after the still lands, so a hand back in the scene is not in the frame. The loop ends on the next shutter tap, when the shot budget is full, when the app leaves the foreground, and on a mode switch, an assemble or navigation away. Every still taken stays in the session.
 - **Lip Sync** shows the sound picker until a sound is picked, with remote record control paused meanwhile. Its clips are muted before the editor opens.
 - **Chroma Key** is offered only where `ChromaKeyShader.isBackendSupported`, because the keyed viewfinder is the mode.
 - **Classic** has the recording limit and no editor (see [Leaving the recorder](#leaving-the-recorder)).

@@ -8623,7 +8623,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoRecorderTimerValueOff => '끔';
 
   @override
+  String get videoRecorderTimerValueTwoSeconds => '2초';
+
+  @override
   String get videoRecorderTimerValueThreeSeconds => '3초';
+
+  @override
+  String get videoRecorderTimerValueFiveSeconds => '5초';
 
   @override
   String get videoRecorderTimerValueTenSeconds => '10초';

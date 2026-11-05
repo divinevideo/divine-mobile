@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
+import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dart';
 
 void main() {
   group(VideoRecorderMode, () {
@@ -126,8 +127,16 @@ void main() {
         expect(VideoRecorderMode.stopMotion.supportGridLines, isTrue);
       });
 
-      test('does not support a countdown timer', () {
-        expect(VideoRecorderMode.stopMotion.supportsCountdownTimer, isFalse);
+      test('cycles its timer through the short between-frame windows', () {
+        expect(
+          VideoRecorderMode.stopMotion.timerDurations,
+          equals(const [
+            TimerDuration.off,
+            TimerDuration.two,
+            TimerDuration.three,
+            TimerDuration.five,
+          ]),
+        );
       });
 
       test('defaults to vertical aspect ratio', () {
@@ -177,6 +186,41 @@ void main() {
             mode.supportsGhostFrame,
             mode != VideoRecorderMode.chromaKey &&
                 mode != VideoRecorderMode.upload,
+            reason: mode.name,
+          );
+        }
+      });
+    });
+
+    group('timerDurations', () {
+      test('starts at off in every mode that shows a timer', () {
+        for (final mode in VideoRecorderMode.values) {
+          expect(
+            mode.timerDurations.firstOrNull,
+            mode.supportsCountdownTimer ? TimerDuration.off : isNull,
+            reason: mode.name,
+          );
+        }
+      });
+
+      test('shows no timer in classic or upload', () {
+        expect(VideoRecorderMode.classic.supportsCountdownTimer, isFalse);
+        expect(VideoRecorderMode.upload.supportsCountdownTimer, isFalse);
+      });
+
+      test('delays the take by 3 or 10 seconds in the video modes', () {
+        for (final mode in const [
+          VideoRecorderMode.capture,
+          VideoRecorderMode.lipSync,
+          VideoRecorderMode.chromaKey,
+        ]) {
+          expect(
+            mode.timerDurations,
+            equals(const [
+              TimerDuration.off,
+              TimerDuration.three,
+              TimerDuration.ten,
+            ]),
             reason: mode.name,
           );
         }

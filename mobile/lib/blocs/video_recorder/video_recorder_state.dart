@@ -98,6 +98,7 @@ class VideoRecorderBlocState extends Equatable {
     this.stopMotionFrames = const [],
     this.stopMotionStatus = StopMotionStatus.idle,
     this.stopMotionShutterTick = 0,
+    this.isIntervalCaptureRunning = false,
     this.chromaKey = _initialChromaKey,
     this.chromaKeyMeasurementStatus = ChromaKeyMeasurementStatus.idle,
     this.unrecordedChromaKeyImagePath,
@@ -169,7 +170,8 @@ class VideoRecorderBlocState extends Equatable {
   /// Aspect ratio of the camera sensor.
   final double cameraSensorAspectRatio;
 
-  /// Current countdown value before recording starts.
+  /// Seconds left on the running countdown: before a take starts, or before
+  /// the next still while [isIntervalCaptureRunning]. `0` when none runs.
   final int countdownValue;
 
   /// Count of camera rebuilds for forcing UI updates.
@@ -191,7 +193,8 @@ class VideoRecorderBlocState extends Equatable {
   /// Whether the active camera supports video stabilization beyond off.
   final bool isVideoStabilizationSupported;
 
-  /// Timer duration before recording starts.
+  /// The timer setting: the delay before a take starts, or in stop-motion the
+  /// interval between hands-free stills.
   final TimerDuration timerDuration;
 
   /// Current recording state.
@@ -286,6 +289,14 @@ class VideoRecorderBlocState extends Equatable {
   /// than delayed by the capture write (~400ms).
   final int stopMotionShutterTick;
 
+  /// Whether stop-motion is capturing stills on its own, one every
+  /// [timerDuration], until the shutter is tapped again.
+  ///
+  /// Each still is taken once [countdownValue] runs out, and the countdown
+  /// starts over once that still has landed, so the scene can be adjusted
+  /// while it runs.
+  final bool isIntervalCaptureRunning;
+
   /// The key the chroma-key viewfinder previews, and that every clip
   /// recorded in [VideoRecorderMode.chromaKey] carries as its
   /// [DivineVideoClip.captureChromaKey].
@@ -341,6 +352,11 @@ class VideoRecorderBlocState extends Equatable {
   /// [isRecording] stays true until the file is finalized — ~1.6s later on
   /// iOS with a look-ahead stabilization mode.
   bool get showsActiveRecording => isRecording && !isStoppingRecording;
+
+  /// Whether the shutter is the only control left: a take is recording, or
+  /// stop-motion is capturing on its interval. Everything else is put away
+  /// until it ends.
+  bool get isShutterActive => isRecording || isIntervalCaptureRunning;
 
   /// Whether the camera is writing the take: past any countdown, and past the
   /// native start. [isRecording] is true for the whole countdown already.
@@ -405,6 +421,7 @@ class VideoRecorderBlocState extends Equatable {
     List<String>? stopMotionFrames,
     StopMotionStatus? stopMotionStatus,
     int? stopMotionShutterTick,
+    bool? isIntervalCaptureRunning,
     ClipChromaKey? chromaKey,
     ChromaKeyMeasurementStatus? chromaKeyMeasurementStatus,
     String? unrecordedChromaKeyImagePath,
@@ -463,6 +480,8 @@ class VideoRecorderBlocState extends Equatable {
       stopMotionStatus: stopMotionStatus ?? this.stopMotionStatus,
       stopMotionShutterTick:
           stopMotionShutterTick ?? this.stopMotionShutterTick,
+      isIntervalCaptureRunning:
+          isIntervalCaptureRunning ?? this.isIntervalCaptureRunning,
       chromaKey: chromaKey ?? this.chromaKey,
       chromaKeyMeasurementStatus:
           chromaKeyMeasurementStatus ?? this.chromaKeyMeasurementStatus,
@@ -517,6 +536,7 @@ class VideoRecorderBlocState extends Equatable {
     stopMotionFrames,
     stopMotionStatus,
     stopMotionShutterTick,
+    isIntervalCaptureRunning,
     chromaKey,
     chromaKeyMeasurementStatus,
     unrecordedChromaKeyImagePath,

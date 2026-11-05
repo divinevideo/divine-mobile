@@ -29,9 +29,13 @@ appId: co.openvine.app.staging
     id: camera_stop_motion_budget
 
 # Control rail, top to bottom. The grid is rendered only by the mode that
-# captures stills; the ghost frame is shared with capture and lip-sync.
+# captures stills; the ghost frame is shared with capture and lip-sync. The
+# timer is shared too, but here it sets the interval of the hands-free loop
+# rather than a delayed start.
 - assertVisible:
     id: camera_flash_button
+- assertVisible:
+    id: camera_timer_button
 - assertVisible:
     id: camera_ghost_frame_button
 - assertVisible:
@@ -41,15 +45,13 @@ appId: co.openvine.app.staging
 - assertVisible:
     id: camera_switch_camera_button
 
-# And the two capture mode has that this mode does not: stop-motion declares
-# neither `supportsCountdownTimer` nor `supportsVideoStabilization`. This pair
-# is a leak guard, not what separates the two screens — the mode wheel above
-# already does that, and neither rail contains the other, so
-# assertCaptureMode fails here on `camera_timer_button` regardless. What it
-# catches is a control starting to render in a mode that does not declare it,
-# which nothing else in the suite would.
-- assertNotVisible:
-    id: camera_timer_button
+# And the one capture mode has that this mode does not: stop-motion does not
+# declare `supportsVideoStabilization`. This is a leak guard, not what
+# separates the two screens — the mode wheel above already does that, and
+# neither rail contains the other, so assertCaptureMode fails here on
+# `camera_stabilization_button` regardless. What it catches is a control
+# starting to render in a mode that does not declare it, which nothing else
+# in the suite would.
 - assertNotVisible:
     id: camera_stabilization_button
 

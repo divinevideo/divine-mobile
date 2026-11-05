@@ -9175,7 +9175,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoRecorderTimerValueOff => 'Aus';
 
   @override
+  String get videoRecorderTimerValueTwoSeconds => '2 Sekunden';
+
+  @override
   String get videoRecorderTimerValueThreeSeconds => '3 Sekunden';
+
+  @override
+  String get videoRecorderTimerValueFiveSeconds => '5 Sekunden';
 
   @override
   String get videoRecorderTimerValueTenSeconds => '10 Sekunden';

@@ -26,7 +26,7 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
         canSwitchCamera: b.state.canSwitchCamera,
         isFrontCamera: b.state.isFrontCamera,
         hasFlash: b.state.hasFlash,
-        isRecording: b.state.isRecording,
+        isShutterActive: b.state.isShutterActive,
         hasRecordingInFlight: b.state.hasRecordingInFlight,
         showGridLines: b.state.showGridLines,
         supportsTimer: b.state.recorderMode.supportsCountdownTimer,
@@ -42,10 +42,10 @@ class VideoRecorderCaptureActions extends ConsumerWidget {
       left: false,
       bottom: false,
       child: IgnorePointer(
-        ignoring: state.isRecording,
+        ignoring: state.isShutterActive,
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 220),
-          opacity: state.isRecording ? 0 : 1,
+          opacity: state.isShutterActive ? 0 : 1,
           child: Container(
             margin: const .symmetric(horizontal: 16),
             padding: const .symmetric(vertical: 12, horizontal: 4),
@@ -246,7 +246,9 @@ String _flashModeValue(AppLocalizations l10n, DivineFlashMode mode) {
 String _timerDurationValue(AppLocalizations l10n, TimerDuration timer) {
   return switch (timer) {
     .off => l10n.videoRecorderTimerValueOff,
+    .two => l10n.videoRecorderTimerValueTwoSeconds,
     .three => l10n.videoRecorderTimerValueThreeSeconds,
+    .five => l10n.videoRecorderTimerValueFiveSeconds,
     .ten => l10n.videoRecorderTimerValueTenSeconds,
   };
 }

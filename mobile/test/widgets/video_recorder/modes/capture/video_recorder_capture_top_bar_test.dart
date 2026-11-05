@@ -41,6 +41,7 @@ void main() {
       bool showRecordingProgress = true,
       VideoRecorderMode recorderMode = VideoRecorderMode.capture,
       List<String> stopMotionFrames = const [],
+      bool isIntervalCaptureRunning = false,
       bool fromEditor = false,
     }) {
       when(() => recorderBloc.state).thenReturn(
@@ -50,6 +51,7 @@ void main() {
           canRecord: true,
           recorderMode: recorderMode,
           stopMotionFrames: stopMotionFrames,
+          isIntervalCaptureRunning: isIntervalCaptureRunning,
         ),
       );
 
@@ -216,6 +218,29 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(nextButton().hitTestable(), findsOneWidget);
+      });
+
+      testWidgets('puts close and next away while the interval loop runs', (
+        tester,
+      ) async {
+        // The shutter ends the loop. A tap that closed the recorder or
+        // assembled the session would end it somewhere the user is not looking.
+        await tester.pumpWidget(
+          buildWidget(
+            recorderMode: VideoRecorderMode.stopMotion,
+            stopMotionFrames: const ['/test/a.jpg'],
+            isIntervalCaptureRunning: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(nextButton().hitTestable(), findsNothing);
+        expect(
+          find
+              .bySemanticsIdentifier(SemanticIds.cameraCloseButton)
+              .hitTestable(),
+          findsNothing,
+        );
       });
 
       testWidgets('next ignores taps while hidden', (tester) async {

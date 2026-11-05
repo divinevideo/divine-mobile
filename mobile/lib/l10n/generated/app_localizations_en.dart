@@ -9152,7 +9152,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoRecorderTimerValueOff => 'Off';
 
   @override
+  String get videoRecorderTimerValueTwoSeconds => '2 seconds';
+
+  @override
   String get videoRecorderTimerValueThreeSeconds => '3 seconds';
+
+  @override
+  String get videoRecorderTimerValueFiveSeconds => '5 seconds';
 
   @override
   String get videoRecorderTimerValueTenSeconds => '10 seconds';

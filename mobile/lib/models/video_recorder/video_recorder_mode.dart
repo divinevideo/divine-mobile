@@ -1,4 +1,5 @@
 import 'package:models/models.dart' as model show AspectRatio;
+import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dart';
 
 /// Recorder modes, declared in the mode wheel's left-to-right order.
 ///
@@ -88,15 +89,30 @@ enum VideoRecorderMode {
     .classic => true,
   };
 
-  bool get supportsCountdownTimer => switch (this) {
-    .upload => false,
-    .capture => true,
-    .stopMotion => false,
-    .lipSync => true,
+  /// The settings the timer button cycles through, [TimerDuration.off] first,
+  /// or an empty list when the mode has no timer.
+  ///
+  /// Video modes count down once and then start the take. Stop-motion counts
+  /// down before every still until the shutter is tapped again, so it offers
+  /// the short windows a nudge between two frames takes.
+  List<TimerDuration> get timerDurations => switch (this) {
+    .upload => const [],
+    .capture => _delayedStartDurations,
+    .stopMotion => const [.off, .two, .three, .five],
+    .lipSync => _delayedStartDurations,
     // Stepping into frame in front of the backdrop needs a hands-free start.
-    .chromaKey => true,
-    .classic => false,
+    .chromaKey => _delayedStartDurations,
+    .classic => const [],
   };
+
+  static const List<TimerDuration> _delayedStartDurations = [
+    TimerDuration.off,
+    TimerDuration.three,
+    TimerDuration.ten,
+  ];
+
+  /// Whether the mode shows the timer button.
+  bool get supportsCountdownTimer => timerDurations.isNotEmpty;
 
   bool get supportsVideoStabilization => switch (this) {
     .upload => false,

@@ -9099,7 +9099,13 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoRecorderTimerValueOff => 'Uit';
 
   @override
+  String get videoRecorderTimerValueTwoSeconds => '2 seconden';
+
+  @override
   String get videoRecorderTimerValueThreeSeconds => '3 seconden';
+
+  @override
+  String get videoRecorderTimerValueFiveSeconds => '5 seconden';
 
   @override
   String get videoRecorderTimerValueTenSeconds => '10 seconden';

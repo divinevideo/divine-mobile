@@ -9056,7 +9056,13 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoRecorderTimerValueOff => 'بند';
 
   @override
+  String get videoRecorderTimerValueTwoSeconds => '2 سیکنڈ';
+
+  @override
   String get videoRecorderTimerValueThreeSeconds => '3 سیکنڈ';
+
+  @override
+  String get videoRecorderTimerValueFiveSeconds => '5 سیکنڈ';
 
   @override
   String get videoRecorderTimerValueTenSeconds => '10 سیکنڈ';

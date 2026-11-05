@@ -8525,7 +8525,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoRecorderTimerValueOff => '关闭';
 
   @override
+  String get videoRecorderTimerValueTwoSeconds => '2秒';
+
+  @override
   String get videoRecorderTimerValueThreeSeconds => '3秒';
+
+  @override
+  String get videoRecorderTimerValueFiveSeconds => '5秒';
 
   @override
   String get videoRecorderTimerValueTenSeconds => '10秒';

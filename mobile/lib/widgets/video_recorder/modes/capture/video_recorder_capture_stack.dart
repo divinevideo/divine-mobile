@@ -53,13 +53,13 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hasClips = ref.watch(clipManagerProvider.select((p) => p.hasClips));
     final (
-      isRecording,
+      isShutterActive,
       recorderMode,
       stopMotionFrameCount,
       stopMotionShutterTick,
     ) = context.select(
       (VideoRecorderBloc b) => (
-        b.state.isRecording,
+        b.state.isShutterActive,
         b.state.recorderMode,
         b.state.stopMotionFrameCount,
         b.state.stopMotionShutterTick,
@@ -69,11 +69,12 @@ class VideoRecorderCaptureStack extends ConsumerWidget {
     final canUndo = recorderMode.capturesStills
         ? stopMotionFrameCount > 0
         : hasClips;
-    // Fades out (opacity 0) while recording or in the editor-hosted recorder.
+    // Fades out (opacity 0) while recording, while stop-motion captures on an
+    // interval, or in the editor-hosted recorder.
     // Opacity alone does not stop hit testing, so the button is also gated
     // with IgnorePointer below — otherwise an invisible tap would silently
     // delete the last still/clip.
-    final undoButtonVisible = canUndo && !isRecording && !fromEditor;
+    final undoButtonVisible = canUndo && !isShutterActive && !fromEditor;
 
     return SafeArea(
       bottom: false,

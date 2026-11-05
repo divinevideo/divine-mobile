@@ -6455,9 +6455,17 @@
   "@videoRecorderTimerValueOff": {
     "description": "Screen-reader state of the recorder's countdown-timer button when no delay is set. Announced after the button label, e.g. 'Cycle timer, Off'."
   },
+  "videoRecorderTimerValueTwoSeconds": "2 seconds",
+  "@videoRecorderTimerValueTwoSeconds": {
+    "description": "Screen-reader state of the recorder's timer button in Stop Motion when a still is captured hands-free every 2 seconds."
+  },
   "videoRecorderTimerValueThreeSeconds": "3 seconds",
   "@videoRecorderTimerValueThreeSeconds": {
     "description": "Screen-reader state of the recorder's countdown-timer button when recording starts after a 3 second delay."
+  },
+  "videoRecorderTimerValueFiveSeconds": "5 seconds",
+  "@videoRecorderTimerValueFiveSeconds": {
+    "description": "Screen-reader state of the recorder's timer button in Stop Motion when a still is captured hands-free every 5 seconds."
   },
   "videoRecorderTimerValueTenSeconds": "10 seconds",
   "@videoRecorderTimerValueTenSeconds": {

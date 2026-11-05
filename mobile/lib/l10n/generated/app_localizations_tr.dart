@@ -8973,7 +8973,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoRecorderTimerValueOff => 'Kapalı';
 
   @override
+  String get videoRecorderTimerValueTwoSeconds => '2 saniye';
+
+  @override
   String get videoRecorderTimerValueThreeSeconds => '3 saniye';
+
+  @override
+  String get videoRecorderTimerValueFiveSeconds => '5 saniye';
 
   @override
   String get videoRecorderTimerValueTenSeconds => '10 saniye';

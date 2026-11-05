@@ -1,30 +1,44 @@
-// ABOUTME: Timer duration enum for delayed recording start
-// ABOUTME: Provides countdown options (off, 3s, 10s) with duration values and icons
+// ABOUTME: Timer duration enum for the recorder's timer button
+// ABOUTME: A delayed start for video modes, the repeat interval in stop-motion
 
 import 'package:divine_ui/divine_ui.dart';
 
-/// Timer duration options for delayed recording.
+/// Timer settings the recorder's timer button cycles through.
+///
+/// Video modes count down once before the take starts. Stop-motion counts
+/// down before every still. `VideoRecorderMode.timerDurations` says which
+/// mode offers which values.
 enum TimerDuration {
-  /// No timer delay.
+  /// No timer.
   off,
 
-  /// 3 second delay.
+  /// 2 seconds.
+  two,
+
+  /// 3 seconds.
   three,
 
-  /// 10 second delay.
+  /// 5 seconds.
+  five,
+
+  /// 10 seconds.
   ten;
 
   /// Icon representing the timer duration.
   DivineIconName get icon => switch (this) {
     .off => .timer,
+    .two => .timer2,
     .three => .timer3,
+    .five => .timer5,
     .ten => .timer10,
   };
 
   /// Duration value for the timer.
   Duration get duration => switch (this) {
     .off => Duration.zero,
+    .two => const Duration(seconds: 2),
     .three => const Duration(seconds: 3),
+    .five => const Duration(seconds: 5),
     .ten => const Duration(seconds: 10),
   };
 }

@@ -317,6 +317,13 @@ class VideoRecorderBloc
     on<_VideoRecorderScreenFlashChanged>(_onScreenFlashChanged);
     on<_VideoRecorderFocusPointTimerFired>(_onFocusPointTimerFired);
     on<_VideoRecorderZoomIndicatorTimerFired>(_onZoomIndicatorTimerFired);
+    on<_VideoRecorderIntervalCaptureTicked>(
+      _onIntervalCaptureTicked,
+      // Only one tick is armed at a time, and the next one only once the
+      // still has landed. Dropping guards the one window a stop and a quick
+      // restart could open for a second.
+      transformer: droppable(),
+    );
   }
 
   final ReadClipManager _readClipManager;
@@ -347,6 +354,9 @@ class VideoRecorderBloc
   CountdownSoundService? _countdownSoundService;
   Timer? _focusPointTimer;
   Timer? _zoomIndicatorTimer;
+
+  /// The next second of the stop-motion interval countdown, while one runs.
+  Timer? _intervalCaptureTimer;
   late final _stopMotionSessions = StopMotionSessionStore(
     readClipManager: _readClipManager,
   );
@@ -355,6 +365,9 @@ class VideoRecorderBloc
   /// How long the zoom ruler stays visible after the last pinch activity
   /// before the auto-hide timer clears it.
   static const _zoomIndicatorHideDelay = Duration(milliseconds: 1000);
+
+  /// One step of the stop-motion interval countdown.
+  static const _intervalCaptureTickInterval = Duration(seconds: 1);
 
   /// The current active camera lens. Delegates to the camera service.
   DivineCameraLens get currentLens => _cameraService.currentLens;
@@ -457,6 +470,7 @@ class VideoRecorderBloc
         state.copyWith(
           recorderMode: VideoRecorderMode.stopMotion,
           showGridLines: _gridLinesEnabledFor(VideoRecorderMode.stopMotion),
+          timerDuration: _timerDurationCarriedTo(VideoRecorderMode.stopMotion),
         ),
       );
     }
@@ -590,6 +604,9 @@ class VideoRecorderBloc
     VideoRecorderAppLifecycleChanged event,
     Emitter<VideoRecorderBlocState> emit,
   ) async {
+    // The camera goes with the app, so the loop would only tick on into
+    // captures that fail.
+    if (event.state != AppLifecycleState.resumed) _stopIntervalCapture(emit);
     try {
       await _cameraService.handleAppLifecycleState(event.state);
     } catch (e, stackTrace) {
@@ -939,7 +956,13 @@ class VideoRecorderBloc
     }
 
     if (state.recorderMode.capturesStills) {
-      add(const VideoRecorderStopMotionFrameCaptured());
+      if (state.isIntervalCaptureRunning) {
+        _stopIntervalCapture(emit);
+      } else if (state.timerDuration != TimerDuration.off) {
+        _startIntervalCapture(emit);
+      } else {
+        add(const VideoRecorderStopMotionFrameCaptured());
+      }
       return;
     }
 
@@ -1799,6 +1822,7 @@ class VideoRecorderBloc
   /// The lock is cleared on the next [VideoRecorderInitializeRequested].
   void _lockRecordingForNavigation(Emitter<VideoRecorderBlocState> emit) {
     _cameraService.setOnRemoteRecordTrigger(null);
+    _stopIntervalCapture(emit);
     if (state.isRecording || state.isStartingRecording) {
       _readClipManager()
         ..stopRecording()
@@ -1845,6 +1869,7 @@ class VideoRecorderBloc
     // cannot land inside it, and the `ready` it leaves behind already carries an
     // empty frame list — so the discard below is a no-op and the queued library
     // write has nothing to lose.
+    _stopIntervalCapture(emit);
     final previousFrames = state.stopMotionFrames;
     // The recording mode the session's clips belong to. Upload records nothing,
     // so while it shows, that is the mode it was entered from — null when the
@@ -1859,9 +1884,7 @@ class VideoRecorderBloc
         clearModeBeforeUpload: mode != VideoRecorderMode.upload,
         aspectRatio: mode.defaultAspectRatio,
         showGridLines: _gridLinesEnabledFor(mode),
-        timerDuration: mode.supportsCountdownTimer
-            ? state.timerDuration
-            : TimerDuration.off,
+        timerDuration: _timerDurationCarriedTo(mode),
         countdownValue: 0,
         stopMotionFrames: const [],
         stopMotionStatus: StopMotionStatus.idle,
@@ -1901,17 +1924,28 @@ class VideoRecorderBloc
       ? VideoRecorderMode.capture
       : mode;
 
+  /// The timer setting to keep when switching to [mode].
+  ///
+  /// Kept only between modes that use it the same way: a delayed start left
+  /// over from a video mode would otherwise turn stop-motion's next shutter
+  /// tap into a loop nobody asked for.
+  TimerDuration _timerDurationCarriedTo(VideoRecorderMode mode) =>
+      mode.capturesStills == state.recorderMode.capturesStills &&
+          mode.timerDurations.contains(state.timerDuration)
+      ? state.timerDuration
+      : TimerDuration.off;
+
   void _onTimerCycled(
     VideoRecorderTimerCycled event,
     Emitter<VideoRecorderBlocState> emit,
   ) {
-    if (!state.recorderMode.supportsCountdownTimer) return;
+    final durations = state.recorderMode.timerDurations;
+    if (durations.isEmpty) return;
 
-    final newTimer = switch (state.timerDuration) {
-      TimerDuration.off => TimerDuration.three,
-      TimerDuration.three => TimerDuration.ten,
-      TimerDuration.ten => TimerDuration.off,
-    };
+    // A setting the mode does not offer starts the cycle over from off.
+    final newTimer =
+        durations[(durations.indexOf(state.timerDuration) + 1) %
+            durations.length];
     emit(state.copyWith(timerDuration: newTimer));
     Log.debug(
       '⏱️  Timer duration changed to: ${newTimer.name}',
@@ -1929,6 +1963,7 @@ class VideoRecorderBloc
       name: 'VideoRecorderBloc',
       category: LogCategory.video,
     );
+    _stopIntervalCapture(emit);
     final frames = state.stopMotionFrames;
     emit(const VideoRecorderBlocState());
     if (frames.isNotEmpty) {
@@ -2182,20 +2217,30 @@ class VideoRecorderBloc
         lensMetadata: _cameraService.currentLensMetadata,
       );
 
+  /// Takes the still a shutter tap asks for, see [_captureStopMotionFrame].
+  Future<void> _onStopMotionFrameCaptured(
+    VideoRecorderStopMotionFrameCaptured event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) => _captureStopMotionFrame(emit);
+
   /// Captures one still, appends it to [state.stopMotionFrames], and persists
-  /// the growing session to the library.
+  /// the growing session to the library. Returns whether a still was appended.
   ///
   /// No video is rendered here — encoding one video per tap is far too slow
   /// (seconds per frame). Frames are encoded into a single video only at
   /// publish. The session is upserted to the library on every frame (not just
   /// on the "Next"/assemble tap) so the recording is preserved the instant it
   /// is shot, even if the user backs out before assembling.
-  Future<void> _onStopMotionFrameCaptured(
-    VideoRecorderStopMotionFrameCaptured event,
-    Emitter<VideoRecorderBlocState> emit,
-  ) async {
+  ///
+  /// [withHaptic] is off for the hands-free stills of the interval loop: the
+  /// phone sits on a stand then, and a vibration as the shutter fires would
+  /// shake the very frame it confirms.
+  Future<bool> _captureStopMotionFrame(
+    Emitter<VideoRecorderBlocState> emit, {
+    bool withHaptic = true,
+  }) async {
     if (!_cameraService.isInitialized || _cameraService.isSwitchingCamera) {
-      return;
+      return false;
     }
 
     // An assemble hands the captured stills to the clip manager and clears
@@ -2205,9 +2250,9 @@ class VideoRecorderBloc
     // synchronous, so it is never the current state while this runs. Dropping
     // the tap here also skips a native capture the after-await guard below
     // would only delete.
-    if (state.stopMotionStatus == StopMotionStatus.ready) return;
+    if (state.stopMotionStatus == StopMotionStatus.ready) return false;
 
-    unawaited(HapticService.recordingFeedback());
+    if (withHaptic) unawaited(HapticService.recordingFeedback());
     // Shutter feedback must fire NOW — the native capture below takes
     // hundreds of ms, and blinking only once the frame lands feels laggy
     // compared to the system camera.
@@ -2222,7 +2267,7 @@ class VideoRecorderBloc
         name: 'VideoRecorderBloc',
         category: LogCategory.video,
       );
-      return;
+      return false;
     }
 
     // Only the still that just landed is checked — the ones already in state
@@ -2236,7 +2281,7 @@ class VideoRecorderBloc
         category: LogCategory.video,
       );
       await _stopMotionSessions.deleteFrameFile(photo.filePath);
-      return;
+      return false;
     }
 
     // The recorder can move off this session across the await above. "Next"
@@ -2252,7 +2297,7 @@ class VideoRecorderBloc
     if (!state.recorderMode.capturesStills ||
         state.stopMotionStatus == StopMotionStatus.ready) {
       unawaited(_stopMotionSessions.deleteFrameFile(photo.filePath));
-      return;
+      return false;
     }
 
     final framePaths = [...state.stopMotionFrames, photo.filePath];
@@ -2271,6 +2316,152 @@ class VideoRecorderBloc
     // Fire-and-forget so shooting stays instant; the library row is upserted
     // by the stable session id, so an out-of-order write just re-writes it.
     unawaited(_persistStopMotionSession(framePaths));
+    return true;
+  }
+
+  /// Starts the hands-free loop: one still every [state.timerDuration] until
+  /// the shutter is tapped again.
+  ///
+  /// The first still waits out a whole countdown as well. The tap that starts
+  /// the loop is a hand on the phone, and it needs that long to leave the
+  /// shot.
+  void _startIntervalCapture(Emitter<VideoRecorderBlocState> emit) {
+    if (!_cameraService.isInitialized ||
+        _cameraService.isSwitchingCamera ||
+        state.stopMotionStatus == StopMotionStatus.ready) {
+      return;
+    }
+
+    final seconds = state.timerDuration.duration.inSeconds;
+    Log.info(
+      '⏱️  Starting stop-motion interval capture, one still every ${seconds}s',
+      name: 'VideoRecorderBloc',
+      category: LogCategory.video,
+    );
+    emit(
+      state.copyWith(isIntervalCaptureRunning: true, countdownValue: seconds),
+    );
+    _armIntervalCaptureTick();
+    unawaited(HapticService.recordingFeedback());
+    // The first still is a whole countdown away, so the beep and the
+    // wakelock have that long to land.
+    runDetached(
+      _prepareIntervalCapture(),
+      'prepare stop-motion interval capture',
+      logName: 'VideoRecorderBloc',
+      category: LogCategory.video,
+    );
+  }
+
+  /// Loads the beep and keeps the screen awake for a loop that just started.
+  Future<void> _prepareIntervalCapture() async {
+    _countdownSoundService ??= _countdownSoundServiceFactory();
+    try {
+      await _countdownSoundService!.preload();
+    } catch (e) {
+      Log.warning(
+        '⚠️ Failed to preload countdown sounds: $e',
+        name: 'VideoRecorderBloc',
+        category: LogCategory.video,
+      );
+    }
+
+    // Nobody touches the phone while the loop runs, so the screen would
+    // otherwise lock in the middle of a session.
+    await WakelockPlus.enable();
+    // A stop or a close that landed meanwhile released the wakelock before
+    // it was taken.
+    if (_isClosing || !state.isIntervalCaptureRunning) {
+      await _disableWakelockSafely();
+    }
+  }
+
+  /// Ends a running hands-free loop. The stills it captured stay in the
+  /// session.
+  void _stopIntervalCapture(Emitter<VideoRecorderBlocState> emit) {
+    _intervalCaptureTimer?.cancel();
+    _intervalCaptureTimer = null;
+    if (!state.isIntervalCaptureRunning) return;
+
+    Log.info(
+      '⏹️  Stopping stop-motion interval capture after '
+      '${state.stopMotionFrameCount} stills',
+      name: 'VideoRecorderBloc',
+      category: LogCategory.video,
+    );
+    emit(state.copyWith(isIntervalCaptureRunning: false, countdownValue: 0));
+    unawaited(_disableWakelockSafely());
+  }
+
+  void _armIntervalCaptureTick() {
+    _intervalCaptureTimer?.cancel();
+    _intervalCaptureTimer = Timer(
+      _intervalCaptureTickInterval,
+      () => addIfOpen(const _VideoRecorderIntervalCaptureTicked()),
+    );
+  }
+
+  /// Counts the interval down by a second, and takes the next still once it
+  /// runs out.
+  ///
+  /// The countdown starts over once the still has landed, not when the
+  /// shutter fired: the camera is still taking the picture for a moment after
+  /// the blink, and a hand back in the scene by then would be in the frame.
+  Future<void> _onIntervalCaptureTicked(
+    _VideoRecorderIntervalCaptureTicked event,
+    Emitter<VideoRecorderBlocState> emit,
+  ) async {
+    if (!state.isIntervalCaptureRunning) return;
+
+    final secondsLeft = state.countdownValue - 1;
+    if (secondsLeft > 0) {
+      emit(state.copyWith(countdownValue: secondsLeft));
+      _armIntervalCaptureTick();
+      return;
+    }
+
+    emit(state.copyWith(countdownValue: 0));
+    final captured = await _captureStopMotionFrame(emit, withHaptic: false);
+    // A stop, a mode switch or the recorder closing can land while the still
+    // is out.
+    if (_isClosing || !state.isIntervalCaptureRunning) return;
+
+    if (captured) {
+      // The loop's only sound: the still is in, so hands can go back into
+      // the scene.
+      unawaited(_countdownSoundService?.playShortBeep());
+      if (!_hasStopMotionBudgetLeft) {
+        Log.info(
+          '⏹️  Stop-motion interval capture filled the shot budget',
+          name: 'VideoRecorderBloc',
+          category: LogCategory.video,
+        );
+        _stopIntervalCapture(emit);
+        return;
+      }
+    }
+
+    emit(
+      state.copyWith(countdownValue: state.timerDuration.duration.inSeconds),
+    );
+    _armIntervalCaptureTick();
+  }
+
+  /// Whether another still still fits in the session's shot budget.
+  ///
+  /// The loop stops once it does not. A still past the budget is trimmed off
+  /// in the editor anyway, and a loop left running unattended would go on
+  /// filling the disk with them.
+  bool get _hasStopMotionBudgetLeft {
+    final clipManager = _readClipManager();
+    final remaining = StopMotionFrameOps.remainingCaptureFrames(
+      state.stopMotionFrameCount,
+      committed: clipManager.totalDuration,
+      framesPerImage: StopMotionFrameOps.captureFramesPerImageFor(
+        clipManager.clips,
+      ),
+    );
+    return remaining > 0;
   }
 
   /// Removes the last captured stop-motion frame, deletes its file, and
@@ -2309,6 +2500,7 @@ class VideoRecorderBloc
     VideoRecorderStopMotionAssembleRequested event,
     Emitter<VideoRecorderBlocState> emit,
   ) {
+    _stopIntervalCapture(emit);
     final frames = state.stopMotionFrames;
     if (frames.isEmpty) return;
 
@@ -2426,6 +2618,9 @@ class VideoRecorderBloc
         stopMotionFrames: state.stopMotionFrames,
         stopMotionStatus: state.stopMotionStatus,
         stopMotionShutterTick: state.stopMotionShutterTick,
+        // Its timer outlives the re-sync too. Reading false here would leave
+        // the loop capturing behind a shutter that offers to start it.
+        isIntervalCaptureRunning: state.isIntervalCaptureRunning,
         // The key and backdrop are the user's, and the backdrop photo is still
         // this recorder's to delete: a flip, a stabilization rebind or a
         // re-init must not reset them.
@@ -2758,6 +2953,8 @@ class VideoRecorderBloc
     _focusPointTimer = null;
     _zoomIndicatorTimer?.cancel();
     _zoomIndicatorTimer = null;
+    _intervalCaptureTimer?.cancel();
+    _intervalCaptureTimer = null;
     // A recorder closed mid-take must not leave the bakes held for good.
     _isClosing = true;
     _releaseChromaKeyBakes();
