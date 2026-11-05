@@ -21,6 +21,7 @@ import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/following_prefetch_marker.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/content_deletion_service.dart';
@@ -875,6 +876,17 @@ class UserDataCleanupException implements Exception {
 
   final String message;
   final Object? cause;
+
+  /// [message] plus which check refused, safe to log.
+  ///
+  /// [toString] leaves [cause] out because a cause can carry private row
+  /// contents. An [AccountStorageException] names only a fixed check, so its
+  /// text is kept; any other cause contributes its type alone.
+  String get diagnostic => switch (cause) {
+    null => message,
+    final AccountStorageException storage => '$message (${storage.message})',
+    final other => '$message (${other.runtimeType})',
+  };
 
   @override
   String toString() => message;

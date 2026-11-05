@@ -314,4 +314,101 @@ void main() {
       expect(receipt.isCurrent, isTrue);
     });
   });
+
+  group('soleAdmittedOwnerPubkey', () {
+    Map<String, Object> record(String owner, String phase) => {
+      'version': 1,
+      'token': 'ab' * 24,
+      'ownerPubkey': owner,
+      'phase': phase,
+    };
+
+    Future<AccountActivationCoordinator> coldGate(
+      Object stored, {
+      String? nativeOwner,
+    }) async {
+      SharedPreferences.resetStatic();
+      final writer = await SharedPreferences.getInstance();
+      await writer.setString(
+        AccountActivationCoordinator.storageKey,
+        stored is String ? stored : jsonEncode(stored),
+      );
+      if (nativeOwner == null) {
+        await writer.remove('current_user_pubkey_hex');
+      } else {
+        await writer.setString('current_user_pubkey_hex', nativeOwner);
+      }
+      SharedPreferences.resetStatic();
+      return AccountActivationCoordinator.forPreferences(
+        await SharedPreferences.getInstance(),
+      );
+    }
+
+    final cases = <String, (Object, String?, Set<String>)>{
+      'an interrupted pending record': (
+        record(_alice, 'pending'),
+        null,
+        {
+          _alice,
+        },
+      ),
+      'an interrupted identityReady record': (
+        record(_alice, 'identityReady'),
+        _bob,
+        {_alice},
+      ),
+      'a record committed for the native owner': (
+        record(_alice, 'committed'),
+        _alice,
+        {_alice},
+      ),
+      'a record committed for another native owner': (
+        record(_alice, 'committed'),
+        _bob,
+        <String>{},
+      ),
+      'a signed-out record': (
+        record(_alice, 'signedOut'),
+        null,
+        {
+          _alice,
+          _bob,
+        },
+      ),
+      'a damaged record': ('{broken', null, <String>{}),
+    };
+
+    for (final MapEntry(key: name, value: (stored, nativeOwner, admitted))
+        in cases.entries) {
+      test('agrees with a cold begin for $name', () async {
+        final gate = await coldGate(stored, nativeOwner: nativeOwner);
+        expect(
+          gate.soleAdmittedOwnerPubkey,
+          admitted.length == 1 ? admitted.single : isNull,
+        );
+        for (final owner in [_alice, _bob]) {
+          final attempt = await coldGate(stored, nativeOwner: nativeOwner);
+          final entry = attempt.begin(
+            ownerPubkey: owner,
+            isCurrent: () => true,
+            recoverInterruptedOwner: true,
+          );
+          if (admitted.contains(owner)) {
+            await expectLater(entry, completes);
+          } else {
+            await expectLater(entry, throwsA(isA<AccountStorageException>()));
+          }
+        }
+      });
+    }
+
+    test('names nobody once this process holds a ticket', () async {
+      await begin();
+      expect(
+        prefs.getString(AccountActivationCoordinator.storageKey),
+        contains('"ownerPubkey":"$_alice"'),
+      );
+      expect(coordinator.soleAdmittedOwnerPubkey, isNull);
+    });
+  });
 }

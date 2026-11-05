@@ -2,6 +2,7 @@
 // ABOUTME: Verifies multi-account loading, selection, and auth actions
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:bloc/bloc.dart';
 import 'package:bloc_test/bloc_test.dart';
@@ -12,9 +13,11 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/welcome/welcome_bloc.dart';
 import 'package:openvine/models/known_account.dart';
+import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockUserProfilesDao extends Mock implements UserProfilesDao {}
 
@@ -83,12 +86,17 @@ const _testPreviousAccount2 = PreviousAccount(
 void main() {
   late _MockUserProfilesDao mockUserProfilesDao;
   late _MockAuthService mockAuthService;
+  late SharedPreferences preferences;
+  late AccountActivationCoordinator activationGate;
 
   setUpAll(() {
     registerFallbackValue(AuthenticationSource.none);
   });
 
-  setUp(() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    preferences = await SharedPreferences.getInstance();
+    activationGate = AccountActivationCoordinator.forPreferences(preferences);
     mockUserProfilesDao = _MockUserProfilesDao();
     mockAuthService = _MockAuthService();
 
@@ -108,6 +116,7 @@ void main() {
   WelcomeBloc buildBloc() => WelcomeBloc(
     userProfilesDao: mockUserProfilesDao,
     authService: mockAuthService,
+    activationGate: activationGate,
   );
 
   group(WelcomeBloc, () {
@@ -317,6 +326,7 @@ void main() {
         build: () => WelcomeBloc(
           userProfilesDao: mockUserProfilesDao,
           authService: mockAuthService,
+          activationGate: activationGate,
           deletionPendingPubkeyHex: _testPubkeyHex,
         ),
         act: (bloc) => bloc.add(
@@ -388,6 +398,7 @@ void main() {
         build: () => WelcomeBloc(
           userProfilesDao: mockUserProfilesDao,
           authService: mockAuthService,
+          activationGate: activationGate,
           deletionPendingPubkeyHex: _testPubkeyHex,
         ),
         seed: () => const WelcomeState(
@@ -592,6 +603,7 @@ void main() {
         build: () => WelcomeBloc(
           userProfilesDao: mockUserProfilesDao,
           authService: mockAuthService,
+          activationGate: activationGate,
           deletionPendingPubkeyHex: _testPubkeyHex,
         ),
         seed: () => const WelcomeState(
@@ -995,6 +1007,7 @@ void main() {
         final bloc = WelcomeBloc(
           userProfilesDao: mockUserProfilesDao,
           authService: mockAuthService,
+          activationGate: activationGate,
         );
         bloc.add(const WelcomeStarted());
         // Wait for _onStarted to complete (accounts load is async).
@@ -1041,6 +1054,7 @@ void main() {
         final bloc = WelcomeBloc(
           userProfilesDao: mockUserProfilesDao,
           authService: mockAuthService,
+          activationGate: activationGate,
         );
         bloc.add(const WelcomeStarted());
         await pumpEventQueue();
@@ -1072,6 +1086,7 @@ void main() {
         final bloc = WelcomeBloc(
           userProfilesDao: mockUserProfilesDao,
           authService: mockAuthService,
+          activationGate: activationGate,
         );
         // Pass account2 as the router-provided initial selection.
         bloc.add(
@@ -1087,6 +1102,61 @@ void main() {
               'An explicit initialSelectedPubkeyHex from the router '
               'must take priority over the recovery anchor pre-selection',
         );
+
+        await bloc.close();
+      },
+    );
+  });
+
+  group('WelcomeStarted after an interrupted account switch', () {
+    Future<void> retainInterruptedActivation(String ownerPubkeyHex) async {
+      await preferences.setString(
+        AccountActivationCoordinator.storageKey,
+        jsonEncode({
+          'version': 1,
+          'token': 'ab' * 24,
+          'ownerPubkey': ownerPubkeyHex,
+          'phase': 'pending',
+        }),
+      );
+    }
+
+    test(
+      'pre-selects the only account the activation gate admits over the '
+      'recovery anchor',
+      () async {
+        when(
+          () => mockAuthService.getKnownAccounts(),
+        ).thenAnswer((_) async => [_testKnownAccount, _testKnownAccount2]);
+        when(() => mockAuthService.getSessionRecoveryAnchorNpub()).thenAnswer(
+          (_) async => NostrKeyUtils.encodePubKey(_testPubkeyHex),
+        );
+        await retainInterruptedActivation(_testPubkeyHex2);
+
+        final bloc = buildBloc()..add(const WelcomeStarted());
+        await pumpEventQueue();
+
+        expect(bloc.state.selectedPubkeyHex, equals(_testPubkeyHex2));
+        expect(bloc.state.selectedAccount?.pubkeyHex, equals(_testPubkeyHex2));
+
+        await bloc.close();
+      },
+    );
+
+    test(
+      'keeps the default selection when the admitted account is not known '
+      'on this device',
+      () async {
+        when(
+          () => mockAuthService.getKnownAccounts(),
+        ).thenAnswer((_) async => [_testKnownAccount, _testKnownAccount2]);
+        await retainInterruptedActivation('c' * 64);
+
+        final bloc = buildBloc()..add(const WelcomeStarted());
+        await pumpEventQueue();
+
+        expect(bloc.state.selectedPubkeyHex, isNull);
+        expect(bloc.state.selectedAccount?.pubkeyHex, equals(_testPubkeyHex));
 
         await bloc.close();
       },

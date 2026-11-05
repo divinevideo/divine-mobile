@@ -15,10 +15,12 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/account_deletion_recovery_routes.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
+import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -81,6 +83,7 @@ class WelcomeScreen extends ConsumerWidget {
     final authState = ref.watch(currentAuthStateProvider);
     final authService = ref.watch(authServiceProvider);
     final db = ref.watch(databaseProvider);
+    final preferences = ref.watch(sharedPreferencesProvider);
     final deletionPendingPubkeyHex = ref
         .watch(submittedAccountDeletionAttemptProvider)
         ?.pubkeyHex;
@@ -94,6 +97,9 @@ class WelcomeScreen extends ConsumerWidget {
           WelcomeBloc(
             userProfilesDao: db.userProfilesDao,
             authService: authService,
+            activationGate: AccountActivationCoordinator.forPreferences(
+              preferences,
+            ),
             deletionPendingPubkeyHex: deletionPendingPubkeyHex,
           )..add(
             WelcomeStarted(initialSelectedPubkeyHex: initialSelectedPubkeyHex),
