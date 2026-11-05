@@ -86,7 +86,13 @@ void main() {
       bool timedOut = false,
       bool noRelays = false,
     }) {
-      when(() => client.queryEventsDetailed(any())).thenAnswer(
+      when(
+        () => client.queryEventsDetailed(
+          any(),
+          useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer(
         (_) async =>
             _readResult(events, timedOut: timedOut, noRelays: noRelays),
       );
@@ -127,7 +133,11 @@ void main() {
 
       test('throws rather than reporting empty when the read throws', () async {
         when(
-          () => client.queryEventsDetailed(any()),
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
         ).thenThrow(StateError('relay down'));
 
         await expectLater(
@@ -218,7 +228,13 @@ void main() {
         're-reads on the next mount instead of caching the failure',
         () async {
           var attempts = 0;
-          when(() => client.queryEventsDetailed(any())).thenAnswer((_) async {
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
             attempts++;
             if (attempts == 1) return _readResult(const [], noRelays: true);
             return _readResult([
@@ -241,7 +257,13 @@ void main() {
 
       test('shares one relay read across concurrent mounts', () async {
         var attempts = 0;
-        when(() => client.queryEventsDetailed(any())).thenAnswer((_) async {
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) async {
           attempts++;
           await Future<void>.delayed(const Duration(milliseconds: 10));
           return _readResult([
@@ -255,6 +277,154 @@ void main() {
         ]);
 
         expect(attempts, equals(1));
+      });
+    });
+
+    group('authoritative mutations', () {
+      test(
+        're-reads after a display snapshot and preserves new remote items',
+        () async {
+          stubRead([
+            _notifyEvent([creatorA]),
+          ]);
+          await repository.readSubscriptions(ownerPubkey: ownerPubkey);
+          final latest = Event(
+            ownerPubkey,
+            Nip51PeopleListCodec.kind,
+            const [
+              ['d', 'notify'],
+              ['p', creatorA, 'wss://relay.example'],
+              ['p', creatorC, 'wss://other.example', 'friend'],
+              ['alt', 'Changed on another device'],
+            ],
+            'latest-private-content',
+            createdAt: 1710000001,
+          );
+          stubRead([latest]);
+          stubPublishSuccess();
+
+          final result = await repository.subscribe(
+            ownerPubkey: ownerPubkey,
+            creatorPubkey: creatorB,
+          );
+
+          expect(result.submitted, isTrue);
+          final published =
+              verify(() => client.publishEvent(captureAny())).captured.single
+                  as Event;
+          expect(published.tags, const [
+            ['d', 'notify'],
+            ['p', creatorA, 'wss://relay.example'],
+            ['p', creatorC, 'wss://other.example', 'friend'],
+            ['alt', 'Changed on another device'],
+            ['p', creatorB],
+          ]);
+          expect(published.content, 'latest-private-content');
+        },
+      );
+
+      for (final noRelays in [false, true]) {
+        test(
+          'refuses a write from a cached snapshot when '
+          'the fresh read ${noRelays ? 'reaches no relay' : 'times out'}',
+          () async {
+            stubRead([
+              _notifyEvent([creatorA]),
+            ]);
+            await repository.readSubscriptions(ownerPubkey: ownerPubkey);
+            stubRead(const [], noRelays: noRelays, timedOut: !noRelays);
+            stubPublishSuccess();
+
+            final result = await repository.subscribe(
+              ownerPubkey: ownerPubkey,
+              creatorPubkey: creatorB,
+            );
+
+            expect(result.status, PeopleListPublishStatus.failed);
+            verifyNever(() => client.publishEvent(any()));
+            expect(
+              await repository.readSubscriptions(ownerPubkey: ownerPubkey),
+              {creatorA},
+            );
+          },
+        );
+      }
+
+      test('uses all-relay settlement without the local event cache', () async {
+        stubRead([
+          _notifyEvent([creatorA]),
+        ]);
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => _readResult([
+            _notifyEvent([creatorA, creatorC]),
+          ]),
+        );
+        stubPublishSuccess();
+
+        await repository.subscribe(
+          ownerPubkey: ownerPubkey,
+          creatorPubkey: creatorB,
+        );
+
+        final published =
+            verify(() => client.publishEvent(captureAny())).captured.single
+                as Event;
+        expect(_publishedMembers(published), [creatorA, creatorC, creatorB]);
+      });
+
+      test('refresh waits for the complete mutation before reading', () async {
+        stubRead([
+          _notifyEvent([creatorA]),
+        ]);
+        await repository.readSubscriptions(ownerPubkey: ownerPubkey);
+        final publishing = Completer<void>();
+        final releasePublish = Completer<void>();
+        var publishInFlight = false;
+        var readDuringPublish = false;
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) async {
+          readDuringPublish |= publishInFlight;
+          return _readResult([
+            _notifyEvent([creatorA]),
+          ]);
+        });
+        when(() => client.publishEvent(any())).thenAnswer((invocation) async {
+          publishInFlight = true;
+          publishing.complete();
+          await releasePublish.future;
+          publishInFlight = false;
+          return PublishSuccess(
+            event: invocation.positionalArguments.first as Event,
+          );
+        });
+        final mutation = repository.subscribe(
+          ownerPubkey: ownerPubkey,
+          creatorPubkey: creatorB,
+        );
+        await publishing.future;
+        final refresh = repository.refresh(ownerPubkey: ownerPubkey);
+        await pumpEventQueue();
+        final overlapped = readDuringPublish;
+        releasePublish.complete();
+        await mutation;
+        await refresh;
+
+        expect(overlapped, isFalse);
+        expect(await repository.readSubscriptions(ownerPubkey: ownerPubkey), {
+          creatorA,
+          creatorB,
+        });
       });
     });
 
@@ -603,7 +773,13 @@ void main() {
         'a removal that failed on an unreadable list is retried later',
         () async {
           var attempts = 0;
-          when(() => client.queryEventsDetailed(any())).thenAnswer((_) async {
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((_) async {
             attempts++;
             if (attempts == 1) return _readResult(const [], noRelays: true);
             return _readResult([
@@ -783,7 +959,13 @@ void main() {
           );
 
           final reversedClient = _MockNostrClient();
-          when(() => reversedClient.queryEventsDetailed(any())).thenAnswer(
+          when(
+            () => reversedClient.queryEventsDetailed(
+              any(),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer(
             (_) async => _readResult([lowerId, higherId]),
           );
           final reversedRepository = NotifySubscriptionsRepositoryImpl(
@@ -799,12 +981,80 @@ void main() {
         },
       );
 
+      test(
+        'a same-second revision with a lower id replaces the snapshot',
+        () async {
+          stubRead([
+            _notifyEvent([creatorA])
+              ..id =
+                  'ffffffffffffffffffffffffffffffff'
+                  'ffffffffffffffffffffffffffffffff',
+          ]);
+          expect(
+            await repository.readSubscriptions(ownerPubkey: ownerPubkey),
+            equals({creatorA}),
+          );
+
+          stubRead([
+            _notifyEvent([creatorB])
+              ..id =
+                  '00000000000000000000000000000000'
+                  '00000000000000000000000000000000',
+          ]);
+          await repository.refresh(ownerPubkey: ownerPubkey);
+
+          expect(
+            await repository.readSubscriptions(ownerPubkey: ownerPubkey),
+            equals({creatorB}),
+          );
+        },
+      );
+
+      test(
+        'keeps its own publish over a same-second revision with a higher id',
+        () async {
+          final nowSeconds =
+              DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
+          // A future base makes the publish step to exactly base + 1, so the
+          // relay revision below can share its created_at.
+          stubRead([
+            _notifyEvent([creatorA], createdAt: nowSeconds + 500),
+          ]);
+          stubPublishSuccess();
+          await repository.subscribe(
+            ownerPubkey: ownerPubkey,
+            creatorPubkey: creatorB,
+          );
+          final published =
+              verify(() => client.publishEvent(captureAny())).captured.single
+                  as Event;
+          final sameSecond =
+              _notifyEvent([creatorC], createdAt: published.createdAt)
+                ..id =
+                    'ffffffffffffffffffffffffffffffff'
+                    'ffffffffffffffffffffffffffffffff';
+          expect(published.id.compareTo(sameSecond.id), lessThan(0));
+
+          stubRead([sameSecond]);
+          await repository.refresh(ownerPubkey: ownerPubkey);
+
+          expect(
+            await repository.readSubscriptions(ownerPubkey: ownerPubkey),
+            equals({creatorA, creatorB}),
+          );
+        },
+      );
+
       test('replaces a stale snapshot and emits the new set', () async {
         var events = [
           _notifyEvent([creatorA]),
         ];
         when(
-          () => client.queryEventsDetailed(any()),
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
         ).thenAnswer((_) async => _readResult(events));
 
         expect(
@@ -835,7 +1085,13 @@ void main() {
 
       test('keeps the last good snapshot when the re-read fails', () async {
         var reads = 0;
-        when(() => client.queryEventsDetailed(any())).thenAnswer((_) async {
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          ),
+        ).thenAnswer((_) async {
           reads++;
           if (reads == 1) {
             return _readResult([

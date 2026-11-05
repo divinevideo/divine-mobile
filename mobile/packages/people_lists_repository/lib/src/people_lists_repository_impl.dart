@@ -248,6 +248,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
 
     final result = await _nostrClient.queryEventsDetailed(
       [filter],
+      useCache: false,
       requireAllRelaysSettled: true,
       timeout: _reconcileTimeout,
     );
