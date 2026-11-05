@@ -207,6 +207,106 @@ void main() {
       expect(thread.hasExactTotal, isTrue);
     });
 
+    test('retains the REST offset after merging a video reply', () async {
+      stubComments(_commentsPage([_restComment('comment', 1000)]));
+      stubReplies(_replies([_replyRow('reply', 2000)]));
+
+      final thread = await load();
+
+      expect(thread.nextOffset, 1);
+    });
+
+    test('does not consume REST comments trimmed by the reply floor', () async {
+      stubComments(
+        _commentsPage([
+          _restComment('newest', 300),
+          _restComment('deferred', 100),
+        ], hasMore: false),
+      );
+      stubReplies(
+        _replies([_replyRow('reply', 200)], hasMore: true, total: 5),
+      );
+
+      final thread = await load();
+
+      expect(thread.nextOffset, 1);
+      expect(thread.hasMore, isTrue);
+      expect(
+        thread.comments.map((c) => _label(c.id)),
+        unorderedEquals(['newest', 'reply']),
+      );
+    });
+
+    test('pages replies by time while keeping comments on REST', () async {
+      stubComments(_commentsPage([_restComment('older-comment', 100)]));
+      when(() => nostr.queryEvents(any())).thenAnswer(
+        (_) async => [Event.fromJson(_replyRow('older-reply', 150))],
+      );
+
+      final thread = await repository.loadComments(
+        rootEventId: _rootId,
+        rootEventKind: _rootKind,
+        rootAddressableId: _rootAddressableId,
+        before: DateTime.fromMillisecondsSinceEpoch(200000),
+        offset: 10,
+        includeVideoReplies: true,
+      );
+
+      expect(
+        thread.comments.map((c) => _label(c.id)),
+        unorderedEquals(['older-comment', 'older-reply']),
+      );
+      expect(thread.nextOffset, 11);
+      expect(thread.hasExactTotal, isFalse);
+      final filters =
+          verify(() => nostr.queryEvents(captureAny())).captured.single
+              as List<Filter>;
+      expect(filters, hasLength(2));
+      expect(filters.every((f) => f.kinds!.single == 34236), isTrue);
+      expect(filters.every((f) => f.until == 200), isTrue);
+      verifyNever(
+        () => funnel.getVideoResponses(
+          videoId: any(named: 'videoId'),
+          type: any(named: 'type'),
+          limit: any(named: 'limit'),
+        ),
+      );
+    });
+
+    test(
+      'keeps REST paging when the first reply window consumed no comments',
+      () async {
+        stubComments(
+          _commentsPage([_restComment('deferred', 100)], hasMore: false),
+        );
+        stubReplies(
+          _replies([_replyRow('first-reply', 200)], hasMore: true, total: 2),
+        );
+        final first = await load();
+        expect(first.nextOffset, 0);
+        expect(first.comments.map((c) => _label(c.id)), ['first-reply']);
+        when(() => nostr.queryEvents(any())).thenAnswer(
+          (_) async => [Event.fromJson(_replyRow('last-reply', 150))],
+        );
+
+        final next = await repository.loadComments(
+          rootEventId: _rootId,
+          rootEventKind: _rootKind,
+          rootAddressableId: _rootAddressableId,
+          before: first.comments.single.createdAt,
+          offset: first.nextOffset!,
+          includeVideoReplies: true,
+        );
+
+        expect(
+          next.comments.map((c) => _label(c.id)),
+          unorderedEquals(['deferred', 'last-reply']),
+        );
+        expect(next.nextOffset, 1);
+        expect(next.hasMore, isFalse);
+      },
+    );
+
     test('asks for no more replies than the page holds', () async {
       stubComments(_commentsPage([_restComment('comment', 1000)]));
       stubReplies(_replies(const []));

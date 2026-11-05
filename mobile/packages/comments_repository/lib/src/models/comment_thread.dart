@@ -57,6 +57,8 @@ class CommentThread extends Equatable {
   ///
   /// Counts every comment REST returned, including ones hidden afterwards,
   /// so a caller can continue the same REST listing.
+  /// A combined video-reply page consumes only the raw REST prefix inside
+  /// its shared time window; older comments are deferred, not skipped.
   final int? nextOffset;
 
   /// Whether the thread has any comments.

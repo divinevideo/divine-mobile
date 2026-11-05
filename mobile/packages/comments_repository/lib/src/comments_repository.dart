@@ -235,7 +235,8 @@ class CommentsRepository {
   ///   comments and merged in, and counted in the total. The page waits for
   ///   them at most `videoRepliesBootstrapGrace` after the comments answer;
   ///   without an answer it is the comments alone and the live watch backfills
-  ///   the replies. Later pages and the relay fallback query both kinds.
+  ///   the replies. Later pages keep text comments on revision-aware REST
+  ///   offsets and read older video replies from the relay with [before].
   ///
   /// Returns a [CommentThread] containing:
   /// - All comments in chronological order
@@ -253,11 +254,16 @@ class CommentsRepository {
     bool includeVideoReplies = false,
   }) async {
     try {
-      if ((before == null || offset > 0) &&
+      if ((before == null || offset > 0 || includeVideoReplies) &&
           (_funnelcakeApiClient?.isAvailable ?? false)) {
         try {
           final videoReplies = includeVideoReplies
-              ? _loadRestVideoReplies(rootEventId: rootEventId, limit: limit)
+              ? _loadVideoReplies(
+                  rootEventId: rootEventId,
+                  rootAddressableId: rootAddressableId,
+                  limit: limit,
+                  before: before,
+                )
               : Future<VideoResponsesResponse?>.value();
           final response = await _funnelcakeApiClient!.getVideoComments(
             videoId: rootEventId,
@@ -287,15 +293,19 @@ class CommentsRepository {
                 rootEventId,
                 rootEventKind,
                 rootAddressableId,
+                restComments: response.comments,
+                offset: offset,
+                repliesHaveExactTotal: before == null,
               ),
             );
             // Merge the user's own just-posted comment when the REST index has
             // not yet ingested it, so a sheet reopen doesn't drop it (#5598).
             // Only the first page can hold it.
-            final thread = offset == 0
+            final firstPage = before == null && offset == 0;
+            final thread = firstPage
                 ? _mergeRecentlyPostedComments(restThread, rootEventId)
                 : restThread;
-            if (offset == 0 && thread.hasExactTotal) {
+            if (firstPage && thread.hasExactTotal) {
               // Auto-update the count cache with the authoritative REST total.
               // Later pages do not carry the first-page adjustments.
               // Zero is written too so a previously cached positive value
@@ -740,6 +750,46 @@ class CommentsRepository {
     }
   }
 
+  /// REST supplies the first reply page; older replies still use the relay's
+  /// time cursor while text comments keep REST's revision-aware offset.
+  Future<VideoResponsesResponse?> _loadVideoReplies({
+    required String rootEventId,
+    required String? rootAddressableId,
+    required int limit,
+    required DateTime? before,
+  }) async {
+    if (before == null) {
+      return _loadRestVideoReplies(rootEventId: rootEventId, limit: limit);
+    }
+    try {
+      final events = await _nostrClient.queryEvents([
+        Filter(
+          kinds: const [EventKind.videoVertical],
+          uppercaseE: [rootEventId],
+          limit: limit,
+          until: before.millisecondsSinceEpoch ~/ 1000,
+        ),
+        if (rootAddressableId != null && rootAddressableId.isNotEmpty)
+          Filter(
+            kinds: const [EventKind.videoVertical],
+            uppercaseA: [rootAddressableId],
+            limit: limit,
+            until: before.millisecondsSinceEpoch ~/ 1000,
+          ),
+      ]);
+      final unique = {for (final event in events) event.id: event};
+      return VideoResponsesResponse(
+        videos: const [],
+        rows: [for (final event in unique.values) event.toJson()],
+        total: unique.length,
+        hasMore: unique.length >= limit,
+      );
+    } on Exception {
+      // The optional reply source must not discard a successful REST page.
+      return null;
+    }
+  }
+
   /// Puts [replies] on [restThread], the page the REST comments made.
   ///
   /// A page is a window of the thread, newest first, and paging resumes from
@@ -752,8 +802,11 @@ class CommentsRepository {
     VideoResponsesResponse? replies,
     String rootEventId,
     int rootEventKind,
-    String? rootAddressableId,
-  ) {
+    String? rootAddressableId, {
+    required List<VideoComment> restComments,
+    required int offset,
+    required bool repliesHaveExactTotal,
+  }) {
     if (replies == null) return restThread;
 
     final known = {for (final comment in restThread.comments) comment.id};
@@ -780,6 +833,17 @@ class CommentsRepository {
     }
 
     final window = floor;
+    // Only advance over the REST prefix actually represented by this time
+    // window. Counting the whole raw page would skip comments trimmed by the
+    // reply floor, including comments on older revisions only REST can find.
+    final consumed = window == null
+        ? restComments.length
+        : restComments
+              .takeWhile(
+                (comment) =>
+                    comment.createdAt >= window.millisecondsSinceEpoch ~/ 1000,
+              )
+              .length;
     final commentMap = {
       for (final comment in [...restThread.comments, ...replyComments])
         if (window == null || !comment.createdAt.isBefore(window))
@@ -787,8 +851,11 @@ class CommentsRepository {
     };
     return _buildThreadFromComments(commentMap, rootEventId).copyWith(
       totalCount: restThread.totalCount + replies.total,
-      hasMore: replies.hasMore ? true : restThread.hasMore,
-      hasExactTotal: restThread.hasExactTotal,
+      hasMore: replies.hasMore || consumed < restComments.length
+          ? true
+          : restThread.hasMore,
+      hasExactTotal: restThread.hasExactTotal && repliesHaveExactTotal,
+      nextOffset: offset + consumed,
     );
   }
 
