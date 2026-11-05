@@ -304,10 +304,9 @@ void main() {
     testWidgets("leaves the playhead alone on the clip's last frame", (
       tester,
     ) async {
-      // The window is closed at both ends, so the clip is still drawn with
-      // the playhead exactly on its end. Trimming that end leaves it there.
+      // Where trimming the clip's end parks the playhead.
       when(() => mainBloc.state).thenReturn(
-        const VideoEditorMainState(currentPosition: Duration(seconds: 6)),
+        VideoEditorMainState(currentPosition: _item.lastShownTime),
       );
 
       await pump(tester, _detachedLayer());
@@ -317,13 +316,13 @@ void main() {
       );
     });
 
-    testWidgets("moves the playhead back from past the clip's end", (
+    testWidgets("moves the playhead back from the clip's exact end", (
       tester,
     ) async {
+      // The window is half-open: the export has no clip at its end, so the
+      // slider would fade a moment the posted video does not contain.
       when(() => mainBloc.state).thenReturn(
-        const VideoEditorMainState(
-          currentPosition: Duration(seconds: 6, milliseconds: 1),
-        ),
+        const VideoEditorMainState(currentPosition: Duration(seconds: 6)),
       );
 
       await pump(tester, _detachedLayer());

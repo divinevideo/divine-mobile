@@ -1559,7 +1559,8 @@ void main() {
                 row: 1,
               ),
             ],
-            trimPosition: const Duration(seconds: 4),
+            // Just inside the new end, where the item still shows.
+            trimPosition: const Duration(milliseconds: 3999),
           ),
         ],
       );
@@ -2076,11 +2077,42 @@ void main() {
             endTime: Duration(seconds: 4),
           ),
         ),
+        // The end handle parks just inside the window: at 4 s itself the item
+        // no longer shows, in the preview or the export.
         expect: () => [
           isA<TimelineOverlayState>().having(
             (s) => s.trimPosition,
             'trimPosition',
-            const Duration(seconds: 4),
+            const Duration(milliseconds: 3999),
+          ),
+        ],
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'TimelineOverlayItemTrimmed exposes the new start for the start handle',
+        build: TimelineOverlayBloc.new,
+        seed: () => TimelineOverlayState(
+          items: [
+            _item(
+              id: 'a',
+              type: TimelineOverlayType.layer,
+              start: Duration.zero,
+              end: const Duration(seconds: 2),
+            ),
+          ],
+        ),
+        act: (bloc) => bloc.add(
+          const TimelineOverlayItemTrimmed(
+            itemId: 'a',
+            isStart: true,
+            startTime: Duration(seconds: 1),
+          ),
+        ),
+        expect: () => [
+          isA<TimelineOverlayState>().having(
+            (s) => s.trimPosition,
+            'trimPosition',
+            const Duration(seconds: 1),
           ),
         ],
       );

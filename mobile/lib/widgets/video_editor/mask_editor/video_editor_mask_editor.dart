@@ -34,7 +34,7 @@ Future<void> editLayerMask(
   final mainBloc = context.read<VideoEditorMainBloc>();
 
   var time = scope.playTimeNotifier.value;
-  if (time < item.startTime || time > item.endTime) {
+  if (!item.showsAt(time)) {
     time = item.startTime;
     mainBloc.add(VideoEditorSeekRequested(time));
   }

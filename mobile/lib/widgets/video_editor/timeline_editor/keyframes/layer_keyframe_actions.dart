@@ -271,7 +271,7 @@ Future<void> editLayerKeyframes(
   // The canvas/diamond follow this live clock while a seek is pending; the
   // bloc's currentPosition only catches up after the player reports it.
   var time = scope.playTimeNotifier.value;
-  if (time < item.startTime || time > item.endTime) {
+  if (!item.showsAt(time)) {
     time = item.startTime;
     mainBloc.add(VideoEditorSeekRequested(time));
   }
@@ -398,7 +398,7 @@ Future<void> editLayerOpacity(
   // A layer is not drawn outside its time range, so a playhead outside it is
   // moved to the layer's start first; the slider would fade nothing visible.
   var time = scope.playTimeNotifier.value;
-  if (time < item.startTime || time > item.endTime) {
+  if (!item.showsAt(time)) {
     time = item.startTime;
     mainBloc.add(VideoEditorSeekRequested(time));
   }

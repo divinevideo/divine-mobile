@@ -39,7 +39,7 @@ Future<void> editLayerBlendMode(
   final mainBloc = context.read<VideoEditorMainBloc>();
 
   final time = scope.playTimeNotifier.value;
-  if (time < item.startTime || time > item.endTime) {
+  if (!item.showsAt(time)) {
     mainBloc.add(VideoEditorSeekRequested(item.startTime));
   }
 
