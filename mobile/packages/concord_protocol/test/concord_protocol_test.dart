@@ -29,6 +29,13 @@ String _readFixture(String name) {
 
 void main() {
   group('concord_protocol', () {
+    test('recipient locator matches the unchanged TypeScript kernel', () {
+      expect(
+        recipientLocator('11' * 32, '22' * 32, '00' * 32, 1),
+        '63f3b02e603eb27c576bd4758660bdfb068952b1675f499f5519df167351ac4b',
+      );
+    });
+
     test('frozen v2 fixtures match TypeScript outputs bidirectionally', () {
       final f =
           jsonDecode(_readFixture('fixtures.json')) as Map<String, dynamic>;

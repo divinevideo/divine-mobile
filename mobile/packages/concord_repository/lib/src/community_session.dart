@@ -330,7 +330,7 @@ class ConcordCommunitySession {
     final count = int.tryParse(countText);
     if (count == null || count < 1) return false;
     int? groupCount;
-    final indices = <int>{};
+    final chunks = <int, List<Map<String, dynamic>>>{};
     final citation = ConcordCitation.fromTags(
       (candidate['tags'] as List).cast<List<String>>(),
     );
@@ -362,8 +362,19 @@ class ConcordCommunitySession {
           index > total) {
         continue;
       }
+      final List<Map<String, dynamic>> blobs;
       try {
-        jsonDecode(event['content'] as String);
+        final decoded = jsonDecode(event['content'] as String);
+        blobs = decoded is List
+            ? decoded
+                  .whereType<Map<String, dynamic>>()
+                  .where(
+                    (blob) =>
+                        blob['locator'] is String && blob['wrapped'] is String,
+                  )
+                  .map(Map<String, dynamic>.from)
+                  .toList()
+            : [];
       } on FormatException {
         continue;
       }
@@ -381,9 +392,30 @@ class ConcordCommunitySession {
               citationKey(citation)) {
         return false;
       }
-      indices.add(index);
+      chunks[index] = blobs;
     }
-    return indices.length == count;
+    if (chunks.length != count) return false;
+    final actor = candidate['author'] as String;
+    // This only stops publication; an owner may retire its own epoch without
+    // recipients. Delegated rotation cannot remove anyone the actor cannot ban.
+    if (actor == bundle!.owner) return true;
+    final locators = chunks.values
+        .expand((blobs) => blobs)
+        .map((blob) => blob['locator'])
+        .toSet();
+    final protected = {bundle!.owner, ...control!.grants.keys}.where(
+      (member) => !control!.canActOnMember(actor, member, 16),
+    );
+    return protected.every(
+      (member) => locators.contains(
+        recipientLocator(
+          actor,
+          member,
+          '00' * 32,
+          bundle!.rootEpoch + 1,
+        ),
+      ),
+    );
   }
 
   Future<void> _checkSignals() async {

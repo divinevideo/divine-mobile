@@ -338,20 +338,44 @@ class _Community {
   )).wrap;
 
   /// A base-rotation signal from the moderator citing its grant edition.
-  Future<Map<String, dynamic>> moderatorRotation(String grantHash) async {
+  Future<Map<String, dynamic>> moderatorRotation(
+    String grantHash, {
+    List<String>? recipients,
+    int chunkIndex = 1,
+    int chunkCount = 1,
+  }) async {
     final rekey = groupKey(
       'concord/base-rekey-pseudonym',
       root,
       communityId,
       epoch: 1,
     );
-    final rumor = _rumor(moderator, 3303, [
-      ['scope', '00' * 32],
-      ['prevepoch', '0'],
-      ['newepoch', '1'],
-      ['prevcommit', epochKeyCommitment(0, root)],
-      ['vac', grantLocator(communityId, moderator), '1', grantHash],
-    ], '');
+    final rumor = _rumor(
+      moderator,
+      3303,
+      [
+        ['scope', '00' * 32],
+        ['prevepoch', '0'],
+        ['newepoch', '1'],
+        ['prevcommit', epochKeyCommitment(0, root)],
+        ['vac', grantLocator(communityId, moderator), '1', grantHash],
+        ['chunk', '$chunkIndex', '$chunkCount'],
+      ],
+      jsonEncode([
+        for (final recipient in recipients ?? [owner, moderator])
+          {
+            'locator': bytesToHex(
+              hkdfSeed(
+                hexToBytes(moderator + recipient),
+                'concord/recipient-pseudonym',
+                hexToBytes('00' * 32),
+                epoch: 1,
+              ),
+            ),
+            'wrapped': 'synthetic opaque recipient material',
+          },
+      ]),
+    );
     return wrapSeal(
       seal: await sealRumor(
         rumor: rumor,
@@ -524,18 +548,32 @@ void main() {
           ['prevcommit', epochKeyCommitment(0, '42' * 32)],
           ['vac', grant, '1', grantHash],
         ];
+        final content = jsonEncode([
+          for (final recipient in [_ReplayCommunity.owner, moderator])
+            {
+              'locator': bytesToHex(
+                hkdfSeed(
+                  hexToBytes(moderator + recipient),
+                  'concord/recipient-pseudonym',
+                  hexToBytes('00' * 32),
+                  epoch: 1,
+                ),
+              ),
+              'wrapped': 'synthetic opaque recipient material',
+            },
+        ]);
         final rumor = <String, dynamic>{
           'kind': 3303,
           'pubkey': moderator,
           'created_at': 1,
           'tags': tags,
-          'content': '[]',
+          'content': content,
           'id': computeEventId(
             pubkey: moderator,
             createdAt: 1,
             kind: 3303,
             tags: tags,
-            content: '[]',
+            content: content,
           ),
         };
         final signal = await wrapSeal(
@@ -953,6 +991,78 @@ void main() {
         await nextRelay.close();
       },
     );
+  });
+  group('Delegated base rotations', () {
+    test('require every protected recipient across complete chunks', () async {
+      final c = _Community();
+      final equal = schnorr.getPublicKey('d1' * 32);
+      final higher = schnorr.getPublicKey('d2' * 32);
+      final higherRole = 'd3' * 32;
+      final grant = await c.edition(
+        '3',
+        grantLocator(c.communityId, c.moderator),
+        {
+          'member': c.moderator,
+          'role_ids': [_Community.roleId],
+        },
+      );
+      final authority = [
+        await c.invite(),
+        await c.metadata('Divine'),
+        (await c.edition('2', _Community.channelId, {'name': 'general'})).wrap,
+        (await c.edition('1', _Community.roleId, {
+          'role_id': _Community.roleId,
+          'position': 2,
+          'permissions': '16',
+        })).wrap,
+        (await c.edition('1', higherRole, {
+          'role_id': higherRole,
+          'position': 1,
+          'permissions': '16',
+        })).wrap,
+        grant.wrap,
+        (await c.edition('3', grantLocator(c.communityId, equal), {
+          'member': equal,
+          'role_ids': [_Community.roleId],
+        })).wrap,
+        (await c.edition('3', grantLocator(c.communityId, higher), {
+          'member': higher,
+          'role_ids': [higherRole],
+        })).wrap,
+      ];
+      final protected = [c.owner, c.moderator, equal, higher];
+      for (final omitted in <String?>['', ...protected, null]) {
+        final recipients = omitted == ''
+            ? <String>[]
+            : protected.where((p) => p != omitted).toList();
+        final relay = _Relay([
+          ...authority,
+          await c.moderatorRotation(
+            grant.hash,
+            recipients: recipients.take(2).toList(),
+            chunkCount: 2,
+          ),
+          await c.moderatorRotation(
+            grant.hash,
+            recipients: recipients.skip(2).toList(),
+            chunkIndex: 2,
+            chunkCount: 2,
+          ),
+        ]);
+        final store = InMemoryConcordStore(_Community.member);
+        final session = c.session(relay, store);
+        if (omitted == null) {
+          await expectLater(session.start(), throwsStateError);
+          expect(await store.get('community-stop'), isNotNull);
+        } else {
+          await session.start();
+          expect(session.canPublish, isTrue, reason: 'omitted $omitted');
+          expect(await store.get('community-stop'), isNull);
+        }
+        await session.close();
+        await relay.close();
+      }
+    });
   });
   group('ConcordCommunitySession.close', () {
     test(
