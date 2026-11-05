@@ -52,7 +52,6 @@ nostr_app_grants_v1
 nostr_key_version
 nostr_keypair # signing material; owned by nostr_key_manager, not this sweep
 nostr_signature_verification_policy
-og_viner_pubkeys_v1 # ambiguous: global cache ABOUT other creators, learned during one account browsing
 pending_unblocks
 preferred_audio_device_id
 protected_minor_override

@@ -274,9 +274,9 @@ VideoEventService videoEventService(Ref ref) {
   }, fireImmediately: true);
 
   // Teach the OG Viner badge cache from every video that flows through the
-  // service. The cache filters internally (only `isOriginalVine` videos
-  // contribute pubkeys), so it's safe to feed it every batch — popular,
-  // new, classics, profile, hashtag, search, anything.
+  // service. The cache filters internally (only videos funnelcake marks
+  // `isVerifiedArchive` contribute pubkeys), so it's safe to feed it every
+  // batch — popular, new, classics, profile, hashtag, search, anything.
   final ogVinerCache = ref.read(ogVinerCacheServiceProvider);
   final disposeObserver = service.addVideoObserver(
     (videos) => unawaited(ogVinerCache.learnFromVideos(videos)),

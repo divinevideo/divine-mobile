@@ -1,7 +1,6 @@
 // ABOUTME: Tests UserName OG Viner badge display from the local cache.
 // ABOUTME: Keeps badge rendering tied to known cached pubkeys only.
 
-import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,13 +14,15 @@ import 'package:openvine/widgets/og_viner_badge.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/og_viner_cache_seed.dart';
+
 void main() {
   const pubkey =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
   Future<Widget> buildSubject({required bool cachedOgViner}) async {
     SharedPreferences.setMockInitialValues({
-      if (cachedOgViner) ogVinerPubkeysCacheKey: jsonEncode([pubkey]),
+      if (cachedOgViner) ogVinerPubkeysCacheKey: ogVinerCacheValue([pubkey]),
     });
     final prefs = await SharedPreferences.getInstance();
 
