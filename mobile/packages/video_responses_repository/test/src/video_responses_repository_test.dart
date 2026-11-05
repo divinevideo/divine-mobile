@@ -1373,6 +1373,82 @@ void main() {
         },
       );
 
+      test('hiding a reply pinned on another device also unpins it', () async {
+        curationAnswers([
+          _curationEvent(
+            createdAt: 1000,
+            tags: [
+              ['e', _hex(201), '', 'pinned'],
+              ['e', _hex(203), '', 'hidden'],
+            ],
+          ),
+        ]);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+
+        final reconciled = await repository().saveCuration(
+          const RepliesCuration().hidden(_hex(201)),
+          videoAddress: _rootAddress,
+          previous: const RepliesCuration(),
+        );
+
+        expect(
+          reconciled,
+          RepliesCuration(hiddenIds: {_hex(201), _hex(203)}),
+        );
+        expect(
+          signed.single.tags,
+          isNot(anyElement(equals(['e', _hex(201), '', 'pinned']))),
+        );
+      });
+
+      test('refuses an account switch while the curation is signed', () async {
+        var currentOwner = _creator;
+        when(() => nostrClient.publicKey).thenAnswer((_) => currentOwner);
+        final responses = VideoResponsesRepository(
+          nostrClient: nostrClient,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async {
+                currentOwner = _viewer;
+                return signedEvent;
+              },
+        );
+
+        await expectLater(
+          responses.saveCuration(
+            RepliesCuration(hiddenIds: {_hex(201)}),
+            videoAddress: _rootAddress,
+            previous: const RepliesCuration(),
+          ),
+          throwsA(isA<RepliesCurationException>()),
+        );
+
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test('signs after the source its own read found, ahead of now', () async {
+        final ahead = NostrTimestamp.now(driftTolerance: 0) + 1000;
+        curationAnswers([_curationEvent(createdAt: ahead)]);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        signedEvent = _curationEvent(createdAt: ahead + 1);
+
+        await repository().saveCuration(
+          RepliesCuration(hiddenIds: {_hex(201)}),
+          videoAddress: _rootAddress,
+          previous: const RepliesCuration(),
+        );
+
+        expect(signed.single.createdAt, equals(ahead + 1));
+      });
+
       test('refuses a signature belonging to a different account', () async {
         signedEvent = _curationEvent(createdAt: 1000, pubkey: _viewer);
 
