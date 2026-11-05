@@ -5108,9 +5108,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get navExploreClassics => 'క్లాసిక్స్';
 
   @override
-  String get navExploreNewVideos => 'కొత్త వీడియోలు';
-
-  @override
   String get navExploreTrending => 'ట్రెండింగ్';
 
   @override

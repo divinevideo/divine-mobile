@@ -4949,9 +4949,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get navExploreClassics => 'کلاسکس';
 
   @override
-  String get navExploreNewVideos => 'نئی ویڈیوز';
-
-  @override
   String get navExploreTrending => 'مقبول';
 
   @override

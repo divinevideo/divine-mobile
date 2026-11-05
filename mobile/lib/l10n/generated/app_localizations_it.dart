@@ -5002,9 +5002,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get navExploreClassics => 'Classici';
 
   @override
-  String get navExploreNewVideos => 'Nuovi video';
-
-  @override
   String get navExploreTrending => 'Di tendenza';
 
   @override

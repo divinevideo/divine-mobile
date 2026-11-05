@@ -273,7 +273,7 @@ class _NewVideosContentState extends ConsumerState<_NewVideosContent> {
                 feedRepository: ref.read(feedRepositoryProvider),
                 initialIndex: index,
                 initialVideoId: videoList[index].id,
-                contextTitle: l10n.navExploreNewVideos,
+                contextTitle: l10n.exploreTabNewDiviners,
                 trafficSource: ViewTrafficSource.discoveryNewCreators,
               ),
             },

@@ -4930,9 +4930,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get navExploreClassics => 'Klasik';
 
   @override
-  String get navExploreNewVideos => 'Video Baharu';
-
-  @override
   String get navExploreTrending => 'Sedang Hangat';
 
   @override

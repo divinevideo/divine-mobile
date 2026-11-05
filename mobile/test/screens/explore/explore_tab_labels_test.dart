@@ -64,7 +64,7 @@ void main() {
         const [
           'Classics',
           'Latest',
-          'New Videos',
+          'New Diviners',
           'Trending',
           'Categories',
           'For You',

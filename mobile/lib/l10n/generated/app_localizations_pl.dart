@@ -5079,9 +5079,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get navExploreClassics => 'Klasyki';
 
   @override
-  String get navExploreNewVideos => 'Nowe filmy';
-
-  @override
   String get navExploreTrending => 'Na topie';
 
   @override

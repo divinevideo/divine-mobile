@@ -4990,9 +4990,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get navExploreClassics => 'Класика';
 
   @override
-  String get navExploreNewVideos => 'Нови видеа';
-
-  @override
   String get navExploreTrending => 'Тенденция';
 
   @override

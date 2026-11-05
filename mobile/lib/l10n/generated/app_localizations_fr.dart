@@ -5016,9 +5016,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get navExploreClassics => 'Classiques';
 
   @override
-  String get navExploreNewVideos => 'Nouvelles vidéos';
-
-  @override
   String get navExploreTrending => 'Tendance';
 
   @override

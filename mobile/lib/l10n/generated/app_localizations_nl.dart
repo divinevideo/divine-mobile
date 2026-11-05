@@ -4957,9 +4957,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get navExploreClassics => 'Klassiekers';
 
   @override
-  String get navExploreNewVideos => 'Nieuwe video\'s';
-
-  @override
   String get navExploreTrending => 'Trending';
 
   @override
