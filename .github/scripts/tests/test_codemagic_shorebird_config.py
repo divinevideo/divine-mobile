@@ -628,7 +628,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         end = self.mobile_ci_contents.index("- name:", start + 1)
         contract = self.mobile_ci_contents[start:end]
         self.assertIn("matrix.shard == 0", contract)
-        self.assertIn("--dart-define=CONCORD_INVITE_URL=https://synthetic.invalid/", contract)
+        self.assertIn("--dart-define=CONCORD_INVITE_URL=https://synthetic.divine.video/", contract)
         self.assertIn("--dart-define=FF_CONCORD_CHAT=false", contract)
         self.assertIn("test/services/build_config_test.dart", contract)
         self.assertIn("test/router/chat_routes_test.dart", contract)

@@ -322,7 +322,7 @@ jobs:
         # shard selection removes files needed by the configuration contract.
         run: |
           flutter test --no-pub \
-            --dart-define=CONCORD_INVITE_URL=https://synthetic.invalid/public-community \
+            --dart-define=CONCORD_INVITE_URL=https://synthetic.divine.video/public-community \
             --dart-define=FF_CONCORD_CHAT=false \
             test/services/build_config_test.dart \
             test/router/chat_routes_test.dart \
