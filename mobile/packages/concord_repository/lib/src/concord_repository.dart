@@ -21,6 +21,18 @@ abstract interface class RelayHistoryStatus {
   bool get historyLimited;
 }
 
+/// Limit state for an authority stream, independent of unrelated subscriptions.
+abstract interface class RelayScopedHistoryStatus
+    implements RelayHistoryStatus {
+  bool historyLimitedForAuthor(String pubkey);
+}
+
+/// Current transport catch-up state; a previous EOSE does not authorize
+/// writes while a reconnect is still fetching fresh authority.
+abstract interface class RelaySynchronizationStatus {
+  bool get synchronized;
+}
+
 abstract interface class AccountScopedStore {
   Future<void> put(String key, String value);
   Future<String?> get(String key);
@@ -69,6 +81,9 @@ class InMemoryConcordStore implements AccountScopedStore {
   }
 }
 
+/// Held stream material used only to recover this account's pending messages.
+typedef ConcordOutboxReadKey = ({GroupKey key, int epoch});
+
 class ConcordRepository {
   ConcordRepository({
     required this.relay,
@@ -76,11 +91,19 @@ class ConcordRepository {
     required this.cipher,
     this.sealedTransport,
     this.historyLimit = 200,
+    this.controlState,
+    this.canPublish,
+    this.historicalOutboxKeys,
+    this.outboxAuthor,
   }) : assert(historyLimit > 0, 'historyLimit must be positive');
 
   /// Recent delivered wraps retained per room. Unsent records are kept.
   final int historyLimit;
   final RelayGateway relay;
+  ConcordControlState? Function()? controlState;
+  bool Function()? canPublish;
+  Map<String, ConcordOutboxReadKey> Function()? historicalOutboxKeys;
+  final String? outboxAuthor;
   final AccountScopedStore store;
   final StreamCipher cipher;
 
@@ -327,7 +350,32 @@ class ConcordRepository {
 
   Future<void> _openRecord(Map<String, dynamic> wrap) async {
     try {
-      final rumor = await _open(wrap);
+      Map<String, dynamic> rumor;
+      if (wrap['pubkey'] == _streamPubkey) {
+        rumor = await _open(wrap);
+      } else {
+        final retained = _sealed.values
+            .where(
+              (r) =>
+                  r['pending'] == true &&
+                  (r['wrap'] as Map)['id'] == wrap['id'],
+            )
+            .firstOrNull;
+        final held = historicalOutboxKeys?.call()[wrap['pubkey']];
+        if (retained == null || held == null || outboxAuthor == null) return;
+        final opened = await openSealedIncoming(
+          wrap: wrap,
+          expectedChannelId: _channelId!,
+          expectedEpoch: held.epoch,
+          streamSeedHex: held.key.seedHex,
+          streamPubkey: held.key.pubkey,
+        );
+        rumor = opened['rumor'] as Map<String, dynamic>;
+        if (rumor['pubkey'] != outboxAuthor ||
+            (rumor['kind'] != 9 && rumor['kind'] != 1111)) {
+          return;
+        }
+      }
       if (!_closed) _applyRumor(rumor);
     } on FormatException {
       // Invalid local records never become timeline state.
@@ -406,6 +454,9 @@ class ConcordRepository {
       _controls.add(
         ControlEvent(
           type: type,
+          citation: ConcordCitation.fromTags(
+            (rumor['tags'] as List).whereType<List<Object?>>(),
+          ),
           id: id,
           targetId: tag[1] as String,
           createdAt: rumor['created_at'] as int,
@@ -462,13 +513,26 @@ class ConcordRepository {
 
   /// Republishes messages whose publish was interrupted before restart.
   Future<void> retryPending({String? messageId}) async {
+    if (canPublish?.call() == false) {
+      throw StateError('Community authority is unavailable');
+    }
     await purgeExpired(now: _now());
     for (final id in [
       ..._pendingIds,
     ].where((id) => messageId == null || id == messageId)) {
       final sealed = _sealed[id];
       if (sealed != null) {
+        // A retained draft survives rotation, but its old carrier must never
+        // become a send in the refreshed room merely because retry was tapped.
+        if (pendingRequiresDraftRestore(id)) {
+          throw StateError(
+            'Restore this earlier-epoch draft before sending again',
+          );
+        }
         try {
+          if (canPublish?.call() == false) {
+            throw StateError('Community authority is unavailable');
+          }
           await relay.publish(Map<String, dynamic>.from(sealed['wrap'] as Map));
         } on Object {
           if (_sealed[id]?['pending'] != false) rethrow;
@@ -591,7 +655,9 @@ class ConcordRepository {
     int epoch = 0,
     int? expiresAt,
   }) async {
-    if (_closed || (_requiresRestore && !_ready)) {
+    if (_closed ||
+        (_requiresRestore && !_ready) ||
+        canPublish?.call() == false) {
       throw StateError('chat history has not loaded');
     }
     final transport = sealedTransport;
@@ -625,6 +691,9 @@ class ConcordRepository {
       streamSeedHex: streamSeedHex,
       streamPubkey: streamPubkey,
     );
+    if (canPublish?.call() == false) {
+      throw StateError('Community authority changed while signing');
+    }
     await _record(id, {'wrap': wrap, 'pending': true, 'expiresAt': expiresAt});
     _messages.add(
       ChatMessage(
@@ -640,6 +709,9 @@ class ConcordRepository {
     );
     _notify();
     try {
+      if (canPublish?.call() == false) {
+        throw StateError('Community authority is unavailable');
+      }
       await relay.publish(wrap);
     } on Object {
       if (_sealed[id]?['pending'] != false) rethrow;
@@ -669,9 +741,25 @@ class ConcordRepository {
     );
   }
 
+  bool pendingRequiresDraftRestore(String id) =>
+      _channelId != null &&
+      _sealed[id]?['pending'] == true &&
+      (_sealed[id]!['wrap'] as Map)['pubkey'] != _streamPubkey;
+
+  Future<void> discardPendingDraft(String id) => _serial(() async {
+    if (_closed || _sealed[id]?['pending'] != true) return;
+    final retained = {..._sealed}..remove(id);
+    await _saveSealed(retained);
+    _notify();
+  });
+  void refreshModeration() => _notify();
   void ingestControl(ControlEvent c) => _controls.add(c);
-  FoldedThread timeline({required int now}) =>
-      foldControls(_messages, _controls, now: now);
+  FoldedThread timeline({required int now}) => foldControls(
+    _messages,
+    _controls,
+    now: now,
+    moderation: controlState?.call(),
+  );
   Future<void> acceptInvite(String communityId) =>
       store.put('invite:$communityId', 'accepted');
   Future<bool> hasAcceptedInvite(String communityId) async =>

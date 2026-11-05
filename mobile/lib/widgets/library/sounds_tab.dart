@@ -15,15 +15,19 @@ import 'package:openvine/blocs/creator_sync/sound_sync_state.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/saved_sound.dart';
+import 'package:openvine/models/sound_cover.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
+import 'package:openvine/providers/saved_sounds_provider.dart';
+import 'package:openvine/providers/sounds_providers.dart';
 import 'package:openvine/router/routes/library_routes.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/screens/sounds/add_sound_page.dart';
 import 'package:openvine/utils/delete_result_localization.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/widgets/library/saved_sound_card.dart';
+import 'package:openvine/widgets/audio/sound_list_tile.dart';
 import 'package:openvine/widgets/library/saved_sound_details_editor.dart';
+import 'package:openvine/widgets/library/saved_sound_tile.dart';
 import 'package:sound_service/sound_service.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -57,24 +61,24 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
 
   /// Whether the preview named by [_previewingSoundId] is paused.
   ///
-  /// A paused preview keeps its card and its waveform fill — it is still the
-  /// active preview, just not advancing.
+  /// A paused preview keeps its row's progress — it is still the active
+  /// preview, just not advancing.
   bool _previewPaused = false;
 
   /// Playback position of the running preview as a 0–1 fraction, so the
-  /// previewing card can fill its waveform as the sound plays.
+  /// previewing row can fill its progress as the sound plays.
   Stream<double>? _previewProgress;
 
   /// Last fraction observed on [_previewProgress].
   ///
-  /// Seeded into the card so a list rebuild or off-screen remount does not
-  /// flash the waveform back to empty while a preview is still active
+  /// Seeded into the row so a list rebuild or off-screen remount does not
+  /// flash the progress back to empty while a preview is still active
   /// (including while paused, when the position stream is quiet).
   double _previewProgressValue = 0;
 
   /// Bumped whenever a new preview load starts or the preview is stopped, so
   /// an in-flight `loadAudio` / `play` from a superseded tap cannot clobber
-  /// the active card state.
+  /// the active row state.
   int _previewSession = 0;
 
   /// Bumped when a running `play()` is intentionally interrupted (pause,
@@ -83,7 +87,7 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
   int _playEpoch = 0;
 
   /// Serializes `loadAudio` calls on the shared player. Session checks alone
-  /// protect card state; without this gate two overlapping loads can still
+  /// protect row state; without this gate two overlapping loads can still
   /// interleave `setAudioSource` on [AudioPlaybackService].
   Future<void>? _previewLoadGate;
 
@@ -192,11 +196,13 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
         _previewProgressValue = 0;
         _previewProgress = _progressFor(audioService, total, session);
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
       Log.error(
-        'Failed to preview sound: $e',
+        'Failed to preview sound ${sound.id}',
         name: 'SoundsTab',
         category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
       );
       if (mounted && session == _previewSession) _clearPreviewState();
       return;
@@ -228,7 +234,7 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
     await audioService.pause();
   }
 
-  /// Plays until the sound ends, then hands the card back to its idle state.
+  /// Plays until the sound ends, then hands the row back to its idle state.
   ///
   /// `play()` also resolves when the preview is paused, and when another
   /// sound stopped this one and now owns the preview state. Neither is an
@@ -241,11 +247,13 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
     final playEpoch = ++_playEpoch;
     try {
       await audioService.play();
-    } catch (e) {
+    } catch (e, stackTrace) {
       Log.error(
-        'Failed to preview sound: $e',
+        'Failed to preview sound $soundId',
         name: 'SoundsTab',
         category: LogCategory.video,
+        error: e,
+        stackTrace: stackTrace,
       );
     }
     if (mounted &&
@@ -403,6 +411,39 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
     await SavedSoundDetailsEditor.show(context, sound: sound);
   }
 
+  /// Opens [sound]'s actions under the fuller view of it that has no room in
+  /// its row.
+  Future<void> _onOpenMore(SavedSound sound, _SavedSoundView view) {
+    return VineBottomSheetActionMenu.show(
+      context: context,
+      title: SavedSoundMenuHeader(
+        sound: sound,
+        cover: view.cover,
+        isMissingFile: view.isMissingFile,
+        cannotBeReused: view.cannotBeReused,
+      ),
+      options: [
+        VineBottomSheetActionData(
+          iconPath: DivineIconName.musicNotes.assetPath,
+          label: context.l10n.savedSoundOpenAction,
+          // A sound whose file is gone has no page to play it on.
+          onTap: view.isMissingFile ? null : () => _onOpenDetails(sound),
+        ),
+        VineBottomSheetActionData(
+          iconPath: DivineIconName.pencilSimple.assetPath,
+          label: context.l10n.savedSoundEditAction,
+          onTap: () => _onEditTap(sound),
+        ),
+        VineBottomSheetActionData(
+          iconPath: DivineIconName.trash.assetPath,
+          label: context.l10n.savedSoundRemoveAction,
+          isDestructive: true,
+          onTap: () => _onRemoveTap(sound),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final availability = ref.watch(soundSyncAvailabilityProvider).value;
@@ -444,9 +485,7 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
           playingProgress: _previewProgress,
           playingProgressValue: _previewProgressValue,
           onPreview: (sound) => _onPreviewTap(sound.audio),
-          onOpenDetails: _onOpenDetails,
-          onEdit: _onEditTap,
-          onRemove: _onRemoveTap,
+          onOpenMore: _onOpenMore,
         ),
         const SliverBottomSafeArea(),
       ],
@@ -478,9 +517,7 @@ class _SoundsContent extends StatelessWidget {
     required this.playingProgress,
     required this.playingProgressValue,
     required this.onPreview,
-    required this.onOpenDetails,
-    required this.onEdit,
-    required this.onRemove,
+    required this.onOpenMore,
   });
 
   final String? playingSoundId;
@@ -488,9 +525,7 @@ class _SoundsContent extends StatelessWidget {
   final Stream<double>? playingProgress;
   final double playingProgressValue;
   final ValueChanged<SavedSound> onPreview;
-  final ValueChanged<SavedSound> onOpenDetails;
-  final ValueChanged<SavedSound> onEdit;
-  final ValueChanged<SavedSound> onRemove;
+  final _OpenMore onOpenMore;
 
   @override
   Widget build(BuildContext context) {
@@ -506,9 +541,7 @@ class _SoundsContent extends StatelessWidget {
           playingProgress: playingProgress,
           playingProgressValue: playingProgressValue,
           onPreview: onPreview,
-          onOpenDetails: onOpenDetails,
-          onEdit: onEdit,
-          onRemove: onRemove,
+          onOpenMore: onOpenMore,
         );
       },
     );
@@ -591,6 +624,9 @@ class _NoResultsState extends StatelessWidget {
   }
 }
 
+/// Says when sync failed or found the vault locked. A sync that runs or
+/// succeeds says nothing: the tab syncs each time it opens, so a running or
+/// done line would only flicker above the list.
 class _SyncStatusBanner extends StatelessWidget {
   const _SyncStatusBanner();
 
@@ -600,9 +636,9 @@ class _SyncStatusBanner extends StatelessWidget {
       selector: (state) => state.status,
       builder: (context, status) {
         final message = switch (status) {
-          SoundSyncStatus.idle => null,
-          SoundSyncStatus.syncing => context.l10n.soundSyncStatusSyncing,
-          SoundSyncStatus.success => context.l10n.soundSyncStatusSynced,
+          SoundSyncStatus.idle ||
+          SoundSyncStatus.syncing ||
+          SoundSyncStatus.success => null,
           SoundSyncStatus.failure => context.l10n.soundSyncStatusFailed,
           SoundSyncStatus.locked => context.l10n.soundSyncStatusLocked,
         };
@@ -611,6 +647,7 @@ class _SyncStatusBanner extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Text(
             message,
+            key: const Key('sound_sync_status'),
             style: VineTheme.labelSmallFont(
               color: context.vineColors.onSurfaceMuted,
             ),
@@ -646,9 +683,10 @@ class _SyncLockedBanner extends StatelessWidget {
 /// library.
 enum _OwnSoundRemoval { deleteEverywhere, removeLocally }
 
-/// The library's Add sound action, above the saved cards in every state.
+/// The library's Add sound action, above the saved sounds in every state.
 ///
 /// Opens [AddSoundPage], where the sound is kept private or shared publicly.
+/// Shaped like the picker's import row above its saved sounds.
 class _AddSoundButton extends StatelessWidget {
   const _AddSoundButton({required this.onTap});
 
@@ -656,16 +694,12 @@ class _AddSoundButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: DivineButton(
-        key: const Key('sounds_add_sound'),
-        label: context.l10n.soundsAddSound,
-        leadingIcon: DivineIconName.plus,
-        type: DivineButtonType.secondary,
-        expanded: true,
-        onPressed: onTap,
-      ),
+    return SoundListActionTile(
+      key: const Key('sounds_add_sound'),
+      icon: DivineIconName.plus,
+      title: context.l10n.soundsAddSound,
+      subtitle: context.l10n.soundsAddSoundHint,
+      onTap: onTap,
     );
   }
 }
@@ -738,9 +772,24 @@ class _SearchInput extends StatelessWidget {
   }
 }
 
-/// Saved-sound list as a [SliverMainAxisGroup] so its header, filters, and
-/// cards scroll as one with the search field above them.
-class _SavedSoundsSection extends StatelessWidget {
+/// How a saved sound's row shows it, which its actions menu repeats.
+typedef _SavedSoundView = ({
+  SoundCover? cover,
+  bool isMissingFile,
+  bool cannotBeReused,
+});
+
+typedef _OpenMore = Future<void> Function(
+  SavedSound sound,
+  _SavedSoundView view,
+);
+
+/// Saved-sound list as a [SliverMainAxisGroup] so its filters and rows
+/// scroll as one with the search field above them.
+///
+/// The rows look like the sound picker's and take their covers from the same
+/// lookup of the sounds' source videos.
+class _SavedSoundsSection extends ConsumerWidget {
   const _SavedSoundsSection({
     required this.state,
     required this.playingSoundId,
@@ -748,9 +797,7 @@ class _SavedSoundsSection extends StatelessWidget {
     required this.playingProgress,
     required this.playingProgressValue,
     required this.onPreview,
-    required this.onOpenDetails,
-    required this.onEdit,
-    required this.onRemove,
+    required this.onOpenMore,
   });
 
   final SavedSoundsState state;
@@ -759,19 +806,26 @@ class _SavedSoundsSection extends StatelessWidget {
   final Stream<double>? playingProgress;
   final double playingProgressValue;
   final ValueChanged<SavedSound> onPreview;
-  final ValueChanged<SavedSound> onOpenDetails;
-  final ValueChanged<SavedSound> onEdit;
-  final ValueChanged<SavedSound> onRemove;
+  final _OpenMore onOpenMore;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final sounds = state.visibleSounds;
     final hashtags =
         state.sounds.expand((sound) => sound.personalHashtags).toSet().toList()
           ..sort();
+    final sourcesLookup = ref.watch(
+      savedSoundSourcesProvider(
+        SoundSourceReferences(state.sounds.map((sound) => sound.audio)),
+      ),
+    );
+    // Nothing to go on while the lookup runs or when it failed: rows then
+    // keep the frame stored with them, and none is marked gone.
+    final sourceCovers = sourcesLookup.hasError ? null : sourcesLookup.value;
+    // Whose own sounds stay usable follows account changes, as in the picker.
+    final viewer = ref.watch(currentAccountIdProvider);
     return SliverMainAxisGroup(
       slivers: [
-        SliverToBoxAdapter(child: _SectionHeader(count: state.sounds.length)),
         if (hashtags.isNotEmpty)
           SliverToBoxAdapter(
             child: _HashtagFilters(
@@ -779,70 +833,47 @@ class _SavedSoundsSection extends StatelessWidget {
               selectedHashtag: state.selectedHashtag,
             ),
           ),
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          sliver: SliverList.builder(
-            itemCount: sounds.length,
-            itemBuilder: (context, index) {
-              final sound = sounds[index];
-              final isPreviewing = playingSoundId == sound.id;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: SavedSoundCard(
-                  sound: sound,
-                  isMissingFile: state.isMissingFile(sound),
-                  isPlaying: isPreviewing && !playingPaused,
-                  progress: isPreviewing ? playingProgress : null,
-                  progressValue: isPreviewing ? playingProgressValue : 0,
-                  onTap: () => onOpenDetails(sound),
-                  onPreview: () => onPreview(sound),
-                  onEdit: () => onEdit(sound),
-                  onRemove: () => onRemove(sound),
-                ),
-              );
-            },
-          ),
+        SliverList.builder(
+          itemCount: sounds.length,
+          itemBuilder: (context, index) {
+            final sound = sounds[index];
+            final isPreviewing = playingSoundId == sound.id;
+            final cover = SoundCover.forSavedSound(
+              sound,
+              sourceCovers: sourceCovers,
+            );
+            final reference = sound.audio.sourceVideoReference;
+            final view = (
+              cover: cover,
+              isMissingFile: state.isMissingFile(sound),
+              cannotBeReused: SoundCover.cannotBeReused(
+                sound.audio,
+                sourceCovers,
+                viewerPubkeyHex: viewer,
+              ),
+            );
+            return SavedSoundTile(
+              sound: sound,
+              cover: cover,
+              // Only a sound with nothing to show until the lookup answers
+              // waits for it.
+              isCoverPending:
+                  cover == null &&
+                  reference != null &&
+                  sourcesLookup.isLoading &&
+                  !(sourceCovers?.containsKey(reference) ?? false),
+              isMissingFile: view.isMissingFile,
+              cannotBeReused: view.cannotBeReused,
+              isPreviewing: isPreviewing,
+              isPlaying: isPreviewing && !playingPaused,
+              progress: isPreviewing ? playingProgress : null,
+              progressValue: isPreviewing ? playingProgressValue : 0,
+              onPreview: () => onPreview(sound),
+              onOpenMore: () => onOpenMore(sound, view),
+            );
+          },
         ),
       ],
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          DivineIcon(
-            icon: DivineIconName.musicNote,
-            color: context.vineColors.accentPositive,
-            size: 20,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            context.l10n.soundsSavedLibraryTitle,
-            style: TextStyle(
-              color: context.vineColors.primaryText,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '($count)',
-            style: TextStyle(
-              color: context.vineColors.onSurfaceMuted,
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

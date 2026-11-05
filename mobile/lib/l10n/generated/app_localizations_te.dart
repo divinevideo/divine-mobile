@@ -4650,9 +4650,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'ఇప్పటికే సౌండ్స్‌లో ఉన్నాయి';
 
   @override
-  String get soundsSavedLibraryTitle => 'నా సౌండ్స్';
-
-  @override
   String get soundsSavedEmptyTitle => 'ఇంకా సేవ్ చేయబడిన శబ్దాలు లేవు';
 
   @override
@@ -4661,6 +4658,10 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'సౌండ్ జోడించండి';
+
+  @override
+  String get soundsAddSoundHint =>
+      'ఫైల్‌ను దిగుమతి చేయండి లేదా రికార్డ్ చేయండి';
 
   @override
   String get soundsAddSharePublicly => 'బహిరంగంగా పంచుకోండి';
@@ -4693,11 +4694,34 @@ class AppLocalizationsTe extends AppLocalizations {
       'పంచుకోవడానికి మీ సౌండ్‌కు ఒక శీర్షిక ఇవ్వండి.';
 
   @override
+  String get soundsShareCoverLabel => 'కవర్';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'ఐచ్ఛికం. ఇతరులు సౌండ్ ఎంచుకునేటప్పుడు మీ సౌండ్ పక్కన దీన్ని చూస్తారు.';
+
+  @override
+  String get soundsShareCoverAdd => 'కవర్ జోడించండి';
+
+  @override
+  String get soundsShareCoverReplace => 'భర్తీ చేయండి';
+
+  @override
+  String get soundsShareCoverRemove => 'కవర్‌ను తీసివేయండి';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'సౌండ్ కవర్';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'ఆ ఫైల్ రకానికి మద్దతు లేదు. ఒక ఆడియో ఫైల్‌ను ఎంచుకోండి.';
 
   @override
   String get soundsImportUnreadable => 'ఆ ఆడియో ఫైల్‌ను చదవడం సాధ్యపడలేదు.';
+
+  @override
+  String get soundsAddSilent =>
+      'ఈ సౌండ్‌లో ఏమీ వినిపించదు, కాబట్టి దీన్ని జోడించడం సాధ్యం కాదు.';
 
   @override
   String get soundsImportAccountChanged =>
@@ -4735,12 +4759,6 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'ఆ ధ్వనిని తీసివేయడం సాధ్యపడలేదు. మళ్లీ ప్రయత్నించండి.';
-
-  @override
-  String get soundSyncStatusSyncing => 'మీ శబ్దాలను సమకాలీకరిస్తోంది...';
-
-  @override
-  String get soundSyncStatusSynced => 'తాజాగా వినిపిస్తోంది';
 
   @override
   String get soundSyncStatusFailed =>
@@ -5803,6 +5821,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get soundViewSource => 'మూలాన్ని వీక్షించండి';
+
+  @override
+  String get soundCreditEdited => 'సవరించబడింది';
 
   @override
   String get soundCloseTooltip => 'మూసివేయండి';
@@ -9448,6 +9469,21 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'కాంతి లీక్';
 
   @override
+  String get videoEditorEffectLightRays => 'కాంతి కిరణాలు';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'అనామార్ఫిక్';
+
+  @override
+  String get videoEditorEffectPrism => 'ప్రిజం';
+
+  @override
+  String get videoEditorEffectWindowLight => 'కిటికీ కాంతి';
+
+  @override
+  String get videoEditorEffectSpotlight => 'స్పాట్‌లైట్';
+
+  @override
   String get videoEditorEffectSnow => 'మంచు';
 
   @override
@@ -11378,6 +11414,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'శీర్షికలేని ధ్వని';
 
   @override
+  String get videoEditorAudioUseSound => 'ఉపయోగించు';
+
+  @override
   String get videoEditorAudioFileMissing => 'ఆడియో ఫైల్ ఈ పరికరంలో లేదు';
 
   @override
@@ -11403,19 +11442,13 @@ class AppLocalizationsTe extends AppLocalizations {
       'మీ వీడియో కోసం ఆడియో విభాగాన్ని ఎంచుకోండి';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'సంఘం';
-
-  @override
-  String get videoEditorAudioCategoryFeatured => 'ఫీచర్ చేయబడింది';
 
   @override
   String get videoEditorAudioCategoryMySounds => 'నా సౌండ్స్';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'బాణం సాధనం';
+  String get videoEditorAudioFilterEffects => 'సౌండ్ ఎఫెక్ట్స్';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => 'ఎరేజర్ సాధనం';
@@ -11425,6 +11458,15 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'పెన్సిల్ సాధనం';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'నియాన్ సాధనం';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'ఇంద్రధనుస్సు సాధనం';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'కాలిగ్రఫీ సాధనం';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'కాలక్రమాన్ని చూపు';
@@ -12159,9 +12201,6 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'రంగు';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'పూర్తయింది';
 
   @override
   String get videoEditorLevelSemanticLabel => 'స్థాయి';
@@ -14254,8 +14293,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String get savedSoundRemoveAction => 'సేవ్ చేయబడిన ధ్వనిని తీసివేయండి';
 
   @override
-  String get savedSoundFileMissing =>
-      'ఈ సౌండ్ ఆడియో ఫైల్ ఈ పరికరంలో లేదు, కాబట్టి ఇది ప్లే కాదు.';
+  String get savedSoundOpenAction => 'ధ్వనిని తెరవండి';
+
+  @override
+  String get savedSoundReuseUnavailable => 'ఇకపై కొత్త వీడియోలలో ఉపయోగించలేరు';
 
   @override
   String get savedSoundClearHashtagFilter =>
@@ -16091,4 +16132,18 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'వీడియో చూడండి';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

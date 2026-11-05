@@ -1,8 +1,9 @@
-// ABOUTME: Account-scoped dependency wiring for native Concord POC screens.
+// ABOUTME: Account-scoped dependency wiring for native Concord room screens.
 // ABOUTME: Reuses the active signer and disposes UI state on account changes.
 
 import 'dart:async';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -13,6 +14,7 @@ import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/features/chat/concord_session.dart';
 import 'package:openvine/features/chat/concord_store.dart';
 import 'package:openvine/features/chat/room_activity_provider.dart';
+import 'package:openvine/features/chat/room_catalog_provider.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -21,7 +23,7 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
 
-/// Selects only channels present in the current POC catalog.
+/// Selects only channels present in the current room catalog.
 /// A missing pair opens the default; an incomplete or unknown pair is rejected.
 bool selectChatRoom(ChatCubit cubit, {String? communityId, String? channelId}) {
   if (communityId == null && channelId == null) return true;
@@ -71,24 +73,39 @@ class ChatPage extends ConsumerWidget {
         signer == null) {
       return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
     }
+    final catalogState = ref.watch(concordRoomCatalogProvider);
+    final catalog = resolveConcordCatalog(catalogState);
+    if (catalog == null || !catalog.ready) {
+      if (catalogState.isLoading) {
+        return const Center(child: DivineCircularProgressIndicator());
+      }
+      return RouteErrorScreen(message: context.l10n.dmConversationLoadError);
+    }
+    // The shared repository exists only once the catalog is ready, so check it
+    // after the catalog's loading and load-error states.
     final shared = repositoryBuilder == null
         ? ref.watch(roomActivityRepositoryProvider)
         : null;
     if (repositoryBuilder == null && shared == null) {
       return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
     }
-    final channel = channelId ?? pocChatDefaultChannel;
+    final communities = catalog.communities;
+    if (communities.isEmpty) {
+      return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
+    }
+    final selectedCommunity = communityId ?? communities.first.id;
+    final channel = channelId ?? communities.first.channels.first;
     // repositoryFor throws for a room outside the catalog and runs before
     // selectChatRoom could reject the URL, so validate the room here.
-    if (!const ChatState().communities.any(
+    if (!communities.any(
           (community) =>
-              community.id == (communityId ?? pocChatCommunityId) &&
+              community.id == selectedCommunity &&
               community.channels.contains(channel),
         ) ||
         (communityId == null) != (channelId == null)) {
       return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
     }
-    final effectiveChannel = pocChannelIdFor(channel);
+    final effectiveChannel = catalog.channelId(channel);
     final database = shared == null ? ref.watch(databaseProvider) : null;
     return BlocProvider(
       key: ValueKey((pubkey, signer, communityId, channelId, shared)),
@@ -100,12 +117,23 @@ class ChatPage extends ConsumerWidget {
               store: DriftConcordStore(
                 dao: database!.concordStoreDao,
                 account: pubkey,
-                scope: '$concordRelayUrl/${channelId ?? pocChatDefaultChannel}',
+                scope: '${catalog.scope}/$channel',
               ),
             ),
-        pocStreamForChannel: pocStreamKeyFor,
+        pocStreamForChannel: catalog.stream,
+        epoch: catalog.epoch,
+        canSend: () =>
+            catalog.canSend &&
+            catalog.communities.any((c) => c.channels.contains(channel)),
+        initialState: ChatState(
+          account: pubkey,
+          isTestCommunity: !catalog.isReal,
+          communities: communities,
+          selectedCommunityId: selectedCommunity,
+          selectedChannelId: channel,
+        ),
         sealedAuthor: pubkey,
-        channelIdFor: pocChannelIdFor,
+        channelIdFor: catalog.channelId,
         ownsRepository: shared == null,
         initialize: shared == null
             ? null

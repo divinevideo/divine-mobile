@@ -6312,6 +6312,7 @@ void main() {
                 any(that: isLiveDeletionsRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 tempRelays: any(named: 'tempRelays'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
               ),
             ).thenAnswer(
               (_) => (deletions..add(StreamController<Event>())).last.stream,
@@ -6357,6 +6358,7 @@ void main() {
               any(that: isLiveDeletionsRead),
               subscriptionId: any(named: 'subscriptionId'),
               tempRelays: any(named: 'tempRelays'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
             ),
           ).thenAnswer(
             (_) => (deletions..add(StreamController<Event>())).last.stream,
@@ -6390,6 +6392,156 @@ void main() {
         });
       });
 
+      test('asks again for refused deletions once per replay of the DMs '
+          'stored events', () {
+        fakeAsync((async) {
+          final dms = <StreamController<Event>>[];
+          final deletions = <StreamController<Event>>[];
+          void Function()? replayStart;
+          void Function(StoredEventsEnd)? replayEnd;
+          when(
+            () => mockNostrClient.subscribe(
+              any(that: isLiveDmRead),
+              subscriptionId: any(named: 'subscriptionId'),
+              tempRelays: any(named: 'tempRelays'),
+              onStoredEventsStart: any(named: 'onStoredEventsStart'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer((invocation) {
+            replayStart =
+                invocation.namedArguments[#onStoredEventsStart]
+                    as void Function()?;
+            replayEnd =
+                invocation.namedArguments[#onStoredEventsEnd]
+                    as void Function(StoredEventsEnd)?;
+            return _openLiveDmRead(invocation, dms);
+          });
+          when(
+            () => mockNostrClient.subscribe(
+              any(that: isLiveDeletionsRead),
+              subscriptionId: any(named: 'subscriptionId'),
+              tempRelays: any(named: 'tempRelays'),
+              onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+            ),
+          ).thenAnswer(
+            (_) => (deletions..add(StreamController<Event>())).last.stream,
+          );
+          when(
+            () => mockNostrClient.unsubscribe(any()),
+          ).thenAnswer((_) async {});
+          final repository = createRepository();
+
+          unawaited(repository.startListening());
+          async.flushMicrotasks();
+          deletions.single.addError(
+            const RelaySubscriptionRefusedException('restricted: no'),
+          );
+          unawaited(deletions.single.close());
+          async.flushMicrotasks();
+          expect(deletions, hasLength(1));
+
+          // A relay reconnecting, or authenticating, replays the DMs.
+          replayStart!();
+          replayEnd!(const StoredEventsEnd(deliveredEventCount: 0));
+          async.flushMicrotasks();
+          expect(deletions, hasLength(2));
+          expect(deletions.last.hasListener, isTrue);
+          expect(dms, hasLength(1), reason: 'the DM REQ was opened again');
+
+          // Refused again, it waits for the next replay: past the reconnect
+          // delay and the hold limit, nothing asks for it.
+          deletions.last.addError(
+            const RelaySubscriptionRefusedException('restricted: no'),
+          );
+          unawaited(deletions.last.close());
+          async
+            ..flushMicrotasks()
+            ..elapse(const Duration(minutes: 3))
+            ..flushMicrotasks();
+          expect(deletions, hasLength(2));
+          expect(dms, hasLength(1));
+
+          unawaited(repository.stopListening());
+          async.flushMicrotasks();
+        });
+      });
+
+      for (final (how, endDeletions, recovers)
+          in <(String, void Function(StreamController<Event>), bool)>[
+            (
+              'is refused by every relay',
+              // NostrClient reports a REQ every relay ended with CLOSED as
+              // this error, then closes its stream.
+              (deletions) {
+                deletions.addError(
+                  const RelaySubscriptionRefusedException('restricted: no'),
+                );
+                unawaited(deletions.close());
+              },
+              false,
+            ),
+            (
+              'fails for another reason',
+              (deletions) => deletions.addError(Exception('socket error')),
+              true,
+            ),
+          ]) {
+        test(
+          recovers
+              ? 'ends the DM REQ when its deletions REQ $how and re-opens both'
+              : 'keeps the DM REQ when its deletions REQ $how, and does not '
+                    'reconnect',
+          () {
+            fakeAsync((async) {
+              final dms = <StreamController<Event>>[];
+              final deletions = <StreamController<Event>>[];
+              when(
+                () => mockNostrClient.subscribe(
+                  any(that: isLiveDmRead),
+                  subscriptionId: any(named: 'subscriptionId'),
+                  tempRelays: any(named: 'tempRelays'),
+                  onStoredEventsStart: any(named: 'onStoredEventsStart'),
+                  onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+                ),
+              ).thenAnswer(
+                (invocation) => _openLiveDmRead(invocation, dms),
+              );
+              when(
+                () => mockNostrClient.subscribe(
+                  any(that: isLiveDeletionsRead),
+                  subscriptionId: any(named: 'subscriptionId'),
+                  tempRelays: any(named: 'tempRelays'),
+                  onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
+                ),
+              ).thenAnswer(
+                (_) => (deletions..add(StreamController<Event>())).last.stream,
+              );
+              when(
+                () => mockNostrClient.unsubscribe(any()),
+              ).thenAnswer((_) async {});
+              final repository = createRepository();
+
+              unawaited(repository.startListening());
+              async.flushMicrotasks();
+              expect(deletions, hasLength(1));
+
+              endDeletions(deletions.single);
+              async.flushMicrotasks();
+              expect(dms.single.hasListener, !recovers);
+
+              async
+                ..elapse(const Duration(seconds: 3))
+                ..flushMicrotasks();
+              expect(dms, hasLength(recovers ? 2 : 1));
+              expect(deletions, hasLength(recovers ? 2 : 1));
+
+              unawaited(repository.stopListening());
+              async.flushMicrotasks();
+            });
+          },
+        );
+      }
+
       for (final (how, end)
           in <(String, void Function(StreamController<Event>))>[
             ('closes', (dms) => unawaited(dms.close())),
@@ -6416,6 +6568,7 @@ void main() {
                 any(that: isLiveDeletionsRead),
                 subscriptionId: any(named: 'subscriptionId'),
                 tempRelays: any(named: 'tempRelays'),
+                onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
               ),
             ).thenAnswer(
               (_) => (deletions..add(StreamController<Event>())).last.stream,
@@ -7992,7 +8145,7 @@ void main() {
           ).captured;
           // tempRelays dials the advertised inbox in ADDITION to the pool.
           // targetRelays must stay null: it is a filter over the pool, so a
-          // non-null value there drops divine's own relay and the four
+          // non-null value there drops divine's own relay and the
           // safeFallbackRelays #2931 added for exactly this read. See #7320.
           expect(captured, [
             ['wss://own.example'],

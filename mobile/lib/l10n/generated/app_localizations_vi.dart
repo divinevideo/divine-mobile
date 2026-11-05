@@ -4453,9 +4453,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Đã có trong Âm thanh';
 
   @override
-  String get soundsSavedLibraryTitle => 'Âm thanh của tôi';
-
-  @override
   String get soundsSavedEmptyTitle => 'Chưa có âm thanh đã lưu';
 
   @override
@@ -4464,6 +4461,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Thêm âm thanh';
+
+  @override
+  String get soundsAddSoundHint => 'Nhập tệp hoặc tự ghi âm';
 
   @override
   String get soundsAddSharePublicly => 'Chia sẻ công khai';
@@ -4494,11 +4494,34 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đặt tiêu đề cho âm thanh để chia sẻ.';
 
   @override
+  String get soundsShareCoverLabel => 'Ảnh bìa';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Không bắt buộc. Mọi người thấy ảnh này cạnh âm thanh của bạn khi chọn âm thanh.';
+
+  @override
+  String get soundsShareCoverAdd => 'Thêm ảnh bìa';
+
+  @override
+  String get soundsShareCoverReplace => 'Thay ảnh';
+
+  @override
+  String get soundsShareCoverRemove => 'Gỡ ảnh bìa';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Ảnh bìa âm thanh';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Loại tệp đó không được hỗ trợ. Hãy chọn một tệp âm thanh.';
 
   @override
   String get soundsImportUnreadable => 'Không đọc được tệp âm thanh đó.';
+
+  @override
+  String get soundsAddSilent =>
+      'Âm thanh này không có tiếng gì để nghe, nên không thể thêm.';
 
   @override
   String get soundsImportAccountChanged =>
@@ -4534,12 +4557,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => 'Không gỡ được âm thanh đó. Thử lại nhé.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Đang đồng bộ âm thanh của bạn…';
-
-  @override
-  String get soundSyncStatusSynced => 'Âm thanh đã được cập nhật';
 
   @override
   String get soundSyncStatusFailed =>
@@ -5574,6 +5591,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get soundViewSource => 'Xem nguồn';
+
+  @override
+  String get soundCreditEdited => 'đã chỉnh sửa';
 
   @override
   String get soundCloseTooltip => 'Đóng';
@@ -9147,6 +9167,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Rò sáng';
 
   @override
+  String get videoEditorEffectLightRays => 'Tia sáng';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Anamorphic';
+
+  @override
+  String get videoEditorEffectPrism => 'Lăng kính';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Ánh sáng cửa sổ';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Đèn rọi';
+
+  @override
   String get videoEditorEffectSnow => 'Tuyết';
 
   @override
@@ -11037,6 +11072,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Âm thanh chưa đặt tên';
 
   @override
+  String get videoEditorAudioUseSound => 'Dùng';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Tệp âm thanh không còn trên thiết bị';
 
@@ -11061,19 +11099,13 @@ class AppLocalizationsVi extends AppLocalizations {
       'Chọn đoạn âm thanh cho video của bạn';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Cộng đồng';
-
-  @override
-  String get videoEditorAudioCategoryFeatured => 'Nổi bật';
 
   @override
   String get videoEditorAudioCategoryMySounds => 'Âm thanh của tôi';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Công cụ mũi tên';
+  String get videoEditorAudioFilterEffects => 'Hiệu ứng âm thanh';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Công cụ tẩy';
@@ -11083,6 +11115,15 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Công cụ bút chì';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Công cụ neon';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Công cụ cầu vồng';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'Công cụ thư pháp';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Hiện timeline';
@@ -11811,9 +11852,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Tông màu';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Xong';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Mức';
@@ -13849,8 +13887,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get savedSoundRemoveAction => 'Gỡ âm thanh đã lưu';
 
   @override
-  String get savedSoundFileMissing =>
-      'Tệp âm thanh của bản nhạc này không còn trên thiết bị nên không phát được.';
+  String get savedSoundOpenAction => 'Mở âm thanh';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Không còn dùng được trong video mới';
 
   @override
   String get savedSoundClearHashtagFilter => 'Xóa bộ lọc hashtag';
@@ -15664,4 +15705,18 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'Xem video';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

@@ -68,50 +68,34 @@ void main() {
     });
 
     group('Position based on tool', () {
-      testWidgets('offset is 0 when pencil is selected', (tester) async {
-        when(() => mockBloc.state).thenReturn(const VideoEditorDrawState());
+      for (final (index, tool) in DrawToolType.drawingTools.indexed) {
+        testWidgets('offset is $index when ${tool.name} is selected', (
+          tester,
+        ) async {
+          when(
+            () => mockBloc.state,
+          ).thenReturn(VideoEditorDrawState(selectedTool: tool));
+
+          await tester.pumpWidget(buildWidget());
+          await tester.pump();
+
+          final slide = tester.widget<AnimatedSlide>(
+            find.byType(AnimatedSlide),
+          );
+          expect(slide.offset, Offset(index.toDouble(), 0));
+        });
+      }
+
+      testWidgets('offset is 0 when a hide tool is selected', (tester) async {
+        when(() => mockBloc.state).thenReturn(
+          const VideoEditorDrawState(selectedTool: DrawToolType.blur),
+        );
 
         await tester.pumpWidget(buildWidget());
         await tester.pump();
 
         final slide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
         expect(slide.offset, Offset.zero);
-      });
-
-      testWidgets('offset is 1 when marker is selected', (tester) async {
-        when(() => mockBloc.state).thenReturn(
-          const VideoEditorDrawState(selectedTool: DrawToolType.marker),
-        );
-
-        await tester.pumpWidget(buildWidget());
-        await tester.pump();
-
-        final slide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
-        expect(slide.offset, const Offset(1, 0));
-      });
-
-      testWidgets('offset is 2 when arrow is selected', (tester) async {
-        when(() => mockBloc.state).thenReturn(
-          const VideoEditorDrawState(selectedTool: DrawToolType.arrow),
-        );
-
-        await tester.pumpWidget(buildWidget());
-        await tester.pump();
-
-        final slide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
-        expect(slide.offset, const Offset(2, 0));
-      });
-
-      testWidgets('offset is 3 when eraser is selected', (tester) async {
-        when(() => mockBloc.state).thenReturn(
-          const VideoEditorDrawState(selectedTool: DrawToolType.eraser),
-        );
-
-        await tester.pumpWidget(buildWidget());
-        await tester.pump();
-
-        final slide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
-        expect(slide.offset, const Offset(3, 0));
       });
     });
 
@@ -139,7 +123,10 @@ void main() {
         await tester.pumpAndSettle();
 
         slide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
-        expect(slide.offset, const Offset(3, 0));
+        expect(
+          slide.offset,
+          Offset(DrawToolType.drawingTools.indexOf(.eraser).toDouble(), 0),
+        );
 
         await controller.close();
       });

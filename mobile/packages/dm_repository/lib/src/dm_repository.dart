@@ -19,6 +19,7 @@ import 'package:dm_repository/src/dm_batch_send_budget.dart';
 import 'package:dm_repository/src/dm_clock.dart';
 import 'package:dm_repository/src/dm_decrypt_isolate.dart';
 import 'package:dm_repository/src/dm_decryption_worker.dart';
+import 'package:dm_repository/src/dm_early_deletions.dart';
 import 'package:dm_repository/src/dm_held_pool_wraps.dart';
 import 'package:dm_repository/src/dm_message_size.dart';
 import 'package:dm_repository/src/dm_reactions_repository.dart';
@@ -947,7 +948,8 @@ class DmRepository {
   StreamSubscription<Event>? _giftWrapSubscription;
 
   /// The live kind-5 read, opened once [_giftWrapSubscription]'s stored
-  /// events end or its hold limit passes, and ended with it.
+  /// events end or its hold limit passes, and ended with it. A refusal from
+  /// every relay ends it alone.
   StreamSubscription<Event>? _deletionsSubscription;
 
   /// The live subscription's progress through stored events, or null while
@@ -1094,6 +1096,11 @@ class DmRepository {
   /// capture ring keeps every line whatever the level and a sender chooses the
   /// ids, so a flood of unresolvable retractions must not be able to fill it.
   static const int maxLoggedDeferredDeletions = 64;
+
+  /// How many kind-5 deletions naming a message not stored yet are held in
+  /// memory, one per message each names, until that message is stored. A
+  /// sender chooses those targets, so past this the oldest is dropped.
+  static const int maxHeldEarlyDeletions = 256;
 
   /// Most participants, sender included, a received rumor may name and still be
   /// filed as a room. NIP-17 advises another messaging scheme for a group of
@@ -1529,6 +1536,7 @@ class DmRepository {
     unawaited(_dismissalSubscription?.cancel());
     _dismissalSubscription = null;
     _pendingReadCursors.clear();
+    _earlyDeletions.clear();
     _endLiveSubscriptions();
     _liveCatchUp?.cancelHoldLimit();
     _liveCatchUp = null;
@@ -1692,7 +1700,7 @@ class DmRepository {
       // Deliberately NOT `targetRelays`: that parameter is a filter over the
       // pool, not an addition — `RelayPool.subscribe` skips every pooled relay
       // the list does not name. Passing the own-inbox list there subtracted
-      // divine's own relay and the four `safeFallbackRelays` that #2931 added
+      // divine's own relay and the `safeFallbackRelays` that #2931 added
       // precisely so DMs written to other relays stay visible, which is the
       // opposite of the intent above. See #7320.
       //
@@ -1725,23 +1733,52 @@ class DmRepository {
       // Deletions are asked for once the DMs' stored events have ended, the
       // AUTH replay's included: a gated relay answers a deletions-only REQ at
       // once but holds the DMs, and a deletion handled before the message it
-      // names finds nothing to retract. The hold limit opens them too, as a
-      // relay can hold that end for the whole session. No catch-up either: a
-      // deletion saves no stamp, so it cannot move a window.
+      // names waits for it only in memory, and only up to a cap. The hold
+      // limit opens them too, as a relay can hold that end for the whole
+      // session. A deletion saves no stamp, so none is held back for it, but
+      // a relay that stops its stored deletions at its result cap is recorded
+      // as catch-up debt, as one that stops its DMs is, and the walk reads
+      // both kinds (#10192).
       var deletionsOpened = false;
       void openDeletions() {
         if (deletionsOpened || _disposed) return;
         if (!identical(_liveCatchUp, catchUp)) return;
         deletionsOpened = true;
+        // A refusal from every relay says nothing about the DMs, and asking
+        // again at once would be refused again, so it ends this REQ alone.
+        // The DMs' next stored-events end asks again: a reconnect or an AUTH
+        // replay may have lifted it.
+        var refused = false;
         _deletionsSubscription = _nostrClient
             .subscribe(
               [deletionsFilter],
               subscriptionId: dmDeletionsSubscriptionId(subscriptionId),
               tempRelays: ownInbox,
+              onStoredEventsEnd: (end) {
+                catchUp.markCapped(end.possiblyCappedRelays);
+                _maybeCommitCatchUp(catchUp);
+              },
             )
             .listen(
               _handleIncomingEvent,
               onError: (Object error) {
+                if (error is RelaySubscriptionRefusedException) {
+                  refused = true;
+                  deletionsOpened = false;
+                  Log.warning(
+                    'Every relay refused the live DM deletions REQ: '
+                    '${error.reason}; the DMs stay subscribed',
+                    category: LogCategory.system,
+                  );
+                  // The DMs' window can be saved past deletions nobody sent.
+                  // The debt walk reads them again, keeps a relay that
+                  // refused for now and settles one that refuses for good.
+                  catchUp.markCapped({
+                    for (final url in _relayUrlsReadBy(catchUp)) url: null,
+                  });
+                  _maybeCommitCatchUp(catchUp);
+                  return;
+                }
                 Log.error(
                   'DM deletions subscription error: $error',
                   category: LogCategory.system,
@@ -1751,6 +1788,7 @@ class DmRepository {
                 if (!_disposed) _scheduleReconnect();
               },
               onDone: () {
+                if (refused) return;
                 _endLiveSubscriptions();
                 _dropLiveCatchUp(catchUp);
                 if (!_disposed) _scheduleReconnect();
@@ -2336,12 +2374,14 @@ class DmRepository {
   /// message is stored.
   ///
   /// A deletion names the message it removes, and applying one finds that
-  /// message by id: one handled before its message is stored is dropped, and
-  /// a drain page brings a deletion before the older page holding its message.
+  /// message by id: one handled before its message is stored waits for it
+  /// only in memory, up to [maxHeldEarlyDeletions], and a drain page brings a
+  /// deletion before the older page holding its message.
   /// The gift-wrap pages read only kinds 1059 and 4 (#9468), so deletions are
   /// read here, after them and after [_recoverOutgoingNip04]. Pages `#p:[self]`
   /// kind-5 newest→oldest on the relays those pages read, the account's own
-  /// inbox [tempRelays] included; see [_runRecoveryPass].
+  /// inbox [tempRelays] included; see [_runRecoveryPass]. A deletion this
+  /// pass finds no message for is dropped, not held.
   Future<bool> _recoverDeletions(
     String pubkey,
     int generation, {
@@ -2726,7 +2766,10 @@ class DmRepository {
         if (!authoritative) sawUnansweredPage = true;
         for (var i = 0; i < events.length; i++) {
           if (_ingestSessionEnded(pubkey, generation)) return false;
-          await _handleIncomingEvent(events[i]);
+          // History is stored by now, so a deletion that names none of it
+          // rarely finds its message later this session, and holding it
+          // could push a live deletion out of the cap.
+          await _handleIncomingEvent(events[i], holdEarlyDeletions: false);
           await _maybeYieldDuringDrain(i);
         }
         // Step strictly below the oldest event seen so the loop terminates;
@@ -3676,6 +3719,7 @@ class DmRepository {
     _reconnectTimer = null;
     _liveCatchUp?.cancelHoldLimit();
     _liveCatchUp = null;
+    _earlyDeletions.clear();
     _cancelNip04CopyRetries();
     _resetRecoveryRefusalConfirmationState();
     await _drainRelayReadySubscription?.cancel();
@@ -3866,20 +3910,22 @@ class DmRepository {
   /// to. The debt walk sends the account's DM filter, which a relay the
   /// subscription was never sent to must not get.
   bool Function(String url) _relaysReadBy(_LiveCatchUp catchUp) {
-    final pool = {
-      for (final url in _nostrClient.configuredRelays)
-        normalizeRelayUrl(url) ?? url,
-    };
-    return (url) {
-      final normalized = normalizeRelayUrl(url) ?? url;
-      return pool.contains(normalized) ||
-          catchUp.inboxRelays.contains(normalized);
-    };
+    final relays = _relayUrlsReadBy(catchUp);
+    return (url) => relays.contains(normalizeRelayUrl(url) ?? url);
   }
+
+  /// The normalized URLs of the relays [catchUp]'s subscription reads; see
+  /// [_relaysReadBy].
+  Set<String> _relayUrlsReadBy(_LiveCatchUp catchUp) => {
+    for (final url in _nostrClient.configuredRelays)
+      normalizeRelayUrl(url) ?? url,
+    ...catchUp.inboxRelays,
+  };
 
   /// Durably records, for each of [capped], the part of the window it may
   /// have withheld at its result cap: from the `since:` [catchUp]'s
-  /// subscription asked from up to the oldest stamp it sent. Returns whether
+  /// subscription asked from up to the oldest stamp it sent, or the whole
+  /// window for a relay that refused the deletions REQ. Returns whether
   /// anything was recorded.
   ///
   /// Every REQ of the subscription, a reconnect's replay included, asks from
@@ -4136,10 +4182,12 @@ class DmRepository {
   /// Routes an incoming event to the correct handler based on kind.
   ///
   /// Serialized via [_eventLock] so that subscription events never race
-  /// into the dedup/insert path concurrently.
+  /// into the dedup/insert path concurrently. With [holdEarlyDeletions]
+  /// false, a deletion naming a message not stored yet is not held.
   Future<void> _handleIncomingEvent(
     Event event, {
     _LiveCatchUp? deferWireTo,
+    bool holdEarlyDeletions = true,
   }) async {
     if (event.kind == EventKind.giftWrap) {
       final gen = _resetGeneration;
@@ -4156,7 +4204,7 @@ class DmRepository {
     }
     await _withEventLock(() async {
       if (event.kind == EventKind.eventDeletion) {
-        await _handleDeletionEvent(event);
+        await _handleDeletionEvent(event, holdIfAbsent: holdEarlyDeletions);
       } else if (event.kind == EventKind.directMessage) {
         await _handleNip04Event(event, deferWireTo: deferWireTo);
       }
@@ -4187,11 +4235,15 @@ class DmRepository {
       await _eventLock;
     }
     final completer = Completer<void>();
-    _eventLock = completer.future;
+    final lock = completer.future;
+    _eventLock = lock;
     try {
       await body();
     } finally {
-      _eventLock = null;
+      // [_resetState] drops the lock, and the next session may hold its own
+      // by the time a previous session's handler ends. Clearing that one
+      // would let two of its handlers run at once.
+      if (identical(_eventLock, lock)) _eventLock = null;
       completer.complete();
     }
   }
@@ -4199,12 +4251,31 @@ class DmRepository {
   /// Handles an incoming NIP-09 kind 5 deletion event.
   ///
   /// For each `e` tag, validates that the event author matches the original
-  /// message sender (NIP-09 requirement) before soft-deleting.
-  Future<void> _handleDeletionEvent(Event deletionEvent) async {
+  /// message sender (NIP-09 requirement) before soft-deleting. With
+  /// [holdIfAbsent], a target not stored yet is held until it is; see
+  /// [_applyEarlyDeletions].
+  Future<void> _handleDeletionEvent(
+    Event deletionEvent, {
+    required bool holdIfAbsent,
+  }) async {
+    final owner = _userPubkey;
+    final generation = _resetGeneration;
     try {
       for (final tag in deletionEvent.tags) {
         if (tag.length < 2 || tag[0] != 'e') continue;
-        await _applyMessageDeletion(rumorId: tag[1], deletion: deletionEvent);
+        final target = tag[1];
+        final outcome = await _applyMessageDeletion(
+          rumorId: target,
+          deletion: deletionEvent,
+        );
+        // The message it names can still arrive, from another relay or out
+        // of order on this one. Only an event id can name a stored message.
+        if (holdIfAbsent &&
+            outcome == null &&
+            !_ingestSessionEnded(owner, generation) &&
+            _eventIdPattern.hasMatch(target)) {
+          _earlyDeletions.hold(target, deletionEvent);
+        }
       }
     } on Object catch (e, stackTrace) {
       Log.error(
@@ -4285,6 +4356,12 @@ class DmRepository {
 
   /// Wrap ids already logged by [_logDeferredDeletion] this session.
   final Set<String> _loggedDeferredDeletions = <String>{};
+
+  /// Kind-5 deletions that named a message this session had not stored yet,
+  /// applied by [_applyEarlyDeletions] once it is. Cleared with the session.
+  final DmEarlyDeletions _earlyDeletions = DmEarlyDeletions(
+    capacity: maxHeldEarlyDeletions,
+  );
 
   static final _eventIdPattern = RegExp(r'^[0-9a-f]{64}$');
 
@@ -4414,6 +4491,37 @@ class DmRepository {
       category: LogCategory.system,
     );
     return DmWrapOutcome.processed;
+  }
+
+  /// Applies the kind-5 deletions held for [messageId], now that it is stored
+  /// for [ownerPubkey]. Each one goes through [_applyMessageDeletion], so it
+  /// takes effect only if its author sent the message.
+  ///
+  /// When the account changed while the message was stored, what is held now
+  /// belongs to the next account, so it stays held.
+  Future<void> _applyEarlyDeletions(
+    String messageId, {
+    required String ownerPubkey,
+  }) async {
+    if (_ownerPubkey != ownerPubkey) return;
+    for (final deletion in _earlyDeletions.take(messageId)) {
+      Log.debug(
+        'Applying kind 5 deletion ${deletion.id}, which arrived before message '
+        '$messageId',
+        category: LogCategory.system,
+      );
+      try {
+        await _applyMessageDeletion(rumorId: messageId, deletion: deletion);
+      } on Object catch (e, stackTrace) {
+        Log.error(
+          'Failed to apply kind 5 deletion ${deletion.id} to message '
+          '$messageId: $e',
+          category: LogCategory.system,
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
+    }
   }
 
   /// Pre-decrypt dedup: has this gift wrap (or NIP-04 event) already been
@@ -5167,6 +5275,7 @@ class DmRepository {
         }
 
         if (refilesMentions) _roomsAwaitingReplyTarget.remove(rumor.id);
+        await _applyEarlyDeletions(rumor.id, ownerPubkey: ownerPubkey);
         // A soft-deleted reply can be the newest one moved; the preview has
         // to come from the newest message still shown.
         for (final refiledConversationId in {
@@ -6014,6 +6123,7 @@ class DmRepository {
         );
         return;
       }
+      await _applyEarlyDeletions(nip04Event.id, ownerPubkey: ownerPubkey);
 
       // NIP-04 created_at values are not randomized (unlike NIP-17 gift
       // wraps), so this bounded timestamp is a real send time and safe to
@@ -14172,12 +14282,16 @@ class _LiveCatchUp {
   /// Whether relays reported as possibly capped wait to be recorded.
   bool get hasCappedRelays => _cappedRelays.isNotEmpty;
 
-  /// Holds [relays] whose stored batch may have stopped at their result cap.
-  /// A first open holds none: the history drain reads below its window.
+  /// Holds [relays] whose stored batch may have stopped at their result cap,
+  /// or that refused the deletions REQ before sending one, which is recorded
+  /// with no bound. A first open holds none: the history drain reads below
+  /// its window.
   ///
   /// A relay the hold limit already recorded is reported again when its
   /// phase ends, for the same batch; a part of the window already recorded
-  /// in this phase is not held again, or the walk would read it twice.
+  /// in this phase is not held again, or the walk would read it twice. The
+  /// deletions REQ reports into the same phase, which is safe because the
+  /// walk reads deletions beside the DMs.
   void markCapped(Map<String, int?> relays) {
     if (since == null) return;
     relays.forEach((url, oldest) {

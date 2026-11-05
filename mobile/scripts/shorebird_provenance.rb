@@ -186,12 +186,18 @@ when 'emit'
   record['record_hmac'] = record_hmac(record, fingerprint_key)
 
   File.write(options[:output], JSON.pretty_generate(record) + "\n", mode: 'w', perm: 0o600)
-when 'policy-required'
+when 'policy-required', 'concord-required'
   require_options(options, :platform, :release_version, :record)
   # Preserve a legacy release's actual define shape, rather than forgiving an
   # extra key during verification. No unsigned record may select that shape.
   record = authenticated_record(options)
-  puts record['config_fingerprints'].key?(PUBLIC_PEOPLE_LIST_POLICY)
+  name = command == 'policy-required' ? PUBLIC_PEOPLE_LIST_POLICY : 'CONCORD_INVITE_URL'
+  if command == 'concord-required'
+    invite = record['config_fingerprints'].key?('CONCORD_INVITE_URL')
+    relay = record['config_fingerprints'].key?('CONCORD_RELAY_URL')
+    abort_with('original community configuration is incomplete; create a full build') if invite != relay
+  end
+  puts record['config_fingerprints'].key?(name)
 when 'verify'
   require_options(
     options,
@@ -249,5 +255,5 @@ when 'verify'
 
   File.write(options[:env_output], "SHOREBIRD_PATCH_BASELINE_COMMIT=#{baseline}\n", mode: 'w', perm: 0o600)
 else
-  abort_with('usage: shorebird_provenance.rb emit|policy-required|verify [options]')
+  abort_with('usage: shorebird_provenance.rb emit|policy-required|concord-required|verify [options]')
 end

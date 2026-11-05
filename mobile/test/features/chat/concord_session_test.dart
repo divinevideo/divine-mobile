@@ -1,8 +1,13 @@
+import 'dart:async';
+
+import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
 import 'package:openvine/features/chat/concord_session.dart';
+import 'package:openvine/features/chat/room_catalog_provider.dart';
 
 class _Signer extends Fake implements NostrSigner {
   _Signer(this.failure);
@@ -11,7 +16,123 @@ class _Signer extends Fake implements NostrSigner {
   Future<Event?> signEvent(Event event) async => throw StateError(failure);
 }
 
+class _Membership extends Fake implements ConcordCommunitySession {
+  @override
+  ConcordInviteBundle? bundle;
+}
+
+class _ObservedMembership extends Fake implements ConcordCommunitySession {
+  @override
+  bool ready = true;
+  @override
+  Object? failure;
+  @override
+  final control = ConcordControlState(communityId: '11' * 32, owner: '22' * 32)
+    ..name = 'Observed community';
+  final events = StreamController<void>();
+  @override
+  Stream<void> get changes => events.stream;
+}
+
 void main() {
+  group('Concord relay configuration', () {
+    test('configured missing relay fails closed', () {
+      if (concordInviteUrl.isNotEmpty &&
+          const String.fromEnvironment('CONCORD_RELAY_URL').isEmpty) {
+        expect(() => concordRelayUrl, throwsStateError);
+      }
+    });
+    test('configured relay contract uses the supplied relay', () {
+      if (concordInviteUrl.isNotEmpty) {
+        expect(
+          concordRelayUrl,
+          const String.fromEnvironment('CONCORD_RELAY_URL'),
+        );
+        expect(concordRelayUrl, isNotEmpty);
+      }
+    });
+  });
+  group('ConcordRoomCatalog', () {
+    test('configured catalog failure never resolves to the POC catalog', () {
+      final result = resolveConcordCatalog(
+        AsyncError<ConcordRoomCatalog>(
+          StateError('synthetic membership failure'),
+          StackTrace.current,
+        ),
+      );
+      if (concordInviteUrl.isNotEmpty) {
+        expect(result, isNull);
+      } else {
+        expect(result!.isReal, isFalse);
+      }
+    });
+
+    test(
+      'catalog observation survives transient authority incompleteness',
+      () async {
+        final session = _ObservedMembership();
+        final values = watchConcordCatalog(session)
+            .take(3)
+            .map((catalog) => catalog.ready)
+            .toList();
+        final result = expectLater(values, completion([true, false, true]));
+        await pumpEventQueue();
+        session.ready = false;
+        session.events.add(null);
+        await pumpEventQueue();
+        session.ready = true;
+        session.events.add(null);
+        await result;
+        await session.events.close();
+      },
+    );
+    test('real channel persistence scope stays stable across root epochs', () {
+      final owner = '11' * 32;
+      final salt = '22' * 32;
+      ConcordInviteBundle bundle(int epoch, String root) =>
+          ConcordInviteBundle.fromJson({
+            'community_id': deriveCommunityId(owner, salt),
+            'owner': owner,
+            'owner_salt': salt,
+            'community_root': root,
+            'root_epoch': epoch,
+            'channels': <dynamic>[],
+            'relays': <String>[],
+          }, nowMs: 0);
+      final membership = _Membership()..bundle = bundle(0, '33' * 32);
+      final catalog = ConcordRoomCatalog.real(membership);
+      final oldScope = catalog.scope;
+      membership.bundle = bundle(1, '44' * 32);
+      expect(catalog.scope, oldScope);
+      expect(catalog.epoch, 1);
+    });
+  });
+  group('Concord relay resolution', () {
+    test('configured invitation requires an explicit secure relay', () {
+      expect(
+        () => resolveConcordRelay(invite: 'configured', relay: ''),
+        throwsStateError,
+      );
+      expect(
+        () => resolveConcordRelay(
+          invite: 'configured',
+          relay: 'https://synthetic.divine.video',
+        ),
+        throwsStateError,
+      );
+      expect(
+        resolveConcordRelay(
+          invite: 'configured',
+          relay: 'wss://synthetic.divine.video/relay',
+        ),
+        'wss://synthetic.divine.video/relay',
+      );
+      expect(
+        resolveConcordRelay(invite: '', relay: ''),
+        'wss://relay.staging.dvines.org',
+      );
+    });
+  });
   group('buildConcordRepository', () {
     test(
       'shared room uses the current signer after same-account recovery',

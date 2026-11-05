@@ -9,7 +9,8 @@ import 'package:models/models.dart'
         VideoStickerRegion,
         videoLinkTagMarker,
         videoReplyVisibilityFeedValue,
-        videoReplyVisibilityTagName;
+        videoReplyVisibilityTagName,
+        withSoundCreditLines;
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/models/video_reply_context.dart';
@@ -89,10 +90,15 @@ void addTextTrackTags(
 /// Appends the descriptive tags of a video: title, summary, hashtags, NIP-32
 /// language and content-warning labels, `published_at`, duration, the
 /// accessibility `alt` text, and an optional NIP-40 expiration.
+///
+/// The summary carries the sound [creditLines] after the caption, as the
+/// content does: clients that show the summary instead, such as the Bluesky
+/// bridge, would otherwise drop the credit.
 void addVideoMetadataTags(
   List<List<String>> tags, {
   required PendingUpload upload,
   required DateTime publishedAt,
+  List<String> creditLines = const [],
   String? language,
   String? contentWarning,
   int? expirationTimestamp,
@@ -100,7 +106,9 @@ void addVideoMetadataTags(
   final title = upload.title;
   final description = upload.description;
   if (title != null) tags.add(['title', title]);
-  if (description != null) tags.add(['summary', description]);
+  if (description != null) {
+    tags.add(['summary', withSoundCreditLines(description, creditLines)]);
+  }
 
   // Drafts saved by older builds can still carry over-long, mixed-case or
   // too many tags, so the publish path applies the same rules as the picker.

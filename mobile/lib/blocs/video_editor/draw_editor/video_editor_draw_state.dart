@@ -8,8 +8,14 @@ enum DrawToolType {
   /// Marker with medium line and a bit transparent.
   marker,
 
-  /// Pencil line with a arrow on the end.
-  arrow,
+  /// Glowing tube around a lighter core.
+  neon,
+
+  /// Broad pen held at an angle: thick across it, thin along it.
+  calligraphy,
+
+  /// Line whose hue runs through the rainbow.
+  rainbow,
 
   /// Eraser tool.
   eraser,
@@ -20,11 +26,31 @@ enum DrawToolType {
   /// Hides the area dragged over behind large square blocks.
   pixelate;
 
+  /// The tools that draw on the video, in the order the bottom bar shows them.
+  static const List<DrawToolType> drawingTools = [
+    pencil,
+    marker,
+    neon,
+    calligraphy,
+    rainbow,
+    eraser,
+  ];
+
   /// Returns the paint configuration (mode, opacity, stroke width) for this tool.
   DrawToolConfig get config => switch (this) {
     .pencil => (mode: .freeStyle, opacity: 1.0, strokeWidth: 6.0),
     .marker => (mode: .freeStyle, opacity: 0.7, strokeWidth: 12.0),
-    .arrow => (mode: .freeStyleArrowEnd, opacity: 1.0, strokeWidth: 8.0),
+    .neon => (mode: EditorDrawBrushes.neon, opacity: 1.0, strokeWidth: 16.0),
+    .rainbow => (
+      mode: EditorDrawBrushes.rainbow,
+      opacity: 1.0,
+      strokeWidth: 10.0,
+    ),
+    .calligraphy => (
+      mode: EditorDrawBrushes.calligraphy,
+      opacity: 1.0,
+      strokeWidth: 14.0,
+    ),
     .eraser => (mode: .eraser, opacity: 1.0, strokeWidth: 12.0),
     // A censor area is a rectangle; it has no stroke.
     .blur => (mode: .blur, opacity: 1.0, strokeWidth: 1.0),
@@ -65,7 +91,7 @@ class VideoEditorDrawState extends Equatable {
     this.canRedo = false,
     this.strokeWidths = const {},
     this.opacity = 1.0,
-    this.selectedColor = VideoEditorConstants.primaryColor,
+    this.selectedColor = VideoEditorConstants.drawDefaultColor,
     this.selectedTool = .pencil,
     this.mode = .freeStyle,
     this.blurIntensity = VideoEditorConstants.censorDefaultIntensity,

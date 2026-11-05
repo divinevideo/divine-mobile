@@ -4194,9 +4194,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => '已在声音库中';
 
   @override
-  String get soundsSavedLibraryTitle => '我的声音';
-
-  @override
   String get soundsSavedEmptyTitle => '还没有保存的声音';
 
   @override
@@ -4204,6 +4201,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get soundsAddSound => '添加声音';
+
+  @override
+  String get soundsAddSoundHint => '导入文件或自己录制';
 
   @override
   String get soundsAddSharePublicly => '公开分享';
@@ -4233,10 +4233,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundsShareTitleRequiredHint => '给你的声音起个标题才能分享。';
 
   @override
+  String get soundsShareCoverLabel => '封面';
+
+  @override
+  String get soundsShareCoverDescription => '可选。大家挑选声音时，会在你的声音旁边看到它。';
+
+  @override
+  String get soundsShareCoverAdd => '添加封面';
+
+  @override
+  String get soundsShareCoverReplace => '替换';
+
+  @override
+  String get soundsShareCoverRemove => '移除封面';
+
+  @override
+  String get soundsShareCoverSheetTitle => '声音封面';
+
+  @override
   String get soundsImportUnsupportedFormat => '不支持该文件类型。请选择音频文件。';
 
   @override
   String get soundsImportUnreadable => '无法读取该音频文件。';
+
+  @override
+  String get soundsAddSilent => '这个声音里听不到任何内容，因此无法添加。';
 
   @override
   String get soundsImportAccountChanged => '你切换了账号，因此这个声音没有被添加。';
@@ -4270,12 +4291,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => '无法移除该声音。请重试。';
-
-  @override
-  String get soundSyncStatusSyncing => '正在同步你的声音…';
-
-  @override
-  String get soundSyncStatusSynced => '声音已是最新';
 
   @override
   String get soundSyncStatusFailed => '无法同步你的声音，我们会再试一次。';
@@ -5251,6 +5266,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get soundViewSource => '查看来源';
+
+  @override
+  String get soundCreditEdited => '已编辑';
 
   @override
   String get soundCloseTooltip => '关闭';
@@ -8662,6 +8680,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectLightLeak => '漏光';
 
   @override
+  String get videoEditorEffectLightRays => '光束';
+
+  @override
+  String get videoEditorEffectAnamorphic => '变形镜头';
+
+  @override
+  String get videoEditorEffectPrism => '棱镜';
+
+  @override
+  String get videoEditorEffectWindowLight => '窗光';
+
+  @override
+  String get videoEditorEffectSpotlight => '聚光灯';
+
+  @override
   String get videoEditorEffectSnow => '雪花';
 
   @override
@@ -10444,6 +10477,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorAudioUntitledSound => '未命名声音';
 
   @override
+  String get videoEditorAudioUseSound => '使用';
+
+  @override
   String get videoEditorAudioFileMissing => '音频文件已经不在这台设备上了';
 
   @override
@@ -10465,19 +10501,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorAudioSegmentInstruction => '为你的视频选择音频片段';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => '社区';
-
-  @override
-  String get videoEditorAudioCategoryFeatured => '精选';
 
   @override
   String get videoEditorAudioCategoryMySounds => '我的声音';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => '箭头工具';
+  String get videoEditorAudioFilterEffects => '音效';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => '橡皮擦工具';
@@ -10487,6 +10517,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => '铅笔工具';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => '霓虹工具';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => '彩虹工具';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => '书法工具';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => '显示时间线';
@@ -11158,9 +11197,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => '色相';
-
-  @override
-  String get videoEditorDoneSemanticLabel => '完成';
 
   @override
   String get videoEditorLevelSemanticLabel => '层级';
@@ -13061,7 +13097,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get savedSoundRemoveAction => '移除已保存的声音';
 
   @override
-  String get savedSoundFileMissing => '这个声音的音频文件已经不在这台设备上了，没法播放。';
+  String get savedSoundOpenAction => '打开声音';
+
+  @override
+  String get savedSoundReuseUnavailable => '已无法在新视频中使用';
 
   @override
   String get savedSoundClearHashtagFilter => '清除话题标签筛选';
@@ -14796,4 +14835,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => '观看视频';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

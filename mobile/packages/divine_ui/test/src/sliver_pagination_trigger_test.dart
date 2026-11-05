@@ -8,11 +8,17 @@ void main() {
       required bool hasMore,
       required bool isLoadingMore,
       required VoidCallback onLoadMore,
+      int rowsAbove = 0,
     }) {
       return MaterialApp(
         home: Scaffold(
           body: CustomScrollView(
             slivers: [
+              SliverList.builder(
+                itemCount: rowsAbove,
+                itemBuilder: (context, index) =>
+                    SizedBox(height: 100, child: Text('Row $index')),
+              ),
               SliverPaginationTrigger(
                 hasMore: hasMore,
                 isLoadingMore: isLoadingMore,
@@ -23,6 +29,60 @@ void main() {
         ),
       );
     }
+
+    testWidgets(
+      'waits until the end of a long list is in reach',
+      (tester) async {
+        var callCount = 0;
+
+        await tester.pumpWidget(
+          buildSubject(
+            hasMore: true,
+            isLoadingMore: false,
+            onLoadMore: () => callCount++,
+            rowsAbove: 50,
+          ),
+        );
+        expect(find.text('Row 0'), findsOneWidget);
+        expect(callCount, isZero);
+
+        await tester.drag(find.text('Row 0'), const Offset(0, -6000));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Row 49'), findsOneWidget);
+        expect(callCount, equals(1));
+      },
+    );
+
+    testWidgets(
+      'lets onLoadMore change state, since it runs after the frame',
+      (tester) async {
+        var loads = 0;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: StatefulBuilder(
+              builder: (context, setState) => Scaffold(
+                body: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(child: Text('Loads $loads')),
+                    SliverPaginationTrigger(
+                      hasMore: loads == 0,
+                      isLoadingMore: false,
+                      onLoadMore: () => setState(() => loads++),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Loads 1'), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'shows nothing when hasMore is false',

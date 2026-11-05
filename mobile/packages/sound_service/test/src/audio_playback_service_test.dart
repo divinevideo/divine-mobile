@@ -428,6 +428,83 @@ void main() {
       verify(() => mockPlayer.setVolume(0.5)).called(1);
     });
 
+    group('setLooping', () {
+      late StreamController<Duration> positions;
+      late StreamController<ProcessingState> states;
+
+      setUp(() {
+        positions = StreamController<Duration>.broadcast();
+        states = StreamController<ProcessingState>.broadcast();
+        addTearDown(positions.close);
+        addTearDown(states.close);
+        when(
+          () => mockPlayer.positionStream,
+        ).thenAnswer((_) => positions.stream);
+        when(
+          () => mockPlayer.processingStateStream,
+        ).thenAnswer((_) => states.stream);
+        when(() => mockPlayer.duration).thenReturn(const Duration(seconds: 4));
+        when(() => mockPlayer.playing).thenReturn(true);
+        when(() => mockPlayer.seek(any())).thenAnswer((_) async {});
+        service = AudioPlaybackService(
+          audioPlayer: mockPlayer,
+          audioSessionWrapper: mockSessionWrapper,
+        );
+      });
+
+      test('starts the audio over when its position reaches the end', () async {
+        service.setLooping(looping: true);
+
+        positions.add(const Duration(seconds: 2));
+        await pumpEventQueue();
+        verifyNever(() => mockPlayer.seek(any()));
+
+        positions.add(const Duration(seconds: 4));
+        await pumpEventQueue();
+        verify(() => mockPlayer.seek(Duration.zero)).called(1);
+      });
+
+      test('starts the audio over when the player completes', () async {
+        service.setLooping(looping: true);
+
+        states.add(ProcessingState.completed);
+        await pumpEventQueue();
+
+        verify(() => mockPlayer.seek(Duration.zero)).called(1);
+      });
+
+      test('leaves paused audio at its end', () async {
+        when(() => mockPlayer.playing).thenReturn(false);
+        service.setLooping(looping: true);
+
+        positions.add(const Duration(seconds: 4));
+        await pumpEventQueue();
+
+        verifyNever(() => mockPlayer.seek(any()));
+      });
+
+      test('stops starting over once turned off', () async {
+        service
+          ..setLooping(looping: true)
+          ..setLooping(looping: false);
+
+        states.add(ProcessingState.completed);
+        await pumpEventQueue();
+
+        verifyNever(() => mockPlayer.seek(any()));
+      });
+
+      test('keeps going when starting over fails', () async {
+        when(() => mockPlayer.seek(any())).thenThrow(Exception('seek failed'));
+        service.setLooping(looping: true);
+
+        states.add(ProcessingState.completed);
+        await pumpEventQueue();
+
+        verify(() => mockPlayer.seek(Duration.zero)).called(1);
+      });
+    });
+
     test('setVolume clamps volume above 1.0', () async {
       when(() => mockPlayer.setVolume(1)).thenAnswer((_) async {});
 

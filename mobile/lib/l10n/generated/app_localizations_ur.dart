@@ -4498,9 +4498,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'پہلے سے آوازوں میں ہے';
 
   @override
-  String get soundsSavedLibraryTitle => 'میری آوازیں';
-
-  @override
   String get soundsSavedEmptyTitle => 'ابھی کوئی محفوظ آواز نہیں';
 
   @override
@@ -4509,6 +4506,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'ساؤنڈ شامل کریں';
+
+  @override
+  String get soundsAddSoundHint => 'فائل درآمد کریں یا خود ریکارڈ کریں';
 
   @override
   String get soundsAddSharePublicly => 'عوامی طور پر شیئر کریں';
@@ -4540,11 +4540,34 @@ class AppLocalizationsUr extends AppLocalizations {
       'شیئر کرنے کے لیے اپنی ساؤنڈ کو عنوان دیں۔';
 
   @override
+  String get soundsShareCoverLabel => 'کور';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'اختیاری۔ لوگ ساؤنڈ چنتے وقت اسے آپ کے ساؤنڈ کے ساتھ دیکھتے ہیں۔';
+
+  @override
+  String get soundsShareCoverAdd => 'کور شامل کریں';
+
+  @override
+  String get soundsShareCoverReplace => 'بدلیں';
+
+  @override
+  String get soundsShareCoverRemove => 'کور ہٹائیں';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'ساؤنڈ کا کور';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'یہ فائل کی قسم سپورٹ نہیں ہے۔ کوئی آڈیو فائل منتخب کریں۔';
 
   @override
   String get soundsImportUnreadable => 'وہ آڈیو فائل پڑھی نہیں جا سکی۔';
+
+  @override
+  String get soundsAddSilent =>
+      'اس ساؤنڈ میں کچھ سنائی نہیں دیتا، اس لیے اسے شامل نہیں کیا جا سکتا۔';
 
   @override
   String get soundsImportAccountChanged =>
@@ -4582,12 +4605,6 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'وہ ساؤنڈ ہٹایا نہیں جا سکا۔ دوبارہ کوشش کریں۔';
-
-  @override
-  String get soundSyncStatusSyncing => 'آپ کی آوازیں ہم آہنگ ہو رہی ہیں…';
-
-  @override
-  String get soundSyncStatusSynced => 'آوازیں تازہ ترین ہیں';
 
   @override
   String get soundSyncStatusFailed =>
@@ -5621,6 +5638,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get soundViewSource => 'ماخذ دیکھیں';
+
+  @override
+  String get soundCreditEdited => 'ترمیم شدہ';
 
   @override
   String get soundCloseTooltip => 'بند کریں';
@@ -9191,6 +9211,21 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'روشنی کا رساؤ';
 
   @override
+  String get videoEditorEffectLightRays => 'روشنی کی کرنیں';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'اینامورفک';
+
+  @override
+  String get videoEditorEffectPrism => 'منشور';
+
+  @override
+  String get videoEditorEffectWindowLight => 'کھڑکی کی روشنی';
+
+  @override
+  String get videoEditorEffectSpotlight => 'اسپاٹ لائٹ';
+
+  @override
   String get videoEditorEffectSnow => 'برف';
 
   @override
@@ -11087,6 +11122,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'بلا عنوان آواز';
 
   @override
+  String get videoEditorAudioUseSound => 'استعمال کریں';
+
+  @override
   String get videoEditorAudioFileMissing => 'آڈیو فائل اب اس ڈیوائس پر نہیں ہے';
 
   @override
@@ -11110,19 +11148,13 @@ class AppLocalizationsUr extends AppLocalizations {
       'اپنی ویڈیو کے لیے آڈیو حصہ منتخب کریں';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'کمیونٹی';
-
-  @override
-  String get videoEditorAudioCategoryFeatured => 'نمایاں';
 
   @override
   String get videoEditorAudioCategoryMySounds => 'میری آوازیں';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'تیر ٹول';
+  String get videoEditorAudioFilterEffects => 'صوتی اثرات';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => 'ایریزر ٹول';
@@ -11132,6 +11164,15 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'پنسل ٹول';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'نیون ٹول';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'قوس قزح ٹول';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'خطاطی ٹول';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'ٹائم لائن دکھائیں';
@@ -11858,9 +11899,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'رنگت';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'ہو گیا';
 
   @override
   String get videoEditorLevelSemanticLabel => 'سطح';
@@ -13897,8 +13935,11 @@ class AppLocalizationsUr extends AppLocalizations {
   String get savedSoundRemoveAction => 'محفوظ شدہ ساؤنڈ ہٹائیں';
 
   @override
-  String get savedSoundFileMissing =>
-      'اس ساؤنڈ کی آڈیو فائل اب اس ڈیوائس پر نہیں ہے، اس لیے یہ چل نہیں سکتی۔';
+  String get savedSoundOpenAction => 'ساؤنڈ کھولیں';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'اب نئی ویڈیوز میں استعمال نہیں ہو سکتا';
 
   @override
   String get savedSoundClearHashtagFilter => 'ہیش ٹیگ فلٹر صاف کریں';
@@ -15720,4 +15761,18 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'ویڈیو دیکھیں';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

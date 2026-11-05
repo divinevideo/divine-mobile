@@ -4517,9 +4517,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Nasa Sounds na';
 
   @override
-  String get soundsSavedLibraryTitle => 'Mga Sound Ko';
-
-  @override
   String get soundsSavedEmptyTitle => 'Wala pang naka-save na sound';
 
   @override
@@ -4528,6 +4525,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Magdagdag ng sound';
+
+  @override
+  String get soundsAddSoundHint => 'Mag-import ng file o mag-record';
 
   @override
   String get soundsAddSharePublicly => 'I-share sa publiko';
@@ -4559,11 +4559,34 @@ class AppLocalizationsFil extends AppLocalizations {
       'Bigyan ng title ang sound mo para ma-share ito.';
 
   @override
+  String get soundsShareCoverLabel => 'Cover';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Opsyonal. Makikita ito ng iba sa tabi ng sound mo kapag pumipili sila.';
+
+  @override
+  String get soundsShareCoverAdd => 'Magdagdag ng cover';
+
+  @override
+  String get soundsShareCoverReplace => 'Palitan';
+
+  @override
+  String get soundsShareCoverRemove => 'Alisin ang cover';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Cover ng sound';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Hindi suportado ang file type na iyan. Pumili ng audio file.';
 
   @override
   String get soundsImportUnreadable => 'Hindi mabasa ang audio file na iyan.';
+
+  @override
+  String get soundsAddSilent =>
+      'Walang maririnig sa sound na ito, kaya hindi ito maidadagdag.';
 
   @override
   String get soundsImportAccountChanged =>
@@ -4601,12 +4624,6 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'Hindi natanggal ang sound na iyon. Subukan ulit.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Sini-sync ang iyong mga tunog…';
-
-  @override
-  String get soundSyncStatusSynced => 'Napapanahon na ang mga tunog';
 
   @override
   String get soundSyncStatusFailed =>
@@ -5649,6 +5666,9 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get soundViewSource => 'Tingnan ang source';
+
+  @override
+  String get soundCreditEdited => 'in-edit';
 
   @override
   String get soundCloseTooltip => 'Isara';
@@ -9254,6 +9274,21 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Light Leak';
 
   @override
+  String get videoEditorEffectLightRays => 'Light Rays';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Anamorphic';
+
+  @override
+  String get videoEditorEffectPrism => 'Prism';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Window Light';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Spotlight';
+
+  @override
   String get videoEditorEffectSnow => 'Niyebe';
 
   @override
@@ -11167,6 +11202,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Walang pamagat na sound';
 
   @override
+  String get videoEditorAudioUseSound => 'Gamitin';
+
+  @override
   String get videoEditorAudioFileMissing => 'Wala na sa device ang audio file';
 
   @override
@@ -11191,19 +11229,13 @@ class AppLocalizationsFil extends AppLocalizations {
       'Piliin ang audio segment para sa video mo';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Community';
-
-  @override
-  String get videoEditorAudioCategoryFeatured => 'Itinatampok';
 
   @override
   String get videoEditorAudioCategoryMySounds => 'Mga Sound Ko';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Tool na arrow';
+  String get videoEditorAudioFilterEffects => 'Sound effects';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Tool na pambura';
@@ -11213,6 +11245,16 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Tool na lapis';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Tool na neon';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Tool na bahaghari';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel =>
+      'Tool na kaligrapiya';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Ipakita ang timeline';
@@ -11945,9 +11987,6 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Hue';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Tapos na';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Antas';
@@ -14024,8 +14063,11 @@ class AppLocalizationsFil extends AppLocalizations {
   String get savedSoundRemoveAction => 'Alisin ang naka-save na sound';
 
   @override
-  String get savedSoundFileMissing =>
-      'Wala na sa device ang audio file ng sound na ito, kaya hindi ito matutugtog.';
+  String get savedSoundOpenAction => 'Buksan ang sound';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Hindi na pwedeng gamitin sa mga bagong video';
 
   @override
   String get savedSoundClearHashtagFilter => 'I-clear ang hashtag filter';
@@ -15852,4 +15894,18 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'Panoorin ang video';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

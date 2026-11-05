@@ -17,7 +17,8 @@ import 'package:models/models.dart'
         InspiredByInfo,
         NativeProofData,
         VideoEvent,
-        stripInspiredByAttribution;
+        stripInspiredByAttribution,
+        stripSoundCredit;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/mentions/mention_text_editing.dart';
@@ -928,7 +929,9 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   void initFromPublishedVideo(VideoEvent video) {
     _suppressAutosave = true;
 
-    final content = stripInspiredByAttribution(video.content);
+    // The sound credit line is the publisher's, not part of the caption;
+    // the update service puts it back on save.
+    final content = stripSoundCredit(stripInspiredByAttribution(video.content));
 
     state = VideoEditorProviderState(
       // Getter falls back to rawTags so the toggle survives a cache round-trip.

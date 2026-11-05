@@ -6,7 +6,11 @@ import 'dart:io';
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart'
-    show ClipSourceCredit, VideoEvent, clipSourceCreditTagMarker;
+    show
+        ClipSourceCredit,
+        VideoEvent,
+        clipSourceCreditTagMarker,
+        withSoundCreditLines;
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_metadata_update_error.dart';
@@ -372,9 +376,16 @@ class VideoMetadataUpdateService {
       // videos.
       tags.add(['title', editorState.title.trim()]);
 
+      // Credited like the content, for clients that show the summary.
       final summary = editorState.description.trim();
       if (summary.isNotEmpty) {
-        tags.add(['summary', summary]);
+        tags.add([
+          'summary',
+          withSoundCreditLines(
+            summary,
+            originalVideo.soundCredits.map((credit) => credit.line),
+          ),
+        ]);
       }
 
       for (final hashtag in HashtagExtractor.normalizeVideoHashtags(
@@ -462,8 +473,13 @@ class VideoMetadataUpdateService {
         );
       }
 
+      // An edit cannot change the sounds, so their credit lines stay as
+      // published; the editor never showed them.
       final content = withInspiredByContentReference(
-        editorState.description.trim(),
+        withSoundCreditLines(
+          editorState.description.trim(),
+          originalVideo.soundCredits.map((credit) => credit.line),
+        ),
         editorState.inspiredByNpubs,
       );
 

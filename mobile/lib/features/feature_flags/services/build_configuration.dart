@@ -78,9 +78,11 @@ class BuildConfiguration {
         // A device-local developer opt-in, never enabled for an entire build.
         return false;
       case FeatureFlag.concordChat:
-        // Default OFF: the POC signs with the account's real key into a
-        // stream anyone can read, so only reviewer builds opt in (#10094).
-        return const bool.fromEnvironment('FF_CONCORD_CHAT');
+        // A configured public community is the release opt-in. Invalid invite
+        // material stays visible as a membership error, never a POC fallback.
+        // Unconfigured developer/reviewer builds retain their explicit opt-in.
+        return const String.fromEnvironment('CONCORD_INVITE_URL').isNotEmpty ||
+            const bool.fromEnvironment('FF_CONCORD_CHAT');
     }
   }
 

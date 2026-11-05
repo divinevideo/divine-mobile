@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:concord_protocol/concord_protocol.dart';
+import 'package:concord_repository/concord_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,15 +13,481 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/features/chat/chat_message_tile.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
+import 'package:openvine/features/chat/concord_reports_provider.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
 class _ChatCubit extends MockCubit<ChatState> implements ChatCubit {}
 
+Future<void> _pumpChatWidget(WidgetTester tester, Widget widget) =>
+    tester.pumpWidget(ProviderScope(child: widget));
+
 void main() {
   group(ChatScreen, () {
+    testWidgets('retired pending messages restore as drafts without retrying', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final cubit = _ChatCubit();
+      final author = '33' * 32;
+      final message = ChatMessage(
+        id: '44' * 32,
+        channelId: 'general',
+        author: author,
+        body: 'Earlier message',
+        createdAt: 1,
+      );
+      final state = ChatState(
+        pendingIds: [message.id],
+        retiredPendingIds: [message.id],
+      );
+      when(() => cubit.state).thenReturn(state);
+      whenListen(cubit, const Stream<ChatState>.empty(), initialState: state);
+      when(cubit.visibleMessages).thenReturn([message]);
+      when(() => cubit.discardPendingDraft(message.id))
+          .thenAnswer((_) async {});
+      await _pumpChatWidget(
+        tester,
+        ProviderScope(
+          overrides: [
+            fetchUserProfileProvider(author).overrideWith(
+              (ref) async => UserProfile(
+                pubkey: author,
+                displayName: 'Synthetic member',
+                rawData: const {},
+                createdAt: DateTime(2026),
+                eventId: '88' * 32,
+              ),
+            ),
+            profileIdentityResolvingProvider(author).overrideWithValue(false),
+            profileVanishedProvider(author).overrideWith((ref) => false),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<ChatCubit>.value(
+              value: cubit,
+              child: const ChatScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'Current draft');
+      await tester.tap(find.text(l10n.messagesRoomRestoreDraft));
+      await tester.pump();
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'Current draft\nEarlier message',
+      );
+      verifyNever(() => cubit.retry(any()));
+      verifyNever(
+        () => cubit.send(
+          communityId: any(named: 'communityId'),
+          channelId: any(named: 'channelId'),
+          author: any(named: 'author'),
+          body: any(named: 'body'),
+          nowMilliseconds: any(named: 'nowMilliseconds'),
+        ),
+      );
+      await tester.tap(find.text(l10n.messagesRoomDiscardDraft));
+      await tester.pump();
+      verify(() => cubit.discardPendingDraft(message.id)).called(1);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'Current draft\nEarlier message',
+      );
+    });
+    testWidgets(
+      'reports the selected real room message with signed HTTP authentication',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final cubit = _ChatCubit();
+        final community = '11' * 32;
+        final channel = '22' * 32;
+        final author = '33' * 32;
+        final message = ChatMessage(
+          id: '44' * 32,
+          channelId: channel,
+          author: author,
+          body: 'Report this message',
+          createdAt: 1,
+        );
+        final state = ChatState(
+          isTestCommunity: false,
+          communities: [
+            ChatCommunity(
+              community,
+              'Synthetic',
+              [channel],
+              channelNames: {channel: 'general'},
+            ),
+          ],
+          selectedCommunityId: community,
+          selectedChannelId: channel,
+        );
+        when(() => cubit.state).thenReturn(state);
+        whenListen(cubit, const Stream<ChatState>.empty(), initialState: state);
+        when(cubit.visibleMessages).thenReturn([message]);
+        Map<String, dynamic>? submitted;
+        final reports = ConcordReports(
+          url: Uri.parse('https://reports.example/v1/reports'),
+          signer: (template) async => {
+            ...template,
+            'pubkey': '55' * 32,
+            'id': '66' * 32,
+            'sig': '77' * 64,
+          },
+          post: (url, body, headers) async {
+            submitted = jsonDecode(body) as Map<String, dynamic>;
+            expect(headers['authorization'], startsWith('Nostr '));
+            return {'caseId': 'synthetic-case'};
+          },
+        );
+        await _pumpChatWidget(
+          tester,
+          ProviderScope(
+            overrides: [
+              concordReportsProvider.overrideWithValue(reports),
+              fetchUserProfileProvider(author).overrideWith(
+                (ref) async => UserProfile(
+                  pubkey: author,
+                  displayName: 'Synthetic member',
+                  rawData: const {},
+                  createdAt: DateTime(2026),
+                  eventId: '88' * 32,
+                ),
+              ),
+              profileIdentityResolvingProvider(author).overrideWithValue(false),
+              profileVanishedProvider(author).overrideWith((ref) => false),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: BlocProvider<ChatCubit>.value(
+                value: cubit,
+                child: const ChatScreen(),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text(l10n.reportSubmit));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.reportReasonSpam));
+        await tester.pumpAndSettle();
+        expect(submitted!['target'] as Map, {
+          'communityId': community,
+          'channelId': channel,
+          'rumorId': message.id,
+        });
+        expect(submitted!['reason'], 'NS-spam');
+        expect(
+          find.text(l10n.reportReceivedThankYou),
+          findsOneWidget,
+        );
+      },
+    );
+    testWidgets('a room report can name child safety and CSAM', (
+      tester,
+    ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final cubit = _ChatCubit();
+      final community = '11' * 32;
+      final channel = '22' * 32;
+      final author = '33' * 32;
+      final message = ChatMessage(
+        id: '44' * 32,
+        channelId: channel,
+        author: author,
+        body: 'Report this message',
+        createdAt: 1,
+      );
+      final state = ChatState(
+        isTestCommunity: false,
+        communities: [
+          ChatCommunity(community, 'Synthetic', [channel]),
+        ],
+        selectedCommunityId: community,
+        selectedChannelId: channel,
+      );
+      when(() => cubit.state).thenReturn(state);
+      whenListen(cubit, const Stream<ChatState>.empty(), initialState: state);
+      when(cubit.visibleMessages).thenReturn([message]);
+      Map<String, dynamic>? submitted;
+      final reports = ConcordReports(
+        url: Uri.parse('https://reports.example/v1/reports'),
+        signer: (template) async => {
+          ...template,
+          'pubkey': '55' * 32,
+          'id': '66' * 32,
+          'sig': '77' * 64,
+        },
+        post: (url, body, headers) async {
+          submitted = jsonDecode(body) as Map<String, dynamic>;
+          return {'caseId': 'synthetic-case'};
+        },
+      );
+      await _pumpChatWidget(
+        tester,
+        ProviderScope(
+          overrides: [
+            concordReportsProvider.overrideWithValue(reports),
+            fetchUserProfileProvider(author).overrideWith(
+              (ref) async => UserProfile(
+                pubkey: author,
+                displayName: 'Synthetic member',
+                rawData: const {},
+                createdAt: DateTime(2026),
+                eventId: '88' * 32,
+              ),
+            ),
+            profileIdentityResolvingProvider(author).overrideWithValue(false),
+            profileVanishedProvider(author).overrideWith((ref) => false),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<ChatCubit>.value(
+              value: cubit,
+              child: const ChatScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text(l10n.reportSubmit));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.reportReasonChildSafety), findsOneWidget);
+      await tester.ensureVisible(find.text(l10n.reportReasonCsam));
+      await tester.tap(find.text(l10n.reportReasonCsam));
+      await tester.pumpAndSettle();
+      expect(submitted!['reason'], 'NS-csam');
+    });
+    testWidgets(
+      'a report submits through the provider current when the reason is '
+      'chosen',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final cubit = _ChatCubit();
+        final community = '11' * 32;
+        final channel = '22' * 32;
+        final author = '33' * 32;
+        final message = ChatMessage(
+          id: '44' * 32,
+          channelId: channel,
+          author: author,
+          body: 'Report this message',
+          createdAt: 1,
+        );
+        final state = ChatState(
+          isTestCommunity: false,
+          communities: [
+            ChatCommunity(community, 'Synthetic', [channel]),
+          ],
+          selectedCommunityId: community,
+          selectedChannelId: channel,
+        );
+        when(() => cubit.state).thenReturn(state);
+        whenListen(cubit, const Stream<ChatState>.empty(), initialState: state);
+        when(cubit.visibleMessages).thenReturn([message]);
+        final submittedBy = <String>[];
+        ConcordReports reportsNamed(String name) => ConcordReports(
+          url: Uri.parse('https://reports.example/v1/reports'),
+          signer: (template) async => {
+            ...template,
+            'pubkey': '55' * 32,
+            'id': '66' * 32,
+            'sig': '77' * 64,
+          },
+          post: (url, body, headers) async {
+            submittedBy.add(name);
+            return {'caseId': 'synthetic-case'};
+          },
+        );
+        var current = reportsNamed('first');
+        await _pumpChatWidget(
+          tester,
+          ProviderScope(
+            overrides: [
+              concordReportsProvider.overrideWith((ref) => current),
+              fetchUserProfileProvider(author).overrideWith(
+                (ref) async => UserProfile(
+                  pubkey: author,
+                  displayName: 'Synthetic member',
+                  rawData: const {},
+                  createdAt: DateTime(2026),
+                  eventId: '88' * 32,
+                ),
+              ),
+              profileIdentityResolvingProvider(author).overrideWithValue(false),
+              profileVanishedProvider(author).overrideWith((ref) => false),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: BlocProvider<ChatCubit>.value(
+                value: cubit,
+                child: const ChatScreen(),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text(l10n.reportSubmit));
+        await tester.pumpAndSettle();
+        // The catalog changes while the reason sheet is open, which rebuilds
+        // the provider and ends the instance read before it.
+        current = reportsNamed('second');
+        ProviderScope.containerOf(
+          tester.element(find.byType(ChatScreen)),
+        ).invalidate(concordReportsProvider);
+        await tester.tap(find.text(l10n.reportReasonSpam));
+        await tester.pumpAndSettle();
+        expect(submittedBy, ['second']);
+        expect(find.text(l10n.reportReceivedThankYou), findsOneWidget);
+      },
+    );
+    testWidgets('a failed draft discard is logged, not thrown', (
+      tester,
+    ) async {
+      final cubit = _ChatCubit();
+      final author = '33' * 32;
+      final message = ChatMessage(
+        id: '44' * 32,
+        channelId: 'general',
+        author: author,
+        body: 'Earlier message',
+        createdAt: 1,
+      );
+      final state = ChatState(
+        pendingIds: [message.id],
+        retiredPendingIds: [message.id],
+      );
+      when(() => cubit.state).thenReturn(state);
+      whenListen(cubit, const Stream<ChatState>.empty(), initialState: state);
+      when(cubit.visibleMessages).thenReturn([message]);
+      when(
+        () => cubit.discardPendingDraft(message.id),
+      ).thenAnswer((_) async => throw StateError('store unavailable'));
+      await _pumpChatWidget(
+        tester,
+        ProviderScope(
+          overrides: [
+            fetchUserProfileProvider(author).overrideWith(
+              (ref) async => UserProfile(
+                pubkey: author,
+                displayName: 'Synthetic member',
+                rawData: const {},
+                createdAt: DateTime(2026),
+                eventId: '88' * 32,
+              ),
+            ),
+            profileIdentityResolvingProvider(author).overrideWithValue(false),
+            profileVanishedProvider(author).overrideWith((ref) => false),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<ChatCubit>.value(
+              value: cubit,
+              child: const ChatScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(
+        find.text(
+          lookupAppLocalizations(const Locale('en')).messagesRoomDiscardDraft,
+        ),
+      );
+      await tester.pump();
+      verify(() => cubit.discardPendingDraft(message.id)).called(1);
+      expect(tester.takeException(), isNull);
+    });
+    testWidgets('offers Report only on other members’ messages', (
+      tester,
+    ) async {
+      final cubit = _ChatCubit();
+      final self = '55' * 32;
+      final other = '33' * 32;
+      final own = ChatMessage(
+        id: '44' * 32,
+        channelId: '22' * 32,
+        author: self,
+        body: 'My message',
+        createdAt: 1,
+      );
+      final theirs = ChatMessage(
+        id: '66' * 32,
+        channelId: '22' * 32,
+        author: other,
+        body: 'Their message',
+        createdAt: 2,
+      );
+      final state = ChatState(
+        account: self,
+        isTestCommunity: false,
+        pendingIds: [own.id],
+      );
+      when(() => cubit.state).thenReturn(state);
+      whenListen(cubit, const Stream<ChatState>.empty(), initialState: state);
+      when(cubit.visibleMessages).thenReturn([own, theirs]);
+      final reports = ConcordReports(
+        url: Uri.parse('https://reports.example/v1/reports'),
+        signer: (template) async => template,
+        post: (url, body, headers) async => {'caseId': 'synthetic-case'},
+      );
+      await _pumpChatWidget(
+        tester,
+        ProviderScope(
+          overrides: [
+            concordReportsProvider.overrideWithValue(reports),
+            for (final author in [self, other]) ...[
+              fetchUserProfileProvider(author).overrideWith(
+                (ref) async => UserProfile(
+                  pubkey: author,
+                  displayName: 'Synthetic member',
+                  rawData: const {},
+                  createdAt: DateTime(2026),
+                  eventId: '88' * 32,
+                ),
+              ),
+              profileIdentityResolvingProvider(
+                author,
+              ).overrideWithValue(false),
+              profileVanishedProvider(author).overrideWith((ref) => false),
+            ],
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BlocProvider<ChatCubit>.value(
+              value: cubit,
+              child: const ChatScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      ChatMessageTile tileOf(ChatMessage message) =>
+          tester.widget<ChatMessageTile>(
+            find.ancestor(
+              of: find.text(message.body),
+              matching: find.byType(ChatMessageTile),
+            ),
+          );
+      expect(
+        find.text(lookupAppLocalizations(const Locale('en')).reportSubmit),
+        findsOneWidget,
+      );
+      expect(tileOf(theirs).onReport, isNotNull);
+      expect(tileOf(own).onReport, isNull);
+    });
     testWidgets('keeps focus and a new draft while a send finishes', (
       tester,
     ) async {
@@ -38,7 +506,8 @@ void main() {
           nowMilliseconds: any(named: 'nowMilliseconds'),
         ),
       ).thenAnswer((_) => sent.future);
-      await tester.pumpWidget(
+      await _pumpChatWidget(
+        tester,
         MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -70,6 +539,67 @@ void main() {
       expect(find.text('next draft'), findsOneWidget);
       expect(tester.testTextInput.isVisible, isTrue);
     });
+    testWidgets('a send that finishes after leaving the room is not restored', (
+      tester,
+    ) async {
+      final cubit = _ChatCubit();
+      whenListen(
+        cubit,
+        const Stream<ChatState>.empty(),
+        initialState: const ChatState(),
+      );
+      when(cubit.visibleMessages).thenReturn([]);
+      final sent = Completer<bool>();
+      final next = Completer<bool>();
+      final sends = [sent, next];
+      when(
+        () => cubit.send(
+          communityId: any(named: 'communityId'),
+          channelId: any(named: 'channelId'),
+          author: any(named: 'author'),
+          body: any(named: 'body'),
+          nowMilliseconds: any(named: 'nowMilliseconds'),
+        ),
+      ).thenAnswer((_) => sends.removeAt(0).future);
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      Future<void> pumpRoom({required bool open}) => tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: open
+                ? BlocProvider<ChatCubit>.value(
+                    value: cubit,
+                    child: const ChatScreen(),
+                  )
+                : const SizedBox(),
+          ),
+        ),
+      );
+      await pumpRoom(open: true);
+      await tester.enterText(find.byType(TextField), 'first message');
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      await pumpRoom(open: false);
+      sent.complete(true);
+      await tester.pump();
+      await pumpRoom(open: true);
+      expect(find.text('first message'), findsNothing);
+
+      // A draft typed while the send was in flight is still the person's.
+      await tester.enterText(find.byType(TextField), 'second message');
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'third message');
+      await tester.pump();
+      await pumpRoom(open: false);
+      next.complete(true);
+      await tester.pump();
+      await pumpRoom(open: true);
+      expect(find.text('third message'), findsOneWidget);
+    });
     for (final width in [390.0, 1400.0]) {
       for (final theme in [VineTheme.theme, VineTheme.lightTheme]) {
         testWidgets(
@@ -94,7 +624,8 @@ void main() {
             tester.view.physicalSize = Size(width, 900);
             tester.view.devicePixelRatio = 1;
             addTearDown(tester.view.reset);
-            await tester.pumpWidget(
+            await _pumpChatWidget(
+              tester,
               ProviderScope(
                 overrides: [
                   fetchUserProfileProvider(author).overrideWith(
@@ -150,7 +681,8 @@ void main() {
       ).thenReturn(const ChatState(selectedChannelId: 'introductions'));
       when(cubit.visibleMessages).thenReturn([]);
       whenListen(cubit, const Stream<ChatState>.empty());
-      await tester.pumpWidget(
+      await _pumpChatWidget(
+        tester,
         MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -195,7 +727,8 @@ void main() {
                 nowMilliseconds: any(named: 'nowMilliseconds'),
               ),
             ).thenAnswer((_) async => accepted);
-            await tester.pumpWidget(
+            await _pumpChatWidget(
+              tester,
               MaterialApp(
                 localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
@@ -254,7 +787,8 @@ void main() {
       });
 
       Future<TextEditingController> pumpComposer(WidgetTester tester) async {
-        await tester.pumpWidget(
+        await _pumpChatWidget(
+          tester,
           MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -384,7 +918,8 @@ void main() {
         when(cubit.visibleMessages).thenReturn([]);
         whenListen(cubit, const Stream<ChatState>.empty());
         when(cubit.start).thenAnswer((_) async {});
-        await tester.pumpWidget(
+        await _pumpChatWidget(
+          tester,
           MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -431,7 +966,8 @@ void main() {
         ChatState state,
       ) async {
         when(() => cubit.state).thenReturn(state);
-        await tester.pumpWidget(
+        await _pumpChatWidget(
+          tester,
           ProviderScope(
             overrides: [
               fetchUserProfileProvider(author)
@@ -496,7 +1032,8 @@ void main() {
         tester,
       ) async {
         const homeIndicator = EdgeInsets.only(bottom: 34);
-        await tester.pumpWidget(
+        await _pumpChatWidget(
+          tester,
           MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -522,7 +1059,8 @@ void main() {
       testWidgets('the message field is set up for multi-line messages', (
         tester,
       ) async {
-        await tester.pumpWidget(
+        await _pumpChatWidget(
+          tester,
           MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,

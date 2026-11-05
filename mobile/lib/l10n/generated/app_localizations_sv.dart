@@ -4486,9 +4486,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Finns redan i Ljud';
 
   @override
-  String get soundsSavedLibraryTitle => 'Mina ljud';
-
-  @override
   String get soundsSavedEmptyTitle => 'Inga sparade ljud ännu';
 
   @override
@@ -4497,6 +4494,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Lägg till ljud';
+
+  @override
+  String get soundsAddSoundHint => 'Importera en fil eller spela in ett eget';
 
   @override
   String get soundsAddSharePublicly => 'Dela offentligt';
@@ -4528,11 +4528,34 @@ class AppLocalizationsSv extends AppLocalizations {
       'Ge ditt ljud en titel för att dela det.';
 
   @override
+  String get soundsShareCoverLabel => 'Omslag';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Valfritt. Andra ser det bredvid ditt ljud när de väljer ett.';
+
+  @override
+  String get soundsShareCoverAdd => 'Lägg till omslag';
+
+  @override
+  String get soundsShareCoverReplace => 'Byt ut';
+
+  @override
+  String get soundsShareCoverRemove => 'Ta bort omslaget';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Ljudets omslag';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Den filtypen stöds inte. Välj en ljudfil.';
 
   @override
   String get soundsImportUnreadable => 'Ljudfilen kunde inte läsas.';
+
+  @override
+  String get soundsAddSilent =>
+      'Det hörs ingenting i det här ljudet, så det kan inte läggas till.';
 
   @override
   String get soundsImportAccountChanged =>
@@ -4569,12 +4592,6 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'Kunde inte ta bort det ljudet. Försök igen.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Synkar dina ljud…';
-
-  @override
-  String get soundSyncStatusSynced => 'Ljuden är uppdaterade';
 
   @override
   String get soundSyncStatusFailed =>
@@ -5606,6 +5623,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get soundViewSource => 'Visa källa';
+
+  @override
+  String get soundCreditEdited => 'redigerad';
 
   @override
   String get soundCloseTooltip => 'Stäng';
@@ -9188,6 +9208,21 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Ljusläcka';
 
   @override
+  String get videoEditorEffectLightRays => 'Ljusstrålar';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Anamorfisk';
+
+  @override
+  String get videoEditorEffectPrism => 'Prisma';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Fönsterljus';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Strålkastare';
+
+  @override
   String get videoEditorEffectSnow => 'Snö';
 
   @override
@@ -11091,6 +11126,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Namnlöst ljud';
 
   @override
+  String get videoEditorAudioUseSound => 'Använd';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Ljudfilen finns inte kvar på enheten';
 
@@ -11116,19 +11154,13 @@ class AppLocalizationsSv extends AppLocalizations {
       'Välj ljudsegmentet för din video';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Gemenskap';
-
-  @override
-  String get videoEditorAudioCategoryFeatured => 'Utvalda';
 
   @override
   String get videoEditorAudioCategoryMySounds => 'Mina ljud';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Pilverktyg';
+  String get videoEditorAudioFilterEffects => 'Ljudeffekter';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Suddverktyg';
@@ -11138,6 +11170,15 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Pennverktyg';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Neonverktyg';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Regnbågsverktyg';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'Kalligrafiverktyg';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Visa tidslinje';
@@ -11864,9 +11905,6 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Nyans';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Klar';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Nivå';
@@ -13916,8 +13954,11 @@ class AppLocalizationsSv extends AppLocalizations {
   String get savedSoundRemoveAction => 'Ta bort sparat ljud';
 
   @override
-  String get savedSoundFileMissing =>
-      'Ljudfilen för det här ljudet finns inte kvar på enheten, så det går inte att spela upp.';
+  String get savedSoundOpenAction => 'Öppna ljudet';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Kan inte längre användas i nya videor';
 
   @override
   String get savedSoundClearHashtagFilter => 'Rensa hashtaggfiltret';
@@ -15738,4 +15779,18 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'Titta på videon';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

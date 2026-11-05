@@ -4631,9 +4631,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Deja în Sunete';
 
   @override
-  String get soundsSavedLibraryTitle => 'Sunetele mele';
-
-  @override
   String get soundsSavedEmptyTitle => 'Niciun sunet salvat încă';
 
   @override
@@ -4642,6 +4639,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Adaugă sunet';
+
+  @override
+  String get soundsAddSoundHint => 'Importă un fișier sau înregistrează unul';
 
   @override
   String get soundsAddSharePublicly => 'Împărtășește public';
@@ -4673,11 +4673,34 @@ class AppLocalizationsRo extends AppLocalizations {
       'Dă-i un titlu sunetului ca să-l poți împărtăși.';
 
   @override
+  String get soundsShareCoverLabel => 'Copertă';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Opțional. Oamenii o văd lângă sunetul tău când aleg unul.';
+
+  @override
+  String get soundsShareCoverAdd => 'Adaugă copertă';
+
+  @override
+  String get soundsShareCoverReplace => 'Înlocuiește';
+
+  @override
+  String get soundsShareCoverRemove => 'Elimină coperta';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Coperta sunetului';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Acest tip de fișier nu este acceptat. Alege un fișier audio.';
 
   @override
   String get soundsImportUnreadable => 'Fișierul audio nu a putut fi citit.';
+
+  @override
+  String get soundsAddSilent =>
+      'În acest sunet nu se aude nimic, așa că nu poate fi adăugat.';
 
   @override
   String get soundsImportAccountChanged =>
@@ -4715,12 +4738,6 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'Nu am putut elimina acel sunet. Încearcă din nou.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Se sincronizează sunetele tale…';
-
-  @override
-  String get soundSyncStatusSynced => 'Sunetele sunt la zi';
 
   @override
   String get soundSyncStatusFailed =>
@@ -5777,6 +5794,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get soundViewSource => 'Vezi sursa';
+
+  @override
+  String get soundCreditEdited => 'editat';
 
   @override
   String get soundCloseTooltip => 'Închide';
@@ -9406,6 +9426,21 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Scurgere de lumină';
 
   @override
+  String get videoEditorEffectLightRays => 'Raze de lumină';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Anamorfic';
+
+  @override
+  String get videoEditorEffectPrism => 'Prismă';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Lumină de fereastră';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Reflector';
+
+  @override
   String get videoEditorEffectSnow => 'Zăpadă';
 
   @override
@@ -11321,6 +11356,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Sunet fără titlu';
 
   @override
+  String get videoEditorAudioUseSound => 'Folosește';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Fișierul audio nu mai este pe dispozitiv';
 
@@ -11347,19 +11385,13 @@ class AppLocalizationsRo extends AppLocalizations {
       'Alege segmentul audio pentru videoclipul tău';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Comunitate';
-
-  @override
-  String get videoEditorAudioCategoryFeatured => 'Recomandate';
 
   @override
   String get videoEditorAudioCategoryMySounds => 'Sunetele mele';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Instrument săgeată';
+  String get videoEditorAudioFilterEffects => 'Efecte';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Instrument radieră';
@@ -11369,6 +11401,16 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Instrument creion';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Instrument neon';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Instrument curcubeu';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel =>
+      'Instrument caligrafie';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Afișează cronologia';
@@ -12109,9 +12151,6 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Nuanță';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Gata';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Nivel';
@@ -14198,8 +14237,11 @@ class AppLocalizationsRo extends AppLocalizations {
   String get savedSoundRemoveAction => 'Elimină sunetul salvat';
 
   @override
-  String get savedSoundFileMissing =>
-      'Fișierul audio al acestui sunet nu mai este pe dispozitiv, așa că nu poate fi redat.';
+  String get savedSoundOpenAction => 'Deschide sunetul';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Nu mai poate fi folosit în videoclipuri noi';
 
   @override
   String get savedSoundClearHashtagFilter => 'Șterge filtrul de hashtaguri';
@@ -16038,4 +16080,18 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'Urmărește videoclipul';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

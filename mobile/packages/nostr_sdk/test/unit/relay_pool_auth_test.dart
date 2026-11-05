@@ -441,6 +441,71 @@ void main() {
       );
     });
 
+    group('after the relay rejected AUTH on the connection', () {
+      const eventId =
+          '6666666666666666666666666666666666666666666666666666666666666666';
+      const refusal = 'auth-required: event marked as protected';
+
+      setUp(() async {
+        await relay.deliver(['AUTH', challenge]);
+        await relay.deliver([
+          'OK',
+          sentAuthEventId(relay),
+          false,
+          'error: relay needs serviceUrl to be configured before AUTH can work',
+        ]);
+      });
+
+      Future<PublishOutcome> publish() => nostr.relayPool.sendEventAwaitOk(
+        [
+          'EVENT',
+          {'id': eventId, 'kind': EventKind.giftWrap},
+        ],
+        eventId: eventId,
+        targetRelays: [relay.url],
+        timeout: const Duration(seconds: 30),
+      );
+
+      test('fails a publish refused for missing AUTH at once', () async {
+        final outcomeFuture = publish();
+        // strfry answers without a new challenge once one is outstanding.
+        await relay.deliver(['OK', eventId, false, refusal]);
+
+        final outcome = await outcomeFuture.timeout(
+          const Duration(seconds: 2),
+          onTimeout: () => fail('the publish waited for an AUTH never sent'),
+        );
+        expect(outcome.rejectedBy, equals({relay.url: refusal}));
+      });
+
+      test('does not sign the re-sent challenge again, and fails the publish '
+          'at once', () async {
+        final outcomeFuture = publish();
+        await relay.deliver(['AUTH', challenge]);
+        await relay.deliver(['OK', eventId, false, refusal]);
+
+        final outcome = await outcomeFuture.timeout(
+          const Duration(seconds: 2),
+          onTimeout: () => fail('the publish waited on a second AUTH'),
+        );
+        expect(outcome.rejectedBy, equals({relay.url: refusal}));
+        expect(sentMessagesOfType(relay, 'AUTH'), hasLength(1));
+      });
+
+      test('drops a publish parked for AUTH when the relay repeats the '
+          'challenge, as another rejected AUTH would', () async {
+        await nostr.relayPool.send([
+          'EVENT',
+          {'id': eventId, 'kind': EventKind.giftWrap},
+        ]);
+        expect(relay.pendingAuthedMessages, hasLength(1));
+
+        await relay.deliver(['AUTH', challenge]);
+
+        expect(relay.pendingAuthedMessages, isEmpty);
+      });
+    });
+
     test('reports auth-required reason when relay never challenges', () async {
       const eventId =
           '7777777777777777777777777777777777777777777777777777777777777777';

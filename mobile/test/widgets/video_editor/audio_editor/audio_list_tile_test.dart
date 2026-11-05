@@ -1,6 +1,7 @@
 // ABOUTME: Tests for AudioListTile widget
 // ABOUTME: Validates rendering, selected state, and tap callback
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
@@ -167,6 +168,53 @@ void main() {
         expect(find.text(l10n.videoEditorAudioUntitledSound), findsOneWidget);
       });
 
+      testWidgets('names the creator of an unnamed video sound', (
+        tester,
+      ) async {
+        final audio = _createTestAudioEvent(
+          title: AudioEvent.originalSoundTitle,
+        ).copyWith(creatorName: 'retrashhh');
+        await tester.pumpWidget(buildWidget(audio: audio));
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(l10n.originalSoundByCreator('retrashhh')),
+          findsOneWidget,
+        );
+        expect(find.text(AudioEvent.originalSoundTitle), findsNothing);
+      });
+
+      testWidgets('names the creator in place of the published default title', (
+        tester,
+      ) async {
+        const publishedTitle = '${AudioEvent.originalSoundTitle} - @retrashhh';
+        final audio = _createTestAudioEvent(
+          title: publishedTitle,
+        ).copyWith(creatorName: 'retrashhh');
+        await tester.pumpWidget(buildWidget(audio: audio));
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(l10n.originalSoundByCreator('retrashhh')),
+          findsOneWidget,
+        );
+        expect(find.text(publishedTitle), findsNothing);
+      });
+
+      testWidgets('keeps the title a publisher gave the sound', (
+        tester,
+      ) async {
+        final audio = _createTestAudioEvent(
+          title: 'Night drive',
+        ).copyWith(creatorName: 'retrashhh');
+        await tester.pumpWidget(buildWidget(audio: audio));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Night drive'), findsOneWidget);
+      });
+
       testWidgets('renders formatted duration', (tester) async {
         final audio = _createTestAudioEvent(duration: 125.0);
         await tester.pumpWidget(buildWidget(audio: audio));
@@ -204,6 +252,33 @@ void main() {
     });
 
     group('Reuse count', () {
+      testWidgets('keeps one line, cutting a long source after the count', (
+        tester,
+      ) async {
+        const source = 'https://pixabay.com/users/absounds-46529880/';
+        // A phone's width, where the source no longer fits beside the rest.
+        tester.view
+          ..physicalSize = const Size(1080, 2400)
+          ..devicePixelRatio = 3;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(
+          buildWidget(
+            audio: _createTestAudioEvent(source: source, duration: 6),
+            videoCount: 23,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final count = l10n.soundVideoCount(23);
+        final subtitle = tester.renderObject<RenderParagraph>(
+          find.textContaining(count),
+        );
+        final text = subtitle.text.toPlainText();
+        expect(text.indexOf(count), lessThan(text.indexOf(source)));
+        expect(subtitle.didExceedMaxLines, isTrue);
+      });
+
       testWidgets('renders the localized reuse count', (tester) async {
         await tester.pumpWidget(
           buildWidget(audio: _createTestAudioEvent(), videoCount: 12),

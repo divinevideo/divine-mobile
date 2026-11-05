@@ -4228,9 +4228,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => '이미 사운드에 있음';
 
   @override
-  String get soundsSavedLibraryTitle => '내 사운드';
-
-  @override
   String get soundsSavedEmptyTitle => '저장된 사운드가 아직 없음';
 
   @override
@@ -4238,6 +4235,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get soundsAddSound => '사운드 추가';
+
+  @override
+  String get soundsAddSoundHint => '파일을 가져오거나 직접 녹음해요';
 
   @override
   String get soundsAddSharePublicly => '공개로 공유';
@@ -4267,11 +4267,33 @@ class AppLocalizationsKo extends AppLocalizations {
   String get soundsShareTitleRequiredHint => '공유하려면 사운드 제목을 입력해 주세요.';
 
   @override
+  String get soundsShareCoverLabel => '커버';
+
+  @override
+  String get soundsShareCoverDescription =>
+      '선택 사항이에요. 사운드를 고를 때 내 사운드 옆에 표시돼요.';
+
+  @override
+  String get soundsShareCoverAdd => '커버 추가';
+
+  @override
+  String get soundsShareCoverReplace => '교체';
+
+  @override
+  String get soundsShareCoverRemove => '커버 삭제';
+
+  @override
+  String get soundsShareCoverSheetTitle => '사운드 커버';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       '지원하지 않는 파일 형식이에요. 오디오 파일을 골라 주세요.';
 
   @override
   String get soundsImportUnreadable => '그 오디오 파일을 읽을 수 없어요.';
+
+  @override
+  String get soundsAddSilent => '이 사운드에는 들리는 소리가 없어서 추가할 수 없어요.';
 
   @override
   String get soundsImportAccountChanged => '계정을 바꿔서 이 사운드는 추가되지 않았어요.';
@@ -4306,12 +4328,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => '해당 사운드를 삭제하지 못했어요. 다시 시도해 주세요.';
-
-  @override
-  String get soundSyncStatusSyncing => '사운드를 동기화하는 중…';
-
-  @override
-  String get soundSyncStatusSynced => '사운드가 최신 상태입니다';
 
   @override
   String get soundSyncStatusFailed => '사운드를 동기화하지 못했어요. 다시 시도할게요.';
@@ -5304,6 +5320,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get soundViewSource => '원본 보기';
+
+  @override
+  String get soundCreditEdited => '편집됨';
 
   @override
   String get soundCloseTooltip => '닫기';
@@ -8757,6 +8776,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectLightLeak => '빛 번짐';
 
   @override
+  String get videoEditorEffectLightRays => '빛줄기';
+
+  @override
+  String get videoEditorEffectAnamorphic => '아나모픽';
+
+  @override
+  String get videoEditorEffectPrism => '프리즘';
+
+  @override
+  String get videoEditorEffectWindowLight => '창문 빛';
+
+  @override
+  String get videoEditorEffectSpotlight => '스포트라이트';
+
+  @override
   String get videoEditorEffectSnow => '눈';
 
   @override
@@ -10570,6 +10604,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorAudioUntitledSound => '제목 없는 사운드';
 
   @override
+  String get videoEditorAudioUseSound => '사용';
+
+  @override
   String get videoEditorAudioFileMissing => '오디오 파일이 기기에 없어요';
 
   @override
@@ -10592,19 +10629,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorAudioSegmentInstruction => '동영상에 사용할 오디오 구간을 선택하세요';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => '커뮤니티';
-
-  @override
-  String get videoEditorAudioCategoryFeatured => '추천';
 
   @override
   String get videoEditorAudioCategoryMySounds => '내 사운드';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => '화살표 도구';
+  String get videoEditorAudioFilterEffects => '효과음';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => '지우개 도구';
@@ -10614,6 +10645,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => '연필 도구';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => '네온 도구';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => '무지개 도구';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => '캘리그래피 도구';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => '타임라인 표시';
@@ -11301,9 +11341,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => '색조';
-
-  @override
-  String get videoEditorDoneSemanticLabel => '완료';
 
   @override
   String get videoEditorLevelSemanticLabel => '레벨';
@@ -13243,7 +13280,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get savedSoundRemoveAction => '저장한 사운드 삭제';
 
   @override
-  String get savedSoundFileMissing => '이 사운드의 오디오 파일이 기기에 없어서 재생할 수 없어요.';
+  String get savedSoundOpenAction => '사운드 열기';
+
+  @override
+  String get savedSoundReuseUnavailable => '이제 새 영상에는 쓸 수 없어요';
 
   @override
   String get savedSoundClearHashtagFilter => '해시태그 필터 지우기';
@@ -14993,4 +15033,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => '동영상 보기';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

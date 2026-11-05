@@ -2676,6 +2676,26 @@ void main() {
       );
     });
 
+    test('strips the sound credit line along with the inspired-by line', () {
+      const credit =
+          '♪ Monkeys Spinning Monkeys – Kevin MacLeod (incompetech.com), '
+          'CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ (edited)';
+      container
+          .read(videoEditorProvider.notifier)
+          .initFromPublishedVideo(
+            buildVideo(
+              content:
+                  'A caption\n\n$credit\n\n'
+                  'Inspired by nostr:${normalizeToNpub('e' * 64)}',
+            ),
+          );
+
+      expect(
+        container.read(videoEditorProvider).description,
+        equals('A caption'),
+      );
+    });
+
     test('strips a whole-content inspired-by line (empty caption publish)', () {
       // Empty-caption publishes trim the leading newlines, so the
       // attribution line is the entire content. Before the fix the strip

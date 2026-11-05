@@ -4542,9 +4542,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Вече е в Звуци';
 
   @override
-  String get soundsSavedLibraryTitle => 'Моите звуци';
-
-  @override
   String get soundsSavedEmptyTitle => 'Все още няма запазени звуци';
 
   @override
@@ -4553,6 +4550,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Добави звук';
+
+  @override
+  String get soundsAddSoundHint => 'Импортирай файл или запиши звук';
 
   @override
   String get soundsAddSharePublicly => 'Сподели публично';
@@ -4584,11 +4584,34 @@ class AppLocalizationsBg extends AppLocalizations {
       'Дай заглавие на звука, за да го споделиш.';
 
   @override
+  String get soundsShareCoverLabel => 'Корица';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'По избор. Хората я виждат до звука ти, когато избират звук.';
+
+  @override
+  String get soundsShareCoverAdd => 'Добави корица';
+
+  @override
+  String get soundsShareCoverReplace => 'Замени';
+
+  @override
+  String get soundsShareCoverRemove => 'Премахни корицата';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Корица на звука';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Този тип файл не се поддържа. Избери аудиофайл.';
 
   @override
   String get soundsImportUnreadable => 'Този аудиофайл не можа да се прочете.';
+
+  @override
+  String get soundsAddSilent =>
+      'В този звук нищо не се чува, затова не може да се добави.';
 
   @override
   String get soundsImportAccountChanged =>
@@ -4625,12 +4648,6 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'Този звук не можа да се премахне. Опитай пак.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Синхронизиране на звуците ви…';
-
-  @override
-  String get soundSyncStatusSynced => 'Звуците са актуални';
 
   @override
   String get soundSyncStatusFailed =>
@@ -5672,6 +5689,9 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get soundViewSource => 'Виж източника';
+
+  @override
+  String get soundCreditEdited => 'редактиран';
 
   @override
   String get soundCloseTooltip => 'Затвори';
@@ -9277,6 +9297,21 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Светлинен отблясък';
 
   @override
+  String get videoEditorEffectLightRays => 'Светлинни лъчи';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Анаморфен';
+
+  @override
+  String get videoEditorEffectPrism => 'Призма';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Светлина от прозорец';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Прожектор';
+
+  @override
   String get videoEditorEffectSnow => 'Сняг';
 
   @override
@@ -11187,6 +11222,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Звук без заглавие';
 
   @override
+  String get videoEditorAudioUseSound => 'Използвай';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'Аудиофайлът вече го няма на устройството';
 
@@ -11212,19 +11250,13 @@ class AppLocalizationsBg extends AppLocalizations {
       'Избери аудио сегмента за видеото си';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Общност';
-
-  @override
-  String get videoEditorAudioCategoryFeatured => 'Препоръчани';
 
   @override
   String get videoEditorAudioCategoryMySounds => 'Моите звуци';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Инструмент със стрелка';
+  String get videoEditorAudioFilterEffects => 'Ефекти';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel =>
@@ -11235,6 +11267,16 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Инструмент молив';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Инструмент неон';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Инструмент дъга';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel =>
+      'Инструмент калиграфия';
 
   @override
   String get videoEditorShowTimelineSemanticLabel =>
@@ -11964,9 +12006,6 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Нюанс';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Готово';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Ниво';
@@ -14039,8 +14078,11 @@ class AppLocalizationsBg extends AppLocalizations {
   String get savedSoundRemoveAction => 'Премахни запазения звук';
 
   @override
-  String get savedSoundFileMissing =>
-      'Аудиофайлът на този звук вече го няма на устройството, затова не може да се възпроизведе.';
+  String get savedSoundOpenAction => 'Отвори звука';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Вече не може да се използва в нови видеоклипове';
 
   @override
   String get savedSoundClearHashtagFilter => 'Изчисти филтъра по хаштаг';
@@ -15867,4 +15909,18 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'Гледай видеото';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

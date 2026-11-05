@@ -237,6 +237,7 @@ class RequestPreviewView extends ConsumerWidget {
                   isRetiredModerationAccount,
                 ),
                 isGroup: participantPubkeys.length > 1,
+                participantPubkeys: participantPubkeys,
               ),
             ),
             _ActionButtons(
@@ -358,6 +359,7 @@ class _ProfileContent extends StatelessWidget {
     required this.moderation,
     required this.isClosedThread,
     required this.isGroup,
+    required this.participantPubkeys,
   });
 
   final String displayName;
@@ -365,6 +367,9 @@ class _ProfileContent extends StatelessWidget {
   final ProfileStats? stats;
   final bool isClosedThread;
   final bool isGroup;
+
+  /// The request's counterparties, self excluded.
+  final List<String> participantPubkeys;
 
   /// Whether counts are still expected to arrive for this account.
   ///
@@ -478,6 +483,7 @@ class _ProfileContent extends StatelessWidget {
                 messages: messages,
                 senderDisplayName: displayName,
                 currentPubkey: currentPubkey,
+                participantPubkeys: participantPubkeys,
               ),
             ],
           ),
@@ -492,11 +498,13 @@ class _InvitePreview extends StatelessWidget {
     required this.messages,
     required this.senderDisplayName,
     required this.currentPubkey,
+    required this.participantPubkeys,
   });
 
   final List<DmMessage> messages;
   final String senderDisplayName;
   final String currentPubkey;
+  final List<String> participantPubkeys;
 
   @override
   Widget build(BuildContext context) {
@@ -509,13 +517,19 @@ class _InvitePreview extends StatelessWidget {
     }
     if (inviteMessage == null) return const SizedBox.shrink();
 
+    final isSent =
+        currentPubkey.isNotEmpty &&
+        inviteMessage.message.senderPubkey == currentPubkey;
     return Padding(
       padding: const EdgeInsets.only(top: 24),
       child: CollaboratorInviteCard(
         invite: inviteMessage.invite,
-        isSent:
-            currentPubkey.isNotEmpty &&
-            inviteMessage.message.senderPubkey == currentPubkey,
+        isSent: isSent,
+        collaboratorPubkey: CollaboratorInvite.collaboratorPubkeyFor(
+          isSent: isSent,
+          currentPubkey: currentPubkey,
+          counterpartyPubkeys: participantPubkeys,
+        ),
         senderDisplayName: senderDisplayName,
       ),
     );

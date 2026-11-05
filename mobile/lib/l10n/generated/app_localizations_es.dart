@@ -4543,9 +4543,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Ya está en Sonidos';
 
   @override
-  String get soundsSavedLibraryTitle => 'Mis sonidos';
-
-  @override
   String get soundsSavedEmptyTitle => 'Aún no hay sonidos guardados';
 
   @override
@@ -4554,6 +4551,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Agregar sonido';
+
+  @override
+  String get soundsAddSoundHint => 'Importá un archivo o grabá uno';
 
   @override
   String get soundsAddSharePublicly => 'Compartir públicamente';
@@ -4585,11 +4585,34 @@ class AppLocalizationsEs extends AppLocalizations {
       'Poné un título a tu sonido para compartirlo.';
 
   @override
+  String get soundsShareCoverLabel => 'Portada';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Opcional. La gente la ve junto a tu sonido cuando elige uno.';
+
+  @override
+  String get soundsShareCoverAdd => 'Agregar portada';
+
+  @override
+  String get soundsShareCoverReplace => 'Reemplazar';
+
+  @override
+  String get soundsShareCoverRemove => 'Quitar la portada';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Portada del sonido';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Ese tipo de archivo no es compatible. Elegí un archivo de audio.';
 
   @override
   String get soundsImportUnreadable => 'No se pudo leer ese archivo de audio.';
+
+  @override
+  String get soundsAddSilent =>
+      'No se escucha nada en este sonido, así que no se puede agregar.';
 
   @override
   String get soundsImportAccountChanged =>
@@ -4627,12 +4650,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get soundsRemoveFailed =>
       'No se pudo quitar ese sonido. Inténtalo de nuevo.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Sincronizando tus sonidos…';
-
-  @override
-  String get soundSyncStatusSynced => 'Sonidos actualizados';
 
   @override
   String get soundSyncStatusFailed =>
@@ -5672,6 +5689,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get soundViewSource => 'Ver origen';
+
+  @override
+  String get soundCreditEdited => 'editado';
 
   @override
   String get soundCloseTooltip => 'Cerrar';
@@ -9291,6 +9311,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Fuga de luz';
 
   @override
+  String get videoEditorEffectLightRays => 'Rayos de luz';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Anamórfico';
+
+  @override
+  String get videoEditorEffectPrism => 'Prisma';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Luz de ventana';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Foco';
+
+  @override
   String get videoEditorEffectSnow => 'Nieve';
 
   @override
@@ -11201,6 +11236,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Sonido sin título';
 
   @override
+  String get videoEditorAudioUseSound => 'Usar';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'El archivo de audio ya no está en el dispositivo';
 
@@ -11227,19 +11265,13 @@ class AppLocalizationsEs extends AppLocalizations {
       'Selecciona el segmento de audio para tu video';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Comunidad';
-
-  @override
-  String get videoEditorAudioCategoryFeatured => 'Destacados';
 
   @override
   String get videoEditorAudioCategoryMySounds => 'Mis sonidos';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Herramienta flecha';
+  String get videoEditorAudioFilterEffects => 'Efectos';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Herramienta borrador';
@@ -11249,6 +11281,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Herramienta lápiz';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Herramienta neón';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Herramienta arcoíris';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel =>
+      'Herramienta caligrafía';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Mostrar línea de tiempo';
@@ -11989,9 +12031,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Tono';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Listo';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Nivel';
@@ -14070,8 +14109,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get savedSoundRemoveAction => 'Quitar el sonido guardado';
 
   @override
-  String get savedSoundFileMissing =>
-      'El archivo de audio de este sonido ya no está en el dispositivo, así que no se puede reproducir.';
+  String get savedSoundOpenAction => 'Abrir el sonido';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Ya no se puede usar en videos nuevos';
 
   @override
   String get savedSoundClearHashtagFilter => 'Borrar el filtro de hashtags';
@@ -15911,4 +15953,18 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'Mirá el video';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

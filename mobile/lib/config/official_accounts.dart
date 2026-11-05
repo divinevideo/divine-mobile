@@ -83,6 +83,25 @@ const List<OfficialAccount> kPinnedOfficialAccounts = [
   kModerationAccount,
 ];
 
+/// Accounts whose Kind 1063 sounds are Divine's own, by pubkey: they rank
+/// and show like the sounds the app ships, and For you loads them.
+///
+/// Its own set, as with the others here: publishing Divine's sounds is a
+/// different permission from the checkmark or from curating lists. HQ until
+/// the team settles on a dedicated account; `mobile/docs/DIVINE_SOUNDS.md`
+/// describes what such an account publishes.
+const Set<String> kDivineSoundPublisherPubkeys = {kHqPubkeyHex};
+
+/// Accounts that publish Divine's imported sound library: thousands of
+/// freely licensed effects and songs (`tools/import_free_sounds.dart`).
+///
+/// Kept apart from [kDivineSoundPublisherPubkeys] so the bulk import does
+/// not take the Divine boost: its sounds show without the community mark and
+/// in search and Popular, but not in New or For you. A sound picked for the
+/// boost is published by a Divine sound account instead. Empty until the
+/// library account exists; `mobile/docs/DIVINE_SOUNDS.md` describes it.
+const Set<String> kSoundLibraryPublisherPubkeys = {};
+
 /// The Divine team and Divine's own accounts, by pubkey. Drives the profile
 /// checkmark.
 ///

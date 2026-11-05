@@ -99,10 +99,10 @@ enum FeatureFlag {
     audience: FeatureFlagAudience.internal,
   ),
   concordChat(
-    'Concord Chat (POC)',
-    'Show Rooms in Messages, the Concord community chat proof of concept. '
-        'Messages are signed with your key into a stream anyone can read. '
-        'Stays off outside reviewer builds (#10094).',
+    'Concord Rooms',
+    'Show public community Rooms in Messages when this build includes an '
+        'invitation. Unconfigured reviewer builds can opt into public test '
+        'rooms. Messages are signed with your key and can be read publicly.',
     audience: FeatureFlagAudience.internal,
   );
 

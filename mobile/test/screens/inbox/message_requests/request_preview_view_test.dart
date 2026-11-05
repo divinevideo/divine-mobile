@@ -22,6 +22,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
+import 'package:openvine/screens/inbox/conversation/widgets/collaborator_invite_card.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/screens/inbox/message_requests/request_preview_view.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
@@ -1139,6 +1140,14 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('You were invited to collaborate.'), findsNothing);
+        expect(
+          tester
+              .widget<CollaboratorInviteCard>(
+                find.byType(CollaboratorInviteCard),
+              )
+              .collaboratorPubkey,
+          currentPubkey,
+        );
 
         await tester.ensureVisible(
           find.text(l10n.inboxCollabInviteNotMineButton),
@@ -1190,6 +1199,14 @@ void main() {
         expect(find.text(l10n.inboxCollabInviteSentStatus), findsOneWidget);
         expect(find.text(l10n.inboxCollabInviteCoPostButton), findsNothing);
         expect(find.text(l10n.inboxCollabInviteNotMineButton), findsNothing);
+        expect(
+          tester
+              .widget<CollaboratorInviteCard>(
+                find.byType(CollaboratorInviteCard),
+              )
+              .collaboratorPubkey,
+          otherPubkey,
+        );
       });
     });
 

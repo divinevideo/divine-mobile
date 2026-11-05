@@ -38,12 +38,15 @@ void main() {
       );
     });
 
-    VideoEvent createVideoWithAudio({InspiredByInfo? inspiredByVideo}) {
+    VideoEvent createVideoWithAudio({
+      InspiredByInfo? inspiredByVideo,
+      String content = 'Test video with audio',
+    }) {
       final now = DateTime.now();
       return VideoEvent(
         id: testVideoId,
         pubkey: testPubkey,
-        content: 'Test video with audio',
+        content: content,
         videoUrl: 'https://example.com/video.mp4',
         createdAt: now.millisecondsSinceEpoch ~/ 1000,
         timestamp: now,
@@ -53,12 +56,14 @@ void main() {
       );
     }
 
-    VideoEvent createVideoWithoutAudio() {
+    VideoEvent createVideoWithoutAudio({
+      String content = 'Test video without audio',
+    }) {
       final now = DateTime.now();
       return VideoEvent(
         id: testVideoId,
         pubkey: testPubkey,
-        content: 'Test video without audio',
+        content: content,
         videoUrl: 'https://example.com/video.mp4',
         createdAt: now.millisecondsSinceEpoch ~/ 1000,
         timestamp: now,
@@ -114,6 +119,106 @@ void main() {
                   entry.message.startsWith('Failed to load audio')),
         )
         .length;
+
+    group('Content credit', () {
+      const creditLine =
+          '♪ YAY! – IFartInUrGeneralDirection via Freesound, CC BY 4.0 '
+          'https://creativecommons.org/licenses/by/4.0/ (edited)';
+
+      testWidgets('credits a sound without an event from the content line', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            video: createVideoWithoutAudio(content: 'Hi\n\n$creditLine'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'YAY! – IFartInUrGeneralDirection via Freesound · '
+            'CC BY 4.0 · ${l10n.soundCreditEdited}',
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('shows the first of several content lines', (tester) async {
+        const second =
+            '♪ Elevator Music – YellowTree via Freesound, CC BY 4.0 '
+            'https://creativecommons.org/licenses/by/4.0/ (edited)';
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            video: createVideoWithoutAudio(
+              content: 'Hi\n\n$creditLine\n$second',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('YAY!'), findsOneWidget);
+        expect(find.textContaining('Elevator Music'), findsNothing);
+      });
+
+      testWidgets('prefers the content line to an unavailable sound', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            video: createVideoWithAudio(content: creditLine),
+            resolvesAudio: false,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('YAY!'), findsOneWidget);
+        expect(
+          find.textContaining(l10n.audioAttributionUnavailableSound),
+          findsNothing,
+        );
+      });
+
+      testWidgets('prefers the content line to a sound that fails to load', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            video: createVideoWithAudio(content: creditLine),
+            audioError: StateError('relay unavailable'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('YAY!'), findsOneWidget);
+        expect(
+          find.textContaining(l10n.audioAttributionUnavailableSound),
+          findsNothing,
+        );
+      });
+
+      testWidgets("shows the sound's own credit once its event loads", (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildTestWidget(video: createVideoWithAudio(content: creditLine)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining('Original sound - @testuser'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('YAY!'), findsNothing);
+      });
+    });
 
     group('Original sound (no audio reference)', () {
       testWidgets('renders nothing for videos without audio reference', (
@@ -209,6 +314,52 @@ void main() {
         expect(find.textContaining('CC BY 4.0'), findsOneWidget);
         expect(find.textContaining('#field-recording'), findsOneWidget);
         expect(find.textContaining('personalLabel'), findsNothing);
+      });
+
+      testWidgets('says an Attribution-licensed sound was edited', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final creditedAudio = testAudio.copyWith(
+          creatorName: 'Kevin MacLeod (incompetech.com)',
+          licenseName: 'CC BY 4.0',
+          licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+        );
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            video: createVideoWithAudio(),
+            audioOverride: creditedAudio,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining('CC BY 4.0 · ${l10n.soundCreditEdited}'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('does not mark a public domain sound as edited', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final publicDomainAudio = testAudio.copyWith(
+          creatorName: 'Kenney',
+          licenseName: 'CC0 1.0',
+          licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+        );
+
+        await tester.pumpWidget(
+          buildTestWidget(
+            video: createVideoWithAudio(),
+            audioOverride: publicDomainAudio,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('CC0 1.0'), findsOneWidget);
+        expect(find.textContaining(l10n.soundCreditEdited), findsNothing);
       });
 
       testWidgets('displays caret right icon', (tester) async {

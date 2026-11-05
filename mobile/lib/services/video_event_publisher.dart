@@ -23,6 +23,7 @@ import 'package:openvine/services/ios_device_attestation_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/published_event_local_echo.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
+import 'package:openvine/services/sound_silence_trimmer.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_event_tag_source.dart';
@@ -71,6 +72,7 @@ class VideoEventPublisher {
     IosDeviceAttestationService? iosDeviceAttestationService,
     PublishedEventLocalEcho? publishedEventLocalEcho,
     ProofModePublishTagger? proofModeTagger,
+    SoundSilenceTrimmer? soundSilenceTrimmer,
   }) : assert(
          proofModeTagger == null || iosDeviceAttestationService == null,
          'An injected proofModeTagger ignores iosDeviceAttestationService; '
@@ -105,6 +107,7 @@ class VideoEventPublisher {
       savedSoundsService: savedSoundsService,
       soundSyncRepositoryGetter: soundSyncRepositoryGetter,
       audioReuseConsentChecker: audioReuseConsentChecker,
+      soundSilenceTrimmer: soundSilenceTrimmer,
     );
   }
 
@@ -191,6 +194,10 @@ class VideoEventPublisher {
 
   /// Publish a video event with custom metadata
   ///
+  /// [creditedSounds] are the audio tracks the edit mixes into the video. The
+  /// credit names them when there are any, and [selectedAudio] otherwise: the
+  /// render mixes the selected sound in only when the timeline has no track.
+  ///
   /// Throws [AudioReuseNotPermittedException] when [selectedAudio] is not
   /// cleared for reuse — see [publishDirectUpload].
   /// Throws [AccountRestrictedPublishException] when an authoritative Divine
@@ -216,6 +223,7 @@ class VideoEventPublisher {
     List<String> inspiredByNpubs = const [],
     List<ClipSourceCredit> clipSourceCredits = const [],
     AudioEvent? selectedAudio,
+    List<AudioEvent> creditedSounds = const [],
     AudioShareAttribution? audioShareAttribution,
     String? selectedAudioEventId,
     String? selectedAudioRelay,
@@ -253,6 +261,7 @@ class VideoEventPublisher {
       inspiredByNpubs: inspiredByNpubs,
       clipSourceCredits: clipSourceCredits,
       selectedAudio: selectedAudio,
+      creditedSounds: creditedSounds,
       audioShareAttribution: audioShareAttribution,
       selectedAudioEventId: selectedAudioEventId,
       selectedAudioRelay: selectedAudioRelay,
@@ -323,6 +332,7 @@ class VideoEventPublisher {
     List<String> inspiredByNpubs = const [],
     List<ClipSourceCredit> clipSourceCredits = const [],
     AudioEvent? selectedAudio,
+    List<AudioEvent> creditedSounds = const [],
     AudioShareAttribution? audioShareAttribution,
     String? selectedAudioEventId,
     String? selectedAudioRelay,
@@ -378,6 +388,7 @@ class VideoEventPublisher {
       inspiredByNpubs: inspiredByNpubs,
       clipSourceCredits: clipSourceCredits,
       selectedAudio: selectedAudio,
+      creditedSounds: creditedSounds,
       audioShareAttribution: audioShareAttribution,
       selectedAudioEventId: selectedAudioEventId,
       selectedAudioRelay: selectedAudioRelay,
@@ -425,6 +436,7 @@ class VideoEventPublisher {
     required List<String> inspiredByNpubs,
     required List<ClipSourceCredit> clipSourceCredits,
     required AudioEvent? selectedAudio,
+    required List<AudioEvent> creditedSounds,
     required AudioShareAttribution? audioShareAttribution,
     required String? selectedAudioEventId,
     required String? selectedAudioRelay,
@@ -490,9 +502,19 @@ class VideoEventPublisher {
       if (imetaTag == null) return false;
       tags.add(imetaTag);
 
+      // Each sound whose licence asks for credit is credited in the content
+      // and the summary: other clients rarely follow the `e … audio`
+      // reference, and a sound added only in the editor has none. Credits
+      // follow the render, which mixes the selected sound in only when the
+      // timeline has no track.
+      final creditLines = soundCreditLines(
+        creditedSounds.isNotEmpty ? creditedSounds : [?selectedAudio],
+      );
+
       addVideoMetadataTags(
         tags,
         upload: upload,
+        creditLines: creditLines,
         publishedAt: scheduledAt ?? DateTime.now(),
         language: language,
         contentWarning: contentWarning,
@@ -547,9 +569,13 @@ class VideoEventPublisher {
         );
       }
 
-      // Append NIP-27 Inspired By person reference to content
+      // The NIP-27 Inspired By person reference goes last, where readers
+      // expect it.
       final content = withInspiredByContentReference(
-        upload.description ?? upload.title ?? '',
+        withSoundCreditLines(
+          upload.description ?? upload.title ?? '',
+          creditLines,
+        ),
         inspiredByNpubs,
       );
 

@@ -1,6 +1,10 @@
 import json
+import os
 import re
+import shutil
 import subprocess
+import shlex
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -621,6 +625,110 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             self.assertLess(workflow.index("- *write_shorebird_dart_defines"), workflow.index("- *fetch_and_verify_shorebird_provenance"))
             self.assertLess(workflow.index("- *fetch_and_verify_shorebird_provenance"), workflow.index("- *prepare_patch_source"))
 
+    def test_configured_rooms_compile_contract_precedes_shard_file_removal(self) -> None:
+        start = self.mobile_ci_contents.index("- name: Verify configured public Rooms entry")
+        end = self.mobile_ci_contents.index("- name:", start + 1)
+        contract = self.mobile_ci_contents[start:end]
+        self.assertIn("matrix.shard == 0", contract)
+        self.assertIn("--dart-define=CONCORD_INVITE_URL=https://synthetic.divine.video/", contract)
+        self.assertIn("--dart-define=FF_CONCORD_CHAT=false", contract)
+        self.assertIn("test/services/build_config_test.dart", contract)
+        self.assertIn("test/router/chat_routes_test.dart", contract)
+        self.assertIn("test/screens/inbox/messages/messages_home_page_test.dart", contract)
+        self.assertIn("test/features/chat/concord_session_test.dart", contract)
+        self.assertLess(start, self.mobile_ci_contents.index("- name: 🔪 Reduce test/"))
+
+    def test_store_and_beta_release_scripts_forward_optional_invite_privately(self) -> None:
+        workflows = self._resolved_config()["workflows"]
+        required = ["ZENDESK_APP_ID", "ZENDESK_CLIENT_ID", "ZENDESK_URL",
+                    "PROOFMODE_SIGNING_SERVER_ENDPOINT", "PROOFMODE_SIGNING_SERVER_TOKEN"]
+        helper = CODEMAGIC_PATH.parent / "mobile/scripts/write_concord_release_defines.rb"
+        for name in ("ios-build", "android-build"):
+            for channel in ("BETA", "PRODUCTION"):
+                for invite in (None, json.loads((CODEMAGIC_PATH.parent / "mobile/packages/concord_protocol/test/fixtures/community-interop.json").read_text())["inviteUrl"]):
+                    with self.subTest(workflow=name, channel=channel, configured=invite is not None):
+                        scripts = [step["script"] for step in workflows[name]["scripts"]
+                                   if step["name"] in ("Write Shorebird dart-defines",
+                                        "Write optional public community configuration")]
+                        self.assertEqual(2, len(scripts))
+                        script = "\n".join(scripts).replace("${{ inputs.DEFAULT_ENV }}", "PRODUCTION")
+                        script = script.replace("ruby scripts/write_concord_release_defines.rb",
+                                                "ruby " + shlex.quote(str(helper)))
+                        environment = {"PATH": os.environ["PATH"], **{key: "synthetic-required-value" for key in required}}
+                        environment["RELEASE_CHANNEL"] = channel
+                        if invite is not None:
+                            environment["CONCORD_INVITE_URL"] = invite
+                            environment["CONCORD_RELAY_URL"] = "wss://synthetic.divine.video/relay"
+                        with tempfile.TemporaryDirectory() as directory:
+                            result = subprocess.run(["bash", "-c", "set -euo pipefail\n" + script],
+                                cwd=directory, env=environment, text=True, capture_output=True, check=False)
+                            self.assertEqual(0, result.returncode, result.stderr)
+                            output = Path(directory) / "build/shorebird/dart_defines.json"
+                            actual = json.loads(output.read_text())
+                            self.assertEqual("PRODUCTION", actual["DEFAULT_ENV"])
+                            self.assertEqual(set(required), set(actual) - {"DEFAULT_ENV", "CONCORD_INVITE_URL", "CONCORD_RELAY_URL"})
+                            self.assertEqual(invite, actual.get("CONCORD_INVITE_URL"))
+                            self.assertEqual("wss://synthetic.divine.video/relay" if invite else None, actual.get("CONCORD_RELAY_URL"))
+                            self.assertEqual(0o600, output.stat().st_mode & 0o777)
+                            self.assertNotIn("synthetic", result.stdout + result.stderr)
+
+    def test_patch_workflows_bootstrap_package_map_before_paired_writer(self) -> None:
+        # A fresh runner has no .dart_tool map. Simulate pub get and Dart's
+        # package-map prerequisite while exercising the real release writer.
+        workflows = self._resolved_config()["workflows"]
+        invite = json.loads((CODEMAGIC_PATH.parent / "mobile/packages/concord_protocol/test/fixtures/community-interop.json").read_text())["inviteUrl"]
+        for name in ("ios-patch", "android-patch"):
+            with self.subTest(workflow=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "scripts").mkdir()
+                (root / "bin").mkdir()
+                shutil.copy(CODEMAGIC_PATH.parent / "mobile/scripts/write_concord_release_defines.rb", root / "scripts")
+                (root / "bin/flutter").write_text('#!/bin/sh\n[ "$*" = "pub get" ] || exit 1\nmkdir -p .dart_tool\nprintf "{}" > .dart_tool/package_config.json\n')
+                (root / "bin/dart").write_text('#!/bin/sh\nmap=${1#--packages=}\ntest -f "$map"\n')
+                (root / "bin/flutter").chmod(0o755)
+                (root / "bin/dart").chmod(0o755)
+                output = root / "defines.json"
+                output.write_text('{"DEFAULT_ENV":"PRODUCTION"}')
+                env = {"PATH": str(root / "bin") + os.pathsep + os.environ["PATH"],
+                       "CONCORD_INVITE_URL": invite,
+                       "CONCORD_RELAY_URL": "wss://synthetic.divine.video/relay"}
+                for step in workflows[name]["scripts"]:
+                    if step["name"] == "Get Flutter dependencies":
+                        result = subprocess.run(["bash", "-c", step["script"]], cwd=root,
+                                                env=env, text=True, capture_output=True)
+                        self.assertEqual(0, result.returncode, result.stderr)
+                    if step["name"] == "Verify private Shorebird release provenance":
+                        result = subprocess.run(["ruby", str(root / "scripts/write_concord_release_defines.rb"),
+                                                 "--output", str(output), "--required"], cwd=root,
+                                                env=env, text=True, capture_output=True)
+                        self.assertEqual(0, result.returncode, result.stderr)
+                        self.assertEqual(invite, json.loads(output.read_text())["CONCORD_INVITE_URL"])
+                        break
+                else:
+                    self.fail("missing provenance step")
+
+    def test_concord_release_and_patch_defines_follow_original_release_shape(self) -> None:
+        base = self._definition_block("write_shorebird_dart_defines")
+        self.assertNotIn("CONCORD_INVITE_URL", base)
+        release = self._definition_block("write_shorebird_concord_defines")
+        self.assertIn("ruby scripts/write_concord_release_defines.rb", release)
+        self.assertIn("--output build/shorebird/dart_defines.json", release)
+        patch = self._definition_block("fetch_and_verify_shorebird_provenance")
+        self.assertLess(patch.index("shorebird_provenance_store.sh fetch"), patch.index("concord-required"))
+        self.assertLess(patch.index("concord-required"), patch.index("write_concord_release_defines.rb"))
+        self.assertLess(patch.index("write_concord_release_defines.rb"), patch.index("shorebird_provenance.rb verify"))
+        self.assertIn('--required', patch)
+        for name, build in [("ios-build", "build_ios"), ("android-build", "build_aab")]:
+            workflow = self._workflow_block(name)
+            self.assertLess(workflow.index("*write_shorebird_dart_defines"), workflow.index("*write_shorebird_concord_defines"))
+            self.assertLess(workflow.index("*write_shorebird_concord_defines"), workflow.index("*" + build))
+            self.assertLess(workflow.index("*" + build), workflow.index("*emit_shorebird_provenance"))
+        for name in ("ios-patch", "android-patch"):
+            self.assertNotIn("*write_shorebird_concord_defines", self._workflow_block(name))
+        macos = self._definition_block("build_macos")
+        self.assertIn("ruby scripts/write_concord_release_defines.rb", macos)
+        self.assertIn("--output build/public_people_list_defines.json", macos)
+
     def test_prepare_patch_source_fails_closed(self) -> None:
         # Codemagic does not abort a multi-line script when a command fails, so
         # the step must set -e: a rejected identity check or a failed
@@ -722,6 +830,34 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
             capture_output=True,
         )
         self.assertEqual(expected_tree, result.stdout.strip())
+
+    def test_ci_config_job_bootstraps_real_invite_parser_before_tests(self) -> None:
+        job = json.loads(subprocess.run(
+            ["ruby", "-ryaml", "-rjson", "-e",
+             "puts JSON.generate(YAML.safe_load_file(ARGV[0]).fetch('jobs').fetch('ci-config-tests'))",
+             str(MOBILE_CI_PATH)],
+            check=True, text=True, capture_output=True,
+        ).stdout)
+        self.assertNotIn("if", job)
+        steps = job["steps"]
+        setup_steps = [i for i, step in enumerate(steps)
+                       if step.get("uses", "").startswith("subosito/flutter-action@")]
+        pub_get_steps = [i for i, step in enumerate(steps)
+                         if step.get("run") == "flutter pub get" and
+                         step.get("working-directory") == "mobile"]
+        test_steps = [i for i, step in enumerate(steps)
+                      if step.get("run") == "python3 -m unittest discover -s .github/scripts/tests"]
+        self.assertEqual(1, len(setup_steps), "Flutter must be installed on the clean runner")
+        self.assertEqual(1, len(pub_get_steps), "The app package map must be generated")
+        self.assertEqual(1, len(test_steps), "Configuration tests must run")
+        setup, pub_get, tests = setup_steps[0], pub_get_steps[0], test_steps[0]
+        self.assertLess(setup, pub_get)
+        self.assertLess(pub_get, tests)
+        self.assertNotIn("if", steps[setup])
+        self.assertNotIn("if", steps[pub_get])
+        self.assertNotIn("if", steps[tests])
+        expected = re.search(r'^flutter = "([^"]+)"$', self.mise_contents, re.MULTILINE).group(1)
+        self.assertEqual(expected, steps[setup]["with"]["flutter-version"])
 
     def test_ci_config_job_fetches_history_for_release_tree_verification(self) -> None:
         job_start = self.mobile_ci_contents.index("  ci-config-tests:")

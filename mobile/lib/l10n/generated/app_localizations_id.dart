@@ -4412,9 +4412,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Sudah ada di Suara';
 
   @override
-  String get soundsSavedLibraryTitle => 'Suara Saya';
-
-  @override
   String get soundsSavedEmptyTitle => 'Belum ada suara yang tersimpan';
 
   @override
@@ -4423,6 +4420,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Tambah suara';
+
+  @override
+  String get soundsAddSoundHint => 'Impor file atau rekam sendiri';
 
   @override
   String get soundsAddSharePublicly => 'Bagikan ke publik';
@@ -4454,11 +4454,34 @@ class AppLocalizationsId extends AppLocalizations {
       'Beri judul pada suaramu untuk membagikannya.';
 
   @override
+  String get soundsShareCoverLabel => 'Sampul';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'Opsional. Orang melihatnya di samping suaramu saat memilih suara.';
+
+  @override
+  String get soundsShareCoverAdd => 'Tambah sampul';
+
+  @override
+  String get soundsShareCoverReplace => 'Ganti';
+
+  @override
+  String get soundsShareCoverRemove => 'Hapus sampul';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Sampul suara';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Jenis file itu tidak didukung. Pilih file audio.';
 
   @override
   String get soundsImportUnreadable => 'File audio itu tidak bisa dibaca.';
+
+  @override
+  String get soundsAddSilent =>
+      'Tidak ada yang terdengar di suara ini, jadi suara ini tidak bisa ditambahkan.';
 
   @override
   String get soundsImportAccountChanged =>
@@ -4494,12 +4517,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => 'Suara itu gagal dihapus. Coba lagi.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Menyinkronkan suaramu…';
-
-  @override
-  String get soundSyncStatusSynced => 'Suara sudah terbaru';
 
   @override
   String get soundSyncStatusFailed =>
@@ -5536,6 +5553,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get soundViewSource => 'Lihat sumber';
+
+  @override
+  String get soundCreditEdited => 'diedit';
 
   @override
   String get soundCloseTooltip => 'Tutup';
@@ -9098,6 +9118,21 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Kebocoran Cahaya';
 
   @override
+  String get videoEditorEffectLightRays => 'Sinar Cahaya';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Anamorfik';
+
+  @override
+  String get videoEditorEffectPrism => 'Prisma';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Cahaya Jendela';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Lampu Sorot';
+
+  @override
   String get videoEditorEffectSnow => 'Salju';
 
   @override
@@ -10991,6 +11026,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Suara tanpa judul';
 
   @override
+  String get videoEditorAudioUseSound => 'Gunakan';
+
+  @override
   String get videoEditorAudioFileMissing =>
       'File audio sudah tidak ada di perangkat';
 
@@ -11016,19 +11054,13 @@ class AppLocalizationsId extends AppLocalizations {
       'Pilih segmen audio untuk videomu';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Komunitas';
-
-  @override
-  String get videoEditorAudioCategoryFeatured => 'Unggulan';
 
   @override
   String get videoEditorAudioCategoryMySounds => 'Suara Saya';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Alat panah';
+  String get videoEditorAudioFilterEffects => 'Efek suara';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Alat penghapus';
@@ -11038,6 +11070,15 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Alat pensil';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Alat neon';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Alat pelangi';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'Alat kaligrafi';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Tampilkan timeline';
@@ -11758,9 +11799,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Rona';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Selesai';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Level';
@@ -13801,8 +13839,11 @@ class AppLocalizationsId extends AppLocalizations {
   String get savedSoundRemoveAction => 'Hapus suara tersimpan';
 
   @override
-  String get savedSoundFileMissing =>
-      'File audio dari suara ini sudah tidak ada di perangkat, jadi tidak bisa diputar.';
+  String get savedSoundOpenAction => 'Buka suara';
+
+  @override
+  String get savedSoundReuseUnavailable =>
+      'Sudah tidak bisa dipakai di video baru';
 
   @override
   String get savedSoundClearHashtagFilter => 'Bersihkan filter tagar';
@@ -15611,4 +15652,18 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'Tonton video';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

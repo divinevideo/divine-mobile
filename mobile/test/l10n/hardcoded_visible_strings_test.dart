@@ -80,7 +80,7 @@ void main() {
         );
       }
 
-      expect(soundsTabSource, contains('context.l10n.soundsSavedLibraryTitle'));
+      expect(soundsTabSource, contains('context.l10n.soundsAddSound'));
       expect(soundDetailSource, contains('context.l10n.soundsSavedToLibrary'));
     });
 

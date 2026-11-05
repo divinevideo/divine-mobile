@@ -30,8 +30,9 @@ const int _kindCollaboratorResponse = 34238;
 /// "did not accept" from "have not heard back yet" — both leave a pubkey
 /// [CollaboratorStatus.pending], but only the former is a real answer.
 ///
-/// One subscription per `(videoAddress, taggedPubkeys)` filter, ref-counted
-/// across watchers for the same video address. The repository owns the explicit
+/// One subscription per video address, filtered by the latest watcher's
+/// tagged pubkeys and ref-counted across that address's watchers; a watch with
+/// a different list replaces it. The repository owns the explicit
 /// Nostr subscription id so release/close can send `CLOSE` to relays instead
 /// of only cancelling the local Dart listener.
 class CollaboratorConfirmationRepository {
@@ -83,12 +84,15 @@ class CollaboratorConfirmationRepository {
   /// Returns a stream of [VideoCollaboratorStatus] for [videoAddress].
   ///
   /// [creatorPubkey] is the author of the kind-34236 video event. Used to
-  /// decide whether to open a kind-34238 relay subscription (only when the
-  /// current user is the creator) and to key the local-store lookup.
+  /// key the current user's local-store lookup.
   ///
   /// [taggedPubkeys] is the list of pubkeys tagged with the
   /// `'collaborator'` role on the latest creator-authored video event. Used
-  /// to reject acceptance events from non-tagged pubkeys.
+  /// to reject acceptance events from non-tagged pubkeys. Watchers of one
+  /// [videoAddress] that are open together should pass the same list: state
+  /// is keyed by the address alone, so a different list replaces the shared
+  /// subscription and drops the acceptances the others already saw. That
+  /// replacement is the intended path when the creator edits collaborators.
   ///
   /// Callers must call [release] with the same [videoAddress] when done to
   /// decrement the ref count and allow cleanup.

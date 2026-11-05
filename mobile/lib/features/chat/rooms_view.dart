@@ -16,9 +16,11 @@ class RoomsView extends StatelessWidget {
     this.activity = const {},
     this.channelIdFor,
     this.onRetry,
+    this.isTest = true,
     super.key,
   });
 
+  final bool isTest;
   final List<ChatCommunity> communities;
   final Map<String, RoomActivitySummary> activity;
   final String Function(String communityId, String channelId)? channelIdFor;
@@ -51,19 +53,20 @@ class RoomsView extends StatelessWidget {
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  context.l10n.messagesPublicTestRooms,
-                  style: VineTheme.bodySmallFont(
-                    color: context.vineColors.onSurfaceMuted,
+              if (isTest)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    context.l10n.messagesPublicTestRooms,
+                    style: VineTheme.bodySmallFont(
+                      color: context.vineColors.onSurfaceMuted,
+                    ),
                   ),
                 ),
-              ),
               const SizedBox(height: 16),
               for (final channel in community.channels)
                 RoomActivityTile(
-                  title: channel,
+                  title: community.channelName(channel),
                   activity:
                       activity[channelIdFor?.call(community.id, channel) ??
                           channel],
@@ -76,7 +79,7 @@ class RoomsView extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Text(context.l10n.messagesNoRooms),
               ),
-            const PublicRoomNotice(),
+            PublicRoomNotice(isTest: isTest),
           ],
         ),
       ),

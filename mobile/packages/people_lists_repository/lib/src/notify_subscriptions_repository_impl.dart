@@ -29,10 +29,11 @@ const String _notifyListTitle = 'Notify';
 ///
 /// Every bell toggle is a read-modify-write on one NIP-33 replaceable event.
 /// Two concurrent toggles would each read the same base set and the second
-/// publish would drop the first's change. Mutations are therefore chained
-/// per owner: each awaits the previous one's completion and reads the set
-/// that mutation produced, so a rapid on/off/on sequence converges instead
-/// of racing.
+/// publish would drop the first's change. Mutations and [refresh] are
+/// therefore chained per owner: each waits for the previous one to finish,
+/// then reads the relays, keeping the previous mutation's result while a
+/// relay still returns an older revision, so a rapid on/off/on sequence
+/// converges instead of racing.
 ///
 /// The chain is per owner rather than per creator on purpose — all bells live
 /// in a *single* event, so serializing per creator would still race.
@@ -41,8 +42,9 @@ const String _notifyListTitle = 'Notify';
 ///
 /// The event is replaceable, so a publish deletes every member it omits.
 /// An unreachable relay pool therefore cannot be treated as an empty list:
-/// reads that did not reach a relay produce no snapshot at all, mutations
-/// against a missing snapshot fail without publishing, and
+/// a read that did not hear from every relay produces no snapshot at all.
+/// Every mutation makes that read itself and, when it yields none, fails
+/// without publishing even if an earlier read left one for display, and
 /// [watchSubscriptions] stays silent so the UI keeps its control disabled.
 class NotifySubscriptionsRepositoryImpl
     implements NotifySubscriptionsRepository {
@@ -55,8 +57,8 @@ class NotifySubscriptionsRepositoryImpl
   final Map<String, _NotifyListSnapshot> _snapshots = {};
   final Map<String, BehaviorSubject<Set<String>>> _subjects = {};
 
-  /// Tail of the per-owner mutation chain. Awaiting it serializes the next
-  /// read-modify-write behind every mutation already queued.
+  /// Tail of each owner's refresh and mutation queue. The complete relay
+  /// read, delta, and publish run before the next operation can read.
   final Map<String, Future<void>> _mutationTails = {};
 
   /// In-flight relay reads, so concurrent mounts share one query instead of
@@ -96,12 +98,7 @@ class NotifySubscriptionsRepositoryImpl
 
   @override
   Future<void> refresh({required String ownerPubkey}) async {
-    final snapshot = await _readFromRelays(ownerPubkey);
-    // A failed read must not clear a good snapshot: the empty set it would
-    // cache is exactly the base a later publish would delete the list down
-    // to.
-    if (snapshot == null) return;
-    _publishSnapshot(ownerPubkey, snapshot);
+    await _serializeOwner(ownerPubkey, () => _loadFreshSnapshot(ownerPubkey));
   }
 
   @override
@@ -149,7 +146,8 @@ class NotifySubscriptionsRepositoryImpl
     _pendingRemovals.clear();
   }
 
-  /// Queues a mutation behind every mutation already pending for [ownerPubkey].
+  /// Queues a mutation behind every operation already queued for
+  /// [ownerPubkey].
   ///
   /// A null [creatorPubkey] mutates nothing by itself and only republishes
   /// outstanding removals — see [reconcile].
@@ -158,16 +156,23 @@ class NotifySubscriptionsRepositoryImpl
     required bool add,
     String? creatorPubkey,
   }) {
-    final previous = _mutationTails[ownerPubkey] ?? Future<void>.value();
-    final result = previous.then(
-      (_) => _applyMutation(
+    return _serializeOwner(
+      ownerPubkey,
+      () => _applyMutation(
         ownerPubkey: ownerPubkey,
         creatorPubkey: creatorPubkey,
         add: add,
       ),
     );
-    // The tail must never carry an error, or every later mutation in the
-    // chain would fail with the earlier one's error instead of running.
+  }
+
+  Future<T> _serializeOwner<T>(
+    String ownerPubkey,
+    Future<T> Function() operation,
+  ) {
+    final previous = _mutationTails[ownerPubkey] ?? Future<void>.value();
+    final result = previous.then((_) => operation());
+    // An error must not strand the next read or mutation in this owner's queue.
     _mutationTails[ownerPubkey] = result.then((_) {}, onError: (_, _) {});
     return result;
   }
@@ -185,7 +190,7 @@ class NotifySubscriptionsRepositoryImpl
       return const PeopleListPublishResult.noop();
     }
 
-    final snapshot = await _ensureSnapshot(ownerPubkey);
+    final snapshot = await _loadFreshSnapshot(ownerPubkey);
     if (snapshot == null) {
       // Publishing against a base set we could not read would delete every
       // subscription the read failed to load. Retain the removal so the next
@@ -282,8 +287,9 @@ class NotifySubscriptionsRepositoryImpl
         _NotifyListSnapshot(
           creators: creators,
           createdAt: createdAt,
-          sourceTags: payload.tags,
-          sourceContent: payload.content,
+          sourceTags: sent.event.tags,
+          sourceContent: sent.event.content,
+          eventId: sent.event.id,
         ),
       );
       return PeopleListPublishResult.submitted(eventId: sent.event.id);
@@ -312,22 +318,31 @@ class NotifySubscriptionsRepositoryImpl
     final inFlight = _inFlightReads[ownerPubkey];
     if (inFlight != null) return inFlight;
 
-    final read = _readFromRelays(ownerPubkey);
+    final read = _loadFreshSnapshot(ownerPubkey);
     _inFlightReads[ownerPubkey] = read;
-    final _NotifyListSnapshot? loaded;
     try {
-      loaded = await read;
+      return await read;
     } finally {
-      // The removed handle is the future awaited just above; `_readFromRelays`
-      // never completes with an error, so there is nothing left to observe.
       _inFlightReads.remove(ownerPubkey)?.ignore();
     }
-    if (loaded == null) return null;
+  }
 
-    // A mutation may have published while the relay read was in flight; that
-    // snapshot is newer than what the relay returned, so keep it.
+  /// Fetches the complete relay source even when a display snapshot exists.
+  /// A failed read never lends that cached snapshot to a replacing write.
+  Future<_NotifyListSnapshot?> _loadFreshSnapshot(String ownerPubkey) async {
+    if (_disposed) return null;
+    final loaded = await _readFromRelays(ownerPubkey);
+    if (loaded == null || _disposed) return null;
+
+    // A relay may still echo a revision replaced by this device. Keep the
+    // complete newer source so rapid mutations do not undo one another.
     final current = _snapshots[ownerPubkey];
-    if (current != null && current.createdAt >= loaded.createdAt) {
+    if (current != null &&
+        (current.createdAt > loaded.createdAt ||
+            (current.createdAt == loaded.createdAt &&
+                current.eventId != null &&
+                loaded.eventId != null &&
+                current.eventId!.compareTo(loaded.eventId!) < 0))) {
       return current;
     }
     _publishSnapshot(ownerPubkey, loaded);
@@ -353,7 +368,11 @@ class NotifySubscriptionsRepositoryImpl
     );
 
     try {
-      final result = await _nostrClient.queryEventsDetailed([filter]);
+      final result = await _nostrClient.queryEventsDetailed(
+        [filter],
+        useCache: false,
+        requireAllRelaysSettled: true,
+      );
       if (result.noRelays || result.timedOut) {
         Log.warning(
           'Notify list unreadable for owner ${pubkeyForLogs(ownerPubkey)} '
@@ -386,6 +405,7 @@ class NotifySubscriptionsRepositoryImpl
         createdAt: newestEvent.createdAt,
         sourceTags: newestEvent.tags,
         sourceContent: newestEvent.content,
+        eventId: newestEvent.id,
       );
     } on Object catch (error) {
       Log.warning(
@@ -448,6 +468,7 @@ class _NotifyListSnapshot {
     required this.createdAt,
     List<List<String>>? sourceTags,
     this.sourceContent,
+    this.eventId,
   }) : assert(
          (sourceTags == null) == (sourceContent == null),
          'sourceTags and sourceContent must both be present or both be absent',
@@ -463,4 +484,5 @@ class _NotifyListSnapshot {
   final int createdAt;
   final List<List<String>>? sourceTags;
   final String? sourceContent;
+  final String? eventId;
 }

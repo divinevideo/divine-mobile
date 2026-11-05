@@ -58,6 +58,7 @@ void main() {
       when(
         () => client.queryEventsDetailed(
           any(),
+          useCache: false,
           requireAllRelaysSettled: true,
           timeout: any(named: 'timeout'),
         ),
@@ -308,6 +309,7 @@ void main() {
         when(
           () => client.queryEventsDetailed(
             any(),
+            useCache: false,
             requireAllRelaysSettled: true,
             timeout: any(named: 'timeout'),
           ),
@@ -375,6 +377,7 @@ void main() {
         when(
           () => client.queryEventsDetailed(
             any(),
+            useCache: false,
             requireAllRelaysSettled: true,
             timeout: any(named: 'timeout'),
           ),
@@ -456,6 +459,7 @@ void main() {
           when(
             () => client.queryEventsDetailed(
               any(),
+              useCache: false,
               requireAllRelaysSettled: true,
               timeout: any(named: 'timeout'),
             ),
@@ -537,6 +541,7 @@ void main() {
         when(
           () => client.queryEventsDetailed(
             any(),
+            useCache: false,
             requireAllRelaysSettled: true,
             timeout: any(named: 'timeout'),
           ),
@@ -583,6 +588,7 @@ void main() {
         when(
           () => client.queryEventsDetailed(
             any(),
+            useCache: false,
             requireAllRelaysSettled: true,
             timeout: any(named: 'timeout'),
           ),
@@ -677,6 +683,7 @@ void main() {
       when(
         () => client.queryEventsDetailed(
           any(),
+          useCache: false,
           requireAllRelaysSettled: true,
           timeout: any(named: 'timeout'),
         ),

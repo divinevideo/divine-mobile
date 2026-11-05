@@ -1,5 +1,5 @@
 // ABOUTME: Tests for AudioCategoryBar widget
-// ABOUTME: Validates rendering of category chips and selection callback
+// ABOUTME: Validates the tab order and the selection callback
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -10,136 +10,55 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group(AudioCategoryBar, () {
-    Widget buildWidget({
-      required AudioCategory category,
-      required ValueChanged<AudioCategory> onSelect,
-    }) {
+    final l10n = lookupAppLocalizations(const Locale('en'));
+
+    Widget buildWidget({required ValueChanged<AudioCategory> onSelect}) {
+      final controller = TabController(
+        length: AudioCategory.values.length,
+        vsync: const TestVSync(),
+      );
+      addTearDown(controller.dispose);
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: AudioCategoryBar(category: category, onSelect: onSelect),
+          body: AudioCategoryBar(controller: controller, onSelect: onSelect),
         ),
       );
     }
 
-    testWidgets('renders all category chips', (tester) async {
-      await tester.pumpWidget(
-        buildWidget(category: AudioCategory.divine, onSelect: (_) {}),
-      );
+    testWidgets('renders the four lists in tab order', (tester) async {
+      await tester.pumpWidget(buildWidget(onSelect: (_) {}));
       await tester.pumpAndSettle();
 
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(find.text(l10n.videoEditorAudioCategoryDivine), findsOneWidget);
-      expect(find.text(l10n.videoEditorAudioCategoryCommunity), findsOneWidget);
-      expect(find.text(l10n.videoEditorAudioCategoryFeatured), findsOneWidget);
-      expect(find.text(l10n.videoEditorAudioCategoryMySounds), findsOneWidget);
+      final positions = [
+        for (final label in [
+          l10n.exploreTabForYou,
+          l10n.exploreTabPopular,
+          l10n.exploreTabNew,
+          l10n.videoEditorAudioCategoryMySounds,
+        ])
+          tester.getTopLeft(find.text(label)).dx,
+      ];
+      expect(positions, orderedEquals([...positions]..sort()));
     });
 
-    testWidgets('calls onSelect with divine when first chip is tapped', (
-      tester,
-    ) async {
-      AudioCategory? selected;
-      await tester.pumpWidget(
-        buildWidget(
-          category: AudioCategory.community,
-          onSelect: (c) => selected = c,
-        ),
-      );
-      await tester.pumpAndSettle();
+    for (final (label, category) in [
+      (l10n.exploreTabForYou, AudioCategory.forYou),
+      (l10n.exploreTabPopular, AudioCategory.popular),
+      (l10n.exploreTabNew, AudioCategory.newest),
+      (l10n.videoEditorAudioCategoryMySounds, AudioCategory.mySounds),
+    ]) {
+      testWidgets('selects ${category.name} from its tab', (tester) async {
+        AudioCategory? selected;
+        await tester.pumpWidget(buildWidget(onSelect: (c) => selected = c));
+        await tester.pumpAndSettle();
 
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      await tester.tap(find.text(l10n.videoEditorAudioCategoryDivine));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
 
-      expect(selected, equals(AudioCategory.divine));
-    });
-
-    testWidgets('calls onSelect with community when second chip is tapped', (
-      tester,
-    ) async {
-      AudioCategory? selected;
-      await tester.pumpWidget(
-        buildWidget(
-          category: AudioCategory.divine,
-          onSelect: (c) => selected = c,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      await tester.tap(find.text(l10n.videoEditorAudioCategoryCommunity));
-      await tester.pumpAndSettle();
-
-      expect(selected, equals(AudioCategory.community));
-    });
-
-    testWidgets('calls onSelect with featured when third chip is tapped', (
-      tester,
-    ) async {
-      AudioCategory? selected;
-      await tester.pumpWidget(
-        buildWidget(
-          category: AudioCategory.divine,
-          onSelect: (c) => selected = c,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      await tester.tap(find.text(l10n.videoEditorAudioCategoryFeatured));
-      await tester.pumpAndSettle();
-
-      expect(selected, equals(AudioCategory.featured));
-    });
-
-    testWidgets('calls onSelect with mySounds when fourth chip is tapped', (
-      tester,
-    ) async {
-      AudioCategory? selected;
-      await tester.pumpWidget(
-        buildWidget(
-          category: AudioCategory.divine,
-          onSelect: (c) => selected = c,
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      await tester.tap(find.text(l10n.videoEditorAudioCategoryMySounds));
-      await tester.pumpAndSettle();
-
-      expect(selected, equals(AudioCategory.mySounds));
-    });
-
-    testWidgets('marks the selected chip with Semantics.selected', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        buildWidget(category: AudioCategory.divine, onSelect: (_) {}),
-      );
-      await tester.pumpAndSettle();
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      final divineSemantics = tester.widget<Semantics>(
-        find.ancestor(
-          of: find.text(l10n.videoEditorAudioCategoryDivine),
-          matching: find.byWidgetPredicate(
-            (w) => w is Semantics && w.properties.selected != null,
-          ),
-        ),
-      );
-      final communitySemantics = tester.widget<Semantics>(
-        find.ancestor(
-          of: find.text(l10n.videoEditorAudioCategoryCommunity),
-          matching: find.byWidgetPredicate(
-            (w) => w is Semantics && w.properties.selected != null,
-          ),
-        ),
-      );
-
-      expect(divineSemantics.properties.selected, isTrue);
-      expect(communitySemantics.properties.selected, isFalse);
-    });
+        expect(selected, equals(category));
+      });
+    }
   });
 }

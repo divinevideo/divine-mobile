@@ -4429,9 +4429,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'Zaten Seslerde';
 
   @override
-  String get soundsSavedLibraryTitle => 'Seslerim';
-
-  @override
   String get soundsSavedEmptyTitle => 'Henüz kaydedilmiş ses yok';
 
   @override
@@ -4440,6 +4437,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'Ses ekle';
+
+  @override
+  String get soundsAddSoundHint => 'Bir dosya içe aktar ya da kendin kaydet';
 
   @override
   String get soundsAddSharePublicly => 'Herkese açık paylaş';
@@ -4471,11 +4471,34 @@ class AppLocalizationsTr extends AppLocalizations {
       'Paylaşmak için sesine bir başlık ver.';
 
   @override
+  String get soundsShareCoverLabel => 'Kapak';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'İsteğe bağlı. İnsanlar ses seçerken senin sesinin yanında görür.';
+
+  @override
+  String get soundsShareCoverAdd => 'Kapak ekle';
+
+  @override
+  String get soundsShareCoverReplace => 'Değiştir';
+
+  @override
+  String get soundsShareCoverRemove => 'Kapağı kaldır';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'Ses kapağı';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'Bu dosya türü desteklenmiyor. Bir ses dosyası seç.';
 
   @override
   String get soundsImportUnreadable => 'Bu ses dosyası okunamadı.';
+
+  @override
+  String get soundsAddSilent =>
+      'Bu seste hiçbir şey duyulmuyor, bu yüzden eklenemez.';
 
   @override
   String get soundsImportAccountChanged =>
@@ -4511,12 +4534,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => 'O ses kaldırılamadı. Tekrar dene.';
-
-  @override
-  String get soundSyncStatusSyncing => 'Sesleriniz eşitleniyor…';
-
-  @override
-  String get soundSyncStatusSynced => 'Sesler güncel';
 
   @override
   String get soundSyncStatusFailed =>
@@ -5551,6 +5568,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get soundViewSource => 'Kaynağı gör';
+
+  @override
+  String get soundCreditEdited => 'düzenlendi';
 
   @override
   String get soundCloseTooltip => 'Kapat';
@@ -9108,6 +9128,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'Işık Sızıntısı';
 
   @override
+  String get videoEditorEffectLightRays => 'Işık Huzmeleri';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'Anamorfik';
+
+  @override
+  String get videoEditorEffectPrism => 'Prizma';
+
+  @override
+  String get videoEditorEffectWindowLight => 'Pencere Işığı';
+
+  @override
+  String get videoEditorEffectSpotlight => 'Spot Işık';
+
+  @override
   String get videoEditorEffectSnow => 'Kar';
 
   @override
@@ -11000,6 +11035,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'Başlıksız ses';
 
   @override
+  String get videoEditorAudioUseSound => 'Kullan';
+
+  @override
   String get videoEditorAudioFileMissing => 'Ses dosyası artık cihazda yok';
 
   @override
@@ -11023,19 +11061,13 @@ class AppLocalizationsTr extends AppLocalizations {
       'Videon için ses bölümünü seç';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'Topluluk';
-
-  @override
-  String get videoEditorAudioCategoryFeatured => 'Öne çıkanlar';
 
   @override
   String get videoEditorAudioCategoryMySounds => 'Seslerim';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'Ok aracı';
+  String get videoEditorAudioFilterEffects => 'Efektler';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => 'Silgi aracı';
@@ -11045,6 +11077,15 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'Kalem aracı';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'Neon aracı';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'Gökkuşağı aracı';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'Kaligrafi aracı';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'Zaman çizelgesini göster';
@@ -11772,9 +11813,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Ton';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'Bitti';
 
   @override
   String get videoEditorLevelSemanticLabel => 'Seviye';
@@ -13832,8 +13870,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get savedSoundRemoveAction => 'Kaydedilen sesi kaldır';
 
   @override
-  String get savedSoundFileMissing =>
-      'Bu sesin ses dosyası artık cihazda yok, o yüzden çalmıyor.';
+  String get savedSoundOpenAction => 'Sesi aç';
+
+  @override
+  String get savedSoundReuseUnavailable => 'Artık yeni videolarda kullanılamaz';
 
   @override
   String get savedSoundClearHashtagFilter => 'Hashtag filtresini temizle';
@@ -15649,4 +15689,18 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'Videoyu izle';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

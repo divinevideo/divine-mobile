@@ -19,6 +19,8 @@
 # 6 - DEFAULT_ENV is configured via build inputs (dropdown) when starting a build
 #   - Options: PRODUCTION, STAGING, POC
 #   - Defaults to PRODUCTION for automatic builds
+# Optional CONCORD_INVITE_URL and CONCORD_RELAY_URL enable public Rooms together.
+# Provide both to the workflow environment; private defines are never logged.
 # 7 - Create environment variable group "proofmode_credentials" with:
 #   - PROOFMODE_SIGNING_SERVER_ENDPOINT
 #   - PROOFMODE_SIGNING_SERVER_TOKEN
@@ -250,6 +252,12 @@ definitions:
         )
         File.chmod(0o600, 'build/shorebird/dart_defines.json')
         RUBY
+    - &write_shorebird_concord_defines
+      name: Write optional public community configuration
+      script: |
+        set -euo pipefail
+        ruby scripts/write_concord_release_defines.rb \
+          --output build/shorebird/dart_defines.json
     - &write_shorebird_people_list_defines
       name: Write Shorebird public-list policy
       script: |
@@ -328,6 +336,17 @@ definitions:
           echo "ERROR: could not establish the release's public-list policy shape."
           exit 1
         fi
+        CONCORD_INVITE_REQUIRED=$(ruby scripts/shorebird_provenance.rb concord-required \
+          --platform "$SHOREBIRD_PLATFORM" \
+          --release-version "${{ inputs.RELEASE_VERSION }}" \
+          --record "$PROVENANCE_PATH")
+        if [ "$CONCORD_INVITE_REQUIRED" = "true" ]; then
+          ruby scripts/write_concord_release_defines.rb \
+            --output build/shorebird/dart_defines.json --required
+        elif [ "$CONCORD_INVITE_REQUIRED" != "false" ]; then
+          echo "ERROR: could not establish the release's public community configuration shape."
+          exit 1
+        fi
         ruby scripts/shorebird_provenance.rb verify \
           --platform "$SHOREBIRD_PLATFORM" \
           --release-version "${{ inputs.RELEASE_VERSION }}" \
@@ -390,18 +409,33 @@ definitions:
           echo "ERROR: could not read build name from pubspec.yaml version."
           exit 1
         fi
-        LATEST_GOOGLE_PLAY_BUILD_NUMBER=$(google-play get-latest-build-number --package-name "co.openvine.app" 2>/dev/null || true)
-        BUILD_NUMBER=$PROJECT_BUILD_NUMBER
+        # Fail closed, like the iOS lookup. Falling back to the Codemagic
+        # counter on a lookup error can pick a versionCode Play already holds,
+        # which Play rejects only after a full build and Shorebird release.
+        PLAY_LOOKUP_LOG=$(mktemp)
+        trap 'rm -f "$PLAY_LOOKUP_LOG"' EXIT
+        if ! LATEST_GOOGLE_PLAY_BUILD_NUMBER=$(google-play get-latest-build-number --package-name "co.openvine.app" 2>"$PLAY_LOOKUP_LOG"); then
+          LATEST_GOOGLE_PLAY_BUILD_NUMBER=
+        fi
         case "$LATEST_GOOGLE_PLAY_BUILD_NUMBER" in
           ''|*[!0-9]*)
-            ;;
-          *)
-            NEXT_PLAY_BUILD_NUMBER=$((LATEST_GOOGLE_PLAY_BUILD_NUMBER + 1))
-            if [ "$NEXT_PLAY_BUILD_NUMBER" -gt "$BUILD_NUMBER" ]; then
-              BUILD_NUMBER=$NEXT_PLAY_BUILD_NUMBER
+            echo "ERROR: could not read the latest Google Play build number."
+            if [ -n "$LATEST_GOOGLE_PLAY_BUILD_NUMBER" ]; then
+              echo "       Google Play returned: $LATEST_GOOGLE_PLAY_BUILD_NUMBER"
             fi
+            if [ -s "$PLAY_LOOKUP_LOG" ]; then
+              echo "       Google Play lookup output:"
+              sed 's/^/       /' "$PLAY_LOOKUP_LOG"
+            fi
+            echo "       Refusing to guess a build number Google Play may reject after the build."
+            exit 1
             ;;
         esac
+        BUILD_NUMBER=$PROJECT_BUILD_NUMBER
+        NEXT_PLAY_BUILD_NUMBER=$((LATEST_GOOGLE_PLAY_BUILD_NUMBER + 1))
+        if [ "$NEXT_PLAY_BUILD_NUMBER" -gt "$BUILD_NUMBER" ]; then
+          BUILD_NUMBER=$NEXT_PLAY_BUILD_NUMBER
+        fi
         RELEASE_VERSION="$BUILD_NAME+$BUILD_NUMBER"
         {
           echo "SHOREBIRD_BUILD_NAME=$BUILD_NAME"
@@ -565,12 +599,15 @@ definitions:
     - &build_macos
       name: Build macOS app
       script: |
+        set -euo pipefail
         # This workflow packages a DMG for direct download. It does not provision
         # a macOS signing identity/profile in Codemagic, so disable signing for
         # the CI build and handle signing/notarization separately when needed.
         python3 scripts/write_public_people_list_defines.py \
           --output build/public_people_list_defines.json \
           --github-repository "$CM_REPO_SLUG"
+        ruby scripts/write_concord_release_defines.rb \
+          --output build/public_people_list_defines.json
         env CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO flutter build macos --release \
           --dart-define-from-file=build/public_people_list_defines.json \
           --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
@@ -1072,6 +1109,7 @@ workflows:
       - *prepare_ios_spm_packages
       - *pod_install
       - *write_shorebird_dart_defines
+      - *write_shorebird_concord_defines
       - *write_shorebird_people_list_defines
       - *build_ios
       - *emit_shorebird_provenance
@@ -1196,6 +1234,7 @@ workflows:
       - *write_shorebird_public_key
       - *preflight_shorebird_android_release
       - *write_shorebird_dart_defines
+      - *write_shorebird_concord_defines
       - *write_shorebird_people_list_defines
       - *build_apk
       - *precache_shorebird_android_artifacts
@@ -1306,6 +1345,8 @@ workflows:
       - *check_signing_endpoint
       - *check_supporters_config
       - *write_shorebird_dart_defines
+      # The paired invite validator needs the package map on a clean runner.
+      - *flutter_pub_get
       - *fetch_and_verify_shorebird_provenance
       - *prepare_patch_source
       - *check_ios_extension_signing_contract
@@ -1391,6 +1432,8 @@ workflows:
       - *check_signing_endpoint
       - *check_supporters_config
       - *write_shorebird_dart_defines
+      # The paired invite validator needs the package map on a clean runner.
+      - *flutter_pub_get
       - *fetch_and_verify_shorebird_provenance
       - *prepare_patch_source
       - *setup_local_properties

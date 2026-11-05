@@ -1062,7 +1062,7 @@ void main() {
         for (final type in EditorEffectType.values)
           if (type.customId != null) type,
       ];
-      expect(custom, hasLength(39));
+      expect(custom, hasLength(44));
       for (final type in custom) {
         final effect = EditorVideoEffect.of(
           id: 'x',
@@ -1177,6 +1177,22 @@ void main() {
         EditorEffectType.swirl,
         EditorEffectType.ripple,
         EditorEffectType.flutedGlass,
+      ]);
+    });
+
+    test('lists the light rays, anamorphic, prism, window light and '
+        'spotlight under light, after the light leak', () {
+      expect(EditorEffectCategory.light.types, [
+        const EditorEffectType.builtIn(VideoEffectType.strobe),
+        const EditorEffectType.builtIn(VideoEffectType.negativeFlash),
+        const EditorEffectType.builtIn(VideoEffectType.vignette),
+        const EditorEffectType.builtIn(VideoEffectType.glow),
+        EditorEffectType.lightLeak,
+        EditorEffectType.lightRays,
+        EditorEffectType.anamorphic,
+        EditorEffectType.prism,
+        EditorEffectType.windowLight,
+        EditorEffectType.spotlight,
       ]);
     });
 

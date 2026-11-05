@@ -287,6 +287,75 @@ void main() {
       expect(restored.hasExplicitReuseConsent, isFalse);
     });
 
+    group('requiresAttribution', () {
+      AudioEvent sound({String? licenseName, String? licenseUrl}) => AudioEvent(
+        id: testHexId,
+        pubkey: testPubkey,
+        createdAt: 1700000000,
+        licenseName: licenseName,
+        licenseUrl: licenseUrl,
+      );
+
+      test('is true for every Creative Commons Attribution link', () {
+        for (final url in [
+          'https://creativecommons.org/licenses/by/4.0/',
+          'https://creativecommons.org/licenses/by-sa/4.0/',
+          'http://creativecommons.org/licenses/by/3.0/',
+        ]) {
+          expect(sound(licenseUrl: url).requiresAttribution, isTrue);
+        }
+      });
+
+      test('is false for a public domain dedication', () {
+        expect(
+          sound(
+            licenseName: 'CC0',
+            licenseUrl: 'http://creativecommons.org/publicdomain/zero/1.0/',
+          ).requiresAttribution,
+          isFalse,
+        );
+      });
+
+      test('reads an Attribution licence from its name alone', () {
+        expect(sound(licenseName: 'CC BY 4.0').requiresAttribution, isTrue);
+        expect(sound(licenseName: 'CC-BY-NC 3.0').requiresAttribution, isTrue);
+        expect(
+          sound(
+            licenseName: 'Attribution 4.0 International',
+          ).requiresAttribution,
+          isTrue,
+        );
+        expect(
+          sound(licenseName: 'Public Domain').requiresAttribution,
+          isFalse,
+        );
+      });
+
+      test('is false without licence data', () {
+        expect(sound().requiresAttribution, isFalse);
+      });
+
+      test("follows a provider's licence data over the tags", () {
+        final provided = sound(licenseName: 'CC BY 4.0').copyWith(
+          externalSource: AudioExternalSource(
+            provider: 'freesound',
+            providerSoundId: '1',
+            providerName: 'Freesound',
+            license: AudioLicenseMetadata(
+              type: 'cc0',
+              name: 'CC0 1.0',
+              url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+              allowsCommercialUse: true,
+              allowsDerivatives: true,
+              requiresAttribution: false,
+            ),
+          ),
+        );
+
+        expect(provided.requiresAttribution, isFalse);
+      });
+    });
+
     group('fromBundledSound', () {
       test('creates AudioEvent from VineSound with correct fields', () {
         // Arrange
@@ -312,6 +381,24 @@ void main() {
         expect(audioEvent.mimeType, equals('audio/mpeg'));
         expect(audioEvent.duration, equals(1.0));
         expect(audioEvent.title, equals('Bruh Sound Effect'));
+      });
+
+      test("carries the manifest's source link, also through JSON", () {
+        final audioEvent = AudioEvent.fromBundledSound(
+          VineSound(
+            id: 'freesound_yay',
+            title: 'YAY!',
+            assetPath: 'assets/sounds/yay.mp3',
+            duration: const Duration(seconds: 4),
+            sourceUrl: 'https://freesound.org/s/61691/',
+          ),
+        );
+
+        expect(audioEvent.sourceUrl, equals('https://freesound.org/s/61691/'));
+        expect(
+          AudioEvent.fromJson(audioEvent.toJson()).sourceUrl,
+          equals('https://freesound.org/s/61691/'),
+        );
       });
 
       test('isBundled returns true for bundled sounds', () {
@@ -389,6 +476,38 @@ void main() {
         final audioEvent = AudioEvent.fromBundledSound(vineSound);
 
         expect(audioEvent.source, equals('ThePauny via Freesound'));
+      });
+
+      test('carries the licence of a sound that links one', () {
+        final vineSound = VineSound(
+          id: 'freesound_yay',
+          title: 'YAY!',
+          assetPath: 'assets/sounds/yay.mp3',
+          duration: const Duration(milliseconds: 4762),
+          artist: 'IFartInUrGeneralDirection',
+          license: 'CC BY 4.0',
+          licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+        );
+
+        final audioEvent = AudioEvent.fromBundledSound(vineSound);
+
+        expect(audioEvent.licenseName, equals('CC BY 4.0'));
+        expect(
+          audioEvent.licenseUrl,
+          equals('https://creativecommons.org/licenses/by/4.0/'),
+        );
+      });
+
+      test('names no licence the manifest only marks unknown', () {
+        final vineSound = VineSound(
+          id: 'bruh',
+          title: 'Bruh Sound Effect',
+          assetPath: 'assets/sounds/bruh.mp3',
+          duration: const Duration(seconds: 1),
+          license: 'unknown',
+        );
+
+        expect(AudioEvent.fromBundledSound(vineSound).licenseName, isNull);
       });
 
       test('omits source when VineSound has no artist or sourceUrl', () {
@@ -645,6 +764,99 @@ void main() {
         );
         expect(withId('local_import_1700000000000').isVoiceOver, isFalse);
         expect(withId('local_extracted_1').isVoiceOver, isFalse);
+      });
+    });
+
+    group('hasDefaultTitle', () {
+      AudioEvent titled(String? title) =>
+          AudioEvent(id: 'id', pubkey: '', createdAt: 1700000000, title: title);
+
+      test('is true without a title of its own', () {
+        expect(titled(null).hasDefaultTitle, isTrue);
+        expect(titled('  ').hasDefaultTitle, isTrue);
+        expect(titled(AudioEvent.originalSoundTitle).hasDefaultTitle, isTrue);
+        expect(titled(' original SOUND ').hasDefaultTitle, isTrue);
+      });
+
+      test('is true for the default title naming its creator', () {
+        expect(titled('Original sound - @rabble').hasDefaultTitle, isTrue);
+        expect(titled(' ORIGINAL Sound - @rabble ').hasDefaultTitle, isTrue);
+      });
+
+      test('is false for a named sound', () {
+        expect(titled('Original sound remix').hasDefaultTitle, isFalse);
+        expect(titled('Original sound-ish').hasDefaultTitle, isFalse);
+        expect(titled('Wednesday My Dudes').hasDefaultTitle, isFalse);
+      });
+    });
+
+    group('isAutoSharedOriginal', () {
+      AudioEvent sound({
+        String id = 'id',
+        String? title = AudioEvent.originalSoundTitle,
+        String? source,
+        AudioExternalSource? externalSource,
+      }) => AudioEvent(
+        id: id,
+        pubkey: '',
+        createdAt: 1700000000,
+        title: title,
+        source: source,
+        externalSource: externalSource,
+      );
+
+      test('is true for a video sound left untitled and uncredited', () {
+        expect(sound().isAutoSharedOriginal, isTrue);
+        expect(sound(title: null).isAutoSharedOriginal, isTrue);
+        expect(sound(source: '  ').isAutoSharedOriginal, isTrue);
+      });
+
+      test('is true for the title the app publishes for a video sound', () {
+        expect(
+          sound(title: 'Original sound - @rabble').isAutoSharedOriginal,
+          isTrue,
+        );
+      });
+
+      test('is false for a sound its publisher named', () {
+        expect(
+          sound(title: 'Rain on a tin roof').isAutoSharedOriginal,
+          isFalse,
+        );
+      });
+
+      test('is false for a sound credited to a source', () {
+        expect(
+          sound(source: 'https://example.com/track').isAutoSharedOriginal,
+          isFalse,
+        );
+      });
+
+      test('is false for a bundled sound', () {
+        expect(
+          sound(id: '${AudioEvent.bundledMarker}_rain').isAutoSharedOriginal,
+          isFalse,
+        );
+      });
+
+      test('is false for an external provider sound', () {
+        final providerSound = sound(
+          externalSource: AudioExternalSource(
+            provider: 'freesound',
+            providerSoundId: '502915',
+            providerName: 'Freesound',
+            license: AudioLicenseMetadata(
+              type: 'cc0',
+              name: 'Creative Commons 0',
+              url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+              allowsCommercialUse: true,
+              allowsDerivatives: true,
+              requiresAttribution: false,
+            ),
+          ),
+        );
+
+        expect(providerSound.isAutoSharedOriginal, isFalse);
       });
     });
 
@@ -1049,6 +1261,157 @@ void main() {
 
         expect(audioEvent.toJson(), isNot(contains('externalSource')));
         expect(audioEvent.isExternalProviderSound, isFalse);
+      });
+    });
+
+    group('cover image', () {
+      const imageUrl = 'https://blossom.example/cover.jpg';
+      const blurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
+
+      AudioEvent parse(List<List<String>> coverTags) =>
+          AudioEvent.fromNostrEvent(
+            Event(testPubkey, 1063, [
+              ['url', 'https://blossom.example/sound.m4a'],
+              ['m', 'audio/mp4'],
+              ...coverTags,
+            ], ''),
+          );
+
+      test('reads the NIP-94 image and blurhash tags', () {
+        final audio = parse([
+          ['image', imageUrl],
+          ['thumb', 'https://blossom.example/thumb.jpg'],
+          ['blurhash', blurhash],
+        ]);
+
+        expect(audio.imageUrl, equals(imageUrl));
+        expect(audio.blurhash, equals(blurhash));
+      });
+
+      test('falls back to the thumb tag when there is no image', () {
+        final audio = parse([
+          ['thumb', 'https://blossom.example/thumb.jpg'],
+        ]);
+
+        expect(audio.imageUrl, equals('https://blossom.example/thumb.jpg'));
+      });
+
+      test('publishes the cover back as image and blurhash tags', () {
+        final audio = AudioEvent(
+          id: 'cover-id',
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+          url: 'https://blossom.example/sound.m4a',
+          imageUrl: imageUrl,
+          blurhash: blurhash,
+        );
+
+        expect(
+          audio.toTags(),
+          containsAll([
+            ['image', imageUrl],
+            ['blurhash', blurhash],
+          ]),
+        );
+      });
+
+      test('keeps the cover through toJson and fromJson', () {
+        final restored = AudioEvent.fromJson(
+          AudioEvent(
+            id: 'cover-id',
+            pubkey: testPubkey,
+            createdAt: 1700000000,
+            imageUrl: imageUrl,
+            blurhash: blurhash,
+          ).toJson(),
+        );
+
+        expect(restored.imageUrl, equals(imageUrl));
+        expect(restored.blurhash, equals(blurhash));
+      });
+    });
+
+    group('divine sound id', () {
+      test('reads the manifest id Divine publishes a shipped sound under', () {
+        final audio = AudioEvent.fromNostrEvent(
+          Event(testPubkey, 1063, [
+            ['url', 'https://blossom.example/wednesday.mp3'],
+            ['m', 'audio/mpeg'],
+            [AudioEvent.divineSoundTag, 'wednesday'],
+          ], ''),
+        );
+
+        expect(audio.divineSoundId, 'wednesday');
+      });
+
+      test('writes it back, and keeps it through copyWith and JSON', () {
+        final audio = AudioEvent(
+          id: 'divine-id',
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+          divineSoundId: 'wednesday',
+        );
+
+        expect(
+          audio.toTags(),
+          contains(equals([AudioEvent.divineSoundTag, 'wednesday'])),
+        );
+        expect(audio.copyWith(title: 'Wed').divineSoundId, 'wednesday');
+        expect(AudioEvent.fromJson(audio.toJson()).divineSoundId, 'wednesday');
+      });
+    });
+
+    group('linkedEventId', () {
+      final eventId = 'a' * 64;
+
+      test('stands in as the attribution of a shipped sound', () {
+        final bundled = AudioEvent.fromBundledSound(
+          VineSound(
+            id: 'wednesday',
+            title: 'Wednesday My Dudes',
+            assetPath: 'assets/sounds/wednesday.mp3',
+            duration: const Duration(seconds: 6),
+          ),
+        );
+
+        expect(bundled.attributionEventId, isNull);
+        expect(
+          bundled.copyWith(linkedEventId: eventId).attributionEventId,
+          eventId,
+        );
+      });
+
+      test('never overrides a sound that is an event itself', () {
+        final published = AudioEvent(
+          id: 'b' * 64,
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+          linkedEventId: eventId,
+        );
+
+        expect(published.attributionEventId, 'b' * 64);
+      });
+
+      test('ignores a value that is not an event id', () {
+        final bundled = AudioEvent(
+          id: '${AudioEvent.bundledMarker}_wednesday',
+          pubkey: AudioEvent.bundledMarker,
+          createdAt: 0,
+          linkedEventId: 'not-an-id',
+        );
+
+        expect(bundled.attributionEventId, isNull);
+      });
+
+      test('survives JSON, as a draft stores it', () {
+        final bundled = AudioEvent(
+          id: '${AudioEvent.bundledMarker}_wednesday',
+          pubkey: AudioEvent.bundledMarker,
+          createdAt: 0,
+          linkedEventId: eventId,
+        );
+
+        expect(AudioEvent.fromJson(bundled.toJson()).linkedEventId, eventId);
       });
     });
 

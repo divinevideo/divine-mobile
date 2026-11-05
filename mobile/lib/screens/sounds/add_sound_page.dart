@@ -7,6 +7,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent, UserProfile;
@@ -15,12 +16,17 @@ import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
 import 'package:openvine/blocs/sound_recorder/sound_recorder_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/image_crop_launcher_provider.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/sound_upload_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/screens/image_crop_editor/image_crop_editor.dart';
+import 'package:openvine/screens/profile_setup/widgets/profile_image_actions_sheet.dart';
+import 'package:openvine/screens/profile_setup/widgets/profile_image_picker.dart';
 import 'package:openvine/screens/sounds/widgets/microphone_denied_notice.dart';
+import 'package:openvine/screens/sounds/widgets/share_cover_section.dart';
 import 'package:openvine/screens/sounds/widgets/sound_recording_panel.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/audio/public_audio_credit_editor.dart';
@@ -70,6 +76,7 @@ class AddSoundPage extends ConsumerWidget {
               ),
               saveSound: savedSoundsBloc.saveSound,
               reclaimAudio: ref.read(audioImportReclaimerProvider),
+              isSilent: ref.read(soundSilenceTrimmerProvider).isSilent,
               viewerAccountId: () => container.read(currentAccountIdProvider),
               publisher: () => container.read(localAudioEventPublisherProvider),
               publisherName:
@@ -108,6 +115,7 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
   static const _logName = 'AddSoundPage';
 
   final TextEditingController _nameController = TextEditingController();
+  final _imagePicker = ImagePicker();
   late final AudioPlaybackService _audioService;
   String? _loadedPath;
   bool _playing = false;
@@ -152,6 +160,63 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
     final recorder = context.read<SoundRecorderCubit>().state;
     if (recorder.isStarting || recorder.isActive) return;
     await context.read<AddSoundCubit>().pickFileAndImport();
+  }
+
+  /// Opens the cover sheet and applies whatever the user picked.
+  ///
+  /// Shares the profile picture's sheet, picker and 1:1 crop, so a sound cover
+  /// comes out of the editor with the same geometry as an avatar or a badge.
+  Future<void> _changeCover() async {
+    final cubit = context.read<AddSoundCubit>();
+    final action = await showProfileImageActionsSheet(
+      context,
+      title: context.l10n.soundsShareCoverSheetTitle,
+      clearLabel: context.l10n.soundsShareCoverRemove,
+      actions: {
+        ProfileImageAction.camera,
+        ProfileImageAction.gallery,
+        if (cubit.state.coverImage != null) ProfileImageAction.clear,
+      },
+    );
+    if (action == null || !mounted) return;
+
+    switch (action) {
+      case ProfileImageAction.camera:
+        await _pickCover(ImageSource.camera);
+      case ProfileImageAction.gallery:
+        await _pickCover(ImageSource.gallery);
+      case ProfileImageAction.clear:
+        cubit.setCoverImage(null);
+      case ProfileImageAction.link:
+      case ProfileImageAction.color:
+        // Intentional no-op: neither row is in the `actions` set above, so
+        // the sheet cannot return them.
+        break;
+    }
+  }
+
+  Future<void> _pickCover(ImageSource source) async {
+    final cubit = context.read<AddSoundCubit>();
+    final cropLauncher = ref.read(imageCropLauncherProvider);
+
+    final picked = await pickProfileXFile(source, _imagePicker, context);
+    if (picked == null || !mounted) return;
+
+    final selection = await resolveProfileImageSelection(picked);
+    if (!mounted) return;
+    if (selection == null) {
+      showProfileImageSelectionFailed(context);
+      return;
+    }
+
+    final cropped = await cropLauncher(
+      context,
+      kind: ImageCropKind.avatar,
+      file: selection.file,
+      bytes: selection.bytes,
+    );
+    if (cropped == null) return;
+    cubit.setCoverImage(cropped);
   }
 
   Future<void> _startRecording() async {
@@ -333,6 +398,7 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
         AddSoundFailure.notSignedIn => l10n.soundUploadSignInFirst,
         AddSoundFailure.publishFailed => l10n.soundUploadFailed,
         AddSoundFailure.accountRestricted => l10n.soundUploadAccountRestricted,
+        AddSoundFailure.silentSound => l10n.soundsAddSilent,
       }, error: true),
     );
   }
@@ -475,12 +541,23 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
                               excluding: !state.canEdit || isRecorderStarting,
                               child: IgnorePointer(
                                 ignoring: !state.canEdit || isRecorderStarting,
-                                child: PublicAudioCreditEditor(
-                                  key: ValueKey(audio.id),
-                                  attribution: attribution,
-                                  onChanged: cubit.updateAttribution,
-                                  emptyTitleHint:
-                                      context.l10n.soundsShareTitleRequiredHint,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    ShareCoverSection(
+                                      coverImage: state.coverImage,
+                                      onChangeCover: _changeCover,
+                                    ),
+                                    PublicAudioCreditEditor(
+                                      key: ValueKey(audio.id),
+                                      attribution: attribution,
+                                      onChanged: cubit.updateAttribution,
+                                      emptyTitleHint: context
+                                          .l10n
+                                          .soundsShareTitleRequiredHint,
+                                    ),
+                                  ],
                                 ),
                               ),
                             )

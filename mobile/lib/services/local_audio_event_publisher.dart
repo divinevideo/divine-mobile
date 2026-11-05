@@ -2,12 +2,15 @@
 // ABOUTME: credited Kind 1063, with or without a source-video coordinate.
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
+import 'package:blurhash_service/blurhash_service.dart';
 import 'package:models/models.dart' show AudioEvent, audioEventKind;
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/sound_silence_trimmer.dart';
 import 'package:openvine/services/video_publish/signed_event_relay_publisher.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -24,7 +27,11 @@ enum LocalAudioPublishFailure {
   /// No signed-in identity can sign the event.
   notAuthenticated,
 
-  /// Blossom rejected or dropped the upload.
+  /// Nothing in the file is loud enough to hear, so publishing it would share
+  /// silence. Retrying cannot help.
+  silent,
+
+  /// Blossom rejected or dropped the upload of the sound or its cover.
   uploadFailed,
 
   /// Signing produced no event.
@@ -64,6 +71,10 @@ final class LocalAudioPublishFailed extends LocalAudioPublishResult {
 /// a sound added from the library and passes none — a sound shared on its own
 /// has no source video, and nothing that reads Kind 1063 requires the `a` tag.
 ///
+/// The file goes through [SoundSilenceTrimmer] before it is uploaded: a
+/// silent one is refused, and silence at the start and end is cut off the
+/// published copy. The local file is left as it was.
+///
 /// Saving the published sound to My Sounds is the caller's job: the video
 /// pipeline writes the library directly, while the Add sound page wires
 /// `AddSoundCubit` to `SavedSoundsBloc` so the tab updates and the waveform
@@ -73,21 +84,28 @@ class LocalAudioEventPublisher {
     required SignedEventRelayPublisher relayPublisher,
     AuthService? authService,
     BlossomUploadService? blossomUploadService,
+    SoundSilenceTrimmer? soundSilenceTrimmer,
   }) : _relayPublisher = relayPublisher,
        _authService = authService,
-       _blossomUploadService = blossomUploadService;
+       _blossomUploadService = blossomUploadService,
+       _soundSilenceTrimmer = soundSilenceTrimmer ?? SoundSilenceTrimmer();
 
   static const String _logName = 'LocalAudioEventPublisher';
 
   final SignedEventRelayPublisher _relayPublisher;
   final AuthService? _authService;
   final BlossomUploadService? _blossomUploadService;
+  final SoundSilenceTrimmer _soundSilenceTrimmer;
 
   /// Uploads [audio]'s file and publishes it credited with [attribution].
   ///
   /// [sourceVideoReference] is the `kind:pubkey:d-tag` coordinate of the video
   /// the sound is published beside, with [sourceVideoRelay] as its relay hint;
   /// both are omitted for a standalone sound.
+  ///
+  /// [coverImage] is a JPEG published as the sound's NIP-94 `image`, with its
+  /// `blurhash`. A cover that fails to upload fails the publish rather than
+  /// shipping the sound without the cover the user chose.
   ///
   /// Throws:
   ///
@@ -99,6 +117,7 @@ class LocalAudioEventPublisher {
     required bool allowAudioReuse,
     String? sourceVideoReference,
     String? sourceVideoRelay,
+    Uint8List? coverImage,
   }) async {
     if (!attribution.isValid) {
       Log.error(
@@ -145,10 +164,79 @@ class LocalAudioEventPublisher {
       );
     }
 
-    final mimeType = audio.mimeType ?? 'audio/mpeg';
+    final AudibleSound sound;
+    switch (await _soundSilenceTrimmer.trim(
+      path: filePath,
+      mimeType: audio.mimeType ?? 'audio/mpeg',
+    )) {
+      case SilentSound():
+        Log.warning(
+          'Local audio has nothing to hear; not publishing it',
+          name: _logName,
+          category: LogCategory.video,
+        );
+        return const LocalAudioPublishFailed(LocalAudioPublishFailure.silent);
+      case final AudibleSound audible:
+        sound = audible;
+    }
+    try {
+      return await _publishAudible(
+        audio: audio,
+        sound: sound,
+        authService: authService,
+        pubkey: pubkey,
+        blossomService: blossomService,
+        attribution: attribution,
+        allowAudioReuse: allowAudioReuse,
+        sourceVideoReference: sourceVideoReference,
+        sourceVideoRelay: sourceVideoRelay,
+        coverImage: coverImage,
+      );
+    } finally {
+      await _soundSilenceTrimmer.deleteTrimmedCopy(sound);
+    }
+  }
+
+  Future<LocalAudioPublishResult> _publishAudible({
+    required AudioEvent audio,
+    required AudibleSound sound,
+    required AuthService authService,
+    required String pubkey,
+    required BlossomUploadService blossomService,
+    required AudioShareAttribution attribution,
+    required bool allowAudioReuse,
+    required String? sourceVideoReference,
+    required String? sourceVideoRelay,
+    required Uint8List? coverImage,
+  }) async {
+    // The cover goes first: it is the smaller upload, so a failure there
+    // costs no audio round trip.
+    String? imageUrl;
+    String? blurhash;
+    if (coverImage != null) {
+      final coverUpload = await blossomService.uploadImageBytes(
+        bytes: coverImage,
+        nostrPubkey: pubkey,
+        filename: 'sound_cover.jpg',
+      );
+      imageUrl = coverUpload.url;
+      if (!coverUpload.success || imageUrl == null) {
+        Log.error(
+          'Sound cover upload failed: ${coverUpload.errorMessage}',
+          name: _logName,
+          category: LogCategory.video,
+        );
+        return const LocalAudioPublishFailed(
+          LocalAudioPublishFailure.uploadFailed,
+        );
+      }
+      blurhash = await BlurhashService.generateBlurhash(coverImage);
+    }
+
+    final audioFile = File(sound.path);
     final uploadResult = await blossomService.uploadAudio(
       audioFile: audioFile,
-      mimeType: mimeType,
+      mimeType: sound.mimeType,
     );
     final audioUrl = uploadResult.fallbackUrl ?? uploadResult.url;
     if (!uploadResult.success ||
@@ -169,14 +257,20 @@ class LocalAudioEventPublisher {
       pubkey: pubkey,
       createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       url: audioUrl,
-      mimeType: mimeType,
+      mimeType: sound.mimeType,
       sha256: uploadResult.videoId,
       fileSize: await audioFile.length(),
-      duration: audio.duration,
+      duration: switch (sound.trimmedDuration) {
+        final trimmed? =>
+          trimmed.inMicroseconds / Duration.microsecondsPerSecond,
+        null => audio.duration,
+      },
       title: attribution.title.trim(),
       source: attribution.sourceUrl?.trim(),
       sourceVideoReference: sourceVideoReference,
       sourceVideoRelay: sourceVideoRelay,
+      imageUrl: imageUrl,
+      blurhash: blurhash,
       creatorName: attribution.creatorName.trim(),
       creatorPubkey: attribution.creatorPubkey,
       creatorUrl: attribution.creatorUrl,

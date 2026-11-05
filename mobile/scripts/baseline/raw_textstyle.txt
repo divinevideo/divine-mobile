@@ -49,7 +49,7 @@ lib/widgets/content_warning.dart	11
 lib/widgets/environment_indicator.dart	1
 lib/widgets/error_message.dart	1
 lib/widgets/global_error_widget.dart	7
-lib/widgets/library/sounds_tab.dart	7
+lib/widgets/library/sounds_tab.dart	5
 lib/widgets/linkified_text/linkified_text.dart	2
 lib/widgets/linkified_text/selectable_linkified_text.dart	2
 lib/widgets/markdown/markdown_text_span_builder.dart	1
@@ -65,8 +65,7 @@ lib/widgets/trending_hashtags_section.dart	1
 lib/widgets/upload_progress_dialog.dart	2
 lib/widgets/user_name.dart	1
 lib/widgets/video_editor/audio_editor/audio_editor_selection_overlay.dart	1
-lib/widgets/video_editor/audio_editor/audio_list_tile.dart	1
-lib/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart	3
+lib/widgets/video_editor/audio_editor/audio_selection_bottom_sheet.dart	2
 lib/widgets/video_feed_item/actions/share_sheet_header.dart	2
 lib/widgets/video_feed_item/actions/share_sheet_message_input.dart	2
 lib/widgets/video_feed_item/actions/share_sheet_more_actions.dart	2

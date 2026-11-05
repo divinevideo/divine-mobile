@@ -4211,9 +4211,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'すでにサウンドにあります';
 
   @override
-  String get soundsSavedLibraryTitle => 'マイサウンド';
-
-  @override
   String get soundsSavedEmptyTitle => '保存されたサウンドはまだありません';
 
   @override
@@ -4221,6 +4218,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'サウンドを追加';
+
+  @override
+  String get soundsAddSoundHint => 'ファイルの読み込みまたは録音';
 
   @override
   String get soundsAddSharePublicly => '一般に公開';
@@ -4250,11 +4250,33 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundsShareTitleRequiredHint => '共有するにはサウンドにタイトルを付けてください。';
 
   @override
+  String get soundsShareCoverLabel => 'カバー';
+
+  @override
+  String get soundsShareCoverDescription =>
+      '任意です。サウンドを選ぶときに、あなたのサウンドの横に表示されます。';
+
+  @override
+  String get soundsShareCoverAdd => 'カバーを追加';
+
+  @override
+  String get soundsShareCoverReplace => '差し替え';
+
+  @override
+  String get soundsShareCoverRemove => 'カバーを削除';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'サウンドのカバー';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'このファイル形式には対応していません。音声ファイルを選んでください。';
 
   @override
   String get soundsImportUnreadable => 'この音声ファイルを読み込めませんでした。';
+
+  @override
+  String get soundsAddSilent => 'このサウンドには聞こえる音がないため、追加できません。';
 
   @override
   String get soundsImportAccountChanged => 'アカウントが切り替わったため、このサウンドは追加されませんでした。';
@@ -4289,12 +4311,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => 'そのサウンドを削除できませんでした。もう一度お試しください。';
-
-  @override
-  String get soundSyncStatusSyncing => 'サウンドを同期しています…';
-
-  @override
-  String get soundSyncStatusSynced => 'サウンドは最新です';
 
   @override
   String get soundSyncStatusFailed => 'サウンドを同期できませんでした。もう一度試します。';
@@ -5283,6 +5299,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get soundViewSource => '元動画を見る';
+
+  @override
+  String get soundCreditEdited => '編集済み';
 
   @override
   String get soundCloseTooltip => '閉じる';
@@ -8738,6 +8757,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectLightLeak => '光漏れ';
 
   @override
+  String get videoEditorEffectLightRays => '光芒';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'アナモルフィック';
+
+  @override
+  String get videoEditorEffectPrism => 'プリズム';
+
+  @override
+  String get videoEditorEffectWindowLight => '窓の光';
+
+  @override
+  String get videoEditorEffectSpotlight => 'スポットライト';
+
+  @override
   String get videoEditorEffectSnow => '雪';
 
   @override
@@ -10549,6 +10583,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'タイトルなしのサウンド';
 
   @override
+  String get videoEditorAudioUseSound => '使う';
+
+  @override
   String get videoEditorAudioFileMissing => '音声ファイルは端末に残っていません';
 
   @override
@@ -10571,19 +10608,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorAudioSegmentInstruction => '動画に使うオーディオ範囲を選択';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'コミュニティ';
-
-  @override
-  String get videoEditorAudioCategoryFeatured => 'おすすめ';
 
   @override
   String get videoEditorAudioCategoryMySounds => 'マイサウンド';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => '矢印ツール';
+  String get videoEditorAudioFilterEffects => '効果音';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => '消しゴムツール';
@@ -10593,6 +10624,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => '鉛筆ツール';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'ネオンツール';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'レインボーツール';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'カリグラフィーツール';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'タイムラインを表示';
@@ -11280,9 +11320,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => '色相';
-
-  @override
-  String get videoEditorDoneSemanticLabel => '完了';
 
   @override
   String get videoEditorLevelSemanticLabel => 'レベル';
@@ -13221,7 +13258,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get savedSoundRemoveAction => '保存したサウンドを削除';
 
   @override
-  String get savedSoundFileMissing => 'このサウンドの音声ファイルは端末に残っていないため再生できません。';
+  String get savedSoundOpenAction => 'サウンドを開く';
+
+  @override
+  String get savedSoundReuseUnavailable => '新しい動画では使えなくなりました';
 
   @override
   String get savedSoundClearHashtagFilter => 'ハッシュタグの絞り込みを解除';
@@ -14976,4 +15016,18 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => '動画を見る';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

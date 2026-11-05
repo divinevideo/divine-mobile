@@ -342,6 +342,67 @@ void main() {
     });
 
     group('addPubkey', () {
+      test(
+        'uses a relay-only owner read before replacing an existing list',
+        () async {
+          final client = _MockNostrClient();
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (_) async => (
+              events: [
+                signedEvent(
+                  kind: _peopleListKind,
+                  tags: const [
+                    ['d', 'relay-only-list'],
+                    ['p', _memberA],
+                    ['p', _memberC, 'wss://relay.example'],
+                    ['alt', 'Keep me'],
+                  ],
+                  content: 'opaque-private-items',
+                  createdAt: 1700000000,
+                ),
+              ],
+              timedOut: false,
+              noRelays: false,
+            ),
+          );
+          when(() => client.publishEventAwaitOk(any())).thenAnswer((
+            invocation,
+          ) async {
+            final event = invocation.positionalArguments.first as Event;
+            return _accepted(event: event);
+          });
+          final repository = buildRepository(nostrClient: client);
+
+          final result = await repository.addPubkey(
+            ownerPubkey: _ownerPubkey,
+            listId: 'relay-only-list',
+            pubkey: _memberB,
+          );
+
+          expect(result.status, PeopleListPublishStatus.submitted);
+          final published =
+              verify(
+                    () => client.publishEventAwaitOk(captureAny()),
+                  ).captured.single
+                  as Event;
+          expect(published.tags, const [
+            ['d', 'relay-only-list'],
+            ['p', _memberA],
+            ['p', _memberC, 'wss://relay.example'],
+            ['alt', 'Keep me'],
+            ['p', _memberB],
+          ]);
+          expect(published.content, 'opaque-private-items');
+        },
+      );
+
       test('preserves foreign tags, p-tag positions, and content', () async {
         final client = _MockNostrClient();
         when(() => client.publicKey).thenReturn(_ownerPubkey);
@@ -359,6 +420,7 @@ void main() {
         when(
           () => client.queryEventsDetailed(
             any(),
+            useCache: false,
             requireAllRelaysSettled: true,
             timeout: any(named: 'timeout'),
           ),
@@ -413,6 +475,7 @@ void main() {
           when(
             () => client.queryEventsDetailed(
               any(),
+              useCache: false,
               requireAllRelaysSettled: true,
               timeout: any(named: 'timeout'),
             ),
@@ -478,6 +541,7 @@ void main() {
           when(
             () => client.queryEventsDetailed(
               any(),
+              useCache: false,
               requireAllRelaysSettled: true,
               timeout: any(named: 'timeout'),
             ),
@@ -646,6 +710,7 @@ void main() {
         when(
           () => client.queryEventsDetailed(
             any(),
+            useCache: false,
             requireAllRelaysSettled: true,
             timeout: any(named: 'timeout'),
           ),
@@ -873,6 +938,7 @@ void main() {
             when(
               () => client.queryEventsDetailed(
                 any(),
+                useCache: false,
                 requireAllRelaysSettled: true,
                 timeout: any(named: 'timeout'),
               ),
@@ -927,6 +993,7 @@ void main() {
             when(
               () => client.queryEventsDetailed(
                 any(),
+                useCache: false,
                 requireAllRelaysSettled: true,
                 timeout: any(named: 'timeout'),
               ),
@@ -1172,6 +1239,7 @@ void main() {
         when(
           () => client.queryEventsDetailed(
             any(),
+            useCache: false,
             requireAllRelaysSettled: true,
             timeout: any(named: 'timeout'),
           ),
@@ -1300,6 +1368,7 @@ void main() {
         when(
           () => client.queryEventsDetailed(
             any(),
+            useCache: false,
             requireAllRelaysSettled: true,
             timeout: any(named: 'timeout'),
           ),
@@ -1487,6 +1556,7 @@ void main() {
           when(
             () => client.queryEventsDetailed(
               any(),
+              useCache: false,
               requireAllRelaysSettled: true,
               timeout: any(named: 'timeout'),
             ),
@@ -1555,6 +1625,7 @@ void main() {
         when(
           () => client.queryEventsDetailed(
             any(),
+            useCache: false,
             requireAllRelaysSettled: true,
             timeout: any(named: 'timeout'),
           ),
@@ -1669,6 +1740,7 @@ void main() {
         verify(
           () => client.queryEventsDetailed(
             any(),
+            useCache: false,
             requireAllRelaysSettled: true,
             timeout: any(named: 'timeout'),
           ),
@@ -1958,6 +2030,7 @@ void main() {
           when(
             () => client.queryEventsDetailed(
               any(),
+              useCache: false,
               requireAllRelaysSettled: true,
               timeout: any(named: 'timeout'),
             ),
@@ -1980,6 +2053,7 @@ void main() {
             when(
               () => client.queryEventsDetailed(
                 any(),
+                useCache: false,
                 requireAllRelaysSettled: true,
                 timeout: any(named: 'timeout'),
               ),
@@ -2036,6 +2110,7 @@ void main() {
           when(
             () => client.queryEventsDetailed(
               any(),
+              useCache: false,
               requireAllRelaysSettled: true,
               timeout: any(named: 'timeout'),
             ),
@@ -2085,6 +2160,7 @@ void main() {
         when(
           () => client.queryEventsDetailed(
             any(),
+            useCache: false,
             requireAllRelaysSettled: true,
             timeout: any(named: 'timeout'),
           ),

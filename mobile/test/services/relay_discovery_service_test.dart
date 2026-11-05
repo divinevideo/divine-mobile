@@ -425,6 +425,17 @@ void main() {
         const urls = IndexerRelayConfig.safeFallbackRelays;
         expect(urls.toSet().length, equals(urls.length));
       });
+
+      test('shares no entry with the retired fallback relays', () {
+        // A retired relay, such as relay.damus.io, refuses every DM read for
+        // every client (#9467), so it must not come back as a fallback.
+        expect(
+          IndexerRelayConfig.safeFallbackRelays.toSet().intersection(
+            IndexerRelayConfig.retiredSafeFallbackRelays.toSet(),
+          ),
+          isEmpty,
+        );
+      });
     });
   });
 }

@@ -13,6 +13,7 @@ import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/poll_sticker_card.dart';
 import 'package:openvine/widgets/video_feed_item/poll_sticker_overlay.dart';
 import 'package:poll_repository/poll_repository.dart';
@@ -115,6 +116,9 @@ void main() {
       );
       when(() => repository.vote(any(), any())).thenAnswer((_) async {});
     });
+
+    // A slider's emoji loads the sticker emoji font, which outlives the test.
+    tearDown(resetStickerEmojiFontForTesting);
 
     NostrSessionReadiness ready(String pubkey) {
       final client = _MockNostrClient();

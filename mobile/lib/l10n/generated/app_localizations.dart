@@ -7543,12 +7543,6 @@ abstract class AppLocalizations {
   /// **'Already in Sounds'**
   String get soundsAlreadySavedToLibrary;
 
-  /// No description provided for @soundsSavedLibraryTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'My Sounds'**
-  String get soundsSavedLibraryTitle;
-
   /// No description provided for @soundsSavedEmptyTitle.
   ///
   /// In en, this message translates to:
@@ -7561,11 +7555,17 @@ abstract class AppLocalizations {
   /// **'Tap Use Sound on a video to save it here.'**
   String get soundsSavedEmptyDescription;
 
-  /// Label of the button above the My Sounds list that adds a sound, picked from the device or recorded, and the title of the screen it opens.
+  /// Label of the row at the top of the My Sounds list that adds a sound, picked from the device or recorded, and the title of the screen it opens.
   ///
   /// In en, this message translates to:
   /// **'Add sound'**
   String get soundsAddSound;
+
+  /// Under the Add sound row at the top of My Sounds in the Library, which opens a page to pick an audio file or record one.
+  ///
+  /// In en, this message translates to:
+  /// **'Import a file or record one'**
+  String get soundsAddSoundHint;
 
   /// Switch on the Add sound screen. On, the sound is published for anyone on Divine to reuse (with a public credit) before it is saved to My Sounds; off, it stays private.
   ///
@@ -7615,6 +7615,42 @@ abstract class AppLocalizations {
   /// **'Give your sound a title to share it.'**
   String get soundsShareTitleRequiredHint;
 
+  /// Heading of the optional cover image section on the Add sound screen while a sound is set to be shared publicly.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover'**
+  String get soundsShareCoverLabel;
+
+  /// Helper text under the cover heading on the Add sound screen. The cover image shows next to the shared sound in the sound picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. People see it next to your sound when they pick one.'**
+  String get soundsShareCoverDescription;
+
+  /// Button on the Add sound screen that opens the camera or gallery to pick a cover image for a sound being shared.
+  ///
+  /// In en, this message translates to:
+  /// **'Add cover'**
+  String get soundsShareCoverAdd;
+
+  /// Button on the Add sound screen, shown once a cover image is picked, that opens the camera or gallery to pick a different one.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get soundsShareCoverReplace;
+
+  /// Row in the cover image sheet on the Add sound screen that removes the picked cover image.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove cover'**
+  String get soundsShareCoverRemove;
+
+  /// Title of the sheet that offers camera, gallery and remove for the cover image of a sound being shared.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound cover'**
+  String get soundsShareCoverSheetTitle;
+
   /// Shown when the picked file's extension is not a supported audio container.
   ///
   /// In en, this message translates to:
@@ -7626,6 +7662,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That audio file couldn\'t be read.'**
   String get soundsImportUnreadable;
+
+  /// No description provided for @soundsAddSilent.
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s nothing to hear in this sound, so it can\'t be added.'**
+  String get soundsAddSilent;
 
   /// Shown when the account changes while a sound is being added, so it was abandoned rather than saved into the new account.
   ///
@@ -7692,18 +7734,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t remove that sound. Try again.'**
   String get soundsRemoveFailed;
-
-  /// Shown while a saved-sound library sync pass with other devices is in progress.
-  ///
-  /// In en, this message translates to:
-  /// **'Syncing your sounds…'**
-  String get soundSyncStatusSyncing;
-
-  /// Shown after a saved-sound library sync pass completes successfully; the local library matches other devices.
-  ///
-  /// In en, this message translates to:
-  /// **'Sounds up to date'**
-  String get soundSyncStatusSynced;
 
   /// Shown when a saved-sound library sync pass fails for a transient reason (e.g. the relay is unreachable). The app will retry automatically on the next trigger.
   ///
@@ -9444,6 +9474,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View source'**
   String get soundViewSource;
+
+  /// Shown after the licence in a sound's credit on a video when the licence (such as CC BY) asks to say that the sound was changed: the video uses an excerpt, mixed into its own audio. Lowercase, a past participle describing the sound.
+  ///
+  /// In en, this message translates to:
+  /// **'edited'**
+  String get soundCreditEdited;
 
   /// No description provided for @soundCloseTooltip.
   ///
@@ -15383,6 +15419,36 @@ abstract class AppLocalizations {
   /// **'Light Leak'**
   String get videoEditorEffectLightLeak;
 
+  /// Name of a video effect: shafts of warm light fall from a sun just above the top of the picture, through the gaps between trees, windows or hair (also called god rays).
+  ///
+  /// In en, this message translates to:
+  /// **'Light Rays'**
+  String get videoEditorEffectLightRays;
+
+  /// Name of a video effect: bright lights such as lamps and headlights throw long, thin blue horizontal streaks, as through an anamorphic cinema lens. Use the film-making term for this lens if the language has one.
+  ///
+  /// In en, this message translates to:
+  /// **'Anamorphic'**
+  String get videoEditorEffectAnamorphic;
+
+  /// Name of a video effect: a rainbow band falls across a corner of the picture, as when a glass prism is held in front of the camera lens.
+  ///
+  /// In en, this message translates to:
+  /// **'Prism'**
+  String get videoEditorEffectPrism;
+
+  /// Name of a video effect: slanted stripes of warm light, as through a venetian blind, slide slowly across the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Window Light'**
+  String get videoEditorEffectWindowLight;
+
+  /// Name of a video effect: the picture is dimmed and round stage spotlights wander slowly over it.
+  ///
+  /// In en, this message translates to:
+  /// **'Spotlight'**
+  String get videoEditorEffectSpotlight;
+
   /// Name of a video effect: snowflakes fall over the picture.
   ///
   /// In en, this message translates to:
@@ -18785,7 +18851,13 @@ abstract class AppLocalizations {
   /// **'Untitled sound'**
   String get videoEditorAudioUntitledSound;
 
-  /// Subtitle on a saved sound in the video editor's sound picker whose imported audio file is no longer on the device. The entry stays listed but cannot be selected, because attaching it would put a dead source on the draft.
+  /// Button on the card for the picked sound in the sound picker that adds the sound to the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Use'**
+  String get videoEditorAudioUseSound;
+
+  /// Subtitle on a saved sound whose imported audio file is no longer on the device, in the video editor's sound picker and in My Sounds in the Library. The entry stays listed but cannot be selected or played, because attaching it would put a dead source on the draft. It deliberately stops short of telling the user to remove the entry: removal publishes a tombstone that deletes it on every synced device, where the file may still be present.
   ///
   /// In en, this message translates to:
   /// **'Audio file is gone from this device'**
@@ -18827,23 +18899,11 @@ abstract class AppLocalizations {
   /// **'Select the audio segment for your video'**
   String get videoEditorAudioSegmentInstruction;
 
-  /// No description provided for @videoEditorAudioCategoryDivine.
-  ///
-  /// In en, this message translates to:
-  /// **'Divine'**
-  String get videoEditorAudioCategoryDivine;
-
   /// No description provided for @videoEditorAudioCategoryCommunity.
   ///
   /// In en, this message translates to:
   /// **'Community'**
   String get videoEditorAudioCategoryCommunity;
-
-  /// No description provided for @videoEditorAudioCategoryFeatured.
-  ///
-  /// In en, this message translates to:
-  /// **'Featured'**
-  String get videoEditorAudioCategoryFeatured;
 
   /// No description provided for @videoEditorAudioCategoryMySounds.
   ///
@@ -18851,11 +18911,11 @@ abstract class AppLocalizations {
   /// **'My Sounds'**
   String get videoEditorAudioCategoryMySounds;
 
-  /// No description provided for @videoEditorDrawToolArrowSemanticLabel.
+  /// Filter chip in the sound picker that narrows the lists to sound effects (booms, laughs, meme lines), as opposed to music. Translate as sound effects, not visual effects.
   ///
   /// In en, this message translates to:
-  /// **'Arrow tool'**
-  String get videoEditorDrawToolArrowSemanticLabel;
+  /// **'Effects'**
+  String get videoEditorAudioFilterEffects;
 
   /// No description provided for @videoEditorDrawToolEraserSemanticLabel.
   ///
@@ -18874,6 +18934,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pencil tool'**
   String get videoEditorDrawToolPencilSemanticLabel;
+
+  /// No description provided for @videoEditorDrawToolNeonSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Neon tool'**
+  String get videoEditorDrawToolNeonSemanticLabel;
+
+  /// No description provided for @videoEditorDrawToolRainbowSemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Rainbow tool'**
+  String get videoEditorDrawToolRainbowSemanticLabel;
+
+  /// No description provided for @videoEditorDrawToolCalligraphySemanticLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Calligraphy tool'**
+  String get videoEditorDrawToolCalligraphySemanticLabel;
 
   /// No description provided for @videoEditorShowTimelineSemanticLabel.
   ///
@@ -20042,12 +20120,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hue'**
   String get videoEditorHueSemanticLabel;
-
-  /// No description provided for @videoEditorDoneSemanticLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Done'**
-  String get videoEditorDoneSemanticLabel;
 
   /// No description provided for @videoEditorLevelSemanticLabel.
   ///
@@ -23313,11 +23385,17 @@ abstract class AppLocalizations {
   /// **'Remove saved sound'**
   String get savedSoundRemoveAction;
 
-  /// Shown on a My Sounds entry whose imported audio file is no longer on the device. The entry keeps the label and hashtags the user wrote, so it is not silently dropped. It deliberately stops short of telling the user to remove the entry: removal publishes a tombstone that deletes it on every synced device, where the file may still be present.
+  /// Action in the menu of a My Sounds entry that opens the sound's own page.
   ///
   /// In en, this message translates to:
-  /// **'This sound\'s audio file is gone from this device, so it can\'t play.'**
-  String get savedSoundFileMissing;
+  /// **'Open sound'**
+  String get savedSoundOpenAction;
+
+  /// Shown in place of the details of a My Sounds entry whose source video was deleted or is hidden from the viewer, or whose creator no longer lets others reuse its sound. The sound picker leaves such a sound out; My Sounds keeps it listed so the user can still remove it.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t be used in new videos anymore'**
+  String get savedSoundReuseUnavailable;
 
   /// No description provided for @savedSoundClearHashtagFilter.
   ///
@@ -26192,6 +26270,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Watch video'**
   String get creatorHighlightWatch;
+
+  /// Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture.
+  ///
+  /// In en, this message translates to:
+  /// **'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.'**
+  String get messagesPublicRoomsDisclosure;
+
+  /// Status for an unconfirmed message encrypted with an earlier room epoch. It cannot be retried as its old carrier.
+  ///
+  /// In en, this message translates to:
+  /// **'This older message wasn’t confirmed. Restore it as a draft to send again.'**
+  String get messagesRoomRetiredDraft;
+
+  /// Copies a retained earlier-epoch message into the current room composer without publishing it.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore draft'**
+  String get messagesRoomRestoreDraft;
+
+  /// Deletes only this account's retained unconfirmed local room draft.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard draft'**
+  String get messagesRoomDiscardDraft;
 }
 
 class _AppLocalizationsDelegate

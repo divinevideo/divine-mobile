@@ -131,6 +131,22 @@ class _SlowFirstAuthSigner implements NostrSigner {
   void close() => _inner.close();
 }
 
+/// Cannot sign its first AUTH, like a remote signer that is not ready yet.
+class _UnreadyFirstAuthSigner extends _SlowFirstAuthSigner {
+  _UnreadyFirstAuthSigner(super.privateKey);
+
+  var _refusedFirstAuth = false;
+
+  @override
+  Future<Event?> signEvent(Event event) async {
+    if (event.kind == EventKind.authentication && !_refusedFirstAuth) {
+      _refusedFirstAuth = true;
+      return null;
+    }
+    return _inner.signEvent(event);
+  }
+}
+
 /// A signer that cannot produce a public key yet, like a remote signer that
 /// is still starting.
 class _NoKeySigner implements NostrSigner {
@@ -716,6 +732,268 @@ void main() {
       expect(result.closedRelayReasons, {'wss://gated.example': 'restricted'});
     });
 
+    group('an earlier AUTH', () {
+      const url = 'wss://reconnecting.example';
+      late Nostr nostr;
+      late _ControlledQueryRelay relay;
+
+      setUp(() async {
+        nostr = Nostr(
+          LocalNostrSigner(
+            '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+          ),
+          [],
+          dummyTempRelay,
+        );
+        relay = _ControlledQueryRelay(url);
+        expect(await nostr.relayPool.add(relay), isTrue);
+      });
+
+      /// A read [relay] refuses until AUTH, and its subscription id.
+      Future<(Future<QueryResult>, String)> refusedRead() async {
+        final pending = nostr.readEvents(
+          [
+            {
+              'kinds': [1059],
+            },
+          ],
+          requireAllRelaysSettled: true,
+          timeout: const Duration(seconds: 30),
+        );
+        final subId = await relay.awaitPendingQuery();
+        await relay.deliver(['CLOSED', subId, 'auth-required: sign in']);
+        return (pending, subId);
+      }
+
+      test('sent before the socket reconnected does not authenticate the new '
+          'one', () async {
+        await relay.deliver(['AUTH', 'first-challenge']);
+        final staleAuthId = relay.capturedAuthEventId;
+        relay.onError('socket dropped');
+        relay.relayStatus.connected = ClientConnected.connected;
+        relay.relayStatusCallback?.call();
+
+        await relay.deliver(['OK', staleAuthId, true, '']);
+        expect(
+          relay.relayStatus.authed,
+          isFalse,
+          reason: 'a verdict on an AUTH for the previous socket decided it',
+        );
+
+        // The new socket's own handshake still decides.
+        await relay.deliver(['AUTH', 'second-challenge']);
+        final currentAuthId = relay.capturedAuthEventId;
+        expect(currentAuthId, isNot(staleAuthId));
+        final (pending, subId) = await refusedRead();
+        await relay.deliver(['OK', currentAuthId, true, '']);
+        await relay.awaitReqCount(2);
+        await relay.deliver(['EOSE', subId]);
+        final result = await pending.timeout(const Duration(seconds: 2));
+        expect(result.endedBy, QueryEnd.complete);
+      });
+
+      test('accepted on the same socket after a new challenge authenticates '
+          'it', () async {
+        await relay.deliver(['AUTH', 'first-challenge']);
+        final earlierAuthId = relay.capturedAuthEventId;
+        await relay.deliver(['AUTH', 'second-challenge']);
+        final currentAuthId = relay.capturedAuthEventId;
+        expect(currentAuthId, isNot(earlierAuthId));
+        final (pending, subId) = await refusedRead();
+
+        await relay.deliver(['OK', earlierAuthId, true, '']);
+        expect(relay.relayStatus.authed, isTrue);
+        await relay.awaitReqCount(2);
+        await relay.deliver(['EOSE', subId]);
+        final result = await pending.timeout(const Duration(seconds: 2));
+        expect(result.endedBy, QueryEnd.complete);
+
+        // The current AUTH is still answered on the same socket.
+        await relay.deliver(['OK', currentAuthId, true, '']);
+        expect(relay.relayStatus.authed, isTrue);
+      });
+
+      test(
+        'accepted on the same socket keeps it authenticated, and its reads '
+        'from ending as restricted, when the current AUTH is rejected',
+        () async {
+          await relay.deliver(['AUTH', 'first-challenge']);
+          final earlierAuthId = relay.capturedAuthEventId;
+          await relay.deliver(['AUTH', 'second-challenge']);
+          final currentAuthId = relay.capturedAuthEventId;
+          final (pending, subId) = await refusedRead();
+
+          await relay.deliver(['OK', earlierAuthId, true, '']);
+          await relay.deliver([
+            'OK',
+            currentAuthId,
+            false,
+            'restricted: not allowed',
+          ]);
+          expect(
+            relay.checkQuery(subId),
+            isTrue,
+            reason: 'the rejection ended a read the earlier AUTH let through',
+          );
+          expect(
+            relay.relayStatus.authed,
+            isTrue,
+            reason: 'the rejection undid an acceptance on the same socket',
+          );
+          await relay.awaitReqCount(2);
+          await relay.deliver(['EOSE', subId]);
+
+          final result = await pending.timeout(const Duration(seconds: 2));
+          expect(result.closedRelayReasons[url], isNot('restricted'));
+        },
+      );
+
+      test('accepted on the same socket keeps a later refusal on it from '
+          'being final when the current AUTH is rejected', () async {
+        await relay.deliver(['AUTH', 'first-challenge']);
+        final earlierAuthId = relay.capturedAuthEventId;
+        await relay.deliver(['AUTH', 'second-challenge']);
+        final currentAuthId = relay.capturedAuthEventId;
+        await relay.deliver(['OK', earlierAuthId, true, '']);
+        await relay.deliver([
+          'OK',
+          currentAuthId,
+          false,
+          'restricted: not allowed',
+        ]);
+
+        final pending = nostr.readEvents(
+          [
+            {
+              'kinds': [1059],
+            },
+          ],
+          requireAllRelaysSettled: true,
+          timeout: const Duration(milliseconds: 300),
+        );
+        final subId = await relay.awaitPendingQuery();
+        await relay.deliver(['CLOSED', subId, 'auth-required: sign in']);
+
+        final result = await pending;
+        // As on any socket that authenticated: the relay is not rejected.
+        expect(result.closedRelayReasons, {url: 'auth-required'});
+      });
+    });
+
+    group('a relay re-added under a removed URL', () {
+      const url = 'wss://gated.example';
+      late _SlowFirstAuthSigner signer;
+      late Nostr nostr;
+      late _ControlledQueryRelay answering;
+      late _ControlledQueryRelay removed;
+      late Future<void> removedChallenge;
+
+      setUp(() async {
+        signer = _SlowFirstAuthSigner(
+          '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+        );
+        nostr = Nostr(signer, [], dummyTempRelay);
+        answering = _ControlledQueryRelay('wss://answering.example');
+        removed = _ControlledQueryRelay(url);
+        expect(await nostr.relayPool.add(answering), isTrue);
+        expect(await nostr.relayPool.add(removed), isTrue);
+        // Its AUTH is signed when the test says, as by a remote signer.
+        removedChallenge = removed.deliver(['AUTH', 'removed-challenge']);
+        await pumpEventQueue();
+      });
+
+      Future<void> signRemovedAuth() async {
+        signer.releaseFirstAuth.complete();
+        await removedChallenge;
+      }
+
+      Future<_ControlledQueryRelay> readd() async {
+        nostr.relayPool.remove(url);
+        final readded = _ControlledQueryRelay(url);
+        expect(await nostr.relayPool.add(readded), isTrue);
+        return readded;
+      }
+
+      /// Reads with [readded] refusing until AUTH, then authenticating and
+      /// answering, and returns how [readded] ended the read.
+      Future<String?> refusedThenAnswered(_ControlledQueryRelay readded) async {
+        var completed = false;
+        final pending = nostr.readEvents(
+          [
+            {
+              'kinds': [1059],
+            },
+          ],
+          requireAllRelaysSettled: true,
+          timeout: const Duration(seconds: 30),
+        )..whenComplete(() => completed = true).ignore();
+        final answeredId = await answering.awaitPendingQuery();
+        final refusedId = await readded.awaitPendingQuery();
+        await answering.deliver(['EOSE', answeredId]);
+        await readded.deliver(['CLOSED', refusedId, 'auth-required: sign in']);
+        await pumpEventQueue();
+        expect(
+          completed,
+          isFalse,
+          reason: 'the new socket was judged on the removed one',
+        );
+
+        if (readded.capturedAuthEventId == null) {
+          await readded.deliver(['AUTH', 'readded-challenge']);
+        }
+        await readded.deliver(['OK', readded.capturedAuthEventId, true, '']);
+        await readded.awaitReqCount(2);
+        await readded.deliver(['EOSE', refusedId]);
+        final result = await pending.timeout(
+          const Duration(seconds: 2),
+          onTimeout: () => fail('the replayed read never ended'),
+        );
+        return result.closedRelayReasons[url];
+      }
+
+      test('does not inherit an AUTH rejection', () async {
+        await signRemovedAuth();
+        await removed.deliver([
+          'OK',
+          removed.capturedAuthEventId,
+          false,
+          'restricted: not allowed',
+        ]);
+        final readded = await readd();
+
+        expect(await refusedThenAnswered(readded), isNot('restricted'));
+      });
+
+      test("is not judged on a verdict that arrives late for the removed "
+          "relay's AUTH", () async {
+        await signRemovedAuth();
+        final readded = await readd();
+        await removed.deliver([
+          'OK',
+          removed.capturedAuthEventId,
+          false,
+          'restricted: not allowed',
+        ]);
+
+        expect(await refusedThenAnswered(readded), isNot('restricted'));
+      });
+
+      test("is not judged on a verdict for the removed relay's AUTH that was "
+          'signed after its own first challenge', () async {
+        final readded = await readd();
+        await readded.deliver(['AUTH', 'readded-challenge']);
+        await signRemovedAuth();
+        await removed.deliver([
+          'OK',
+          removed.capturedAuthEventId,
+          false,
+          'restricted: not allowed',
+        ]);
+
+        expect(await refusedThenAnswered(readded), isNot('restricted'));
+      });
+    });
+
     test('a rejection of an AUTH for a superseded challenge leaves the read '
         'parked for the current one', () async {
       final nostr = Nostr(
@@ -973,6 +1251,270 @@ void main() {
       await relay.deliver(['EOSE', subId]);
       final result = await pending;
       expect(result.timedOut, isFalse);
+    });
+
+    test('a challenge the relay re-sends after rejecting AUTH for it is not '
+        'signed again, and the refusal ends at once as restricted', () async {
+      final signer = LocalNostrSigner(
+        '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12',
+      );
+      final nostr = Nostr(signer, [], dummyTempRelay);
+      final answering = _ControlledQueryRelay('wss://answering.example');
+      final gated = _ControlledQueryRelay('wss://gated.example');
+      expect(await nostr.relayPool.add(answering), isTrue);
+      expect(await nostr.relayPool.add(gated), isTrue);
+      await gated.deliver(['AUTH', 'connection-challenge']);
+      await gated.deliver([
+        'OK',
+        gated.capturedAuthEventId,
+        false,
+        'error: relay needs serviceUrl to be configured before AUTH can work',
+      ]);
+      expect(gated.sentMessages.where((m) => m.first == 'AUTH'), hasLength(1));
+
+      final pending = nostr.readEvents(
+        [
+          {
+            'kinds': [1059],
+          },
+        ],
+        requireAllRelaysSettled: true,
+        timeout: const Duration(seconds: 30),
+      );
+      final answeredId = await answering.awaitPendingQuery();
+      final refusedId = await gated.awaitPendingQuery();
+      await answering.deliver(['EOSE', answeredId]);
+      // strfry re-sends the connection's one challenge before every refusal.
+      await gated.deliver(['AUTH', 'connection-challenge']);
+      await gated.deliver([
+        'CLOSED',
+        refusedId,
+        'ERROR: auth-required: requested filter requires authentication',
+      ]);
+
+      final result = await pending.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => fail('the query waited on a second AUTH signature'),
+      );
+      expect(result.closedRelayReasons, {'wss://gated.example': 'restricted'});
+      expect(
+        gated.sentMessages.where((m) => m.first == 'AUTH'),
+        hasLength(1),
+        reason: 'the relay already rejected AUTH for this challenge',
+      );
+    });
+
+    group('an AUTH challenge the relay sends again', () {
+      const privateKey =
+          '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
+      const challenge = 'connection-challenge';
+
+      int authFramesSent(_ControlledQueryRelay relay) =>
+          relay.sentMessages.where((m) => m.first == 'AUTH').length;
+
+      Future<_ControlledQueryRelay> addRelay(NostrSigner signer) async {
+        final nostr = Nostr(signer, [], dummyTempRelay);
+        final relay = _ControlledQueryRelay('wss://gated.example');
+        expect(await nostr.relayPool.add(relay), isTrue);
+        return relay;
+      }
+
+      Future<void> rejectAuth(_ControlledQueryRelay relay, String reason) =>
+          relay.deliver(['OK', relay.capturedAuthEventId, false, reason]);
+
+      test(
+        'is signed again when the relay only throttled the last AUTH',
+        () async {
+          final relay = await addRelay(LocalNostrSigner(privateKey));
+          await relay.deliver(['AUTH', challenge]);
+          await rejectAuth(relay, 'rate-limited: slow down');
+
+          await relay.deliver(['AUTH', challenge]);
+
+          expect(authFramesSent(relay), equals(2));
+        },
+      );
+
+      test('is signed when it is a new challenge string', () async {
+        final relay = await addRelay(LocalNostrSigner(privateKey));
+        await relay.deliver(['AUTH', challenge]);
+        await rejectAuth(relay, 'error: relay needs serviceUrl');
+
+        await relay.deliver(['AUTH', 'next-challenge']);
+
+        expect(authFramesSent(relay), equals(2));
+      });
+
+      test('is signed again on a new socket', () async {
+        final relay = await addRelay(LocalNostrSigner(privateKey));
+        await relay.deliver(['AUTH', challenge]);
+        await rejectAuth(relay, 'error: relay needs serviceUrl');
+        relay.onError('socket dropped');
+        relay.relayStatus.connected = ClientConnected.connected;
+        relay.relayStatusCallback?.call();
+
+        await relay.deliver(['AUTH', challenge]);
+
+        expect(authFramesSent(relay), equals(2));
+      });
+
+      test('is signed when the last one could not be signed', () async {
+        final relay = await addRelay(_UnreadyFirstAuthSigner(privateKey));
+        await relay.deliver(['AUTH', challenge]);
+        expect(authFramesSent(relay), equals(0));
+
+        await relay.deliver(['AUTH', challenge]);
+
+        expect(authFramesSent(relay), equals(1));
+      });
+
+      test('is signed again once its unanswered AUTH has outlived '
+          '${RelayPool.authHandshakeWindow}', () async {
+        final relay = await addRelay(LocalNostrSigner(privateKey));
+        await relay.deliver(['AUTH', challenge]);
+        await Future<void>.delayed(RelayPool.authHandshakeWindow * 1.2);
+
+        await relay.deliver(['AUTH', challenge]);
+
+        expect(authFramesSent(relay), equals(2));
+      });
+    });
+
+    group('an AUTH challenge the relay repeats while its AUTH is still '
+        'outstanding', () {
+      const privateKey =
+          '5ee1c8000ab28edd64d74a7d951ac2dd559814887b1b9e1ac7c5f89e96125c12';
+      const challenge = 'connection-challenge';
+      const refusal =
+          'ERROR: auth-required: requested filter requires authentication';
+
+      late _SlowFirstAuthSigner signer;
+      late Nostr nostr;
+      late _ControlledQueryRelay gated;
+
+      int authFramesSent() =>
+          gated.sentMessages.where((m) => m.first == 'AUTH').length;
+
+      Future<QueryResult> readDms() => nostr.readEvents(
+        [
+          {
+            'kinds': [1059],
+          },
+        ],
+        requireAllRelaysSettled: true,
+        timeout: const Duration(seconds: 30),
+      );
+
+      setUp(() async {
+        signer = _SlowFirstAuthSigner(privateKey);
+        nostr = Nostr(signer, [], dummyTempRelay);
+        gated = _ControlledQueryRelay('wss://gated.example');
+        expect(await nostr.relayPool.add(gated), isTrue);
+      });
+
+      /// Two reads strfry refuses while the signer still works on the first
+      /// AUTH: it challenges before each refusal, with the same string.
+      Future<(Future<QueryResult>, Future<QueryResult>)>
+      refuseTwoReads() async {
+        final first = readDms();
+        final firstId = await gated.awaitPendingQuery();
+        final second = readDms();
+        final secondId = await gated.awaitPendingQuery();
+        expect(secondId, isNot(firstId));
+
+        final firstSignature = gated.deliver(['AUTH', challenge]);
+        await pumpEventQueue();
+        await gated.deliver(['CLOSED', firstId, refusal]);
+        await gated.deliver(['AUTH', challenge]);
+        await gated.deliver(['CLOSED', secondId, refusal]);
+
+        signer.releaseFirstAuth.complete();
+        await firstSignature;
+        return (first, second);
+      }
+
+      test('is not signed again, and both refusals end as restricted once '
+          'that AUTH is rejected', () async {
+        final (first, second) = await refuseTwoReads();
+        expect(authFramesSent(), equals(1));
+
+        await gated.deliver([
+          'OK',
+          gated.capturedAuthEventId,
+          false,
+          'error: relay needs serviceUrl to be configured before AUTH can work',
+        ]);
+
+        for (final read in [first, second]) {
+          final result = await read.timeout(
+            const Duration(seconds: 2),
+            onTimeout: () => fail('the read outlived the AUTH rejection'),
+          );
+          expect(result.closedRelayReasons, {
+            'wss://gated.example': 'restricted',
+          });
+        }
+        expect(authFramesSent(), equals(1));
+      });
+
+      test('is not signed again, and both reads are replayed once that AUTH '
+          'succeeds', () async {
+        final (first, second) = await refuseTwoReads();
+        expect(authFramesSent(), equals(1));
+
+        await gated.deliver(['OK', gated.capturedAuthEventId, true, '']);
+        await gated.awaitReqCount(4);
+        final replayed = gated.sentMessages
+            .where((m) => m.first == 'REQ')
+            .skip(2)
+            .map((m) => m[1] as String)
+            .toList();
+        expect(replayed, hasLength(2));
+        for (final subId in replayed) {
+          await gated.deliver(['EOSE', subId]);
+        }
+
+        for (final read in [first, second]) {
+          final result = await read.timeout(const Duration(seconds: 2));
+          expect(result.endedBy, QueryEnd.complete);
+          expect(result.closedRelayReasons, isEmpty);
+        }
+        expect(authFramesSent(), equals(1));
+      });
+
+      test('is not signed again after that AUTH was sent and before the '
+          'relay answers it', () async {
+        // A local key signs before the next frame arrives, so strfry's
+        // repeats land while the relay is still answering the sent AUTH.
+        signer.releaseFirstAuth.complete();
+        final first = readDms();
+        final firstId = await gated.awaitPendingQuery();
+        final second = readDms();
+        final secondId = await gated.awaitPendingQuery();
+        await gated.deliver(['AUTH', challenge]);
+        expect(authFramesSent(), equals(1));
+        await gated.deliver(['CLOSED', firstId, refusal]);
+        await gated.deliver(['AUTH', challenge]);
+        await gated.deliver(['CLOSED', secondId, refusal]);
+        expect(authFramesSent(), equals(1));
+
+        await gated.deliver([
+          'OK',
+          gated.capturedAuthEventId,
+          false,
+          'error: relay needs serviceUrl to be configured before AUTH can work',
+        ]);
+
+        for (final read in [first, second]) {
+          final result = await read.timeout(
+            const Duration(seconds: 2),
+            onTimeout: () => fail('the read outlived the AUTH rejection'),
+          );
+          expect(result.closedRelayReasons, {
+            'wss://gated.example': 'restricted',
+          });
+        }
+      });
     });
 
     test('auth-required CLOSED keeps the query for post-AUTH replay', () async {

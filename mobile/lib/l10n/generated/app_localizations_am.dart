@@ -4385,9 +4385,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get soundsAlreadySavedToLibrary => 'ቀድሞውኑ በድምፆች ውስጥ';
 
   @override
-  String get soundsSavedLibraryTitle => 'የእኔ ድምፆች';
-
-  @override
   String get soundsSavedEmptyTitle => 'ገና የተቀመጠ ድምፅ የለም';
 
   @override
@@ -4396,6 +4393,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get soundsAddSound => 'ድምፅ ያክሉ';
+
+  @override
+  String get soundsAddSoundHint => 'ፋይል ያስገቡ ወይም ይቅዱ';
 
   @override
   String get soundsAddSharePublicly => 'በይፋ ያጋሩ';
@@ -4425,11 +4425,33 @@ class AppLocalizationsAm extends AppLocalizations {
   String get soundsShareTitleRequiredHint => 'ለማጋራት ለድምፅዎ ርዕስ ይስጡት።';
 
   @override
+  String get soundsShareCoverLabel => 'ሽፋን';
+
+  @override
+  String get soundsShareCoverDescription =>
+      'አማራጭ። ሰዎች ድምፅ ሲመርጡ ከድምፅዎ አጠገብ ያዩታል።';
+
+  @override
+  String get soundsShareCoverAdd => 'ሽፋን ጨምር';
+
+  @override
+  String get soundsShareCoverReplace => 'ተካ';
+
+  @override
+  String get soundsShareCoverRemove => 'ሽፋኑን አስወግድ';
+
+  @override
+  String get soundsShareCoverSheetTitle => 'የድምፅ ሽፋን';
+
+  @override
   String get soundsImportUnsupportedFormat =>
       'ይህ የፋይል አይነት አይደገፍም። የድምፅ ፋይል ይምረጡ።';
 
   @override
   String get soundsImportUnreadable => 'ያ የድምፅ ፋይል ሊነበብ አልቻለም።';
+
+  @override
+  String get soundsAddSilent => 'በዚህ ድምፅ ውስጥ የሚሰማ ነገር የለም፣ ስለዚህ ማከል አይቻልም።';
 
   @override
   String get soundsImportAccountChanged => 'መለያ ስለቀየሩ ይህ ድምፅ አልታከለም።';
@@ -4464,12 +4486,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get soundsRemoveFailed => 'ያን ድምፅ ማስወገድ አልተቻለም። እንደገና ሞክር።';
-
-  @override
-  String get soundSyncStatusSyncing => 'ድምፆችዎ በማመሳሰል ላይ…';
-
-  @override
-  String get soundSyncStatusSynced => 'ድምፆች ወቅታዊ ናቸው';
 
   @override
   String get soundSyncStatusFailed => 'ድምፆችዎን ማመሳሰል አልተቻለም። እንደገና እንሞክራለን።';
@@ -5473,6 +5489,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get soundViewSource => 'ምንጭ ይመልከቱ';
+
+  @override
+  String get soundCreditEdited => 'የተስተካከለ';
 
   @override
   String get soundCloseTooltip => 'ገጠመ';
@@ -8981,6 +9000,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectLightLeak => 'የብርሃን ፍሰት';
 
   @override
+  String get videoEditorEffectLightRays => 'የብርሃን ጨረሮች';
+
+  @override
+  String get videoEditorEffectAnamorphic => 'አናሞርፊክ';
+
+  @override
+  String get videoEditorEffectPrism => 'ፕሪዝም';
+
+  @override
+  String get videoEditorEffectWindowLight => 'የመስኮት ብርሃን';
+
+  @override
+  String get videoEditorEffectSpotlight => 'ስፖትላይት';
+
+  @override
   String get videoEditorEffectSnow => 'በረዶ';
 
   @override
@@ -10833,6 +10867,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorAudioUntitledSound => 'ርዕስ አልባ ድምጽ';
 
   @override
+  String get videoEditorAudioUseSound => 'ተጠቀም';
+
+  @override
   String get videoEditorAudioFileMissing => 'የድምፅ ፋይሉ በዚህ መሣሪያ ላይ የለም';
 
   @override
@@ -10855,19 +10892,13 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorAudioSegmentInstruction => 'ለቪዲዮዎ የድምጽ ክፍሉን ይምረጡ';
 
   @override
-  String get videoEditorAudioCategoryDivine => 'Divine';
-
-  @override
   String get videoEditorAudioCategoryCommunity => 'ማህበረሰብ';
-
-  @override
-  String get videoEditorAudioCategoryFeatured => 'ተለይቶ የቀረበ';
 
   @override
   String get videoEditorAudioCategoryMySounds => 'የእኔ ድምፆች';
 
   @override
-  String get videoEditorDrawToolArrowSemanticLabel => 'የቀስት መሣሪያ';
+  String get videoEditorAudioFilterEffects => 'የድምፅ ውጤቶች';
 
   @override
   String get videoEditorDrawToolEraserSemanticLabel => 'መጥረጊያ መሳሪያ';
@@ -10877,6 +10908,15 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorDrawToolPencilSemanticLabel => 'የእርሳስ መሳሪያ';
+
+  @override
+  String get videoEditorDrawToolNeonSemanticLabel => 'የኒዮን መሳሪያ';
+
+  @override
+  String get videoEditorDrawToolRainbowSemanticLabel => 'የቀስተ ደመና መሳሪያ';
+
+  @override
+  String get videoEditorDrawToolCalligraphySemanticLabel => 'የካሊግራፊ መሳሪያ';
 
   @override
   String get videoEditorShowTimelineSemanticLabel => 'የጊዜ መስመር አሳይ';
@@ -11580,9 +11620,6 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'ሁ';
-
-  @override
-  String get videoEditorDoneSemanticLabel => 'ተከናውኗል';
 
   @override
   String get videoEditorLevelSemanticLabel => 'ደረጃ';
@@ -13559,8 +13596,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String get savedSoundRemoveAction => 'የተቀመጠውን ድምፅ አስወግድ';
 
   @override
-  String get savedSoundFileMissing =>
-      'የዚህ ድምፅ የድምፅ ፋይል በዚህ መሣሪያ ላይ የለም፣ ስለዚህ መጫወት አይችልም።';
+  String get savedSoundOpenAction => 'ድምፁን ይክፈቱ';
+
+  @override
+  String get savedSoundReuseUnavailable => 'ከእንግዲህ በአዲስ ቪዲዮዎች ውስጥ መጠቀም አይቻልም';
 
   @override
   String get savedSoundClearHashtagFilter => 'የሃሽታግ ማጣሪያን አጽዳ';
@@ -15341,4 +15380,18 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get creatorHighlightWatch => 'ቪዲዮውን ይመልከቱ';
+
+  @override
+  String get messagesPublicRoomsDisclosure =>
+      'These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.';
+
+  @override
+  String get messagesRoomRetiredDraft =>
+      'This older message wasn’t confirmed. Restore it as a draft to send again.';
+
+  @override
+  String get messagesRoomRestoreDraft => 'Restore draft';
+
+  @override
+  String get messagesRoomDiscardDraft => 'Discard draft';
 }

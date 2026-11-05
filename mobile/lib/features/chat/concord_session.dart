@@ -6,11 +6,20 @@ import 'package:concord_repository/concord_repository.dart';
 import 'package:crypto/crypto.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/signer/nostr_signer.dart';
+import 'package:openvine/features/chat/concord_configuration.dart';
 
-/// POC relay endpoint (controlled local/POC relay; staging default).
-const String concordRelayUrl = String.fromEnvironment(
-  'CONCORD_RELAY_URL',
-  defaultValue: 'wss://relay.staging.dvines.org',
+const _defaultConcordRelay = 'wss://relay.staging.dvines.org';
+
+String resolveConcordRelay({required String invite, required String relay}) {
+  if (invite.isNotEmpty && !isSecureConcordRelay(relay)) {
+    throw StateError('Configured community requires an explicit secure relay');
+  }
+  return relay.isEmpty ? _defaultConcordRelay : relay;
+}
+
+String get concordRelayUrl => resolveConcordRelay(
+  invite: const String.fromEnvironment('CONCORD_INVITE_URL'),
+  relay: const String.fromEnvironment('CONCORD_RELAY_URL'),
 );
 
 /// Stable 32-byte identifier for a channel in the public POC catalog.
@@ -53,6 +62,9 @@ ConcordRepository buildConcordRepository({
   required NostrSigner? signer,
   required AccountScopedStore store,
   NostrSigner? Function()? signerForSend,
+  ConcordControlState? Function()? controlState,
+  bool Function()? canPublish,
+  Map<String, ConcordOutboxReadKey> Function()? historicalOutboxKeys,
 }) {
   final relay = WebSocketRelayGateway(concordRelayUrl);
   final sealed = signer != null && pubkey != null
@@ -88,6 +100,10 @@ ConcordRepository buildConcordRepository({
     relay: relay,
     store: store,
     cipher: _UnavailableCipher(),
+    controlState: controlState,
+    canPublish: canPublish,
+    historicalOutboxKeys: historicalOutboxKeys,
+    outboxAuthor: pubkey,
     sealedTransport: sealed,
   );
 }

@@ -2998,12 +2998,15 @@
   "soundsNoSoundsFoundDescription": "Try a different search term",
   "soundsSavedToLibrary": "Saved to Sounds",
   "soundsAlreadySavedToLibrary": "Already in Sounds",
-  "soundsSavedLibraryTitle": "My Sounds",
   "soundsSavedEmptyTitle": "No saved sounds yet",
   "soundsSavedEmptyDescription": "Tap Use Sound on a video to save it here.",
   "soundsAddSound": "Add sound",
   "@soundsAddSound": {
-    "description": "Label of the button above the My Sounds list that adds a sound, picked from the device or recorded, and the title of the screen it opens."
+    "description": "Label of the row at the top of the My Sounds list that adds a sound, picked from the device or recorded, and the title of the screen it opens."
+  },
+  "soundsAddSoundHint": "Import a file or record one",
+  "@soundsAddSoundHint": {
+    "description": "Under the Add sound row at the top of My Sounds in the Library, which opens a page to pick an audio file or record one."
   },
   "soundsAddSharePublicly": "Share publicly",
   "@soundsAddSharePublicly": {
@@ -3043,6 +3046,30 @@
   "@soundsShareTitleRequiredHint": {
     "description": "Helper text under the empty Sound title field on the Add sound screen while a recording is set to be shared publicly. Explains why the Share sound button is disabled."
   },
+  "soundsShareCoverLabel": "Cover",
+  "@soundsShareCoverLabel": {
+    "description": "Heading of the optional cover image section on the Add sound screen while a sound is set to be shared publicly."
+  },
+  "soundsShareCoverDescription": "Optional. People see it next to your sound when they pick one.",
+  "@soundsShareCoverDescription": {
+    "description": "Helper text under the cover heading on the Add sound screen. The cover image shows next to the shared sound in the sound picker."
+  },
+  "soundsShareCoverAdd": "Add cover",
+  "@soundsShareCoverAdd": {
+    "description": "Button on the Add sound screen that opens the camera or gallery to pick a cover image for a sound being shared."
+  },
+  "soundsShareCoverReplace": "Replace",
+  "@soundsShareCoverReplace": {
+    "description": "Button on the Add sound screen, shown once a cover image is picked, that opens the camera or gallery to pick a different one."
+  },
+  "soundsShareCoverRemove": "Remove cover",
+  "@soundsShareCoverRemove": {
+    "description": "Row in the cover image sheet on the Add sound screen that removes the picked cover image."
+  },
+  "soundsShareCoverSheetTitle": "Sound cover",
+  "@soundsShareCoverSheetTitle": {
+    "description": "Title of the sheet that offers camera, gallery and remove for the cover image of a sound being shared."
+  },
   "soundsImportUnsupportedFormat": "That file type isn't supported. Pick an audio file.",
   "@soundsImportUnsupportedFormat": {
     "description": "Shown when the picked file's extension is not a supported audio container."
@@ -3051,6 +3078,7 @@
   "@soundsImportUnreadable": {
     "description": "Shown when the picked file exists but cannot be opened or decoded as audio."
   },
+  "soundsAddSilent": "There's nothing to hear in this sound, so it can't be added.",
   "soundsImportAccountChanged": "You switched accounts, so this sound wasn't added.",
   "@soundsImportAccountChanged": {
     "description": "Shown when the account changes while a sound is being added, so it was abandoned rather than saved into the new account."
@@ -3088,14 +3116,6 @@
   "soundsRemoveFailed": "Couldn't remove that sound. Try again.",
   "@soundsRemoveFailed": {
     "description": "Snackbar shown when removing a sound from the local library fails to persist."
-  },
-  "soundSyncStatusSyncing": "Syncing your sounds…",
-  "@soundSyncStatusSyncing": {
-    "description": "Shown while a saved-sound library sync pass with other devices is in progress."
-  },
-  "soundSyncStatusSynced": "Sounds up to date",
-  "@soundSyncStatusSynced": {
-    "description": "Shown after a saved-sound library sync pass completes successfully; the local library matches other devices."
   },
   "soundSyncStatusFailed": "Couldn't sync your sounds. We'll try again.",
   "@soundSyncStatusFailed": {
@@ -3771,6 +3791,10 @@
   "soundUnableToPreview": "Unable to preview sound - no audio available",
   "soundPreviewFailed": "Failed to play preview. Please try again.",
   "soundViewSource": "View source",
+  "soundCreditEdited": "edited",
+  "@soundCreditEdited": {
+    "description": "Shown after the licence in a sound's credit on a video when the licence (such as CC BY) asks to say that the sound was changed: the video uses an excerpt, mixed into its own audio. Lowercase, a past participle describing the sound."
+  },
   "soundCloseTooltip": "Close",
   "exploreNotExploreRoute": "Not an explore route",
   "legalTitle": "Legal",
@@ -6600,6 +6624,26 @@
   "@videoEditorEffectLightLeak": {
     "description": "Name of a video effect: warm light washes in from the edges of the picture and drifts across it, as when stray light fogs a strip of film."
   },
+  "videoEditorEffectLightRays": "Light Rays",
+  "@videoEditorEffectLightRays": {
+    "description": "Name of a video effect: shafts of warm light fall from a sun just above the top of the picture, through the gaps between trees, windows or hair (also called god rays)."
+  },
+  "videoEditorEffectAnamorphic": "Anamorphic",
+  "@videoEditorEffectAnamorphic": {
+    "description": "Name of a video effect: bright lights such as lamps and headlights throw long, thin blue horizontal streaks, as through an anamorphic cinema lens. Use the film-making term for this lens if the language has one."
+  },
+  "videoEditorEffectPrism": "Prism",
+  "@videoEditorEffectPrism": {
+    "description": "Name of a video effect: a rainbow band falls across a corner of the picture, as when a glass prism is held in front of the camera lens."
+  },
+  "videoEditorEffectWindowLight": "Window Light",
+  "@videoEditorEffectWindowLight": {
+    "description": "Name of a video effect: slanted stripes of warm light, as through a venetian blind, slide slowly across the picture."
+  },
+  "videoEditorEffectSpotlight": "Spotlight",
+  "@videoEditorEffectSpotlight": {
+    "description": "Name of a video effect: the picture is dimmed and round stage spotlights wander slowly over it."
+  },
   "videoEditorEffectSnow": "Snow",
   "@videoEditorEffectSnow": {
     "description": "Name of a video effect: snowflakes fall over the picture."
@@ -8441,9 +8485,13 @@
   "videoEditorAudioPlayPreviewSemanticLabel": "Play preview",
   "videoEditorAudioPausePreviewSemanticLabel": "Pause preview",
   "videoEditorAudioUntitledSound": "Untitled sound",
+  "videoEditorAudioUseSound": "Use",
+  "@videoEditorAudioUseSound": {
+    "description": "Button on the card for the picked sound in the sound picker that adds the sound to the video."
+  },
   "videoEditorAudioFileMissing": "Audio file is gone from this device",
   "@videoEditorAudioFileMissing": {
-    "description": "Subtitle on a saved sound in the video editor's sound picker whose imported audio file is no longer on the device. The entry stays listed but cannot be selected, because attaching it would put a dead source on the draft."
+    "description": "Subtitle on a saved sound whose imported audio file is no longer on the device, in the video editor's sound picker and in My Sounds in the Library. The entry stays listed but cannot be selected or played, because attaching it would put a dead source on the draft. It deliberately stops short of telling the user to remove the entry: removal publishes a tombstone that deletes it on every synced device, where the file may still be present."
   },
   "videoEditorAudioUntitled": "Untitled",
   "videoEditorAudioAddAudio": "Add audio",
@@ -8451,14 +8499,18 @@
   "videoEditorAudioNoSoundsAvailableSubtitle": "Sounds will appear here when creators share audio",
   "videoEditorAudioFailedToLoadTitle": "Failed to load sounds",
   "videoEditorAudioSegmentInstruction": "Select the audio segment for your video",
-  "videoEditorAudioCategoryDivine": "Divine",
   "videoEditorAudioCategoryCommunity": "Community",
-  "videoEditorAudioCategoryFeatured": "Featured",
   "videoEditorAudioCategoryMySounds": "My Sounds",
-  "videoEditorDrawToolArrowSemanticLabel": "Arrow tool",
+  "videoEditorAudioFilterEffects": "Effects",
+  "@videoEditorAudioFilterEffects": {
+    "description": "Filter chip in the sound picker that narrows the lists to sound effects (booms, laughs, meme lines), as opposed to music. Translate as sound effects, not visual effects."
+  },
   "videoEditorDrawToolEraserSemanticLabel": "Eraser tool",
   "videoEditorDrawToolMarkerSemanticLabel": "Marker tool",
   "videoEditorDrawToolPencilSemanticLabel": "Pencil tool",
+  "videoEditorDrawToolNeonSemanticLabel": "Neon tool",
+  "videoEditorDrawToolRainbowSemanticLabel": "Rainbow tool",
+  "videoEditorDrawToolCalligraphySemanticLabel": "Calligraphy tool",
   "videoEditorShowTimelineSemanticLabel": "Show timeline",
   "videoEditorHideTimelineSemanticLabel": "Hide timeline",
   "videoEditorFeedPreviewContent": "Avoid placing content behind these areas.",
@@ -9295,7 +9347,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Hue",
-  "videoEditorDoneSemanticLabel": "Done",
   "videoEditorLevelSemanticLabel": "Level",
   "videoEditorBrushSizeSemanticLabel": "Brush size",
   "@videoEditorBrushSizeSemanticLabel": {
@@ -10802,9 +10853,13 @@
   "savedSoundPreviewAction": "Preview sound",
   "savedSoundEditAction": "Edit sound details",
   "savedSoundRemoveAction": "Remove saved sound",
-  "savedSoundFileMissing": "This sound's audio file is gone from this device, so it can't play.",
-  "@savedSoundFileMissing": {
-    "description": "Shown on a My Sounds entry whose imported audio file is no longer on the device. The entry keeps the label and hashtags the user wrote, so it is not silently dropped. It deliberately stops short of telling the user to remove the entry: removal publishes a tombstone that deletes it on every synced device, where the file may still be present."
+  "savedSoundOpenAction": "Open sound",
+  "@savedSoundOpenAction": {
+    "description": "Action in the menu of a My Sounds entry that opens the sound's own page."
+  },
+  "savedSoundReuseUnavailable": "Can't be used in new videos anymore",
+  "@savedSoundReuseUnavailable": {
+    "description": "Shown in place of the details of a My Sounds entry whose source video was deleted or is hidden from the viewer, or whose creator no longer lets others reuse its sound. The sound picker leaves such a sound out; My Sounds keeps it listed so the user can still remove it."
   },
   "savedSoundClearHashtagFilter": "Clear hashtag filter",
   "soundAllowRemix": "Allow others to remix this sound",
@@ -12804,5 +12859,13 @@
   "creatorHighlightWatch": "Watch video",
   "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  }
+  },
+  "messagesPublicRoomsDisclosure": "These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.",
+  "@messagesPublicRoomsDisclosure": {"description": "Privacy notice for the real public community rooms. A room can be linked to a Discord channel, which shows each message there under the member's profile name and picture."},
+  "messagesRoomRetiredDraft": "This older message wasn’t confirmed. Restore it as a draft to send again.",
+  "@messagesRoomRetiredDraft": {"description": "Status for an unconfirmed message encrypted with an earlier room epoch. It cannot be retried as its old carrier."},
+  "messagesRoomRestoreDraft": "Restore draft",
+  "@messagesRoomRestoreDraft": {"description": "Copies a retained earlier-epoch message into the current room composer without publishing it."},
+  "messagesRoomDiscardDraft": "Discard draft",
+  "@messagesRoomDiscardDraft": {"description": "Deletes only this account's retained unconfirmed local room draft."}
 }

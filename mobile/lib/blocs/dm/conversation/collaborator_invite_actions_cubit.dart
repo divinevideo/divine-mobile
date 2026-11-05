@@ -20,6 +20,28 @@ class CollaboratorInviteActionsState extends Equatable {
     return inviteStates[_keyFor(invite)] ?? CollaboratorInviteState.pending;
   }
 
+  /// What the card shows: this device's action state for [invite] merged with
+  /// [relayStatus], the repository's status for the current user.
+  ///
+  /// A local ignore wins over any acceptance (#6970). Otherwise an acceptance
+  /// made on any device wins over an accept in flight, a failed attempt or no
+  /// decision; without one, the local state shows.
+  CollaboratorInviteState displayStateFor(
+    CollaboratorInvite invite, {
+    CollaboratorStatus? relayStatus,
+  }) {
+    final local = stateFor(invite);
+    return switch (local) {
+      CollaboratorInviteState.ignored ||
+      CollaboratorInviteState.accepted => local,
+      _ when relayStatus == CollaboratorStatus.confirmed =>
+        CollaboratorInviteState.accepted,
+      _ when relayStatus == CollaboratorStatus.ignored =>
+        CollaboratorInviteState.ignored,
+      _ => local,
+    };
+  }
+
   CollaboratorInviteActionsState copyWith({
     Map<String, CollaboratorInviteState>? inviteStates,
   }) {
@@ -61,12 +83,21 @@ class CollaboratorInviteActionsCubit
       state.inviteStates,
     );
     for (final invite in invites) {
-      updated[CollaboratorInviteActionsState._keyFor(invite)] = _stateStore
-          .getState(
-            videoAddress: invite.videoAddress,
-            creatorPubkey: invite.creatorPubkey,
-            collaboratorPubkey: _currentUserPubkey,
-          );
+      final key = CollaboratorInviteActionsState._keyFor(invite);
+      // This instance's own accept already holds `accepting` in state. One
+      // read back from the store was left by an earlier session that never
+      // finished, so offering the actions again is the honest state.
+      if (state.inviteStates[key] == CollaboratorInviteState.accepting) {
+        continue;
+      }
+      final stored = _stateStore.getState(
+        videoAddress: invite.videoAddress,
+        creatorPubkey: invite.creatorPubkey,
+        collaboratorPubkey: _currentUserPubkey,
+      );
+      updated[key] = stored == CollaboratorInviteState.accepting
+          ? CollaboratorInviteState.pending
+          : stored;
     }
     emit(state.copyWith(inviteStates: updated));
   }

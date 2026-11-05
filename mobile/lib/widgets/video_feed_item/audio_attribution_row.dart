@@ -23,6 +23,10 @@ import 'package:unified_logger/unified_logger.dart';
 ///   [OriginalSoundDetailScreen]
 /// - **Unresolved reference**: `♪ Sound unavailable · Creator`, display-only —
 ///   the video reuses a sound whose event can't be fetched (#6185)
+/// - **Content credit**: `♪ Title – Creator · CC BY 4.0 · edited`,
+///   display-only — read from the credit line the publisher put at the end of
+///   the video's content ([VideoEvent.soundCredits]) when the sound's event is
+///   not at hand, as for a sound the app ships
 class AudioAttributionRow extends ConsumerWidget {
   /// Creates an AudioAttributionRow.
   const AudioAttributionRow({required this.video, super.key});
@@ -32,10 +36,18 @@ class AudioAttributionRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // The display hides the credit line from the caption, so the pill shows
+    // it wherever the sound's own event cannot.
+    // A video crediting several sounds shows the first; the About sheet
+    // lists them all.
+    final contentCredit = video.soundCredits.firstOrNull;
+
     // Only show for videos with shared/bundled audio, not original sounds.
     // Original sound info is available in the metadata "more info" sheet.
     if (!video.hasAudioReference || video.audioEventId == null) {
-      return const SizedBox.shrink();
+      return contentCredit == null
+          ? const SizedBox.shrink()
+          : _ContentCreditAttribution(credit: contentCredit);
     }
 
     // Watch the shared audio event asynchronously
@@ -44,13 +56,17 @@ class AudioAttributionRow extends ConsumerWidget {
     return audioAsync.when(
       data: (audio) {
         if (audio == null) {
-          return _UnresolvedAudioAttribution(video: video);
+          return contentCredit == null
+              ? _UnresolvedAudioAttribution(video: video)
+              : _ContentCreditAttribution(credit: contentCredit);
         }
 
         return _AudioAttributionContent(audio: audio, sourceVideo: video);
       },
       loading: () => const _AudioAttributionSkeleton(),
-      error: (error, stack) => _UnresolvedAudioAttribution(video: video),
+      error: (error, stack) => contentCredit == null
+          ? _UnresolvedAudioAttribution(video: video)
+          : _ContentCreditAttribution(credit: contentCredit),
     );
   }
 }
@@ -93,6 +109,9 @@ class _AudioAttributionContent extends ConsumerWidget {
           context.l10n.soundSharedBy(publisherName),
       ],
       ?audio.licenseName,
+      // The video uses an excerpt mixed into its own audio, which an
+      // Attribution licence asks to say (CC BY 4.0 §3(a)(1)(B)).
+      if (audio.requiresAttribution) context.l10n.soundCreditEdited,
       ...audio.publicTags.map((tag) => '#$tag'),
     ].join(' · ');
 
@@ -161,6 +180,28 @@ class _UnresolvedAudioAttribution extends ConsumerWidget {
         creatorProfile: creatorProfile,
         reusedCreatorPubkey: reusedCreatorPubkey,
       ),
+    );
+  }
+}
+
+/// Display-only credit read from the line at the end of the video's content.
+///
+/// The line exists only for a sound whose licence asks for credit, so it
+/// always says the excerpt was edited. Not a reuse entry point: the sound's
+/// reuse terms live in its event, which is not at hand.
+class _ContentCreditAttribution extends StatelessWidget {
+  const _ContentCreditAttribution({required this.credit});
+
+  final SoundCredit credit;
+
+  @override
+  Widget build(BuildContext context) {
+    return _AudioAttributionPill(
+      soundName: credit.work,
+      creatorName: [
+        ?credit.license,
+        context.l10n.soundCreditEdited,
+      ].join(' · '),
     );
   }
 }
