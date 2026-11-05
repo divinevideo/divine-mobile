@@ -414,7 +414,7 @@ void main() {
         );
         await publishing.future;
         final refresh = repository.refresh(ownerPubkey: ownerPubkey);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         final overlapped = readDuringPublish;
         releasePublish.complete();
         await mutation;
