@@ -29,10 +29,11 @@ const String _notifyListTitle = 'Notify';
 ///
 /// Every bell toggle is a read-modify-write on one NIP-33 replaceable event.
 /// Two concurrent toggles would each read the same base set and the second
-/// publish would drop the first's change. Mutations are therefore chained
-/// per owner: each awaits the previous one's completion and reads the set
-/// that mutation produced, so a rapid on/off/on sequence converges instead
-/// of racing.
+/// publish would drop the first's change. Mutations and [refresh] are
+/// therefore chained per owner: each waits for the previous one to finish,
+/// then reads the relays, keeping the previous mutation's result while a
+/// relay still returns an older revision, so a rapid on/off/on sequence
+/// converges instead of racing.
 ///
 /// The chain is per owner rather than per creator on purpose — all bells live
 /// in a *single* event, so serializing per creator would still race.
@@ -41,8 +42,9 @@ const String _notifyListTitle = 'Notify';
 ///
 /// The event is replaceable, so a publish deletes every member it omits.
 /// An unreachable relay pool therefore cannot be treated as an empty list:
-/// reads that did not reach a relay produce no snapshot at all, mutations
-/// against a missing snapshot fail without publishing, and
+/// a read that did not hear from every relay produces no snapshot at all.
+/// Every mutation makes that read itself and, when it yields none, fails
+/// without publishing even if an earlier read left one for display, and
 /// [watchSubscriptions] stays silent so the UI keeps its control disabled.
 class NotifySubscriptionsRepositoryImpl
     implements NotifySubscriptionsRepository {
@@ -144,7 +146,8 @@ class NotifySubscriptionsRepositoryImpl
     _pendingRemovals.clear();
   }
 
-  /// Queues a mutation behind every mutation already pending for [ownerPubkey].
+  /// Queues a mutation behind every operation already queued for
+  /// [ownerPubkey].
   ///
   /// A null [creatorPubkey] mutates nothing by itself and only republishes
   /// outstanding removals — see [reconcile].
