@@ -119,24 +119,7 @@ final StreamProvider<ConcordRoomCatalog> concordRoomCatalogProvider =
         ),
       );
       await session.start();
-      String signatureOf() => jsonEncode([
-        session.control!.name,
-        for (final channel in session.control!.publicChannels)
-          [channel.id, channel.name],
-      ]);
-      var signature = signatureOf();
-      yield ConcordRoomCatalog.real(session);
-      await for (final _ in session.changes) {
-        if (!session.ready) {
-          throw StateError(
-            'Community authority is unavailable: ${session.failure}',
-          );
-        }
-        final next = signatureOf();
-        if (next == signature) continue;
-        signature = next;
-        yield ConcordRoomCatalog.real(session);
-      }
+      yield* watchConcordCatalog(session);
     });
 
 /// POC synchronous callers stay available when no real invite is configured.
@@ -149,3 +132,29 @@ ConcordRoomCatalog? resolveConcordCatalog(
 
 ConcordRoomCatalog? currentConcordCatalog(Ref ref) =>
     resolveConcordCatalog(ref.watch(concordRoomCatalogProvider));
+
+/// Keeps the catalog observation alive while missing control history catches up.
+Stream<ConcordRoomCatalog> watchConcordCatalog(
+  ConcordCommunitySession session,
+) async* {
+  String signatureOf() => jsonEncode([
+    session.control!.name,
+    for (final channel in session.control!.publicChannels)
+      [channel.id, channel.name],
+  ]);
+  var signature = signatureOf();
+  var wasReady = session.ready;
+  yield ConcordRoomCatalog.real(session);
+  await for (final _ in session.changes) {
+    if (session.failure != null) {
+      throw StateError(
+        'Community authority is unavailable: ${session.failure}',
+      );
+    }
+    final next = signatureOf();
+    if (next == signature && session.ready == wasReady) continue;
+    signature = next;
+    wasReady = session.ready;
+    yield ConcordRoomCatalog.real(session);
+  }
+}

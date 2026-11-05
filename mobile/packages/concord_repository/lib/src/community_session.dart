@@ -402,12 +402,8 @@ class ConcordCommunitySession {
       priorHeads: _acceptedHeads,
       snapshotIds: bundle!.rootEpoch > 0 ? _snapshotIds : const {},
     );
-    if (_loaded &&
-        (control!.incomplete.isNotEmpty || control!.banned.contains(account))) {
-      failure = StateError(
-        'Community authority changed; reopen Rooms to refresh',
-      );
-    }
+    // Replay can deliver a newer head before its predecessor. Readiness closes
+    // publication while the fold is incomplete, without poisoning later replay.
     if (_loaded) _acceptedHeads = {...control!.heads};
     if (_signals.isNotEmpty) _enqueue(_checkSignals);
     _notify();

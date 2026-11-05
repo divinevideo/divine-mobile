@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,8 +20,40 @@ class _Membership extends Fake implements ConcordCommunitySession {
   ConcordInviteBundle? bundle;
 }
 
+class _ObservedMembership extends Fake implements ConcordCommunitySession {
+  @override
+  bool ready = true;
+  @override
+  Object? failure;
+  @override
+  final control = ConcordControlState(communityId: '11' * 32, owner: '22' * 32)
+    ..name = 'Observed community';
+  final events = StreamController<void>();
+  @override
+  Stream<void> get changes => events.stream;
+}
+
 void main() {
   group('ConcordRoomCatalog', () {
+    test(
+      'catalog observation survives transient authority incompleteness',
+      () async {
+        final session = _ObservedMembership();
+        final values = watchConcordCatalog(session)
+            .take(3)
+            .map((catalog) => catalog.ready)
+            .toList();
+        final result = expectLater(values, completion([true, false, true]));
+        await Future<void>.delayed(Duration.zero);
+        session.ready = false;
+        session.events.add(null);
+        await Future<void>.delayed(Duration.zero);
+        session.ready = true;
+        session.events.add(null);
+        await result;
+        await session.events.close();
+      },
+    );
     test('real channel persistence scope stays stable across root epochs', () {
       final owner = '11' * 32;
       final salt = '22' * 32;

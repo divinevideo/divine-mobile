@@ -83,6 +83,112 @@ class _DelayedStore extends InMemoryConcordStore {
   }
 }
 
+class _ReplayCommunity {
+  static final owner = schnorr.getPublicKey('31' * 32);
+  static final id = deriveCommunityId(owner, '32' * 32);
+  static final channel = '53' * 32;
+  static final read = controlReadKey('42' * 32, id, 0);
+  static String channelContent(int version) =>
+      jsonEncode({'name': 'room-$version', 'private': false});
+  static String hash(int version) => editionHash(
+    channel,
+    version,
+    version == 1 ? null : hash(version - 1),
+    channelContent(version),
+  );
+  static Future<Map<String, dynamic>> edition(
+    String eid,
+    String vsk,
+    String content, {
+    int version = 1,
+    String? previous,
+  }) async {
+    final tags = <List<String>>[
+      ['vsk', vsk],
+      ['eid', eid],
+      ['ev', '$version'],
+      if (previous != null) ['ep', previous],
+    ];
+    final rumor = <String, dynamic>{
+      'pubkey': owner,
+      'kind': 3308,
+      'created_at': version,
+      'tags': tags,
+      'content': content,
+    };
+    rumor['id'] = computeEventId(
+      pubkey: owner,
+      createdAt: version,
+      kind: 3308,
+      tags: tags,
+      content: content,
+    );
+    return wrapSeal(
+      seal: await sealRumor(
+        rumor: rumor,
+        sealKind: 20014,
+        streamSeedHex: read.seedHex,
+        streamPubkey: read.pubkey,
+        authorSecretHex: '31' * 32,
+      ),
+      streamSeedHex: read.seedHex,
+      streamPubkey: read.pubkey,
+    );
+  }
+
+  static Future<Map<String, dynamic>> channelWrap(int version) => edition(
+    channel,
+    '2',
+    channelContent(version),
+    version: version,
+    previous: version == 1 ? null : hash(version - 1),
+  );
+  static Future<List<Map<String, dynamic>>> bootstrap(
+    ConcordInviteFragment fragment,
+  ) async {
+    final bundle = {
+      'community_id': id,
+      'owner': owner,
+      'owner_salt': '32' * 32,
+      'community_root': '42' * 32,
+      'root_epoch': 0,
+      'channels': <dynamic>[],
+      'relays': <String>[],
+      'name': 'Replay community',
+    };
+    final content = await nip44Encrypt(
+      jsonEncode(bundle),
+      inviteBundleKey(fragment.token),
+    );
+    final pubkey = schnorr.getPublicKey('64' * 32);
+    final tags = <List<String>>[
+      ['d', ''],
+      ['vsk', '6'],
+    ];
+    final eventId = computeEventId(
+      pubkey: pubkey,
+      createdAt: 1,
+      kind: 33301,
+      tags: tags,
+      content: content,
+    );
+    final event = <String, dynamic>{
+      'pubkey': pubkey,
+      'kind': 33301,
+      'created_at': 1,
+      'tags': tags,
+      'content': content,
+      'id': eventId,
+      'sig': schnorr.sign('64' * 32, eventId, '00' * 32),
+    };
+    return [
+      event,
+      await edition(id, '0', jsonEncode({'name': 'Replay community'})),
+      await channelWrap(1),
+    ];
+  }
+}
+
 void main() {
   final fixture = readConcordFixture('community-interop.json');
   final event = fixture['bundleEvent'] as Map<String, dynamic>;
@@ -346,6 +452,43 @@ void main() {
         });
         await next.close();
         await nextRelay.close();
+      },
+    );
+  });
+  group('ConcordCommunitySession reconnect', () {
+    test(
+      'newest-first replay recovers once the missing predecessor arrives',
+      () async {
+        final bootstrap = await _ReplayCommunity.bootstrap(fragment);
+        final relay = _Relay(bootstrap);
+        final s = ConcordCommunitySession(
+          relay: relay,
+          store: InMemoryConcordStore('aa' * 32),
+          linkSigner: bootstrap.first['pubkey'] as String,
+          fragment: fragment,
+          account: 'aa' * 32,
+          nowMs: () => 0,
+        );
+        await s.start();
+        final gap = s.changes.firstWhere(
+          (_) => s.control!.incomplete.isNotEmpty,
+        );
+        relay.receive(await _ReplayCommunity.channelWrap(3));
+        await gap;
+        expect(s.ready, isFalse);
+        final complete = s.changes.firstWhere(
+          (_) =>
+              s.control!.channels[_ReplayCommunity.channel]!.name == 'room-3' &&
+              s.control!.incomplete.isEmpty,
+        );
+        relay.receive(await _ReplayCommunity.channelWrap(2));
+        await complete;
+        await Future<void>.delayed(Duration.zero);
+        expect(s.ready, isTrue);
+        expect(s.failure, isNull);
+        expect(s.canPublish, isTrue);
+        await s.close();
+        await relay.close();
       },
     );
   });
