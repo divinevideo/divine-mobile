@@ -1385,6 +1385,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get exploreTabNew => 'Bago';
 
   @override
+  String get exploreTabNewDiviners => 'Bagong Diviners';
+
+  @override
   String get exploreTabPopular => 'Sikat';
 
   @override

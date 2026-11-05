@@ -1388,6 +1388,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get exploreTabNew => 'جديد';
 
   @override
+  String get exploreTabNewDiviners => 'Diviners الجدد';
+
+  @override
   String get exploreTabPopular => 'الرائج';
 
   @override

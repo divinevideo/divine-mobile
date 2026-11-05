@@ -1403,6 +1403,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get exploreTabNew => 'نئی';
 
   @override
+  String get exploreTabNewDiviners => 'نئے Diviners';
+
+  @override
   String get exploreTabPopular => 'مقبول';
 
   @override

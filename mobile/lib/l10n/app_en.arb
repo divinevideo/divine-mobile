@@ -879,6 +879,10 @@
     "description": "Explore tab listing the most recently published videos from everyone."
   },
   "exploreTabNew": "New",
+  "exploreTabNewDiviners": "New Diviners",
+  "@exploreTabNewDiviners": {
+    "description": "Explore tab listing videos from creators whose first Divine video is recent. 'Diviners' is the name for people on Divine; keep it untranslated."
+  },
   "exploreTabPopular": "Popular",
   "exploreTabCategories": "Categories",
   "exploreTabForYou": "For You",

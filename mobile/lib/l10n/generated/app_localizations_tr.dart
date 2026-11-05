@@ -1338,6 +1338,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get exploreTabNew => 'Yeni';
 
   @override
+  String get exploreTabNewDiviners => 'Yeni Diviners';
+
+  @override
   String get exploreTabPopular => 'Popüler';
 
   @override

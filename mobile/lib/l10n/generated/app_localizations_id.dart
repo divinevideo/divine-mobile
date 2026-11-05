@@ -1340,6 +1340,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get exploreTabNew => 'Baru';
 
   @override
+  String get exploreTabNewDiviners => 'Diviners Baru';
+
+  @override
   String get exploreTabPopular => 'Populer';
 
   @override

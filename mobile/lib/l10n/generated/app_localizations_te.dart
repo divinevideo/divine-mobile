@@ -1434,6 +1434,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get exploreTabNew => 'కొత్తది';
 
   @override
+  String get exploreTabNewDiviners => 'కొత్త Diviners';
+
+  @override
   String get exploreTabPopular => 'జనాదరణ పొందినది';
 
   @override

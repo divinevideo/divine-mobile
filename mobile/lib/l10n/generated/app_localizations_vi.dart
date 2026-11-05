@@ -1367,6 +1367,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get exploreTabNew => 'Mới';
 
   @override
+  String get exploreTabNewDiviners => 'Diviners mới';
+
+  @override
   String get exploreTabPopular => 'Phổ biến';
 
   @override

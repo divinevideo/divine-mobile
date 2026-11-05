@@ -1444,6 +1444,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get exploreTabNew => 'Noi';
 
   @override
+  String get exploreTabNewDiviners => 'Diviners noi';
+
+  @override
   String get exploreTabPopular => 'Populare';
 
   @override

@@ -1406,6 +1406,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exploreTabNew => 'New';
 
   @override
+  String get exploreTabNewDiviners => 'New Diviners';
+
+  @override
   String get exploreTabPopular => 'Popular';
 
   @override

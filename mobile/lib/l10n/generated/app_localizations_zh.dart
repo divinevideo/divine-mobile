@@ -1284,6 +1284,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exploreTabNew => '最新';
 
   @override
+  String get exploreTabNewDiviners => '新 Diviners';
+
+  @override
   String get exploreTabPopular => '热门';
 
   @override

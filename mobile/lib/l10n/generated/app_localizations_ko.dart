@@ -1278,6 +1278,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exploreTabNew => '신규';
 
   @override
+  String get exploreTabNewDiviners => '새 Diviners';
+
+  @override
   String get exploreTabPopular => '인기';
 
   @override

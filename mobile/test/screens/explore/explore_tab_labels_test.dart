@@ -39,7 +39,7 @@ void main() {
         const [
           'Classics',
           'Latest',
-          'New',
+          'New Diviners',
           'Popular',
           'Categories',
           'For You',
