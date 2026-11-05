@@ -62,6 +62,16 @@ void main() {
       expect(hidden(selfTagged, verifiedOnly: true), isTrue);
     });
 
+    test('a platform=vine tag satisfies provenance while funnelcake cannot '
+        'check the archive', () {
+      final unchecked = createTestVideoEvent(
+        id: 'unchecked-vine',
+        rawTags: const {'platform': 'vine'},
+      ).copyWith(isArchiveVerificationUnknown: true);
+
+      expect(hidden(unchecked, verifiedOnly: true), isFalse);
+    });
+
     test('axes are independent, not a single relaxed rule', () {
       // Off-host is hidden by hosting even though provenance is off...
       expect(hidden(offHost, divineHostedOnly: true), isTrue);

@@ -254,6 +254,7 @@ class VideoEvent {
     this.warnLabels = const [],
     this.proofSummary,
     this.isVerifiedArchive = false,
+    this.isArchiveVerificationUnknown = false,
     this.archiveAudioReuseEnabled = false,
     this.eventKind,
     this.sourceRelay,
@@ -385,6 +386,8 @@ class VideoEvent {
               json['proofSummary'] as Map<String, dynamic>,
             ),
       isVerifiedArchive: json['isVerifiedArchive'] as bool? ?? false,
+      isArchiveVerificationUnknown:
+          json['isArchiveVerificationUnknown'] as bool? ?? false,
       archiveAudioReuseEnabled:
           json['archiveAudioReuseEnabled'] as bool? ?? false,
     );
@@ -1053,6 +1056,13 @@ class VideoEvent {
   /// itself express creator consent.
   final bool isVerifiedArchive;
 
+  /// Whether Funnelcake could not check this event against its archive.
+  ///
+  /// True only for a Funnelcake row whose `verified_archive: false` came
+  /// without an available archive snapshot. Relay-delivered events carry no
+  /// row, so they stay false: unverified, not unknown.
+  final bool isArchiveVerificationUnknown;
+
   /// Whether Funnelcake enables audio reuse for this verified classic Vine.
   ///
   /// Combined with [isVerifiedArchive], this grants reuse by default. Creator
@@ -1627,10 +1637,19 @@ class VideoEvent {
   /// The meaning of `platform` differs by ingestion path, and any publisher
   /// can write the tag, so this is a display signal rather than archive
   /// provenance. Decisions that rely on provenance (badges, filters, credit,
-  /// audio reuse) read [isVerifiedArchive] instead.
+  /// audio reuse) read [isVerifiedArchive] or [countsAsArchiveVine] instead.
   bool get isOriginalVine {
     return rawTags['platform'] == 'vine';
   }
+
+  /// Whether trust decisions (the "verified only" preference, the Not Divine
+  /// and Human-Made badges) treat this video as an archived Vine.
+  ///
+  /// Funnelcake's verification decides it. Only while Funnelcake could not
+  /// check ([isArchiveVerificationUnknown]) does the `platform=vine` tag
+  /// stand in, which keeps classics visible through an archive outage.
+  bool get countsAsArchiveVine =>
+      isVerifiedArchive || (isArchiveVerificationUnknown && isOriginalVine);
 
   /// All hashtags including the synthetic "classic" tag for original Vines.
   List<String> get allHashtags => [if (isOriginalVine) 'classic', ...hashtags];
@@ -1937,6 +1956,7 @@ class VideoEvent {
     List<String>? warnLabels,
     ProofVerificationSummary? proofSummary,
     bool? isVerifiedArchive,
+    bool? isArchiveVerificationUnknown,
     bool? archiveAudioReuseEnabled,
     int? eventKind,
     String? sourceRelay,
@@ -2012,6 +2032,8 @@ class VideoEvent {
     warnLabels: warnLabels ?? this.warnLabels,
     proofSummary: proofSummary ?? this.proofSummary,
     isVerifiedArchive: isVerifiedArchive ?? this.isVerifiedArchive,
+    isArchiveVerificationUnknown:
+        isArchiveVerificationUnknown ?? this.isArchiveVerificationUnknown,
     archiveAudioReuseEnabled:
         archiveAudioReuseEnabled ?? this.archiveAudioReuseEnabled,
     eventKind: eventKind ?? this.eventKind,
@@ -2104,6 +2126,7 @@ class VideoEvent {
     'moderationLabels': moderationLabels,
     'proofSummary': proofSummary?.toJson(),
     'isVerifiedArchive': isVerifiedArchive,
+    'isArchiveVerificationUnknown': isArchiveVerificationUnknown,
     'archiveAudioReuseEnabled': archiveAudioReuseEnabled,
     'eventKind': eventKind,
     'sourceRelay': sourceRelay,

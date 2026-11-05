@@ -36,9 +36,10 @@ extension ProofModeHelpers on VideoEvent {
 
   /// Should show ProofMode badge.
   ///
-  /// Archive Vines funnelcake verifies never show it. A self-applied
-  /// `platform=vine` tag does not count as verification.
+  /// Archived Vines ([VideoEvent.countsAsArchiveVine]) never show it. A
+  /// self-applied `platform=vine` tag counts only while funnelcake cannot
+  /// check its archive.
   bool get shouldShowProofModeBadge {
-    return hasProofMode && !isVerifiedArchive;
+    return hasProofMode && !countsAsArchiveVine;
   }
 }

@@ -54,6 +54,7 @@ class VideoStats {
     this.collaboratorPubkeys = const [],
     this.proofSummary,
     this.isVerifiedArchive = false,
+    this.isArchiveVerificationUnknown = false,
     this.archiveAudioReuseEnabled = false,
     List<String> moderationLabels = const [],
     @Deprecated('Use moderationLabels') List<String>? contentLabels,
@@ -460,6 +461,11 @@ class VideoStats {
       moderationLabels: moderationLabels,
       proofSummary: proofSummary,
       isVerifiedArchive: json['verified_archive'] == true,
+      // Funnelcake answers false whenever its archive snapshot is missing or
+      // expired, so a false only counts when it says the snapshot was there.
+      isArchiveVerificationUnknown:
+          json['verified_archive'] != true &&
+          json['archive_provenance_available'] != true,
       archiveAudioReuseEnabled: json['archive_audio_reuse_enabled'] == true,
     );
   }
@@ -595,6 +601,12 @@ class VideoStats {
   /// This server-derived classification does not express creator consent.
   final bool isVerifiedArchive;
 
+  /// Whether Funnelcake could not check this event against its archive.
+  ///
+  /// True only while [isVerifiedArchive] is false: the row did not say its
+  /// archive snapshot was available, so its `false` is not a real answer.
+  final bool isArchiveVerificationUnknown;
+
   /// Whether Funnelcake enables audio reuse for this verified classic Vine.
   ///
   /// Combined with [isVerifiedArchive], this grants reuse by default. Creator
@@ -688,6 +700,7 @@ class VideoStats {
       moderationLabels: moderationLabels,
       proofSummary: proofSummary,
       isVerifiedArchive: isVerifiedArchive,
+      isArchiveVerificationUnknown: isArchiveVerificationUnknown,
       archiveAudioReuseEnabled: archiveAudioReuseEnabled,
       nostrEventTags: eventTags,
       rawTags: {

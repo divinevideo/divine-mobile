@@ -129,6 +129,15 @@ void main() {
       expect(video.shouldShowNotDivineBadge, isFalse);
     });
 
+    test('returns false for a tagged Vine funnelcake could not check', () {
+      final video = _createVideoWithUrl('https://example.com/video.mp4')
+          .copyWith(
+            rawTags: const {'platform': 'vine'},
+            isArchiveVerificationUnknown: true,
+          );
+      expect(video.shouldShowNotDivineBadge, isFalse);
+    });
+
     test('returns true for an external video with only a self-applied '
         'platform=vine tag', () {
       final event = Event.fromJson({

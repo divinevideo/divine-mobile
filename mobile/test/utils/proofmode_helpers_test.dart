@@ -321,6 +321,27 @@ void main() {
       },
     );
 
+    test(
+      'a platform=vine tag hides the ProofMode badge while funnelcake '
+      'cannot check the archive',
+      () {
+        final video = VideoEvent(
+          id: 'combo1c',
+          pubkey: 'pubkey1',
+          createdAt: DateTime.now().millisecondsSinceEpoch,
+          content: 'tagged Vine the archive could not check',
+          timestamp: DateTime.now(),
+          rawTags: const {
+            'verification': 'verified_mobile',
+            'platform': 'vine',
+          },
+          isArchiveVerificationUnknown: true,
+        );
+
+        expect(video.shouldShowProofModeBadge, isFalse);
+      },
+    );
+
     test('shows only ProofMode badge for new verified videos', () {
       final video = VideoEvent(
         id: 'combo2',

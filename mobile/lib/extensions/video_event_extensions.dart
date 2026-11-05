@@ -66,10 +66,11 @@ extension VideoEventAppExtensions on VideoEvent {
   /// Shows badge for content that is:
   /// - NOT from Divine servers
   /// - AND does NOT have ProofMode verification (those show ProofMode badge)
-  /// - AND is NOT an archive Vine funnelcake verifies (a self-applied
-  ///   `platform=vine` tag does not count)
+  /// - AND is NOT an archived Vine ([VideoEvent.countsAsArchiveVine]; a
+  ///   self-applied `platform=vine` tag counts only while funnelcake cannot
+  ///   check its archive)
   bool get shouldShowNotDivineBadge {
-    return !isFromDivineServer && !hasProofMode && !isVerifiedArchive;
+    return !isFromDivineServer && !hasProofMode && !countsAsArchiveVine;
   }
 
   // ---------------------------------------------------------------------------
