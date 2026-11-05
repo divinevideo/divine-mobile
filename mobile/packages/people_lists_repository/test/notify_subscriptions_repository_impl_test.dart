@@ -981,6 +981,70 @@ void main() {
         },
       );
 
+      test(
+        'a same-second revision with a lower id replaces the snapshot',
+        () async {
+          stubRead([
+            _notifyEvent([creatorA])
+              ..id =
+                  'ffffffffffffffffffffffffffffffff'
+                  'ffffffffffffffffffffffffffffffff',
+          ]);
+          expect(
+            await repository.readSubscriptions(ownerPubkey: ownerPubkey),
+            equals({creatorA}),
+          );
+
+          stubRead([
+            _notifyEvent([creatorB])
+              ..id =
+                  '00000000000000000000000000000000'
+                  '00000000000000000000000000000000',
+          ]);
+          await repository.refresh(ownerPubkey: ownerPubkey);
+
+          expect(
+            await repository.readSubscriptions(ownerPubkey: ownerPubkey),
+            equals({creatorB}),
+          );
+        },
+      );
+
+      test(
+        'keeps its own publish over a same-second revision with a higher id',
+        () async {
+          final nowSeconds =
+              DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
+          // A future base makes the publish step to exactly base + 1, so the
+          // relay revision below can share its created_at.
+          stubRead([
+            _notifyEvent([creatorA], createdAt: nowSeconds + 500),
+          ]);
+          stubPublishSuccess();
+          await repository.subscribe(
+            ownerPubkey: ownerPubkey,
+            creatorPubkey: creatorB,
+          );
+          final published =
+              verify(() => client.publishEvent(captureAny())).captured.single
+                  as Event;
+          final sameSecond =
+              _notifyEvent([creatorC], createdAt: published.createdAt)
+                ..id =
+                    'ffffffffffffffffffffffffffffffff'
+                    'ffffffffffffffffffffffffffffffff';
+          expect(published.id.compareTo(sameSecond.id), lessThan(0));
+
+          stubRead([sameSecond]);
+          await repository.refresh(ownerPubkey: ownerPubkey);
+
+          expect(
+            await repository.readSubscriptions(ownerPubkey: ownerPubkey),
+            equals({creatorA, creatorB}),
+          );
+        },
+      );
+
       test('replaces a stale snapshot and emits the new set', () async {
         var events = [
           _notifyEvent([creatorA]),
