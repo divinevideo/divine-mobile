@@ -2383,11 +2383,23 @@ abstract class AppLocalizations {
   /// **'Classics'**
   String get exploreTabClassics;
 
+  /// Explore tab listing the most recently published videos from everyone.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest'**
+  String get exploreTabLatest;
+
   /// No description provided for @exploreTabNew.
   ///
   /// In en, this message translates to:
   /// **'New'**
   String get exploreTabNew;
+
+  /// Explore tab listing videos from creators whose first Divine video is recent. 'Diviners' is the name for people on Divine; keep it untranslated.
+  ///
+  /// In en, this message translates to:
+  /// **'New Diviners'**
+  String get exploreTabNewDiviners;
 
   /// No description provided for @exploreTabPopular.
   ///
@@ -8269,12 +8281,6 @@ abstract class AppLocalizations {
   /// **'Classics'**
   String get navExploreClassics;
 
-  /// No description provided for @navExploreNewVideos.
-  ///
-  /// In en, this message translates to:
-  /// **'New Videos'**
-  String get navExploreNewVideos;
-
   /// No description provided for @navExploreTrending.
   ///
   /// In en, this message translates to:
@@ -12534,6 +12540,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No videos in New Videos'**
   String get newVideosTabEmptyTitle;
+
+  /// Empty-state title of the Latest tab in Explore.
+  ///
+  /// In en, this message translates to:
+  /// **'No videos in Latest'**
+  String get latestVideosTabEmptyTitle;
 
   /// No description provided for @popularVideosContextTitle.
   ///

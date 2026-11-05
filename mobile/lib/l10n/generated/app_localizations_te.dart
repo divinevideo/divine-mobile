@@ -1428,7 +1428,13 @@ class AppLocalizationsTe extends AppLocalizations {
   String get exploreTabClassics => 'క్లాసిక్స్';
 
   @override
+  String get exploreTabLatest => 'తాజావి';
+
+  @override
   String get exploreTabNew => 'కొత్తది';
+
+  @override
+  String get exploreTabNewDiviners => 'కొత్త Diviners';
 
   @override
   String get exploreTabPopular => 'జనాదరణ పొందినది';
@@ -5102,9 +5108,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get navExploreClassics => 'క్లాసిక్స్';
 
   @override
-  String get navExploreNewVideos => 'కొత్త వీడియోలు';
-
-  @override
   String get navExploreTrending => 'ట్రెండింగ్';
 
   @override
@@ -7651,6 +7654,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => 'కొత్త వీడియోలలో వీడియోలు లేవు';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'తాజావిలో వీడియోలు లేవు';
 
   @override
   String get popularVideosContextTitle => 'జనాదరణ పొందిన వీడియోలు';

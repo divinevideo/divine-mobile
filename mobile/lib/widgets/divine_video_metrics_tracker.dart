@@ -594,6 +594,7 @@ ProductAnalyticsV2Surface _productSurface(ViewTrafficSource source) {
     ViewTrafficSource.profile => ProductAnalyticsV2Surface.profile,
     ViewTrafficSource.search => ProductAnalyticsV2Surface.searchResults,
     ViewTrafficSource.discoveryNew ||
+    ViewTrafficSource.discoveryNewCreators ||
     ViewTrafficSource.discoveryClassic ||
     ViewTrafficSource.discoveryForYou ||
     ViewTrafficSource.discoveryPopular ||

@@ -1397,7 +1397,13 @@ class AppLocalizationsUr extends AppLocalizations {
   String get exploreTabClassics => 'کلاسکس';
 
   @override
+  String get exploreTabLatest => 'تازہ ترین';
+
+  @override
   String get exploreTabNew => 'نئی';
+
+  @override
+  String get exploreTabNewDiviners => 'نئے Diviners';
 
   @override
   String get exploreTabPopular => 'مقبول';
@@ -4943,9 +4949,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get navExploreClassics => 'کلاسکس';
 
   @override
-  String get navExploreNewVideos => 'نئی ویڈیوز';
-
-  @override
   String get navExploreTrending => 'مقبول';
 
   @override
@@ -7435,6 +7438,9 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => 'نئی ویڈیوز میں کوئی ویڈیو نہیں';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'تازہ ترین میں کوئی ویڈیو نہیں';
 
   @override
   String get popularVideosContextTitle => 'مقبول ویڈیوز';

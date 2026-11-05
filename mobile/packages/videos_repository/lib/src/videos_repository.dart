@@ -1036,6 +1036,42 @@ class VideosRepository {
     );
   }
 
+  /// Fetches videos from new creators: creators whose first video on Divine
+  /// is at most 30 days old, at most three videos each, newest first.
+  ///
+  /// Backs the Explore New tab. Only Funnelcake knows when a creator started
+  /// publishing, so there is no relay fallback: callers hide the tab when the
+  /// API is unavailable.
+  ///
+  /// Pass the previous page's [HomeFeedResult.paginationCursor] as [cursor]
+  /// to continue. Page on [HomeFeedResult.hasMore], not on the video count.
+  ///
+  /// Throws [FunnelcakeNotConfiguredException] when the API is unavailable,
+  /// and propagates other [FunnelcakeException]s so callers can retry
+  /// without losing their position.
+  Future<HomeFeedResult> getNewCreatorVideos({
+    int limit = _defaultLimit,
+    String? cursor,
+  }) async {
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+
+    final page = await _fetchVisibleRecentVideosFromStatsApi(
+      limit: limit,
+      cursor: cursor,
+      newCreatorsOnly: true,
+    );
+    final hydrated = await _hydrateVideosWithBulkStats(page.videos);
+    return _recentVideosResult(
+      hydrated,
+      limit: limit,
+      serverHasMore: page.serverHasMore,
+      paginationCursor: page.nextCursor,
+    );
+  }
+
   /// Wraps a latest-feed page, recording whether more sits behind it so
   /// callers paginate on the flag instead of re-deriving it from a count they
   /// may not have requested.
@@ -1066,6 +1102,7 @@ class VideosRepository {
     required int limit,
     int? until,
     String? cursor,
+    bool newCreatorsOnly = false,
   }) async {
     var pageCursor = cursor;
     var legacyBefore = until;
@@ -1075,7 +1112,13 @@ class VideosRepository {
     String? nextPageCursor;
 
     while (visible.length < limit) {
-      final page = pageCursor == null
+      final page = newCreatorsOnly
+          ? await _funnelcakeApiClient!.getRecentVideosPage(
+              limit: limit,
+              cursor: pageCursor,
+              newCreatorsOnly: true,
+            )
+          : pageCursor == null
           ? await _funnelcakeApiClient!.getRecentVideosPage(
               limit: limit,
               before: legacyBefore,
@@ -1099,6 +1142,10 @@ class VideosRepository {
         if (nextPageCursor == pageCursor) break;
         pageCursor = nextPageCursor;
         legacyBefore = null;
+      } else if (newCreatorsOnly) {
+        // Every server that understands the new-creators filter returns a
+        // cursor; without one there is no safe way to ask for the next page.
+        break;
       } else {
         // Older Funnelcake builds returned a bare list with no cursor. Keep
         // top-up behavior available for that response shape, but never expose

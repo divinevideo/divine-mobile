@@ -1334,7 +1334,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get exploreTabClassics => 'Klasik';
 
   @override
+  String get exploreTabLatest => 'Terbaru';
+
+  @override
   String get exploreTabNew => 'Baru';
+
+  @override
+  String get exploreTabNewDiviners => 'Diviners Baru';
 
   @override
   String get exploreTabPopular => 'Populer';
@@ -4854,9 +4860,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get navExploreClassics => 'Klasik';
 
   @override
-  String get navExploreNewVideos => 'Video Baru';
-
-  @override
   String get navExploreTrending => 'Trending';
 
   @override
@@ -7349,6 +7352,9 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => 'Tidak ada video di Video Baru';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'Tidak ada video di Terbaru';
 
   @override
   String get popularVideosContextTitle => 'Video Populer';

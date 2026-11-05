@@ -1382,7 +1382,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get exploreTabClassics => 'الكلاسيكيات';
 
   @override
+  String get exploreTabLatest => 'الأحدث';
+
+  @override
   String get exploreTabNew => 'جديد';
+
+  @override
+  String get exploreTabNewDiviners => 'Diviners الجدد';
 
   @override
   String get exploreTabPopular => 'الرائج';
@@ -4932,9 +4938,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navExploreClassics => 'الكلاسيكيات';
 
   @override
-  String get navExploreNewVideos => 'فيديوهات جديدة';
-
-  @override
   String get navExploreTrending => 'الرائجة';
 
   @override
@@ -7437,6 +7440,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => 'لا توجد فيديوهات في الفيديوهات الجديدة';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'لا توجد فيديوهات في الأحدث';
 
   @override
   String get popularVideosContextTitle => 'الفيديوهات الرائجة';

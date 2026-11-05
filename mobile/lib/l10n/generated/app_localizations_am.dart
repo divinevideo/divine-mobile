@@ -1363,7 +1363,13 @@ class AppLocalizationsAm extends AppLocalizations {
   String get exploreTabClassics => 'ክላሲኮች';
 
   @override
+  String get exploreTabLatest => 'የቅርብ ጊዜ';
+
+  @override
   String get exploreTabNew => 'አዲስ';
+
+  @override
+  String get exploreTabNewDiviners => 'አዲስ Diviners';
 
   @override
   String get exploreTabPopular => 'ታዋቂ';
@@ -4815,9 +4821,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get navExploreClassics => 'ክላሲኮች';
 
   @override
-  String get navExploreNewVideos => 'አዳዲስ ቪዲዮዎች';
-
-  @override
   String get navExploreTrending => 'በመታየት ላይ ያለ';
 
   @override
@@ -7257,6 +7260,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => 'በአዲስ ቪዲዮዎች ውስጥ ምንም ቪዲዮ የለም';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'በየቅርብ ጊዜ ውስጥ ምንም ቪዲዮ የለም';
 
   @override
   String get popularVideosContextTitle => 'ታዋቂ ቪዲዮዎች';

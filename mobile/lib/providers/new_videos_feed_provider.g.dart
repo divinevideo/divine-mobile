@@ -8,52 +8,119 @@ part of 'new_videos_feed_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// New Videos feed provider - shows newest videos first.
+/// Publication-ordered feed provider - shows newest videos first.
 ///
-/// Delegates video fetching to [VideosRepository.getNewVideos] so the Explore
-/// New Videos tab does not share the popular/trending source.
+/// [PublicationFeed.latest] delegates to [VideosRepository.getNewVideos], so
+/// the Explore Latest tab does not share the popular/trending source.
+/// [PublicationFeed.newCreators] delegates to
+/// [VideosRepository.getNewCreatorVideos], which has no relay fallback.
 
 @ProviderFor(NewVideosFeed)
-final newVideosFeedProvider = NewVideosFeedProvider._();
+final newVideosFeedProvider = NewVideosFeedFamily._();
 
-/// New Videos feed provider - shows newest videos first.
+/// Publication-ordered feed provider - shows newest videos first.
 ///
-/// Delegates video fetching to [VideosRepository.getNewVideos] so the Explore
-/// New Videos tab does not share the popular/trending source.
+/// [PublicationFeed.latest] delegates to [VideosRepository.getNewVideos], so
+/// the Explore Latest tab does not share the popular/trending source.
+/// [PublicationFeed.newCreators] delegates to
+/// [VideosRepository.getNewCreatorVideos], which has no relay fallback.
 final class NewVideosFeedProvider
     extends $AsyncNotifierProvider<NewVideosFeed, VideoFeedState> {
-  /// New Videos feed provider - shows newest videos first.
+  /// Publication-ordered feed provider - shows newest videos first.
   ///
-  /// Delegates video fetching to [VideosRepository.getNewVideos] so the Explore
-  /// New Videos tab does not share the popular/trending source.
-  NewVideosFeedProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'newVideosFeedProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
+  /// [PublicationFeed.latest] delegates to [VideosRepository.getNewVideos], so
+  /// the Explore Latest tab does not share the popular/trending source.
+  /// [PublicationFeed.newCreators] delegates to
+  /// [VideosRepository.getNewCreatorVideos], which has no relay fallback.
+  NewVideosFeedProvider._({
+    required NewVideosFeedFamily super.from,
+    required PublicationFeed super.argument,
+  }) : super(
+         retry: null,
+         name: r'newVideosFeedProvider',
+         isAutoDispose: false,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$newVideosFeedHash();
 
+  @override
+  String toString() {
+    return r'newVideosFeedProvider'
+        ''
+        '($argument)';
+  }
+
   @$internal
   @override
   NewVideosFeed create() => NewVideosFeed();
+
+  @override
+  bool operator ==(Object other) {
+    return other is NewVideosFeedProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
 }
 
-String _$newVideosFeedHash() => r'd9721ec519083a62aa876987b7b602915507b56a';
+String _$newVideosFeedHash() => r'f9f571feb6f259f875b1ee3926ee2d31bd6f8c60';
 
-/// New Videos feed provider - shows newest videos first.
+/// Publication-ordered feed provider - shows newest videos first.
 ///
-/// Delegates video fetching to [VideosRepository.getNewVideos] so the Explore
-/// New Videos tab does not share the popular/trending source.
+/// [PublicationFeed.latest] delegates to [VideosRepository.getNewVideos], so
+/// the Explore Latest tab does not share the popular/trending source.
+/// [PublicationFeed.newCreators] delegates to
+/// [VideosRepository.getNewCreatorVideos], which has no relay fallback.
+
+final class NewVideosFeedFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          NewVideosFeed,
+          AsyncValue<VideoFeedState>,
+          VideoFeedState,
+          FutureOr<VideoFeedState>,
+          PublicationFeed
+        > {
+  NewVideosFeedFamily._()
+    : super(
+        retry: null,
+        name: r'newVideosFeedProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: false,
+      );
+
+  /// Publication-ordered feed provider - shows newest videos first.
+  ///
+  /// [PublicationFeed.latest] delegates to [VideosRepository.getNewVideos], so
+  /// the Explore Latest tab does not share the popular/trending source.
+  /// [PublicationFeed.newCreators] delegates to
+  /// [VideosRepository.getNewCreatorVideos], which has no relay fallback.
+
+  NewVideosFeedProvider call(PublicationFeed feed) =>
+      NewVideosFeedProvider._(argument: feed, from: this);
+
+  @override
+  String toString() => r'newVideosFeedProvider';
+}
+
+/// Publication-ordered feed provider - shows newest videos first.
+///
+/// [PublicationFeed.latest] delegates to [VideosRepository.getNewVideos], so
+/// the Explore Latest tab does not share the popular/trending source.
+/// [PublicationFeed.newCreators] delegates to
+/// [VideosRepository.getNewCreatorVideos], which has no relay fallback.
 
 abstract class _$NewVideosFeed extends $AsyncNotifier<VideoFeedState> {
-  FutureOr<VideoFeedState> build();
+  late final _$args = ref.$arg as PublicationFeed;
+  PublicationFeed get feed => _$args;
+
+  FutureOr<VideoFeedState> build(PublicationFeed feed);
   @$mustCallSuper
   @override
   WhenComplete runBuild() {
@@ -66,6 +133,6 @@ abstract class _$NewVideosFeed extends $AsyncNotifier<VideoFeedState> {
               Object?,
               Object?
             >;
-    return element.handleCreate(ref, build);
+    return element.handleCreate(ref, () => build(_$args));
   }
 }

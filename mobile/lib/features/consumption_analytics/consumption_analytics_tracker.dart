@@ -85,6 +85,7 @@ class ConsumptionAnalyticsTracker {
         ViewTrafficSource.profile => ProductAnalyticsV2Surface.profile,
         ViewTrafficSource.search => ProductAnalyticsV2Surface.searchResults,
         ViewTrafficSource.discoveryNew ||
+        ViewTrafficSource.discoveryNewCreators ||
         ViewTrafficSource.discoveryClassic ||
         ViewTrafficSource.discoveryForYou ||
         ViewTrafficSource.discoveryPopular ||
@@ -110,7 +111,11 @@ class ConsumptionAnalyticsTracker {
     }
     return switch (source) {
       ViewTrafficSource.home => ProductAnalyticsV2FeedType.home,
-      ViewTrafficSource.discoveryNew => ProductAnalyticsV2FeedType.newVines,
+      // The product schema has one feed type for both publication-ordered
+      // Explore feeds; the view's traffic source still tells them apart.
+      ViewTrafficSource.discoveryNew ||
+      ViewTrafficSource.discoveryNewCreators =>
+        ProductAnalyticsV2FeedType.newVines,
       ViewTrafficSource.discoveryClassic => ProductAnalyticsV2FeedType.classics,
       ViewTrafficSource.discoveryForYou => ProductAnalyticsV2FeedType.forYou,
       ViewTrafficSource.discoveryPopular => ProductAnalyticsV2FeedType.popular,

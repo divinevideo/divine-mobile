@@ -1268,7 +1268,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exploreTabClassics => 'クラシック';
 
   @override
+  String get exploreTabLatest => '最新';
+
+  @override
   String get exploreTabNew => '新着';
+
+  @override
+  String get exploreTabNewDiviners => '新しいDiviners';
 
   @override
   String get exploreTabPopular => '人気';
@@ -4636,9 +4642,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get navExploreClassics => 'クラシック';
 
   @override
-  String get navExploreNewVideos => '新着動画';
-
-  @override
   String get navExploreTrending => 'トレンド';
 
   @override
@@ -7044,6 +7047,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => '新着動画に動画はないよ';
+
+  @override
+  String get latestVideosTabEmptyTitle => '最新に動画はないよ';
 
   @override
   String get popularVideosContextTitle => '人気の動画';

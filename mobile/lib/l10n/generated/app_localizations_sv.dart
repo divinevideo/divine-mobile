@@ -1381,7 +1381,13 @@ class AppLocalizationsSv extends AppLocalizations {
   String get exploreTabClassics => 'Klassiker';
 
   @override
+  String get exploreTabLatest => 'Senaste';
+
+  @override
   String get exploreTabNew => 'Nytt';
+
+  @override
+  String get exploreTabNewDiviners => 'Nya Diviners';
 
   @override
   String get exploreTabPopular => 'Populärt';
@@ -4927,9 +4933,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get navExploreClassics => 'Klassiker';
 
   @override
-  String get navExploreNewVideos => 'Nya videor';
-
-  @override
   String get navExploreTrending => 'Trendar';
 
   @override
@@ -7428,6 +7431,9 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => 'Inga videor i Nya videor';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'Inga videor i Senaste';
 
   @override
   String get popularVideosContextTitle => 'Populära videor';

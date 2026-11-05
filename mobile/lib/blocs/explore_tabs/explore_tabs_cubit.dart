@@ -12,11 +12,11 @@ part 'explore_tabs_state.dart';
 
 /// Coordinates which explore tabs are present and their order.
 ///
-/// Tab availability is dynamic: Classics, For You, and Apps tabs appear based
-/// on async feature/platform checks, which shifts the index of every later
-/// tab. To keep callers from reasoning about raw indices, this cubit owns the
-/// ordered tab-name list and the name<->index conversion, and treats tab
-/// identity as the stable key (never the index).
+/// Tab availability is dynamic: Classics, New, For You, and Apps tabs appear
+/// based on async feature/platform checks, which shifts the index of every
+/// later tab. To keep callers from reasoning about raw indices, this cubit
+/// owns the ordered tab-name list and the name<->index conversion, and treats
+/// tab identity as the stable key (never the index).
 ///
 /// It also owns the explore screen's service-touching side effects (screen
 /// analytics and top-hashtag loading) so the presentation layer reaches them
@@ -46,11 +46,13 @@ class ExploreTabsCubit extends Cubit<ExploreTabsState> {
   /// only rebuilds its [TabController] when the tab set actually changes.
   void updateAvailability({
     required bool classicsAvailable,
+    required bool newCreatorsAvailable,
     required bool forYouAvailable,
     required bool appsAvailable,
     FeaturedTabConfig? featuredTab,
   }) {
     if (classicsAvailable == state.classicsAvailable &&
+        newCreatorsAvailable == state.newCreatorsAvailable &&
         forYouAvailable == state.forYouAvailable &&
         appsAvailable == state.appsAvailable &&
         featuredTab == state.featuredTab) {
@@ -59,6 +61,7 @@ class ExploreTabsCubit extends Cubit<ExploreTabsState> {
     emit(
       state.copyWith(
         classicsAvailable: classicsAvailable,
+        newCreatorsAvailable: newCreatorsAvailable,
         forYouAvailable: forYouAvailable,
         appsAvailable: appsAvailable,
         featuredTab: featuredTab,

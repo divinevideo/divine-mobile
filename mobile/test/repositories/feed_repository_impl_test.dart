@@ -33,7 +33,7 @@ Completer<VideoFeedState>? _pendingBuild;
 
 class _TestNewVideosFeed extends NewVideosFeed {
   @override
-  Future<VideoFeedState> build() async {
+  Future<VideoFeedState> build(PublicationFeed feed) async {
     ref.watch(_reloadTrigger);
     final pending = _pendingBuild;
     if (pending != null) return pending.future;
@@ -54,7 +54,9 @@ void main() {
 
     setUp(() {
       container = ProviderContainer(
-        overrides: [newVideosFeedProvider.overrideWith(_TestNewVideosFeed.new)],
+        overrides: [
+          newVideosFeedProvider.overrideWith2((_) => _TestNewVideosFeed()),
+        ],
       );
       repository = container.read(feedRepositoryProvider);
     });
@@ -90,9 +92,11 @@ void main() {
       'global feed bridge replays latest state and re-emits updates',
       () async {
         final feed = container.read(
-          newVideosFeedProvider.notifier,
+          newVideosFeedProvider(PublicationFeed.latest).notifier,
         ) as _TestNewVideosFeed;
-        await container.read(newVideosFeedProvider.future);
+        await container.read(
+          newVideosFeedProvider(PublicationFeed.latest).future,
+        );
         feed.emit([_video('1')], hasMore: true);
 
         final videosExpectation = expectLater(
@@ -133,9 +137,11 @@ void main() {
       'global feed bridge closes streams that already replayed a value',
       () async {
         final feed = container.read(
-          newVideosFeedProvider.notifier,
+          newVideosFeedProvider(PublicationFeed.latest).notifier,
         ) as _TestNewVideosFeed;
-        await container.read(newVideosFeedProvider.future);
+        await container.read(
+          newVideosFeedProvider(PublicationFeed.latest).future,
+        );
         feed.emit([_video('1')], hasMore: true);
 
         final videos = <List<VideoEvent>>[];
@@ -172,9 +178,11 @@ void main() {
       'reloading at subscribe time',
       () async {
         final feed = container.read(
-          newVideosFeedProvider.notifier,
+          newVideosFeedProvider(PublicationFeed.latest).notifier,
         ) as _TestNewVideosFeed;
-        await container.read(newVideosFeedProvider.future);
+        await container.read(
+          newVideosFeedProvider(PublicationFeed.latest).future,
+        );
         feed.emit([_video('1')], hasMore: true);
 
         // Block the rebuild, then bump a watched dependency. Riverpod does
@@ -188,7 +196,9 @@ void main() {
 
         // Sanity: this is the state that used to be dropped — a reload that
         // still carries the value the grid is rendering.
-        final reloading = container.read(newVideosFeedProvider);
+        final reloading = container.read(
+          newVideosFeedProvider(PublicationFeed.latest),
+        );
         expect(reloading.isLoading, isTrue);
         expect(reloading.asData, isNull);
         expect(reloading.value?.videos.single.id, '1');

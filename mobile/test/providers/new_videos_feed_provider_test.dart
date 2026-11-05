@@ -99,14 +99,21 @@ void main() {
             (_) async => HomeFeedResult(videos: _videos(1), hasMore: false),
           );
           final container = createContainer();
-          final first = await container.read(newVideosFeedProvider.future);
+          final first = await container.read(
+            newVideosFeedProvider(PublicationFeed.latest).future,
+          );
           expect(first.videos, isEmpty);
           expect(first.hasMoreContent, isTrue);
 
-          await container.read(newVideosFeedProvider.notifier).loadMore();
+          await container
+              .read(newVideosFeedProvider(PublicationFeed.latest).notifier)
+              .loadMore();
 
           expect(
-            container.read(newVideosFeedProvider).requireValue.videos,
+            container
+                .read(newVideosFeedProvider(PublicationFeed.latest))
+                .requireValue
+                .videos,
             hasLength(1),
           );
         },
@@ -122,7 +129,7 @@ void main() {
           stubPages(first: HomeFeedResult(videos: _videos(2), hasMore: true));
 
           final state = await createContainer().read(
-            newVideosFeedProvider.future,
+            newVideosFeedProvider(PublicationFeed.latest).future,
           );
 
           expect(state.videos, hasLength(2));
@@ -141,7 +148,7 @@ void main() {
           );
 
           final state = await createContainer().read(
-            newVideosFeedProvider.future,
+            newVideosFeedProvider(PublicationFeed.latest).future,
           );
 
           expect(state.hasMoreContent, isFalse);
@@ -163,14 +170,20 @@ void main() {
         stubPages(first: HomeFeedResult(videos: _videos(2), hasMore: true));
         final container = createContainer(overrideAppReady: false);
 
-        final initial = await container.read(newVideosFeedProvider.future);
+        final initial = await container.read(
+          newVideosFeedProvider(PublicationFeed.latest).future,
+        );
         expect(initial.videos.map((v) => v.id), ['new-0', 'new-1']);
 
         hideSecondVideo = true;
         container.read(appForegroundProvider.notifier).setForeground(false);
-        await container.read(newVideosFeedProvider.future);
+        await container.read(
+          newVideosFeedProvider(PublicationFeed.latest).future,
+        );
 
-        final backgrounded = container.read(newVideosFeedProvider).requireValue;
+        final backgrounded = container
+            .read(newVideosFeedProvider(PublicationFeed.latest))
+            .requireValue;
         expect(backgrounded.videos.map((v) => v.id), ['new-0']);
         verify(
           () => videosRepository.getNewVideos(
@@ -218,8 +231,12 @@ void main() {
           );
         });
         final container = createContainer();
-        await container.read(newVideosFeedProvider.future);
-        final notifier = container.read(newVideosFeedProvider.notifier);
+        await container.read(
+          newVideosFeedProvider(PublicationFeed.latest).future,
+        );
+        final notifier = container.read(
+          newVideosFeedProvider(PublicationFeed.latest).notifier,
+        );
         final pending = notifier.loadMore();
         await oldPageStarted.future;
         await notifier.refresh();
@@ -230,7 +247,7 @@ void main() {
 
         expect(
           container
-              .read(newVideosFeedProvider)
+              .read(newVideosFeedProvider(PublicationFeed.latest))
               .requireValue
               .videos
               .map((v) => v.id),
@@ -239,7 +256,7 @@ void main() {
         await notifier.loadMore();
         expect(
           container
-              .read(newVideosFeedProvider)
+              .read(newVideosFeedProvider(PublicationFeed.latest))
               .requireValue
               .videos
               .map((v) => v.id),
@@ -281,8 +298,12 @@ void main() {
             );
           });
           final container = createContainer();
-          await container.read(newVideosFeedProvider.future);
-          final notifier = container.read(newVideosFeedProvider.notifier);
+          await container.read(
+            newVideosFeedProvider(PublicationFeed.latest).future,
+          );
+          final notifier = container.read(
+            newVideosFeedProvider(PublicationFeed.latest).notifier,
+          );
 
           await notifier.refresh();
           await notifier.loadMore();
@@ -290,7 +311,7 @@ void main() {
           expect(requestedCursors, [null, null, 'p:fresh']);
           expect(
             container
-                .read(newVideosFeedProvider)
+                .read(newVideosFeedProvider(PublicationFeed.latest))
                 .requireValue
                 .videos
                 .map((v) => v.id),
@@ -335,23 +356,34 @@ void main() {
             );
           });
           final container = createContainer();
-          await container.read(newVideosFeedProvider.future);
-          final notifier = container.read(newVideosFeedProvider.notifier);
+          await container.read(
+            newVideosFeedProvider(PublicationFeed.latest).future,
+          );
+          final notifier = container.read(
+            newVideosFeedProvider(PublicationFeed.latest).notifier,
+          );
 
           await notifier.loadMore();
           expect(
-            container.read(newVideosFeedProvider).requireValue.hasMoreContent,
+            container
+                .read(newVideosFeedProvider(PublicationFeed.latest))
+                .requireValue
+                .hasMoreContent,
             isTrue,
           );
           await notifier.loadMore();
-          final failed = container.read(newVideosFeedProvider).requireValue;
+          final failed = container
+              .read(newVideosFeedProvider(PublicationFeed.latest))
+              .requireValue;
           expect(failed.hasMoreContent, isTrue);
           expect(failed.isLoadingMore, isFalse);
           expect(failed.videos, hasLength(1));
           await notifier.loadMore();
 
           expect(requestedCursors, [null, 'p:second', 'p:third', 'p:third']);
-          final recovered = container.read(newVideosFeedProvider).requireValue;
+          final recovered = container
+              .read(newVideosFeedProvider(PublicationFeed.latest))
+              .requireValue;
           expect(recovered.videos.map((v) => v.id), ['new-0', 'more-0']);
           expect(recovered.hasMoreContent, isFalse);
         },
@@ -383,12 +415,18 @@ void main() {
           );
         });
         final container = createContainer();
-        final initial = await container.read(newVideosFeedProvider.future);
+        final initial = await container.read(
+          newVideosFeedProvider(PublicationFeed.latest).future,
+        );
         expect(initial.videos.map((video) => video.id), ['new-0']);
 
-        await container.read(newVideosFeedProvider.notifier).loadMore();
+        await container
+            .read(newVideosFeedProvider(PublicationFeed.latest).notifier)
+            .loadMore();
 
-        final page = container.read(newVideosFeedProvider).requireValue;
+        final page = container
+            .read(newVideosFeedProvider(PublicationFeed.latest))
+            .requireValue;
         expect(page.videos.map((video) => video.id), ['new-0', 'boundary-0']);
         expect(page.hasMoreContent, isFalse);
       });
@@ -404,11 +442,17 @@ void main() {
             ),
           );
           final container = createContainer();
-          await container.read(newVideosFeedProvider.future);
+          await container.read(
+            newVideosFeedProvider(PublicationFeed.latest).future,
+          );
 
-          await container.read(newVideosFeedProvider.notifier).loadMore();
+          await container
+              .read(newVideosFeedProvider(PublicationFeed.latest).notifier)
+              .loadMore();
 
-          final state = container.read(newVideosFeedProvider).requireValue;
+          final state = container
+              .read(newVideosFeedProvider(PublicationFeed.latest))
+              .requireValue;
           expect(state.videos, hasLength(4));
           expect(state.hasMoreContent, isTrue);
         },
@@ -423,14 +467,110 @@ void main() {
           ),
         );
         final container = createContainer();
-        await container.read(newVideosFeedProvider.future);
+        await container.read(
+          newVideosFeedProvider(PublicationFeed.latest).future,
+        );
 
-        await container.read(newVideosFeedProvider.notifier).loadMore();
+        await container
+            .read(newVideosFeedProvider(PublicationFeed.latest).notifier)
+            .loadMore();
 
         expect(
-          container.read(newVideosFeedProvider).requireValue.hasMoreContent,
+          container
+              .read(newVideosFeedProvider(PublicationFeed.latest))
+              .requireValue
+              .hasMoreContent,
           isFalse,
         );
+      });
+    });
+
+    group('newCreators', () {
+      void stubNewCreators({
+        required HomeFeedResult first,
+        HomeFeedResult? next,
+      }) {
+        when(
+          () => videosRepository.getNewCreatorVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor', that: isNull),
+          ),
+        ).thenAnswer((_) async => first);
+        when(
+          () => videosRepository.getNewCreatorVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor', that: isNotNull),
+          ),
+        ).thenAnswer((_) async => next ?? const HomeFeedResult(videos: []));
+      }
+
+      test('reads new-creator videos, not the Latest source', () async {
+        stubNewCreators(
+          first: HomeFeedResult(videos: _videos(2, idPrefix: 'debut')),
+        );
+
+        final state = await createContainer().read(
+          newVideosFeedProvider(PublicationFeed.newCreators).future,
+        );
+
+        expect(state.videos.map((v) => v.id), ['debut-0', 'debut-1']);
+        verifyNever(
+          () => videosRepository.getNewVideos(
+            limit: any(named: 'limit'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        );
+      });
+
+      test('pages with the server cursor', () async {
+        stubNewCreators(
+          first: HomeFeedResult(
+            videos: _videos(2, idPrefix: 'debut'),
+            hasMore: true,
+            paginationCursor: 'p:page-2',
+          ),
+          next: HomeFeedResult(
+            videos: _videos(1, idPrefix: 'later'),
+            hasMore: false,
+          ),
+        );
+        final container = createContainer();
+        final provider = newVideosFeedProvider(PublicationFeed.newCreators);
+        await container.read(provider.future);
+
+        await container.read(provider.notifier).loadMore();
+
+        final state = container.read(provider).requireValue;
+        expect(state.videos, hasLength(3));
+        expect(state.hasMoreContent, isFalse);
+        verify(
+          () => videosRepository.getNewCreatorVideos(
+            limit: any(named: 'limit'),
+            cursor: 'p:page-2',
+          ),
+        ).called(1);
+      });
+
+      test('stops instead of refetching page one without a cursor', () async {
+        stubNewCreators(
+          first: HomeFeedResult(
+            videos: _videos(2, idPrefix: 'debut'),
+            hasMore: true,
+          ),
+        );
+        final container = createContainer();
+        final provider = newVideosFeedProvider(PublicationFeed.newCreators);
+        await container.read(provider.future);
+
+        await container.read(provider.notifier).loadMore();
+
+        expect(container.read(provider).requireValue.hasMoreContent, isFalse);
+        verify(
+          () => videosRepository.getNewCreatorVideos(
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+          ),
+        ).called(1);
       });
     });
   });

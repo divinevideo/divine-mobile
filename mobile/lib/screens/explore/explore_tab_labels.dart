@@ -22,8 +22,8 @@ const featuredTabPillMaxLength = 16;
 
 /// Returns the localized display label for an Explore tab [name].
 ///
-/// The shell uses a little more context for video mode ("New Videos",
-/// "Trending") while the tab bar keeps the shorter tab copy ("New", "Popular").
+/// The shell uses a little more context for video mode ("Trending") while
+/// the tab bar keeps the shorter tab copy ("Popular").
 ///
 /// The featured tab reads "Featured" like any other tab. The server sends a
 /// label too, but it is now pinned to that one word rather than being
@@ -38,8 +38,8 @@ String labelForExploreTabName(
   exploreFeaturedTabName => l10n.exploreTabFeatured,
   exploreClassicsTabName =>
     shellTitle ? l10n.navExploreClassics : l10n.exploreTabClassics,
-  exploreDefaultTabName =>
-    shellTitle ? l10n.navExploreNewVideos : l10n.exploreTabNew,
+  exploreLatestTabName => l10n.exploreTabLatest,
+  exploreNewTabName => l10n.exploreTabNewDiviners,
   explorePopularTabName =>
     shellTitle ? l10n.navExploreTrending : l10n.exploreTabPopular,
   exploreCategoriesTabName => l10n.exploreTabCategories,

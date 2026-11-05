@@ -1272,7 +1272,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get exploreTabClassics => '클래식';
 
   @override
+  String get exploreTabLatest => '최신';
+
+  @override
   String get exploreTabNew => '신규';
+
+  @override
+  String get exploreTabNewDiviners => '새 Diviners';
 
   @override
   String get exploreTabPopular => '인기';
@@ -4653,9 +4659,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get navExploreClassics => '클래식';
 
   @override
-  String get navExploreNewVideos => '새 영상';
-
-  @override
   String get navExploreTrending => '인기';
 
   @override
@@ -7069,6 +7072,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => '새 영상에 영상이 없어요';
+
+  @override
+  String get latestVideosTabEmptyTitle => '최신에 영상이 없어요';
 
   @override
   String get popularVideosContextTitle => '인기 영상';

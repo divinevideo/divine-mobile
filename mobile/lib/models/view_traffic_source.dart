@@ -6,8 +6,15 @@ enum ViewTrafficSource {
   /// Video viewed from home/following feed
   home,
 
-  /// Video viewed from explore/discovery — new videos tab
+  /// Video viewed from explore/discovery — Latest tab (every new video).
+  ///
+  /// Keeps the `discovery:new` tag it had while this feed was the New tab,
+  /// so its history stays continuous.
   discoveryNew,
+
+  /// Video viewed from explore/discovery — New tab (videos from creators who
+  /// debuted recently).
+  discoveryNewCreators,
 
   /// Video viewed from explore/discovery — classic vines tab
   discoveryClassic,
@@ -43,6 +50,7 @@ extension ViewTrafficSourceTags on ViewTrafficSource {
     return switch (this) {
       ViewTrafficSource.home => 'home',
       ViewTrafficSource.discoveryNew => 'discovery:new',
+      ViewTrafficSource.discoveryNewCreators => 'discovery:newcreators',
       ViewTrafficSource.discoveryClassic => 'discovery:classic',
       ViewTrafficSource.discoveryForYou => 'discovery:foryou',
       ViewTrafficSource.discoveryPopular => 'discovery:popular',
@@ -62,6 +70,8 @@ ViewTrafficSource viewTrafficSourceFromTag(String raw) {
     'search' => ViewTrafficSource.search,
     'share' => ViewTrafficSource.share,
     'discovery:new' || 'discovery_new' => ViewTrafficSource.discoveryNew,
+    'discovery:newcreators' ||
+    'discovery_new_creators' => ViewTrafficSource.discoveryNewCreators,
     'discovery:popular' ||
     'discovery_popular' => ViewTrafficSource.discoveryPopular,
     'discovery:classic' ||

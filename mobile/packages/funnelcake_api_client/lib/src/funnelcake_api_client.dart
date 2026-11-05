@@ -670,11 +670,16 @@ class FunnelcakeApiClient {
   /// drops malformed rows, so its length cannot distinguish "the source ran
   /// out" from "one row was unusable".
   ///
+  /// When [newCreatorsOnly] is true, the server returns only videos from
+  /// creators whose first video on Divine is at most 30 days old, at most
+  /// three per creator. That feed has no relay equivalent.
+  ///
   /// Throws the same exceptions as [getRecentVideos].
   Future<RecentVideosResponse> getRecentVideosPage({
     int limit = 50,
     int? before,
     String? cursor,
+    bool newCreatorsOnly = false,
   }) async {
     if (!isAvailable) {
       throw const FunnelcakeNotConfiguredException();
@@ -683,6 +688,7 @@ class FunnelcakeApiClient {
     final queryParams = _videoQueryParameters({
       'sort': 'published',
       'limit': limit.toString(),
+      if (newCreatorsOnly) 'creators': 'new',
     });
     if (before != null) {
       queryParams['before'] = before.toString();

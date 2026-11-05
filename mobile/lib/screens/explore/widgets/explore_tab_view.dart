@@ -4,6 +4,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/explore_tabs/explore_tabs_cubit.dart';
 import 'package:openvine/features/challenges/challenges_tab.dart';
+import 'package:openvine/providers/new_videos_feed_provider.dart';
 import 'package:openvine/screens/apps/apps_directory_screen.dart';
 import 'package:openvine/screens/explore/tabs/explore_lists_tab.dart';
 import 'package:openvine/screens/explore/tabs/featured_videos_tab.dart';
@@ -47,7 +48,13 @@ class ExploreTabView extends StatelessWidget {
             for (final name in tabsState.tabNames)
               switch (name) {
                 exploreClassicsTabName => const ClassicVinesTab(),
-                exploreDefaultTabName => const NewVideosTab(),
+                exploreLatestTabName => const NewVideosTab(
+                  key: ValueKey(exploreLatestTabName),
+                ),
+                exploreNewTabName => const NewVideosTab(
+                  key: ValueKey(exploreNewTabName),
+                  feed: PublicationFeed.newCreators,
+                ),
                 explorePopularTabName => const PopularVideosTab(),
                 exploreCategoriesTabName => const CategoriesTab(),
                 exploreForYouTabName => const ForYouTab(),
@@ -62,12 +69,12 @@ class ExploreTabView extends StatelessWidget {
               },
           ],
         ),
-        // New videos banner only shows on the New Videos and Trending tabs.
+        // New videos banner only shows on the Latest and Trending tabs.
         AnimatedBuilder(
           animation: controller,
           builder: (context, _) {
             final currentIndex = controller.index;
-            if (currentIndex == tabsState.newVideosIndex ||
+            if (currentIndex == tabsState.latestIndex ||
                 currentIndex == tabsState.trendingIndex) {
               return const ExploreBufferedVideosBanner();
             }

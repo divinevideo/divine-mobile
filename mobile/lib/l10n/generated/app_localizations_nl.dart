@@ -1399,7 +1399,13 @@ class AppLocalizationsNl extends AppLocalizations {
   String get exploreTabClassics => 'Klassiekers';
 
   @override
+  String get exploreTabLatest => 'Recent';
+
+  @override
   String get exploreTabNew => 'Nieuw';
+
+  @override
+  String get exploreTabNewDiviners => 'Nieuwe Diviners';
 
   @override
   String get exploreTabPopular => 'Populair';
@@ -4951,9 +4957,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get navExploreClassics => 'Klassiekers';
 
   @override
-  String get navExploreNewVideos => 'Nieuwe video\'s';
-
-  @override
   String get navExploreTrending => 'Trending';
 
   @override
@@ -7469,6 +7472,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get newVideosTabEmptyTitle => 'Geen video\'s bij Nieuwe video\'s';
+
+  @override
+  String get latestVideosTabEmptyTitle => 'Geen video\'s bij Recent';
 
   @override
   String get popularVideosContextTitle => 'Populaire video\'s';
