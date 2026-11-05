@@ -10,6 +10,7 @@ enum LoopPcmTests {
     static func main() {
         blendsWithWhatFollowsTheLoopPoint()
         blendsALapShorterThanTheCrossfadeAcrossAllOfIt()
+        measuresALapShorterThanItsTailWindowAcrossAllOfIt()
         carriesOnFromTheLapWhenNothingLiveFollows()
         keepsAHeadOfDigitalSilence()
         rampsADecodeThatEndsBeforeTheLoop()
@@ -57,6 +58,31 @@ enum LoopPcmTests {
         )!
         precondition(silentTail.fadeFrames == short)
         precondition(silentTail.samples.count == short)
+    }
+
+    /// A lap shorter than the window its end is measured over is measured
+    /// across all of it. Measured from before its first frame, it always
+    /// read as silent, so a lap whose sound stops at the loop point was
+    /// blended with the silence that follows and clicked on every lap.
+    static func measuresALapShorterThanItsTailWindowAcrossAllOfIt() {
+        let tiny = 441  // 10 ms, half the tail window
+        let live = LoopPcm.prepare(
+            samples: tone(frames: tiny + 8_820, channels: 2),
+            channels: 2, sampleRate: rate, loopFrames: tiny, startFrame: 0
+        )!
+        precondition(live.blendedFromPastTheLoop)
+        precondition(live.fadeFrames == tiny)
+        for channel in 0..<2 {
+            precondition(seamStep(live, channel: channel) <= maxToneStep * 1.1)
+        }
+
+        let stopsDead = LoopPcm.prepare(
+            samples: tone(frames: tiny, channels: 1) + [Float](repeating: 0, count: 8_820),
+            channels: 1, sampleRate: rate, loopFrames: tiny, startFrame: 0
+        )!
+        precondition(!stopsDead.blendedFromPastTheLoop)
+        precondition(stopsDead.samples.count == tiny)
+        precondition(seamStep(stopsDead, channel: 0) <= maxToneStep)
     }
 
     /// A track that stops dead at the loop point — the decoder ringing out

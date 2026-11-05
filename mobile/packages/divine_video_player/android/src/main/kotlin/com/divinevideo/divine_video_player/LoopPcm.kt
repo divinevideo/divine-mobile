@@ -150,7 +150,8 @@ internal object LoopPcm {
         }
 
         val pcm = Pcm(placed, channels, sampleRate)
-        val tailRms = pcm.rms(loopFrames - pcm.frames(TAIL_MS), loopFrames)
+        // A lap shorter than the tail window is measured across all of it.
+        val tailRms = pcm.rms(maxOf(0, loopFrames - pcm.frames(TAIL_MS)), loopFrames)
         val spare = decodedFrames - loopFrames
         val crossfade = minOf(pcm.frames(CROSSFADE_MS), loopFrames)
         // A lap that ends in silence has nothing to carry across its seam.

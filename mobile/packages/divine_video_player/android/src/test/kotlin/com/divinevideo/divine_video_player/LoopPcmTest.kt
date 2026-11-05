@@ -2,6 +2,7 @@ package com.divinevideo.divine_video_player
 
 import kotlin.math.abs
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -202,6 +203,39 @@ class LoopPcmTest {
 
         assertTrue(silentTail.blendedFromPastTheLoop)
         assertEquals(loopFrames, silentTail.fadeFrames)
+    }
+
+    @Test
+    fun `measures a lap shorter than its tail window across all of it`() {
+        // Measured from before the lap's first frame, the tail read past the
+        // start of the decode and threw, and the clip kept the player's own
+        // seam instead of this loop.
+        val loopFrames = sampleRate / 100 // 10 ms, half the tail window
+        val live = LoopPcm.prepare(
+            samples = tone(frames = loopFrames + sampleRate / 4),
+            channels = 1,
+            sampleRate = sampleRate,
+            loopUs = 10_000L,
+        )!!
+
+        assertTrue(live.blendedFromPastTheLoop)
+        assertEquals(loopFrames, live.fadeFrames)
+        assertTrue(
+            "seam step should be one tone step, was ${seamStep(live, 1)}",
+            seamStep(live, 1) <= 101,
+        )
+
+        // Sound that stops at the loop point is ramped, not blended with the
+        // silence that follows.
+        val stopsDead = LoopPcm.prepare(
+            samples = tone(frames = loopFrames) + ShortArray(sampleRate / 4),
+            channels = 1,
+            sampleRate = sampleRate,
+            loopUs = 10_000L,
+        )!!
+
+        assertFalse(stopsDead.blendedFromPastTheLoop)
+        assertEquals(0, seamStep(stopsDead, 1))
     }
 
     @Test
