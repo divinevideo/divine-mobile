@@ -1459,7 +1459,33 @@ void main() {
       );
 
       blocTest<VerifyConnectCubit, VerifyConnectState>(
-        'does not count a refused start as a failed start',
+        'does not count a refused Bluesky start as a failed start',
+        build: () => build(_bluesky),
+        seed: () => const VerifyConnectState(
+          platform: _bluesky,
+          identity: 'alice.bsky.social',
+        ),
+        setUp: () => when(
+          () => repository.startSignIn(
+            platform: any(named: 'platform'),
+            pubkey: any(named: 'pubkey'),
+            returnUrl: any(named: 'returnUrl'),
+            startCheck: any(named: 'startCheck'),
+            handle: any(named: 'handle'),
+          ),
+        ).thenThrow(const VerifierApiException(400, 'unresolvable handle')),
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
+          expect(cubit.state.status, equals(VerifyConnectStatus.editing));
+          expect(launched, isEmpty);
+          expect(cubit.state.signInFailedToStart, isFalse);
+        },
+        errors: () => [isA<VerifierApiException>()],
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'counts a refused start that took no handle as a failed start',
         build: () => build(_twitter),
         setUp: () => when(
           () => repository.startSignIn(
@@ -1475,7 +1501,7 @@ void main() {
           expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
           expect(cubit.state.status, equals(VerifyConnectStatus.editing));
           expect(launched, isEmpty);
-          expect(cubit.state.signInFailedToStart, isFalse);
+          expect(cubit.state.signInFailedToStart, isTrue);
         },
         errors: () => [isA<VerifierApiException>()],
       );

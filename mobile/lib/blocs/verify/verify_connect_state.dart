@@ -147,8 +147,9 @@ class VerifyConnectState extends Equatable {
 
   /// Whether a sign-in in this flow failed to start or to launch.
   ///
-  /// A start the verifier refused with a 4xx does not count: that refuses
-  /// what was sent, which the person can correct and try again.
+  /// A Bluesky start the verifier refused with a 4xx does not count: that
+  /// start takes the typed handle, which the person can correct and try
+  /// again. The other starts take no handle, so a 4xx there counts.
   ///
   /// Stays set for the rest of the flow, so a renewal that cannot start a
   /// sign-in keeps the proof post on offer while the sign-in can be retried.

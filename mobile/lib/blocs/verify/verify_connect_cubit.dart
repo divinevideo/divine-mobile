@@ -279,10 +279,15 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     } on VerifierApiException catch (error, stackTrace) {
       if (isClosed) return;
       addError(error, stackTrace);
-      // A 4xx refuses what was sent, such as a Bluesky handle the verifier
-      // cannot resolve. The handle stays editable and the proof post hidden,
-      // so the person can correct it and sign in again.
-      final refused = error.statusCode >= 400 && error.statusCode < 500;
+      // Only Bluesky's start takes what the person typed. There a 4xx (such
+      // as a handle the verifier cannot resolve) keeps the handle editable
+      // and the proof post hidden, so the person can correct it and sign in
+      // again. The other starts take no handle, so a 4xx leaves nothing to
+      // correct and counts as a failed start.
+      final refused =
+          platform == 'bluesky' &&
+          error.statusCode >= 400 &&
+          error.statusCode < 500;
       return _fail(
         VerifyConnectError.oauthFailed,
         signInFailedToStart: !refused,
