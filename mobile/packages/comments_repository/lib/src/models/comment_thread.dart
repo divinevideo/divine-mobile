@@ -20,6 +20,7 @@ class CommentThread extends Equatable {
     this.hasMore,
     this.hasExactTotal = true,
     this.commentCache = const {},
+    this.nextOffset,
   });
 
   /// Creates an empty thread for a given root event.
@@ -28,7 +29,8 @@ class CommentThread extends Equatable {
       totalCount = 0,
       hasMore = false,
       hasExactTotal = true,
-      commentCache = const {};
+      commentCache = const {},
+      nextOffset = null;
 
   /// The ID of the root event these comments belong to.
   final String rootEventId;
@@ -50,6 +52,13 @@ class CommentThread extends Equatable {
   /// Cache of all comments by ID for quick lookup.
   final Map<String, Comment> commentCache;
 
+  /// Where the next REST page starts, or `null` when the page did not come
+  /// from REST.
+  ///
+  /// Counts every comment REST returned, including ones hidden afterwards,
+  /// so a caller can continue the same REST listing.
+  final int? nextOffset;
+
   /// Whether the thread has any comments.
   bool get isEmpty => totalCount == 0;
 
@@ -67,6 +76,7 @@ class CommentThread extends Equatable {
     bool? hasMore,
     bool? hasExactTotal,
     Map<String, Comment>? commentCache,
+    int? nextOffset,
   }) => CommentThread(
     rootEventId: rootEventId ?? this.rootEventId,
     comments: comments ?? this.comments,
@@ -74,6 +84,7 @@ class CommentThread extends Equatable {
     hasMore: hasMore ?? this.hasMore,
     hasExactTotal: hasExactTotal ?? this.hasExactTotal,
     commentCache: commentCache ?? this.commentCache,
+    nextOffset: nextOffset ?? this.nextOffset,
   );
 
   @override
@@ -84,5 +95,6 @@ class CommentThread extends Equatable {
     hasMore,
     hasExactTotal,
     commentCache,
+    nextOffset,
   ];
 }

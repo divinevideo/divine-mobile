@@ -72,6 +72,7 @@ final class CommentsListState extends Equatable {
     this.error,
     this.isLoadingMore = false,
     this.hasMoreContent = true,
+    this.nextOffset,
     this.sortMode = CommentsSortMode.newest,
     this.replyCountsByCommentId = const {},
     this.newCommentIds = const {},
@@ -130,6 +131,14 @@ final class CommentsListState extends Equatable {
 
   /// Whether more comments are being loaded (pagination).
   final bool isLoadingMore;
+
+  /// Where the next REST page of comments starts, or `null` until REST has
+  /// served a page.
+  ///
+  /// Paging by this position, rather than by the oldest loaded comment,
+  /// keeps later pages on REST, which also lists comments scoped to an
+  /// earlier revision of an edited video.
+  final int? nextOffset;
 
   /// Whether there are more comments to load.
   final bool hasMoreContent;
@@ -256,6 +265,7 @@ final class CommentsListState extends Equatable {
     CommentsListError? error,
     bool? isLoadingMore,
     bool? hasMoreContent,
+    int? nextOffset,
     CommentsSortMode? sortMode,
     Map<String, int>? replyCountsByCommentId,
     Set<String>? newCommentIds,
@@ -279,6 +289,7 @@ final class CommentsListState extends Equatable {
       error: clearError ? null : (error ?? this.error),
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       hasMoreContent: hasMoreContent ?? this.hasMoreContent,
+      nextOffset: nextOffset ?? this.nextOffset,
       sortMode: sortMode ?? this.sortMode,
       replyCountsByCommentId:
           replyCountsByCommentId ?? this.replyCountsByCommentId,
@@ -303,6 +314,7 @@ final class CommentsListState extends Equatable {
     error,
     isLoadingMore,
     hasMoreContent,
+    nextOffset,
     sortMode,
     replyCountsByCommentId,
     newCommentIds,

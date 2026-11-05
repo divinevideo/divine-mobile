@@ -203,6 +203,11 @@ class CommentsRepository {
   ///   before this time.
   ///   Note: Nostr `until` filter is inclusive, so subtract 1 second from the
   ///   oldest loaded comment's timestamp when paginating.
+  /// - [offset]: Position of the next REST page, as reported by
+  ///   [CommentThread.nextOffset] of the previous page. A positive [offset]
+  ///   asks REST for that page even when [before] is set, because the relay
+  ///   cannot see comments scoped to a superseded revision of an edited
+  ///   video. If REST fails, the page is read from the relay with [before].
   ///
   /// Returns a [CommentThread] containing:
   /// - All comments in chronological order
@@ -220,7 +225,8 @@ class CommentsRepository {
     bool includeVideoReplies = false,
   }) async {
     try {
-      if (before == null && (_funnelcakeApiClient?.isAvailable ?? false)) {
+      if ((before == null || offset > 0) &&
+          (_funnelcakeApiClient?.isAvailable ?? false)) {
         try {
           final response = await _funnelcakeApiClient!.getVideoComments(
             videoId: rootEventId,
@@ -239,17 +245,19 @@ class CommentsRepository {
                 response,
                 rootEventId,
                 rootEventKind,
+                offset: offset,
                 rootAddressableId: rootAddressableId,
               ),
             );
             // Merge the user's own just-posted comment when the REST index has
             // not yet ingested it, so a sheet reopen doesn't drop it (#5598).
-            final thread = _mergeRecentlyPostedComments(
-              restThread,
-              rootEventId,
-            );
-            if (thread.hasExactTotal) {
+            // Only the first page can hold it.
+            final thread = offset == 0
+                ? _mergeRecentlyPostedComments(restThread, rootEventId)
+                : restThread;
+            if (offset == 0 && thread.hasExactTotal) {
               // Auto-update the count cache with the authoritative REST total.
+              // Later pages do not carry the first-page adjustments.
               // Zero is written too so a previously cached positive value
               // can't outlive the comments it counted — important with the
               // addressable-id companion cache, which would otherwise serve
@@ -263,7 +271,7 @@ class CommentsRepository {
             return _filterThread(thread);
           }
         } on FunnelcakeException {
-          // Fall back to relay query when REST bootstrap is unavailable.
+          // Fall back to the relay query when REST is unavailable.
         }
       }
 
@@ -1339,6 +1347,7 @@ class CommentsRepository {
     VideoCommentsResponse response,
     String rootEventId,
     int rootEventKind, {
+    required int offset,
     String? rootAddressableId,
   }) {
     final commentMap = <String, Comment>{};
@@ -1360,6 +1369,7 @@ class CommentsRepository {
       totalCount: response.total,
       hasMore: response.hasMore,
       hasExactTotal: response.hasExactTotal,
+      nextOffset: offset + response.comments.length,
     );
   }
 
