@@ -8467,12 +8467,6 @@ abstract class AppLocalizations {
   /// **'Classics'**
   String get navExploreClassics;
 
-  /// No description provided for @navExploreNewVideos.
-  ///
-  /// In en, this message translates to:
-  /// **'New Videos'**
-  String get navExploreNewVideos;
-
   /// No description provided for @navExploreTrending.
   ///
   /// In en, this message translates to:

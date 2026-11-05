@@ -4960,9 +4960,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get navExploreClassics => 'Klasik';
 
   @override
-  String get navExploreNewVideos => 'Video Baru';
-
-  @override
   String get navExploreTrending => 'Trending';
 
   @override

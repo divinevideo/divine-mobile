@@ -5029,9 +5029,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navExploreClassics => 'الكلاسيكيات';
 
   @override
-  String get navExploreNewVideos => 'فيديوهات جديدة';
-
-  @override
   String get navExploreTrending => 'الرائجة';
 
   @override

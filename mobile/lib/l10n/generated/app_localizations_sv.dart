@@ -5033,9 +5033,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get navExploreClassics => 'Klassiker';
 
   @override
-  String get navExploreNewVideos => 'Nya videor';
-
-  @override
   String get navExploreTrending => 'Trendar';
 
   @override

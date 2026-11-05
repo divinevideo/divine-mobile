@@ -4997,9 +4997,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get navExploreClassics => 'Kinh điển';
 
   @override
-  String get navExploreNewVideos => 'Video mới';
-
-  @override
   String get navExploreTrending => 'Thịnh hành';
 
   @override

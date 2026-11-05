@@ -4740,9 +4740,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get navExploreClassics => 'クラシック';
 
   @override
-  String get navExploreNewVideos => '新着動画';
-
-  @override
   String get navExploreTrending => 'トレンド';
 
   @override

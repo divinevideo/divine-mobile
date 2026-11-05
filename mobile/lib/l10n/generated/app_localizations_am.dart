@@ -4918,9 +4918,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get navExploreClassics => 'ክላሲኮች';
 
   @override
-  String get navExploreNewVideos => 'አዳዲስ ቪዲዮዎች';
-
-  @override
   String get navExploreTrending => 'በመታየት ላይ ያለ';
 
   @override

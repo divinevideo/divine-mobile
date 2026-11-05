@@ -5181,9 +5181,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get navExploreClassics => 'Clasice';
 
   @override
-  String get navExploreNewVideos => 'Videoclipuri noi';
-
-  @override
   String get navExploreTrending => 'În trend';
 
   @override

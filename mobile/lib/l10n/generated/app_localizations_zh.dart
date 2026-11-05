@@ -4712,9 +4712,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get navExploreClassics => '经典';
 
   @override
-  String get navExploreNewVideos => '新视频';
-
-  @override
   String get navExploreTrending => '热门';
 
   @override

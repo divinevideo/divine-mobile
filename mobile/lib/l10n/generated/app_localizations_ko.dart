@@ -4758,9 +4758,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get navExploreClassics => '클래식';
 
   @override
-  String get navExploreNewVideos => '새 영상';
-
-  @override
   String get navExploreTrending => '인기';
 
   @override

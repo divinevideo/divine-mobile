@@ -5068,9 +5068,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get navExploreClassics => 'Classics';
 
   @override
-  String get navExploreNewVideos => 'Bagong Video';
-
-  @override
   String get navExploreTrending => 'Trending';
 
   @override
