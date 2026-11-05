@@ -83,6 +83,189 @@ class _DelayedStore extends InMemoryConcordStore {
   }
 }
 
+/// A synthetic owner-rooted community whose owner and moderator keys the test
+/// holds, so it can author control editions after the session has loaded.
+class _Community {
+  static const ownerSecret =
+      'a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1';
+  static const linkSecret =
+      'b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2';
+  static const moderatorSecret =
+      'c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3';
+  static const member =
+      'd4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4';
+  static const salt =
+      'e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5';
+  static const root =
+      'f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6';
+  static const channelId =
+      'abababababababababababababababababababababababababababababababab';
+  static const roleId =
+      '5555555555555555555555555555555555555555555555555555555555555555';
+  static final token = List<int>.generate(16, (i) => i + 1);
+  final String owner = schnorr.getPublicKey(ownerSecret);
+  final String link = schnorr.getPublicKey(linkSecret);
+  final String moderator = schnorr.getPublicKey(moderatorSecret);
+  late final String communityId = deriveCommunityId(owner, salt);
+  late final GroupKey read = controlReadKey(root, communityId, 0);
+  late final fragment = ConcordInviteFragment.decode(
+    base64Url.encode([4, 0, 0, ...token]),
+  );
+  var _serial = 0;
+
+  static Map<String, dynamic> _signed(
+    String secret,
+    int kind,
+    List<List<String>> tags,
+    String content,
+  ) {
+    final pubkey = schnorr.getPublicKey(secret);
+    final id = computeEventId(
+      pubkey: pubkey,
+      createdAt: 1,
+      kind: kind,
+      tags: tags,
+      content: content,
+    );
+    return {
+      'id': id,
+      'pubkey': pubkey,
+      'created_at': 1,
+      'kind': kind,
+      'tags': tags,
+      'content': content,
+      'sig': schnorr.sign(secret, id, '00' * 32),
+    };
+  }
+
+  Map<String, dynamic> _rumor(
+    String author,
+    int kind,
+    List<List<String>> tags,
+    String content,
+  ) {
+    // A distinct timestamp keeps otherwise identical rumors apart.
+    final createdAt = ++_serial;
+    return {
+      'id': computeEventId(
+        pubkey: author,
+        createdAt: createdAt,
+        kind: kind,
+        tags: tags,
+        content: content,
+      ),
+      'pubkey': author,
+      'created_at': createdAt,
+      'kind': kind,
+      'tags': tags,
+      'content': content,
+    };
+  }
+
+  Future<Map<String, dynamic>> invite() async => _signed(
+    linkSecret,
+    33301,
+    [
+      ['d', ''],
+      ['vsk', '6'],
+    ],
+    await nip44Encrypt(
+      jsonEncode({
+        'community_id': communityId,
+        'owner': owner,
+        'owner_salt': salt,
+        'community_root': root,
+        'root_epoch': 0,
+        'channels': <dynamic>[],
+        'relays': <String>[],
+      }),
+      inviteBundleKey(token),
+    ),
+  );
+
+  /// An owner-authored control edition and the relay carrier holding it.
+  Future<({Map<String, dynamic> wrap, String hash})> edition(
+    String vsk,
+    String entityId,
+    Object content, {
+    int version = 1,
+    String? previous,
+  }) async {
+    final encoded = jsonEncode(content);
+    final rumor = _rumor(owner, 3308, [
+      ['vsk', vsk],
+      ['eid', entityId],
+      ['ev', '$version'],
+      if (previous != null) ['ep', previous],
+    ], encoded);
+    final wrap = await wrapSeal(
+      seal: await sealRumor(
+        rumor: rumor,
+        sealKind: 20014,
+        streamSeedHex: read.seedHex,
+        streamPubkey: read.pubkey,
+        authorSecretHex: ownerSecret,
+      ),
+      streamSeedHex: read.seedHex,
+      streamPubkey: read.pubkey,
+    );
+    return (
+      wrap: wrap,
+      hash: editionHash(entityId, version, previous, encoded),
+    );
+  }
+
+  Future<Map<String, dynamic>> metadata(
+    String name, {
+    int version = 1,
+    String? previous,
+  }) async => (await edition(
+    '0',
+    communityId,
+    {'name': name},
+    version: version,
+    previous: previous,
+  )).wrap;
+
+  /// A base-rotation signal from the moderator citing its grant edition.
+  Future<Map<String, dynamic>> moderatorRotation(String grantHash) async {
+    final rekey = groupKey(
+      'concord/base-rekey-pseudonym',
+      root,
+      communityId,
+      epoch: 1,
+    );
+    final rumor = _rumor(moderator, 3303, [
+      ['scope', '00' * 32],
+      ['prevepoch', '0'],
+      ['newepoch', '1'],
+      ['prevcommit', epochKeyCommitment(0, root)],
+      ['vac', grantLocator(communityId, moderator), '1', grantHash],
+    ], '');
+    return wrapSeal(
+      seal: await sealRumor(
+        rumor: rumor,
+        sealKind: 20013,
+        streamSeedHex: rekey.seedHex,
+        streamPubkey: rekey.pubkey,
+        authorSecretHex: moderatorSecret,
+      ),
+      streamSeedHex: rekey.seedHex,
+      streamPubkey: rekey.pubkey,
+    );
+  }
+
+  ConcordCommunitySession session(_Relay relay, AccountScopedStore store) =>
+      ConcordCommunitySession(
+        relay: relay,
+        store: store,
+        linkSigner: link,
+        fragment: fragment,
+        account: member,
+        nowMs: () => 0,
+      );
+}
+
 void main() {
   final fixture = readConcordFixture('community-interop.json');
   final event = fixture['bundleEvent'] as Map<String, dynamic>;
@@ -344,6 +527,129 @@ void main() {
           'general',
           'introductions',
         });
+        await next.close();
+        await nextRelay.close();
+      },
+    );
+  });
+  group('ConcordCommunitySession after load', () {
+    test(
+      'editions replayed newest first after a reconnect do not close Rooms',
+      () async {
+        final c = _Community();
+        final first = await c.edition('0', c.communityId, {'name': 'Divine'});
+        final relay = _Relay([
+          await c.invite(),
+          first.wrap,
+          (await c.edition('2', _Community.channelId, {
+            'name': 'general',
+          })).wrap,
+        ]);
+        final s = c.session(relay, InMemoryConcordStore(_Community.member));
+        await s.start();
+        expect(s.ready, isTrue);
+        // Two renames while the socket was down. On reconnect the relay
+        // replays stored events newest first, so v3 arrives before v2.
+        final second = await c.edition(
+          '0',
+          c.communityId,
+          {'name': 'Divine two'},
+          version: 2,
+          previous: first.hash,
+        );
+        final third = await c.metadata(
+          'Divine three',
+          version: 3,
+          previous: second.hash,
+        );
+        final readiness = s.changes.map((_) => s.ready).take(2).toList();
+        relay
+          ..receive(third)
+          ..receive(second.wrap);
+        expect(await readiness.timeout(const Duration(seconds: 10)), [
+          isFalse,
+          isTrue,
+        ]);
+        expect(s.failure, isNull);
+        expect(s.control!.name, 'Divine three');
+        await s.close();
+        await relay.close();
+      },
+    );
+    test('a ban or a lasting gap after load keeps Rooms closed', () async {
+      final c = _Community();
+      final first = await c.edition('0', c.communityId, {'name': 'Divine'});
+      final room = await c.edition('2', _Community.channelId, {
+        'name': 'general',
+      });
+      for (final change in [
+        await c.metadata('Divine three', version: 3, previous: '00' * 32),
+        (await c.edition('4', banlistLocator(c.communityId), [
+          _Community.member,
+        ])).wrap,
+      ]) {
+        final relay = _Relay([await c.invite(), first.wrap, room.wrap]);
+        final s = c.session(relay, InMemoryConcordStore(_Community.member));
+        await s.start();
+        expect(s.ready, isTrue);
+        final changed = s.changes.first;
+        relay.receive(change);
+        await changed.timeout(const Duration(seconds: 10));
+        expect(s.ready, isFalse);
+        expect(s.canPublish, isFalse);
+        // A held gap keeps the accepted name rather than the gapped edition.
+        expect(s.control!.name, 'Divine');
+        await s.close();
+        await relay.close();
+      }
+    });
+    test(
+      'a moderator demoted since the last sync cannot stop a returning '
+      'device with a rotation signal',
+      () async {
+        final c = _Community();
+        final store = InMemoryConcordStore(_Community.member);
+        final grantId = grantLocator(c.communityId, c.moderator);
+        final authority = [
+          await c.invite(),
+          await c.metadata('Divine'),
+          (await c.edition('2', _Community.channelId, {
+            'name': 'general',
+          })).wrap,
+          (await c.edition('1', _Community.roleId, {
+            'role_id': _Community.roleId,
+            'position': 1,
+            'permissions': 16,
+          })).wrap,
+        ];
+        final grant = await c.edition('3', grantId, {
+          'member': c.moderator,
+          'role_ids': [_Community.roleId],
+        });
+        final firstRelay = _Relay([...authority, grant.wrap]);
+        final first = c.session(firstRelay, store);
+        await first.start();
+        expect(first.control!.permits(c.moderator, 16), isTrue);
+        await first.close();
+        await firstRelay.close();
+        final demotion = await c.edition(
+          '3',
+          grantId,
+          {'member': c.moderator, 'role_ids': <String>[]},
+          version: 2,
+          previous: grant.hash,
+        );
+        final nextRelay = _Relay([
+          ...authority,
+          grant.wrap,
+          demotion.wrap,
+          await c.moderatorRotation(grant.hash),
+        ]);
+        final next = c.session(nextRelay, store);
+        await next.start();
+        expect(next.ready, isTrue);
+        expect(next.control!.permits(c.moderator, 16), isFalse);
+        expect(await store.get('community-stop'), isNull);
         await next.close();
         await nextRelay.close();
       },

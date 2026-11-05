@@ -120,6 +120,7 @@ final StreamProvider<ConcordRoomCatalog> concordRoomCatalogProvider =
       );
       await session.start();
       String signatureOf() => jsonEncode([
+        session.ready,
         session.control!.name,
         for (final channel in session.control!.publicChannels)
           [channel.id, channel.name],
@@ -127,7 +128,10 @@ final StreamProvider<ConcordRoomCatalog> concordRoomCatalogProvider =
       var signature = signatureOf();
       yield ConcordRoomCatalog.real(session);
       await for (final _ in session.changes) {
-        if (!session.ready) {
+        // Only terminal failures end the catalog. Incomplete authority (for
+        // example while a reconnect replays history) or a ban yields a closed
+        // catalog that reopens when a later fold allows it.
+        if (session.failure != null) {
           throw StateError(
             'Community authority is unavailable: ${session.failure}',
           );

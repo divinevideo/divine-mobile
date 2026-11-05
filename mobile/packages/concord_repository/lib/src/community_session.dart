@@ -289,7 +289,9 @@ class ConcordCommunitySession {
                 } on FormatException {
                   return;
                 }
-                await _checkSignals();
+                // Before load the fold may be a stale cache; bootstrap checks
+                // every collected signal against the relay's full authority.
+                if (_loaded) await _checkSignals();
               }),
               onError: _fail,
             ),
@@ -402,12 +404,10 @@ class ConcordCommunitySession {
       priorHeads: _acceptedHeads,
       snapshotIds: bundle!.rootEpoch > 0 ? _snapshotIds : const {},
     );
-    if (_loaded &&
-        (control!.incomplete.isNotEmpty || control!.banned.contains(account))) {
-      failure = StateError(
-        'Community authority changed; reopen Rooms to refresh',
-      );
-    }
+    // After load, `ready` follows each fold's incompleteness and bans. A
+    // reconnect replays stored events newest first, so an entity can look
+    // incomplete until its missing edition arrives; the fold holds its accepted
+    // head across the gap. `failure` stays reserved for terminal errors.
     if (_loaded) _acceptedHeads = {...control!.heads};
     if (_signals.isNotEmpty) _enqueue(_checkSignals);
     _notify();
