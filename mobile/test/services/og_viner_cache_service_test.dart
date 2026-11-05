@@ -5,6 +5,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
+import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/services/og_viner_cache_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -141,6 +142,51 @@ void main() {
 
         expect(prefs.getString('terms_accepted_at'), isNull);
         expect(OgVinerCacheService(prefs: prefs).isOgViner(_ogPubkey), isTrue);
+      });
+    });
+
+    group('environments', () {
+      test(
+        'keeps a set learned against one environment out of another',
+        () async {
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          final staging = OgVinerCacheService(
+            prefs: prefs,
+            storageKey: ogVinerPubkeysCacheKeyFor(AppEnvironment.staging),
+          );
+
+          await staging.learnFromVideos([
+            _video(pubkey: _ogPubkey, verifiedArchive: true),
+          ]);
+
+          expect(
+            OgVinerCacheService(
+              prefs: prefs,
+              storageKey: ogVinerPubkeysCacheKeyFor(AppEnvironment.production),
+            ).isOgViner(_ogPubkey),
+            isFalse,
+          );
+          expect(
+            OgVinerCacheService(
+              prefs: prefs,
+              storageKey: ogVinerPubkeysCacheKeyFor(AppEnvironment.staging),
+            ).isOgViner(_ogPubkey),
+            isTrue,
+          );
+        },
+      );
+
+      test('gives each environment its own key, and production keeps the one '
+          'learned sets are stored under', () {
+        final keys = AppEnvironment.values.map(ogVinerPubkeysCacheKeyFor);
+
+        expect(keys.toSet(), hasLength(AppEnvironment.values.length));
+        expect(
+          ogVinerPubkeysCacheKeyFor(AppEnvironment.production),
+          equals(ogVinerPubkeysCacheKey),
+        );
+        expect(OgVinerCacheService.deviceScopedPrefsKeys, containsAll(keys));
       });
     });
   });

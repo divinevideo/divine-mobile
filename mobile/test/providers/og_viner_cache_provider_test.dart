@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
+import 'package:openvine/models/environment_config.dart';
+import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/og_viner_cache_service.dart';
@@ -32,20 +34,40 @@ void main() {
     });
 
     test(
-      'falls back to an in-memory cache when prefs are not wired',
+      'reads the set learned against the environment the app points at',
       () async {
-        final container = ProviderContainer();
+        SharedPreferences.setMockInitialValues({
+          ogVinerPubkeysCacheKey: jsonEncode([ogPubkey]),
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            currentEnvironmentProvider.overrideWithValue(
+              const EnvironmentConfig(environment: AppEnvironment.staging),
+            ),
+          ],
+        );
         addTearDown(container.dispose);
+
         final service = container.read(ogVinerCacheServiceProvider);
+
         expect(service.isOgViner(ogPubkey), isFalse);
-
-        await service.learnFromVideos([
-          _archiveVine(id: 'archive-1', pubkey: ogPubkey),
-        ]);
-
-        expect(service.isOgViner(ogPubkey), isTrue);
       },
     );
+
+    test('falls back to an in-memory cache when prefs are not wired', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final service = container.read(ogVinerCacheServiceProvider);
+      expect(service.isOgViner(ogPubkey), isFalse);
+
+      await service.learnFromVideos([
+        _archiveVine(id: 'archive-1', pubkey: ogPubkey),
+      ]);
+
+      expect(service.isOgViner(ogPubkey), isTrue);
+    });
   });
 }
 

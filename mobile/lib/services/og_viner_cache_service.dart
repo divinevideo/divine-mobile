@@ -5,11 +5,34 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:models/models.dart';
+import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Preference key holding the sorted JSON list of OG Viner pubkeys.
+/// Preference key holding the sorted JSON list of OG Viner pubkeys learned
+/// against production.
 const ogVinerPubkeysCacheKey = 'og_viner_pubkeys_v2';
+
+/// The set learned against staging.
+const ogVinerStagingPubkeysCacheKey = 'og_viner_pubkeys_v2_staging';
+
+/// The set learned against the proof-of-concept environment.
+const ogVinerPocPubkeysCacheKey = 'og_viner_pubkeys_v2_poc';
+
+/// The set learned against a local stack.
+const ogVinerLocalPubkeysCacheKey = 'og_viner_pubkeys_v2_local';
+
+/// The key holding the set learned against [environment].
+///
+/// Each environment answers from its own funnelcake, so a set learned against
+/// one must not badge creators in another.
+String ogVinerPubkeysCacheKeyFor(AppEnvironment environment) =>
+    switch (environment) {
+      AppEnvironment.production => ogVinerPubkeysCacheKey,
+      AppEnvironment.staging => ogVinerStagingPubkeysCacheKey,
+      AppEnvironment.poc => ogVinerPocPubkeysCacheKey,
+      AppEnvironment.local => ogVinerLocalPubkeysCacheKey,
+    };
 
 /// The pre-#6983 key. Its set was learned from a tag any publisher can write,
 /// so it is deleted unread.
@@ -20,22 +43,31 @@ const legacyOgVinerPubkeysCacheKey = 'og_viner_pubkeys_v1';
 ///
 /// A pubkey is learned only from a video whose `verified_archive` flag is set.
 class OgVinerCacheService extends ChangeNotifier {
-  /// Creates the cache, loading what [prefs] holds.
-  OgVinerCacheService({SharedPreferences? prefs}) : _prefs = prefs {
+  /// Creates the cache, loading what [prefs] holds under [storageKey].
+  OgVinerCacheService({
+    SharedPreferences? prefs,
+    String storageKey = ogVinerPubkeysCacheKey,
+  }) : _prefs = prefs,
+       _storageKey = storageKey {
     _load();
   }
 
   /// Whether a creator is an OG Viner does not depend on who is signed in, so
-  /// the set survives sign-out and account switches. The legacy key is
-  /// device-level too, and deleted the first time the cache loads.
+  /// every environment's set survives sign-out and account switches. The
+  /// legacy key is device-level too, and deleted the first time the cache
+  /// loads.
   static const List<String> deviceScopedPrefsKeys = [
     ogVinerPubkeysCacheKey,
+    ogVinerStagingPubkeysCacheKey,
+    ogVinerPocPubkeysCacheKey,
+    ogVinerLocalPubkeysCacheKey,
     legacyOgVinerPubkeysCacheKey,
   ];
 
   static const _logName = 'OgVinerCacheService';
 
   final SharedPreferences? _prefs;
+  final String _storageKey;
   final Set<String> _pubkeys = {};
 
   /// Whether [pubkey] has been seen on a video funnelcake verifies as an
@@ -81,7 +113,7 @@ class OgVinerCacheService extends ChangeNotifier {
       );
     }
 
-    final stored = prefs.getString(ogVinerPubkeysCacheKey);
+    final stored = prefs.getString(_storageKey);
     if (stored == null || stored.isEmpty) return;
 
     final Object? decoded;
@@ -105,7 +137,7 @@ class OgVinerCacheService extends ChangeNotifier {
 
     final sortedPubkeys = _pubkeys.toList()..sort();
     try {
-      await prefs.setString(ogVinerPubkeysCacheKey, jsonEncode(sortedPubkeys));
+      await prefs.setString(_storageKey, jsonEncode(sortedPubkeys));
     } catch (_) {
       // Keep in-memory discoveries even if local persistence fails.
     }
