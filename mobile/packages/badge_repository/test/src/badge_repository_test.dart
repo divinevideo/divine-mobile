@@ -3446,6 +3446,34 @@ void main() {
         },
       );
 
+      test('leaves client attribution to the signer', () async {
+        stubRead(
+          events: [
+            _signed(
+              _event(
+                id: _eventId(157),
+                pubkey: _pubkey(1),
+                kind: EventKind.profileBadges,
+                tags: [
+                  ['client', 'Another app'],
+                  ['a', retainedCoordinate],
+                  ['e', _eventId(121)],
+                ],
+              ),
+            ),
+          ],
+        );
+
+        await repository.acceptAward(award(coordinate, 122));
+
+        expect(lastSignedEvent()!.tags, [
+          ['a', retainedCoordinate],
+          ['e', _eventId(121)],
+          ['a', coordinate],
+          ['e', _eventId(122)],
+        ]);
+      });
+
       test('replaces only a list the owner actually signed', () async {
         final genuine = _signed(
           _event(

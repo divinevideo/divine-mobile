@@ -2287,7 +2287,11 @@ class BadgeRepository {
   }) async {
     final tags = <List<String>>[];
     final retained = <(String, String)>{};
-    final sourceTags = source?.event.tags ?? const <List<String>>[];
+    // The signer stamps attribution from the current preference only when no
+    // client tag is present, so the old one would credit the wrong app.
+    final sourceTags = Nip89ClientTag.withoutClientTag(
+      source?.event.tags ?? const <List<String>>[],
+    );
     for (var index = 0; index < sourceTags.length; index++) {
       final tag = sourceTags[index];
       final next = index + 1 < sourceTags.length ? sourceTags[index + 1] : null;
