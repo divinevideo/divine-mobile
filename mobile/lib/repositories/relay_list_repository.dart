@@ -128,9 +128,11 @@ class RelayListRepository {
   final SharedPreferences _sharedPreferences;
   final List<DiscoveredRelay> Function() _discoveredRelays;
 
-  /// Applies the explicit settings edit to a fresh relay list. Calls without
-  /// an edit conservatively add configured relays; absence from this device's
-  /// connection pool never implies the user removed a relay on another client.
+  /// Applies the explicit settings edit to a fresh relay list, or to the
+  /// environment relay when no list exists yet. Calls without an edit replay
+  /// stored edits, or conservatively add configured relays when none are
+  /// stored; absence from this device's connection pool never implies the user
+  /// removed a relay on another client.
   Future<RelayListPublishResult> publishConfiguredRelayList({
     String? addedRelay,
     String? removedRelay,
@@ -266,8 +268,15 @@ class RelayListRepository {
         base = event;
       }
     }
+    // With no list anywhere, start from the one bootstrap publishes, so an
+    // edit never advertises a list without the relay Divine writes to.
+    final source =
+        base?.tags ??
+        [
+          ['r', _environment.relayUrl],
+        ];
     final tags = [
-      for (final tag in base?.tags ?? const <List<String>>[])
+      for (final tag in source)
         if (!(tag.length >= 2 &&
             tag[0] == 'r' &&
             pending.entries.any(

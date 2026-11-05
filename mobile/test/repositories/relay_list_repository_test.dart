@@ -281,6 +281,52 @@ void main() {
     );
 
     test(
+      'starts a first list from the environment relay when none exists',
+      () async {
+        await buildRepository().publishConfiguredRelayList(
+          addedRelay: 'wss://added.example',
+        );
+
+        final event =
+            verify(
+                  () => nostrClient.publishEventAwaitOk(
+                    captureAny(),
+                    targetRelays: any(named: 'targetRelays'),
+                    timeout: any(named: 'timeout'),
+                  ),
+                ).captured.single
+                as Event;
+        expect(event.tags, [
+          ['r', EnvironmentConfig.production.relayUrl],
+          ['r', 'wss://added.example'],
+        ]);
+      },
+    );
+
+    test(
+      'does not publish an empty list when removing from an account without '
+      'one',
+      () async {
+        await buildRepository().publishConfiguredRelayList(
+          removedRelay: 'wss://fallback.example',
+        );
+
+        final event =
+            verify(
+                  () => nostrClient.publishEventAwaitOk(
+                    captureAny(),
+                    targetRelays: any(named: 'targetRelays'),
+                    timeout: any(named: 'timeout'),
+                  ),
+                ).captured.single
+                as Event;
+        expect(event.tags, [
+          ['r', EnvironmentConfig.production.relayUrl],
+        ]);
+      },
+    );
+
+    test(
       'retains an accepted addition across restart before relay echo',
       () async {
         await buildRepository().publishConfiguredRelayList(
@@ -297,6 +343,7 @@ void main() {
           ),
         ).captured.cast<Event>();
         expect(events.last.tags, [
+          ['r', EnvironmentConfig.production.relayUrl],
           ['r', 'wss://one.example'],
           ['r', 'wss://two.example'],
         ]);
@@ -410,6 +457,7 @@ void main() {
         ).captured.cast<Event>();
         expect(events, hasLength(1));
         expect(events.single.tags, [
+          ['r', EnvironmentConfig.production.relayUrl],
           ['r', 'wss://chosen.example'],
         ]);
       },
@@ -494,6 +542,7 @@ void main() {
           ),
         ).captured.cast<Event>();
         expect(events.last.tags, [
+          ['r', EnvironmentConfig.production.relayUrl],
           ['r', 'wss://one.example'],
           ['r', 'wss://two.example'],
         ]);
