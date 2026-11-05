@@ -1904,6 +1904,7 @@
   "soundUnableToPreview": "No se puede previsualizar el sonido: no hay audio disponible",
   "soundPreviewFailed": "No se pudo reproducir la previsualización. Probá de nuevo.",
   "soundViewSource": "Ver origen",
+  "soundCreditEdited": "editado",
   "soundCloseTooltip": "Cerrar",
   "exploreNotExploreRoute": "No es una ruta de explorar",
   "legalTitle": "Legal",

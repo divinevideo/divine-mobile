@@ -1890,6 +1890,7 @@
   "soundUnableToPreview": "تعذر معاينة الصوت - لا يوجد صوت متاح",
   "soundPreviewFailed": "تعذر تشغيل المعاينة. يرجى المحاولة مرّة أخرى.",
   "soundViewSource": "عرض المصدر",
+  "soundCreditEdited": "مُعدَّل",
   "soundCloseTooltip": "إغلاق",
   "exploreNotExploreRoute": "ليس مسار استكشاف",
   "legalTitle": "قانوني",

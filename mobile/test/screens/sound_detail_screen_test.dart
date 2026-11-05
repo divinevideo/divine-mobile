@@ -879,6 +879,64 @@ void main() {
         );
         expect(find.text('View source'), findsNothing);
       });
+
+      testWidgets('links the licence to its text', (tester) async {
+        final testSound = createTestAudioEvent(id: 'sound1').copyWith(
+          creatorName: 'Kevin MacLeod (incompetech.com)',
+          licenseName: 'CC BY 4.0',
+          licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+        );
+
+        await tester.pumpWidget(
+          createTestWidget(
+            child: SoundDetailScreen(sound: testSound),
+            overrides: [
+              soundUsageCountProvider(
+                testSound.id,
+              ).overrideWith((ref) => Future.value(0)),
+              videosUsingSoundProvider(
+                testSound.id,
+              ).overrideWith((ref) => Future.value(<String>[])),
+              audioPlaybackServiceProvider.overrideWithValue(mockAudioService),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byWidgetPredicate(
+            (widget) => widget is DivineTextLink && widget.text == 'CC BY 4.0',
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('shows a licence without a link as plain text', (
+        tester,
+      ) async {
+        final testSound = createTestAudioEvent(
+          id: 'sound1',
+        ).copyWith(creatorName: 'Original Artist', licenseName: 'CC BY 4.0');
+
+        await tester.pumpWidget(
+          createTestWidget(
+            child: SoundDetailScreen(sound: testSound),
+            overrides: [
+              soundUsageCountProvider(
+                testSound.id,
+              ).overrideWith((ref) => Future.value(0)),
+              videosUsingSoundProvider(
+                testSound.id,
+              ).overrideWith((ref) => Future.value(<String>[])),
+              audioPlaybackServiceProvider.overrideWithValue(mockAudioService),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('CC BY 4.0'), findsOneWidget);
+        expect(find.byType(DivineTextLink), findsNothing);
+      });
     });
 
     group('Action Buttons', () {

@@ -1897,6 +1897,7 @@
   "soundUnableToPreview": "Ses önizlenemiyor - ses mevcut değil",
   "soundPreviewFailed": "Önizleme oynatılamadı. Lütfen tekrar dene.",
   "soundViewSource": "Kaynağı gör",
+  "soundCreditEdited": "düzenlendi",
   "soundCloseTooltip": "Kapat",
   "exploreNotExploreRoute": "Keşif rotası değil",
   "legalTitle": "Yasal",

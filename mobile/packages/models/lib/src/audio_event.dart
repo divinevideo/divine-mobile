@@ -82,6 +82,7 @@ class AudioEvent {
     this.creatorUrl,
     String? licenseName,
     this.licenseUrl,
+    this.sourceUrl,
     List<String> publicTags = const [],
     this.proxyId,
     this.proxyProtocol,
@@ -280,6 +281,11 @@ class AudioEvent {
       duration: sound.durationInSeconds,
       title: sound.title,
       source: source,
+      // Only a licence with a link names one; the manifest marks the rest
+      // `unknown` or leaves them out.
+      licenseName: sound.licenseUrl == null ? null : sound.license,
+      licenseUrl: sound.licenseUrl,
+      sourceUrl: sound.sourceUrl,
     );
   }
 
@@ -366,6 +372,7 @@ class AudioEvent {
       creatorUrl: json['creatorUrl'] as String?,
       licenseName: json['licenseName'] as String?,
       licenseUrl: json['licenseUrl'] as String?,
+      sourceUrl: json['sourceUrl'] as String?,
       publicTags: _normalizedStringList(json['publicTags']),
       proxyId: json['proxyId'] as String?,
       proxyProtocol: json['proxyProtocol'] as String?,
@@ -567,6 +574,28 @@ class AudioEvent {
 
   /// Whether this audio is a draft-local imported file.
   bool get isLocalImport => id.startsWith('${localImportMarker}_');
+
+  /// Whether its licence asks a work made with it to credit it and say that
+  /// it was changed, as every Creative Commons Attribution licence does.
+  ///
+  /// Read from the provider's licence data when there is some, otherwise
+  /// from the licence link or name. Without licence data, nothing is asked.
+  bool get requiresAttribution {
+    if (externalSource case final external?) {
+      return external.license.requiresAttribution;
+    }
+    // Every licence under this path is an Attribution licence; public domain
+    // tools such as CC0 live under `/publicdomain/`.
+    if (licenseUrl?.toLowerCase().contains('creativecommons.org/licenses/') ??
+        false) {
+      return true;
+    }
+    final name = (licenseName ?? '').toLowerCase().replaceAll(
+      RegExp('[^a-z]'),
+      '',
+    );
+    return name.startsWith('ccby') || name.contains('attribution');
+  }
 
   /// Whether this audio was extracted from one of the draft's own clips.
   bool get isLocalExtracted => id.startsWith('${localExtractedMarker}_');
@@ -777,6 +806,11 @@ class AudioEvent {
 
   /// Canonical public license URL.
   final String? licenseUrl;
+
+  /// The page the sound was published on, for a sound the app ships: the
+  /// link its manifest names. Never read from a Nostr event, so a credit can
+  /// link it without trusting whoever published one.
+  final String? sourceUrl;
 
   /// Public catalog tags. These are distinct from private library hashtags.
   final List<String> publicTags;
@@ -1085,6 +1119,7 @@ class AudioEvent {
     String? creatorUrl,
     String? licenseName,
     String? licenseUrl,
+    String? sourceUrl,
     List<String>? publicTags,
     String? proxyId,
     String? proxyProtocol,
@@ -1134,6 +1169,7 @@ class AudioEvent {
       creatorUrl: creatorUrl ?? this.creatorUrl,
       licenseName: licenseName ?? this.licenseName,
       licenseUrl: licenseUrl ?? this.licenseUrl,
+      sourceUrl: sourceUrl ?? this.sourceUrl,
       publicTags: publicTags ?? this.publicTags,
       proxyId: proxyId ?? this.proxyId,
       proxyProtocol: proxyProtocol ?? this.proxyProtocol,
@@ -1240,6 +1276,7 @@ class AudioEvent {
     'creatorUrl': ?creatorUrl,
     'licenseName': ?licenseName,
     'licenseUrl': ?licenseUrl,
+    'sourceUrl': ?sourceUrl,
     if (publicTags.isNotEmpty) 'publicTags': publicTags,
     'proxyId': ?proxyId,
     'proxyProtocol': ?proxyProtocol,

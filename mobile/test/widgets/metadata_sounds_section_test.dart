@@ -57,12 +57,14 @@ void main() {
       );
     });
 
-    VideoEvent createVideoWithAudio() {
+    VideoEvent createVideoWithAudio({
+      String content = 'Test video with audio',
+    }) {
       final now = DateTime.now();
       return VideoEvent(
         id: testVideoId,
         pubkey: testPubkey,
-        content: 'Test video with audio',
+        content: content,
         videoUrl: 'https://example.com/video.mp4',
         createdAt: now.millisecondsSinceEpoch ~/ 1000,
         timestamp: now,
@@ -76,12 +78,13 @@ void main() {
       bool? allowAudioReuse,
       bool isVerifiedArchive = false,
       InspiredByInfo? inspiredBy,
+      String content = 'Test video without audio',
     }) {
       final now = DateTime.now();
       return VideoEvent(
         id: testVideoId,
         pubkey: testPubkey,
-        content: 'Test video without audio',
+        content: content,
         videoUrl: 'https://example.com/video.mp4',
         createdAt: now.millisecondsSinceEpoch ~/ 1000,
         timestamp: now,
@@ -102,6 +105,7 @@ void main() {
       AudioEvent? audioOverride,
       String? viewerPubkey,
       Object? audioError,
+      bool resolvesAudio = true,
       ValueNotifier<int>? rebuilds,
       bool currentPolicyAllowsReuse = true,
     }) {
@@ -109,7 +113,7 @@ void main() {
         overrides: [
           soundByIdProvider(testAudioEventId).overrideWith((ref) async {
             if (audioError != null) throw audioError;
-            return audioOverride ?? testAudio;
+            return resolvesAudio ? audioOverride ?? testAudio : null;
           }),
           authServiceProvider.overrideWithValue(
             _mockAuth(viewerPubkey: viewerPubkey),
@@ -248,7 +252,14 @@ void main() {
         expect(find.textContaining('By Original Artist'), findsOneWidget);
         expect(find.textContaining('Shared by'), findsOneWidget);
         expect(find.text('Credit only'), findsOneWidget);
-        expect(find.text('CC BY 4.0'), findsOneWidget);
+        // An Attribution licence asks to say the excerpt was changed.
+        expect(
+          find.text(
+            'CC BY 4.0 · '
+            '${lookupAppLocalizations(const Locale('en')).soundCreditEdited}',
+          ),
+          findsOneWidget,
+        );
         expect(find.text('https://example.com/original'), findsOneWidget);
         expect(find.text('#loops'), findsOneWidget);
       });
@@ -316,6 +327,183 @@ void main() {
 
         expect(_divineIcon(DivineIconName.caretRight), findsOneWidget);
       });
+    });
+
+    group('Content credit', () {
+      testWidgets('credits a sound without an event instead of calling it '
+          'the original sound', (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final video = createVideoWithoutAudio(
+          content:
+              'Hi\n\n♪ Elevator Music – YellowTree via Freesound, CC BY 4.0 '
+              'https://creativecommons.org/licenses/by/4.0/ (edited)',
+        );
+
+        await tester.pumpWidget(buildTestWidget(video: video));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Elevator Music – YellowTree via Freesound'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('CC BY 4.0 · ${l10n.soundCreditEdited}'),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.metadataOriginalSound), findsNothing);
+      });
+
+      testWidgets('lists every credited sound', (tester) async {
+        final video = createVideoWithoutAudio(
+          content:
+              'Hi\n\n♪ Elevator Music – YellowTree via Freesound, CC BY 4.0 '
+              'https://creativecommons.org/licenses/by/4.0/ (edited)\n'
+              '♪ Radio Announcement – TheScarlettWitch89 via Freesound, '
+              'CC BY 3.0 https://creativecommons.org/licenses/by/3.0/ (edited)',
+        );
+
+        await tester.pumpWidget(buildTestWidget(video: video));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Elevator Music – YellowTree via Freesound'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Radio Announcement – TheScarlettWitch89 via Freesound'),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('lists a further credited sound under the referenced one', (
+        tester,
+      ) async {
+        final video = createVideoWithAudio(
+          content:
+              'Hi\n\n♪ Elevator Music – YellowTree via Freesound, CC BY 4.0 '
+              'https://creativecommons.org/licenses/by/4.0/ (edited)',
+        );
+
+        await tester.pumpWidget(buildTestWidget(video: video));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Cool Beat'), findsOneWidget);
+        expect(
+          find.text('Elevator Music – YellowTree via Freesound'),
+          findsOneWidget,
+        );
+      });
+
+      for (final (name, unavailable) in [
+        ('is missing', (resolvesAudio: false, audioError: null)),
+        (
+          'fails to load',
+          (resolvesAudio: true, audioError: StateError('relay unavailable')),
+        ),
+      ]) {
+        testWidgets('credits from the content line when the sound $name', (
+          tester,
+        ) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          final video = createVideoWithAudio(
+            content:
+                'Hi\n\n♪ Elevator Music – YellowTree via Freesound, CC BY 4.0 '
+                'https://creativecommons.org/licenses/by/4.0/ (edited)',
+          );
+
+          await tester.pumpWidget(
+            buildTestWidget(
+              video: video,
+              resolvesAudio: unavailable.resolvesAudio,
+              audioError: unavailable.audioError,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text('Elevator Music – YellowTree via Freesound'),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.metadataOriginalSound), findsNothing);
+        });
+      }
+
+      testWidgets("does not repeat the referenced sound's own credit", (
+        tester,
+      ) async {
+        final licensed = testAudio.copyWith(
+          creatorName: 'Someone',
+          licenseName: 'CC BY 4.0',
+          licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+        );
+        final video = createVideoWithAudio(
+          content: 'Hi\n\n${soundCreditLine(licensed)}',
+        );
+
+        await tester.pumpWidget(
+          buildTestWidget(video: video, audioOverride: licensed),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Cool Beat'), findsOneWidget);
+        expect(_divineIcon(DivineIconName.waveform), findsOneWidget);
+      });
+
+      testWidgets('keeps a different sound that shares the title', (
+        tester,
+      ) async {
+        final licensed = testAudio.copyWith(
+          creatorName: 'Someone',
+          licenseName: 'CC BY 4.0',
+          licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+        );
+        final namesake = licensed.copyWith(
+          id: 'f' * 64,
+          creatorName: 'Someone Else',
+        );
+        final video = createVideoWithAudio(
+          content:
+              'Hi\n\n${soundCreditLine(licensed)}\n'
+              '${soundCreditLine(namesake)}',
+        );
+
+        await tester.pumpWidget(
+          buildTestWidget(video: video, audioOverride: licensed),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Cool Beat'), findsOneWidget);
+        expect(find.text('Cool Beat – Someone Else'), findsOneWidget);
+      });
+
+      testWidgets(
+        'does not repeat the referenced sound when its event names it '
+        'differently',
+        (tester) async {
+          // A shipped sound is credited from the app's manifest, but the
+          // video references the event Divine published for it, which can
+          // name its creator and source differently.
+          final published = testAudio.copyWith(
+            creatorName: 'Someone',
+            licenseName: 'CC BY 4.0',
+            licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+          );
+          final video = createVideoWithAudio(
+            content:
+                'Hi\n\n♪ Cool Beat – Someone via Freesound '
+                'https://freesound.org/s/1/, CC BY 4.0 '
+                'https://creativecommons.org/licenses/by/4.0/ (edited)',
+          );
+
+          await tester.pumpWidget(
+            buildTestWidget(video: video, audioOverride: published),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text('Cool Beat'), findsOneWidget);
+          expect(_divineIcon(DivineIconName.waveform), findsOneWidget);
+        },
+      );
     });
 
     group('Original sound', () {
@@ -545,12 +733,12 @@ void main() {
       const reusedCreatorPubkey =
           'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
 
-      VideoEvent reusedVideo() {
+      VideoEvent reusedVideo({String content = 'Reused audio'}) {
         final now = DateTime.now();
         return VideoEvent(
           id: testVideoId,
           pubkey: testPubkey,
-          content: 'Reused audio',
+          content: content,
           videoUrl: 'https://example.com/video.mp4',
           createdAt: now.millisecondsSinceEpoch ~/ 1000,
           timestamp: now,
@@ -593,6 +781,35 @@ void main() {
           );
           // The reusing user's own author name must not be credited.
           expect(find.text('Jake Lara'), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'keeps the source creator above the credits of other sounds',
+        (tester) async {
+          // The credit line is for music added in the editor, not for the
+          // reused sound, so it must not replace the reused sound's creator.
+          final video = reusedVideo(
+            content:
+                'Reused audio\n\n♪ Elevator Music – YellowTree via Freesound, '
+                'CC BY 4.0 https://creativecommons.org/licenses/by/4.0/ '
+                '(edited)',
+          );
+
+          await tester.pumpWidget(
+            buildTestWidget(video: video, resolvesAudio: false),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text('Original sound'), findsOneWidget);
+          expect(
+            find.text(UserProfile.defaultDisplayNameFor(reusedCreatorPubkey)),
+            findsOneWidget,
+          );
+          expect(
+            find.text('Elevator Music – YellowTree via Freesound'),
+            findsOneWidget,
+          );
         },
       );
 

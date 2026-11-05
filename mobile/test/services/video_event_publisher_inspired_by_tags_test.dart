@@ -5,7 +5,12 @@ import 'package:collection/collection.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart'
-    show ClipSourceCredit, clipSourceCreditTagMarker;
+    show
+        AudioEvent,
+        ClipSourceCredit,
+        clipSourceCreditTagMarker,
+        soundCreditsFromContent,
+        stripInspiredByAttribution;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
@@ -303,6 +308,172 @@ void main() {
           expect(capturedContent, isNot(contains(second)));
         },
       );
+
+      group('sound credit', () {
+        // The publisher's own sound, so the publish needs no reuse check.
+        AudioEvent sound({required String licenseUrl}) => AudioEvent(
+          id: 'f' * 64,
+          pubkey: testPubkey,
+          createdAt: 1,
+          title: 'Monkeys Spinning Monkeys',
+          creatorName: 'Kevin MacLeod (incompetech.com)',
+          licenseName: 'CC BY 4.0',
+          licenseUrl: licenseUrl,
+        );
+
+        test(
+          'credits an Attribution-licensed sound before the Inspired By line',
+          () async {
+            // Other clients rarely follow the `e … audio` reference, so the
+            // credit travels in the content; the Inspired By parser is
+            // anchored to the end and must still find its line.
+            stubSignAndPublish();
+            final npub = NostrKeyUtils.encodePubKey(inspiredPersonPubkey);
+
+            final result = await publisher.publishDirectUpload(
+              createUpload().copyWith(description: 'my caption'),
+              inspiredByNpubs: [npub],
+              selectedAudio: sound(
+                licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+              ),
+            );
+
+            expect(result, isTrue);
+            expect(
+              stripInspiredByAttribution(capturedContent),
+              equals(
+                'my caption\n\n♪ Monkeys Spinning Monkeys – Kevin MacLeod '
+                '(incompetech.com), CC BY 4.0 '
+                'https://creativecommons.org/licenses/by/4.0/ (edited)',
+              ),
+            );
+            expect(capturedContent, endsWith('Inspired by nostr:$npub'));
+          },
+        );
+
+        test('adds no credit for a sound whose licence asks none', () async {
+          stubSignAndPublish();
+
+          final result = await publisher.publishDirectUpload(
+            createUpload().copyWith(description: 'my caption'),
+            selectedAudio: sound(
+              licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+            ).copyWith(licenseName: 'CC0 1.0'),
+          );
+
+          expect(result, isTrue);
+          expect(capturedContent, equals('my caption'));
+          expect(soundCreditsFromContent(capturedContent), isEmpty);
+        });
+
+        test('credits a sound added only in the editor', () async {
+          // A shipped sound has no Nostr event, so it never becomes the
+          // selected sound; its credit comes from the editor's tracks.
+          stubSignAndPublish();
+
+          final result = await publisher.publishDirectUpload(
+            createUpload().copyWith(description: 'my caption'),
+            creditedSounds: [
+              AudioEvent(
+                id: 'bundled_freesound_radio_announcement',
+                pubkey: AudioEvent.bundledMarker,
+                createdAt: 0,
+                title: 'Radio Announcement',
+                source: 'TheScarlettWitch89 via Freesound',
+                licenseName: 'CC BY 3.0',
+                licenseUrl: 'https://creativecommons.org/licenses/by/3.0/',
+              ),
+            ],
+          );
+
+          expect(result, isTrue);
+          expect(
+            capturedContent,
+            equals(
+              'my caption\n\n♪ Radio Announcement – TheScarlettWitch89 via '
+              'Freesound, CC BY 3.0 '
+              'https://creativecommons.org/licenses/by/3.0/ (edited)',
+            ),
+          );
+        });
+
+        test('credits each editor track once, in timeline order', () async {
+          stubSignAndPublish();
+          final monkeys = sound(
+            licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+          );
+          final elevator = monkeys.copyWith(
+            id: 'e' * 64,
+            title: 'Elevator Music',
+            creatorName: 'YellowTree',
+          );
+
+          final result = await publisher.publishDirectUpload(
+            createUpload().copyWith(description: 'my caption'),
+            creditedSounds: [elevator, monkeys, elevator],
+          );
+
+          expect(result, isTrue);
+          expect(
+            soundCreditsFromContent(capturedContent).map((c) => c.work),
+            equals([
+              'Elevator Music – YellowTree',
+              'Monkeys Spinning Monkeys – Kevin MacLeod (incompetech.com)',
+            ]),
+          );
+        });
+
+        test(
+          'does not credit a selected sound the timeline left out',
+          () async {
+            // The render mixes the selected sound in only when the timeline has
+            // no track, so a timeline track replaces it.
+            stubSignAndPublish();
+            final selected = sound(
+              licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+            );
+
+            final result = await publisher.publishDirectUpload(
+              createUpload().copyWith(description: 'my caption'),
+              selectedAudio: selected,
+              creditedSounds: [
+                selected.copyWith(
+                  id: 'e' * 64,
+                  title: 'Elevator Music',
+                  creatorName: 'YellowTree',
+                ),
+              ],
+            );
+
+            expect(result, isTrue);
+            expect(
+              soundCreditsFromContent(capturedContent).map((c) => c.work),
+              equals(['Elevator Music – YellowTree']),
+            );
+          },
+        );
+
+        test('credits the sound in the summary too', () async {
+          // The Bluesky bridge shows the summary instead of the content.
+          stubSignAndPublish();
+          final npub = NostrKeyUtils.encodePubKey(inspiredPersonPubkey);
+
+          final result = await publisher.publishDirectUpload(
+            createUpload().copyWith(description: 'my caption'),
+            inspiredByNpubs: [npub],
+            selectedAudio: sound(
+              licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+            ),
+          );
+
+          expect(result, isTrue);
+          expect(
+            capturedTags.where((tag) => tag.first == 'summary').single[1],
+            equals(stripInspiredByAttribution(capturedContent)),
+          );
+          expect(soundCreditsFromContent(capturedContent), hasLength(1));
+        });
+      });
 
       test(
         'credits every picked creator alongside an inspiring video',

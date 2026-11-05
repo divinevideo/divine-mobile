@@ -308,6 +308,30 @@ void main() {
         },
       );
 
+      testWidgets('moves a sound credit line from the description to the '
+          'audio row when the video has no sound reference', (tester) async {
+        testVideo = testVideo.copyWith(
+          content:
+              'Tap this description\n\n'
+              '♪ YAY! – IFartInUrGeneralDirection via Freesound, CC BY 4.0 '
+              'https://creativecommons.org/licenses/by/4.0/ (edited)',
+        );
+
+        await pumpOverlay(tester);
+
+        expect(find.text('Tap this description'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(AudioAttributionRow),
+            matching: find.text(
+              'YAY! – IFartInUrGeneralDirection via Freesound · '
+              'CC BY 4.0 · ${_l10n(tester).soundCreditEdited}',
+            ),
+          ),
+          findsOneWidget,
+        );
+      });
+
       // Pumps the overlay for a third-party viewer, with the collaborator's
       // acceptance resolved to [status].
       Future<void> pumpAsThirdPartyViewer(

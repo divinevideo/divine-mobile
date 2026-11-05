@@ -1900,6 +1900,7 @@
   "soundUnableToPreview": "Nu pot previzualiza sunetul - niciun audio disponibil",
   "soundPreviewFailed": "N-am putut reda previzualizarea. Încearcă din nou.",
   "soundViewSource": "Vezi sursa",
+  "soundCreditEdited": "editat",
   "soundCloseTooltip": "Închide",
   "exploreNotExploreRoute": "Nu e o rută de explorare",
   "legalTitle": "Legal",

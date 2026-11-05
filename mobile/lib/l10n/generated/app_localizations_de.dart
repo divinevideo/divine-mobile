@@ -5708,6 +5708,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get soundViewSource => 'Quelle ansehen';
 
   @override
+  String get soundCreditEdited => 'bearbeitet';
+
+  @override
   String get soundCloseTooltip => 'Schließen';
 
   @override

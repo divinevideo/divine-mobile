@@ -5823,6 +5823,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get soundViewSource => 'మూలాన్ని వీక్షించండి';
 
   @override
+  String get soundCreditEdited => 'సవరించబడింది';
+
+  @override
   String get soundCloseTooltip => 'మూసివేయండి';
 
   @override

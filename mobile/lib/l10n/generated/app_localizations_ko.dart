@@ -5322,6 +5322,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get soundViewSource => '원본 보기';
 
   @override
+  String get soundCreditEdited => '편집됨';
+
+  @override
   String get soundCloseTooltip => '닫기';
 
   @override

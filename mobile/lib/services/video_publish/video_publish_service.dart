@@ -14,6 +14,7 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
+import 'package:openvine/extensions/draft_audio_tracks_extensions.dart';
 import 'package:openvine/extensions/draft_content_warning_extensions.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -422,6 +423,7 @@ class VideoPublishService {
           inspiredByNpubs: draft.inspiredByNpubs,
           clipSourceCredits: draft.clipSourceCredits,
           selectedAudio: draft.selectedSound,
+          creditedSounds: draft.editorAudioTracks,
           audioShareAttribution: draft.audioShareAttribution,
           selectedAudioEventId: draft.selectedSound?.id,
           selectedAudioRelay: draft.selectedSound?.sourceVideoRelay,

@@ -5625,6 +5625,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get soundViewSource => 'Visa källa';
 
   @override
+  String get soundCreditEdited => 'redigerad';
+
+  @override
   String get soundCloseTooltip => 'Stäng';
 
   @override

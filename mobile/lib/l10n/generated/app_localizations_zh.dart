@@ -5268,6 +5268,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get soundViewSource => '查看来源';
 
   @override
+  String get soundCreditEdited => '已编辑';
+
+  @override
   String get soundCloseTooltip => '关闭';
 
   @override

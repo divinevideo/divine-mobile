@@ -1900,6 +1900,7 @@
   "soundUnableToPreview": "Impossible d'écouter l'aperçu - aucun audio disponible",
   "soundPreviewFailed": "Échec de la lecture de l'aperçu. Réessaie.",
   "soundViewSource": "Voir la source",
+  "soundCreditEdited": "modifié",
   "soundCloseTooltip": "Fermer",
   "exploreNotExploreRoute": "Pas une route d'exploration",
   "legalTitle": "Mentions légales",

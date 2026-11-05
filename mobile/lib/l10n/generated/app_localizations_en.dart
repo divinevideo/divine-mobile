@@ -5718,6 +5718,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get soundViewSource => 'View source';
 
   @override
+  String get soundCreditEdited => 'edited';
+
+  @override
   String get soundCloseTooltip => 'Close';
 
   @override

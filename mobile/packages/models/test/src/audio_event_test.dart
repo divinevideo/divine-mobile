@@ -287,6 +287,75 @@ void main() {
       expect(restored.hasExplicitReuseConsent, isFalse);
     });
 
+    group('requiresAttribution', () {
+      AudioEvent sound({String? licenseName, String? licenseUrl}) => AudioEvent(
+        id: testHexId,
+        pubkey: testPubkey,
+        createdAt: 1700000000,
+        licenseName: licenseName,
+        licenseUrl: licenseUrl,
+      );
+
+      test('is true for every Creative Commons Attribution link', () {
+        for (final url in [
+          'https://creativecommons.org/licenses/by/4.0/',
+          'https://creativecommons.org/licenses/by-sa/4.0/',
+          'http://creativecommons.org/licenses/by/3.0/',
+        ]) {
+          expect(sound(licenseUrl: url).requiresAttribution, isTrue);
+        }
+      });
+
+      test('is false for a public domain dedication', () {
+        expect(
+          sound(
+            licenseName: 'CC0',
+            licenseUrl: 'http://creativecommons.org/publicdomain/zero/1.0/',
+          ).requiresAttribution,
+          isFalse,
+        );
+      });
+
+      test('reads an Attribution licence from its name alone', () {
+        expect(sound(licenseName: 'CC BY 4.0').requiresAttribution, isTrue);
+        expect(sound(licenseName: 'CC-BY-NC 3.0').requiresAttribution, isTrue);
+        expect(
+          sound(
+            licenseName: 'Attribution 4.0 International',
+          ).requiresAttribution,
+          isTrue,
+        );
+        expect(
+          sound(licenseName: 'Public Domain').requiresAttribution,
+          isFalse,
+        );
+      });
+
+      test('is false without licence data', () {
+        expect(sound().requiresAttribution, isFalse);
+      });
+
+      test("follows a provider's licence data over the tags", () {
+        final provided = sound(licenseName: 'CC BY 4.0').copyWith(
+          externalSource: AudioExternalSource(
+            provider: 'freesound',
+            providerSoundId: '1',
+            providerName: 'Freesound',
+            license: AudioLicenseMetadata(
+              type: 'cc0',
+              name: 'CC0 1.0',
+              url: 'https://creativecommons.org/publicdomain/zero/1.0/',
+              allowsCommercialUse: true,
+              allowsDerivatives: true,
+              requiresAttribution: false,
+            ),
+          ),
+        );
+
+        expect(provided.requiresAttribution, isFalse);
+      });
+    });
+
     group('fromBundledSound', () {
       test('creates AudioEvent from VineSound with correct fields', () {
         // Arrange
@@ -312,6 +381,24 @@ void main() {
         expect(audioEvent.mimeType, equals('audio/mpeg'));
         expect(audioEvent.duration, equals(1.0));
         expect(audioEvent.title, equals('Bruh Sound Effect'));
+      });
+
+      test("carries the manifest's source link, also through JSON", () {
+        final audioEvent = AudioEvent.fromBundledSound(
+          VineSound(
+            id: 'freesound_yay',
+            title: 'YAY!',
+            assetPath: 'assets/sounds/yay.mp3',
+            duration: const Duration(seconds: 4),
+            sourceUrl: 'https://freesound.org/s/61691/',
+          ),
+        );
+
+        expect(audioEvent.sourceUrl, equals('https://freesound.org/s/61691/'));
+        expect(
+          AudioEvent.fromJson(audioEvent.toJson()).sourceUrl,
+          equals('https://freesound.org/s/61691/'),
+        );
       });
 
       test('isBundled returns true for bundled sounds', () {
@@ -389,6 +476,38 @@ void main() {
         final audioEvent = AudioEvent.fromBundledSound(vineSound);
 
         expect(audioEvent.source, equals('ThePauny via Freesound'));
+      });
+
+      test('carries the licence of a sound that links one', () {
+        final vineSound = VineSound(
+          id: 'freesound_yay',
+          title: 'YAY!',
+          assetPath: 'assets/sounds/yay.mp3',
+          duration: const Duration(milliseconds: 4762),
+          artist: 'IFartInUrGeneralDirection',
+          license: 'CC BY 4.0',
+          licenseUrl: 'https://creativecommons.org/licenses/by/4.0/',
+        );
+
+        final audioEvent = AudioEvent.fromBundledSound(vineSound);
+
+        expect(audioEvent.licenseName, equals('CC BY 4.0'));
+        expect(
+          audioEvent.licenseUrl,
+          equals('https://creativecommons.org/licenses/by/4.0/'),
+        );
+      });
+
+      test('names no licence the manifest only marks unknown', () {
+        final vineSound = VineSound(
+          id: 'bruh',
+          title: 'Bruh Sound Effect',
+          assetPath: 'assets/sounds/bruh.mp3',
+          duration: const Duration(seconds: 1),
+          license: 'unknown',
+        );
+
+        expect(AudioEvent.fromBundledSound(vineSound).licenseName, isNull);
       });
 
       test('omits source when VineSound has no artist or sourceUrl', () {

@@ -5570,6 +5570,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get soundViewSource => 'Kaynağı gör';
 
   @override
+  String get soundCreditEdited => 'düzenlendi';
+
+  @override
   String get soundCloseTooltip => 'Kapat';
 
   @override

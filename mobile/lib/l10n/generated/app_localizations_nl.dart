@@ -5655,6 +5655,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get soundViewSource => 'Bron bekijken';
 
   @override
+  String get soundCreditEdited => 'bewerkt';
+
+  @override
   String get soundCloseTooltip => 'Sluiten';
 
   @override

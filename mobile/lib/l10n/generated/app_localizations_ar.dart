@@ -5620,6 +5620,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get soundViewSource => 'عرض المصدر';
 
   @override
+  String get soundCreditEdited => 'مُعدَّل';
+
+  @override
   String get soundCloseTooltip => 'إغلاق';
 
   @override

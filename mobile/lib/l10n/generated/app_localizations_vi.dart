@@ -5593,6 +5593,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get soundViewSource => 'Xem nguồn';
 
   @override
+  String get soundCreditEdited => 'đã chỉnh sửa';
+
+  @override
   String get soundCloseTooltip => 'Đóng';
 
   @override
