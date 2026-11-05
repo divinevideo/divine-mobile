@@ -7135,6 +7135,76 @@ void main() {
         expect(published.last.tags, isEmpty);
       });
 
+      test(
+        'leaves the next account pinned after a switch mid-revoke',
+        () async {
+          var owner = _pubkey(1);
+          repository = BadgeRepository(
+            nostrClient: nostrClient,
+            sharedPreferences: preferences,
+            currentPubkey: () => owner,
+            signer: () => dismissalSigner,
+            signEvent:
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async {
+                  final event = _event(
+                    id: _eventId(900 + kind),
+                    pubkey: owner,
+                    kind: kind,
+                    tags: tags,
+                    content: content,
+                    createdAt: createdAt ?? 1000,
+                  );
+                  // The user switches accounts once the deletion is signed.
+                  if (kind == EventKind.eventDeletion) owner = _pubkey(4);
+                  return event;
+                },
+          );
+          _stubQueries(nostrClient, {
+            'awardsFor:${coordinate.value}': [
+              _awardEvent(
+                id: _eventId(72),
+                issuerPubkey: _pubkey(1),
+                definitionCoordinate: coordinate.value,
+                recipients: [_pubkey(1)],
+              ),
+            ],
+            // The account switched to has pinned the same badge itself.
+            'profileCurrent:${_pubkey(4)}': [
+              _signed(
+                _profileBadgesEvent(
+                  id: _eventId(73),
+                  pubkey: _pubkey(4),
+                  tags: [
+                    ['a', coordinate.value],
+                    ['e', _eventId(74)],
+                  ],
+                ),
+              ),
+            ],
+          });
+
+          await expectLater(
+            repository.revokeAward(
+              coordinate: coordinate,
+              recipientPubkey: _pubkey(1),
+            ),
+            throwsA(isA<ProfileBadgesWriteRefusedException>()),
+          );
+
+          final published = verify(
+            () => nostrClient.publishEventAwaitOk(captureAny()),
+          ).captured.cast<Event>();
+          expect(published.map((event) => event.kind), [
+            EventKind.eventDeletion,
+          ]);
+        },
+      );
+
       test('unpins on a retry after the awards are already gone', () async {
         // The first attempt deleted the award but failed before the unpin,
         // so the retry finds no award to revoke and must still get there.

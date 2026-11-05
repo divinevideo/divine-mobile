@@ -1644,7 +1644,7 @@ class BadgeRepository {
     // badge on your profile with the award already gone. Outside the block
     // above so a retry still reaches it once the awards are already deleted.
     if (recipientPubkey == pubkey) {
-      await _unpinCoordinate(coordinate.value);
+      await _unpinCoordinate(coordinate.value, expectedOwner: pubkey);
     }
   }
 
@@ -1966,9 +1966,12 @@ class BadgeRepository {
 
   /// Drops the badge at [coordinate] from the current user's profile badge
   /// list, publishing nothing when it was not pinned in the first place.
-  Future<void> _unpinCoordinate(String coordinate) => _withProfileBadgeWrite((
-    pubkey,
-  ) async {
+  ///
+  /// [expectedOwner] pins the account, as for [_withProfileBadgeWrite].
+  Future<void> _unpinCoordinate(
+    String coordinate, {
+    String? expectedOwner,
+  }) => _withProfileBadgeWrite(expectedOwner: expectedOwner, (pubkey) async {
     final currentProfileBadges = await _readProfileBadgesForWrite(pubkey);
     final refs = currentProfileBadges?.badges ?? const <Nip58ProfileBadgeRef>[];
     final remaining = [
@@ -2056,11 +2059,14 @@ class BadgeRepository {
   /// each edit reads the list the one before it published.
   ///
   /// The queue slot is taken before the first await, and the account is
-  /// checked again when the turn comes.
+  /// checked again when the turn comes. A caller that settled on an account
+  /// earlier passes it as [expectedOwner], so a switch since then refuses the
+  /// edit instead of applying it to the new account's list.
   Future<void> _withProfileBadgeWrite(
-    Future<void> Function(String owner) operation,
-  ) async {
-    final owner = _requireCurrentPubkey();
+    Future<void> Function(String owner) operation, {
+    String? expectedOwner,
+  }) async {
+    final owner = expectedOwner ?? _requireCurrentPubkey();
     final previous = _profileBadgeWriteTail;
     final finished = Completer<void>();
     _profileBadgeWriteTail = finished.future;
