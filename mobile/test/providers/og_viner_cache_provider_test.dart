@@ -1,6 +1,8 @@
 // ABOUTME: Tests Riverpod provider wiring for the OG Viner local cache.
 // ABOUTME: Ensures optional badge state can be read without network calls.
 
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
@@ -9,8 +11,6 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/og_viner_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../helpers/og_viner_cache_seed.dart';
-
 void main() {
   const ogPubkey =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -18,7 +18,7 @@ void main() {
   group('ogVinerCacheProvider', () {
     test('reads cached OG Viner pubkeys from SharedPreferences', () async {
       SharedPreferences.setMockInitialValues({
-        ogVinerPubkeysCacheKey: ogVinerCacheValue([ogPubkey]),
+        ogVinerPubkeysCacheKey: jsonEncode([ogPubkey]),
       });
       final prefs = await SharedPreferences.getInstance();
       final container = ProviderContainer(

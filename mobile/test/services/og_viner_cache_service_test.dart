@@ -1,5 +1,5 @@
 // ABOUTME: Tests the device-scoped cache of pubkeys known to be OG Viners.
-// ABOUTME: Covers verified-only learning, 30-day expiry and the v1 discard.
+// ABOUTME: Covers verified-only learning, persistence and the v1 discard.
 
 import 'dart:convert';
 
@@ -16,34 +16,18 @@ const _secondOgPubkey =
 const _selfTaggedPubkey =
     'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 
-/// UTC day numbers (days since the Unix epoch): 2026-11-01 is day 20758,
-/// checked with Python's `date(2026, 11, 1) - date(1970, 1, 1)`.
-const _nov1 = 20758;
-const int _nov30 = _nov1 + 29;
-const int _dec1 = _nov1 + 30;
-
-DateTime _onDay(int day) =>
-    DateTime.utc(1970).add(Duration(days: day, hours: 13));
-
-Map<String, int> _stored(SharedPreferences prefs) =>
-    (jsonDecode(prefs.getString(ogVinerPubkeysCacheKey)!) as Map)
-        .cast<String, int>();
+List<String> _stored(SharedPreferences prefs) =>
+    (jsonDecode(prefs.getString(ogVinerPubkeysCacheKey)!) as List)
+        .cast<String>();
 
 void main() {
   group(OgVinerCacheService, () {
-    late DateTime now;
-
-    setUp(() {
-      now = _onDay(_nov1);
-      SharedPreferences.setMockInitialValues({});
-    });
-
     Future<(OgVinerCacheService, SharedPreferences)> build([
       Map<String, Object> seed = const {},
     ]) async {
       SharedPreferences.setMockInitialValues(seed);
       final prefs = await SharedPreferences.getInstance();
-      return (OgVinerCacheService(prefs: prefs, now: () => now), prefs);
+      return (OgVinerCacheService(prefs: prefs), prefs);
     }
 
     group('learnFromVideos', () {
@@ -53,12 +37,13 @@ void main() {
           final (service, prefs) = await build();
 
           final added = await service.learnFromVideos([
+            _video(pubkey: _secondOgPubkey, verifiedArchive: true),
             _video(pubkey: _ogPubkey, verifiedArchive: true),
           ]);
 
-          expect(added, equals(1));
+          expect(added, equals(2));
           expect(service.isOgViner(_ogPubkey), isTrue);
-          expect(_stored(prefs), equals({_ogPubkey: _nov1}));
+          expect(_stored(prefs), equals([_ogPubkey, _secondOgPubkey]));
         },
       );
 
@@ -87,9 +72,9 @@ void main() {
         expect(notifications, equals(1));
       });
 
-      test('writes nothing when every author was already seen today', () async {
+      test('writes nothing when every author is already known', () async {
         // Spacing jsonEncode never produces, so any rewrite shows.
-        const stored = '{ "$_ogPubkey" : $_nov1 }';
+        const stored = '[ "$_ogPubkey" ]';
         final (service, prefs) = await build({ogVinerPubkeysCacheKey: stored});
         var notifications = 0;
         service.addListener(() => notifications++);
@@ -102,90 +87,12 @@ void main() {
         expect(notifications, equals(0));
         expect(prefs.getString(ogVinerPubkeysCacheKey), equals(stored));
       });
-
-      test(
-        're-learning an expired pubkey badges it again and notifies',
-        () async {
-          final (service, _) = await build({
-            ogVinerPubkeysCacheKey: jsonEncode({_ogPubkey: _nov1}),
-          });
-          now = _onDay(_dec1);
-          expect(service.isOgViner(_ogPubkey), isFalse);
-          var notifications = 0;
-          service.addListener(() => notifications++);
-
-          final added = await service.learnFromVideos([
-            _video(pubkey: _ogPubkey, verifiedArchive: true),
-          ]);
-
-          expect(added, equals(1));
-          expect(notifications, equals(1));
-          expect(service.isOgViner(_ogPubkey), isTrue);
-        },
-      );
-
-      test(
-        'a later sighting extends the badge past its first 30 days',
-        () async {
-          final (service, prefs) = await build({
-            ogVinerPubkeysCacheKey: jsonEncode({_ogPubkey: _nov1}),
-          });
-          now = _onDay(_nov30);
-
-          await service.learnFromVideos([
-            _video(pubkey: _ogPubkey, verifiedArchive: true),
-          ]);
-          now = _onDay(_dec1);
-
-          expect(_stored(prefs), equals({_ogPubkey: _nov30}));
-          expect(service.isOgViner(_ogPubkey), isTrue);
-        },
-      );
-
-      test('drops expired pubkeys from storage on the next write', () async {
-        final (service, prefs) = await build({
-          ogVinerPubkeysCacheKey: jsonEncode({_secondOgPubkey: _nov1}),
-        });
-        now = _onDay(_dec1);
-
-        await service.learnFromVideos([
-          _video(pubkey: _ogPubkey, verifiedArchive: true),
-        ]);
-
-        expect(_stored(prefs), equals({_ogPubkey: _dec1}));
-      });
     });
 
     group('isOgViner', () {
-      for (final (label, today, badged) in [
-        ('on the day it was seen', _nov1, true),
-        ('29 days later', _nov30, true),
-        ('30 days later', _dec1, false),
-      ]) {
-        test('a pubkey last seen on Nov 1 is badged $label: $badged', () async {
-          now = _onDay(today);
-          final (service, _) = await build({
-            ogVinerPubkeysCacheKey: jsonEncode({_ogPubkey: _nov1}),
-          });
-
-          expect(service.isOgViner(_ogPubkey), badged);
-        });
-      }
-
-      test('expires while the service stays alive', () async {
-        final (service, _) = await build({
-          ogVinerPubkeysCacheKey: jsonEncode({_ogPubkey: _nov1}),
-        });
-        expect(service.isOgViner(_ogPubkey), isTrue);
-
-        now = _onDay(_dec1);
-
-        expect(service.isOgViner(_ogPubkey), isFalse);
-      });
-
       test('matches a pubkey regardless of case', () async {
         final (service, _) = await build({
-          ogVinerPubkeysCacheKey: jsonEncode({_ogPubkey: _nov1}),
+          ogVinerPubkeysCacheKey: jsonEncode([_ogPubkey]),
         });
 
         expect(service.isOgViner(_ogPubkey.toUpperCase()), isTrue);
@@ -193,15 +100,13 @@ void main() {
     });
 
     group('loading', () {
-      test('a day stored ahead of the clock still expires on time', () async {
+      test('badges the pubkeys stored under the v2 key', () async {
         final (service, _) = await build({
-          ogVinerPubkeysCacheKey: jsonEncode({_ogPubkey: _nov1 + 365}),
+          ogVinerPubkeysCacheKey: jsonEncode([_ogPubkey]),
         });
+
         expect(service.isOgViner(_ogPubkey), isTrue);
-
-        now = _onDay(_dec1);
-
-        expect(service.isOgViner(_ogPubkey), isFalse);
+        expect(service.isOgViner(_secondOgPubkey), isFalse);
       });
 
       test('starts empty from corrupt data', () async {
@@ -224,7 +129,7 @@ void main() {
     group('account changes', () {
       test('signing in as another account keeps the set', () async {
         final (_, prefs) = await build({
-          ogVinerPubkeysCacheKey: jsonEncode({_ogPubkey: _nov1}),
+          ogVinerPubkeysCacheKey: jsonEncode([_ogPubkey]),
           'terms_accepted_at': '2026-11-01T00:00:00Z',
         });
 
@@ -235,13 +140,7 @@ void main() {
         );
 
         expect(prefs.getString('terms_accepted_at'), isNull);
-        expect(
-          OgVinerCacheService(
-            prefs: prefs,
-            now: () => now,
-          ).isOgViner(_ogPubkey),
-          isTrue,
-        );
+        expect(OgVinerCacheService(prefs: prefs).isOgViner(_ogPubkey), isTrue);
       });
     });
   });

@@ -1,6 +1,7 @@
 // ABOUTME: Tests UserName OG Beta Tester chit display from server eligibility.
 // ABOUTME: Pins eligibility and OG Viner precedence at the render site.
 
+import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:flutter/semantics.dart';
@@ -19,8 +20,6 @@ import 'package:openvine/widgets/special_profile_checkmark.dart';
 import 'package:openvine/widgets/user_name.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../helpers/og_viner_cache_seed.dart';
-
 void main() {
   const eligiblePubkey =
       'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
@@ -35,7 +34,7 @@ void main() {
     List<String>? lookups,
   }) async {
     SharedPreferences.setMockInitialValues({
-      if (cachedOgViner) ogVinerPubkeysCacheKey: ogVinerCacheValue([pubkey]),
+      if (cachedOgViner) ogVinerPubkeysCacheKey: jsonEncode([pubkey]),
     });
     final prefs = await SharedPreferences.getInstance();
 

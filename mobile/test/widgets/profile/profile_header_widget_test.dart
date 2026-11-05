@@ -80,7 +80,6 @@ import 'package:visibility_detector/visibility_detector.dart';
 
 import '../../helpers/finders.dart';
 import '../../helpers/go_router.dart';
-import '../../helpers/og_viner_cache_seed.dart';
 import '../../helpers/test_provider_overrides.dart';
 import '../../helpers/test_pubkeys.dart';
 
@@ -1709,7 +1708,7 @@ void main() {
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({
-        ogVinerPubkeysCacheKey: ogVinerCacheValue([testUserHex]),
+        ogVinerPubkeysCacheKey: jsonEncode([testUserHex]),
       });
       final prefs = await SharedPreferences.getInstance();
       final l10n = lookupAppLocalizations(const Locale('en'));
@@ -1765,7 +1764,7 @@ void main() {
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({
-        ogVinerPubkeysCacheKey: ogVinerCacheValue([testUserHex]),
+        ogVinerPubkeysCacheKey: jsonEncode([testUserHex]),
       });
       final prefs = await SharedPreferences.getInstance();
 
@@ -1793,7 +1792,7 @@ void main() {
     testWidgets('gives a tap where the name badge overlaps the username to the '
         'badge', (tester) async {
       SharedPreferences.setMockInitialValues({
-        ogVinerPubkeysCacheKey: ogVinerCacheValue([testUserHex]),
+        ogVinerPubkeysCacheKey: jsonEncode([testUserHex]),
       });
       final prefs = await SharedPreferences.getInstance();
       final l10n = lookupAppLocalizations(const Locale('en'));
@@ -1996,7 +1995,7 @@ void main() {
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({
-        ogVinerPubkeysCacheKey: ogVinerCacheValue([testUserHex]),
+        ogVinerPubkeysCacheKey: jsonEncode([testUserHex]),
       });
       final prefs = await SharedPreferences.getInstance();
 
@@ -2059,7 +2058,7 @@ void main() {
     ) async {
       final teamPubkey = kDivineTeamPubkeys.first;
       SharedPreferences.setMockInitialValues({
-        ogVinerPubkeysCacheKey: ogVinerCacheValue([teamPubkey]),
+        ogVinerPubkeysCacheKey: jsonEncode([teamPubkey]),
       });
       final prefs = await SharedPreferences.getInstance();
 
