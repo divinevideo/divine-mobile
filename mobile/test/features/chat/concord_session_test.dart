@@ -44,10 +44,10 @@ void main() {
             .map((catalog) => catalog.ready)
             .toList();
         final result = expectLater(values, completion([true, false, true]));
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         session.ready = false;
         session.events.add(null);
-        await Future<void>.delayed(Duration.zero);
+        await pumpEventQueue();
         session.ready = true;
         session.events.add(null);
         await result;
