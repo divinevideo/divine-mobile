@@ -19,12 +19,18 @@ class LoopPcmTest {
 
     private val sampleRate = 44100
 
-    /** A tone with a deliberate step at [loopFrames], so a seam is measurable. */
+    /** How far [tone] moves from one frame to the next, between its drops. */
+    private val toneStep = 100
+
+    /**
+     * A sawtooth that rises [toneStep] a frame and drops back every 200
+     * frames, so a step at a seam is measurable.
+     */
     private fun tone(frames: Int, channels: Int = 1, offset: Int = 0): ShortArray =
         ShortArray(frames * channels) { index ->
             val frame = index / channels
             val channel = index % channels
-            (((frame + offset) % 200 - 100) * 100 + channel * 7).toShort()
+            (((frame + offset) % 200 - 100) * toneStep + channel * 7).toShort()
         }
 
     private fun rms(samples: ShortArray, from: Int, until: Int): Double =
@@ -168,6 +174,40 @@ class LoopPcmTest {
             "seam step should fall, was $before now ${seamStep(prepared, 1)}",
             seamStep(prepared, 1) < before,
         )
+    }
+
+    @Test
+    fun `blends a lap shorter than the crossfade across all of it`() {
+        // A clip trimmed or split shorter than the crossfade. A crossfade
+        // longer than the lap ended the blend part-way, so the lap's last
+        // sample wrapped into material it did not lead into; on Apple the same
+        // rule wrote past the loop and crashed the app.
+        val loopFrames = sampleRate / 20 // 50 ms, half the crossfade
+        val prepared = LoopPcm.prepare(
+            samples = tone(frames = loopFrames + sampleRate / 4),
+            channels = 1,
+            sampleRate = sampleRate,
+            loopUs = 50_000L,
+        )!!
+
+        assertTrue(prepared.blendedFromPastTheLoop)
+        assertEquals(loopFrames, prepared.fadeFrames)
+        // The tone carries on across the wrap one ordinary step at a time.
+        assertTrue(
+            "seam step should be one tone step, was ${seamStep(prepared, 1)}",
+            seamStep(prepared, 1) <= toneStep + 1,
+        )
+
+        // A lap that ends in silence takes the other blend, capped the same way.
+        val silentTail = LoopPcm.prepare(
+            samples = ShortArray(loopFrames) + tone(frames = sampleRate / 4),
+            channels = 1,
+            sampleRate = sampleRate,
+            loopUs = 50_000L,
+        )!!
+
+        assertTrue(silentTail.blendedFromPastTheLoop)
+        assertEquals(loopFrames, silentTail.fadeFrames)
     }
 
     @Test
