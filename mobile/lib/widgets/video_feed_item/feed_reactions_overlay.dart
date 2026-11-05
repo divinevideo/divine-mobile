@@ -330,36 +330,40 @@ class _SpeechBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: FeedReactionsOverlayLayout.bubbleColor,
-            borderRadius: BorderRadius.circular(
-              FeedReactionsOverlayLayout.bubbleRadius,
-            ),
+        // As wide as the comment needs, up to the full width, and never so
+        // narrow that the tail no longer fits under the body.
+        ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: FeedReactionsOverlayLayout.bubbleMinWidth,
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: FeedReactionsOverlayLayout.bubbleHorizontalPadding,
-              vertical: FeedReactionsOverlayLayout.bubbleVerticalPadding,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: FeedReactionsOverlayLayout.bubbleColor,
+              borderRadius: BorderRadius.circular(
+                FeedReactionsOverlayLayout.bubbleRadius,
+              ),
             ),
-            child: _TopCommentText(content: content),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: FeedReactionsOverlayLayout.bubbleHorizontalPadding,
+                vertical: FeedReactionsOverlayLayout.bubbleVerticalPadding,
+              ),
+              child: _TopCommentText(content: content),
+            ),
           ),
         ),
         Padding(
           padding: const EdgeInsets.only(
             left: FeedReactionsOverlayLayout.tailInset,
           ),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: ExcludeSemantics(
-              child: SvgPicture.asset(
-                FeedReactionsOverlayLayout.tailAsset,
-                width: FeedReactionsOverlayLayout.tailWidth,
-                height: FeedReactionsOverlayLayout.tailHeight,
-              ),
+          child: ExcludeSemantics(
+            child: SvgPicture.asset(
+              FeedReactionsOverlayLayout.tailAsset,
+              width: FeedReactionsOverlayLayout.tailWidth,
+              height: FeedReactionsOverlayLayout.tailHeight,
             ),
           ),
         ),
@@ -403,6 +407,8 @@ class _TopCommentText extends StatelessWidget {
       ),
       maxLines: FeedReactionsOverlayLayout.commentMaxLines,
       overflow: TextOverflow.ellipsis,
+      // Hug the longest line, so the bubble ends where the text does.
+      textWidthBasis: TextWidthBasis.longestLine,
     );
   }
 }
@@ -469,6 +475,10 @@ abstract final class FeedReactionsOverlayLayout {
   static const double tailWidth = 22;
   static const double tailHeight = 16;
   static const double tailInset = 28;
+
+  /// Narrowest bubble that still holds the tail under its straight edge:
+  /// the tail's inset and width plus the bottom-right corner's radius.
+  static const double bubbleMinWidth = tailInset + tailWidth + bubbleRadius;
 
   /// Space between the bubble's tail and the author row.
   static const double gapBelowBubble = 8;

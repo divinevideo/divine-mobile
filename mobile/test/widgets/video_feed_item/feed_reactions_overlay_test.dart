@@ -173,6 +173,69 @@ void main() {
         );
       });
 
+      group('a bubble as wide as its comment', () {
+        Finder bubbleOf(String content) => find.ancestor(
+          of: find.text(content),
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is DecoratedBox &&
+                w.decoration is BoxDecoration &&
+                (w.decoration as BoxDecoration).color ==
+                    FeedReactionsOverlayLayout.bubbleColor,
+          ),
+        );
+
+        Future<double> pumpWith(WidgetTester tester, String content) async {
+          when(() => cubit.state).thenReturn(
+            _visibleState.copyWith(
+              topComment: Comment(
+                id: _topComment.id,
+                content: content,
+                authorPubkey: _commenter,
+                createdAt: DateTime(2026, 10, 28),
+                rootEventId: _video.id,
+                rootAuthorPubkey: _creator,
+              ),
+            ),
+          );
+          await tester.pumpWidget(buildSubject());
+          await tester.pump();
+          return tester.getSize(bubbleOf(content)).width;
+        }
+
+        testWidgets(
+          'narrow for a short comment, but wide enough for the tail',
+          (
+            tester,
+          ) async {
+            final width = await pumpWith(tester, 'ok');
+            final available =
+                tester.getSize(find.byType(FeedReactionsOverlay)).width -
+                2 * FeedReactionsOverlayLayout.sidePadding;
+
+            expect(width, lessThan(available / 2));
+            expect(
+              width,
+              greaterThanOrEqualTo(FeedReactionsOverlayLayout.bubbleMinWidth),
+            );
+          },
+        );
+
+        testWidgets('the full width for a comment that wraps', (tester) async {
+          final width = await pumpWith(
+            tester,
+            'this comment is long enough to wrap onto several lines of the bubble '
+            'when it is shown',
+          );
+          final available =
+              tester.getSize(find.byType(FeedReactionsOverlay)).width -
+              2 * FeedReactionsOverlayLayout.sidePadding;
+
+          expect(width, greaterThan(available * 0.8));
+          expect(width, lessThanOrEqualTo(available));
+        });
+      });
+
       testWidgets('a mention as the comments sheet does, by display name', (
         tester,
       ) async {
