@@ -1100,6 +1100,41 @@ void main() {
         },
       );
 
+      for (final client in [
+        Nip89ClientTag.tag,
+        ['client', 'Another app'],
+      ]) {
+        test(
+          'leaves the source ${client[1]} client tag to the signer',
+          () async {
+            curationAnswers([
+              _curationEvent(
+                createdAt: 1000,
+                tags: [
+                  client,
+                  ['e', _hex(201), '', 'hidden'],
+                ],
+              ),
+            ]);
+            when(
+              () => nostrClient.publishEventAwaitOk(any()),
+            ).thenAnswer((_) async => _outcome(accepted: true));
+
+            await repository().saveCuration(
+              RepliesCuration(hiddenIds: {_hex(202)}),
+              videoAddress: _rootAddress,
+              previous: const RepliesCuration(),
+            );
+
+            expect(signed.single.tags, [
+              ['d', RepliesCuration.dTagFor(_rootAddress)],
+              ['e', _hex(201), '', 'hidden'],
+              ['e', _hex(202), '', 'hidden'],
+            ]);
+          },
+        );
+      }
+
       for (final noRelays in [false, true]) {
         test(
           'refuses an incomplete nonempty read (noRelays: $noRelays)',

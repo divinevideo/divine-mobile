@@ -167,7 +167,9 @@ one of their videos, and the ones they hid
   `["a", "<reply address>", "", "pinned"]` for an addressable reply, so the
   mark outlives an edit of it, or `["e", "<reply id>", "", "hidden"]` for one
   that is not; empty content when the app writes the first one, and a
-  replacement keeps the content and the other tags of the one it replaces
+  replacement keeps the content and the other tags of the one it replaces,
+  except a NIP-89 `client` tag, which the app sets from the user's current
+  attribution setting
 - Read and published by `mobile/packages/video_responses_repository`
   (`RepliesCuration`); viewers see the pinned reply first and none of the
   hidden ones on the video's replies sticker and in its replies feed

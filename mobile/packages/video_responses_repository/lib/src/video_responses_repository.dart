@@ -512,7 +512,14 @@ class VideoResponsesRepository {
     final event = await _signEvent(
       kind: RepliesCuration.kind,
       content: source?.content ?? '',
-      tags: replacement.toTags(videoAddress, sourceTags: source?.tags),
+      tags: replacement.toTags(
+        videoAddress,
+        // The signer stamps attribution from the current setting, so the
+        // replaced curation's `client` tag is not carried forward (#8176).
+        sourceTags: source == null
+            ? null
+            : Nip89ClientTag.withoutClientTag(source.tags),
+      ),
       createdAt: math.max(now, (_curationSignedAt[dTag] ?? 0) + 1),
     );
     _requireCurationOwner(owner);
