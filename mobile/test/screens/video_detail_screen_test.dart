@@ -454,6 +454,38 @@ void main() {
         );
       });
 
+      testWidgets(
+        'blames the provenance setting for a video that only tags itself '
+        'a Vine',
+        (tester) async {
+          stubHidden(
+            createTestVideoEvent(
+              id: 'self_tagged_video',
+              videoUrl: 'https://cdn.divine.video/abc.mp4',
+              rawTags: const {'platform': 'vine'},
+            ),
+          );
+          final provenanceFilter = _MockVideoProvenanceFilterService();
+          when(() => provenanceFilter.showVerifiedOnly).thenReturn(true);
+
+          await tester.pumpWidget(
+            buildSubject(
+              extraOverrides: [
+                videoProvenanceFilterServiceProvider.overrideWithValue(
+                  provenanceFilter,
+                ),
+              ],
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.text(l10n.videoDetailHiddenByProvenanceFilterBody),
+            findsOneWidget,
+          );
+        },
+      );
+
       testWidgets('offers both a settings route and a per-video override', (
         tester,
       ) async {
