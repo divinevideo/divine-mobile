@@ -33,6 +33,12 @@ class StoreStateTest(unittest.TestCase):
              Version(1, 0, 4), Version(1, 0, 5)],
         )
 
+    def test_ios_mistyped_values_fail_closed(self):
+        for entry in (_ios(120, "READY_FOR_SALE"), _ios("1.2.0", ["X"])):
+            with self.subTest(entry=entry):
+                with self.assertRaises(ValueError):
+                    ios_submitted_versions([entry])
+
     def test_ios_drops_unsubmitted_states(self):
         entries = [
             _ios("1.0.1", "PREPARE_FOR_SUBMISSION"),

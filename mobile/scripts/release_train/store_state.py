@@ -20,6 +20,10 @@ def ios_submitted_versions(app_store_versions: list) -> list[Version]:
             raise ValueError(f"App Store version entry has no attributes: {entry!r}")
         version = attrs.get("versionString")
         state = attrs.get("appVersionState") or attrs.get("appStoreState")
+        if not isinstance(version, str) or not isinstance(state, str):
+            raise ValueError(
+                f"App Store version entry has non-string versionString or state: {entry!r}"
+            )
         if not version or not state:
             raise ValueError(
                 f"App Store version entry missing versionString or state: {entry!r}"

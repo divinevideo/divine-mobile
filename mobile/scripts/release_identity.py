@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,6 +19,14 @@ from release_train.store_state import (
 from release_train.versions import pubspec_version
 
 DEFAULT_REPOSITORY = "divinevideo/divine-release-provenance"
+
+
+def _build_number(text):
+    if not re.fullmatch(r"[0-9]+", text, re.ASCII):
+        raise argparse.ArgumentTypeError(
+            f"expected a non-negative integer of ASCII digits, got {text!r}"
+        )
+    return int(text)
 
 
 def _json(path):
@@ -39,7 +48,7 @@ def _parser():
     alloc.add_argument("--source-sha", required=True)
     alloc.add_argument("--reservation-key", required=True)
     alloc.add_argument("--codemagic-build-id", required=True)
-    alloc.add_argument("--store-latest-build", type=int, required=True)
+    alloc.add_argument("--store-latest-build", type=_build_number, required=True)
     alloc.add_argument("--shorebird-releases", required=True)
     alloc.add_argument("--stable-tags", required=True)
     alloc.add_argument("--app-store-versions")

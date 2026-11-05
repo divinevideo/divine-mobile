@@ -4,7 +4,9 @@ import json
 import subprocess
 import sys
 import tempfile
+import os
 import unittest
+from unittest import mock
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -122,6 +124,64 @@ class CliTest(unittest.TestCase):
         self.assertEqual(1, code)
         self.assertTrue(out.startswith("ERROR:"))
         self.assertFalse(self.out.exists())
+
+    def test_mistyped_store_value_is_an_error_not_a_traceback(self):
+        bad = self.write(
+            "typed.json",
+            json.dumps(
+                [{"attributes": {"versionString": 120,
+                                 "appVersionState": "READY_FOR_SALE"}}]
+            ),
+        )
+        argv = self.allocate_argv(extra=["--app-store-versions", bad])
+        code, out = self.run_main(argv, self.bootstrapped())
+        self.assertEqual(1, code)
+        self.assertTrue(out.startswith("ERROR:"))
+        self.assertNotIn("Traceback", out)
+        self.assertFalse(self.out.exists())
+
+    def test_store_latest_build_must_be_plain_digits(self):
+        for bad in ("-1", "abc", "1_000", "+5", " 5 "):
+            with self.subTest(value=bad):
+                argv = self.allocate_argv()
+                argv[argv.index("--store-latest-build") + 1] = bad
+                with contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as raised:
+                        self.run_main(argv, self.bootstrapped())
+                self.assertEqual(2, raised.exception.code)
+                self.assertFalse(self.out.exists())
+
+    def repo_used(self, prefix, env):
+        seen = []
+
+        def factory(repo):
+            seen.append(repo)
+            return self.bootstrapped()
+
+        with mock.patch.dict(os.environ, env):
+            if "SHOREBIRD_PROVENANCE_REPOSITORY" not in env:
+                os.environ.pop("SHOREBIRD_PROVENANCE_REPOSITORY", None)
+            with contextlib.redirect_stdout(io.StringIO()):
+                release_identity.main(
+                    prefix + self.allocate_argv(), ledger_factory=factory, now=NOW
+                )
+        return seen
+
+    def test_ledger_repository_default(self):
+        self.assertEqual(
+            ["divinevideo/divine-release-provenance"], self.repo_used([], {})
+        )
+
+    def test_ledger_repository_env_override(self):
+        env = {"SHOREBIRD_PROVENANCE_REPOSITORY": "org/from-env"}
+        self.assertEqual(["org/from-env"], self.repo_used([], env))
+
+    def test_ledger_repository_flag_wins(self):
+        env = {"SHOREBIRD_PROVENANCE_REPOSITORY": "org/from-env"}
+        self.assertEqual(
+            ["org/flag"],
+            self.repo_used(["--ledger-repository", "org/flag"], env),
+        )
 
     def test_invalid_store_payload_is_an_error(self):
         empty = self.write("empty.json", "[]")
