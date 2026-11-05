@@ -571,7 +571,8 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
     final headerButtons = <Widget>[
       if (userList.isEditable)
         DivineButton(
-          label: context.l10n.peopleListsManagePeopleButton,
+          label: context.l10n.listManageButton,
+          semanticLabel: context.l10n.peopleListsManagePeopleButton,
           type: DivineButtonType.secondary,
           leadingIcon: DivineIconName.users,
           expanded: true,

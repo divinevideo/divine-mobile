@@ -189,7 +189,7 @@ void main() {
     }
 
     Finder manageVideosButton() =>
-        find.widgetWithText(DivineButton, l10n.listManageVideosAction);
+        find.widgetWithText(DivineButton, l10n.listManageButton);
 
     group('navigation', () {
       testWidgets('back button pops when the router can pop', (tester) async {
@@ -998,10 +998,12 @@ void main() {
         expect(share.left, greaterThan(manage.right));
         expect(share.width, manage.width);
         expect(find.byType(FollowListButton), findsNothing);
-        expect(
-          tester.widget<DivineButton>(manageVideosButton()).type,
-          DivineButtonType.secondary,
-        );
+        final manageButton = tester.widget<DivineButton>(manageVideosButton());
+        expect(manageButton.type, DivineButtonType.secondary);
+        // A short label beside a video icon; screen readers hear the full
+        // action.
+        expect(manageButton.leadingIcon, DivineIconName.play);
+        expect(manageButton.semanticLabel, l10n.listManageVideosAction);
       });
 
       testWidgets('a private list leaves Manage videos the whole row', (

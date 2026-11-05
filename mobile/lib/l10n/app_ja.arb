@@ -1789,6 +1789,7 @@
   "profileListsEmpty": "まだリストがないよ。まとめておきたいループでひとつ作ってみて。",
   "listEditTitle": "リストを編集",
   "listShareButton": "シェア",
+  "listManageButton": "管理",
   "peopleListsManagePeopleButton": "ユーザーを管理",
   "listShareFailed": "リストを共有できなかった。もう一度試してね。",
   "listSave": "保存",

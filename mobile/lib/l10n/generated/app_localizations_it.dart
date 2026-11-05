@@ -5410,6 +5410,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get listShareButton => 'Condividi';
 
   @override
+  String get listManageButton => 'Gestisci';
+
+  @override
   String get peopleListsManagePeopleButton => 'Gestisci persone';
 
   @override

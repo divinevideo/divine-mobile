@@ -5046,6 +5046,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get listShareButton => '공유';
 
   @override
+  String get listManageButton => '관리';
+
+  @override
   String get peopleListsManagePeopleButton => '사람 관리';
 
   @override

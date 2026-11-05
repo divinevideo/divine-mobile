@@ -5378,6 +5378,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get listShareButton => 'I-share';
 
   @override
+  String get listManageButton => 'Pamahalaan';
+
+  @override
   String get peopleListsManagePeopleButton => 'Pamahalaan ang mga tao';
 
   @override

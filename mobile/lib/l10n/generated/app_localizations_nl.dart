@@ -5366,6 +5366,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get listShareButton => 'Delen';
 
   @override
+  String get listManageButton => 'Beheren';
+
+  @override
   String get peopleListsManagePeopleButton => 'Mensen beheren';
 
   @override

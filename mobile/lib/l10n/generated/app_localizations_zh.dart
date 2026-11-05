@@ -5001,6 +5001,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get listShareButton => '分享';
 
   @override
+  String get listManageButton => '管理';
+
+  @override
   String get peopleListsManagePeopleButton => '管理成员';
 
   @override

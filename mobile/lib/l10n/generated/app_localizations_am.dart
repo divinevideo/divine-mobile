@@ -5211,6 +5211,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get listShareButton => 'አጋራ';
 
   @override
+  String get listManageButton => 'አስተዳድር';
+
+  @override
   String get peopleListsManagePeopleButton => 'ሰዎችን አስተዳድር';
 
   @override

@@ -5304,6 +5304,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get listShareButton => 'Chia sẻ';
 
   @override
+  String get listManageButton => 'Quản lý';
+
+  @override
   String get peopleListsManagePeopleButton => 'Quản lý người';
 
   @override

@@ -5285,6 +5285,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get listShareButton => 'Paylaş';
 
   @override
+  String get listManageButton => 'Yönet';
+
+  @override
   String get peopleListsManagePeopleButton => 'Kişileri yönet';
 
   @override

@@ -5414,6 +5414,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get listShareButton => 'Teilen';
 
   @override
+  String get listManageButton => 'Verwalten';
+
+  @override
   String get peopleListsManagePeopleButton => 'Personen verwalten';
 
   @override

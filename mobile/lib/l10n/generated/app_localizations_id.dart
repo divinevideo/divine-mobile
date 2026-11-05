@@ -5267,6 +5267,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get listShareButton => 'Bagikan';
 
   @override
+  String get listManageButton => 'Kelola';
+
+  @override
   String get peopleListsManagePeopleButton => 'Kelola orang';
 
   @override

@@ -5026,6 +5026,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get listShareButton => 'シェア';
 
   @override
+  String get listManageButton => '管理';
+
+  @override
   String get peopleListsManagePeopleButton => 'ユーザーを管理';
 
   @override

@@ -1991,6 +1991,7 @@
   "profileListsEmpty": "Още няма списъци. Направи един за луповете, които искаш да държиш заедно.",
   "listEditTitle": "Редактирай списъка",
   "listShareButton": "Сподели",
+  "listManageButton": "Управление",
   "peopleListsManagePeopleButton": "Управление на хората",
   "listShareFailed": "Списъкът не можа да бъде споделен. Опитай пак.",
   "listSave": "Запази",

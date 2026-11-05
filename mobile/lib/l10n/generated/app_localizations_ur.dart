@@ -5350,6 +5350,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get listShareButton => 'شیئر';
 
   @override
+  String get listManageButton => 'نظم کریں';
+
+  @override
   String get peopleListsManagePeopleButton => 'لوگوں کا نظم کریں';
 
   @override
