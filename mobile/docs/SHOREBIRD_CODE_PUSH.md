@@ -431,6 +431,14 @@ nothing. Run it as a dry run first, check the output, then run it again with
 `DRY_RUN=NO`. It fails closed if either store lookup (App Store Connect
 versions, Google Play production track) errors.
 
+The dry run lists the ledger files a real run would create (`would create:`);
+the real run prints the same list under `created:`. `ledger already
+bootstrapped; nothing to create` means nothing is missing. If a Play
+production version code cannot be mapped to a version, the run stops before
+writing anything and names the code; add
+`releases/android/<version>+<code>.json` provenance or
+`allocations/builds/android/<code>.json` with a `"version"` string, then rerun.
+
 ### A patch targets a release version, not a channel
 
 TestFlight build `1.0.9+247` and App Store build `1.0.9+247` are the same

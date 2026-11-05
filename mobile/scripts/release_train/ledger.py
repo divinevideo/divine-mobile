@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import base64
 import json
 import subprocess
@@ -77,7 +79,7 @@ class GhLedgerStore:
             content = json.loads(result.stdout)["content"]
             raw = base64.b64decode("".join(content.split()), validate=True)
             record = json.loads(raw.decode("utf-8"))
-        except (ValueError, KeyError, TypeError) as error:
+        except (ValueError, KeyError, TypeError, AttributeError) as error:
             raise LedgerError(f"unreadable content for {path}: {error!r}") from error
         if not isinstance(record, dict):
             raise LedgerError(f"content of {path} is not a JSON object")

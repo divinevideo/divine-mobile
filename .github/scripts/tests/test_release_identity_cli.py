@@ -226,6 +226,44 @@ class CliTest(unittest.TestCase):
         self.assertEqual([], store.creates)
         self.assertIn(BOOTSTRAP_PATH, out.splitlines())
         self.assertIn("allocations/claims/1.2.0/app-store.json", out.splitlines())
+        self.assertEqual("would create:", out.splitlines()[0])
+
+    def test_bootstrap_real_run_prints_created_header(self):
+        store = MemoryLedgerStore()
+        code, out = self.run_main(
+            [
+                "bootstrap",
+                "--app-store-versions", self.ios,
+                "--play-production-track", self.play,
+            ],
+            store,
+        )
+        self.assertEqual(0, code)
+        self.assertEqual("created:", out.splitlines()[0])
+        self.assertIn(BOOTSTRAP_PATH, out.splitlines())
+
+    def test_bootstrap_with_nothing_to_create_says_so(self):
+        store = MemoryLedgerStore(
+            {
+                BOOTSTRAP_PATH: {"schema": 1},
+                "allocations/claims/1.2.0/app-store.json": {},
+            }
+        )
+        for extra in ([], ["--dry-run"]):
+            code, out = self.run_main(
+                [
+                    "bootstrap",
+                    "--app-store-versions", self.ios,
+                    "--play-production-track", self.play,
+                ]
+                + extra,
+                store,
+            )
+            self.assertEqual(0, code)
+            self.assertEqual(
+                ["ledger already bootstrapped; nothing to create"], out.splitlines()
+            )
+        self.assertEqual([], store.creates)
 
     def test_bootstrap_writes(self):
         store = MemoryLedgerStore()

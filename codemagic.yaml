@@ -1866,9 +1866,15 @@ workflows:
             fi
             exit 1
           fi
+          # Fail closed: only an exact NO writes to the ledger.
           DRY_RUN_FLAG=
           if [ "${{ inputs.DRY_RUN }}" = "YES" ]; then
             DRY_RUN_FLAG=--dry-run
+          elif [ "${{ inputs.DRY_RUN }}" = "NO" ]; then
+            DRY_RUN_FLAG=
+          else
+            echo "ERROR: DRY_RUN must be YES or NO, got '${{ inputs.DRY_RUN }}'."
+            exit 1
           fi
           python3 scripts/release_identity.py bootstrap \
             --app-store-versions "$ASC_VERSIONS_JSON" \

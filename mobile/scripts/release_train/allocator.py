@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -52,12 +54,20 @@ def map_play_version_codes(
         allocation = reservation_path("android", code)
         if allocation in paths:
             try:
-                text = ledger.read_json(allocation).get("version")
+                record = ledger.read_json(allocation)
             except LedgerError as error:
                 raise AllocationError(
                     f"cannot read allocation for Play version code {code} "
                     f"at {allocation}: {error}"
                 ) from error
+            if "version" in record:
+                text = record["version"]
+                if not isinstance(text, str) or not text:
+                    unmappable.append(
+                        f"{code} (version at {allocation} is not a "
+                        f"non-empty string)"
+                    )
+                    continue
         if text:
             mapped[code] = parse_version(text)
             continue
@@ -74,7 +84,9 @@ def map_play_version_codes(
     if unmappable:
         listed = ", ".join(sorted(set(unmappable)))
         raise AllocationError(
-            f"cannot map Play version codes to a version: {listed}"
+            f"cannot map Play version codes to a version: {listed} "
+            "\u2014 add releases/android/<version>+<code>.json provenance or "
+            'allocations/builds/android/<code>.json with a "version" string'
         )
     return mapped
 
@@ -247,6 +259,7 @@ def allocate(
     store_version_codes: Iterable[int] = (),
     now: datetime,
 ) -> Allocation:
+    validate_reservation_key(reservation_key, platform, source_sha)
     if BOOTSTRAP_PATH not in ledger.paths():
         raise AllocationError(
             "the release ledger is not bootstrapped; run the "

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """Allocate release versions and build numbers from the release ledger."""
+
+from __future__ import annotations
+
 import argparse
 import json
 import os
@@ -119,6 +122,10 @@ def _bootstrap(args, ledger, now):
         now=now,
         dry_run=args.dry_run,
     )
+    if not created:
+        print("ledger already bootstrapped; nothing to create")
+        return
+    print("would create:" if args.dry_run else "created:")
     for path in created:
         print(path)
 

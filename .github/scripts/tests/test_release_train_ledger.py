@@ -173,6 +173,7 @@ class GhLedgerStoreTests(unittest.TestCase):
         for body in (
             json.dumps([{"name": "a.json"}]),
             json.dumps({"content": ""}),
+            json.dumps({"content": None}),
             json.dumps({"content": "!!!notbase64"}),
             "not json at all",
         ):

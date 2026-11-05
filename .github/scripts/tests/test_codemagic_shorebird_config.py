@@ -693,6 +693,20 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         self.assertIn("bootstrap", script)
         self.assertIn("--dry-run", script)
 
+    def test_bootstrap_dry_run_fails_open_never(self) -> None:
+        script = self._bootstrap_script()
+
+        self.assertIn('"${{ inputs.DRY_RUN }}" = "YES"', script)
+        self.assertIn('"${{ inputs.DRY_RUN }}" = "NO"', script)
+        yes = script.index('"${{ inputs.DRY_RUN }}" = "YES"')
+        no = script.index('"${{ inputs.DRY_RUN }}" = "NO"')
+        self.assertIn("--dry-run", script[yes:no])
+        tail = script[no:]
+        self.assertIn("else", tail)
+        self.assertRegex(tail, r"ERROR:[^\n]*DRY_RUN")
+        self.assertIn("exit 1", tail[tail.index("else") :])
+        self.assertLess(script.index("else", no), script.index("release_identity.py"))
+
     def test_bootstrap_fetches_both_stores_fail_closed(self) -> None:
         script = self._bootstrap_script()
 

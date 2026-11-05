@@ -160,6 +160,22 @@ class MapPlayVersionCodesTest(unittest.TestCase):
         self.assertIn("777", message)
         self.assertIn("888", message)
         self.assertNotIn("200", message)
+        self.assertIn("releases/android/<version>+<code>.json", message)
+        self.assertIn("allocations/builds/android/<code>.json", message)
+
+    def test_non_string_allocation_version_is_an_error_naming_code_and_path(
+        self,
+    ) -> None:
+        path = "allocations/builds/android/200.json"
+        ledger = MemoryLedgerStore(
+            {path: {"version": 120}, "releases/android/1.0.28+190.json": {}}
+        )
+        with self.assertRaises(AllocationError) as caught:
+            map_play_version_codes(ledger, [190, 200])
+        message = str(caught.exception)
+        self.assertIn("200", message)
+        self.assertIn(path, message)
+        self.assertNotIn("190", message)
 
 
 class _UnreadableStore(MemoryLedgerStore):
@@ -465,11 +481,6 @@ class ValidateReservationKeyTest(unittest.TestCase):
                 validate_reservation_key(key, "ios", SHA)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
-SHA = "a" * 40
 BOOT = {BOOTSTRAP_PATH: {"schema": 1}}
 
 
@@ -494,6 +505,16 @@ class AllocateTest(unittest.TestCase):
         ledger = MemoryLedgerStore()
         with self.assertRaisesRegex(AllocationError, "not bootstrapped"):
             run_allocate(ledger)
+        self.assertEqual(ledger.creates, [])
+
+    def test_allocate_validates_the_key_before_any_write(self) -> None:
+        ledger = MemoryLedgerStore(dict(BOOT))
+        with self.assertRaisesRegex(AllocationError, "invalid reservation key"):
+            run_allocate(
+                ledger,
+                reservation_key="bogus/key",
+                store_versions=[v("1.0.27")],
+            )
         self.assertEqual(ledger.creates, [])
 
     def test_allocate_reconciles_before_deriving(self) -> None:
@@ -674,3 +695,7 @@ class BootstrapTest(unittest.TestCase):
         )
         self.assertEqual(paths, ["allocations/claims/1.0.27/app-store.json"])
         self.assertNotIn(BOOTSTRAP_PATH, ledger.creates)
+
+
+if __name__ == "__main__":
+    unittest.main()
