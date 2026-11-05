@@ -97,8 +97,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   Future<void> _report(ChatMessage message) async {
-    final reports = ref.read(concordReportsProvider);
-    if (reports == null) return;
+    if (ref.read(concordReportsProvider) == null) return;
     final reason = await VineBottomSheetSelectionMenu.show(
       context: context,
       title: Text(context.l10n.reportWhyReporting),
@@ -113,7 +112,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
       ],
     );
     if (reason == null || !mounted) return;
+    // A new catalog (a renamed room, say) rebuilds the provider while the
+    // sheet is open and ends the instance read before it.
+    final reports = ref.read(concordReportsProvider);
     try {
+      if (reports == null) throw StateError('Room reports unavailable');
       await reports.submit(
         communityId: context.read<ChatCubit>().state.selectedCommunityId,
         channelId: message.channelId,

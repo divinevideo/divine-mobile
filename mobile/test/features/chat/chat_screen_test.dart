@@ -267,6 +267,90 @@ void main() {
       await tester.pumpAndSettle();
       expect(submitted!['reason'], 'NS-csam');
     });
+    testWidgets(
+      'a report submits through the provider current when the reason is '
+      'chosen',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final cubit = _ChatCubit();
+        final community = '11' * 32;
+        final channel = '22' * 32;
+        final author = '33' * 32;
+        final message = ChatMessage(
+          id: '44' * 32,
+          channelId: channel,
+          author: author,
+          body: 'Report this message',
+          createdAt: 1,
+        );
+        final state = ChatState(
+          isTestCommunity: false,
+          communities: [
+            ChatCommunity(community, 'Synthetic', [channel]),
+          ],
+          selectedCommunityId: community,
+          selectedChannelId: channel,
+        );
+        when(() => cubit.state).thenReturn(state);
+        whenListen(cubit, const Stream<ChatState>.empty(), initialState: state);
+        when(cubit.visibleMessages).thenReturn([message]);
+        final submittedBy = <String>[];
+        ConcordReports reportsNamed(String name) => ConcordReports(
+          url: Uri.parse('https://reports.example/v1/reports'),
+          signer: (template) async => {
+            ...template,
+            'pubkey': '55' * 32,
+            'id': '66' * 32,
+            'sig': '77' * 64,
+          },
+          post: (url, body, headers) async {
+            submittedBy.add(name);
+            return {'caseId': 'synthetic-case'};
+          },
+        );
+        var current = reportsNamed('first');
+        await _pumpChatWidget(
+          tester,
+          ProviderScope(
+            overrides: [
+              concordReportsProvider.overrideWith((ref) => current),
+              fetchUserProfileProvider(author).overrideWith(
+                (ref) async => UserProfile(
+                  pubkey: author,
+                  displayName: 'Synthetic member',
+                  rawData: const {},
+                  createdAt: DateTime(2026),
+                  eventId: '88' * 32,
+                ),
+              ),
+              profileIdentityResolvingProvider(author).overrideWithValue(false),
+              profileVanishedProvider(author).overrideWith((ref) => false),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: BlocProvider<ChatCubit>.value(
+                value: cubit,
+                child: const ChatScreen(),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text(l10n.reportSubmit));
+        await tester.pumpAndSettle();
+        // The catalog changes while the reason sheet is open, which rebuilds
+        // the provider and ends the instance read before it.
+        current = reportsNamed('second');
+        ProviderScope.containerOf(
+          tester.element(find.byType(ChatScreen)),
+        ).invalidate(concordReportsProvider);
+        await tester.tap(find.text(l10n.reportReasonSpam));
+        await tester.pumpAndSettle();
+        expect(submittedBy, ['second']);
+        expect(find.text(l10n.reportReceivedThankYou), findsOneWidget);
+      },
+    );
     testWidgets('a failed draft discard is logged, not thrown', (
       tester,
     ) async {
