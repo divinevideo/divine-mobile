@@ -418,6 +418,9 @@ class BadgeRepository {
   /// The same pool-wide margin as `BookmarksRepository.maxPublishFutureSkew`:
   /// Divine's relay refuses `created_at` more than 60 s ahead, a stricter
   /// relay may refuse sooner, and this device's clock is not the relay's.
+  /// Unlike bookmarks, a write that would need more is refused rather than
+  /// published at the cap: a capped list would lose to the source it read,
+  /// dropping the change the user just made.
   static const _profileBadgeFutureBudgetSeconds = 30;
 
   /// Null leaves awards unfiltered, which is what an anonymous or test
@@ -2278,7 +2281,8 @@ class BadgeRepository {
   int _nextProfileBadgeTimestamp(String owner, Nip58ProfileBadges? source) {
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     // Start from the signer's usual backdate, which absorbs a device clock
-    // that runs a little fast; only a newer source pushes the stamp later.
+    // that runs a little fast; only a newer source or an earlier attempt
+    // pushes the stamp later.
     var timestamp =
         now - NostrTimestamp.getDriftToleranceForKind(EventKind.profileBadges);
     final latest = source?.event.createdAt;
