@@ -39,6 +39,8 @@ import 'package:sound_service/sound_service.dart';
 import 'package:sounds_repository/sounds_repository.dart'
     show RankedSounds, SoundsRepository;
 
+import '../../../helpers/scroll.dart';
+
 AudioEvent _createTestAudioEvent({
   String id = 'test-sound-id',
   String pubkey = 'test-pubkey',
@@ -152,6 +154,7 @@ void main() {
       Completer<bool>? pendingConsent,
       AudioFilePickerService? audioFilePicker,
       Set<String> blockedSoundAuthors = const {},
+      double spaceBelow = 0,
     }) {
       final blocklist = _MockContentBlocklistRepository();
       when(() => blocklist.currentState).thenAnswer(
@@ -261,9 +264,21 @@ void main() {
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
-              body: AudioSelectionBottomSheet(
-                scrollController: scrollController,
-                audioService: audioService,
+              // Like every host of the picker, so the keyboard overlaps it
+              // rather than shrinking it.
+              resizeToAvoidBottomInset: false,
+              body: Column(
+                children: [
+                  Expanded(
+                    child: AudioSelectionBottomSheet(
+                      scrollController: scrollController,
+                      audioService: audioService,
+                    ),
+                  ),
+                  // What a host lays out below the picker, as the recorder
+                  // does its mode wheel.
+                  SizedBox(height: spaceBelow),
+                ],
               ),
             ),
           ),
@@ -440,6 +455,86 @@ void main() {
         expect(find.text(l10n.exploreTabPopular), findsWidgets);
         expect(find.text(l10n.exploreTabNew), findsWidgets);
         expect(find.text(l10n.videoEditorAudioCategoryMySounds), findsWidgets);
+      });
+    });
+
+    group('Keyboard', () {
+      const keyboardHeight = 300.0;
+
+      /// Raises a keyboard [keyboardHeight] tall and returns where its top
+      /// edge sits.
+      Future<double> raiseKeyboard(WidgetTester tester) async {
+        final view = tester.view;
+        view.viewInsets = FakeViewPadding(
+          bottom: keyboardHeight * view.devicePixelRatio,
+        );
+        addTearDown(view.resetViewInsets);
+        await tester.pumpAndSettle();
+        return view.physicalSize.height / view.devicePixelRatio -
+            keyboardHeight;
+      }
+
+      testWidgets('scrolls the last sound above the keyboard', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: const AsyncValue.data([]),
+            forYouSounds: [
+              for (var i = 0; i < 30; i++)
+                _createTestAudioEvent(id: 'sound-$i', title: 'Sound $i'),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+        final keyboardTop = await raiseKeyboard(tester);
+
+        await tester.drag(
+          find.byType(AudioListTile).first,
+          const Offset(0, -4000),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getBottomLeft(find.byType(AudioListTile).last).dy,
+          lessThanOrEqualTo(keyboardTop),
+        );
+      });
+
+      testWidgets('keeps what a fruitless search offers reachable above the '
+          'keyboard', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(trendingSoundsAsync: AsyncValue.data(testSounds)),
+        );
+        await tester.pumpAndSettle();
+        final keyboardTop = await raiseKeyboard(tester);
+
+        await tester.enterText(find.byType(TextField).first, 'nothing like it');
+        await tester.pumpAndSettle();
+        final import = find.byKey(const Key('audio_search_import'));
+        await scrollUntilTappable(
+          tester,
+          import,
+          50,
+          scrollable: find
+              .ancestor(of: import, matching: find.byType(Scrollable))
+              .first,
+        );
+
+        expect(tester.getBottomLeft(import).dy, lessThanOrEqualTo(keyboardTop));
+      });
+
+      testWidgets('clears only the keyboard above a host that ends higher', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            spaceBelow: 100,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final keyboardTop = await raiseKeyboard(tester);
+
+        expect(tester.getBottomLeft(find.byType(TabBarView)).dy, keyboardTop);
       });
     });
 
@@ -1649,6 +1744,118 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(AudioEditorSelectionOverlay), findsNothing);
+      });
+
+      testWidgets('unpicks the picked sound when it is tapped again', (
+        tester,
+      ) async {
+        final audioService = _stubbedAudioService();
+        await tester.pumpWidget(
+          buildWidget(
+            trendingSoundsAsync: AsyncValue.data(testSounds),
+            audioService: audioService,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.exploreTabNew));
+        await tester.pumpAndSettle();
+        final row = find.ancestor(
+          of: find.text('Beta Song'),
+          matching: find.byType(AudioListTile),
+        );
+        await tester.tap(row);
+        await tester.pumpAndSettle();
+        expect(tester.widget<AudioListTile>(row).isSelected, isTrue);
+        clearInteractions(audioService);
+
+        await tester.tap(row);
+        await tester.pumpAndSettle();
+
+        expect(tester.widget<AudioListTile>(row).isSelected, isFalse);
+        expect(find.byType(AudioEditorSelectionOverlay), findsNothing);
+        verify(audioService.pause).called(1);
+        verifyNever(audioService.play);
+      });
+
+      group('selection card', () {
+        final card = find.byType(AudioEditorSelectionOverlay);
+
+        double opacityOf(WidgetTester tester) => tester
+            .widget<FadeTransition>(
+              find
+                  .ancestor(of: card, matching: find.byType(FadeTransition))
+                  .first,
+            )
+            .opacity
+            .value;
+
+        Future<Finder> pumpNewTab(WidgetTester tester) async {
+          await tester.pumpWidget(
+            buildWidget(
+              trendingSoundsAsync: AsyncValue.data(testSounds),
+              audioService: _stubbedAudioService(),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          await tester.tap(find.text(l10n.exploreTabNew));
+          await tester.pumpAndSettle();
+          return find.ancestor(
+            of: find.text('Beta Song'),
+            matching: find.byType(AudioListTile),
+          );
+        }
+
+        testWidgets('fades up from below the bottom edge on a pick, its safe '
+            'area included, and back down on an unpick', (tester) async {
+          tester.view.padding = FakeViewPadding(
+            bottom: 34 * tester.view.devicePixelRatio,
+          );
+          addTearDown(tester.view.resetPadding);
+          final row = await pumpNewTab(tester);
+          final bottomEdge = tester
+              .getBottomLeft(find.byType(AudioSelectionBottomSheet))
+              .dy;
+
+          await tester.tap(row);
+          await tester.pump();
+          expect(tester.getTopLeft(card).dy, bottomEdge);
+          expect(opacityOf(tester), 0);
+          await tester.pumpAndSettle();
+          final restingTop = tester.getTopLeft(card).dy;
+          expect(restingTop, lessThan(bottomEdge));
+          expect(opacityOf(tester), 1);
+
+          await tester.tap(row);
+          await tester.pump();
+          // A third of the way out it is still on its way, and clearly seen.
+          await tester.pump(const Duration(milliseconds: 70));
+          expect(
+            tester.getTopLeft(card).dy,
+            inExclusiveRange(restingTop, bottomEdge),
+          );
+          expect(opacityOf(tester), inExclusiveRange(0.5, 1));
+          await tester.pumpAndSettle();
+          expect(card, findsNothing);
+        });
+
+        testWidgets('appears in place at once when motion is reduced', (
+          tester,
+        ) async {
+          tester.platformDispatcher.accessibilityFeaturesTestValue =
+              const FakeAccessibilityFeatures(disableAnimations: true);
+          addTearDown(
+            tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+          );
+          final row = await pumpNewTab(tester);
+
+          await tester.tap(row);
+          await tester.pump();
+
+          expect(opacityOf(tester), 1);
+        });
       });
 
       testWidgets('marks a tapped sound while its reuse check runs, and '

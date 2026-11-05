@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -412,7 +413,8 @@ class _AudioSelectionBottomSheetState
   }
 
   Future<void> _selectSound(AudioEvent sound) async {
-    if (_selectedItem?.id == sound.id) return;
+    // Tapping the picked sound again unpicks it.
+    if (_selectedItem?.id == sound.id) return _deselectSound();
 
     // Bundled / imported / provider-catalog sounds carry their own terms and
     // never reach the resolver. Everything else — including the creator's own
@@ -459,6 +461,17 @@ class _AudioSelectionBottomSheetState
       _selectedItem = preview;
     });
     await _togglePlayPause(enforcePlay: true);
+  }
+
+  /// Leaves no sound picked and stops the preview. A reuse check or a file
+  /// still loading for the sound finds it unpicked and stops there.
+  Future<void> _deselectSound() async {
+    setState(() {
+      _selectedItem = null;
+      _isLoadingAudio = false;
+    });
+    await _audioService.pause();
+    await _audioService.seek(.zero);
   }
 
   /// Unpicks [sound], whose creator does not allow reusing it, and says so.
@@ -918,7 +931,7 @@ class _AudioSelectionBottomSheetState
       ),
     );
 
-    return Stack(
+    final picker = Stack(
       children: [
         if (embedded)
           // Embedded in a page, the categories stay put while the search
@@ -968,8 +981,29 @@ class _AudioSelectionBottomSheetState
 
         Align(
           alignment: .bottomCenter,
+          // Picking a sound fades the card up into place from below the
+          // bottom edge, its safe-area padding included, and unpicking it runs
+          // the same way back. Switching to another sound keeps the card, as
+          // both are the same widget.
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
+            duration: const Duration(
+              milliseconds: 220,
+            ).autoReduceMotion(context),
+            switchInCurve: Curves.easeOutCubic,
+            // An outgoing child runs this curve backwards, so an ease-out
+            // here leaves the card slowly and speeds it away. An ease-in
+            // would drop half of it in the first few frames.
+            switchOutCurve: Curves.easeOutCubic,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween(
+                  begin: const Offset(0, 1),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            ),
             child: _selectedItem != null
                 ? AudioEditorSelectionOverlay(
                     audio: _selectedItem!,
@@ -993,6 +1027,67 @@ class _AudioSelectionBottomSheetState
         ),
       ],
     );
+
+    return _KeyboardClearance(child: picker);
+  }
+}
+
+/// Keeps [child] clear of the software keyboard by padding its bottom with
+/// the part of the keyboard that covers it.
+///
+/// None of the picker's hosts resize for the keyboard, so without this the
+/// last rows, the empty state and the Done bar sit behind it while the user
+/// searches. Embedded in the recorder the picker ends above the mode wheel,
+/// so only the keyboard above its own bottom edge is taken off.
+class _KeyboardClearance extends StatefulWidget {
+  const _KeyboardClearance({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeyboardClearance> createState() => _KeyboardClearanceState();
+}
+
+class _KeyboardClearanceState extends State<_KeyboardClearance> {
+  /// How far this widget's bottom edge sat above the bottom of the screen
+  /// at its last measurement.
+  double _spaceBelow = 0;
+  bool _isMeasureScheduled = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
+    // The space below only matters while the keyboard is up, and it can
+    // change as it rises: what sits below gives up its safe-area padding.
+    if (keyboardHeight > 0) {
+      _scheduleMeasure(screenHeight: MediaQuery.sizeOf(context).height);
+    }
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: math.max(0, keyboardHeight - _spaceBelow),
+      ),
+      // What the picker lays out below is already clear of the keyboard.
+      child: MediaQuery.removeViewInsets(
+        context: context,
+        removeBottom: true,
+        child: widget.child,
+      ),
+    );
+  }
+
+  void _scheduleMeasure({required double screenHeight}) {
+    if (_isMeasureScheduled) return;
+    _isMeasureScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _isMeasureScheduled = false;
+      if (!mounted) return;
+      final box = context.findRenderObject();
+      if (box is! RenderBox || !box.hasSize) return;
+      final bottom = box.localToGlobal(Offset(0, box.size.height)).dy;
+      final spaceBelow = math.max(0.0, screenHeight - bottom);
+      if (spaceBelow == _spaceBelow) return;
+      setState(() => _spaceBelow = spaceBelow);
+    });
   }
 }
 
@@ -1326,9 +1421,9 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return _CenteredScrollable(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.music_off,
@@ -1368,9 +1463,9 @@ class _SearchEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return _CenteredScrollable(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.search_off,
@@ -1411,6 +1506,26 @@ class _SearchEmptyState extends StatelessWidget {
   }
 }
 
+/// Centres [child] in the space it is given, and lets it scroll once that
+/// space is shorter than it, as above a raised keyboard on a small phone.
+class _CenteredScrollable extends StatelessWidget {
+  const _CenteredScrollable({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(child: child),
+        ),
+      ),
+    );
+  }
+}
+
 /// [leading] above [child], which fills the rest, or just [child] without
 /// one.
 class _LeadingAbove extends StatelessWidget {
@@ -1443,11 +1558,11 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return _CenteredScrollable(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             const DivineIcon(
               icon: DivineIconName.warningCircle,
