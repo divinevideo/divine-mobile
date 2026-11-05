@@ -127,14 +127,14 @@ void main() {
         expect(VideoRecorderMode.stopMotion.supportGridLines, isTrue);
       });
 
-      test('cycles its timer through the short between-frame windows', () {
+      test('cycles its interval through 3, 5 and 10 seconds', () {
         expect(
           VideoRecorderMode.stopMotion.timerDurations,
           equals(const [
             TimerDuration.off,
-            TimerDuration.two,
             TimerDuration.three,
             TimerDuration.five,
+            TimerDuration.ten,
           ]),
         );
       });

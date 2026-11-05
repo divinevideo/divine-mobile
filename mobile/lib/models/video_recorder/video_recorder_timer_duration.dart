@@ -12,9 +12,6 @@ enum TimerDuration {
   /// No timer.
   off,
 
-  /// 2 seconds.
-  two,
-
   /// 3 seconds.
   three,
 
@@ -27,7 +24,6 @@ enum TimerDuration {
   /// Icon representing the timer duration.
   DivineIconName get icon => switch (this) {
     .off => .timer,
-    .two => .timer2,
     .three => .timer3,
     .five => .timer5,
     .ten => .timer10,
@@ -36,7 +32,6 @@ enum TimerDuration {
   /// Duration value for the timer.
   Duration get duration => switch (this) {
     .off => Duration.zero,
-    .two => const Duration(seconds: 2),
     .three => const Duration(seconds: 3),
     .five => const Duration(seconds: 5),
     .ten => const Duration(seconds: 10),

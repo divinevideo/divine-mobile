@@ -93,12 +93,12 @@ enum VideoRecorderMode {
   /// or an empty list when the mode has no timer.
   ///
   /// Video modes count down once and then start the take. Stop-motion counts
-  /// down before every still until the shutter is tapped again, so it offers
-  /// the short windows a nudge between two frames takes.
+  /// down before every still until the shutter is tapped again, so it adds
+  /// the 5 second window a nudge between two frames often takes.
   List<TimerDuration> get timerDurations => switch (this) {
     .upload => const [],
     .capture => _delayedStartDurations,
-    .stopMotion => const [.off, .two, .three, .five],
+    .stopMotion => const [.off, .three, .five, .ten],
     .lipSync => _delayedStartDurations,
     // Stepping into frame in front of the backdrop needs a hands-free start.
     .chromaKey => _delayedStartDurations,

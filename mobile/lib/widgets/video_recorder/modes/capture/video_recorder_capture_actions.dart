@@ -246,7 +246,6 @@ String _flashModeValue(AppLocalizations l10n, DivineFlashMode mode) {
 String _timerDurationValue(AppLocalizations l10n, TimerDuration timer) {
   return switch (timer) {
     .off => l10n.videoRecorderTimerValueOff,
-    .two => l10n.videoRecorderTimerValueTwoSeconds,
     .three => l10n.videoRecorderTimerValueThreeSeconds,
     .five => l10n.videoRecorderTimerValueFiveSeconds,
     .ten => l10n.videoRecorderTimerValueTenSeconds,

@@ -8604,9 +8604,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoRecorderTimerValueOff => 'オフ';
 
   @override
-  String get videoRecorderTimerValueTwoSeconds => '2秒';
-
-  @override
   String get videoRecorderTimerValueThreeSeconds => '3秒';
 
   @override

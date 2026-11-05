@@ -8963,9 +8963,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoRecorderTimerValueOff => 'Nonaktif';
 
   @override
-  String get videoRecorderTimerValueTwoSeconds => '2 detik';
-
-  @override
   String get videoRecorderTimerValueThreeSeconds => '3 detik';
 
   @override

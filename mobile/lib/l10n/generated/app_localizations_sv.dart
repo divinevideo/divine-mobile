@@ -9053,9 +9053,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoRecorderTimerValueOff => 'Av';
 
   @override
-  String get videoRecorderTimerValueTwoSeconds => '2 sekunder';
-
-  @override
   String get videoRecorderTimerValueThreeSeconds => '3 sekunder';
 
   @override

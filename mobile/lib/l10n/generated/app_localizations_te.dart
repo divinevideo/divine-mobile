@@ -9313,9 +9313,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoRecorderTimerValueOff => 'ఆఫ్';
 
   @override
-  String get videoRecorderTimerValueTwoSeconds => '2 సెకన్లు';
-
-  @override
   String get videoRecorderTimerValueThreeSeconds => '3 సెకన్లు';
 
   @override

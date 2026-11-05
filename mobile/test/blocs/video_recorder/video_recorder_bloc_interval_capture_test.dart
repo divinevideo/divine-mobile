@@ -115,7 +115,7 @@ void main() {
     }
 
     VideoRecorderBloc buildBloc({
-      TimerDuration timer = TimerDuration.two,
+      TimerDuration timer = TimerDuration.three,
       CameraServiceFactory? cameraServiceFactory,
     }) =>
         VideoRecorderBloc(
@@ -160,10 +160,10 @@ void main() {
           tapShutter(bloc, async);
 
           expect(bloc.state.isIntervalCaptureRunning, isTrue);
-          expect(bloc.state.countdownValue, 2);
+          expect(bloc.state.countdownValue, 3);
 
           elapse(async, const Duration(seconds: 1));
-          expect(bloc.state.countdownValue, 1);
+          expect(bloc.state.countdownValue, 2);
           verifyNever(() => cameraService.capturePhoto());
 
           closeBloc(bloc, async);
@@ -175,15 +175,15 @@ void main() {
           final bloc = buildBloc();
           tapShutter(bloc, async);
 
-          elapse(async, const Duration(seconds: 2));
+          elapse(async, const Duration(seconds: 3));
           expect(bloc.state.stopMotionFrames, hasLength(1));
           expect(
             bloc.state.countdownValue,
-            2,
+            3,
             reason: 'counts down to the next still once this one landed',
           );
 
-          elapse(async, const Duration(seconds: 2));
+          elapse(async, const Duration(seconds: 3));
           expect(bloc.state.stopMotionFrames, hasLength(2));
           verify(() => cameraService.capturePhoto()).called(2);
           verify(sounds.playShortBeep).called(2);
@@ -208,7 +208,7 @@ void main() {
           photo.complete(writeFrame());
           async.flushMicrotasks();
           expect(bloc.state.stopMotionFrames, hasLength(1));
-          expect(bloc.state.countdownValue, 2);
+          expect(bloc.state.countdownValue, 3);
 
           closeBloc(bloc, async);
         });
@@ -267,7 +267,7 @@ void main() {
           async.flushMicrotasks();
           expect(bloc.state.isIntervalCaptureRunning, isTrue);
 
-          elapse(async, const Duration(seconds: 2));
+          elapse(async, const Duration(seconds: 3));
           expect(bloc.state.stopMotionFrames, hasLength(1));
 
           closeBloc(bloc, async);
@@ -282,7 +282,7 @@ void main() {
         fakeAsync((async) {
           final bloc = buildBloc();
           tapShutter(bloc, async);
-          elapse(async, const Duration(seconds: 2));
+          elapse(async, const Duration(seconds: 3));
 
           tapShutter(bloc, async);
           expect(bloc.state.isIntervalCaptureRunning, isFalse);
@@ -308,7 +308,7 @@ void main() {
           final bloc = buildBloc();
           tapShutter(bloc, async);
 
-          elapse(async, const Duration(seconds: 2));
+          elapse(async, const Duration(seconds: 3));
           expect(bloc.state.stopMotionFrames, hasLength(1));
           expect(bloc.state.isIntervalCaptureRunning, isFalse);
 

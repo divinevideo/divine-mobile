@@ -9120,9 +9120,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoRecorderTimerValueOff => 'Naka-off';
 
   @override
-  String get videoRecorderTimerValueTwoSeconds => '2 segundo';
-
-  @override
   String get videoRecorderTimerValueThreeSeconds => '3 segundo';
 
   @override

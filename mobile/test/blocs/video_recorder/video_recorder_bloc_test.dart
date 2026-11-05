@@ -1105,7 +1105,7 @@ void main() {
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-        'cycles stop-motion through off → two → three → five → off',
+        'cycles stop-motion through off → three → five → ten → off',
         build: () => buildBloc()
           ..emit(
             const VideoRecorderBlocState(
@@ -1120,9 +1120,9 @@ void main() {
         },
         expect: () => [
           for (final timer in const [
-            TimerDuration.two,
             TimerDuration.three,
             TimerDuration.five,
+            TimerDuration.ten,
             TimerDuration.off,
           ])
             isA<VideoRecorderBlocState>().having(

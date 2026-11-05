@@ -9171,9 +9171,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoRecorderTimerValueOff => 'Disattivato';
 
   @override
-  String get videoRecorderTimerValueTwoSeconds => '2 secondi';
-
-  @override
   String get videoRecorderTimerValueThreeSeconds => '3 secondi';
 
   @override

@@ -5467,7 +5467,6 @@
   "@videoRecorderTimerValueOff": {
     "description": "Screen-reader state of the recorder's countdown-timer button when no delay is set. Announced after the button label, e.g. 'Cycle timer, Off'."
   },
-  "videoRecorderTimerValueTwoSeconds": "2 సెకన్లు",
   "videoRecorderTimerValueThreeSeconds": "3 సెకన్లు",
   "videoRecorderTimerValueFiveSeconds": "5 సెకన్లు",
   "@videoRecorderTimerValueThreeSeconds": {

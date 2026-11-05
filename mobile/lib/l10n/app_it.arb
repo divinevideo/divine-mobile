@@ -2635,7 +2635,6 @@
   "videoRecorderFlashValueOn": "Attivato",
   "videoRecorderFlashValueAuto": "Automatico",
   "videoRecorderTimerValueOff": "Disattivato",
-  "videoRecorderTimerValueTwoSeconds": "2 secondi",
   "videoRecorderTimerValueThreeSeconds": "3 secondi",
   "videoRecorderTimerValueFiveSeconds": "5 secondi",
   "videoRecorderTimerValueTenSeconds": "10 secondi",

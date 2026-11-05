@@ -9011,9 +9011,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoRecorderTimerValueOff => 'Tắt';
 
   @override
-  String get videoRecorderTimerValueTwoSeconds => '2 giây';
-
-  @override
   String get videoRecorderTimerValueThreeSeconds => '3 giây';
 
   @override

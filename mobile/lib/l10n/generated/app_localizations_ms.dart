@@ -9058,9 +9058,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoRecorderTimerValueOff => 'Mati';
 
   @override
-  String get videoRecorderTimerValueTwoSeconds => '2 saat';
-
-  @override
   String get videoRecorderTimerValueThreeSeconds => '3 saat';
 
   @override
