@@ -1419,6 +1419,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get exploreTabNew => 'Нови';
 
   @override
+  String get exploreTabNewDiviners => 'Нови Diviners';
+
+  @override
   String get exploreTabPopular => 'Популярни';
 
   @override

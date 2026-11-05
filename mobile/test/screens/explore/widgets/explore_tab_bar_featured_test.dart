@@ -135,7 +135,7 @@ void main() {
       );
 
       final latestX = tester.getCenter(find.text(_l10n.exploreTabLatest)).dx;
-      final newX = tester.getCenter(find.text(_l10n.exploreTabNew)).dx;
+      final newX = tester.getCenter(find.text(_l10n.exploreTabNewDiviners)).dx;
       final featuredX = tester
           .getCenter(find.text(_l10n.exploreTabFeatured))
           .dx;

@@ -1391,6 +1391,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get exploreTabNew => 'Nytt';
 
   @override
+  String get exploreTabNewDiviners => 'Nya Diviners';
+
+  @override
   String get exploreTabPopular => 'Populärt';
 
   @override

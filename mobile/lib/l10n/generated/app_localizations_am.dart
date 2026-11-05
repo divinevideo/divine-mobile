@@ -1372,6 +1372,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get exploreTabNew => 'አዲስ';
 
   @override
+  String get exploreTabNewDiviners => 'አዲስ Diviners';
+
+  @override
   String get exploreTabPopular => 'ታዋቂ';
 
   @override

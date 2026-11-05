@@ -1422,6 +1422,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get exploreTabNew => 'Nuovi';
 
   @override
+  String get exploreTabNewDiviners => 'Nuovi Diviners';
+
+  @override
   String get exploreTabPopular => 'Popolari';
 
   @override

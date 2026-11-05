@@ -2395,6 +2395,12 @@ abstract class AppLocalizations {
   /// **'New'**
   String get exploreTabNew;
 
+  /// Explore tab listing videos from creators whose first Divine video is recent. 'Diviners' is the name for people on Divine; keep it untranslated.
+  ///
+  /// In en, this message translates to:
+  /// **'New Diviners'**
+  String get exploreTabNewDiviners;
+
   /// No description provided for @exploreTabPopular.
   ///
   /// In en, this message translates to:

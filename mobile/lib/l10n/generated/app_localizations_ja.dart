@@ -1278,6 +1278,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exploreTabNew => '新着';
 
   @override
+  String get exploreTabNewDiviners => '新しいDiviners';
+
+  @override
   String get exploreTabPopular => '人気';
 
   @override

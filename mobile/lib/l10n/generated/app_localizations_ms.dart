@@ -1372,6 +1372,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get exploreTabNew => 'Baharu';
 
   @override
+  String get exploreTabNewDiviners => 'Diviners Baharu';
+
+  @override
   String get exploreTabPopular => 'Popular';
 
   @override
