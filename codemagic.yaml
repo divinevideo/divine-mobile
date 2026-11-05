@@ -1330,6 +1330,8 @@ workflows:
       - *check_signing_endpoint
       - *check_supporters_config
       - *write_shorebird_dart_defines
+      # The paired invite validator needs the package map on a clean runner.
+      - *flutter_pub_get
       - *fetch_and_verify_shorebird_provenance
       - *prepare_patch_source
       - *check_ios_extension_signing_contract
@@ -1415,6 +1417,8 @@ workflows:
       - *check_signing_endpoint
       - *check_supporters_config
       - *write_shorebird_dart_defines
+      # The paired invite validator needs the package map on a clean runner.
+      - *flutter_pub_get
       - *fetch_and_verify_shorebird_provenance
       - *prepare_patch_source
       - *setup_local_properties

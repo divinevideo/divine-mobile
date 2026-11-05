@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import shutil
 import subprocess
 import shlex
 import tempfile
@@ -670,6 +671,41 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
                             self.assertEqual("wss://synthetic.divine.video/relay" if invite else None, actual.get("CONCORD_RELAY_URL"))
                             self.assertEqual(0o600, output.stat().st_mode & 0o777)
                             self.assertNotIn("synthetic", result.stdout + result.stderr)
+
+    def test_patch_workflows_bootstrap_package_map_before_paired_writer(self) -> None:
+        # A fresh runner has no .dart_tool map. Simulate pub get and Dart's
+        # package-map prerequisite while exercising the real release writer.
+        workflows = self._resolved_config()["workflows"]
+        invite = json.loads((CODEMAGIC_PATH.parent / "mobile/packages/concord_protocol/test/fixtures/community-interop.json").read_text())["inviteUrl"]
+        for name in ("ios-patch", "android-patch"):
+            with self.subTest(workflow=name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "scripts").mkdir()
+                (root / "bin").mkdir()
+                shutil.copy(CODEMAGIC_PATH.parent / "mobile/scripts/write_concord_release_defines.rb", root / "scripts")
+                (root / "bin/flutter").write_text('#!/bin/sh\n[ "$*" = "pub get" ] || exit 1\nmkdir -p .dart_tool\nprintf "{}" > .dart_tool/package_config.json\n')
+                (root / "bin/dart").write_text('#!/bin/sh\nmap=${1#--packages=}\ntest -f "$map"\n')
+                (root / "bin/flutter").chmod(0o755)
+                (root / "bin/dart").chmod(0o755)
+                output = root / "defines.json"
+                output.write_text('{"DEFAULT_ENV":"PRODUCTION"}')
+                env = {"PATH": str(root / "bin") + os.pathsep + os.environ["PATH"],
+                       "CONCORD_INVITE_URL": invite,
+                       "CONCORD_RELAY_URL": "wss://synthetic.divine.video/relay"}
+                for step in workflows[name]["scripts"]:
+                    if step["name"] == "Get Flutter dependencies":
+                        result = subprocess.run(["bash", "-c", step["script"]], cwd=root,
+                                                env=env, text=True, capture_output=True)
+                        self.assertEqual(0, result.returncode, result.stderr)
+                    if step["name"] == "Verify private Shorebird release provenance":
+                        result = subprocess.run(["ruby", str(root / "scripts/write_concord_release_defines.rb"),
+                                                 "--output", str(output), "--required"], cwd=root,
+                                                env=env, text=True, capture_output=True)
+                        self.assertEqual(0, result.returncode, result.stderr)
+                        self.assertEqual(invite, json.loads(output.read_text())["CONCORD_INVITE_URL"])
+                        break
+                else:
+                    self.fail("missing provenance step")
 
     def test_concord_release_and_patch_defines_follow_original_release_shape(self) -> None:
         base = self._definition_block("write_shorebird_dart_defines")
