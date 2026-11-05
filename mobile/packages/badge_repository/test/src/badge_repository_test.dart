@@ -3396,7 +3396,14 @@ void main() {
               remove
                   ? repository.removeAward(target)
                   : repository.acceptAward(target),
-              throwsStateError,
+              throwsA(
+                isA<ProfileBadgesWriteRefusedException>().having(
+                  (error) => error.toString(),
+                  'toString',
+                  'ProfileBadgesWriteRefusedException: Could not confirm the '
+                      'latest profile badges from relays',
+                ),
+              ),
             );
 
             expect(lastSignedEvent(), isNull);
@@ -3548,7 +3555,7 @@ void main() {
         stubRead(timedOut: true);
         await expectLater(
           repository.acceptAward(award(coordinate, 122)),
-          throwsStateError,
+          throwsA(isA<ProfileBadgesWriteRefusedException>()),
         );
         stubRead();
 
@@ -3609,7 +3616,7 @@ void main() {
           });
           final mutation = expectLater(
             repository.acceptAward(award(coordinate, 122)),
-            throwsStateError,
+            throwsA(isA<ProfileBadgesWriteRefusedException>()),
           );
           await readStarted.future;
           owner = _pubkey(4);
@@ -3799,7 +3806,7 @@ void main() {
 
         await expectLater(
           repository.acceptAward(award(nextCoordinate, 132)),
-          throwsStateError,
+          throwsA(isA<ProfileBadgesWriteRefusedException>()),
         );
 
         expect(attempts, isEmpty);

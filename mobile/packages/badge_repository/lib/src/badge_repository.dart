@@ -348,6 +348,22 @@ class BadgeSigningException implements Exception {
   String toString() => 'BadgeSigningException: $message';
 }
 
+/// A profile badge edit that was refused rather than published, because the
+/// list it would replace could not be trusted to be current.
+///
+/// Thrown when the relays cannot confirm the latest list, when the signed-in
+/// account changes during the edit, or when the replacement would have to be
+/// stamped past the clock window. These are expected network and session
+/// conditions, not programming errors.
+class ProfileBadgesWriteRefusedException implements Exception {
+  const ProfileBadgesWriteRefusedException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'ProfileBadgesWriteRefusedException: $message';
+}
+
 class BadgeRepository {
   /// Creates a badge repository. [sessionChanges] ends any cached subscription
   /// absence proof, including a sign-out/sign-in to the same account.
@@ -1552,6 +1568,8 @@ class BadgeRepository {
   /// * [StateError] if there is no current pubkey, the badge belongs to
   ///   someone else.
   /// * [BadgeSigningException] if an event cannot be signed.
+  /// * [ProfileBadgesWriteRefusedException] when taking down the current
+  ///   user's own pin is refused, for any reason listed on [removeAward].
   /// * [BadgePublishException] when no relay accepts one of the events.
   Future<void> revokeAward({
     required BadgeCoordinate coordinate,
@@ -1877,9 +1895,12 @@ class BadgeRepository {
   ///
   /// Throws:
   ///
-  /// * [StateError] if there is no current pubkey, the relay read is
-  ///   incomplete, or the account changes.
+  /// * [StateError] if there is no current pubkey, or the signer returns an
+  ///   event for a different account or `created_at`.
   /// * [BadgeSigningException] if signing is declined or times out.
+  /// * [ProfileBadgesWriteRefusedException] if the relays cannot confirm the
+  ///   current list, the account changes during the edit, or the replacement
+  ///   would be stamped past the clock window.
   /// * [BadgePublishException] when no relay confirms the published list.
   Future<void> acceptAward(BadgeAwardViewData award) =>
       _withProfileBadgeWrite((pubkey) async {
@@ -1922,9 +1943,12 @@ class BadgeRepository {
   ///
   /// Throws:
   ///
-  /// * [StateError] if there is no current pubkey, the relay read is
-  ///   incomplete, or the account changes.
+  /// * [StateError] if there is no current pubkey, or the signer returns an
+  ///   event for a different account or `created_at`.
   /// * [BadgeSigningException] if signing is declined or times out.
+  /// * [ProfileBadgesWriteRefusedException] if the relays cannot confirm the
+  ///   current list, the account changes during the edit, or the replacement
+  ///   would be stamped past the clock window.
   /// * [BadgePublishException] when no relay confirms the published list.
   Future<void> removeAward(BadgeAwardViewData award) =>
       _unpinCoordinate(award.definitionCoordinate);
@@ -2040,7 +2064,9 @@ class BadgeRepository {
 
   void _ensureCurrentPubkey(String owner) {
     if (_currentPubkey() != owner) {
-      throw StateError('Account changed while updating profile badges');
+      throw const ProfileBadgesWriteRefusedException(
+        'Account changed while updating profile badges',
+      );
     }
   }
 
@@ -2059,7 +2085,7 @@ class BadgeRepository {
     );
     _ensureCurrentPubkey(owner);
     if (result.timedOut || result.noRelays) {
-      throw StateError(
+      throw const ProfileBadgesWriteRefusedException(
         'Could not confirm the latest profile badges from relays',
       );
     }
@@ -2227,7 +2253,9 @@ class BadgeRepository {
     final attempted = _profileBadgeAttemptedAt[owner];
     if (attempted != null && attempted >= timestamp) timestamp = attempted + 1;
     if (timestamp > now + _profileBadgeFutureBudgetSeconds) {
-      throw StateError('Profile badge timestamp exceeds the clock window');
+      throw const ProfileBadgesWriteRefusedException(
+        'Profile badge timestamp exceeds the clock window',
+      );
     }
     // Reserve before signing: a send whose ACK is lost may already be live.
     _profileBadgeAttemptedAt[owner] = timestamp;
