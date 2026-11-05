@@ -783,7 +783,7 @@ class _ListHeroHeader extends StatelessWidget {
     final authorPubkey = this.authorPubkey;
     final isPublic = this.isPublic;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, kListHeroBottomPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 8,
