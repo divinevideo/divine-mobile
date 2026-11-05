@@ -35,6 +35,23 @@ class _ObservedMembership extends Fake implements ConcordCommunitySession {
 }
 
 void main() {
+  group('Concord relay configuration', () {
+    test('configured missing relay fails closed', () {
+      if (concordInviteUrl.isNotEmpty &&
+          const String.fromEnvironment('CONCORD_RELAY_URL').isEmpty) {
+        expect(() => concordRelayUrl, throwsStateError);
+      }
+    });
+    test('configured relay contract uses the supplied relay', () {
+      if (concordInviteUrl.isNotEmpty) {
+        expect(
+          concordRelayUrl,
+          const String.fromEnvironment('CONCORD_RELAY_URL'),
+        );
+        expect(concordRelayUrl, isNotEmpty);
+      }
+    });
+  });
   group('ConcordRoomCatalog', () {
     test('configured catalog failure never resolves to the POC catalog', () {
       final result = resolveConcordCatalog(
@@ -88,6 +105,32 @@ void main() {
       membership.bundle = bundle(1, '44' * 32);
       expect(catalog.scope, oldScope);
       expect(catalog.epoch, 1);
+    });
+  });
+  group('Concord relay resolution', () {
+    test('configured invitation requires an explicit secure relay', () {
+      expect(
+        () => resolveConcordRelay(invite: 'configured', relay: ''),
+        throwsStateError,
+      );
+      expect(
+        () => resolveConcordRelay(
+          invite: 'configured',
+          relay: 'https://synthetic.divine.video',
+        ),
+        throwsStateError,
+      );
+      expect(
+        resolveConcordRelay(
+          invite: 'configured',
+          relay: 'wss://synthetic.divine.video/relay',
+        ),
+        'wss://synthetic.divine.video/relay',
+      );
+      expect(
+        resolveConcordRelay(invite: '', relay: ''),
+        'wss://relay.staging.dvines.org',
+      );
     });
   });
   group('buildConcordRepository', () {

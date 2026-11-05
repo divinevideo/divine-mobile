@@ -192,6 +192,11 @@ when 'policy-required', 'concord-required'
   # extra key during verification. No unsigned record may select that shape.
   record = authenticated_record(options)
   name = command == 'policy-required' ? PUBLIC_PEOPLE_LIST_POLICY : 'CONCORD_INVITE_URL'
+  if command == 'concord-required'
+    invite = record['config_fingerprints'].key?('CONCORD_INVITE_URL')
+    relay = record['config_fingerprints'].key?('CONCORD_RELAY_URL')
+    abort_with('original community configuration is incomplete; create a full build') if invite != relay
+  end
   puts record['config_fingerprints'].key?(name)
 when 'verify'
   require_options(

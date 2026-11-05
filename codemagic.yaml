@@ -19,8 +19,8 @@
 # 6 - DEFAULT_ENV is configured via build inputs (dropdown) when starting a build
 #   - Options: PRODUCTION, STAGING, POC
 #   - Defaults to PRODUCTION for automatic builds
-# Optional CONCORD_INVITE_URL enables public Rooms in release builds. Provide it
-# to the workflow environment; it is merged into private defines, never logged.
+# Optional CONCORD_INVITE_URL and CONCORD_RELAY_URL enable public Rooms together.
+# Provide both to the workflow environment; private defines are never logged.
 # 7 - Create environment variable group "proofmode_credentials" with:
 #   - PROOFMODE_SIGNING_SERVER_ENDPOINT
 #   - PROOFMODE_SIGNING_SERVER_TOKEN

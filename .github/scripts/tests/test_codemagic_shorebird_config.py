@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import subprocess
 import shlex
@@ -643,7 +644,7 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
         helper = CODEMAGIC_PATH.parent / "mobile/scripts/write_concord_release_defines.rb"
         for name in ("ios-build", "android-build"):
             for channel in ("BETA", "PRODUCTION"):
-                for invite in (None, "https://synthetic.invalid/community#synthetic-token"):
+                for invite in (None, json.loads((CODEMAGIC_PATH.parent / "mobile/packages/concord_protocol/test/fixtures/community-interop.json").read_text())["inviteUrl"]):
                     with self.subTest(workflow=name, channel=channel, configured=invite is not None):
                         scripts = [step["script"] for step in workflows[name]["scripts"]
                                    if step["name"] in ("Write Shorebird dart-defines",
@@ -652,10 +653,11 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
                         script = "\n".join(scripts).replace("${{ inputs.DEFAULT_ENV }}", "PRODUCTION")
                         script = script.replace("ruby scripts/write_concord_release_defines.rb",
                                                 "ruby " + shlex.quote(str(helper)))
-                        environment = {key: "synthetic-required-value" for key in required}
+                        environment = {"PATH": os.environ["PATH"], **{key: "synthetic-required-value" for key in required}}
                         environment["RELEASE_CHANNEL"] = channel
                         if invite is not None:
                             environment["CONCORD_INVITE_URL"] = invite
+                            environment["CONCORD_RELAY_URL"] = "wss://synthetic.divine.video/relay"
                         with tempfile.TemporaryDirectory() as directory:
                             result = subprocess.run(["bash", "-c", "set -euo pipefail\n" + script],
                                 cwd=directory, env=environment, text=True, capture_output=True, check=False)
@@ -663,8 +665,9 @@ class CodemagicShorebirdConfigTest(unittest.TestCase):
                             output = Path(directory) / "build/shorebird/dart_defines.json"
                             actual = json.loads(output.read_text())
                             self.assertEqual("PRODUCTION", actual["DEFAULT_ENV"])
-                            self.assertEqual(set(required), set(actual) - {"DEFAULT_ENV", "CONCORD_INVITE_URL"})
+                            self.assertEqual(set(required), set(actual) - {"DEFAULT_ENV", "CONCORD_INVITE_URL", "CONCORD_RELAY_URL"})
                             self.assertEqual(invite, actual.get("CONCORD_INVITE_URL"))
+                            self.assertEqual("wss://synthetic.divine.video/relay" if invite else None, actual.get("CONCORD_RELAY_URL"))
                             self.assertEqual(0o600, output.stat().st_mode & 0o777)
                             self.assertNotIn("synthetic", result.stdout + result.stderr)
 

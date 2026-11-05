@@ -18,6 +18,14 @@ if invite.empty?
   exit 0
 end
 
+# Validate with the same protocol decoder used by the app, without putting
+# invitation material in arguments or command output.
+validator = File.join(__dir__, 'validate_concord_release.dart')
+packages = File.expand_path('../.dart_tool/package_config.json', __dir__)
+unless system('dart', "--packages=#{packages}", validator, out: File::NULL, err: File::NULL)
+  abort('ERROR: invalid CONCORD_INVITE_URL or CONCORD_RELAY_URL')
+end
+
 begin
   defines = JSON.parse(File.read(options[:output]))
 rescue Errno::ENOENT, JSON::ParserError
@@ -25,6 +33,7 @@ rescue Errno::ENOENT, JSON::ParserError
 end
 abort('ERROR: release dart-defines must be an object') unless defines.is_a?(Hash)
 defines['CONCORD_INVITE_URL'] = invite
+defines['CONCORD_RELAY_URL'] = ENV.fetch('CONCORD_RELAY_URL')
 
 # Preserve required defines and replace atomically with a private file. Neither
 # the invitation nor existing credentials belong in command arguments or logs.

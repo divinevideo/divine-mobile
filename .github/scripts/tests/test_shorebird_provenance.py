@@ -11,6 +11,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = REPO_ROOT / "mobile" / "scripts" / "shorebird_provenance.rb"
+INVITE = json.loads((REPO_ROOT / "mobile/packages/concord_protocol/test/fixtures/community-interop.json").read_text())["inviteUrl"]
+RELAY = "wss://synthetic.divine.video/relay"
 POLICY_NAME = "DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS"
 
 # Throwaway P-256 public keys, generated for this test. Public halves only,
@@ -131,7 +133,7 @@ class ShorebirdProvenanceTest(unittest.TestCase):
             capture_output=True,
         )
 
-    def prepare_patch_policy(self, policy: str = "[]", invite: str = "") -> subprocess.CompletedProcess[str]:
+    def prepare_patch_policy(self, policy: str = "[]", invite: str = "", relay: str = "") -> subprocess.CompletedProcess[str]:
         # Execute the actual Codemagic gate with the real Ruby authenticator and
         # policy writer. Only the already-fetched record and temporary output
         # paths replace remote/build inputs; no network operation is needed.
@@ -153,6 +155,7 @@ class ShorebirdProvenanceTest(unittest.TestCase):
                 "CM_REPO_SLUG": "divinevideo/divine-mobile",
                 POLICY_NAME: policy,
                 "CONCORD_INVITE_URL": invite,
+                "CONCORD_RELAY_URL": relay,
             },
             check=False,
             text=True,
@@ -168,26 +171,40 @@ class ShorebirdProvenanceTest(unittest.TestCase):
         self.assertEqual(0, self.verify().returncode)
 
     def test_configured_patch_requires_exact_invite_and_keeps_values_private(self) -> None:
-        invite = "https://synthetic.invalid/release#synthetic-token"
+        invite = INVITE
         original = json.loads(self.defines.read_text())
-        self.defines.write_text(json.dumps({**original, "CONCORD_INVITE_URL": invite}))
+        self.defines.write_text(json.dumps({**original, "CONCORD_INVITE_URL": invite, "CONCORD_RELAY_URL": RELAY}))
         self.assertEqual(0, self.emit().returncode)
         self.assertNotIn(invite, self.record.read_text())
         self.defines.write_text(json.dumps(original))
         missing = self.prepare_patch_policy()
         self.assertNotEqual(0, missing.returncode)
         self.assertEqual(original, json.loads(self.defines.read_text()))
-        prepared = self.prepare_patch_policy(invite=invite)
+        prepared = self.prepare_patch_policy(invite=invite, relay=RELAY)
         self.assertEqual(0, prepared.returncode, prepared.stderr)
         self.assertEqual(invite, json.loads(self.defines.read_text())["CONCORD_INVITE_URL"])
         self.assertEqual(0, self.verify().returncode)
-        drift = self.prepare_patch_policy(invite="https://synthetic.invalid/changed#token")
+        drift = self.prepare_patch_policy(invite=invite, relay="wss://synthetic.divine.video/changed")
         self.assertEqual(0, drift.returncode, drift.stderr)
         rejected = self.verify()
         self.assertNotEqual(0, rejected.returncode)
-        self.assertIn("CONCORD_INVITE_URL", rejected.stderr)
+        self.assertIn("CONCORD_RELAY_URL", rejected.stderr)
+        other_invite = json.loads((REPO_ROOT / "mobile/packages/concord_protocol/test/fixtures/community-lifecycle.json").read_text())["inviteUrl"]
+        changed = self.prepare_patch_policy(invite=other_invite, relay=RELAY)
+        self.assertEqual(0, changed.returncode, changed.stderr)
+        self.assertIn("CONCORD_INVITE_URL", self.verify().stderr)
         self.assertNotIn("synthetic.invalid", missing.stdout + missing.stderr +
             prepared.stdout + prepared.stderr + rejected.stdout + rejected.stderr)
+
+    def test_invite_only_original_requires_full_build(self) -> None:
+        original = json.loads(self.defines.read_text())
+        self.defines.write_text(json.dumps({**original, "CONCORD_INVITE_URL": "synthetic"}))
+        self.assertEqual(0, self.emit().returncode)
+        self.defines.write_text(json.dumps(original))
+        result = self.prepare_patch_policy(invite="synthetic")
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("full build", result.stderr.lower())
+        self.assertEqual(original, json.loads(self.defines.read_text()))
 
     def test_unsigned_record_cannot_select_concord_patch_shape(self) -> None:
         baseline = self.defines.read_bytes()
