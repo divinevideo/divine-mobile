@@ -44,6 +44,9 @@ void _keepEverySound(MockSoundsRepository repository) {
   when(() => repository.withoutBlockedAuthors(any())).thenAnswer(
     (invocation) => invocation.positionalArguments.single as List<AudioEvent>,
   );
+  when(() => repository.withoutLibrarySounds(any())).thenAnswer(
+    (invocation) => invocation.positionalArguments.single as List<AudioEvent>,
+  );
 }
 
 class MockSoundLibraryService extends Mock implements SoundLibraryService {}
@@ -286,6 +289,23 @@ void main() {
         verify(
           () => mockRepository.fetchTrendingSounds(limit: 100),
         ).called(1);
+      });
+
+      test('leaves out the imported library', () async {
+        final community = createTestAudioEvent(id: 'community');
+        final imported = createTestAudioEvent(id: 'imported');
+        stubPages([
+          [community, imported],
+        ]);
+        when(
+          () => mockRepository.withoutLibrarySounds([community, imported]),
+        ).thenReturn([community]);
+
+        final result = await buildContainer().read(
+          trendingSoundsProvider.future,
+        );
+
+        expect(result.sounds, [community]);
       });
 
       test('leaves out the unnamed sounds nobody reused', () async {
@@ -1302,6 +1322,20 @@ void main() {
             'bob',
           ], limit: 100),
         ).called(1);
+      });
+
+      test('leaves out the imported library of a followed account', () async {
+        final followed = createTestAudioEvent(id: 'followed-sound');
+        final imported = createTestAudioEvent(id: 'imported');
+        stubCreatorSounds((_) async => [followed, imported]);
+        when(
+          () => mockRepository.withoutLibrarySounds([followed, imported]),
+        ).thenReturn([followed]);
+
+        final container = buildContainer(const ['alice']);
+
+        final result = await container.read(forYouSoundsProvider.future);
+        expect(result.sounds, [followed]);
       });
 
       test('leaves out the unnamed sounds nobody reused', () async {

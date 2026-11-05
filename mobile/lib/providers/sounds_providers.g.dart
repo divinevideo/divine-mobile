@@ -154,7 +154,7 @@ final class SoundsRepositoryProvider
   }
 }
 
-String _$soundsRepositoryHash() => r'ee1eabdb6858cd033616241484cd49192481c3ac';
+String _$soundsRepositoryHash() => r'88713c2898cb6802d5dbfeb3a6f79d210d2dc802';
 
 /// The newest sounds, the picker's "New" list, loading older ones page by
 /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
@@ -217,7 +217,7 @@ final class TrendingSoundsProvider
   TrendingSounds create() => TrendingSounds();
 }
 
-String _$trendingSoundsHash() => r'308f904cb163b67176bf6635d34eddd65ee18fc6';
+String _$trendingSoundsHash() => r'a9bbfc997ee11a4178a221faabe06d82aebc832f';
 
 /// The newest sounds, the picker's "New" list, loading older ones page by
 /// page as it is scrolled ([TrendingSounds.loadMore]), and on its own until
@@ -1161,7 +1161,7 @@ final class ForYouSoundsProvider
   ForYouSounds create() => ForYouSounds();
 }
 
-String _$forYouSoundsHash() => r'4e3765a54b30199fd2c60394634f55554490ec0d';
+String _$forYouSoundsHash() => r'185df5339a875ba58195d980c44b8452d019e458';
 
 /// The newest sounds published by people the viewer follows, for the
 /// picker's "For you" list, loading older ones page by page as it is

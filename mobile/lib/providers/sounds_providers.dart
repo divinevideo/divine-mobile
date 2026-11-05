@@ -8,7 +8,7 @@ import 'package:meta/meta.dart';
 import 'package:models/models.dart' show AudioEvent, VideoEvent, searchTermsOf;
 import 'package:nostr_sdk/nostr_sdk.dart' show AId;
 import 'package:openvine/config/official_accounts.dart'
-    show kDivineSoundPublisherPubkeys;
+    show kDivineSoundPublisherPubkeys, kSoundLibraryPublisherPubkeys;
 import 'package:openvine/extensions/divine_sound_extensions.dart';
 import 'package:openvine/models/paged_sounds.dart';
 import 'package:openvine/models/sound_cover.dart';
@@ -60,6 +60,10 @@ SoundsRepository soundsRepository(Ref ref) {
     nostrClient: nostrClient,
     funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
     divineSoundPublishers: kDivineSoundPublisherPubkeys,
+    // Empty until the library account exists, so it equals the default for
+    // now; wired already so that adding the account's pubkey is enough.
+    // ignore: avoid_redundant_argument_values
+    librarySoundPublishers: kSoundLibraryPublisherPubkeys,
     // The same rule the feed hides blocked and muted accounts by.
     blockFilter: createBlockedAuthorFilter(ref),
   );
@@ -115,8 +119,12 @@ class TrendingSounds extends _$TrendingSounds with _LoadsMoreSounds {
         limit: _relayPageSize,
         until: until,
       ),
+      // The imported library would fill the newest pages; it is reached
+      // through search and Popular instead.
       keep: (sounds) => repository.withoutUnusedOriginals(
-        repository.withoutBlockedAuthors(sounds),
+        repository.withoutLibrarySounds(
+          repository.withoutBlockedAuthors(sounds),
+        ),
       ),
     );
     return PagedSounds.first(await _pager.next());
@@ -390,7 +398,9 @@ class ForYouSounds extends _$ForYouSounds with _LoadsMoreSounds {
       // Most of what people share is the unnamed sound of a video, which
       // only earns a place here once someone else has used it.
       keep: (sounds) => repository.withoutUnusedOriginals([
-        for (final sound in repository.withoutBlockedAuthors(sounds))
+        for (final sound in repository.withoutLibrarySounds(
+          repository.withoutBlockedAuthors(sounds),
+        ))
           if (!sound.isDivine) sound,
       ]),
     );
