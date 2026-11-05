@@ -574,6 +574,50 @@ void main() {
       expect(find.text('Casey'), findsOneWidget);
     });
 
+    testWidgets('picker sizes to its rows instead of a fixed fraction', (
+      tester,
+    ) async {
+      // A phone-sized viewport: the old fraction-of-screen sizing left a
+      // large empty band under two rows here.
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        _wrap(
+          CollaboratorAvatarRowBody(
+            visibility: _allConfirmed(const [_collab1, _collab2]),
+          ),
+          overrides: [
+            fetchUserProfileProvider(
+              _collab1,
+            ).overrideWith((ref) async => _makeProfile(_collab1, 'Alice')),
+            fetchUserProfileProvider(
+              _collab2,
+            ).overrideWith((ref) async => _makeProfile(_collab2, 'Bob')),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(_l10n.videoCollaboratorWithMore('Alice', 1)));
+      await tester.pumpAndSettle();
+
+      final sheetBottom = tester.getBottomLeft(find.byType(VineBottomSheet)).dy;
+      final lastRowBottom = tester
+          .getBottomLeft(
+            find.ancestor(
+              of: find.text('Bob'),
+              matching: find.byType(ListTile),
+            ),
+          )
+          .dy;
+
+      // Only the list's own 16px bottom padding sits under the last row.
+      expect(sheetBottom - lastRowBottom, moreOrLessEquals(16));
+    });
+
     testWidgets('expanded picker omits collaborator ignored by current user', (
       tester,
     ) async {
