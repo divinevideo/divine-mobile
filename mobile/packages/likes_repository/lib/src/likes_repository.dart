@@ -3569,7 +3569,7 @@ class LikesRepository {
       _readChunked([eventId], (ids) => likesOf(ids, null), timeout: timeout),
       if (hasCoordinate)
         _readChunked(
-          [addressableId],
+          [addressableId, ?legacyVideoCoordinateFor(addressableId)],
           (coordinates) => likesOf(null, coordinates),
           timeout: timeout,
         ),
@@ -3608,11 +3608,14 @@ class LikesRepository {
 
   /// Whether [reaction] targets [eventId], or the coordinate [addressableId]
   /// when one is given.
-  bool _isReactionOn(Event reaction, String eventId, String? addressableId) =>
-      _extractTargetEventId(reaction) == eventId ||
-      (addressableId != null &&
-          addressableId.isNotEmpty &&
-          _extractAddressableId(reaction) == addressableId);
+  bool _isReactionOn(Event reaction, String eventId, String? addressableId) {
+    if (_extractTargetEventId(reaction) == eventId) return true;
+    if (addressableId == null || addressableId.isEmpty) return false;
+    final coordinate = _extractAddressableId(reaction);
+    final legacy = legacyVideoCoordinateFor(addressableId);
+    return coordinate == addressableId ||
+        (legacy != null && coordinate == legacy);
+  }
 
   /// The newest of [reactions] as the record for [eventId], carrying
   /// [addressableId] when the reaction itself has no `a` tag.
@@ -3645,12 +3648,14 @@ class LikesRepository {
     final pubkey = await _currentUserPubkey();
     if (pubkey == null) return null;
 
-    final hasCoordinate = addressableId != null && addressableId.isNotEmpty;
+    // Includes the legacy 34236 key of a Kind 34235 video (#10776).
+    final coordinates = _voteTargetsByCoordinate(
+      [eventId],
+      {eventId: ?addressableId},
+    );
     final reactions = await _queryVoteTargetReactions(
       eventIds: [eventId],
-      eventIdByCoordinate: hasCoordinate
-          ? {addressableId: eventId}
-          : const <String, String>{},
+      eventIdByCoordinate: coordinates,
       authors: [pubkey],
     );
 

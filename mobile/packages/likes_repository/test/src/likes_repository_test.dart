@@ -6305,6 +6305,70 @@ void main() {
         );
       }
 
+      group('on the relays after a cold start', () {
+        Event legacyDownvote() => createMockReaction(
+          id: testReactionEventId,
+          targetEventId: oldEventId,
+          authorPubkey: testUserPubkey,
+          content: '-',
+          tags: [
+            ['e', oldEventId],
+            ['a', legacyCoordinate],
+          ],
+        );
+
+        test('downvoteEvent finds the downvote left under the legacy key '
+            'instead of sending another', () async {
+          mockQueryEventsSequence([
+            <Event>[],
+            [legacyDownvote()],
+            <Event>[],
+          ]);
+          repository = createRepository(withLocalStorage: false);
+
+          await expectLater(
+            repository.downvoteEvent(
+              eventId: newEventId,
+              authorPubkey: testAuthorPubkey,
+              addressableId: coordinate,
+              targetKind: 34235,
+            ),
+            throwsA(isA<AlreadyDownvotedException>()),
+          );
+          verifyNever(
+            () => mockNostrClient.sendLike(
+              any(),
+              content: any(named: 'content'),
+              addressableId: any(named: 'addressableId'),
+              targetAuthorPubkey: any(named: 'targetAuthorPubkey'),
+              targetKind: any(named: 'targetKind'),
+            ),
+          );
+        });
+
+        test('removeDownvote deletes the downvote left under the legacy '
+            'key', () async {
+          mockQueryEventsSequence([
+            <Event>[],
+            [legacyDownvote()],
+            <Event>[],
+          ]);
+          when(
+            () => mockNostrClient.deleteEvent(any()),
+          ).thenAnswer((_) async => MockEvent());
+          repository = createRepository(withLocalStorage: false);
+
+          await repository.removeDownvote(
+            newEventId,
+            addressableId: coordinate,
+          );
+
+          verify(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).called(1);
+        });
+      });
+
       test('resolves the like stored under the legacy key', () async {
         stubLegacyRecord();
         repository = createRepository();
