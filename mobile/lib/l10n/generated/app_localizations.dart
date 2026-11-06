@@ -13174,24 +13174,6 @@ abstract class AppLocalizations {
   /// **'Service Unavailable'**
   String get geoBlockedTitle;
 
-  /// No description provided for @likedVideosEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'No liked videos'**
-  String get likedVideosEmpty;
-
-  /// No description provided for @likedVideosInvalidRoute.
-  ///
-  /// In en, this message translates to:
-  /// **'Invalid route'**
-  String get likedVideosInvalidRoute;
-
-  /// No description provided for @likedVideosTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Liked Videos'**
-  String get likedVideosTitle;
-
   /// No description provided for @uploadFailureSheetRetryingSnackbar.
   ///
   /// In en, this message translates to:

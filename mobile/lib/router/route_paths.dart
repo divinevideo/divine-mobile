@@ -61,7 +61,6 @@ abstract final class RoutePaths {
   static const librarySounds = '/sounds';
   static const addSound = '$librarySounds/$addSoundSubpath';
   static const addSoundSubpath = 'add';
-  static const likedVideos = '/liked-videos';
   static const messageRequests = '/inbox/message-requests';
   static const minorAccountReview = '/account-review';
   static const monetizationLinksSettings = '/settings/monetization-links';
@@ -184,8 +183,6 @@ abstract final class RoutePaths {
     return '$hashtagBase/$encodedTag';
   }
 
-  static String likedVideosForIndex(int? index) =>
-      index == null ? likedVideos : '$likedVideos/$index';
   static String notificationsForIndex([int? index]) =>
       index == null ? notifications : '$notifications/$index';
   static String originalSoundDetailForPubkey(String pubkey) =>

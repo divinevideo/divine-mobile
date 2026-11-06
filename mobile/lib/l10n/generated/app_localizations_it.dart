@@ -7937,15 +7937,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get geoBlockedTitle => 'Servizio non disponibile';
 
   @override
-  String get likedVideosEmpty => 'Nessun video piaciuto';
-
-  @override
-  String get likedVideosInvalidRoute => 'Percorso non valido';
-
-  @override
-  String get likedVideosTitle => 'Video piaciuti';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar =>
       'Nuovo tentativo di caricamento…';
 

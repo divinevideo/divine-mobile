@@ -7754,15 +7754,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get geoBlockedTitle => 'Layanan Tidak Tersedia';
 
   @override
-  String get likedVideosEmpty => 'Tidak ada video yang disukai';
-
-  @override
-  String get likedVideosInvalidRoute => 'Rute tidak valid';
-
-  @override
-  String get likedVideosTitle => 'Video yang Disukai';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'Mencoba mengunggah lagi…';
 
   @override

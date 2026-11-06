@@ -7941,15 +7941,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get geoBlockedTitle => 'Dienst nicht verfügbar';
 
   @override
-  String get likedVideosEmpty => 'Keine gelikten Videos';
-
-  @override
-  String get likedVideosInvalidRoute => 'Ungültige Route';
-
-  @override
-  String get likedVideosTitle => 'Gelikte Videos';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'Upload wird wiederholt …';
 
   @override

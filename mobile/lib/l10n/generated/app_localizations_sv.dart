@@ -7835,15 +7835,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get geoBlockedTitle => 'Tjänsten är inte tillgänglig';
 
   @override
-  String get likedVideosEmpty => 'Inga gillade videor';
-
-  @override
-  String get likedVideosInvalidRoute => 'Ogiltig rutt';
-
-  @override
-  String get likedVideosTitle => 'Gillade videor';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'Försöker ladda upp igen…';
 
   @override

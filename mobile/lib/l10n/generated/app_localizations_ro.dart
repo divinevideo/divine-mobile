@@ -8034,15 +8034,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get geoBlockedTitle => 'Serviciu indisponibil';
 
   @override
-  String get likedVideosEmpty => 'Niciun videoclip apreciat';
-
-  @override
-  String get likedVideosInvalidRoute => 'Rută invalidă';
-
-  @override
-  String get likedVideosTitle => 'Videoclipuri apreciate';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'Se reîncearcă încărcarea…';
 
   @override

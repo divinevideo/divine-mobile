@@ -67,7 +67,7 @@ final activeVideoIdProvider = Provider<String?>((ref) {
       return null;
     case RouteType.profile:
       // Profile video mode hands off to the pooled fullscreen screen, which
-      // self-manages playback — same as hashtag, likedVideos and
+      // self-manages playback — same as hashtag and
       // pooledVideoFeed below. Resolving an active video here needed a second
       // video list, and the only source available to a Riverpod provider was a
       // raw relay subscription: a list that could disagree with the
@@ -80,10 +80,6 @@ final activeVideoIdProvider = Provider<String?>((ref) {
       return null;
     case RouteType.explore:
       videosAsync = ref.watch(videosForExploreRouteProvider);
-    case RouteType.likedVideos:
-      // Liked videos feed mode uses PooledFullscreenVideoFeedScreen inline,
-      // which self-manages playback. Return null.
-      return null;
     case RouteType.videoFeed: // legacy alias, same as pooledVideoFeed
     case RouteType.pooledVideoFeed:
     case RouteType.videoDetail:

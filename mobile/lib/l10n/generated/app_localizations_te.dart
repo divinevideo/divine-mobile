@@ -8077,15 +8077,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get geoBlockedTitle => 'సేవ అందుబాటులో లేదు';
 
   @override
-  String get likedVideosEmpty => 'ఇష్టపడిన వీడియోలు లేవు';
-
-  @override
-  String get likedVideosInvalidRoute => 'మార్గం చెల్లదు';
-
-  @override
-  String get likedVideosTitle => 'ఇష్టపడిన వీడియోలు';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar =>
       'అప్‌లోడ్ చేయడానికి మళ్లీ ప్రయత్నిస్తోంది…';
 

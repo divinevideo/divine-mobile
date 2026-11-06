@@ -7849,15 +7849,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get geoBlockedTitle => 'الخدمة غير متاحة';
 
   @override
-  String get likedVideosEmpty => 'لا توجد فيديوهات معجب بها';
-
-  @override
-  String get likedVideosInvalidRoute => 'مسار غير صالح';
-
-  @override
-  String get likedVideosTitle => 'الفيديوهات المعجب بها';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'جارٍ إعادة محاولة الرفع…';
 
   @override

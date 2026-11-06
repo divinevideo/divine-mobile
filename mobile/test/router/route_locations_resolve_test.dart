@@ -65,7 +65,6 @@ final _locations = <String, List<String>>{
   'libraryClipsOnly': [RoutePaths.libraryClipsOnly],
   'libraryDrafts': [RoutePaths.libraryDrafts],
   'librarySounds': [RoutePaths.librarySounds],
-  'likedVideos': [RoutePaths.likedVideos],
   'messageRequests': [RoutePaths.messageRequests],
   'minorAccountReview': [RoutePaths.minorAccountReview],
   'monetizationLinksSettings': [RoutePaths.monetizationLinksSettings],
@@ -116,10 +115,6 @@ final _locations = <String, List<String>>{
   'followersForPubkey': [RoutePaths.followersForPubkey(_pubkeyHex)],
   'followingForPubkey': [RoutePaths.followingForPubkey(_pubkeyHex)],
   'hashtagForTag': [RoutePaths.hashtagForTag('music')],
-  'likedVideosForIndex': [
-    RoutePaths.likedVideosForIndex(null),
-    RoutePaths.likedVideosForIndex(2),
-  ],
   // Without an index this returns `notifications`, excluded below.
   'notificationsForIndex': [RoutePaths.notificationsForIndex(1)],
   'originalSoundDetailForPubkey': [
@@ -242,6 +237,14 @@ void main() {
     // migration debt (#3572): nothing else ties it to a registered route.
     test('$WelcomeScreen.createAccountPath matches a registered route', () {
       expect(isRegistered(WelcomeScreen.createAccountPath), isTrue);
+    });
+
+    // The standalone liked-videos page had no way in from the app and was
+    // removed (#8701); a typed URL now gets the unknown-path screen. Liked
+    // videos live in the profile's Liked tab.
+    test('the removed /liked-videos page no longer matches a route', () {
+      expect(isRegistered('/liked-videos'), isFalse);
+      expect(isRegistered('/liked-videos/2'), isFalse);
     });
   });
 }
