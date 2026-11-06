@@ -28,5 +28,8 @@ dev_dependencies:
   # Test-only: names PaginatedPubkeys when stubbing the Funnelcake client.
   models:
     path: ../models
+  # Test-only: a real NostrClient publish reads the NIP-89 client-tag
+  # preference, which the relay-read tests back with a mock store.
+  shared_preferences: ^2.5.3
   test: ^1.26.3
   very_good_analysis: ^10.0.0

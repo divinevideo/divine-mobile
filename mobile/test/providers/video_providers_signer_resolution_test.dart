@@ -70,6 +70,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(<Filter>[]);
     registerFallbackValue(<String>[]);
+    registerFallbackValue(Duration.zero);
   });
 
   late _MockAuthService authService;
@@ -112,20 +113,18 @@ void main() {
       record.subscribedAuthors.add(filters.first.authors);
       return const Stream<Event>.empty();
     });
+    // The likes sync reads through readEvents, so a complete empty read is
+    // what lets it finish on this client.
     when(
-      () => client.queryEventsDetailed(
+      () => client.readEvents(
         any(),
         requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        timeout: any(named: 'timeout'),
       ),
     ).thenAnswer((invocation) async {
       final filters = invocation.positionalArguments.first as List<Filter>;
       record.queriedAuthors.add(filters.first.authors);
-      return (events: <Event>[], timedOut: false, noRelays: false);
-    });
-    when(() => client.queryEvents(any())).thenAnswer((invocation) async {
-      final filters = invocation.positionalArguments.first as List<Filter>;
-      record.queriedAuthors.add(filters.first.authors);
-      return <Event>[];
+      return const QueryResult(events: [], endedBy: QueryEnd.complete);
     });
     when(() => client.unsubscribe(any())).thenAnswer((_) async {});
     when(client.dispose).thenAnswer((_) async {});

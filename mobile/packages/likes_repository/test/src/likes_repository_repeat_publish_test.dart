@@ -15,12 +15,10 @@ class _MockLikesLocalStorage extends Mock implements LikesLocalStorage {}
 
 class _MockEvent extends Mock implements Event {}
 
-typedef _RelaySnapshot = ({List<Event> events, bool timedOut, bool noRelays});
-
 /// Holds the startup relay snapshot open so a tap can race it.
 class _GatedRelaySnapshot {
-  final reactions = Completer<_RelaySnapshot>();
-  final deletions = Completer<_RelaySnapshot>();
+  final reactions = Completer<QueryResult>();
+  final deletions = Completer<QueryResult>();
 
   /// Lets reconciliation land as a complete, uncapped snapshot.
   void land({
@@ -28,10 +26,10 @@ class _GatedRelaySnapshot {
     List<Event> deletions = const [],
   }) {
     this.reactions.complete(
-      (events: reactions, timedOut: false, noRelays: false),
+      QueryResult(events: reactions, endedBy: QueryEnd.complete),
     );
     this.deletions.complete(
-      (events: deletions, timedOut: false, noRelays: false),
+      QueryResult(events: deletions, endedBy: QueryEnd.complete),
     );
   }
 }
@@ -41,6 +39,10 @@ void main() {
     late _MockNostrClient nostrClient;
     late _MockLikesLocalStorage storage;
     late LikesRepository repository;
+
+    /// Every action handed to the offline queue, as `like:<id>` or
+    /// `unlike:<id>`.
+    late List<String> queued;
 
     const user = 'repeat_like_user_pubkey_1234567890abcdef1234567890abcdef';
     const otherUser = 'repeat_like_other_pubkey_1234567890abcdef1234567890abcd';
@@ -91,8 +93,36 @@ void main() {
       return event;
     }
 
-    /// Answers reaction queries with [reactions] and deletion queries with
-    /// [deletions], whatever order the repository issues them in.
+    /// Every relay read the repository makes, whatever its filters.
+    Future<QueryResult> readEvents() => nostrClient.readEvents(
+      any(),
+      requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+      timeout: any(named: 'timeout'),
+    );
+
+    /// A target lookup: a kind-7 read aimed at an event or a coordinate,
+    /// unlike the startup snapshot's account-wide read.
+    final isTargetLookup = predicate<List<Filter>>(
+      (filters) => filters.any(
+        (filter) =>
+            (filter.kinds ?? const <int>[]).contains(EventKind.reaction) &&
+            ((filter.e?.isNotEmpty ?? false) ||
+                (filter.a?.isNotEmpty ?? false)),
+      ),
+      'a target lookup',
+    );
+
+    void expectNoTargetLookup() => verifyNever(
+      () => nostrClient.readEvents(
+        any(that: isTargetLookup),
+        requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        timeout: any(named: 'timeout'),
+      ),
+    );
+
+    /// Answers reaction reads with [reactions] and deletion reads with
+    /// [deletions], whatever order the repository issues them in. Likes read
+    /// through `readEvents`; the downvote lookup still uses `queryEvents`.
     void stubRelay({
       List<Event> reactions = const [],
       List<Event> deletions = const [],
@@ -104,6 +134,18 @@ void main() {
         if (kinds.contains(EventKind.eventDeletion)) return deletions;
         return const <Event>[];
       });
+      when(readEvents).thenAnswer((invocation) async {
+        final filters = invocation.positionalArguments.first as List<Filter>;
+        final kinds = filters.first.kinds ?? const <int>[];
+        return QueryResult(
+          events: kinds.contains(EventKind.reaction)
+              ? reactions
+              : kinds.contains(EventKind.eventDeletion)
+              ? deletions
+              : const <Event>[],
+          endedBy: QueryEnd.complete,
+        );
+      });
     }
 
     void stubCompleteRelaySnapshot({
@@ -111,19 +153,19 @@ void main() {
       List<Event> deletions = const [],
       bool timedOut = false,
       bool noRelays = false,
+      bool possiblyCapped = false,
     }) {
-      when(
-        () => nostrClient.queryEventsDetailed(
-          any(),
-          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-        ),
-      ).thenAnswer((invocation) async {
+      when(readEvents).thenAnswer((invocation) async {
         final filters = invocation.positionalArguments.first as List<Filter>;
         final kinds = filters.first.kinds ?? const <int>[];
-        return (
+        return QueryResult(
           events: kinds.contains(EventKind.reaction) ? reactions : deletions,
-          timedOut: timedOut,
-          noRelays: noRelays,
+          endedBy: noRelays
+              ? QueryEnd.noRelay
+              : timedOut
+              ? QueryEnd.deadline
+              : QueryEnd.complete,
+          possiblyCapped: possiblyCapped,
         );
       });
     }
@@ -132,12 +174,7 @@ void main() {
     /// [_GatedRelaySnapshot.land] so a tap can be interleaved with startup.
     _GatedRelaySnapshot gateRelaySnapshot() {
       final gate = _GatedRelaySnapshot();
-      when(
-        () => nostrClient.queryEventsDetailed(
-          any(),
-          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
-        ),
-      ).thenAnswer((invocation) {
+      when(readEvents).thenAnswer((invocation) {
         final filters = invocation.positionalArguments.first as List<Filter>;
         final kinds = filters.first.kinds ?? const <int>[];
         return kinds.contains(EventKind.reaction)
@@ -205,6 +242,7 @@ void main() {
     setUpAll(() {
       registerFallbackValue(_MockEvent());
       registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Duration.zero);
       registerFallbackValue(
         LikeRecord(
           targetEventId: 'fallback',
@@ -215,6 +253,7 @@ void main() {
     });
 
     setUp(() {
+      queued = [];
       nostrClient = _MockNostrClient();
       storage = _MockLikesLocalStorage();
       when(() => nostrClient.publicKey).thenReturn(user);
@@ -244,7 +283,9 @@ void main() {
               required authorPubkey,
               addressableId,
               targetKind,
-            }) async {},
+            }) async {
+              queued.add('${isLike ? 'like' : 'unlike'}:$eventId');
+            },
       );
     });
 
@@ -586,7 +627,7 @@ void main() {
             equals(freshReactionId),
           );
 
-          verifyNever(() => nostrClient.queryEvents(any()));
+          expectNoTargetLookup();
           expectPublishedOnce();
         },
       );
@@ -605,7 +646,7 @@ void main() {
             equals(freshReactionId),
           );
 
-          verify(() => nostrClient.queryEvents(any())).called(1);
+          verify(readEvents).called(1);
           expectPublishedOnce();
         },
       );
@@ -624,7 +665,7 @@ void main() {
             equals(freshReactionId),
           );
 
-          verify(() => nostrClient.queryEvents(any())).called(1);
+          verify(readEvents).called(1);
           expectPublishedOnce();
         },
       );
@@ -652,8 +693,35 @@ void main() {
             equals(freshReactionId),
           );
 
-          verify(() => nostrClient.queryEvents(any())).called(1);
+          verify(readEvents).called(1);
           expectPublishedOnce();
+        },
+      );
+
+      test(
+        'retains the target lookup when a relay capped startup below the '
+        'read limit',
+        () async {
+          // A relay whose own result-size limit is smaller than the filter's
+          // stops early without the answer reaching the filter's limit.
+          stubCompleteRelaySnapshot(
+            reactions: [reaction(id: landedReactionId)],
+            possiblyCapped: true,
+          );
+          await repository.initialize();
+          clearInteractions(nostrClient);
+          stubRelay();
+          stubSendLike(() async => reaction(id: freshReactionId));
+
+          expect(
+            await repository.likeEvent(
+              eventId: 'another_target_id_1234567890abcdef1234567890abcdef12',
+              authorPubkey: author,
+            ),
+            equals(freshReactionId),
+          );
+
+          verify(readEvents).called(1);
         },
       );
 
@@ -682,7 +750,7 @@ void main() {
 
           // The target resolver queries by event id and coordinate, then
           // checks candidate reaction ids for deletions.
-          verify(() => nostrClient.queryEvents(any())).called(3);
+          verify(readEvents).called(3);
           expectNoPublish();
         },
       );
@@ -704,7 +772,7 @@ void main() {
 
           await expectLater(like, throwsA(isA<AlreadyLikedException>()));
           expectNoPublish();
-          verifyNever(() => nostrClient.queryEvents(any()));
+          expectNoTargetLookup();
         },
       );
 
@@ -729,13 +797,10 @@ void main() {
         },
       );
 
-      test('publishes when the relay check itself fails', () async {
-        // The guard fails open: an unreachable relay must not turn a like
-        // into a silent no-op. The publish that follows fails the same way
-        // and takes the existing retry path.
-        when(
-          () => nostrClient.queryEvents(any()),
-        ).thenThrow(Exception('relay unreachable'));
+      test('queues the like when the relay check itself fails', () async {
+        // A check that failed proves nothing either way (#9004). The like
+        // stays filled and waits in the queue, whose replay checks again.
+        when(readEvents).thenThrow(Exception('relay unreachable'));
         stubSendLike(() async => reaction(id: freshReactionId));
 
         final result = await repository.likeEvent(
@@ -743,8 +808,10 @@ void main() {
           authorPubkey: author,
         );
 
-        expect(result, equals(freshReactionId));
-        expectPublishedOnce();
+        expect(result, startsWith('pending_like_'));
+        expect(queued, equals(['like:$target']));
+        expectNoPublish();
+        expect(await repository.isLiked(target), isTrue);
       });
 
       test(
@@ -753,10 +820,8 @@ void main() {
           // The placeholder must be indexed before the first await, or two
           // taps inside the relay round-trip both pass the already-liked
           // check and both publish.
-          final relayGate = Completer<List<Event>>();
-          when(
-            () => nostrClient.queryEvents(any()),
-          ).thenAnswer((_) => relayGate.future);
+          final relayGate = Completer<QueryResult>();
+          when(readEvents).thenAnswer((_) => relayGate.future);
           stubSendLike(() async => reaction(id: freshReactionId));
 
           final first = repository.likeEvent(
@@ -768,7 +833,9 @@ void main() {
             throwsA(isA<AlreadyLikedException>()),
           );
 
-          relayGate.complete(const <Event>[]);
+          relayGate.complete(
+            const QueryResult(events: [], endedBy: QueryEnd.complete),
+          );
           expect(await first, equals(freshReactionId));
           expectPublishedOnce();
         },
@@ -783,9 +850,16 @@ void main() {
           ).thenAnswer((_) async => const CountResult(count: 10));
           expect(await repository.getLikeCount(target), equals(10));
           final relayGate = Completer<List<Event>>();
-          when(
-            () => nostrClient.queryEvents(any()),
-          ).thenAnswer((_) => relayGate.future);
+          when(readEvents).thenAnswer((invocation) async {
+            final filters =
+                invocation.positionalArguments.first as List<Filter>;
+            final isDeletionRead = (filters.first.kinds ?? const <int>[])
+                .contains(EventKind.eventDeletion);
+            return QueryResult(
+              events: isDeletionRead ? const [] : await relayGate.future,
+              endedBy: QueryEnd.complete,
+            );
+          });
           when(
             () => nostrClient.deleteEvent(any()),
           ).thenAnswer((_) async => _MockEvent());
@@ -1101,13 +1175,14 @@ void main() {
     });
 
     test(
-      'a like that joined a failing initialization still publishes',
+      'a like that joined a failing initialization is queued rather than '
+      'failed',
       () async {
         // Startup reconciliation is best-effort, and a tap that joined the
         // attempt must not surface its failure as a failed like: the
-        // optimistic heart is already filled and the queue never sees the
-        // action. The snapshot stays incomplete, so the target-specific
-        // safety check still guards the publish.
+        // optimistic heart is already filled. The snapshot stays incomplete,
+        // and the same signer failure leaves the target-specific check
+        // unanswered, so the like waits in the queue to check again (#9004).
         stubStorageWrites();
         final signerGate = Completer<String?>();
         when(
@@ -1122,17 +1197,18 @@ void main() {
           eventId: target,
           authorPubkey: author,
         );
-        final published = expectLater(
+        final queuedLike = expectLater(
           like,
-          completion(equals(freshReactionId)),
+          completion(startsWith('pending_like_')),
         );
         final failed = expectLater(initialization, throwsA(isA<StateError>()));
         await Future<void>.delayed(Duration.zero);
         signerGate.completeError(StateError('signer failed'));
 
         await failed;
-        await published;
-        expectPublishedOnce();
+        await queuedLike;
+        expect(queued, equals(['like:$target']));
+        expectNoPublish();
       },
     );
 
