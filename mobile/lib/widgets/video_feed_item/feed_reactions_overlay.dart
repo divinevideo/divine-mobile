@@ -161,10 +161,20 @@ class FeedReactionsOverlay extends StatelessWidget {
   }
 }
 
-class _FeedReactionsOverlayView extends StatelessWidget {
+class _FeedReactionsOverlayView extends StatefulWidget {
   const _FeedReactionsOverlayView({required this.video});
 
   final VideoEvent video;
+
+  @override
+  State<_FeedReactionsOverlayView> createState() =>
+      _FeedReactionsOverlayViewState();
+}
+
+class _FeedReactionsOverlayViewState extends State<_FeedReactionsOverlayView> {
+  /// Whether the reaction has finished fading in. Until then it takes no
+  /// taps, so a tap meant for the video is not spent on something unseen.
+  bool _fadedIn = true;
 
   @override
   Widget build(BuildContext context) {
@@ -172,26 +182,33 @@ class _FeedReactionsOverlayView extends StatelessWidget {
       (FeedTopCommentCubit cubit) => cubit.state.isOverlayVisible,
     );
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    // The reaction covers the video after a loop with no input from the
-    // viewer, so a screen reader is told what appeared.
     return BlocListener<FeedTopCommentCubit, FeedTopCommentState>(
       listenWhen: (previous, current) =>
           !previous.isOverlayVisible && current.isOverlayVisible,
-      listener: (context, state) => announceDetached(
-        context,
-        state.topComment!.content.trim(),
-        description: 'announce feed reaction',
-        logName: 'FeedReactionsOverlay',
-      ),
+      listener: (context, state) {
+        // The reaction covers the video after a loop with no input from the
+        // viewer, so a screen reader is told what appeared.
+        announceDetached(
+          context,
+          state.topComment!.content.trim(),
+          description: 'announce feed reaction',
+          logName: 'FeedReactionsOverlay',
+        );
+        if (!reduceMotion) setState(() => _fadedIn = false);
+      },
       child: IgnorePointer(
-        ignoring: !isVisible,
+        ignoring: !isVisible || !_fadedIn,
         child: AnimatedOpacity(
           opacity: isVisible ? 1 : 0,
           duration: reduceMotion
               ? Duration.zero
               : FeedReactionsOverlayLayout.fadeDuration,
+          // Also called when a fade-out ends, after which nothing is pending.
+          onEnd: () {
+            if (!_fadedIn) setState(() => _fadedIn = true);
+          },
           child: isVisible
-              ? _ReactionContent(video: video)
+              ? _ReactionContent(video: widget.video)
               : const SizedBox.shrink(),
         ),
       ),

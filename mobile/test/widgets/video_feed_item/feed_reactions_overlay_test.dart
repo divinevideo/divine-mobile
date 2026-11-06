@@ -476,6 +476,38 @@ void main() {
         },
       );
 
+      testWidgets('ignores taps until the reaction has faded in', (
+        tester,
+      ) async {
+        whenListen(
+          cubit,
+          Stream.value(_visibleState),
+          initialState: _visibleState.copyWith(hasCompletedLoop: false),
+        );
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+
+        await tester.tapAt(const Offset(200, 500));
+        verifyNever(() => cubit.dismiss());
+
+        await tester.pumpAndSettle();
+        await tester.tapAt(const Offset(200, 500));
+        verify(() => cubit.dismiss()).called(1);
+      });
+
+      testWidgets('takes taps at once under reduced motion', (tester) async {
+        whenListen(
+          cubit,
+          Stream.value(_visibleState),
+          initialState: _visibleState.copyWith(hasCompletedLoop: false),
+        );
+        await tester.pumpWidget(buildSubject(reducedMotion: true));
+        await tester.pump();
+
+        await tester.tapAt(const Offset(200, 500));
+        verify(() => cubit.dismiss()).called(1);
+      });
+
       testWidgets('tapping beside a short comment dismisses the reaction', (
         tester,
       ) async {
