@@ -15,7 +15,8 @@ ValueKey<Object> videoInteractionsBlocKey({
     repostsRepository,
     video.stableId,
     video.addressableId,
-    video.eventKind,
+    // The bloc reads the kind only for a video with no coordinate (#6980).
+    video.addressableId == null ? video.eventKind : null,
     includeVideoReplies,
   ));
 }
