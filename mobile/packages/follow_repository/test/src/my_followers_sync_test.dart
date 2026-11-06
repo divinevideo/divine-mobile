@@ -898,6 +898,8 @@ void main() {
           started.complete();
           return response.future;
         });
+        // No relay finds a follower, so the REST timeout fails the fetch.
+        when(() => client.queryEvents(any())).thenAnswer((_) async => []);
       });
 
       test('reaches a listener that is still subscribed', () async {
