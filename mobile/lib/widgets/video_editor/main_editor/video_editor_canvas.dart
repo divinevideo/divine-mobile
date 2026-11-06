@@ -650,6 +650,19 @@ class _VideoEditor extends ConsumerStatefulWidget {
 
 class _VideoEditorState extends ConsumerState<_VideoEditor>
     with TickerProviderStateMixin {
+  /// How many [_heroTag]s have been handed out.
+  static int _heroTagCount = 0;
+
+  /// The tag of the editor's background [Hero], unique to this canvas.
+  ///
+  /// On the package default, every editor shares one tag, so closing an
+  /// editor that was pushed over another flew the hero back to the one
+  /// below. Flutter builds a flight in the navigator's overlay, which has
+  /// neither the [VideoEditorScope] nor the blocs the preview reads, so the
+  /// build threw. The crop-rotate editors avoid the same flight with
+  /// `transformEditorHeroTag`.
+  final String _heroTag = 'divine-video-editor-hero-${_heroTagCount++}';
+
   late final ProVideoController _proVideoController;
 
   /// The scope's fine-grained play-time notifier, cached from
@@ -3484,6 +3497,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           _proVideoController,
           key: scope.editorKey,
           configs: ProImageEditorConfigs(
+            heroTag: _heroTag,
             theme: Theme.of(context),
             stateHistory: StateHistoryConfigs(
               initStateHistory: _initStateHistory,
