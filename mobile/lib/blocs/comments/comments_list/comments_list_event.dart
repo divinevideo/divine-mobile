@@ -22,12 +22,15 @@ final class CommentsSortModeChanged extends CommentsListEvent {
   final CommentsSortMode sortMode;
 }
 
-/// A new comment was received from the real-time subscription.
-final class NewCommentReceived extends CommentsListEvent {
-  const NewCommentReceived(this.comment);
+/// Comments received from the real-time subscription within one window.
+///
+/// A burst arrives as one event, so it costs one state update and none of it
+/// is dropped (#6744).
+final class NewCommentsBatchReceived extends CommentsListEvent {
+  const NewCommentsBatchReceived(this.comments);
 
-  /// The new comment received from the stream.
-  final Comment comment;
+  /// The comments received, in the order they arrived.
+  final List<Comment> comments;
 }
 
 /// The relay backfill reached EOSE; subsequent events are live.
@@ -71,8 +74,8 @@ final class OptimisticCommentInserted extends CommentsListEvent {
 /// Replace a placeholder with its confirmed canonical comment.
 ///
 /// Race-safe: if the canonical comment is already in the store (because the
-/// relay echo arrived first via [NewCommentReceived]), the handler removes
-/// any leftover placeholder and is otherwise a no-op.
+/// relay echo arrived first via [NewCommentsBatchReceived]), the handler
+/// removes any leftover placeholder and is otherwise a no-op.
 final class OptimisticCommentConfirmed extends CommentsListEvent {
   const OptimisticCommentConfirmed({
     required this.placeholderId,

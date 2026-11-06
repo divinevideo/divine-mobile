@@ -2249,19 +2249,23 @@ class FunnelcakeApiClient {
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
-        final (:items, hasMore: _, nextCursor: _) = _unwrapListResponse(
-          decoded,
-        );
+        final (:items, :hasMore, nextCursor: _) = _unwrapListResponse(decoded);
         final total = decoded is Map<String, dynamic>
             ? (decoded['total'] as num?)?.toInt()
             : null;
+        final videos = <VideoStats>[];
+        final rows = <Map<String, dynamic>>[];
+        for (final row in items.whereType<Map<String, dynamic>>()) {
+          final video = VideoStats.fromJson(row);
+          if (video.id.isEmpty || video.videoUrl.isEmpty) continue;
+          videos.add(video);
+          rows.add(row['event'] as Map<String, dynamic>? ?? row);
+        }
         return VideoResponsesResponse(
-          videos: items
-              .whereType<Map<String, dynamic>>()
-              .map(VideoStats.fromJson)
-              .where((v) => v.id.isNotEmpty && v.videoUrl.isNotEmpty)
-              .toList(),
+          videos: videos,
           total: total ?? items.length,
+          rows: rows,
+          hasMore: hasMore ?? false,
         );
       } else if (response.statusCode == 404) {
         throw FunnelcakeNotFoundException(

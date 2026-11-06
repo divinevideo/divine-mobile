@@ -39,6 +39,7 @@ void main() {
       registerFallbackValue(<Filter>[]);
       registerFallbackValue(FakeEvent());
       registerFallbackValue(Duration.zero);
+      registerFallbackValue(VideoResponseType.replies);
     });
 
     setUp(() {
@@ -47,6 +48,19 @@ void main() {
       when(() => mockNostrClient.publicKey).thenReturn(testUserPubkey);
       repository = CommentsRepository(nostrClient: mockNostrClient);
     });
+
+    /// funnelcake answers the request for video replies with none.
+    void stubNoVideoReplies() {
+      when(
+        () => mockFunnelcakeApiClient.getVideoResponses(
+          videoId: any(named: 'videoId'),
+          type: any(named: 'type'),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer(
+        (_) async => const VideoResponsesResponse(videos: [], total: 0),
+      );
+    }
 
     group('constructor', () {
       test('creates repository with nostrClient', () {
@@ -183,6 +197,7 @@ void main() {
         'REST bootstrap does not wait for relay video reply lookup',
         () async {
           when(() => mockFunnelcakeApiClient.isAvailable).thenReturn(true);
+          stubNoVideoReplies();
           when(
             () => mockFunnelcakeApiClient.getVideoComments(
               videoId: any(named: 'videoId'),
@@ -240,6 +255,7 @@ void main() {
 
       test('maps video metadata from REST imeta tags', () async {
         when(() => mockFunnelcakeApiClient.isAvailable).thenReturn(true);
+        stubNoVideoReplies();
         when(
           () => mockFunnelcakeApiClient.getVideoComments(
             videoId: any(named: 'videoId'),
@@ -329,6 +345,7 @@ void main() {
 
       test('maps video metadata from positional REST imeta tags', () async {
         when(() => mockFunnelcakeApiClient.isAvailable).thenReturn(true);
+        stubNoVideoReplies();
         when(
           () => mockFunnelcakeApiClient.getVideoComments(
             videoId: any(named: 'videoId'),
@@ -412,10 +429,13 @@ void main() {
       test(
         'maps coordinate and kind from a REST video reply (#6124)',
         () async {
-          // loadComments is REST-first, so this — not the relay mapper — is the
-          // path that serves the first page in production. Without it a vote on
-          // a REST-delivered video reply still carries k:1111 and no `a` tag.
+          // The mapper for a REST comment that is a video reply: funnelcake's
+          // comments are kind 1111 only today, so a first-page video reply
+          // comes from the video-replies endpoint instead. Should the comments
+          // read model widen, a vote on one still carries its own kind and
+          // `a` tag (#6124).
           when(() => mockFunnelcakeApiClient.isAvailable).thenReturn(true);
+          stubNoVideoReplies();
           when(
             () => mockFunnelcakeApiClient.getVideoComments(
               videoId: any(named: 'videoId'),
@@ -516,6 +536,7 @@ void main() {
 
       test('falls back to relay query when REST bootstrap throws', () async {
         when(() => mockFunnelcakeApiClient.isAvailable).thenReturn(true);
+        stubNoVideoReplies();
         when(
           () => mockFunnelcakeApiClient.getVideoComments(
             videoId: any(named: 'videoId'),

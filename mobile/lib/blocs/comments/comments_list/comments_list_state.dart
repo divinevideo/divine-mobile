@@ -123,7 +123,7 @@ final class CommentsListState extends Equatable {
   /// [newCommentCount] pill. Lifted into state (instead of a mutable bloc
   /// instance field) per rules/state_management.md so it is observable in
   /// `blocTest` and survives state restoration. Default `false` to prevent
-  /// pre-load `NewCommentReceived` events from being mis-classified as live.
+  /// pre-load `NewCommentsBatchReceived` events from being mis-classified as live.
   final bool isBackfillComplete;
 
   /// l10n-friendly error code; null when no error is pending.
