@@ -105,9 +105,11 @@ void main() {
       () async {
         final requests = <String>[];
         final inFlight = Completer<http.Response>();
+        final requestStarted = Completer<void>();
         final q = queue(
           MockClient((r) async {
             requests.add(r.body);
+            requestStarted.complete();
             return inFlight.future;
           }),
         );
@@ -115,7 +117,7 @@ void main() {
         q.configure(initializedConsent: true, b2OptIn: true);
         event();
         final flush = q.flush();
-        await Future<void>.delayed(Duration.zero);
+        await requestStarted.future;
         q.configure(initializedConsent: false, b2OptIn: true);
         inFlight.complete(http.Response('', 503));
         await flush;
