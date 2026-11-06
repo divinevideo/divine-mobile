@@ -547,6 +547,25 @@ void main() {
         },
       );
 
+      testWidgets('reads as a dismiss control and a comment by its author', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        when(() => cubit.state).thenReturn(_visibleState);
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+
+        expect(find.bySemanticsLabel(l10n.feedReactionDismiss), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(
+            RegExp(RegExp.escape(UserProfile.generatedNameFor(_commenter))),
+          ),
+          findsOneWidget,
+        );
+        expect(find.bySemanticsLabel(RegExp('avatar')), findsNothing);
+        handle.dispose();
+      });
+
       testWidgets('ignores taps until the reaction has faded in', (
         tester,
       ) async {

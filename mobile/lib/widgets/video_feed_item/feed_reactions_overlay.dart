@@ -504,10 +504,13 @@ class _TopCommentAuthor extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       spacing: 8,
       children: [
-        UserAvatar(
-          size: FeedReactionsOverlayLayout.authorAvatarSize,
-          imageUrl: profile?.picture,
-          placeholderSeed: authorPubkey,
+        // The name beside it already says who wrote the comment.
+        ExcludeSemantics(
+          child: UserAvatar(
+            size: FeedReactionsOverlayLayout.authorAvatarSize,
+            imageUrl: profile?.picture,
+            placeholderSeed: authorPubkey,
+          ),
         ),
         Flexible(
           child: profile == null
