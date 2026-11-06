@@ -223,8 +223,8 @@ class CollaboratorAvatarRowBody extends StatelessWidget {
         context.l10n.metadataCollaboratorsLabel,
         style: VineTheme.titleMediumFont(color: context.vineColors.onSurface),
       ),
-      // Fixed mode sizes the sheet to its rows; the list scrolls only when
-      // the rows outgrow the screen.
+      // Fixed mode with a shrink-wrapped list sizes the sheet to its rows;
+      // the list scrolls only once they outgrow the screen.
       scrollable: false,
       body: _CollaboratorPickerList(pubkeys: pubkeys, visibility: visibility),
     );
