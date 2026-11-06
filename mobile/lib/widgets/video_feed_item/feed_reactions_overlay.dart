@@ -275,20 +275,23 @@ class _TopCommentContent extends StatelessWidget {
     );
     if (comment == null) return const SizedBox.shrink();
 
-    return Semantics(
-      button: true,
-      hint: context.l10n.feedReactionOpenComment,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => _openComment(context, comment),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          spacing: FeedReactionsOverlayLayout.gapBelowBubble,
-          children: [
-            _SpeechBubble(content: comment.content.trim()),
-            _TopCommentAuthor(authorPubkey: comment.authorPubkey),
-          ],
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: FeedReactionsOverlayLayout.maxTextScale,
+      child: Semantics(
+        button: true,
+        hint: context.l10n.feedReactionOpenComment,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _openComment(context, comment),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            spacing: FeedReactionsOverlayLayout.gapBelowBubble,
+            children: [
+              _SpeechBubble(content: comment.content.trim()),
+              _TopCommentAuthor(authorPubkey: comment.authorPubkey),
+            ],
+          ),
         ),
       ),
     );
@@ -495,4 +498,8 @@ abstract final class FeedReactionsOverlayLayout {
   static const fadeDuration = Duration(milliseconds: 250);
 
   static const commentMaxLines = 6;
+
+  /// Largest text scale the comment and its author grow to, as in the
+  /// comments sheet: six headline lines past it no longer fit a phone screen.
+  static const double maxTextScale = 1.5;
 }

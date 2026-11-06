@@ -92,6 +92,7 @@ void main() {
 
     Widget buildSubject({
       bool reducedMotion = false,
+      TextScaler textScaler = TextScaler.noScaling,
       List<Override> extraOverrides = const [],
     }) => ProviderScope(
       overrides: [
@@ -104,7 +105,10 @@ void main() {
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: MediaQuery(
-          data: MediaQueryData(disableAnimations: reducedMotion),
+          data: MediaQueryData(
+            disableAnimations: reducedMotion,
+            textScaler: textScaler,
+          ),
           child: Scaffold(
             body: BlocProvider<FeedTopCommentCubit>.value(
               value: cubit,
@@ -234,6 +238,35 @@ void main() {
           expect(width, greaterThan(available * 0.8));
           expect(width, lessThanOrEqualTo(available));
         });
+      });
+
+      testWidgets('a six-line comment on screen at the largest text size', (
+        tester,
+      ) async {
+        when(() => cubit.state).thenReturn(
+          _visibleState.copyWith(
+            topComment: Comment(
+              id: _topComment.id,
+              content: List.filled(40, 'reaction').join(' '),
+              authorPubkey: _commenter,
+              createdAt: DateTime(2026, 10, 28),
+              rootEventId: _video.id,
+              rootAuthorPubkey: _creator,
+            ),
+          ),
+        );
+        await tester.pumpWidget(
+          buildSubject(textScaler: const TextScaler.linear(3)),
+        );
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(
+          tester.getRect(find.byType(UserAvatar)).bottom,
+          lessThanOrEqualTo(
+            tester.getRect(find.byType(FeedReactionsOverlay)).bottom,
+          ),
+        );
       });
 
       testWidgets('a mention as the comments sheet does, by display name', (
