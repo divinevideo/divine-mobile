@@ -16,6 +16,7 @@ import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
+import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
@@ -1804,6 +1805,38 @@ void main() {
 
         expect(sweeps, hasLength(2));
       });
+    });
+  });
+
+  group('$UserDataCleanupException.diagnostic', () {
+    test('names the account storage check that refused', () {
+      const error = UserDataCleanupException(
+        'Could not establish the account safely',
+        AccountStorageException(
+          'Account activation evidence requires recovery',
+        ),
+      );
+
+      expect(
+        error.diagnostic,
+        'Could not establish the account safely '
+        '(Account activation evidence requires recovery)',
+      );
+    });
+
+    test('names only the type of any other cause', () {
+      const error = UserDataCleanupException(
+        'Required cleanup blocked',
+        FormatException('Invalid cached row', 'private cleanup cause sentinel'),
+      );
+
+      expect(error.diagnostic, 'Required cleanup blocked (FormatException)');
+    });
+
+    test('is the message when nothing caused it', () {
+      const error = UserDataCleanupException('Could not clear account cache');
+
+      expect(error.diagnostic, 'Could not clear account cache');
     });
   });
 }
