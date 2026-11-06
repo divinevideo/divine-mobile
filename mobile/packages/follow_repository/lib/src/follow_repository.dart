@@ -478,6 +478,10 @@ class FollowRepository {
   // Completes when the newest contact-list broadcast so far has finished,
   // whichever way. See [_broadcastContactList].
   Future<void>? _contactListBroadcastTail;
+
+  // A failed publish may undo only its own edit, not a newer edit to the same
+  // account that is still waiting to publish.
+  final _pendingFollowEdits = <String, Object>{};
   bool _isInitialized = false;
   final Completer<void> _initializedCompleter = Completer<void>();
 
@@ -2629,59 +2633,71 @@ class FollowRepository {
       category: LogCategory.system,
     );
 
-    // 1. Update in-memory cache immediately
-    _followingPubkeys = [..._followingPubkeys, pubkey];
-    _emitFollowingList();
-    await _invalidateMyFollowingCache();
-
-    // Check if offline and queue if needed
-    if (_isOnline != null && !_isOnline() && _queueOfflineAction != null) {
-      await _queueOfflineAction(isFollow: true, pubkey: pubkey);
-
-      // Save to local storage for persistence
-      await _saveToLocalStorage();
-
-      Log.info(
-        'Queued follow action for offline sync: '
-        '${pubkeyForLogs(pubkey)}',
-        name: 'FollowRepository',
-        category: LogCategory.system,
-      );
-      return FollowOutcome.queued;
-    }
-
+    final edit = Object();
+    _pendingFollowEdits[pubkey] = edit;
     try {
-      // 2. Broadcast to network
-      final published = await _broadcastContactList();
-
-      // 3. Save to local storage
-      await _saveToLocalStorage();
-
-      Log.info(
-        'Follow ${published ? 'published' : 'pending broadcast'}: '
-        '${pubkeyForLogs(pubkey)}',
-        name: 'FollowRepository',
-        category: LogCategory.system,
-      );
-      if (!published) return FollowOutcome.queued;
-      // An unfollow sent meanwhile can undo the follow before its list is
-      // built; then nothing about this account reached the relay.
-      return _followingPubkeys.contains(pubkey)
-          ? FollowOutcome.published
-          : FollowOutcome.unchanged;
-    } catch (e) {
-      // Roll back this follow only. Restoring a whole pre-follow snapshot
-      // would also throw away a newer contact list the pre-publish read
-      // adopted, putting the stale list back (#8266).
-      _followingPubkeys = _followingPubkeys.where((p) => p != pubkey).toList();
+      // 1. Update in-memory cache immediately
+      _followingPubkeys = [..._followingPubkeys, pubkey];
       _emitFollowingList();
+      await _invalidateMyFollowingCache();
 
-      Log.error(
-        'Error following user: $e',
-        name: 'FollowRepository',
-        category: LogCategory.system,
-      );
-      rethrow;
+      // Check if offline and queue if needed
+      if (_isOnline != null && !_isOnline() && _queueOfflineAction != null) {
+        await _queueOfflineAction(isFollow: true, pubkey: pubkey);
+
+        // Save to local storage for persistence
+        await _saveToLocalStorage();
+
+        Log.info(
+          'Queued follow action for offline sync: '
+          '${pubkeyForLogs(pubkey)}',
+          name: 'FollowRepository',
+          category: LogCategory.system,
+        );
+        return FollowOutcome.queued;
+      }
+
+      try {
+        // 2. Broadcast to network
+        final published = await _broadcastContactList();
+
+        // 3. Save to local storage
+        await _saveToLocalStorage();
+
+        Log.info(
+          'Follow ${published ? 'published' : 'pending broadcast'}: '
+          '${pubkeyForLogs(pubkey)}',
+          name: 'FollowRepository',
+          category: LogCategory.system,
+        );
+        if (!published) return FollowOutcome.queued;
+        // An unfollow sent meanwhile can undo the follow before its list is
+        // built; then nothing about this account reached the relay.
+        return _followingPubkeys.contains(pubkey)
+            ? FollowOutcome.published
+            : FollowOutcome.unchanged;
+      } catch (e) {
+        // Roll back this follow only. Restoring a whole pre-follow snapshot
+        // would also throw away a newer contact list the pre-publish read
+        // adopted, putting the stale list back (#8266).
+        if (identical(_pendingFollowEdits[pubkey], edit)) {
+          _followingPubkeys = _followingPubkeys
+              .where((p) => p != pubkey)
+              .toList();
+          _emitFollowingList();
+        }
+
+        Log.error(
+          'Error following user: $e',
+          name: 'FollowRepository',
+          category: LogCategory.system,
+        );
+        rethrow;
+      }
+    } finally {
+      if (identical(_pendingFollowEdits[pubkey], edit)) {
+        _pendingFollowEdits.remove(pubkey);
+      }
     }
   }
 
@@ -2750,56 +2766,66 @@ class FollowRepository {
       category: LogCategory.system,
     );
 
-    // 1. Update in-memory cache immediately
-    _followingPubkeys = _followingPubkeys.where((p) => p != pubkey).toList();
-    _emitFollowingList();
-    await _invalidateMyFollowingCache();
-
-    // Check if offline and queue if needed
-    if (_isOnline != null && !_isOnline() && _queueOfflineAction != null) {
-      await _queueOfflineAction(isFollow: false, pubkey: pubkey);
-
-      // Save to local storage for persistence
-      await _saveToLocalStorage();
-
-      _emitConfirmedUnfollow(pubkey);
-
-      Log.info(
-        'Queued unfollow action for offline sync: '
-        '${pubkeyForLogs(pubkey)}',
-        name: 'FollowRepository',
-        category: LogCategory.system,
-      );
-      return;
-    }
-
+    final edit = Object();
+    _pendingFollowEdits[pubkey] = edit;
     try {
-      // 2. Broadcast to network
-      await _broadcastContactList();
-
-      // 3. Save to local storage
-      await _saveToLocalStorage();
-
-      _emitConfirmedUnfollow(pubkey);
-
-      Log.info(
-        'Successfully unfollowed user: ${pubkeyForLogs(pubkey)}',
-        name: 'FollowRepository',
-        category: LogCategory.system,
-      );
-    } catch (e) {
-      // Roll back this unfollow only, for the same reason as [follow].
-      if (!_followingPubkeys.contains(pubkey)) {
-        _followingPubkeys = [..._followingPubkeys, pubkey];
-      }
+      // 1. Update in-memory cache immediately
+      _followingPubkeys = _followingPubkeys.where((p) => p != pubkey).toList();
       _emitFollowingList();
+      await _invalidateMyFollowingCache();
 
-      Log.error(
-        'Error unfollowing user: $e',
-        name: 'FollowRepository',
-        category: LogCategory.system,
-      );
-      rethrow;
+      // Check if offline and queue if needed
+      if (_isOnline != null && !_isOnline() && _queueOfflineAction != null) {
+        await _queueOfflineAction(isFollow: false, pubkey: pubkey);
+
+        // Save to local storage for persistence
+        await _saveToLocalStorage();
+
+        _emitConfirmedUnfollow(pubkey);
+
+        Log.info(
+          'Queued unfollow action for offline sync: '
+          '${pubkeyForLogs(pubkey)}',
+          name: 'FollowRepository',
+          category: LogCategory.system,
+        );
+        return;
+      }
+
+      try {
+        // 2. Broadcast to network
+        await _broadcastContactList();
+
+        // 3. Save to local storage
+        await _saveToLocalStorage();
+
+        _emitConfirmedUnfollow(pubkey);
+
+        Log.info(
+          'Successfully unfollowed user: ${pubkeyForLogs(pubkey)}',
+          name: 'FollowRepository',
+          category: LogCategory.system,
+        );
+      } catch (e) {
+        // Roll back this unfollow only, for the same reason as [follow].
+        if (identical(_pendingFollowEdits[pubkey], edit)) {
+          if (!_followingPubkeys.contains(pubkey)) {
+            _followingPubkeys = [..._followingPubkeys, pubkey];
+          }
+          _emitFollowingList();
+        }
+
+        Log.error(
+          'Error unfollowing user: $e',
+          name: 'FollowRepository',
+          category: LogCategory.system,
+        );
+        rethrow;
+      }
+    } finally {
+      if (identical(_pendingFollowEdits[pubkey], edit)) {
+        _pendingFollowEdits.remove(pubkey);
+      }
     }
   }
 

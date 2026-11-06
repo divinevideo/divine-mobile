@@ -289,6 +289,45 @@ void main() {
       expect(repository.followingPubkeys, [_bob]);
     });
 
+    test('a refused earlier follow does not undo a later follow of the same '
+        'account', () async {
+      relay.refused.add(0);
+      final first = repository
+          .followWithResult(_alice)
+          .then<Object>((outcome) => outcome, onError: (Object e) => e);
+      await relay.untilStarted(1);
+      final unfollowed = repository.unfollow(_alice);
+      final followedAgain = repository.followWithResult(_alice);
+      await relay.release();
+
+      expect(await first, isA<Exception>());
+      await unfollowed;
+      expect(await followedAgain, FollowOutcome.published);
+      expect(repository.followingPubkeys, [_alice]);
+      expect(relay.accepted.last, [_alice]);
+    });
+
+    test('a refused earlier unfollow does not undo a later unfollow of the '
+        'same account', () async {
+      final initial = repository.followWithResult(_alice);
+      await relay.release();
+      expect(await initial, FollowOutcome.published);
+      relay.refused.add(1);
+      final first = repository
+          .unfollow(_alice)
+          .then<Object?>((_) => null, onError: (Object e) => e);
+      await relay.untilStarted(2);
+      final followed = repository.followWithResult(_alice);
+      final unfollowedAgain = repository.unfollow(_alice);
+      await relay.release();
+
+      expect(await first, isA<Exception>());
+      await followed;
+      await unfollowedAgain;
+      expect(repository.followingPubkeys, isEmpty);
+      expect(relay.accepted.last, isEmpty);
+    });
+
     test('a follow queued behind a withheld publish still publishes', () async {
       reads.add((events: <Event>[], timedOut: true, noRelays: false));
       final first = repository.followWithResult(_alice);
