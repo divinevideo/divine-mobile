@@ -669,7 +669,7 @@ abstract final class FeedReactionsOverlayLayout {
   static const double tailInset = 28;
 
   /// Narrowest bubble that still holds the tail under its straight edge:
-  /// the tail's inset and width plus the bottom-right corner's radius.
+  /// the tail's inset and width plus the bottom end corner's radius.
   static const double bubbleMinWidth = tailInset + tailWidth + bubbleRadius;
 
   /// Space between the bubble's tail and the author row.
