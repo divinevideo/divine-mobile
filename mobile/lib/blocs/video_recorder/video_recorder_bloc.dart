@@ -2558,10 +2558,10 @@ class VideoRecorderBloc
   /// Rebuilds [state] from the current [CameraService] values.
   ///
   /// Only the rebuild count, aspect ratio, recorder mode (with the mode Upload
-  /// was entered from), overlay and grid toggles, the take in flight, the
-  /// navigation lock, the stop-motion session, the chroma-key setup and, while
-  /// the camera is initialized, the screen flash carry over; flash resets to
-  /// `off` and every other field to its default.
+  /// was entered from), overlay and grid toggles, the timer setting, the take
+  /// in flight, the navigation lock, the stop-motion session and interval loop,
+  /// the chroma-key setup and (while initialized) the screen flash carry over;
+  /// flash resets to `off` and every other field to its default.
   ///
   /// A wall measurement survives a re-sync on the same side of the phone, but
   /// not a flip to the other one: its still shows the wall behind the lens it
