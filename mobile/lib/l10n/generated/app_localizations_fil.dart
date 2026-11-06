@@ -6436,10 +6436,6 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Nabigo ang reaction, i-double tap para subukan ulit';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'Hindi naipadala ang iyong $emoji reaction. I-double tap para subukan ulit';
   }

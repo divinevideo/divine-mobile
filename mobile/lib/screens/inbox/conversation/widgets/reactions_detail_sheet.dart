@@ -231,10 +231,9 @@ class _ReactorRow extends ConsumerWidget {
           context.l10n.dmReactionChipPendingA11yLabel(reaction.emoji),
           null,
         ),
-        DmReactionPublishStatus.failed => (
-          context.l10n.dmReactionChipFailedA11yLabel,
-          null,
-        ),
+        // Both are retried the same way, and the label names the emoji so
+        // the row says which reaction a retry sends again.
+        DmReactionPublishStatus.failed ||
         DmReactionPublishStatus.unconfirmed => (
           context.l10n.dmReactionChipUnconfirmedA11yLabel(reaction.emoji),
           null,

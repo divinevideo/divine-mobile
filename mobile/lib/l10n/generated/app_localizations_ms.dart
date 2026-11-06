@@ -6397,10 +6397,6 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Tindak balas gagal, ketik dua kali untuk cuba semula';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'Tindak balas $emoji anda tidak dapat dihantar. Ketik dua kali untuk cuba semula';
   }

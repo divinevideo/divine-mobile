@@ -6071,9 +6071,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel => '반응 실패, 두 번 탭하면 다시 시도';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return '$emoji 반응을 보내지 못했어요. 두 번 탭하면 다시 시도해요';
   }

@@ -6015,9 +6015,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel => '回应失败，双击重试';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return '无法发送你的 $emoji 回应，双击重试';
   }

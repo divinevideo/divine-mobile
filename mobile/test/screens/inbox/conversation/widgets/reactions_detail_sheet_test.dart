@@ -455,7 +455,8 @@ void main() {
         find.byWidgetPredicate(
           (widget) =>
               widget is Semantics &&
-              widget.properties.label == l10n.dmReactionChipFailedA11yLabel,
+              widget.properties.label ==
+                  l10n.dmReactionChipUnconfirmedA11yLabel('😂'),
         ),
         findsOneWidget,
       );
@@ -643,7 +644,7 @@ void main() {
 
         await open(tester);
 
-        final label = l10n.dmReactionChipFailedA11yLabel;
+        final label = l10n.dmReactionChipUnconfirmedA11yLabel('🔥');
         expect(
           tester.getSemantics(find.bySemanticsLabel(label)),
           isSemantics(label: label, isButton: true, hasTapAction: true),

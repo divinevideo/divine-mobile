@@ -3147,7 +3147,11 @@ void main() {
         // make. The label falls back to the plain descriptive own-reaction one.
         expect(
           find.bySemanticsLabel(
-            RegExp(RegExp.escape(l10n.dmReactionChipFailedA11yLabel)),
+            RegExp(
+              RegExp.escape(
+                l10n.dmReactionChipUnconfirmedA11yLabel(ownReactionEmoji),
+              ),
+            ),
           ),
           findsNothing,
         );

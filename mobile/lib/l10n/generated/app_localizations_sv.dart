@@ -6391,10 +6391,6 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
-  String get dmReactionChipFailedA11yLabel =>
-      'Reaktionen misslyckades, dubbeltryck för att försöka igen';
-
-  @override
   String dmReactionChipUnconfirmedA11yLabel(String emoji) {
     return 'Din reaktion $emoji kunde inte skickas. Dubbeltryck för att försöka igen';
   }
