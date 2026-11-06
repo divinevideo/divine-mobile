@@ -125,6 +125,7 @@ Future<void> _pumpEditorLayer(
   required VideoEditorMainBloc editor,
   ValueNotifier<bool>? previewReleased,
   ValueNotifier<LiveVolume?>? liveVolume,
+  ValueNotifier<Map<String, dynamic>>? metaUpdates,
 }) async {
   final bodySize = ValueNotifier<Size>(Size.zero);
   addTearDown(bodySize.dispose);
@@ -162,7 +163,16 @@ Future<void> _pumpEditorLayer(
           // The scope insists on an owner for the notifier it hands out.
           cancelLiveVolumePreview: liveVolume == null ? null : (_) => false,
           fromLibrary: false,
-          child: _layerHost(DetachedClipLayerView(meta: meta)),
+          child: _layerHost(
+            metaUpdates == null
+                ? DetachedClipLayerView(meta: meta)
+                // Rebuilds the layer in place under the same scope, as a
+                // history write does.
+                : ValueListenableBuilder<Map<String, dynamic>>(
+                    valueListenable: metaUpdates,
+                    builder: (_, meta, _) => DetachedClipLayerView(meta: meta),
+                  ),
+          ),
         ),
       ),
     ),
@@ -572,15 +582,25 @@ void main() {
         clip: _clip(),
         layerId: 'layer-1',
       ).toMeta();
-      final fake = await pumpLayer(tester, meta: meta, editor: editor);
-      expect(fake.volumeCalls, [1]);
-
-      // A confirmed change or an undo hands the layer a new meta.
+      final metaUpdates = ValueNotifier(meta);
+      addTearDown(metaUpdates.dispose);
+      final fake = _fakePlayer();
+      await detachedClipPlayers.acquire(
+        detachedClipPlayerKey(meta)!,
+        () async => fake,
+      );
       await _pumpEditorLayer(
         tester,
-        meta: DetachedClipLayerData.withVolume(meta, 0)!,
+        meta: meta,
         editor: editor,
+        metaUpdates: metaUpdates,
       );
+      expect(fake.volumeCalls, [1]);
+
+      // A confirmed change or an undo hands the layer a new meta, in place:
+      // the editor scope above it stays as it was.
+      metaUpdates.value = DetachedClipLayerData.withVolume(meta, 0)!;
+      await tester.pump();
 
       expect(fake.volumeCalls.last, 0);
       // Still the pooled companion: reopening one for a volume would blank the
