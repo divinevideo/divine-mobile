@@ -219,16 +219,17 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  DivineVideoClip clipOf(Duration duration) => DivineVideoClip(
-    id: 'clip',
-    video: EditorVideo.file(
-      File('${tempDir.path}/clip.mp4')..writeAsBytesSync(const [0]),
-    ),
-    duration: duration,
-    recordedAt: DateTime(2026),
-    targetAspectRatio: model.AspectRatio.vertical,
-    originalAspectRatio: 9 / 16,
-  );
+  DivineVideoClip clipOf(Duration duration, {String name = 'clip'}) =>
+      DivineVideoClip(
+        id: name,
+        video: EditorVideo.file(
+          File('${tempDir.path}/$name.mp4')..writeAsBytesSync(const [0]),
+        ),
+        duration: duration,
+        recordedAt: DateTime(2026),
+        targetAspectRatio: model.AspectRatio.vertical,
+        originalAspectRatio: 9 / 16,
+      );
 
   /// Mounts the canvas over one clip of [duration] and lets its player come
   /// up on the mocked channel.
@@ -359,22 +360,11 @@ void main() {
   }
 
   group('clip detach', () {
-    DivineVideoClip clipFile(String name, Duration duration) => DivineVideoClip(
-      id: name,
-      video: EditorVideo.file(
-        File('${tempDir.path}/$name.mp4')..writeAsBytesSync(const [0]),
-      ),
-      duration: duration,
-      recordedAt: DateTime(2026),
-      targetAspectRatio: model.AspectRatio.vertical,
-      originalAspectRatio: 9 / 16,
-    );
-
     testWidgets('rebuilds the player from the clips left on the timeline', (
       tester,
     ) async {
-      final detached = clipFile('detached', const Duration(seconds: 3));
-      final remaining = clipFile('remaining', const Duration(seconds: 6));
+      final detached = clipOf(const Duration(seconds: 3), name: 'detached');
+      final remaining = clipOf(const Duration(seconds: 6), name: 'remaining');
       final states = StreamController<ClipEditorState>.broadcast();
       addTearDown(states.close);
       await pumpCanvas(
