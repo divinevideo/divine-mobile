@@ -241,7 +241,10 @@ class _FeedReactionsOverlayViewState
 /// [content] as plain text, with mentions resolved the way the bubble's
 /// [LinkifiedText] shows them.
 String _spokenComment(BuildContext context, WidgetRef ref, String content) {
-  final style = VineTheme.bodyMediumFont();
+  // Only the plain text is read; this style is never painted.
+  final style = VineTheme.bodyMediumFont(
+    color: FeedReactionsOverlayLayout.bubbleTextColor,
+  );
   return TextSpan(
     children: LinkifiedTextSpanBuilder(
       text: content,
