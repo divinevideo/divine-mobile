@@ -336,22 +336,26 @@ class _ReactionContent extends StatelessWidget {
   }
 }
 
-class _TopCommentContent extends StatelessWidget {
+class _TopCommentContent extends ConsumerWidget {
   const _TopCommentContent({required this.video});
 
   final VideoEvent video;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final comment = context.select(
       (FeedTopCommentCubit cubit) => cubit.state.topComment,
     );
     if (comment == null) return const SizedBox.shrink();
+    final content = comment.content.trim();
 
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: FeedReactionsOverlayLayout.maxTextScale,
+      // The bubble's text splits into one node per link, which left the
+      // button labelled with the author alone; it reads the whole comment.
       child: Semantics(
         button: true,
+        label: _spokenComment(context, ref, content),
         hint: context.l10n.feedReactionOpenComment,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -361,7 +365,7 @@ class _TopCommentContent extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             spacing: FeedReactionsOverlayLayout.gapBelowBubble,
             children: [
-              _SpeechBubble(content: comment.content.trim()),
+              ExcludeSemantics(child: _SpeechBubble(content: content)),
               _TopCommentAuthor(authorPubkey: comment.authorPubkey),
             ],
           ),

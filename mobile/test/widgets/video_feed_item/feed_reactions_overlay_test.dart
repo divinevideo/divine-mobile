@@ -4,6 +4,7 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -563,6 +564,55 @@ void main() {
           findsOneWidget,
         );
         expect(find.bySemanticsLabel(RegExp('avatar')), findsNothing);
+        handle.dispose();
+      });
+
+      testWidgets('reads a comment with a mention whole, as a button', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        const mentionedHex =
+            '6666666666666666666666666666666666666666666666666666666666666666';
+        final npub = NostrKeyUtils.encodePubKey(mentionedHex);
+        when(() => cubit.state).thenReturn(
+          _visibleState.copyWith(
+            topComment: Comment(
+              id: _topComment.id,
+              content: 'yesss nostr:$npub so good',
+              authorPubkey: _commenter,
+              createdAt: DateTime(2026, 10, 28),
+              rootEventId: _video.id,
+              rootAuthorPubkey: _creator,
+            ),
+          ),
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            extraOverrides: [
+              userProfileReactiveProvider(mentionedHex).overrideWith(
+                (ref) => Stream<UserProfile?>.value(
+                  UserProfile(
+                    pubkey: mentionedHex,
+                    rawData: const {},
+                    createdAt: DateTime(2026),
+                    eventId: _topComment.id,
+                    displayName: 'Ryohei Nakatake',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        final button = find.bySemanticsLabel(
+          RegExp(RegExp.escape('yesss @Ryohei Nakatake so good')),
+        );
+        expect(button, findsOneWidget);
+        final data = tester.getSemantics(button).getSemanticsData();
+        expect(data.hasAction(SemanticsAction.tap), isTrue);
+        expect(data.hint, l10n.feedReactionOpenComment);
         handle.dispose();
       });
 
