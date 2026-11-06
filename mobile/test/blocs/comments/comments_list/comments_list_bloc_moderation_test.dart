@@ -424,6 +424,34 @@ void main() {
 
         expect(bloc.state.commentsById, isNot(contains('harassment')));
       });
+
+      test(
+        'puts the hidden comments away once the last one is removed',
+        () async {
+          ownerHid(
+            const CommentModeration(
+              hiddenCommentIds: {'later'},
+              autoHiddenAuthors: {_harasser},
+            ),
+          );
+          final bloc = await loaded(buildBloc());
+          addTearDown(bloc.close);
+          await bloc.stream.firstWhere((s) => s.isBackfillComplete);
+          bloc.add(const HiddenCommentsVisibilityToggled());
+          await pumpEventQueue();
+          expect(bloc.state.showHiddenComments, isTrue);
+
+          // The viewer blocks the author of the only hidden comment.
+          bloc.add(const CommentsRemovedByAuthorFromStore(_harasser));
+          await pumpEventQueue();
+          // A comment the owner hid arrives later.
+          bloc.add(NewCommentsBatchReceived([_comment('later')]));
+          await pumpEventQueue();
+
+          expect(bloc.state.showHiddenComments, isFalse);
+          expect(shownIds(bloc.state), isNot(contains('later')));
+        },
+      );
     });
 
     group('NewCommentsBatchReceived', () {

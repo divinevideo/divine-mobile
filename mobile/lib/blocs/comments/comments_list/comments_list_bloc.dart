@@ -380,8 +380,9 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       // unless the echo carries video metadata missing from the REST bootstrap
       // copy. In that case, upgrade in place so a REST-loaded video reply can
       // render as soon as the relay echo arrives.
-      // Blocked/muted authors are already filtered by the repository's
-      // watchComments stream, so no additional check is needed here.
+      // The repository's watchComments stream already drops blocked and
+      // muted authors, except the owner's own blocks on their video, which
+      // stay as comments the owner hid.
       final existingComment = store[comment.id];
       if (existingComment != null) {
         if (!existingComment.hasVideo && comment.hasVideo) {
@@ -470,13 +471,18 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     Emitter<CommentsListState> emit,
     Map<String, Comment> updated,
   ) {
+    final next = state.copyWith(
+      commentsById: updated,
+      replyCountsByCommentId: computeReplyCounts(updated),
+      // The pill counts only new comments that are still listed.
+      newCommentIds: state.newCommentIds.where(updated.containsKey).toSet(),
+    );
+    // The last hidden comment left the store, say its author was blocked or
+    // deleted it: a later hidden one must not arrive already revealed.
     emit(
-      state.copyWith(
-        commentsById: updated,
-        replyCountsByCommentId: computeReplyCounts(updated),
-        // The pill counts only new comments that are still listed.
-        newCommentIds: state.newCommentIds.where(updated.containsKey).toSet(),
-      ),
+      next.showHiddenComments && next.hiddenCommentCount == 0
+          ? next.copyWith(showHiddenComments: false)
+          : next,
     );
   }
 
