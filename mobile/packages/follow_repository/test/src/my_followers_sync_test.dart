@@ -890,7 +890,7 @@ void main() {
         started = Completer<void>();
         response = Completer<PaginatedPubkeys>();
         when(() => api.isAvailable).thenReturn(true);
-        // The same outage fails the count request, which falls back quietly.
+        // The same outage fails the count request, which falls back to relays.
         when(() => api.getSocialCounts(owner)).thenThrow(timeout);
         when(() => api.getFollowers(pubkey: owner, limit: 5000)).thenAnswer((
           _,
