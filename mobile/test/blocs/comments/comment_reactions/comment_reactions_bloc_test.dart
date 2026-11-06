@@ -713,6 +713,38 @@ void main() {
         ).called(1);
       });
 
+      // The repository skips a comment it already deleted only once the
+      // first request has landed, so a repeat must not start before then.
+      test('a second delete of the same comment waits for the first', () async {
+        final firstDelete = Completer<void>();
+        var deleteCalls = 0;
+        when(
+          () => mockCommentsRepository.deleteComment(
+            commentId: validId('c1'),
+            rootEventId: any(named: 'rootEventId'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+          ),
+        ).thenAnswer(
+          (_) => ++deleteCalls == 1 ? firstDelete.future : Future.value(),
+        );
+        final bloc = createBloc();
+        addTearDown(() async {
+          if (!firstDelete.isCompleted) firstDelete.complete();
+          await bloc.close();
+        });
+
+        bloc
+          ..add(CommentDeleteRequested(validId('c1')))
+          ..add(CommentDeleteRequested(validId('c1')));
+        await pumpEventQueue();
+        expect(deleteCalls, equals(1));
+
+        firstDelete.complete();
+        await pumpEventQueue();
+
+        expect(deleteCalls, equals(2));
+      });
+
       test('a block of another author runs once the first finishes', () async {
         final firstBlock = Completer<bool>();
         when(
