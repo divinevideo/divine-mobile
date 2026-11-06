@@ -192,9 +192,9 @@ class _FeedReactionsOverlayViewState
     final comment = context.select(
       (FeedTopCommentCubit cubit) => cubit.state.topComment,
     );
-    _spokenText = comment == null
-        ? ''
-        : _spokenComment(context, ref, comment.content.trim());
+    _spokenText = isVisible && comment != null
+        ? _spokenComment(context, ref, comment.content.trim())
+        : '';
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     return BlocListener<FeedTopCommentCubit, FeedTopCommentState>(
       listenWhen: (previous, current) =>
@@ -226,7 +226,7 @@ class _FeedReactionsOverlayViewState
             }
           },
           child: isVisible
-              ? _ReactionContent(video: widget.video)
+              ? _ReactionContent(video: widget.video, spokenText: _spokenText)
               : const SizedBox.shrink(),
         ),
       ),
@@ -266,9 +266,12 @@ String _spokenComment(BuildContext context, WidgetRef ref, String content) {
 }
 
 class _ReactionContent extends StatelessWidget {
-  const _ReactionContent({required this.video});
+  const _ReactionContent({required this.video, required this.spokenText});
 
   final VideoEvent video;
+
+  /// The comment as the bubble shows it, read by screen readers.
+  final String spokenText;
 
   @override
   Widget build(BuildContext context) {
@@ -279,6 +282,7 @@ class _ReactionContent extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) => _ReactionLayers(
         video: video,
+        spokenText: spokenText,
         top: top,
         commentMaxLines: _commentLinesThatFit(
           context,
@@ -339,11 +343,13 @@ int _commentLinesThatFit(
 class _ReactionLayers extends StatelessWidget {
   const _ReactionLayers({
     required this.video,
+    required this.spokenText,
     required this.top,
     required this.commentMaxLines,
   });
 
   final VideoEvent video;
+  final String spokenText;
   final double top;
   final int commentMaxLines;
 
@@ -387,6 +393,7 @@ class _ReactionLayers extends StatelessWidget {
                     ),
                     child: _TopCommentContent(
                       video: video,
+                      spokenText: spokenText,
                       commentMaxLines: commentMaxLines,
                     ),
                   ),
@@ -417,17 +424,19 @@ class _ReactionLayers extends StatelessWidget {
   }
 }
 
-class _TopCommentContent extends ConsumerWidget {
+class _TopCommentContent extends StatelessWidget {
   const _TopCommentContent({
     required this.video,
+    required this.spokenText,
     required this.commentMaxLines,
   });
 
   final VideoEvent video;
+  final String spokenText;
   final int commentMaxLines;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final comment = context.select(
       (FeedTopCommentCubit cubit) => cubit.state.topComment,
     );
@@ -440,7 +449,7 @@ class _TopCommentContent extends ConsumerWidget {
       // button labelled with the author alone; it reads the whole comment.
       child: Semantics(
         button: true,
-        label: _spokenComment(context, ref, content),
+        label: spokenText,
         hint: context.l10n.feedReactionOpenComment,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
