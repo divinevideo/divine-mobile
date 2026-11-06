@@ -26,11 +26,7 @@ class _PendingCrashReporter implements CrashReporter {
   void log(String message) {}
 
   @override
-  Future<void> recordError(
-    Object error,
-    StackTrace? stack, {
-    String? reason,
-  }) {
+  Future<void> recordError(Object error, StackTrace? stack, {String? reason}) {
     reports.add((error: error, reason: reason));
     return _inFlight.future;
   }
@@ -45,11 +41,8 @@ class _FailingCrashReporter implements CrashReporter {
   void log(String message) {}
 
   @override
-  Future<void> recordError(
-    Object error,
-    StackTrace? stack, {
-    String? reason,
-  }) => Future.error(StateError('Crash reporter is down'));
+  Future<void> recordError(Object error, StackTrace? stack, {String? reason}) =>
+      Future.error(StateError('Crash reporter is down'));
 }
 
 /// The coordinator's warning and error lines in the unified log, which is
@@ -388,6 +381,105 @@ void main() {
 
       // Should complete without throwing; optional failure is logged only
       await initFuture;
+    });
+
+    group('concurrent calls', () {
+      test('a call made while a run is in flight waits for it instead of '
+          'throwing', () async {
+        coordinator.registerService(
+          name: 'SeedMediaMaintenance',
+          phase: StartupPhase.deferred,
+          initialize: createServiceInitializer('SeedMediaMaintenance'),
+          optional: true,
+        );
+
+        final firstRun = coordinator.initializeRemaining();
+        await pumpEventQueue();
+        // An account switch remounts DivineApp, which asks again.
+        var secondRunSettled = false;
+        final secondRun = coordinator.initializeRemaining().whenComplete(
+          () => secondRunSettled = true,
+        );
+        await pumpEventQueue();
+
+        expect(secondRunSettled, isFalse);
+
+        serviceCompleters['SeedMediaMaintenance']!.complete();
+        await Future.wait([firstRun, secondRun]);
+
+        expect(
+          initializationLog.where(
+            (entry) => entry == 'SeedMediaMaintenance:start',
+          ),
+          hasLength(1),
+        );
+        expect(coordinator.isPhaseComplete(StartupPhase.deferred), isTrue);
+      });
+
+      test('a call queued behind an earlier-phase run still runs the later '
+          'phases', () async {
+        coordinator.registerService(
+          name: 'EnvironmentService',
+          phase: StartupPhase.critical,
+          initialize: createServiceInitializer('EnvironmentService'),
+        );
+        coordinator.registerService(
+          name: 'CoreServices',
+          phase: StartupPhase.essential,
+          initialize: createServiceInitializer('CoreServices'),
+        );
+
+        final criticalRun = coordinator.initializeThrough(
+          StartupPhase.critical,
+        );
+        final remainingRun = coordinator.initializeRemaining();
+        await pumpEventQueue();
+
+        expect(initializationLog, isNot(contains('CoreServices:start')));
+
+        serviceCompleters['EnvironmentService']!.complete();
+        await criticalRun;
+        await pumpEventQueue();
+
+        expect(initializationLog, contains('CoreServices:start'));
+
+        serviceCompleters['CoreServices']!.complete();
+        await remainingRun;
+
+        expect(
+          initializationLog.where(
+            (entry) => entry == 'EnvironmentService:start',
+          ),
+          hasLength(1),
+        );
+        expect(coordinator.isPhaseComplete(StartupPhase.essential), isTrue);
+      });
+
+      test('a call queued behind a failed run retries what that run left '
+          'unfinished', () async {
+        var attempts = 0;
+        final firstAttemptFails = Completer<void>();
+        coordinator.registerService(
+          name: 'CoreServices',
+          phase: StartupPhase.essential,
+          initialize: () async {
+            attempts++;
+            if (attempts == 1) {
+              await firstAttemptFails.future;
+              throw Exception('CoreServices failed');
+            }
+          },
+        );
+
+        final firstRun = coordinator.initializeRemaining();
+        final secondRun = coordinator.initializeRemaining();
+        firstAttemptFails.complete();
+
+        await expectLater(firstRun, throwsException);
+        await expectLater(secondRun, completes);
+        expect(attempts, equals(2));
+        expect(coordinator.isPhaseComplete(StartupPhase.essential), isTrue);
+      });
     });
 
     group('service failure reporting', () {

@@ -38,7 +38,10 @@ class StartupCoordinator {
   final MetricsCollector _metricsCollector = MetricsCollector();
 
   bool _registrationLocked = false;
-  bool _isInitializing = false;
+
+  /// The most recently started run, until it settles.
+  Future<void>? _latestRun;
+  int _runCount = 0;
   StartupMetrics? _metrics;
 
   /// Get final metrics after initialization
@@ -268,23 +271,47 @@ class StartupCoordinator {
     }
   }
 
+  /// Runs [body], after any run still in flight has settled.
+  ///
+  /// A call that arrives during another run, such as `DivineApp` asking again
+  /// after an account switch remounts it, behaves as if it had been made once
+  /// that run finished: phases and services already done are skipped, so it
+  /// only does what is left. A failure stays with the caller whose run hit it;
+  /// the waiting run retries whatever that run left unfinished.
   Future<void> _runInitialization({
     required String logMessage,
     required Future<void> Function() body,
+  }) {
+    _registrationLocked = true;
+    final run = _runAfter(_latestRun, logMessage: logMessage, body: body);
+    _latestRun = run;
+    return run;
+  }
+
+  Future<void> _runAfter(
+    Future<void>? previousRun, {
+    required String logMessage,
+    required Future<void> Function() body,
   }) async {
-    if (_isInitializing) {
-      throw StateError('Initialization already in progress');
+    final runNumber = ++_runCount;
+    if (previousRun != null) {
+      Log.info(
+        '$logMessage after the run already in progress',
+        name: 'StartupCoordinator',
+      );
+      try {
+        await previousRun;
+      } on Object {
+        // Its own caller receives that failure; this run retries what it left.
+      }
     }
 
-    _registrationLocked = true;
-    _isInitializing = true;
     Log.info(logMessage, name: 'StartupCoordinator');
-
     try {
       await body();
       _finalizeMetricsIfComplete();
     } finally {
-      _isInitializing = false;
+      if (runNumber == _runCount) _latestRun = null;
     }
   }
 
