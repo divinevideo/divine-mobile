@@ -50,6 +50,18 @@ const _reqEidChunkSize = 500;
 /// smaller.
 const int _reqTagValueChunkBytes = 128 * 1024;
 
+/// How long a read that waits for every relay gives them to answer: the
+/// client's own default.
+const _settledReadTimeout = Duration(seconds: 5);
+
+/// What a relay read returned, and whether that answer was complete (see
+/// `LikesRepository._provesAbsence`).
+typedef _RelayRead = ({List<Event> events, bool isComplete});
+
+/// What this account's deletions say about some of its reactions, by id: the
+/// ones a deletion names, and the ones a short read leaves unknown.
+typedef _Retractions = ({Set<String> retracted, Set<String> undecided});
+
 /// Callback to check if the device is currently online
 typedef IsOnlineCallback = bool Function();
 
@@ -257,12 +269,13 @@ class LikesRepository {
   /// therefore race the initial relay snapshot unless it joins this future.
   Future<void>? _startupReconciliationFuture;
 
-  /// Whether the last relay reconciliation returned an uncapped snapshot.
+  /// Whether the last relay reconciliation proved its snapshot complete.
   ///
-  /// A result that fills either fetch limit may have omitted older reactions
-  /// or deletions. In that case individual targets still need a relay check
-  /// before publishing; a smaller result lets ordinary likes stay on the fast
-  /// path for the rest of the session.
+  /// It does when the reactions read finished without reaching its limit and
+  /// the deletions read settled every reaction it returned. Otherwise
+  /// individual targets still need a relay check before publishing; a proven
+  /// snapshot lets ordinary likes stay on the fast path for the rest of the
+  /// session.
   bool _hasCompleteRelayReactionSnapshot = false;
 
   /// Whether [dispose] has been called.
@@ -2096,16 +2109,20 @@ class LikesRepository {
   /// Sync all user's reactions from relays.
   ///
   /// Fetches the user's Kind 7 events from relays and updates local storage.
-  /// Also fetches Kind 5 deletion events to filter out unliked reactions.
-  /// This should be called on startup to ensure local state matches relay
-  /// state.
+  /// Also fetches the Kind 5 deletions naming them to filter out unliked
+  /// reactions. This should be called on startup to ensure local state
+  /// matches relay state.
+  ///
+  /// Both reads wait for every relay to settle. A reaction is saved only when
+  /// the deletions read completed, so a short answer leaves it out rather
+  /// than restoring a like that was taken back (#9004).
   ///
   /// Returns a [LikesSyncResult] containing all synced data needed by the UI.
   ///
-  /// When [requireCompleteRelaySnapshot] is true, waits for every configured
-  /// relay to settle and records whether the bounded result proves that the
-  /// in-memory reaction set is complete. Ordinary likes may skip their
-  /// target-specific relay lookup only after that proof succeeds.
+  /// When [requireCompleteRelaySnapshot] is true, also records whether the
+  /// bounded result proves that the in-memory reaction set is complete.
+  /// Ordinary likes may skip their target-specific relay lookup only after
+  /// that proof succeeds.
   ///
   /// Throws `SyncFailedException` if syncing fails.
   Future<LikesSyncResult> syncUserReactions({
@@ -2146,55 +2163,27 @@ class LikesRepository {
         return _buildSyncResult();
       }
 
-      // Fetch both reactions and deletions from relays (authoritative)
+      // Fetch the reactions, then the deletions naming them, from relays
+      // (authoritative). Both wait for every relay, and only a complete
+      // deletions read lets a reaction count as live (#9004).
       final reactionsFilter = Filter(
         kinds: const [EventKind.reaction],
         authors: [pubkey],
         limit: _defaultReactionFetchLimit,
       );
-
-      final deletionsFilter = Filter(
-        kinds: const [EventKind.eventDeletion],
-        authors: [pubkey],
-        limit: _defaultReactionFetchLimit,
+      final reactionsRead = await _nostrClient.readEvents(
+        [reactionsFilter],
+        requireAllRelaysSettled: true,
       );
-
-      late final List<Event> reactionEvents;
-      late final List<Event> deletionEvents;
+      final reactionEvents = reactionsRead.events;
+      final retractions = await _readRetractions(
+        {for (final event in reactionEvents) event.id: event},
+        pubkey: pubkey,
+      );
       if (requireCompleteRelaySnapshot) {
-        final results = await Future.wait([
-          _nostrClient.queryEventsDetailed(
-            [reactionsFilter],
-            requireAllRelaysSettled: true,
-          ),
-          _nostrClient.queryEventsDetailed(
-            [deletionsFilter],
-            requireAllRelaysSettled: true,
-          ),
-        ]);
-        reactionEvents = results[0].events;
-        deletionEvents = results[1].events;
         _hasCompleteRelayReactionSnapshot =
-            results.every((result) => !result.timedOut && !result.noRelays) &&
-            reactionEvents.length < _defaultReactionFetchLimit &&
-            deletionEvents.length < _defaultReactionFetchLimit;
-      } else {
-        final results = await Future.wait([
-          _nostrClient.queryEvents([reactionsFilter]),
-          _nostrClient.queryEvents([deletionsFilter]),
-        ]);
-        reactionEvents = results[0];
-        deletionEvents = results[1];
-      }
-
-      // Build set of deleted reaction event IDs from Kind 5 events
-      final deletedReactionIds = <String>{};
-      for (final deletion in deletionEvents) {
-        for (final tag in deletion.tags) {
-          if (tag.isNotEmpty && tag[0] == 'e' && tag.length > 1) {
-            deletedReactionIds.add(tag[1]);
-          }
-        }
+            _provesAbsence(reactionsRead, reactionsFilter) &&
+            retractions.undecided.isEmpty;
       }
 
       final newRecords = <LikeRecord>[];
@@ -2214,7 +2203,7 @@ class LikesRepository {
         }
 
         // Skip reactions that have been deleted
-        if (deletedReactionIds.contains(event.id)) {
+        if (retractions.retracted.contains(event.id)) {
           if (_likeRecords.containsKey(targetId)) {
             deletedTargetIds.add(targetId);
           }
@@ -2223,6 +2212,10 @@ class LikesRepository {
           }
           continue;
         }
+
+        // The deletions read ended short, so this reaction may have been
+        // taken back; saving it could restore a like the user removed.
+        if (retractions.undecided.contains(event.id)) continue;
 
         if (_isLikeReaction(event)) {
           final record = LikeRecord(
@@ -2623,6 +2616,98 @@ class LikesRepository {
       for (final chunk in results)
         for (final event in chunk) event.id: event,
     }.values.toList();
+  }
+
+  /// [_queryChunked] that also says whether the relays' answer was complete.
+  ///
+  /// Every chunk waits for every relay to settle, so a slower relay is not
+  /// cut off a settle window after the first one answers. The answer is
+  /// complete only when [_provesAbsence] holds for every chunk.
+  Future<_RelayRead> _readChunked(
+    List<String> values,
+    Filter Function(List<String> chunk) buildFilter, {
+    Duration timeout = _settledReadTimeout,
+  }) async {
+    if (values.isEmpty) return (events: const <Event>[], isComplete: true);
+
+    final filters = [
+      for (final chunk in _chunkStrings(values, _reqEidChunkSize))
+        buildFilter(chunk),
+    ];
+    final results = await Future.wait([
+      for (final filter in filters)
+        _nostrClient.readEvents(
+          [filter],
+          requireAllRelaysSettled: true,
+          timeout: timeout,
+        ),
+    ]);
+    return (
+      events: {
+        for (final result in results)
+          for (final event in result.events) event.id: event,
+      }.values.toList(),
+      isComplete: [
+        for (var i = 0; i < filters.length; i++)
+          _provesAbsence(results[i], filters[i]),
+      ].every((proved) => proved),
+    );
+  }
+
+  /// Whether [read] of [filter] proves that an event it did not return does
+  /// not exist: every relay finished on its own, none may have held events
+  /// back at its result-size limit, and the answer merged with the local
+  /// cache was not cut off at the filter's own limit.
+  static bool _provesAbsence(QueryResult read, Filter filter) {
+    final limit = filter.limit;
+    return read.isComplete &&
+        !read.possiblyCapped &&
+        (limit == null || read.events.length < limit);
+  }
+
+  /// Reads this account's deletions of [reactionsById] and sorts the
+  /// reactions by what they show.
+  ///
+  /// A reaction is retracted when a deletion its own author signed names it.
+  /// One that no returned deletion names is proven live only when the read
+  /// was complete; otherwise its retraction is undecided, since the deletion
+  /// may be on a relay that did not finish answering (#9004).
+  Future<_Retractions> _readRetractions(
+    Map<String, Event> reactionsById, {
+    required String pubkey,
+    Duration timeout = _settledReadTimeout,
+  }) async {
+    final read = await _readChunked(
+      reactionsById.keys.toList(),
+      (chunk) => Filter(
+        kinds: const [EventKind.eventDeletion],
+        authors: [pubkey],
+        e: chunk,
+        limit: _defaultReactionFetchLimit,
+      ),
+      timeout: timeout,
+    );
+
+    final retracted = <String>{};
+    for (final deletion in read.events) {
+      for (final tag in deletion.tags) {
+        if (tag.length > 1 && tag[0] == 'e') {
+          final reaction = reactionsById[tag[1]];
+          if (reaction != null && reaction.pubkey == deletion.pubkey) {
+            retracted.add(reaction.id);
+          }
+        }
+      }
+    }
+    return (
+      retracted: retracted,
+      undecided: read.isComplete
+          ? const <String>{}
+          : {
+              for (final id in reactionsById.keys)
+                if (!retracted.contains(id)) id,
+            },
+    );
   }
 
   List<List<String>> _chunkStrings(List<String> values, int chunkSize) {

@@ -73,6 +73,7 @@ void main() {
       String authorPubkey = 'reaction_author_pubkey_1234567890abcdef',
     }) {
       final event = MockEvent();
+      when(() => event.id).thenReturn('deletion_of_${deletedEventIds.join()}');
       when(() => event.pubkey).thenReturn(authorPubkey);
       when(
         () => event.tags,
@@ -88,20 +89,22 @@ void main() {
       });
     }
 
-    void mockDetailedQueryEventsSequence(List<List<Event>> responses) {
+    /// Stubs the reads that must tell a complete answer from a short one —
+    /// the sync's — with [responses] in call order, each a complete read.
+    void mockReadEventsSequence(List<List<Event>> responses) {
       var callCount = 0;
       when(
-        () => mockNostrClient.queryEventsDetailed(
+        () => mockNostrClient.readEvents(
           any(),
           requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          timeout: any(named: 'timeout'),
         ),
-      ).thenAnswer((_) async {
-        return (
+      ).thenAnswer(
+        (_) async => QueryResult(
           events: responses[callCount++ % responses.length],
-          timedOut: false,
-          noRelays: false,
-        );
-      });
+          endedBy: QueryEnd.complete,
+        ),
+      );
     }
 
     // Helper to create repository with standard setup
@@ -129,6 +132,7 @@ void main() {
       registerFallbackValue(<Filter>[]);
       registerFallbackValue(createLikeRecord());
       registerFallbackValue('');
+      registerFallbackValue(Duration.zero);
     });
 
     setUp(() {
@@ -509,7 +513,7 @@ void main() {
         when(
           () => mockLocalStorage.getAllLikeRecords(),
         ).thenThrow(storageFailure);
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [createMockReaction(id: reactionId, targetEventId: targetId)],
           [],
         ]);
@@ -526,7 +530,7 @@ void main() {
         when(
           () => mockLocalStorage.saveLikeRecordsBatch(any()),
         ).thenThrow(storageFailure);
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [createMockReaction(id: reactionId, targetEventId: targetId)],
           [],
         ]);
@@ -551,7 +555,7 @@ void main() {
         when(
           () => mockLocalStorage.deleteLikeRecord(any()),
         ).thenThrow(storageFailure);
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [createMockReaction(id: reactionId, targetEventId: targetId)],
           [
             createMockDeletion([reactionId]),
@@ -3556,16 +3560,17 @@ void main() {
           when(
             () => mockNostrClient.resolvePublicKey(),
           ).thenAnswer((_) async => testUserPubkey);
-          mockQueryEventsSequence([
-            [],
-            [],
-          ]);
+          mockReadEventsSequence([<Event>[]]);
 
           repository = createRepository();
           await repository.syncUserReactions();
 
           final captured = verify(
-            () => mockNostrClient.queryEvents(captureAny()),
+            () => mockNostrClient.readEvents(
+              captureAny(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
           ).captured.cast<List<Filter>>();
           expect(captured, isNotEmpty);
           for (final filters in captured) {
@@ -3637,7 +3642,7 @@ void main() {
           targetEventId: targetId,
         );
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [mockReaction],
           [],
         ]);
@@ -3668,7 +3673,7 @@ void main() {
         );
         final mockDeletion = createMockDeletion([reactionId1]);
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [mockReaction1, mockReaction2],
           [mockDeletion],
         ]);
@@ -3702,7 +3707,7 @@ void main() {
         );
         final mockDeletion = createMockDeletion([reactionId]);
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [mockReaction],
           [mockDeletion],
         ]);
@@ -3726,7 +3731,7 @@ void main() {
           content: '-', // Dislike
         );
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [mockReaction],
           [],
         ]);
@@ -3738,9 +3743,7 @@ void main() {
       });
 
       test('handles empty relay response', () async {
-        when(
-          () => mockNostrClient.queryEvents(any()),
-        ).thenAnswer((_) async => []);
+        mockReadEventsSequence([<Event>[]]);
 
         repository = createRepository();
         final result = await repository.syncUserReactions();
@@ -3759,7 +3762,11 @@ void main() {
           ],
         );
         when(
-          () => mockNostrClient.queryEvents(any()),
+          () => mockNostrClient.readEvents(
+            any(),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenThrow(Exception('Network error'));
 
         repository = createRepository();
@@ -3775,7 +3782,11 @@ void main() {
         'throws SyncFailedException when relay fails and no local data',
         () async {
           when(
-            () => mockNostrClient.queryEvents(any()),
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
           ).thenThrow(Exception('Network error'));
 
           repository = createRepository();
@@ -3803,7 +3814,7 @@ void main() {
         );
         final mockDeletion = createMockDeletion([reactionId1]);
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [mockReaction1, mockReaction2],
           [mockDeletion],
         ]);
@@ -3834,7 +3845,7 @@ void main() {
         );
         final mockDeletion = createMockDeletion([reactionId1, reactionId2]);
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [mockReaction1, mockReaction2],
           [mockDeletion],
         ]);
@@ -3844,6 +3855,36 @@ void main() {
 
         expect(result.orderedEventIds, isEmpty);
       });
+
+      test(
+        "keeps a reaction that only another account's deletion names",
+        () async {
+          const targetId = 'target_event_1234567890abcdef';
+          const reactionId = 'reaction_event_1234567890abcdef';
+          final mockReaction = createMockReaction(
+            id: reactionId,
+            targetEventId: targetId,
+          );
+          // NIP-09: only the reaction's author can retract it.
+          final foreignDeletion = createMockDeletion(
+            [reactionId],
+            authorPubkey: 'another_account_pubkey_1234567890abcdef',
+          );
+
+          mockReadEventsSequence([
+            [mockReaction],
+            [foreignDeletion],
+          ]);
+          when(
+            () => mockLocalStorage.saveLikeRecordsBatch(any()),
+          ).thenAnswer((_) async {});
+
+          repository = createRepository();
+          final result = await repository.syncUserReactions();
+
+          expect(result.orderedEventIds, contains(targetId));
+        },
+      );
 
       test('updates newer record when duplicate target events exist', () async {
         const targetId = 'target_event_1234567890abcdef';
@@ -3860,7 +3901,7 @@ void main() {
           createdAt: 1700000100,
         );
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [mockOlder, mockNewer],
           [],
         ]);
@@ -3910,7 +3951,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             [relayReaction],
             <Event>[],
           ]);
@@ -3982,7 +4023,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             [olderRelayReaction],
             <Event>[],
           ]);
@@ -5126,7 +5167,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockDetailedQueryEventsSequence([
+          mockReadEventsSequence([
             [relayReaction],
             <Event>[],
           ]);
@@ -5137,10 +5178,12 @@ void main() {
           repository = createRepository();
           await repository.initialize();
 
+          // The reactions read, then the deletions naming the one it found.
           verify(
-            () => mockNostrClient.queryEventsDetailed(
+            () => mockNostrClient.readEvents(
               any(),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
             ),
           ).called(2);
           expect(
@@ -5170,7 +5213,7 @@ void main() {
               ),
             ],
           );
-          mockDetailedQueryEventsSequence([
+          mockReadEventsSequence([
             <Event>[],
             <Event>[],
           ]);
@@ -5178,12 +5221,14 @@ void main() {
           repository = createRepository();
           await repository.initialize();
 
+          // No reaction came back, so there is no deletion to look for.
           verify(
-            () => mockNostrClient.queryEventsDetailed(
+            () => mockNostrClient.readEvents(
               any(),
-              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
             ),
-          ).called(2);
+          ).called(1);
         },
       );
 
@@ -5203,11 +5248,10 @@ void main() {
             (_) async => [createLikeRecord(targetEventId: oldEventId)],
           );
           when(
-            () => mockNostrClient.queryEventsDetailed(
+            () => mockNostrClient.readEvents(
               any(),
-              requireAllRelaysSettled: any(
-                named: 'requireAllRelaysSettled',
-              ),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
             ),
           ).thenThrow(Exception('offline'));
 
@@ -5687,7 +5731,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             [otherDeviceReaction],
             <Event>[],
           ]);
@@ -6039,7 +6083,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             [reaction],
             <Event>[],
           ]);
@@ -6077,7 +6121,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             [reaction],
             <Event>[],
           ]);
@@ -6106,7 +6150,7 @@ void main() {
             ['a', coordinate],
           ],
         );
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [reaction],
           <Event>[],
         ]);
@@ -6771,7 +6815,7 @@ void main() {
           ],
         );
 
-        mockQueryEventsSequence([
+        mockReadEventsSequence([
           [oldReaction, newReaction],
           <Event>[],
           [oldReaction, newReaction],

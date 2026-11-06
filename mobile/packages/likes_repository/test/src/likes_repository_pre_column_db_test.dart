@@ -35,6 +35,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Duration.zero);
     });
 
     setUp(() {
@@ -113,16 +114,16 @@ void main() {
         final client = createClient();
         var queryCall = 0;
         when(
-          () => client.queryEventsDetailed(
+          () => client.readEvents(
             any(),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async {
           queryCall++;
-          return (
+          return QueryResult(
             events: queryCall == 1 ? [createReaction()] : <Event>[],
-            timedOut: false,
-            noRelays: false,
+            endedBy: QueryEnd.complete,
           );
         });
         final repository = LikesRepository(
@@ -157,9 +158,10 @@ void main() {
         // making ordinary local state depend on relay availability.
         final offlineClient = createClient();
         when(
-          () => offlineClient.queryEventsDetailed(
+          () => offlineClient.readEvents(
             any(),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
           ),
         ).thenThrow(Exception('offline'));
         final restarted = LikesRepository(
@@ -179,9 +181,10 @@ void main() {
           isTrue,
         );
         verify(
-          () => offlineClient.queryEventsDetailed(
+          () => offlineClient.readEvents(
             any(),
             requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
           ),
         ).called(1);
         restarted.dispose();

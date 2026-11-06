@@ -15,12 +15,10 @@ class _MockLikesLocalStorage extends Mock implements LikesLocalStorage {}
 
 class _MockEvent extends Mock implements Event {}
 
-typedef _RelaySnapshot = ({List<Event> events, bool timedOut, bool noRelays});
-
 /// Holds the startup relay snapshot open so a tap can race it.
 class _GatedRelaySnapshot {
-  final reactions = Completer<_RelaySnapshot>();
-  final deletions = Completer<_RelaySnapshot>();
+  final reactions = Completer<QueryResult>();
+  final deletions = Completer<QueryResult>();
 
   /// Lets reconciliation land as a complete, uncapped snapshot.
   void land({
@@ -28,10 +26,10 @@ class _GatedRelaySnapshot {
     List<Event> deletions = const [],
   }) {
     this.reactions.complete(
-      (events: reactions, timedOut: false, noRelays: false),
+      QueryResult(events: reactions, endedBy: QueryEnd.complete),
     );
     this.deletions.complete(
-      (events: deletions, timedOut: false, noRelays: false),
+      QueryResult(events: deletions, endedBy: QueryEnd.complete),
     );
   }
 }
@@ -113,17 +111,21 @@ void main() {
       bool noRelays = false,
     }) {
       when(
-        () => nostrClient.queryEventsDetailed(
+        () => nostrClient.readEvents(
           any(),
-          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          requireAllRelaysSettled: true,
+          timeout: any(named: 'timeout'),
         ),
       ).thenAnswer((invocation) async {
         final filters = invocation.positionalArguments.first as List<Filter>;
         final kinds = filters.first.kinds ?? const <int>[];
-        return (
+        return QueryResult(
           events: kinds.contains(EventKind.reaction) ? reactions : deletions,
-          timedOut: timedOut,
-          noRelays: noRelays,
+          endedBy: noRelays
+              ? QueryEnd.noRelay
+              : timedOut
+              ? QueryEnd.deadline
+              : QueryEnd.complete,
         );
       });
     }
@@ -133,9 +135,10 @@ void main() {
     _GatedRelaySnapshot gateRelaySnapshot() {
       final gate = _GatedRelaySnapshot();
       when(
-        () => nostrClient.queryEventsDetailed(
+        () => nostrClient.readEvents(
           any(),
-          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          requireAllRelaysSettled: true,
+          timeout: any(named: 'timeout'),
         ),
       ).thenAnswer((invocation) {
         final filters = invocation.positionalArguments.first as List<Filter>;
@@ -205,6 +208,7 @@ void main() {
     setUpAll(() {
       registerFallbackValue(_MockEvent());
       registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Duration.zero);
       registerFallbackValue(
         LikeRecord(
           targetEventId: 'fallback',
