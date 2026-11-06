@@ -353,26 +353,55 @@ void main() {
         ],
       );
 
-      blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-        'does not let a comment dated in the future win',
-        setUp: () {
-          stubComments([
-            _comment('future', age: const Duration(hours: -3)),
-            _comment('upvoted'),
-          ]);
-          stubUpvotes({'future': 5, 'upvoted': 1});
-        },
-        build: buildCubit,
-        act: (cubit) => cubit.load(),
-        skip: 1,
-        expect: () => [
-          isA<FeedTopCommentState>().having(
-            (s) => s.topComment?.id,
-            'topComment',
-            'upvoted',
-          ),
-        ],
-      );
+      group('a comment dated in the future', () {
+        for (final (ahead, label) in [
+          (const Duration(minutes: 115), 'just under two hours'),
+          (const Duration(hours: 2), 'exactly two hours'),
+          (const Duration(hours: 3), 'over two hours'),
+        ]) {
+          blocTest<FeedTopCommentCubit, FeedTopCommentState>(
+            'scores as if posted now when $label ahead',
+            setUp: () {
+              stubComments([
+                _comment('future', age: -ahead),
+                _comment('popular'),
+              ]);
+              stubUpvotes({'future': 1, 'popular': 10});
+            },
+            build: buildCubit,
+            act: (cubit) => cubit.load(),
+            skip: 1,
+            expect: () => [
+              isA<FeedTopCommentState>().having(
+                (s) => s.topComment?.id,
+                'topComment',
+                'popular',
+              ),
+            ],
+          );
+        }
+
+        blocTest<FeedTopCommentCubit, FeedTopCommentState>(
+          'ties with a comment posted now rather than winning the tie-break',
+          setUp: () {
+            stubComments([
+              _comment('now', age: Duration.zero),
+              _comment('future', age: const Duration(minutes: -90)),
+            ]);
+            stubUpvotes({});
+          },
+          build: buildCubit,
+          act: (cubit) => cubit.load(),
+          skip: 1,
+          expect: () => [
+            isA<FeedTopCommentState>().having(
+              (s) => s.topComment?.id,
+              'topComment',
+              'now',
+            ),
+          ],
+        );
+      });
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
         'is empty when only video replies and blank comments exist',

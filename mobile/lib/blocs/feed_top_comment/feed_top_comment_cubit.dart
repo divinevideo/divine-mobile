@@ -172,18 +172,17 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
     final replyCounts = computeReplyCounts({
       for (final comment in allComments) comment.id: comment,
     });
-    // A comment dated more than two hours ahead of [now] scores NaN, which is
-    // neither higher nor lower than any score and so won whenever it came
-    // first. Rank it last instead.
-    double score(Comment comment) {
-      final value = commentEngagementScore(
-        comment: comment,
-        now: now,
-        likeCounts: upvotes,
-        replyCounts: replyCounts,
-      );
-      return value.isNaN ? double.negativeInfinity : value;
-    }
+    // Its author sets created_at, so a comment dated after [now] counts as
+    // posted now. Dated ahead it would score ever higher as the decay's base
+    // shrinks, then Infinity and NaN past two hours, and win the tie-break.
+    DateTime postedAt(Comment comment) =>
+        comment.createdAt.isAfter(now) ? now : comment.createdAt;
+    double score(Comment comment) => commentEngagementScore(
+      comment: comment.copyWith(createdAt: postedAt(comment)),
+      now: now,
+      likeCounts: upvotes,
+      replyCounts: replyCounts,
+    );
 
     return candidates.reduce((best, comment) {
       final bestScore = score(best);
@@ -191,7 +190,7 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
       if (commentScore != bestScore) {
         return commentScore > bestScore ? comment : best;
       }
-      return comment.createdAt.isAfter(best.createdAt) ? comment : best;
+      return postedAt(comment).isAfter(postedAt(best)) ? comment : best;
     });
   }
 
