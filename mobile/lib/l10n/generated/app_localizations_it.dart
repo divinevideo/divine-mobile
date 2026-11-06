@@ -9843,6 +9843,36 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => 'Timbro';
 
   @override
+  String get videoEditorCaptionsPresetOutline => 'Contorno';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => 'Riflettore';
+
+  @override
+  String get videoEditorCaptionsPresetHype => 'Hype';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => 'Minimal';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => 'Evidenziatore';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => 'Bagliore';
+
+  @override
+  String get videoEditorCaptionsPresetComic => 'Fumetto';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => 'Caramella';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => 'Arcade';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => 'Cinema';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => 'Apri editor testo';
 
   @override

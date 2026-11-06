@@ -9813,6 +9813,36 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => 'Печат';
 
   @override
+  String get videoEditorCaptionsPresetOutline => 'Контур';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => 'Прожектор';
+
+  @override
+  String get videoEditorCaptionsPresetHype => 'Хайп';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => 'Минимален';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => 'Текстмаркер';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => 'Сияние';
+
+  @override
+  String get videoEditorCaptionsPresetComic => 'Комикс';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => 'Бонбон';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => 'Аркада';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => 'Кино';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => 'Отвори текстовия редактор';
 
   @override

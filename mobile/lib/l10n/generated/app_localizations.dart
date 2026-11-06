@@ -16385,6 +16385,66 @@ abstract class AppLocalizations {
   /// **'Stamp'**
   String get videoEditorCaptionsPresetStamp;
 
+  /// Name of the built-in caption style: heavy white text with a dark outline, no background.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline'**
+  String get videoEditorCaptionsPresetOutline;
+
+  /// Name of the built-in caption style: outlined text that lights up each word as it is spoken.
+  ///
+  /// In en, this message translates to:
+  /// **'Spotlight'**
+  String get videoEditorCaptionsPresetSpotlight;
+
+  /// Name of the built-in caption style: loud cartoon-style text with a thick outline that lights up each word as it is spoken.
+  ///
+  /// In en, this message translates to:
+  /// **'Hype'**
+  String get videoEditorCaptionsPresetHype;
+
+  /// Name of the built-in caption style: plain white text with a soft shadow, no background.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimal'**
+  String get videoEditorCaptionsPresetMinimal;
+
+  /// Name of the built-in caption style: black text on a yellow box, like a highlighter pen. Must differ from the Marker style name.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlighter'**
+  String get videoEditorCaptionsPresetHighlighter;
+
+  /// Name of the built-in caption style: white text with a colored glow around it. Must differ from the Neon style name.
+  ///
+  /// In en, this message translates to:
+  /// **'Glow'**
+  String get videoEditorCaptionsPresetGlow;
+
+  /// Name of the built-in caption style: comic-book lettering in yellow with a thick outline.
+  ///
+  /// In en, this message translates to:
+  /// **'Comic'**
+  String get videoEditorCaptionsPresetComic;
+
+  /// Name of the built-in caption style: rounded text on a pink box that bounces in.
+  ///
+  /// In en, this message translates to:
+  /// **'Candy'**
+  String get videoEditorCaptionsPresetCandy;
+
+  /// Name of the built-in caption style: blocky video-game lettering in bright green with an outline.
+  ///
+  /// In en, this message translates to:
+  /// **'Arcade'**
+  String get videoEditorCaptionsPresetArcade;
+
+  /// Name of the built-in caption style: film subtitles with a thin outline and a soft shadow.
+  ///
+  /// In en, this message translates to:
+  /// **'Cinema'**
+  String get videoEditorCaptionsPresetCinema;
+
   /// No description provided for @videoEditorOpenTextSemanticLabel.
   ///
   /// In en, this message translates to:

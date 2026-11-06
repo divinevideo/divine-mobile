@@ -9724,6 +9724,36 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => 'مہر';
 
   @override
+  String get videoEditorCaptionsPresetOutline => 'آؤٹ لائن';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => 'اسپاٹ لائٹ';
+
+  @override
+  String get videoEditorCaptionsPresetHype => 'ہائپ';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => 'سادہ';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => 'ہائی لائٹر';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => 'چمک';
+
+  @override
+  String get videoEditorCaptionsPresetComic => 'کامک';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => 'ٹافی';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => 'آرکیڈ';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => 'سنیما';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => 'ٹیکسٹ ایڈیٹر کھولیں';
 
   @override

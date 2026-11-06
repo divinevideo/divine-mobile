@@ -9727,6 +9727,36 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => 'Setem';
 
   @override
+  String get videoEditorCaptionsPresetOutline => 'Garis luar';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => 'Sorotan';
+
+  @override
+  String get videoEditorCaptionsPresetHype => 'Hype';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => 'Minimal';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => 'Penyerlah';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => 'Cahaya';
+
+  @override
+  String get videoEditorCaptionsPresetComic => 'Komik';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => 'Gula-gula';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => 'Arked';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => 'Pawagam';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => 'Buka penyunting teks';
 
   @override

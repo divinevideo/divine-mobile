@@ -9986,6 +9986,36 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => 'స్టాంప్';
 
   @override
+  String get videoEditorCaptionsPresetOutline => 'అవుట్‌లైన్';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => 'స్పాట్‌లైట్';
+
+  @override
+  String get videoEditorCaptionsPresetHype => 'హైప్';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => 'మినిమల్';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => 'హైలైటర్';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => 'గ్లో';
+
+  @override
+  String get videoEditorCaptionsPresetComic => 'కామిక్';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => 'క్యాండీ';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => 'ఆర్కేడ్';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => 'సినిమా';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => 'టెక్స్ట్ ఎడిటర్‌ను తెరవండి';
 
   @override

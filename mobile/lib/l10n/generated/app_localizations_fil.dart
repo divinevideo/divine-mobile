@@ -9796,6 +9796,36 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => 'Selyo';
 
   @override
+  String get videoEditorCaptionsPresetOutline => 'Outline';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => 'Spotlight';
+
+  @override
+  String get videoEditorCaptionsPresetHype => 'Hype';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => 'Minimal';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => 'Highlighter';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => 'Liwanag';
+
+  @override
+  String get videoEditorCaptionsPresetComic => 'Komiks';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => 'Kendi';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => 'Arcade';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => 'Sine';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => 'Buksan ang text editor';
 
   @override

@@ -9263,6 +9263,36 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => 'スタンプ';
 
   @override
+  String get videoEditorCaptionsPresetOutline => '縁取り';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => 'スポットライト';
+
+  @override
+  String get videoEditorCaptionsPresetHype => '盛り上げ';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => 'ミニマル';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => '蛍光ペン';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => 'グロー';
+
+  @override
+  String get videoEditorCaptionsPresetComic => 'コミック';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => 'キャンディ';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => 'アーケード';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => 'シネマ';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => 'テキストエディタを開く';
 
   @override

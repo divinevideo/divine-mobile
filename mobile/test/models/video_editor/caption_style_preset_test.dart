@@ -8,6 +8,10 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/models/video_editor/text_effects.dart';
+import 'package:openvine/utils/editor_text_fonts.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show LayerBackgroundMode;
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 
 void main() {
@@ -51,6 +55,16 @@ void main() {
         for (final animation in preset.leave) {
           expect(animation.phase, equals(pve.AnimationPhase.animateOut));
         }
+      }
+    });
+
+    test('every preset renders with an editor catalogue font', () {
+      // A burned-in caption layer keeps only its font family name. The
+      // editor and the publish rasterizer register just the catalogue fonts
+      // a restored layer names (preloadEditorTextFonts), so a preset font
+      // outside the catalogue would bake in the platform default instead.
+      for (final preset in CaptionStylePreset.presets) {
+        expect(googleFontFamilyName(preset.font), isNotNull, reason: preset.id);
       }
     });
 
@@ -173,6 +187,35 @@ void main() {
         layer.animations,
         hasLength(classic.enter.length + classic.leave.length),
       );
+    });
+
+    test('buildLayer draws the preset outline and shadow', () {
+      // Built on classic's bundled font for the reason above; the outlined
+      // built-in presets differ only in font and values.
+      final glowColor = VideoEditorConstants.colors[6];
+      final outlined = CaptionStylePreset(
+        id: 'outlined',
+        font: classic.font,
+        color: classic.color,
+        background: classic.background,
+        colorMode: LayerBackgroundMode.onlyColor,
+        enter: classic.enter,
+        leave: classic.leave,
+        effects: TextEffects(
+          outlineThickness: 0.5,
+          shadowStrength: 1,
+          shadowColor: glowColor,
+        ),
+      );
+
+      final layer = outlined.buildLayer(
+        cue,
+        bodySize: const Size(400, 800),
+      );
+
+      expect(layer.outlineWidth, equals(TextEffects.maxOutlineWidth / 2));
+      expect(layer.textStyle?.shadows, hasLength(1));
+      expect(layer.textStyle?.shadows?.single.color, equals(glowColor));
     });
   });
 }

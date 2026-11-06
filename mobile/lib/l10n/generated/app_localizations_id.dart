@@ -9631,6 +9631,36 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorCaptionsPresetStamp => 'Stempel';
 
   @override
+  String get videoEditorCaptionsPresetOutline => 'Garis tepi';
+
+  @override
+  String get videoEditorCaptionsPresetSpotlight => 'Lampu sorot';
+
+  @override
+  String get videoEditorCaptionsPresetHype => 'Hype';
+
+  @override
+  String get videoEditorCaptionsPresetMinimal => 'Minimalis';
+
+  @override
+  String get videoEditorCaptionsPresetHighlighter => 'Penanda teks';
+
+  @override
+  String get videoEditorCaptionsPresetGlow => 'Pendar';
+
+  @override
+  String get videoEditorCaptionsPresetComic => 'Komik';
+
+  @override
+  String get videoEditorCaptionsPresetCandy => 'Permen';
+
+  @override
+  String get videoEditorCaptionsPresetArcade => 'Arkade';
+
+  @override
+  String get videoEditorCaptionsPresetCinema => 'Sinema';
+
+  @override
   String get videoEditorOpenTextSemanticLabel => 'Buka editor teks';
 
   @override
