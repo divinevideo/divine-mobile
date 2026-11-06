@@ -426,6 +426,43 @@ void main() {
           verify(() => cubit.dismiss()).called(2);
         },
       );
+
+      testWidgets('tapping beside a short comment dismisses the reaction', (
+        tester,
+      ) async {
+        when(() => cubit.state).thenReturn(
+          _visibleState.copyWith(
+            topComment: Comment(
+              id: _topComment.id,
+              content: 'ok',
+              authorPubkey: _commenter,
+              createdAt: DateTime(2026, 10, 28),
+              rootEventId: _video.id,
+              rootAuthorPubkey: _creator,
+            ),
+          ),
+        );
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+
+        final comment = find.text('ok');
+        final commentTapArea = find
+            .ancestor(of: comment, matching: find.byType(GestureDetector))
+            .first;
+        final screen = tester.getRect(find.byType(FeedReactionsOverlay));
+        expect(
+          tester.getRect(commentTapArea).right,
+          lessThan(screen.width / 2),
+        );
+
+        await tester.tapAt(
+          Offset(
+            screen.right - FeedReactionsOverlayLayout.sidePadding - 1,
+            tester.getCenter(find.byType(UserAvatar)).dy,
+          ),
+        );
+        verify(() => cubit.dismiss()).called(1);
+      });
     });
   });
 

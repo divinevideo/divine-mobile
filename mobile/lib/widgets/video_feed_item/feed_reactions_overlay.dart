@@ -440,7 +440,10 @@ class _TopCommentAuthor extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userProfileReactiveProvider(authorPubkey)).value;
     final nameStyle = VineTheme.titleSmallFont(color: VineTheme.whiteText);
+    // As wide as its content, so the comment's tap area ends where the
+    // bubble and name do and a tap beside them reaches the scrim.
     return Row(
+      mainAxisSize: MainAxisSize.min,
       spacing: 8,
       children: [
         UserAvatar(
