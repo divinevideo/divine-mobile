@@ -646,6 +646,51 @@ void main() {
       expect(find.byType(VineBottomSheet), findsNothing);
     });
 
+    testWidgets('picker scrolls when its rows outgrow the screen', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(375, 667);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final pubkeys = [
+        for (var i = 0; i < 20; i++) i.toRadixString(16).padLeft(64, '0'),
+      ];
+      await tester.pumpWidget(
+        _wrap(
+          CollaboratorAvatarRowBody(visibility: _allConfirmed(pubkeys)),
+          overrides: [
+            for (final (i, pubkey) in pubkeys.indexed)
+              fetchUserProfileProvider(pubkey).overrideWith(
+                (ref) async => _makeProfile(pubkey, 'Collaborator $i'),
+              ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.text(_l10n.videoCollaboratorWithMore('Collaborator 0', 19)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final lastRow = find.text('Collaborator 19');
+      expect(lastRow, findsNothing);
+
+      await tester.scrollUntilVisible(
+        lastRow,
+        200,
+        scrollable: find.descendant(
+          of: find.byType(VineBottomSheet),
+          matching: find.byType(Scrollable),
+        ),
+      );
+
+      expect(lastRow, findsOneWidget);
+    });
+
     testWidgets('expanded picker omits collaborator ignored by current user', (
       tester,
     ) async {
