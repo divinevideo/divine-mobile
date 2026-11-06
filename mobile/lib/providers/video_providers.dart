@@ -993,19 +993,21 @@ VideosRepository videosRepository(Ref ref) {
 ///   *relay-bound* use of that predicate; `state_management.md` documents only
 ///   the relay-free NIP-98 one.
 ///
-/// Rebuilt whenever the identity changes — sign-in, sign-out, account switch
-/// — which disposes the old instance and re-runs `initialize()` on the new
-/// client. A key never arrives late on one client: every `NostrIdentity`
-/// answers `getPublicKey()` with its stored pubkey whatever its RPC state, and
-/// the keyless client never has one, so `initialize()` subscribes and syncs
-/// with the key on every client that has an identity (#6838). Either watch
-/// below carries the rebuild on its own; `video_providers_signer_resolution_test`
-/// pins that.
+/// Rebuilt whenever `NostrService` swaps its client — sign-in, sign-out,
+/// account switch, and an offline-restored session whose identity can sign
+/// again — which disposes the old instance and re-runs `initialize()` on the
+/// new client. The `nostrServiceProvider` watch is what carries that last one:
+/// the signer upgrade keeps the same `AuthState`. A key never arrives late on
+/// one client: every `NostrIdentity` answers `getPublicKey()` with its stored
+/// pubkey whatever its RPC state, and the keyless client never has one, so
+/// `initialize()` subscribes and syncs with the key on every client that has
+/// an identity (#6838). `video_providers_signer_resolution_test` pins both.
 ///
-/// An empty result from `syncUserReactions()` therefore means the account has
-/// no reactions, or the caller holds an instance from before the identity
-/// changed. The guards are pinned by `likes_repository_test.dart`'s
-/// `signer readiness (#6813)` and `initialize` groups.
+/// An empty result from `syncUserReactions()` is still not proof of emptiness:
+/// a relay read that times out returns whatever arrived, and
+/// `ProfileLikedVideosBloc` renders an empty sync as `success`. The guards are
+/// pinned by `likes_repository_test.dart`'s `signer readiness (#6813)` and
+/// `initialize` groups.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
