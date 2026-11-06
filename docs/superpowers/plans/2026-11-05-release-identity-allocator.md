@@ -239,7 +239,7 @@ The reservation record is `{"schema": 1, "platform", "build_number", "version", 
     1. Require `BOOTSTRAP_PATH` in `ledger.paths()`. Otherwise raise `AllocationError` with the message `the release ledger is not bootstrapped; run the release-identity-bootstrap workflow in Codemagic`.
     2. Run `reconcile`.
     3. Run `derive_version(pubspec, claimed_versions(paths) + stable_tags)`.
-    4. Require the version to be at least the highest observed submitted App Store version (iOS) or mapped Play production version (Android), even if a concurrent claim is absent from the listing.
+    4. Require the version to be newer than the highest observed submitted App Store version (iOS), or at least the highest mapped Play production version (Android), even if a concurrent claim is absent from the listing. Pending/rejected iOS versions remain permanently claimed, although the later store preflight permits reuse of those states.
     5. Run `reserve_build_number`.
   - `bootstrap(*, ledger, ios_store_versions: list[Version], android_version_codes: list[int], now, dry_run: bool) -> list[str]`. It reconciles both platforms and collects every unmappable identity before raising. Unless this is a dry run, it then creates `BOOTSTRAP_PATH` with `{"schema": 1, "bootstrapped_at", "claims": [sorted claim paths]}`. It returns the paths it created or would create. A dry run writes nothing.
 
@@ -396,7 +396,7 @@ Branch `feat/builds-allocate-release-identity`, from `main` after PR B merges **
 - Refuse an empty submitted Play production view. Ignore draft release codes, while retaining completed, staged and halted releases. Claim iOS versions already submitted, including pending and rejected versions; claims never expire.
 - Mapping repairs go only in `allocations/builds/android/<code>.json`, never in patch provenance under `releases/`.
 - CLI tests must observe both stores affecting versions, the platform-specific Shorebird spent check, and the Codemagic build id. Bind reuse to the recorded source SHA and reservation key; require full lowercase 40-hex source SHAs for manual keys too.
-- Keep observed store uploads separate from the minimum build-number floor. A spent reservation gets a new number; the existing identity is never rebuilt. Refuse an iOS version below the observed submitted version even if a concurrent claim is absent from the ledger listing, matching the Android guard.
+- Keep observed store uploads separate from the minimum build-number floor. A spent reservation gets a new number; the existing identity is never rebuilt. Refuse an iOS version at or below the observed submitted version even if a concurrent claim is absent from the ledger listing. Android retains its strictly-below guard because Play accepts a higher code with the same version name.
 - Report only claims and bootstrap markers actually created by this invocation. Fresh reservations skip identities already held by Shorebird or provenance.
 
 Before builds allocate (PR C), complete these explicit prerequisites:

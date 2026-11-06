@@ -307,9 +307,9 @@ def allocate(
     version = derive_version(
         pubspec, claimed_versions(ledger.paths()) + list(stable_tags)
     )
-    if platform == "ios" and observed_versions and version < max(observed_versions):
+    if platform == "ios" and observed_versions and version <= max(observed_versions):
         raise AllocationError(
-            f"derived version {version} is below the highest App Store "
+            f"derived version {version} is not newer than the highest App Store "
             f"submitted version {max(observed_versions)}"
         )
     if platform == "android" and codes:

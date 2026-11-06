@@ -665,6 +665,17 @@ class IosFloorGuardTest(unittest.TestCase):
             run_allocate(ledger, store_versions=iter([v("1.0.50")]))
         self.assertFalse([p for p in ledger.creates if p.startswith("allocations/builds/")])
 
+    def test_lost_race_with_equal_submitted_version_stops_before_reserving(self):
+        # Pending/rejected iOS submissions are permanently claimed by the
+        # allocator, even though the later store preflight permits reuse.
+        lost = "allocations/claims/1.0.50/app-store.json"
+        ledger = StaleViewStore(dict(BOOT), lost)
+        with self.assertRaisesRegex(AllocationError, "1.0.50.*1.0.50"):
+            run_allocate(
+                ledger, pubspec=v("1.0.50"), store_versions=[v("1.0.50")]
+            )
+        self.assertFalse([p for p in ledger.creates if p.startswith("allocations/builds/")])
+
 
 class AndroidFloorGuardTest(unittest.TestCase):
     def test_lost_race_claim_missing_from_view_trips_the_floor_check(self) -> None:
