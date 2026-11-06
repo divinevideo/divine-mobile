@@ -31,6 +31,7 @@ class VineBottomSheet extends StatelessWidget {
     this.children,
     this.body,
     this.buildScrollBody,
+    this.leading,
     this.trailing,
     this.onComplete,
     this.closeSemanticLabel = 'Close',
@@ -93,6 +94,11 @@ class VineBottomSheet extends StatelessWidget {
   /// Use this when you need direct access to the [ScrollController]
   /// for custom scroll behavior. Requires [scrollController] to be provided.
   final Widget Function(ScrollController scrollController)? buildScrollBody;
+
+  /// Optional leading widget in header (e.g., a filter pill).
+  ///
+  /// Ignored when [onComplete] is set, whose close button takes the slot.
+  final Widget? leading;
 
   /// Optional trailing widget in header (e.g., badge, button)
   final Widget? trailing;
@@ -215,6 +221,7 @@ class VineBottomSheet extends StatelessWidget {
     Widget? contentTitleTrailing,
     Widget? body,
     Widget Function(ScrollController scrollController)? buildScrollBody,
+    Widget? leading,
     Widget? trailing,
     AsyncCallback? onComplete,
     String closeSemanticLabel = 'Close',
@@ -288,6 +295,7 @@ class VineBottomSheet extends StatelessWidget {
               contentTitleTrailing: contentTitleTrailing,
               scrollController: scrollController,
               buildScrollBody: buildScrollBody,
+              leading: leading,
               trailing: trailing,
               onComplete: onComplete,
               closeSemanticLabel: closeSemanticLabel,
@@ -389,6 +397,7 @@ class VineBottomSheet extends StatelessWidget {
             title: title,
             contentTitle: contentTitle,
             contentTitleTrailing: contentTitleTrailing,
+            leading: leading,
             trailing: trailing,
             onComplete: onComplete,
             closeSemanticLabel: closeSemanticLabel,
@@ -420,6 +429,7 @@ class VineBottomSheet extends StatelessWidget {
             ? _ScrollableContent(
                 showHeader: showHeader,
                 title: title,
+                leading: leading,
                 trailing: trailing,
                 onComplete: onComplete,
                 closeSemanticLabel: closeSemanticLabel,
@@ -440,6 +450,7 @@ class VineBottomSheet extends StatelessWidget {
             : _FixedContent(
                 showHeader: showHeader,
                 title: title,
+                leading: leading,
                 trailing: trailing,
                 onComplete: onComplete,
                 closeSemanticLabel: closeSemanticLabel,
@@ -496,6 +507,7 @@ class _ScrollableContent extends StatelessWidget {
   const _ScrollableContent({
     required this.showHeader,
     required this.title,
+    required this.leading,
     required this.trailing,
     required this.onComplete,
     required this.closeSemanticLabel,
@@ -516,6 +528,7 @@ class _ScrollableContent extends StatelessWidget {
 
   final bool showHeader;
   final Widget? title;
+  final Widget? leading;
   final Widget? trailing;
   final AsyncCallback? onComplete;
   final String closeSemanticLabel;
@@ -546,7 +559,7 @@ class _ScrollableContent extends StatelessWidget {
                     onClose: () => Navigator.of(context).pop(),
                     semanticLabel: closeSemanticLabel,
                   )
-                : null,
+                : leading,
             trailing: onComplete != null
                 ? _CompleteButton(
                     onComplete: onComplete!,
@@ -635,6 +648,7 @@ class _FixedContent extends StatelessWidget {
   const _FixedContent({
     required this.showHeader,
     required this.title,
+    required this.leading,
     required this.trailing,
     required this.onComplete,
     required this.closeSemanticLabel,
@@ -653,6 +667,7 @@ class _FixedContent extends StatelessWidget {
 
   final bool showHeader;
   final Widget? title;
+  final Widget? leading;
   final Widget? trailing;
   final AsyncCallback? onComplete;
   final String closeSemanticLabel;
@@ -684,7 +699,7 @@ class _FixedContent extends StatelessWidget {
                       onClose: () => Navigator.of(context).pop(),
                       semanticLabel: closeSemanticLabel,
                     )
-                  : null,
+                  : leading,
               trailing: onComplete != null
                   ? _CompleteButton(
                       onComplete: onComplete!,
