@@ -59,8 +59,11 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
   late final StreamSubscription<void> _loopSubscription;
 
   /// Fetches the comments and their vote counts and selects the top comment.
+  ///
+  /// Runs once per cubit; later calls do nothing, so a finished state never
+  /// carries an earlier load's comment.
   Future<void> load() async {
-    if (state.status == FeedTopCommentStatus.loading) return;
+    if (state.status != FeedTopCommentStatus.initial) return;
     emit(state.copyWith(status: FeedTopCommentStatus.loading));
 
     final List<Comment> comments;

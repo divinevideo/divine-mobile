@@ -198,6 +198,41 @@ void main() {
       });
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
+        'loads only once',
+        setUp: () {
+          stubComments([_comment('only')]);
+          stubUpvotes({});
+        },
+        build: buildCubit,
+        act: (cubit) async {
+          await cubit.load();
+          await cubit.load();
+        },
+        expect: () => [
+          isA<FeedTopCommentState>().having(
+            (s) => s.status,
+            'status',
+            FeedTopCommentStatus.loading,
+          ),
+          isA<FeedTopCommentState>().having(
+            (s) => s.status,
+            'status',
+            FeedTopCommentStatus.ready,
+          ),
+        ],
+        verify: (_) {
+          verify(
+            () => commentsRepository.loadComments(
+              rootEventId: any(named: 'rootEventId'),
+              rootEventKind: any(named: 'rootEventKind'),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              limit: any(named: 'limit'),
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<FeedTopCommentCubit, FeedTopCommentState>(
         'selects the most upvoted comment',
         setUp: () {
           stubComments([_comment('a'), _comment('b', content: 'Wanna know')]);
