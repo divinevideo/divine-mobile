@@ -1518,6 +1518,24 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Legendas desativadas';
 
   @override
+  String get videoSettingsReactionsOn => 'Reações ativadas';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reações desativadas';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Mostrar reações';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Ocultar reações';
+
+  @override
+  String get feedReactionDismiss => 'Ocultar reação';
+
+  @override
+  String get feedReactionOpenComment => 'Abrir nos comentários';
+
+  @override
   String get contentWarningLabel => 'Aviso de conteúdo';
 
   @override

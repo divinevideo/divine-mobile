@@ -542,6 +542,7 @@ flutter:
     - assets/licenses/
     - assets/icon/
     - assets/illustrations/
+    - assets/reactions/
     - assets/info_stickers/
     - assets/looks/
     - assets/loading-brand-sprite.png

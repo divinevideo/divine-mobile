@@ -1470,6 +1470,24 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Đã tắt phụ đề';
 
   @override
+  String get videoSettingsReactionsOn => 'Đã bật phản hồi';
+
+  @override
+  String get videoSettingsReactionsOff => 'Đã tắt phản hồi';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Hiện phản hồi';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Ẩn phản hồi';
+
+  @override
+  String get feedReactionDismiss => 'Ẩn phản hồi này';
+
+  @override
+  String get feedReactionOpenComment => 'Mở trong bình luận';
+
+  @override
   String get contentWarningLabel => 'Cảnh báo nội dung';
 
   @override

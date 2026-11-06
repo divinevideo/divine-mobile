@@ -1525,6 +1525,24 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Sottotitoli disattivati';
 
   @override
+  String get videoSettingsReactionsOn => 'Reazioni attive';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reazioni disattivate';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Mostra reazioni';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Nascondi reazioni';
+
+  @override
+  String get feedReactionDismiss => 'Nascondi reazione';
+
+  @override
+  String get feedReactionOpenComment => 'Apri nei commenti';
+
+  @override
   String get contentWarningLabel => 'Avviso sui contenuti';
 
   @override

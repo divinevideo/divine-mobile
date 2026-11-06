@@ -968,6 +968,30 @@
   "@videoSettingsCaptionsOff": {
     "description": "Snackbar confirming that captions were just turned off from the playback-settings pill."
   },
+  "videoSettingsReactionsOn": "Reactions on",
+  "@videoSettingsReactionsOn": {
+    "description": "Snackbar confirming that reactions mode was just turned on from the playback-settings pill. In reactions mode the feed shows a video's top comment after its first loop."
+  },
+  "videoSettingsReactionsOff": "Reactions off",
+  "@videoSettingsReactionsOff": {
+    "description": "Snackbar confirming that reactions mode was just turned off from the playback-settings pill."
+  },
+  "videoSettingsReactionsEnable": "Show reactions",
+  "@videoSettingsReactionsEnable": {
+    "description": "Semantic label for the reactions toggle in the playback-settings popover when reactions mode is currently off."
+  },
+  "videoSettingsReactionsDisable": "Hide reactions",
+  "@videoSettingsReactionsDisable": {
+    "description": "Semantic label for the reactions toggle in the playback-settings popover when reactions mode is currently on."
+  },
+  "feedReactionDismiss": "Hide reaction",
+  "@feedReactionDismiss": {
+    "description": "Semantic label for the darkened area around a video's top comment in reactions mode; activating it hides the comment."
+  },
+  "feedReactionOpenComment": "Open in comments",
+  "@feedReactionOpenComment": {
+    "description": "Semantic hint for a video's top comment in reactions mode; activating it opens the comments sheet at that comment."
+  },
   "contentWarningLabel": "Content Warning",
   "contentWarningNudity": "Nudity",
   "contentWarningSexualContent": "Sexual Content",

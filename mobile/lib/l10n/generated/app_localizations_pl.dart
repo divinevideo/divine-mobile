@@ -1545,6 +1545,24 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Napisy wyłączone';
 
   @override
+  String get videoSettingsReactionsOn => 'Reakcje włączone';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reakcje wyłączone';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Pokaż reakcje';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Ukryj reakcje';
+
+  @override
+  String get feedReactionDismiss => 'Ukryj reakcję';
+
+  @override
+  String get feedReactionOpenComment => 'Otwórz w komentarzach';
+
+  @override
   String get contentWarningLabel => 'Ostrzeżenie o treści';
 
   @override

@@ -1488,6 +1488,24 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Naka-off ang captions';
 
   @override
+  String get videoSettingsReactionsOn => 'Naka-on ang reactions';
+
+  @override
+  String get videoSettingsReactionsOff => 'Naka-off ang reactions';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Ipakita ang reactions';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Itago ang reactions';
+
+  @override
+  String get feedReactionDismiss => 'Itago ang reaction';
+
+  @override
+  String get feedReactionOpenComment => 'Buksan sa comments';
+
+  @override
   String get contentWarningLabel => 'Babala sa nilalaman';
 
   @override

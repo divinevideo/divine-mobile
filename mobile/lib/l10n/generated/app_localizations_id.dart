@@ -1436,6 +1436,24 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Teks nonaktif';
 
   @override
+  String get videoSettingsReactionsOn => 'Reaksi aktif';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reaksi nonaktif';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Tampilkan reaksi';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Sembunyikan reaksi';
+
+  @override
+  String get feedReactionDismiss => 'Sembunyikan reaksi ini';
+
+  @override
+  String get feedReactionOpenComment => 'Buka di komentar';
+
+  @override
   String get contentWarningLabel => 'Peringatan Konten';
 
   @override

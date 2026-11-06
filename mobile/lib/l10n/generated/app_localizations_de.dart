@@ -1521,6 +1521,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Untertitel aus';
 
   @override
+  String get videoSettingsReactionsOn => 'Reaktionen an';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reaktionen aus';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Reaktionen anzeigen';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Reaktionen ausblenden';
+
+  @override
+  String get feedReactionDismiss => 'Reaktion ausblenden';
+
+  @override
+  String get feedReactionOpenComment => 'In Kommentaren öffnen';
+
+  @override
   String get contentWarningLabel => 'Inhaltswarnung';
 
   @override

@@ -1506,6 +1506,24 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'کیپشن آف';
 
   @override
+  String get videoSettingsReactionsOn => 'ردعمل آن';
+
+  @override
+  String get videoSettingsReactionsOff => 'ردعمل آف';
+
+  @override
+  String get videoSettingsReactionsEnable => 'ردعمل دکھائیں';
+
+  @override
+  String get videoSettingsReactionsDisable => 'ردعمل چھپائیں';
+
+  @override
+  String get feedReactionDismiss => 'یہ ردعمل چھپائیں';
+
+  @override
+  String get feedReactionOpenComment => 'تبصروں میں کھولیں';
+
+  @override
   String get contentWarningLabel => 'مواد انتباہ';
 
   @override

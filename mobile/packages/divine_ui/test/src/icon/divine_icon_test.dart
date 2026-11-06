@@ -80,6 +80,14 @@ void main() {
       );
     });
 
+    test('chatCircleFill maps to its fill icon', () {
+      expect(DivineIconName.chatCircleFill.fileName, 'chat_circle_fill');
+      expect(
+        DivineIconName.chatCircleFill.assetPath,
+        'assets/icon/chat_circle_fill.svg',
+      );
+    });
+
     test('all enum values have non-empty file names', () {
       for (final icon in DivineIconName.values) {
         expect(

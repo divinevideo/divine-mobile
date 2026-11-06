@@ -1377,6 +1377,24 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoSettingsCaptionsOff => '자막 꺼짐';
 
   @override
+  String get videoSettingsReactionsOn => '반응 켜짐';
+
+  @override
+  String get videoSettingsReactionsOff => '반응 꺼짐';
+
+  @override
+  String get videoSettingsReactionsEnable => '반응 보기';
+
+  @override
+  String get videoSettingsReactionsDisable => '반응 숨기기';
+
+  @override
+  String get feedReactionDismiss => '이 반응 숨기기';
+
+  @override
+  String get feedReactionOpenComment => '댓글에서 열기';
+
+  @override
   String get contentWarningLabel => '콘텐츠 경고';
 
   @override
