@@ -581,9 +581,11 @@ void main() {
         await tester.pump();
 
         expect(find.bySemanticsLabel(l10n.feedReactionDismiss), findsOneWidget);
+        // Exactly the comment and its author, each once.
         expect(
           find.bySemanticsLabel(
-            RegExp(RegExp.escape(UserProfile.generatedNameFor(_commenter))),
+            '${_topComment.content}\n'
+            '${UserProfile.generatedNameFor(_commenter)}',
           ),
           findsOneWidget,
         );
