@@ -39,6 +39,7 @@ class _GatedRelay {
 
   /// The p tags of every publish the client started, in order.
   final started = <List<String>>[];
+  final contents = <String>[];
 
   /// The p tags of every publish that succeeded, in order.
   final accepted = <List<String>>[];
@@ -67,6 +68,7 @@ class _GatedRelay {
           .toList();
       final index = started.length;
       started.add(follows);
+      contents.add(invocation.positionalArguments[1] as String);
       _inFlight++;
       if (_inFlight > maxInFlight) maxInFlight = _inFlight;
       final gate = Completer<void>();
@@ -115,6 +117,7 @@ void main() {
     late _GatedRelay relay;
     late FollowRepository repository;
     late List<_ReadResult> reads;
+    late StreamController<Event> contactLists;
 
     setUpAll(() {
       registerFallbackValue(_MockEvent());
@@ -129,6 +132,7 @@ void main() {
       client = _MockNostrClient();
       relay = _GatedRelay(client)..install();
       reads = [];
+      contactLists = StreamController<Event>.broadcast(sync: true);
 
       when(() => client.hasKeys).thenReturn(true);
       when(() => client.publicKey).thenReturn(_owner);
@@ -142,7 +146,11 @@ void main() {
           sendAfterAuth: any(named: 'sendAfterAuth'),
           onEose: any(named: 'onEose'),
         ),
-      ).thenAnswer((_) => const Stream<Event>.empty());
+      ).thenAnswer(
+        (invocation) => invocation.namedArguments[#subscriptionId] == null
+            ? const Stream<Event>.empty()
+            : contactLists.stream,
+      );
       when(() => client.unsubscribe(any())).thenAnswer((_) async {});
       // Each pre-publish read takes the next scripted answer; once the script
       // runs out, the relay settles with no kind 3.
@@ -168,7 +176,10 @@ void main() {
       await repository.initialize();
     });
 
-    tearDown(() => repository.dispose());
+    tearDown(() async {
+      await repository.dispose();
+      await contactLists.close();
+    });
 
     test('a second follow waits for the first publish to finish', () async {
       final first = repository.followWithResult(_alice);
@@ -227,6 +238,83 @@ void main() {
         expect(repository.followingPubkeys, isEmpty);
       },
     );
+
+    test('a live relay echo preserves a follow queued before the previous '
+        'publish completes', () async {
+      addTearDown(relay.release);
+      final first = repository.followWithResult(_alice);
+      await relay.untilStarted(1);
+      final second = repository.followWithResult(_bob);
+      contactLists.add(
+        Event(_owner, EventKind.contactList, [
+          ['p', _alice],
+        ], ''),
+      );
+
+      expect(repository.followingPubkeys, [_alice, _bob]);
+      await relay.release();
+
+      await first;
+      expect(await second, FollowOutcome.published);
+      expect(relay.accepted.last, [_alice, _bob]);
+    });
+
+    test('a newer live relay list keeps its content after an older publish '
+        'finishes', () async {
+      addTearDown(relay.release);
+      final first = repository.followWithResult(_alice);
+      await relay.untilStarted(1);
+      final second = repository.followWithResult(_bob);
+      const content = '{"wss://relay.example":{"read":true,"write":true}}';
+      contactLists.add(
+        Event(
+          _owner,
+          EventKind.contactList,
+          [
+            ['p', _alice],
+            ['p', _carol],
+          ],
+          content,
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 60,
+        ),
+      );
+      await relay.release();
+
+      await first;
+      expect(await second, FollowOutcome.published);
+      expect(relay.accepted.last, [_alice, _carol, _bob]);
+      expect(relay.contents.last, content);
+    });
+
+    test('a live relay echo preserves an unfollow queued before the previous '
+        'publish completes', () async {
+      addTearDown(relay.release);
+      final alice = repository.followWithResult(_alice);
+      final bob = repository.followWithResult(_bob);
+      await relay.release();
+      await Future.wait([alice, bob]);
+
+      final first = repository.unfollow(_alice);
+      await relay.untilStarted(2);
+      final second = repository.unfollow(_bob);
+      contactLists.add(
+        Event(
+          _owner,
+          EventKind.contactList,
+          [
+            ['p', _bob],
+          ],
+          '',
+          createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 60,
+        ),
+      );
+
+      expect(repository.followingPubkeys, isEmpty);
+      await relay.release();
+
+      await Future.wait([first, second]);
+      expect(relay.accepted.last, isEmpty);
+    });
 
     test('a follow the publish ahead of it already carried is not published '
         'again', () async {

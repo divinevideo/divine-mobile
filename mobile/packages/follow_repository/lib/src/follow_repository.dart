@@ -3612,11 +3612,15 @@ class FollowRepository {
     // Cache the contact list event
     _cacheUserEvent?.call(event);
 
-    _currentUserContactListEvent = event;
-    // The event we just published is now the newest one we know of, and the
-    // list it was built from is the base for the next pending-change diff.
-    _followingProvenance = (createdAt: event.createdAt, id: event.id);
-    _adoptedFollows = base;
+    // A newer remote base may have arrived on the subscription while this
+    // event was sending. Do not replace its content or adopted list with an
+    // older event merely because that send finished later.
+    _rememberContactListEvent(event);
+    final provenance = _followingProvenance;
+    if (provenance == null || _isNewer(event.createdAt, event.id, provenance)) {
+      _followingProvenance = (createdAt: event.createdAt, id: event.id);
+      _adoptedFollows = base;
+    }
     _contactListBroadcastPending = false;
     _followingConfirmedByRelay = true;
 
@@ -3638,6 +3642,10 @@ class FollowRepository {
   /// fingerprint it looked for — and it re-broadcast the union, publishing the
   /// resurrected follows back to the relay (#8266).
   void _processContactListEvent(Event event) {
+    // A relay may echo a publish before its send completes, while another
+    // local edit is already queued. Adopt the remote base without losing
+    // those edits, just as the pre-publish read does.
+    final pending = _pendingFollowEdits.isEmpty ? null : _pendingLocalChange();
     final adopted = _adoptContactList(
       _followsOf(event, source: 'network Kind 3 event ${event.id}'),
       createdAt: event.createdAt,
@@ -3647,6 +3655,7 @@ class FollowRepository {
     _rememberContactListEvent(event);
     _followingConfirmedByRelay = true;
     if (!adopted) return;
+    if (pending != null) _applyPendingLocalChange(pending);
 
     unawaited(_saveToLocalStorage());
     unawaited(_invalidateMyFollowingCache());
