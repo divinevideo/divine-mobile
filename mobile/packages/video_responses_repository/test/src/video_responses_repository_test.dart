@@ -2516,6 +2516,12 @@ void main() {
       expect(hidden.hiddenIds, equals({_hex(202)}));
       expect(hidden.shown(_hex(202)).restoredIds, isEmpty);
       expect(hidden.pinned(_hex(202)).hiddenAuthors, equals({_viewer}));
+      expect(hidden.pinned(_hex(202)).restoredIds, isEmpty);
+      // Pinning shows the reply, also one whose author is hidden.
+      final pinned = curation.pinned(_hex(203), authorHidden: true);
+      expect(pinned.pinnedId, equals(_hex(203)));
+      expect(pinned.restoredIds, equals({_hex(203)}));
+      expect(pinned.pinned(null, authorHidden: true).restoredIds, {_hex(203)});
       expect(
         const RepliesCuration().withHiddenAuthors({_viewer}).hiddenAuthors,
         equals({_viewer}),

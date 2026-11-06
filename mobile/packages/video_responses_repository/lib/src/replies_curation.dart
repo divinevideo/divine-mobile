@@ -130,13 +130,17 @@ class RepliesCuration extends Equatable {
   }
 
   /// This curation with [replyId] pinned to the front instead, shown again
-  /// when it was hidden; `null` pins none.
-  RepliesCuration pinned(String? replyId) => RepliesCuration(
-    pinnedId: replyId,
-    hiddenIds: {...hiddenIds}..remove(replyId),
-    restoredIds: restoredIds,
-    hiddenAuthors: hiddenAuthors,
-  );
+  /// when it was hidden, and marked `restored` when [authorHidden], since its
+  /// author's replies are hidden otherwise; `null` pins none.
+  RepliesCuration pinned(String? replyId, {bool authorHidden = false}) =>
+      RepliesCuration(
+        pinnedId: replyId,
+        hiddenIds: {...hiddenIds}..remove(replyId),
+        restoredIds: authorHidden && replyId != null
+            ? {...restoredIds, replyId}
+            : restoredIds,
+        hiddenAuthors: hiddenAuthors,
+      );
 
   /// This curation with [replyId] hidden, and no longer pinned.
   RepliesCuration hidden(String replyId) => RepliesCuration(

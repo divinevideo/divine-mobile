@@ -219,6 +219,25 @@ void main() {
         act: (cubit) => cubit.pinToggled(_hex(2)),
         expect: () => const <VideoRepliesState>[],
       );
+
+      blocTest<VideoRepliesCubit, VideoRepliesState>(
+        'shows the reply of an account the creator blocked when pinning it',
+        build: build,
+        seed: () => loaded.copyWith(
+          curation: RepliesCuration(hiddenAuthors: {_hex(1001)}),
+        ),
+        act: (cubit) => cubit.pinToggled(_hex(1)),
+        skip: 1,
+        expect: () => [
+          loaded.copyWith(
+            curation: RepliesCuration(
+              pinnedId: _hex(1),
+              restoredIds: {_hex(1)},
+              hiddenAuthors: {_hex(1001)},
+            ),
+          ),
+        ],
+      );
     });
 
     group('hideToggled', () {

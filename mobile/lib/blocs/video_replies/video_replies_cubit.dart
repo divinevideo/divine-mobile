@@ -75,23 +75,23 @@ class VideoRepliesCubit extends Cubit<VideoRepliesState>
   }
 
   /// Pins the reply [replyKey] names, its [RepliesCuration.keyOf], to the
-  /// front, or unpins it when it is pinned already.
-  Future<void> pinToggled(String replyKey) => _save(
-    state.curation.pinnedId == replyKey
-        ? state.curation.pinned(null)
-        : state.curation.pinned(replyKey),
-  );
+  /// front, or unpins it when it is pinned already. Pinning shows it again,
+  /// also when the creator blocked its author.
+  Future<void> pinToggled(String replyKey) {
+    final curation = state.curation;
+    if (curation.pinnedId == replyKey) return _save(curation.pinned(null));
+    return _save(
+      curation.pinned(replyKey, authorHidden: _isAuthorHidden(replyKey)),
+    );
+  }
 
   /// Hides the reply [replyKey] names, its [RepliesCuration.keyOf], or shows
   /// it again when it is hidden, also when it is hidden because the creator
   /// blocked its author.
   Future<void> hideToggled(String replyKey) {
     final curation = state.curation;
-    final reply = state.replies
-        .where((reply) => RepliesCuration.keyOf(reply) == replyKey)
-        .firstOrNull;
-    final authorHidden =
-        reply != null && curation.hiddenAuthors.contains(reply.pubkey);
+    final reply = _replyOf(replyKey);
+    final authorHidden = _isAuthorHidden(replyKey);
     final hidden = reply == null
         ? curation.hiddenIds.contains(replyKey)
         : curation.hides(reply);
@@ -100,6 +100,16 @@ class VideoRepliesCubit extends Cubit<VideoRepliesState>
           ? curation.shown(replyKey, authorHidden: authorHidden)
           : curation.hidden(replyKey),
     );
+  }
+
+  VideoEvent? _replyOf(String replyKey) => state.replies
+      .where((reply) => RepliesCuration.keyOf(reply) == replyKey)
+      .firstOrNull;
+
+  /// Whether the creator blocked the author of the reply [replyKey] names.
+  bool _isAuthorHidden(String replyKey) {
+    final reply = _replyOf(replyKey);
+    return reply != null && state.curation.hiddenAuthors.contains(reply.pubkey);
   }
 
   Future<void> _save(RepliesCuration curation) async {
