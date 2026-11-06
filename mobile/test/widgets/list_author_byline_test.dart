@@ -202,6 +202,33 @@ void main() {
         await tester.tap(find.byType(RichText).last);
         expect(taps, 2);
       });
+
+      testWidgets("a screen reader's activation opens the author", (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        try {
+          var taps = 0;
+          await _pump(
+            tester,
+            onTap: () => taps++,
+            overrides: [
+              userProfileReactiveProvider(
+                _author,
+              ).overrideWith((ref) => Stream.value(_profile())),
+            ],
+          );
+
+          // The row hides its children from screen readers, so the tap they
+          // send has to land on the row itself.
+          tester.semantics.tap(
+            find.semantics.byLabel(l10n.listByAuthor('Mackardigan')),
+          );
+          expect(taps, 1);
+        } finally {
+          handle.dispose();
+        }
+      });
     });
   });
 }
