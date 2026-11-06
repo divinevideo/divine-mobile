@@ -1578,13 +1578,23 @@ class VideoEvent {
   bool get hasAddressableDTag =>
       addressableDTag != null && addressableDTag!.isNotEmpty;
 
-  String? get addressableId => hasAddressableDTag
-      ? AId(
-          kind: EventKind.videoVertical,
-          pubkey: pubkey,
-          dTag: addressableDTag!,
-        ).toAString()
-      : null;
+  /// The `kind:pubkey:d-tag` coordinate of this video, under its own kind.
+  ///
+  /// Null without a `d` tag, and for a regular kind (21, 22) even when the
+  /// event carries one: those videos have no address. An unknown kind is read
+  /// as 34236, the only kind Divine publishes.
+  String? get addressableId {
+    final kind = _coordinateKind;
+    if (!hasAddressableDTag || kind == null) return null;
+    return AId(kind: kind, pubkey: pubkey, dTag: addressableDTag!).toAString();
+  }
+
+  int? get _coordinateKind => switch (eventKind) {
+    null => NIP71VideoKinds.addressableShortVideo,
+    NIP71VideoKinds.addressableShortVideo ||
+    NIP71VideoKinds.addressableNormalVideo => eventKind,
+    _ => null,
+  };
 
   /// Canonical identity for feed/session deduplication.
   ///

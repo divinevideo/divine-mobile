@@ -1,5 +1,5 @@
 // ABOUTME: Tests VideoEvent.addressableId uses only real addressable d tags.
-// ABOUTME: Preserves the legacy app-wide 34236 coordinate key for real d tags.
+// ABOUTME: Builds the coordinate under the video's own addressable kind.
 
 import 'package:models/models.dart';
 import 'package:test/test.dart';
@@ -35,13 +35,31 @@ void main() {
       expect(video.addressableId, equals('34236:$pubkey:vine123'));
     });
 
-    test('keeps legacy 34236 coordinates for app-wide compatibility', () {
+    test('uses kind 34235 for an addressable normal video', () {
       final video = build(
         eventKind: 34235,
         vineId: 'reel456',
         addressableDTag: 'reel456',
       );
-      expect(video.addressableId, equals('34236:$pubkey:reel456'));
+      expect(video.addressableId, equals('34235:$pubkey:reel456'));
+    });
+
+    test('is null for a regular short video that carries a d tag', () {
+      final video = build(
+        eventKind: 22,
+        vineId: 'stray22',
+        addressableDTag: 'stray22',
+      );
+      expect(video.addressableId, isNull);
+    });
+
+    test('is null for a regular normal video that carries a d tag', () {
+      final video = build(
+        eventKind: 21,
+        vineId: 'stray21',
+        addressableDTag: 'stray21',
+      );
+      expect(video.addressableId, isNull);
     });
 
     test('does not fall back to the event id for d-less videos', () {
