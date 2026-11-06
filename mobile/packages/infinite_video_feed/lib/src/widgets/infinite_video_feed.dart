@@ -1690,7 +1690,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       'Source failover index $index: '
       'failedSource=$failedSource source=$nextSource',
     );
-    if (_usesB2Original(widget.videos[index])) {
+    if (isB2OriginalPlaybackSource(failedSource ?? '')) {
       _log(
         'B2 canary fallback index $index: '
         'failedSource=$failedSource retrySource=$nextSource',

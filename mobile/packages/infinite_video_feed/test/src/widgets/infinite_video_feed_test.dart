@@ -436,6 +436,67 @@ void main() {
     }
 
     testWidgets(
+      'runtime B2 fallback after renditions failed is logged as a B2 fallback',
+      (tester) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        await LogCaptureService().clearAllLogs();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(playerIds: const [0]);
+        harness.setClipsFailures[0] = <Exception>[
+          PlatformException(code: 'not_found'),
+          PlatformException(code: 'not_found'),
+        ];
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo('canary', videoUrl: raw)],
+                cache: cache,
+                preferB2Original: true,
+                urlResolver: (_) => '$raw/720p.mp4',
+                prefetchCount: 0,
+                autoRetryMaxAttempts: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+            '$raw/720p.mp4',
+            '$raw/hls/master.m3u8',
+            b2,
+          ]);
+          await harness.sendEvent(0, {
+            'status': 'error',
+            'errorCode': 'service_unavailable',
+            'errorMessage': 'Synthetic playback failure',
+          });
+          await tester.pump();
+          await tester.pump();
+          expect(
+            harness.clipsHandedToPlayer.map((clip) => clip['uri']).last,
+            raw,
+          );
+          expect(
+            LogCaptureService()
+                .getRecentLogs(minLevel: LogLevel.debug)
+                .map((log) => log.message),
+            contains(
+              'B2 canary fallback index 0: '
+              'failedSource=$b2 retrySource=$raw',
+            ),
+          );
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+          await LogCaptureService().clearAllLogs();
+        }
+      },
+    );
+
+    testWidgets(
       'prefetch never aliases B2 or canonical bytes into a canary event key',
       (tester) async {
         DivineVideoPlayerController.resetIdCounterForTesting();
