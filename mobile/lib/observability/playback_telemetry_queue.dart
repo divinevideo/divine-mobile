@@ -11,12 +11,15 @@ class PlaybackTelemetryQueue {
   PlaybackTelemetryQueue({
     required AnalyticsIngestClient client,
     required String platform,
+    this.onIdle,
   }) : _client = client,
        _platform = platform {
     _events = FeedPlaybackTelemetry.events.listen(_enqueue);
     _resets = FeedPlaybackTelemetry.resets.listen((_) {
+      if (_changingCollection) return;
       _generation++;
       _pending.clear();
+      _notifyIdle();
     });
     _timer = Timer.periodic(const Duration(seconds: 5), (_) {
       unawaited(flush());
@@ -25,6 +28,7 @@ class PlaybackTelemetryQueue {
 
   final AnalyticsIngestClient _client;
   final String _platform;
+  void Function()? onIdle;
   final _pending = <_PendingPlayback>[];
   late final StreamSubscription<Map<String, Object?>> _events;
   late final StreamSubscription<void> _resets;
@@ -32,7 +36,11 @@ class PlaybackTelemetryQueue {
   bool _enabled = false;
   bool _sending = false;
   bool _disposed = false;
+  bool _collecting = true;
+  bool _changingCollection = false;
   int _generation = 0;
+
+  bool get isIdle => !_sending && _pending.isEmpty;
 
   void configure({
     required bool initializedConsent,
@@ -40,11 +48,33 @@ class PlaybackTelemetryQueue {
     bool reset = false,
   }) {
     _enabled = !_disposed && initializedConsent && b2OptIn;
-    FeedPlaybackTelemetry.configure(enabled: _enabled, reset: reset);
+    FeedPlaybackTelemetry.configure(
+      enabled: _enabled && _collecting,
+      reset: reset,
+    );
+  }
+
+  /// Navigation ends correlation, not consent for already collected rows.
+  void setCollecting(bool collecting) {
+    _collecting = collecting;
+    _changingCollection = true;
+    try {
+      FeedPlaybackTelemetry.configure(enabled: _enabled && collecting);
+    } finally {
+      _changingCollection = false;
+    }
+    if (!collecting) {
+      unawaited(flush());
+      _notifyIdle();
+    }
+  }
+
+  void _notifyIdle() {
+    if (!_disposed && isIdle) onIdle?.call();
   }
 
   void _enqueue(Map<String, Object?> event) {
-    if (!_enabled || _disposed) return;
+    if (!_enabled || !_collecting || _disposed) return;
     if (_pending.length == 200) _pending.removeAt(0);
     _pending.add(
       _PendingPlayback(
@@ -75,6 +105,7 @@ class PlaybackTelemetryQueue {
     }
     if (selected.isEmpty) {
       _pending.removeAt(0);
+      _notifyIdle();
       return;
     }
     _sending = true;
@@ -98,11 +129,13 @@ class PlaybackTelemetryQueue {
       }
     } finally {
       _sending = false;
+      _notifyIdle();
     }
   }
 
   Future<void> dispose() async {
     _disposed = true;
+    onIdle = null;
     configure(initializedConsent: false, b2OptIn: false, reset: true);
     _timer.cancel();
     await _events.cancel();

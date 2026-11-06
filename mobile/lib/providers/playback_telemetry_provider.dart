@@ -25,7 +25,22 @@ final Provider<void> playbackTelemetryProvider = Provider.autoDispose<void>((
   final httpClient = ref.watch(instrumentedHttpClientFactoryProvider)();
   ref.onDispose(httpClient.close);
   final environment = ref.watch(currentEnvironmentProvider);
-  final queue = PlaybackTelemetryQueue(
+  var delivery = ref.keepAlive();
+  var observing = true;
+  var b2OptIn = true;
+  var validDependencies = true;
+  late final PlaybackTelemetryQueue queue;
+  queue = PlaybackTelemetryQueue(
+    onIdle: () {
+      if (observing) return;
+      delivery.close();
+      // A paused non-weak subscription can prevent automatic disposal even
+      // after keepAlive closes. Invalidate the idle owner explicitly; a later
+      // feed resume builds a fresh owner instead of retaining idle resources.
+      scheduleMicrotask(() {
+        if (ref.mounted && !observing && queue.isIdle) ref.invalidateSelf();
+      });
+    },
     client: AnalyticsIngestClient(
       httpClient: httpClient,
       nip98AuthService: ref.watch(nip98AuthServiceProvider),
@@ -43,32 +58,60 @@ final Provider<void> playbackTelemetryProvider = Provider.autoDispose<void>((
             _ => 'unknown',
           },
   );
-  var observing = true;
   void configure({bool reset = false}) => queue.configure(
-    initializedConsent: observing && analytics.initializedAnalyticsConsent,
-    b2OptIn: ref.read(isFeatureEnabledProvider(FeatureFlag.b2PlaybackCanary)),
+    initializedConsent:
+        validDependencies && analytics.initializedAnalyticsConsent,
+    b2OptIn: b2OptIn,
     reset: reset,
   );
   configure();
-  // Offstage consumers can be paused without disposing their providers.
-  // Stop delivery immediately so paused flag listeners cannot retain consent.
+  // Keep only bounded delivery alive after the final feed leaves. Riverpod
+  // pauses Ref listeners even with keepAlive, so privacy listeners below are
+  // container-owned and explicitly closed with this delivery owner.
   ref.onCancel(() {
     observing = false;
-    queue.configure(initializedConsent: false, b2OptIn: false, reset: true);
+    queue.setCollecting(false);
   });
   ref.onResume(() {
     observing = true;
+    queue.setCollecting(true);
+    // Riverpod disallows keepAlive inside lifecycle callbacks themselves.
     scheduleMicrotask(() {
-      if (ref.mounted && observing) configure(reset: true);
+      if (!ref.mounted) return;
+      final previous = delivery;
+      delivery = ref.keepAlive();
+      previous.close();
+      if (!observing && queue.isIdle) delivery.close();
     });
   });
   final subscription = analytics.privacyChanges.listen(
     (_) => configure(reset: true),
   );
-  ref.listen(isFeatureEnabledProvider(FeatureFlag.b2PlaybackCanary), (_, _) {
-    configure(reset: true);
-  });
+  final cohort = ref.container.listen(
+    isFeatureEnabledProvider(FeatureFlag.b2PlaybackCanary),
+    (_, enabled) {
+      b2OptIn = enabled;
+      configure(reset: true);
+    },
+  );
+  final environmentBoundary = ref.container.listen(
+    currentEnvironmentProvider,
+    (_, _) {
+      validDependencies = false;
+      configure(reset: true);
+    },
+  );
+  final analyticsBoundary = ref.container.listen(
+    analyticsServiceProvider,
+    (_, _) {
+      validDependencies = false;
+      configure(reset: true);
+    },
+  );
   ref.onDispose(() {
+    cohort.close();
+    environmentBoundary.close();
+    analyticsBoundary.close();
     unawaited(subscription.cancel());
     unawaited(queue.dispose());
   });

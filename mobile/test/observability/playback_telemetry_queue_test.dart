@@ -12,6 +12,8 @@ import 'package:openvine/services/nip98_auth_service.dart';
 
 class _Nip98 extends Mock implements Nip98AuthService {}
 
+class _Ingest extends Mock implements AnalyticsIngestClient {}
+
 void main() {
   PlaybackTelemetryQueue queue(http.Client client) => PlaybackTelemetryQueue(
     client: AnalyticsIngestClient(
@@ -27,6 +29,23 @@ void main() {
   ).finish(outcome: FeedPlaybackOutcome.cancelled);
 
   group(PlaybackTelemetryQueue, () {
+    test('unexpected ingest exceptions are isolated and bounded', () async {
+      final client = _Ingest();
+      when(() => client.publishPlaybackBatch(any()))
+          .thenThrow(StateError('synthetic ingest failure'));
+      final q = PlaybackTelemetryQueue(client: client, platform: 'android');
+      addTearDown(q.dispose);
+      q.configure(initializedConsent: true, b2OptIn: true);
+      event();
+      q.setCollecting(false);
+      for (var i = 0; i < 5; i++) {
+        await q.flush();
+      }
+      verify(() => client.publishPlaybackBatch(any())).called(3);
+      expect(q.isIdle, isTrue);
+      expect(FeedPlaybackTelemetry.startLoad(), isNull);
+    });
+
     test(
       'both initialized consent and opt-in are required at activation',
       () async {
