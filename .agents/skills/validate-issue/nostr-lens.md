@@ -104,9 +104,9 @@ Three rules before any command:
 
 Against a slow relay use one long-lived connection, not a process per query.
 Parallel one-shot processes return silent partial sets, and sequential ones
-get refused once there are enough of them: across about 110 one-shot `nak`
-calls to `relay.divine.video`, between a third and half of the time slices
-still failed to connect after four tries (`context deadline exceeded`), and
+get refused once there are enough of them: across about 110 time slices read
+with one-shot `nak` calls to `relay.divine.video`, between a third and half of
+the slices still failed to connect after four tries (`context deadline exceeded`), and
 later single reads failed too. Check every call's stderr for
 `failed to connect` and retry, or its empty output reads as a zero. With raw `websocat`,
 hold stdin open (`{ printf …; sleep 12; }`) or the socket closes before the
