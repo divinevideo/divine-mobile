@@ -54,6 +54,27 @@ void main() {
       expect(video.addressableId, equals(ownAddressableId));
     });
 
+    test('keeps the addressable kind when a video reply has no coordinate', () {
+      final comment = Comment(
+        id: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+        content: 'video reply',
+        authorPubkey:
+            'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+        createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+        rootEventId:
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        rootAuthorPubkey:
+            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        eventKind: 34236,
+        videoUrl: 'https://media.divine.video/reply-video',
+      );
+
+      final video = comment.toSyntheticVideoEvent();
+
+      expect(video.addressableId, isNull);
+      expect(video.eventKind, equals(34236));
+    });
+
     test('gives a shared Kind 34236 video reply the d tag its citation '
         'needs', () {
       const authorPubkey =

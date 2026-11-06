@@ -20,7 +20,11 @@ extension CommentSyntheticVideoEventX on Comment {
       // copy does, so a like, repost or share can address it (#6980).
       vineId: ownCoordinate?.dTag,
       addressableDTag: ownCoordinate?.dTag,
-      eventKind: ownCoordinate == null ? null : EventKind.videoVertical,
+      // Retain a known addressable kind even if its coordinate is missing,
+      // so the like writer can name the kind and report the missing a tag.
+      eventKind: ownCoordinate != null || eventKind == EventKind.videoVertical
+          ? EventKind.videoVertical
+          : null,
       title: title.isNotEmpty ? title : null,
       videoUrl: videoUrl,
       thumbnailUrl: thumbnailUrl,

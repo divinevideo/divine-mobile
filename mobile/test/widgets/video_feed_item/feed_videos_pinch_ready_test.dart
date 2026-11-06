@@ -700,6 +700,35 @@ void main() {
       await _unmount(tester);
     });
 
+    testWidgets('names the kind of a video reply with no coordinate', (
+      tester,
+    ) async {
+      final rig = await _pumpReadyFeed(
+        tester,
+        video: Comment(
+          id: _testVideoId,
+          content: 'video reply',
+          authorPubkey: _testPubkey,
+          createdAt: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
+          rootEventId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          rootAuthorPubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          eventKind: 34236,
+          videoUrl: 'https://example.com/video.mp4',
+        ).toSyntheticVideoEvent(),
+      );
+
+      await doubleTapToLike(tester);
+
+      verify(
+        () => rig.likes.toggleLike(
+          eventId: _testVideoId,
+          authorPubkey: _testPubkey,
+          targetKind: 34236,
+        ),
+      ).called(1);
+      await _unmount(tester);
+    });
+
     testWidgets('tags a video reply opened from comments with its coordinate', (
       tester,
     ) async {
