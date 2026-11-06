@@ -1455,6 +1455,27 @@ void main() {
       expect(container.read(nostrServiceProvider), same(client));
       expect(factory.callCount, equals(1));
     });
+
+    test('keeps the pubkey-only client when a failed upgrade re-emits the '
+        'same identity', () async {
+      final pubkeyOnly = PubkeyOnlyNostrIdentity(pubkey: pubkeyA);
+      when(() => mockAuth.currentIdentity).thenReturn(pubkeyOnly);
+      when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyA);
+
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      final client = container.read(nostrServiceProvider);
+      await pumpEventQueue(times: 2);
+
+      // A failed startup upgrade still nudges the auth stream, with the
+      // pubkey-only identity left in place.
+      authStream.add(AuthState.authenticated);
+      await pumpEventQueue(times: 3);
+
+      expect(container.read(nostrServiceProvider), same(client));
+      expect(factory.callCount, equals(1));
+    });
   });
 
   group('disposed-ref guard (#5602 / #5600 regression)', () {
