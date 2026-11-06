@@ -173,6 +173,19 @@ one of their videos, and the ones they hid
 - Read and published by `mobile/packages/video_responses_repository`
   (`RepliesCuration`); viewers see the pinned reply first and none of the
   hidden ones on the video's replies sticker and in its replies feed
+- The same event holds the creator's decisions about comments (kind 1111) on
+  the video (#5044): `["e", "<comment id>", "", "hidden"]`, and `restored` in
+  place of `hidden` for a comment kept although its author is auto-hidden
+  (below). The comments sheet leaves hidden comments and video replies out
+  until the viewer chooses to see them; their authors always see their own.
+  Read and published by `CommentModerationRepository` in
+  `mobile/packages/comments_repository`. Both writers keep the tags the other
+  wrote, and only an event signed by the owner named in the video address
+  counts
+- Commenters hidden on all of a creator's videos: an addressable event of the
+  creator's with `["d", "divine:hidden-commenters"]` and a `p` tag per
+  commenter. Divine adds the accounts the creator blocks and removes them on
+  unblock (`blockedCommenterReconcilerProvider`)
 - Kind 30078 is also used for the app's own encrypted sync and DM read-state
   markers, which are self-addressed; those readers ignore other `d` tags
 

@@ -1374,4 +1374,61 @@ final class CommentsRepositoryProvider
 }
 
 String _$commentsRepositoryHash() =>
-    r'21b8d5931408335180c18406e3aa033c6f15b448';
+    r'46309222751ebc7222aa6758dde7caa979b47a32';
+
+/// Provider for [CommentModerationRepository]: the moderation video owners
+/// publish for the comments on their videos (NIP-78 kind 30078).
+
+@ProviderFor(commentModerationRepository)
+final commentModerationRepositoryProvider =
+    CommentModerationRepositoryProvider._();
+
+/// Provider for [CommentModerationRepository]: the moderation video owners
+/// publish for the comments on their videos (NIP-78 kind 30078).
+
+final class CommentModerationRepositoryProvider
+    extends
+        $FunctionalProvider<
+          CommentModerationRepository,
+          CommentModerationRepository,
+          CommentModerationRepository
+        >
+    with $Provider<CommentModerationRepository> {
+  /// Provider for [CommentModerationRepository]: the moderation video owners
+  /// publish for the comments on their videos (NIP-78 kind 30078).
+  CommentModerationRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'commentModerationRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$commentModerationRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<CommentModerationRepository> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  CommentModerationRepository create(Ref ref) {
+    return commentModerationRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CommentModerationRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CommentModerationRepository>(value),
+    );
+  }
+}
+
+String _$commentModerationRepositoryHash() =>
+    r'5666012e089fa3ca00f9c3ec79b4ddb5d4240dd4';

@@ -147,6 +147,137 @@ void main() {
     });
   });
 
+  group(HiddenCommentsToggle, () {
+    final l10n = lookupAppLocalizations(const Locale('en'));
+    const harasserPubkey =
+        'c3d4e5f6789012345678901234567890abcdef123456789012345678901234ab';
+    late _MockCommentsListBloc listBloc;
+
+    setUpAll(() {
+      registerFallbackValue(const HiddenCommentsVisibilityToggled());
+    });
+
+    setUp(() => listBloc = _MockCommentsListBloc());
+
+    CommentsListState stateWith({
+      required bool ownerHidSomething,
+      bool showHiddenComments = false,
+    }) {
+      final comment = CommentBuilder()
+          .withId(TestCommentIds.comment1Id)
+          .withAuthorPubkey(harasserPubkey)
+          .withContent('Unwanted')
+          .build();
+      return CommentsListState(
+        rootEventId: testVideoEventId,
+        rootAuthorPubkey: testVideoAuthorPubkey,
+        status: CommentsStatus.success,
+        commentsById: {comment.id: comment},
+        moderation: ownerHidSomething
+            ? const CommentModeration(autoHiddenAuthors: {harasserPubkey})
+            : CommentModeration.empty,
+        showHiddenComments: showHiddenComments,
+      );
+    }
+
+    Future<void> pumpToggle(WidgetTester tester, CommentsListState state) {
+      when(() => listBloc.state).thenReturn(state);
+      return tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: BlocProvider<CommentsListBloc>.value(
+              value: listBloc,
+              child: const Center(child: HiddenCommentsToggle()),
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('leaves the hidden comments out of the header count', (
+      tester,
+    ) async {
+      final shown = CommentBuilder()
+          .withId(TestCommentIds.comment2Id)
+          .withContent('Kind')
+          .build();
+      final state = stateWith(ownerHidSomething: true);
+      when(() => listBloc.state).thenReturn(
+        CommentsListState(
+          rootEventId: state.rootEventId,
+          rootAuthorPubkey: state.rootAuthorPubkey,
+          status: CommentsStatus.success,
+          commentsById: {...state.commentsById, shown.id: shown},
+          moderation: state.moderation,
+        ),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: BlocProvider<CommentsListBloc>.value(
+              value: listBloc,
+              child: CommentsTitle(
+                initialCount: 2,
+                onNewCommentsPillTap: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text(l10n.commentsHeaderCount(1)), findsOneWidget);
+    });
+
+    testWidgets('stays away while the owner hid nothing', (tester) async {
+      await pumpToggle(tester, stateWith(ownerHidSomething: false));
+
+      expect(find.textContaining(l10n.commentsHiddenLabel), findsNothing);
+    });
+
+    testWidgets('counts the comments the owner hid', (tester) async {
+      await pumpToggle(tester, stateWith(ownerHidSomething: true));
+
+      expect(find.text('${l10n.commentsHiddenLabel} 1'), findsOneWidget);
+    });
+
+    testWidgets('shows the hidden comments when tapped', (tester) async {
+      await pumpToggle(tester, stateWith(ownerHidSomething: true));
+
+      await tester.tap(find.byType(HiddenCommentsToggle));
+
+      verify(
+        () => listBloc.add(any(that: isA<HiddenCommentsVisibilityToggled>())),
+      ).called(1);
+    });
+
+    testWidgets('tells screen readers whether they are shown', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpToggle(
+        tester,
+        stateWith(ownerHidSomething: true, showHiddenComments: true),
+      );
+
+      expect(
+        tester.getSemantics(
+          find.bySemanticsIdentifier('comments_hidden_toggle'),
+        ),
+        isSemantics(
+          label: l10n.commentsHiddenToggleSemanticLabel,
+          value: '1',
+          isButton: true,
+          hasToggledState: true,
+          isToggled: true,
+          hasTapAction: true,
+        ),
+      );
+      semantics.dispose();
+    });
+  });
+
   group('CommentsScreen', () {
     late _MockAuthService mockAuthService;
     late _MockCommentsListBloc mockListBloc;

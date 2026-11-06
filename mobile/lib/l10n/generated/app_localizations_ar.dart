@@ -8743,6 +8743,43 @@ class AppLocalizationsAr extends AppLocalizations {
   String get commentsSortSemanticLabel => 'ترتيب التعليقات';
 
   @override
+  String get commentsHiddenLabel => 'مخفية';
+
+  @override
+  String get commentsHiddenToggleSemanticLabel => 'عرض التعليقات المخفية';
+
+  @override
+  String get commentsHiddenNotice =>
+      'أُخفيت هذه التعليقات عمدًا من قِبل الصانع.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'هذه التعليقات مخفية من قِبلك. لا يراها الآخرون إلا إذا اختاروا عرضها.';
+
+  @override
+  String get commentHiddenByCreator => 'مخفي من قِبل الصانع';
+
+  @override
+  String get commentHiddenByYou => 'مخفي من قِبلك';
+
+  @override
+  String get commentOptionsHideLabel => 'إخفاء التعليق';
+
+  @override
+  String get commentOptionsHideSemanticLabel => 'إخفاء هذا التعليق على الفيديو';
+
+  @override
+  String get commentOptionsShowLabel => 'إظهار التعليق';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'إظهار هذا التعليق على الفيديو مجددًا';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'تعذّر تحديث التعليقات المخفية. يُرجى المحاولة مرة أخرى.';
+
+  @override
   String get commentReply => 'رد';
 
   @override

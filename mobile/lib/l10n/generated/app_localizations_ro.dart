@@ -8937,6 +8937,44 @@ class AppLocalizationsRo extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Sortarea comentariilor';
 
   @override
+  String get commentsHiddenLabel => 'Ascunse';
+
+  @override
+  String get commentsHiddenToggleSemanticLabel => 'Arată comentariile ascunse';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Creatorul a ascuns intenționat aceste comentarii.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Ai ascuns aceste comentarii. Celelalte persoane le văd doar dacă aleg asta.';
+
+  @override
+  String get commentHiddenByCreator => 'Ascuns de creator';
+
+  @override
+  String get commentHiddenByYou => 'Ascuns de tine';
+
+  @override
+  String get commentOptionsHideLabel => 'Ascunde comentariul';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Ascunde acest comentariu pe videoclipul tău';
+
+  @override
+  String get commentOptionsShowLabel => 'Arată comentariul';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Arată din nou acest comentariu pe videoclipul tău';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Nu am putut actualiza comentariile ascunse. Încearcă din nou.';
+
+  @override
   String get commentReply => 'Răspunde';
 
   @override

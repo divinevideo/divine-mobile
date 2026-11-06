@@ -100,6 +100,7 @@ void main() {
     void Function()? onRelayStatisticsBuilt,
     void Function()? onRelaySetChangeBuilt,
     void Function()? onBlockedFollowReconcilerBuilt,
+    void Function()? onBlockedCommenterReconcilerBuilt,
     void Function()? onNotificationPreferencesSyncBuilt,
     void Function()? onPushNotificationSyncBuilt,
     void Function()? onNotificationActivityBuilt,
@@ -140,6 +141,9 @@ void main() {
     relayConnectionStatusBridgeProvider.overrideWith((ref) {}),
     blockedFollowReconcilerProvider.overrideWith(
       (ref) => onBlockedFollowReconcilerBuilt?.call(),
+    ),
+    blockedCommenterReconcilerProvider.overrideWith(
+      (ref) => onBlockedCommenterReconcilerBuilt?.call(),
     ),
     relayListDirtyPublishBridgeProvider.overrideWithValue(null),
     contactListDirtyBroadcastBridgeProvider.overrideWithValue(null),
@@ -257,6 +261,7 @@ void main() {
       var relayStatistics = false;
       var relaySetChange = false;
       var blockedFollowReconciler = false;
+      var blockedCommenterReconciler = false;
 
       await tester.pumpWidget(
         ProviderScope(
@@ -265,6 +270,8 @@ void main() {
             onRelaySetChangeBuilt: () => relaySetChange = true,
             onBlockedFollowReconcilerBuilt: () =>
                 blockedFollowReconciler = true,
+            onBlockedCommenterReconcilerBuilt: () =>
+                blockedCommenterReconciler = true,
           ),
           child: const AppRootSideEffects(child: SizedBox.shrink()),
         ),
@@ -277,6 +284,7 @@ void main() {
       expect(relayStatistics, isFalse);
       expect(relaySetChange, isFalse);
       expect(blockedFollowReconciler, isFalse);
+      expect(blockedCommenterReconciler, isFalse);
     });
 
     testWidgets('owns push lifecycle without the bottom-nav shell', (
@@ -354,6 +362,7 @@ void main() {
       var relayStatistics = false;
       var relaySetChange = false;
       var blockedFollowReconciler = false;
+      var blockedCommenterReconciler = false;
 
       await tester.pumpWidget(
         ProviderScope(
@@ -362,6 +371,8 @@ void main() {
             onRelaySetChangeBuilt: () => relaySetChange = true,
             onBlockedFollowReconcilerBuilt: () =>
                 blockedFollowReconciler = true,
+            onBlockedCommenterReconcilerBuilt: () =>
+                blockedCommenterReconciler = true,
           ),
           child: const AppShellSideEffects(child: SizedBox.shrink()),
         ),
@@ -371,6 +382,7 @@ void main() {
       expect(relayStatistics, isTrue);
       expect(relaySetChange, isTrue);
       expect(blockedFollowReconciler, isTrue);
+      expect(blockedCommenterReconciler, isTrue);
     });
 
     testWidgets('does not own the identity mirrors', (tester) async {
@@ -440,6 +452,7 @@ void main() {
       'pushNotificationSyncProvider',
       'blocklistSyncBridgeProvider',
       'blockedFollowReconcilerProvider',
+      'blockedCommenterReconcilerProvider',
     ];
 
     for (final path in const [

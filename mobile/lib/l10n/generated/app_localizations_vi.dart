@@ -8688,6 +8688,44 @@ class AppLocalizationsVi extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Sắp xếp bình luận';
 
   @override
+  String get commentsHiddenLabel => 'Đã ẩn';
+
+  @override
+  String get commentsHiddenToggleSemanticLabel => 'Hiện bình luận đã ẩn';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Nhà sáng tạo đã cố ý ẩn những bình luận này.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Bạn đã ẩn những bình luận này. Người khác chỉ thấy chúng nếu họ chọn xem.';
+
+  @override
+  String get commentHiddenByCreator => 'Nhà sáng tạo đã ẩn';
+
+  @override
+  String get commentHiddenByYou => 'Bạn đã ẩn';
+
+  @override
+  String get commentOptionsHideLabel => 'Ẩn bình luận';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Ẩn bình luận này trên video của bạn';
+
+  @override
+  String get commentOptionsShowLabel => 'Hiện bình luận';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Hiện lại bình luận này trên video của bạn';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Không cập nhật được các bình luận đã ẩn. Hãy thử lại.';
+
+  @override
   String get commentReply => 'Trả lời';
 
   @override

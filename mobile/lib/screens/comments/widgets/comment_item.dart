@@ -16,6 +16,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show UserProfile;
 import 'package:openvine/blocs/comments/comment_composer/comment_composer_bloc.dart';
 import 'package:openvine/blocs/comments/comment_reactions/comment_reactions_bloc.dart';
+import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -39,18 +40,32 @@ import 'package:openvine/widgets/user_name.dart';
 /// Includes a reply button and like button in the actions row.
 /// Long press opens options menu for any comment:
 /// - Own comments: Edit, Delete
-/// - Other users' comments: Flag Content, Block User
+/// - Other users' comments: Flag Content, Block User, and for the video
+///   owner Hide or Show comment
 ///
 /// Uses [Comment] from the comments_repository package,
 /// following clean architecture separation of UI and repository layers.
 class CommentItem extends ConsumerStatefulWidget {
-  const CommentItem({required this.comment, this.depth = 0, super.key});
+  const CommentItem({
+    required this.comment,
+    this.depth = 0,
+    this.isHiddenByOwner = false,
+    this.viewerOwnsVideo = false,
+    super.key,
+  });
 
   /// The comment to display.
   final Comment comment;
 
   /// Nesting depth (0 = top-level, 1+ = reply).
   final int depth;
+
+  /// Whether the video owner hid this comment; it is then only shown because
+  /// the viewer chose to see hidden comments, and says so.
+  final bool isHiddenByOwner;
+
+  /// Whether the viewer owns the video, and so can hide or show the comment.
+  final bool viewerOwnsVideo;
 
   @override
   ConsumerState<CommentItem> createState() => _CommentItemState();
@@ -161,6 +176,12 @@ class _CommentItemState extends ConsumerState<CommentItem> {
                               ),
                           avatarSize: widget.depth >= 2 ? 28.0 : 36.0,
                         ),
+                        if (widget.isHiddenByOwner) ...[
+                          const SizedBox(height: 8),
+                          _HiddenByOwnerLabel(
+                            viewerOwnsVideo: widget.viewerOwnsVideo,
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         // Show reply indicator only for orphaned
                         // replies at depth 0
@@ -264,6 +285,9 @@ class _CommentItemState extends ConsumerState<CommentItem> {
     // after the widget may have been unmounted.
     final reactionsBloc = context.read<CommentReactionsBloc>();
     final composerBloc = context.read<CommentComposerBloc>();
+    final listBloc = widget.viewerOwnsVideo
+        ? context.read<CommentsListBloc>()
+        : null;
 
     final CommentOptionResult? result;
 
@@ -278,6 +302,8 @@ class _CommentItemState extends ConsumerState<CommentItem> {
         context,
         commentId: widget.comment.id,
         authorPubkey: widget.comment.authorPubkey,
+        viewerOwnsVideo: listBloc != null,
+        isHidden: widget.isHiddenByOwner,
       );
     }
 
@@ -291,6 +317,8 @@ class _CommentItemState extends ConsumerState<CommentItem> {
         reactionsBloc.add(CommentDeleteRequested(widget.comment.id));
       case CommentBlockUserResult(:final authorPubkey):
         reactionsBloc.add(CommentBlockUserRequested(authorPubkey));
+      case CommentModerationResult(:final hide):
+        listBloc?.add(CommentModerationRequested(widget.comment, hide: hide));
       case CommentEditResult(:final commentId, :final content):
         // Editing a comment whose row is gone has nothing to edit.
         if (!mounted) return;
@@ -304,6 +332,33 @@ class _CommentItemState extends ConsumerState<CommentItem> {
           ),
         );
     }
+  }
+}
+
+/// Says that the video owner hid the comment: "Hidden by you" to the owner,
+/// "Hidden by the creator" to everyone else.
+class _HiddenByOwnerLabel extends StatelessWidget {
+  const _HiddenByOwnerLabel({required this.viewerOwnsVideo});
+
+  final bool viewerOwnsVideo;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.vineColors.onSurfaceVariant;
+    return Row(
+      spacing: 4,
+      children: [
+        DivineIcon(icon: DivineIconName.eyeSlash, size: 14, color: color),
+        Flexible(
+          child: Text(
+            viewerOwnsVideo
+                ? context.l10n.commentHiddenByYou
+                : context.l10n.commentHiddenByCreator,
+            style: VineTheme.labelSmallFont(color: color),
+          ),
+        ),
+      ],
+    );
   }
 }
 

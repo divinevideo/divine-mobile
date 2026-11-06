@@ -8726,6 +8726,44 @@ class AppLocalizationsSv extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Sortering av kommentarer';
 
   @override
+  String get commentsHiddenLabel => 'Dolda';
+
+  @override
+  String get commentsHiddenToggleSemanticLabel => 'Visa dolda kommentarer';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Kreatören har dolt de här kommentarerna med flit.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Du har dolt de här kommentarerna. Andra ser dem bara om de väljer det.';
+
+  @override
+  String get commentHiddenByCreator => 'Dold av kreatören';
+
+  @override
+  String get commentHiddenByYou => 'Dold av dig';
+
+  @override
+  String get commentOptionsHideLabel => 'Dölj kommentar';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Dölj den här kommentaren på din video';
+
+  @override
+  String get commentOptionsShowLabel => 'Visa kommentar';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Visa den här kommentaren på din video igen';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Det gick inte att uppdatera de dolda kommentarerna. Försök igen.';
+
+  @override
   String get commentReply => 'Svara';
 
   @override

@@ -14609,6 +14609,72 @@ abstract class AppLocalizations {
   /// **'Comments sorting'**
   String get commentsSortSemanticLabel;
 
+  /// Label of the comments-sheet header pill that shows, beside a count, how many comments the video owner hid. Tapping it shows or hides them again.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden'**
+  String get commentsHiddenLabel;
+
+  /// Accessibility label of the header toggle that shows the comments the video owner hid. Screen readers add the on/off state and the count.
+  ///
+  /// In en, this message translates to:
+  /// **'Show hidden comments'**
+  String get commentsHiddenToggleSemanticLabel;
+
+  /// Short notice above the comments while a viewer has chosen to see the ones the video owner hid on purpose.
+  ///
+  /// In en, this message translates to:
+  /// **'The creator hid these comments on purpose.'**
+  String get commentsHiddenNotice;
+
+  /// Short notice above the comments while the video owner looks at the comments they hid. Other viewers only see them by choosing to.
+  ///
+  /// In en, this message translates to:
+  /// **'You hid these comments. Others only see them if they choose to.'**
+  String get commentsHiddenNoticeOwner;
+
+  /// Small label on a comment the video owner hid, shown while a viewer has chosen to see hidden comments.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden by the creator'**
+  String get commentHiddenByCreator;
+
+  /// Small label on a comment the video owner hid, shown to that owner on their own video.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden by you'**
+  String get commentHiddenByYou;
+
+  /// Comment menu action for the video owner: hide someone else's comment on their own video without blocking that person.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide comment'**
+  String get commentOptionsHideLabel;
+
+  /// Accessibility label of the video owner's hide-comment action.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide this comment on your video'**
+  String get commentOptionsHideSemanticLabel;
+
+  /// Comment menu action for the video owner: show a comment they hid on their own video again.
+  ///
+  /// In en, this message translates to:
+  /// **'Show comment'**
+  String get commentOptionsShowLabel;
+
+  /// Accessibility label of the video owner's show-comment-again action.
+  ///
+  /// In en, this message translates to:
+  /// **'Show this comment on your video again'**
+  String get commentOptionsShowSemanticLabel;
+
+  /// Snackbar shown when hiding or showing a comment on the owner's own video could not be saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t update the hidden comments. Try again.'**
+  String get commentsErrorModerationFailed;
+
   /// Button label under a comment that opens the reply composer.
   ///
   /// In en, this message translates to:

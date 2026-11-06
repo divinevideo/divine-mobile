@@ -90,6 +90,64 @@ void main() {
   const pubkey =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
+  group(isOwnBlockOnOwnVideo, () {
+    const owner =
+        '0edc2f474484769bc9bf6d471d180e4e280b0bcd719b6da791001beb730cff1b';
+    const blocked =
+        'b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012a1';
+    const stranger =
+        'c3d4e5f6789012345678901234567890abcdef1234567890123456789012ab12';
+    late ContentBlocklistRepository blocklistRepository;
+
+    setUpAll(() => registerFallbackValue(<Filter>[]));
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      blocklistRepository = ContentBlocklistRepository(
+        prefs: await SharedPreferences.getInstance(),
+      );
+      addTearDown(blocklistRepository.dispose);
+      final client = _MockNostrClient();
+      when(() => client.publicKey).thenReturn(owner);
+      when(
+        () => client.subscribe(any()),
+      ).thenAnswer((_) => const Stream<Event>.empty());
+      await blocklistRepository.syncMuteListsInBackground(client, owner);
+      await blocklistRepository.blockUser(blocked, ourPubkey: owner);
+    });
+
+    bool check({
+      String authorPubkey = blocked,
+      String? rootAuthorPubkey = owner,
+      String viewerPubkey = owner,
+    }) => isOwnBlockOnOwnVideo(
+      authorPubkey: authorPubkey,
+      rootAuthorPubkey: rootAuthorPubkey,
+      viewerPubkey: viewerPubkey,
+      blocklistRepository: blocklistRepository,
+    );
+
+    test("keeps a blocked author's comment on the viewer's own video", () {
+      expect(check(), isTrue);
+    });
+
+    test("drops it on someone else's video", () {
+      expect(check(rootAuthorPubkey: stranger), isFalse);
+    });
+
+    test('drops it when no coordinate names the owner', () {
+      expect(check(rootAuthorPubkey: null), isFalse);
+    });
+
+    test('drops it while signed out', () {
+      expect(check(viewerPubkey: '', rootAuthorPubkey: ''), isFalse);
+    });
+
+    test('ignores authors the owner did not block', () {
+      expect(check(authorPubkey: stranger), isFalse);
+    });
+  });
+
   group('followRepositoryProvider follower persistence', () {
     setUpAll(() {
       registerFallbackValue(<Filter>[]);

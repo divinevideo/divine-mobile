@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -22,6 +23,11 @@ part 'comments_list_state.dart';
 /// CommentRemovedFromStore / CommentsRemovedByAuthorFromStore events.
 /// Engagement sort needs upvote counts from [CommentReactionsBloc] — see
 /// [CommentsListState.threadedCommentsWith].
+///
+/// With a [CommentModerationRepository] it also loads what the video owner
+/// hid from the thread (#5044), and lets the owner hide and restore comments.
+/// [viewerBlockedAuthors] are the accounts the viewer blocked; on the
+/// viewer's own video their comments count as hidden by the owner.
 class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   CommentsListBloc({
     required CommentsRepository commentsRepository,
@@ -32,7 +38,12 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     int? initialTotalCount,
     bool includeVideoReplies = false,
     String? focusCommentId,
+    CommentModerationRepository? commentModerationRepository,
+    String? viewerPubkey,
+    Set<String> viewerBlockedAuthors = const {},
   }) : _commentsRepository = commentsRepository,
+       _commentModerationRepository = commentModerationRepository,
+       _viewerBlockedAuthors = viewerBlockedAuthors,
        _initialTotalCount = initialTotalCount,
        _includeVideoReplies = includeVideoReplies,
        super(
@@ -42,6 +53,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
            rootAuthorPubkey: rootAuthorPubkey,
            rootAddressableId: rootAddressableId,
            pendingFocusCommentId: focusCommentId,
+           viewerPubkey: viewerPubkey,
          ),
        ) {
     on<CommentsLoadRequested>(_onLoadRequested);
@@ -59,6 +71,11 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     on<CommentRemovedFromStore>(_onCommentRemovedFromStore);
     on<CommentsRemovedByAuthorFromStore>(_onCommentsRemovedByAuthorFromStore);
     on<CommentDeletionReceived>(_onCommentDeletionReceived);
+    on<HiddenCommentsVisibilityToggled>(_onHiddenCommentsVisibilityToggled);
+    on<CommentModerationRequested>(
+      _onCommentModerationRequested,
+      transformer: sequential(),
+    );
   }
 
   /// Page size for comment loading.
@@ -79,6 +96,8 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   final int? _initialTotalCount;
 
   final CommentsRepository _commentsRepository;
+  final CommentModerationRepository? _commentModerationRepository;
+  final Set<String> _viewerBlockedAuthors;
   final bool _includeVideoReplies;
   BatchedSubscription<Comment>? _commentStreamSubscription;
   StreamSubscription<CommentDeletion>? _commentDeletionSubscription;
@@ -124,6 +143,10 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       ),
     );
 
+    // Read alongside the first page, so a hidden comment is never painted
+    // before the owner's moderation arrives. Never throws.
+    final moderation = _loadModeration();
+
     try {
       final thread = await _commentsRepository.loadComments(
         rootEventId: state.rootEventId,
@@ -132,6 +155,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         limit: _pageSize,
         includeVideoReplies: _includeVideoReplies,
       );
+      final loadedModeration = await moderation;
 
       final commentsById = {
         ...state.commentsById,
@@ -151,6 +175,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           hasMoreContent: hasMore,
           nextOffset: thread.nextOffset,
           replyCountsByCommentId: computeReplyCounts(commentsById),
+          moderation: loadedModeration,
         ),
       );
       _focusWhenLoaded(emit, pageAddedComments: thread.comments.isNotEmpty);
@@ -391,7 +416,10 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         placeholders.remove(placeholder);
       }
       store[comment.id] = comment;
-      if (state.isBackfillComplete && placeholder == null) {
+      // A comment the owner hid does not announce itself in the pill.
+      if (state.isBackfillComplete &&
+          placeholder == null &&
+          (state.showHiddenComments || !state.isHiddenByOwner(comment))) {
         newIds.add(comment.id);
       }
       changed = true;
@@ -540,6 +568,15 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     CommentsRemovedByAuthorFromStore event,
     Emitter<CommentsListState> emit,
   ) {
+    if (state.isViewerRootAuthor) {
+      emit(
+        _withModeration(
+          state.moderation.withAutoHiddenAuthors([event.authorPubkey]),
+          closeHidden: true,
+        ),
+      );
+      return;
+    }
     _emitStore(
       emit,
       Map<String, Comment>.from(state.commentsById)
@@ -557,6 +594,98 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       emit,
       Map<String, Comment>.from(state.commentsById)..remove(comment.id),
     );
+  }
+
+  /// The video owner's moderation of this thread, including the viewer's own
+  /// blocks when the viewer is the owner.
+  Future<CommentModeration> _loadModeration() async {
+    final ownBlocks = state.isViewerRootAuthor
+        ? _viewerBlockedAuthors
+        : const <String>{};
+    final repository = _commentModerationRepository;
+    final coordinate = state.rootAddressableId;
+    if (repository == null || coordinate == null || coordinate.isEmpty) {
+      return CommentModeration.empty.withAutoHiddenAuthors(ownBlocks);
+    }
+    final moderation = await repository.loadModeration(
+      rootAddressableId: coordinate,
+    );
+    return moderation.withAutoHiddenAuthors(ownBlocks);
+  }
+
+  /// [state] with [moderation] applied.
+  ///
+  /// [closeHidden] — the owner just hid something — puts the hidden comments
+  /// away, so the thread is clean at once. With nothing hidden any more the
+  /// toggle resets too, so a later hide does not show up already revealed.
+  CommentsListState _withModeration(
+    CommentModeration moderation, {
+    bool closeHidden = false,
+  }) {
+    final next = state.copyWith(moderation: moderation);
+    if (!next.showHiddenComments) return next;
+    if (closeHidden || next.hiddenCommentCount == 0) {
+      return next.copyWith(showHiddenComments: false);
+    }
+    return next;
+  }
+
+  void _onHiddenCommentsVisibilityToggled(
+    HiddenCommentsVisibilityToggled event,
+    Emitter<CommentsListState> emit,
+  ) {
+    emit(state.copyWith(showHiddenComments: !state.showHiddenComments));
+  }
+
+  /// Applies the owner's hide or restore at once and publishes it; a failed
+  /// publish takes the change back and reports
+  /// [CommentsListError.moderationFailed].
+  Future<void> _onCommentModerationRequested(
+    CommentModerationRequested event,
+    Emitter<CommentsListState> emit,
+  ) async {
+    final repository = _commentModerationRepository;
+    final coordinate = state.rootAddressableId;
+    final comment = event.comment;
+    if (repository == null ||
+        coordinate == null ||
+        coordinate.isEmpty ||
+        !state.isViewerRootAuthor ||
+        comment.authorPubkey == state.viewerPubkey) {
+      return;
+    }
+
+    final previous = state.moderation;
+    emit(
+      _withModeration(
+        event.hide ? previous.hide(comment) : previous.restore(comment),
+        closeHidden: event.hide,
+      ),
+    );
+    try {
+      if (event.hide) {
+        await repository.hideComment(
+          rootAddressableId: coordinate,
+          comment: comment,
+        );
+      } else {
+        await repository.restoreComment(
+          rootAddressableId: coordinate,
+          comment: comment,
+          authorAutoHidden: previous.autoHiddenAuthors.contains(
+            comment.authorPubkey,
+          ),
+        );
+      }
+    } on CommentsRepositoryException catch (e, stackTrace) {
+      _logRepoFailure(e, stackTrace, 'Error saving comment moderation');
+      emit(
+        _withModeration(
+          // Keep commenters auto-hidden meanwhile, such as one just blocked.
+          previous.withAutoHiddenAuthors(state.moderation.autoHiddenAuthors),
+        ).copyWith(error: CommentsListError.moderationFailed),
+      );
+    }
   }
 
   /// Removes the [comments] whose author asked for their deletion.

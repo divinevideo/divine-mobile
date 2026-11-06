@@ -46,6 +46,20 @@ final class NewCommentsAcknowledged extends CommentsListEvent {
   const NewCommentsAcknowledged();
 }
 
+/// The viewer shows or hides again the comments the video owner hid.
+final class HiddenCommentsVisibilityToggled extends CommentsListEvent {
+  const HiddenCommentsVisibilityToggled();
+}
+
+/// The video owner hides [comment] from the thread's default view, or shows
+/// it again when [hide] is false.
+final class CommentModerationRequested extends CommentsListEvent {
+  const CommentModerationRequested(this.comment, {required this.hide});
+
+  final Comment comment;
+  final bool hide;
+}
+
 /// Clear any transient error.
 final class CommentsListErrorCleared extends CommentsListEvent {
   const CommentsListErrorCleared();
@@ -117,6 +131,9 @@ final class CommentDeletionReceived extends CommentsListEvent {
 }
 
 /// Remove every comment authored by [authorPubkey] (post-block cleanup).
+///
+/// On the viewer's own video the comments stay, hidden by default, because
+/// the owner's block is comment moderation there (#5044).
 final class CommentsRemovedByAuthorFromStore extends CommentsListEvent {
   const CommentsRemovedByAuthorFromStore(this.authorPubkey);
 

@@ -3,6 +3,7 @@
 // ABOUTME: split CommentsListBloc + CommentReactionsBloc provider tree.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:comments_repository/comments_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -90,6 +91,81 @@ void main() {
         ),
       );
     }
+
+    group('comments the video owner hid', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      const harasserPubkey =
+          'c3d4e5f6789012345678901234567890abcdef123456789012345678901234ab';
+      final hidden = CommentBuilder()
+          .withId('1' * 64)
+          .withAuthorPubkey(harasserPubkey)
+          .withRootEventId(testVideoEventId)
+          .withRootAuthorPubkey(testVideoAuthorPubkey)
+          .withContent('Unwanted comment')
+          .build();
+      final shown = CommentBuilder()
+          .withId('2' * 64)
+          .withRootEventId(testVideoEventId)
+          .withRootAuthorPubkey(testVideoAuthorPubkey)
+          .withContent('Kind comment')
+          .build();
+
+      CommentsListState stateWith({
+        bool showHiddenComments = false,
+        String? viewerPubkey,
+      }) => CommentsListState(
+        rootEventId: testVideoEventId,
+        rootAuthorPubkey: testVideoAuthorPubkey,
+        status: CommentsStatus.success,
+        commentsById: {hidden.id: hidden, shown.id: shown},
+        moderation: const CommentModeration(
+          autoHiddenAuthors: {harasserPubkey},
+        ),
+        showHiddenComments: showHiddenComments,
+        viewerPubkey: viewerPubkey,
+      );
+
+      testWidgets('leaves them out by default', (tester) async {
+        await tester.pumpWidget(buildTestWidget(listState: stateWith()));
+        await tester.pump();
+
+        expect(find.text('Kind comment'), findsOneWidget);
+        expect(find.text('Unwanted comment'), findsNothing);
+        expect(find.byType(HiddenCommentsNotice), findsNothing);
+      });
+
+      testWidgets('shows them below a notice once the viewer asks', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildTestWidget(listState: stateWith(showHiddenComments: true)),
+        );
+        await tester.pump();
+
+        expect(find.text(l10n.commentsHiddenNotice), findsOneWidget);
+        expect(find.text('Unwanted comment'), findsOneWidget);
+        expect(find.text(l10n.commentHiddenByCreator), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.byType(HiddenCommentsNotice)).dy,
+          lessThan(tester.getTopLeft(find.text('Kind comment')).dy),
+        );
+      });
+
+      testWidgets('tells the owner they hid them', (tester) async {
+        await tester.pumpWidget(
+          buildTestWidget(
+            listState: stateWith(
+              showHiddenComments: true,
+              viewerPubkey: testVideoAuthorPubkey,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text(l10n.commentsHiddenNoticeOwner), findsOneWidget);
+        expect(find.text(l10n.commentHiddenByYou), findsOneWidget);
+      });
+    });
 
     testWidgets('shows skeleton loader when loading', (tester) async {
       const state = CommentsListState(

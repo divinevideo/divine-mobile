@@ -4511,6 +4511,17 @@
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
+  "commentsHiddenLabel": "Disembunyikan",
+  "commentsHiddenToggleSemanticLabel": "Tunjuk komen yang disembunyikan",
+  "commentsHiddenNotice": "Pencipta sengaja menyembunyikan komen ini.",
+  "commentsHiddenNoticeOwner": "Anda menyembunyikan komen ini. Orang lain hanya melihatnya jika mereka memilih untuk melihatnya.",
+  "commentHiddenByCreator": "Disembunyikan oleh pencipta",
+  "commentHiddenByYou": "Disembunyikan oleh anda",
+  "commentOptionsHideLabel": "Sembunyikan komen",
+  "commentOptionsHideSemanticLabel": "Sembunyikan komen ini pada video anda",
+  "commentOptionsShowLabel": "Tunjuk komen",
+  "commentOptionsShowSemanticLabel": "Tunjuk semula komen ini pada video anda",
+  "commentsErrorModerationFailed": "Gagal mengemas kini komen yang disembunyikan. Cuba lagi.",
   "commentReply": "Balas",
   "@commentReply": {
     "description": "Button label under a comment that opens the reply composer."

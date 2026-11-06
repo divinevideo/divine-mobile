@@ -9,6 +9,7 @@ import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:categories_repository/categories_repository.dart';
 import 'package:challenge_protocol/challenge_protocol.dart' as challenge;
 import 'package:comments_repository/comments_repository.dart';
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:curation_repository/curation_repository.dart';
@@ -1212,7 +1213,17 @@ CommentsRepository commentsRepository(Ref ref) {
   final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
 
   final engine = ref.watch(contentPolicyEngineProvider);
-  bool blockFilter(String pubkey) {
+  bool blockFilter(String pubkey, {String? rootAuthorPubkey}) {
+    if (isOwnBlockOnOwnVideo(
+      authorPubkey: pubkey,
+      rootAuthorPubkey: rootAuthorPubkey,
+      viewerPubkey: nostrClient.publicKey,
+      blocklistRepository: blocklistRepository,
+    )) {
+      // On their own video the owner's block is comment moderation: the
+      // comment stays, hidden by default, so they can review and restore it.
+      return false;
+    }
     final decision = engine.evaluate(
       PolicyInput(pubkey: pubkey),
       blocklistRepository.currentState,
@@ -1228,6 +1239,30 @@ CommentsRepository commentsRepository(Ref ref) {
   ref.onDispose(repository.clearCommentCountCache);
   return repository;
 }
+
+/// Whether [viewerPubkey] owns the video and has blocked [authorPubkey].
+///
+/// Such a comment is the owner's own moderation, so the comments surfaces
+/// keep it, hidden by default, instead of dropping it like other blocks.
+/// [rootAuthorPubkey] must come from the video coordinate, not from the
+/// comment, which its author writes.
+bool isOwnBlockOnOwnVideo({
+  required String authorPubkey,
+  required String? rootAuthorPubkey,
+  required String viewerPubkey,
+  required ContentBlocklistRepository blocklistRepository,
+}) =>
+    viewerPubkey.isNotEmpty &&
+    rootAuthorPubkey == viewerPubkey &&
+    blocklistRepository
+        .blockedPubkeysForAccount(viewerPubkey)
+        .contains(authorPubkey);
+
+/// Provider for [CommentModerationRepository]: the moderation video owners
+/// publish for the comments on their videos (NIP-78 kind 30078).
+@Riverpod(keepAlive: true)
+CommentModerationRepository commentModerationRepository(Ref ref) =>
+    CommentModerationRepository(nostrClient: ref.watch(nostrServiceProvider));
 
 /// Dormant until an explicit challenge flow requests it. No Explore/global
 /// discovery route is enabled, and no unshipped API DTO is consumed.

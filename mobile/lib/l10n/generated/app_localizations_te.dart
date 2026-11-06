@@ -8985,6 +8985,44 @@ class AppLocalizationsTe extends AppLocalizations {
   String get commentsSortSemanticLabel => 'వ్యాఖ్యల క్రమబద్ధీకరణ';
 
   @override
+  String get commentsHiddenLabel => 'దాచబడినవి';
+
+  @override
+  String get commentsHiddenToggleSemanticLabel => 'దాచిన వ్యాఖ్యలను చూపించండి';
+
+  @override
+  String get commentsHiddenNotice =>
+      'సృష్టికర్త ఈ వ్యాఖ్యలను ఉద్దేశపూర్వకంగా దాచారు.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'మీరు ఈ వ్యాఖ్యలను దాచారు. ఇతరులు ఎంచుకుంటేనే వాటిని చూస్తారు.';
+
+  @override
+  String get commentHiddenByCreator => 'సృష్టికర్త దాచారు';
+
+  @override
+  String get commentHiddenByYou => 'మీరు దాచారు';
+
+  @override
+  String get commentOptionsHideLabel => 'వ్యాఖ్యను దాచండి';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'మీ వీడియోలో ఈ వ్యాఖ్యను దాచండి';
+
+  @override
+  String get commentOptionsShowLabel => 'వ్యాఖ్యను చూపించండి';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'మీ వీడియోలో ఈ వ్యాఖ్యను మళ్లీ చూపించండి';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'దాచిన వ్యాఖ్యలను అప్‌డేట్ చేయడం విఫలమైంది. మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get commentReply => 'ప్రత్యుత్తరం ఇవ్వండి';
 
   @override

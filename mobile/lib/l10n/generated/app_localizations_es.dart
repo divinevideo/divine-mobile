@@ -8824,6 +8824,44 @@ class AppLocalizationsEs extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Orden de los comentarios';
 
   @override
+  String get commentsHiddenLabel => 'Ocultos';
+
+  @override
+  String get commentsHiddenToggleSemanticLabel => 'Mostrar comentarios ocultos';
+
+  @override
+  String get commentsHiddenNotice =>
+      'El creador ocultó estos comentarios a propósito.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Ocultaste estos comentarios. Los demás solo los ven si eligen verlos.';
+
+  @override
+  String get commentHiddenByCreator => 'Oculto por el creador';
+
+  @override
+  String get commentHiddenByYou => 'Oculto por vos';
+
+  @override
+  String get commentOptionsHideLabel => 'Ocultar comentario';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Ocultar este comentario en tu video';
+
+  @override
+  String get commentOptionsShowLabel => 'Mostrar comentario';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Volver a mostrar este comentario en tu video';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'No se pudieron actualizar los comentarios ocultos. Probá de nuevo.';
+
+  @override
   String get commentReply => 'Responder';
 
   @override

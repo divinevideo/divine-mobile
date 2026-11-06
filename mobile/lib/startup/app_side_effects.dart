@@ -174,6 +174,10 @@ class AppShellSideEffects extends ConsumerWidget {
     ref.watch(blocklistSyncBridgeProvider);
     ref.watch(blockedFollowReconcilerProvider);
 
+    // Auto-hides the comments of blocked accounts on the user's own videos
+    // by publishing them to the account's comment moderation list (#5044).
+    ref.watch(blockedCommenterReconcilerProvider);
+
     return child;
   }
 }

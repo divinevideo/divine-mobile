@@ -8529,6 +8529,42 @@ class AppLocalizationsAm extends AppLocalizations {
   String get commentsSortSemanticLabel => 'የአስተያየቶች ቅደም ተከተል';
 
   @override
+  String get commentsHiddenLabel => 'የተደበቁ';
+
+  @override
+  String get commentsHiddenToggleSemanticLabel => 'የተደበቁ አስተያየቶችን ማሳየት';
+
+  @override
+  String get commentsHiddenNotice => 'እነዚህ አስተያየቶች በፈጣሪው ሆን ተብሎ ተደብቀዋል።';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'እነዚህን አስተያየቶች ደብቀዋቸዋል። ሌሎች የሚያዩዋቸው ራሳቸው ከመረጡ ብቻ ነው።';
+
+  @override
+  String get commentHiddenByCreator => 'በፈጣሪው የተደበቀ';
+
+  @override
+  String get commentHiddenByYou => 'በእርስዎ የተደበቀ';
+
+  @override
+  String get commentOptionsHideLabel => 'አስተያየት መደበቅ';
+
+  @override
+  String get commentOptionsHideSemanticLabel => 'ይህን አስተያየት በቪዲዮዎ ላይ መደበቅ';
+
+  @override
+  String get commentOptionsShowLabel => 'አስተያየት ማሳየት';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'ይህን አስተያየት በቪዲዮዎ ላይ እንደገና ማሳየት';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'የተደበቁ አስተያየቶችን ማዘመን አልተሳካም። እንደገና ይሞክሩ።';
+
+  @override
   String get commentReply => 'መልስ';
 
   @override

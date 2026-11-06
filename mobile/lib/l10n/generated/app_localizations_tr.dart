@@ -8649,6 +8649,43 @@ class AppLocalizationsTr extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Yorum sıralaması';
 
   @override
+  String get commentsHiddenLabel => 'Gizli';
+
+  @override
+  String get commentsHiddenToggleSemanticLabel => 'Gizli yorumları göster';
+
+  @override
+  String get commentsHiddenNotice =>
+      'İçerik üreticisi bu yorumları bilerek gizledi.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Bu yorumları sen gizledin. Diğerleri onları yalnızca kendileri seçerse görür.';
+
+  @override
+  String get commentHiddenByCreator => 'İçerik üreticisi gizledi';
+
+  @override
+  String get commentHiddenByYou => 'Sen gizledin';
+
+  @override
+  String get commentOptionsHideLabel => 'Yorumu gizle';
+
+  @override
+  String get commentOptionsHideSemanticLabel => 'Bu yorumu videonda gizle';
+
+  @override
+  String get commentOptionsShowLabel => 'Yorumu göster';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Bu yorumu videonda yeniden göster';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Gizli yorumlar güncellenemedi. Tekrar dene.';
+
+  @override
   String get commentReply => 'Yanıtla';
 
   @override

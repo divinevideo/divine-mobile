@@ -8793,6 +8793,45 @@ class AppLocalizationsFil extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Pagkakasunod-sunod ng mga komento';
 
   @override
+  String get commentsHiddenLabel => 'Nakatago';
+
+  @override
+  String get commentsHiddenToggleSemanticLabel =>
+      'Ipakita ang mga nakatagong komento';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Sinadya ng creator na itago ang mga komentong ito.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Itinago mo ang mga komentong ito. Makikita lang ito ng iba kung pipiliin nila.';
+
+  @override
+  String get commentHiddenByCreator => 'Itinago ng creator';
+
+  @override
+  String get commentHiddenByYou => 'Itinago mo';
+
+  @override
+  String get commentOptionsHideLabel => 'Itago ang komento';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Itago ang komentong ito sa video mo';
+
+  @override
+  String get commentOptionsShowLabel => 'Ipakita ang komento';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Ipakita ulit ang komentong ito sa video mo';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Hindi na-update ang mga nakatagong komento. Subukan ulit.';
+
+  @override
   String get commentReply => 'Sumagot';
 
   @override

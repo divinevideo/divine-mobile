@@ -8640,6 +8640,45 @@ class AppLocalizationsId extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Urutan komentar';
 
   @override
+  String get commentsHiddenLabel => 'Disembunyikan';
+
+  @override
+  String get commentsHiddenToggleSemanticLabel =>
+      'Tampilkan komentar yang disembunyikan';
+
+  @override
+  String get commentsHiddenNotice =>
+      'Kreator sengaja menyembunyikan komentar ini.';
+
+  @override
+  String get commentsHiddenNoticeOwner =>
+      'Kamu menyembunyikan komentar ini. Orang lain hanya melihatnya kalau mereka memilih untuk melihatnya.';
+
+  @override
+  String get commentHiddenByCreator => 'Disembunyikan oleh kreator';
+
+  @override
+  String get commentHiddenByYou => 'Disembunyikan olehmu';
+
+  @override
+  String get commentOptionsHideLabel => 'Sembunyikan komentar';
+
+  @override
+  String get commentOptionsHideSemanticLabel =>
+      'Sembunyikan komentar ini di videomu';
+
+  @override
+  String get commentOptionsShowLabel => 'Tampilkan komentar';
+
+  @override
+  String get commentOptionsShowSemanticLabel =>
+      'Tampilkan lagi komentar ini di videomu';
+
+  @override
+  String get commentsErrorModerationFailed =>
+      'Gagal memperbarui komentar yang disembunyikan. Coba lagi.';
+
+  @override
   String get commentReply => 'Balas';
 
   @override
