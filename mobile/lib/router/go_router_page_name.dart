@@ -39,7 +39,6 @@ String? _shellSurfaceNameForPath(String? path) {
     'notifications' => 'notifications',
     'inbox' => 'inbox',
     'profile' => 'profile',
-    'liked-videos' => 'liked-videos',
     _ => null,
   };
 }

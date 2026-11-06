@@ -7639,15 +7639,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get geoBlockedTitle => 'አገልግሎት አይገኝም';
 
   @override
-  String get likedVideosEmpty => 'ምንም የተወደዱ ቪዲዮዎች የሉም';
-
-  @override
-  String get likedVideosInvalidRoute => 'ልክ ያልሆነ መንገድ';
-
-  @override
-  String get likedVideosTitle => 'የተወደዱ ቪዲዮዎች';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'ስቀላን እንደገና በመሞከር ላይ…';
 
   @override

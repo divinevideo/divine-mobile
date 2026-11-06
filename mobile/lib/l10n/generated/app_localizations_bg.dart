@@ -7902,15 +7902,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get geoBlockedTitle => 'Услугата не е налична';
 
   @override
-  String get likedVideosEmpty => 'Няма харесани видеа';
-
-  @override
-  String get likedVideosInvalidRoute => 'Невалиден маршрут';
-
-  @override
-  String get likedVideosTitle => 'Харесани видеа';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'Повторно качване…';
 
   @override

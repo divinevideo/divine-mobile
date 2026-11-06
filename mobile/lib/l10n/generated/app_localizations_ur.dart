@@ -7822,15 +7822,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get geoBlockedTitle => 'سروس دستیاب نہیں';
 
   @override
-  String get likedVideosEmpty => 'کوئی پسندیدہ ویڈیو نہیں';
-
-  @override
-  String get likedVideosInvalidRoute => 'غلط روٹ';
-
-  @override
-  String get likedVideosTitle => 'پسندیدہ ویڈیوز';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar =>
       'اپلوڈ دوبارہ کوشش ہو رہی ہے…';
 

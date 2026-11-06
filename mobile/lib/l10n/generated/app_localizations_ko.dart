@@ -7440,15 +7440,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get geoBlockedTitle => '서비스를 이용할 수 없어요';
 
   @override
-  String get likedVideosEmpty => '좋아요한 영상 없음';
-
-  @override
-  String get likedVideosInvalidRoute => '잘못된 경로';
-
-  @override
-  String get likedVideosTitle => '좋아요한 영상';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => '업로드 다시 시도 중…';
 
   @override

@@ -7418,15 +7418,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get geoBlockedTitle => 'サービスは利用できないよ';
 
   @override
-  String get likedVideosEmpty => 'いいねした動画はないよ';
-
-  @override
-  String get likedVideosInvalidRoute => '無効なルート';
-
-  @override
-  String get likedVideosTitle => 'いいねした動画';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'アップロードを再試行中…';
 
   @override

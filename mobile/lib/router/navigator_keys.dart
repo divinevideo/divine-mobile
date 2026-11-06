@@ -22,6 +22,6 @@ class NavigatorKeys {
   /// Inbox tab branch navigator key (inbox + notifications routes).
   static final inbox = GlobalKey<NavigatorState>(debugLabel: 'inbox');
 
-  /// Profile tab branch navigator key (profile + liked-videos routes).
+  /// Profile tab branch navigator key (profile routes).
   static final profile = GlobalKey<NavigatorState>(debugLabel: 'profile');
 }

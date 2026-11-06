@@ -8022,15 +8022,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get geoBlockedTitle => 'Usługa niedostępna';
 
   @override
-  String get likedVideosEmpty => 'Brak polubionych filmów';
-
-  @override
-  String get likedVideosInvalidRoute => 'Nieprawidłowa trasa';
-
-  @override
-  String get likedVideosTitle => 'Polubione filmy';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'Ponawianie przesyłania…';
 
   @override

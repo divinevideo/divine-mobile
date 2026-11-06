@@ -7896,15 +7896,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get geoBlockedTitle => 'Serviço indisponível';
 
   @override
-  String get likedVideosEmpty => 'Nenhum vídeo curtido';
-
-  @override
-  String get likedVideosInvalidRoute => 'Rota inválida';
-
-  @override
-  String get likedVideosTitle => 'Vídeos curtidos';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'Tentando enviar de novo…';
 
   @override

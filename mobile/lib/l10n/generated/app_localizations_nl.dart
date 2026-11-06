@@ -7858,15 +7858,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get geoBlockedTitle => 'Dienst niet beschikbaar';
 
   @override
-  String get likedVideosEmpty => 'Geen gelikete video\'s';
-
-  @override
-  String get likedVideosInvalidRoute => 'Ongeldige route';
-
-  @override
-  String get likedVideosTitle => 'Gelikete video\'s';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'Upload opnieuw proberen…';
 
   @override

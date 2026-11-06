@@ -7824,15 +7824,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get geoBlockedTitle => 'Perkhidmatan Tidak Tersedia';
 
   @override
-  String get likedVideosEmpty => 'Tiada video disukai';
-
-  @override
-  String get likedVideosInvalidRoute => 'Laluan tidak sah';
-
-  @override
-  String get likedVideosTitle => 'Video Disukai';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'Mencuba semula muat naik…';
 
   @override

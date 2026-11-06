@@ -91,10 +91,6 @@ void main() {
         goRouterPageName(_FakeGoRouterState(path: '/profile/:npub/:index')),
         'profile',
       );
-      expect(
-        goRouterPageName(_FakeGoRouterState(path: '/liked-videos/:index')),
-        'liked-videos',
-      );
     });
 
     test(

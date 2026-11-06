@@ -7874,15 +7874,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get geoBlockedTitle => 'Hindi Available ang Serbisyo';
 
   @override
-  String get likedVideosEmpty => 'Walang naka-like na video';
-
-  @override
-  String get likedVideosInvalidRoute => 'Hindi wastong route';
-
-  @override
-  String get likedVideosTitle => 'Mga Naka-like na Video';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar =>
       'Sinusubukan ulit ang upload…';
 

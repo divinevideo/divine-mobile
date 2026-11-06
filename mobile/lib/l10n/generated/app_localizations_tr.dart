@@ -7744,15 +7744,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get geoBlockedTitle => 'Hizmet Kullanılamıyor';
 
   @override
-  String get likedVideosEmpty => 'Beğenilen video yok';
-
-  @override
-  String get likedVideosInvalidRoute => 'Geçersiz rota';
-
-  @override
-  String get likedVideosTitle => 'Beğenilen Videolar';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'Yükleme tekrar deneniyor…';
 
   @override

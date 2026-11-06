@@ -7917,15 +7917,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get geoBlockedTitle => 'Service Unavailable';
 
   @override
-  String get likedVideosEmpty => 'No liked videos';
-
-  @override
-  String get likedVideosInvalidRoute => 'Invalid route';
-
-  @override
-  String get likedVideosTitle => 'Liked Videos';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'Retrying upload…';
 
   @override

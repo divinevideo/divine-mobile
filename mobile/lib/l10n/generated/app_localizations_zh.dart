@@ -7358,15 +7358,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get geoBlockedTitle => '服务不可用';
 
   @override
-  String get likedVideosEmpty => '没有点赞的视频';
-
-  @override
-  String get likedVideosInvalidRoute => '无效的路由';
-
-  @override
-  String get likedVideosTitle => '点赞的视频';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => '正在重试上传…';
 
   @override

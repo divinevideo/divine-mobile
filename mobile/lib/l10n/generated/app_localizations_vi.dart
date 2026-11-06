@@ -7783,15 +7783,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get geoBlockedTitle => 'Dịch vụ không khả dụng';
 
   @override
-  String get likedVideosEmpty => 'Chưa có video đã thích';
-
-  @override
-  String get likedVideosInvalidRoute => 'Tuyến không hợp lệ';
-
-  @override
-  String get likedVideosTitle => 'Video đã thích';
-
-  @override
   String get uploadFailureSheetRetryingSnackbar => 'Đang thử tải lên lại…';
 
   @override

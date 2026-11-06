@@ -95,7 +95,6 @@ void main() {
     for (final type in const [
       RouteType.profile,
       RouteType.hashtag,
-      RouteType.likedVideos,
       RouteType.pooledVideoFeed,
       RouteType.videoDetail,
       RouteType.videoFeed,

@@ -17,7 +17,6 @@ import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/home_feed_retap_cubit.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
-import 'package:openvine/screens/liked_videos_screen_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/screens/profile_unavailable_pins_screen.dart';
 import 'package:openvine/startup/app_side_effects.dart';
@@ -167,7 +166,7 @@ List<RouteBase> shellRoutes() {
           ],
         ),
 
-        // PROFILE tab (own profile grid/feed + liked-videos)
+        // PROFILE tab (own profile grid/feed)
         StatefulShellBranch(
           navigatorKey: NavigatorKeys.profile,
           initialLocation: ProfileScreenRouter.path,
@@ -196,17 +195,6 @@ List<RouteBase> shellRoutes() {
               path: ProfileScreenRouter.pathWithIndex,
               pageBuilder: (ctx, st) =>
                   branchPage(st, const ProfileScreenRouter()),
-            ),
-            GoRoute(
-              path: LikedVideosScreenRouter.path,
-              name: LikedVideosScreenRouter.routeName,
-              pageBuilder: (ctx, st) =>
-                  branchPage(st, const LikedVideosScreenRouter()),
-            ),
-            GoRoute(
-              path: LikedVideosScreenRouter.pathWithIndex,
-              pageBuilder: (ctx, st) =>
-                  branchPage(st, const LikedVideosScreenRouter()),
             ),
           ],
         ),
