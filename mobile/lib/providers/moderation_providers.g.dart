@@ -782,8 +782,11 @@ String _$blockedFollowReconcilerHash() =>
 /// [CommentModerationRepository]. A block adds them and a fresh unblock
 /// removes them. Once the session can sign, blocks the list is missing — made
 /// before it existed, or while it could not be published — are added too.
-/// Nothing else removes an entry, so a device still loading its blocks never
-/// strips one another device added.
+/// An unblock that could not be published is kept per account and removed at
+/// the next block, unblock, session start or return to the app, also after a
+/// restart. Nothing
+/// else removes an entry, so a device still loading its blocks never strips
+/// one another device added.
 ///
 /// Activated by `AppShellSideEffects`.
 
@@ -799,8 +802,11 @@ final blockedCommenterReconcilerProvider =
 /// [CommentModerationRepository]. A block adds them and a fresh unblock
 /// removes them. Once the session can sign, blocks the list is missing — made
 /// before it existed, or while it could not be published — are added too.
-/// Nothing else removes an entry, so a device still loading its blocks never
-/// strips one another device added.
+/// An unblock that could not be published is kept per account and removed at
+/// the next block, unblock, session start or return to the app, also after a
+/// restart. Nothing
+/// else removes an entry, so a device still loading its blocks never strips
+/// one another device added.
 ///
 /// Activated by `AppShellSideEffects`.
 
@@ -815,8 +821,11 @@ final class BlockedCommenterReconcilerProvider
   /// [CommentModerationRepository]. A block adds them and a fresh unblock
   /// removes them. Once the session can sign, blocks the list is missing — made
   /// before it existed, or while it could not be published — are added too.
-  /// Nothing else removes an entry, so a device still loading its blocks never
-  /// strips one another device added.
+  /// An unblock that could not be published is kept per account and removed at
+  /// the next block, unblock, session start or return to the app, also after a
+  /// restart. Nothing
+  /// else removes an entry, so a device still loading its blocks never strips
+  /// one another device added.
   ///
   /// Activated by `AppShellSideEffects`.
   BlockedCommenterReconcilerProvider._()
@@ -853,4 +862,4 @@ final class BlockedCommenterReconcilerProvider
 }
 
 String _$blockedCommenterReconcilerHash() =>
-    r'2121b3878369d19b72c7274fe7786cc9a529a5a2';
+    r'04681a0793fcda156eff8e6b963fcc16ecbcbcbe';

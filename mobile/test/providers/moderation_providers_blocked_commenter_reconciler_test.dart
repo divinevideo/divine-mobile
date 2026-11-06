@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -44,9 +45,14 @@ void main() {
     registerFallbackValue(const <String>[]);
   });
 
-  Future<ProviderContainer> createContainer({bool sessionReady = true}) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-    final prefs = await SharedPreferences.getInstance();
+  late SharedPreferences prefs;
+
+  Future<ProviderContainer> createContainer({
+    bool sessionReady = true,
+    Map<String, Object> storedPrefs = const {},
+  }) async {
+    SharedPreferences.setMockInitialValues(storedPrefs);
+    prefs = await SharedPreferences.getInstance();
 
     nostrClient = _MockNostrClient();
     when(() => nostrClient.publicKey).thenReturn(ourPubkey);
@@ -198,6 +204,77 @@ void main() {
         add: {otherHarasser},
         remove: {harasser},
       );
+    });
+
+    group('with an unblock whose publish failed', () {
+      /// Blocks and then unblocks the harasser while publishing fails.
+      Future<ProviderContainer> failUnblock() async {
+        final container = await createContainer();
+        await blocklistRepository.blockUser(harasser, ourPubkey: ourPubkey);
+        container.read(blockedCommenterReconcilerProvider);
+        await pumpEventQueue();
+        when(
+          () => moderationRepository.updateAutoHiddenAuthors(
+            add: any(named: 'add'),
+            remove: any(named: 'remove'),
+          ),
+        ).thenThrow(const CommentModerationFailedException('offline'));
+        await blocklistRepository.unblockUser(harasser);
+        await pumpEventQueue();
+        return container;
+      }
+
+      void publishingWorks() => when(
+        () => moderationRepository.updateAutoHiddenAuthors(
+          add: any(named: 'add'),
+          remove: any(named: 'remove'),
+        ),
+      ).thenAnswer((_) async {});
+
+      test('removes it after a restart', () async {
+        final first = await failUnblock();
+        final stored = {
+          for (final key in prefs.getKeys()) key: prefs.get(key)!,
+        };
+        first.dispose();
+
+        // The next launch, with what the last one left on disk.
+        final container = await createContainer(storedPrefs: stored);
+        container.read(blockedCommenterReconcilerProvider);
+        await pumpEventQueue();
+
+        expectUpdate(updates().single, remove: {harasser});
+        expect(
+          prefs.getStringList('$hiddenCommenterRemovalsPrefsPrefix$ourPubkey'),
+          isNull,
+        );
+      });
+
+      test('removes it when the app returns', () async {
+        final container = await failUnblock();
+        publishingWorks();
+        clearInteractions(moderationRepository);
+
+        container.read(appForegroundProvider.notifier).setForeground(false);
+        container.read(appForegroundProvider.notifier).setForeground(true);
+        await pumpEventQueue();
+
+        expectUpdate(updates().single, remove: {harasser});
+      });
+
+      test('forgets it when the account is blocked again', () async {
+        await failUnblock();
+        publishingWorks();
+
+        await blocklistRepository.blockUser(harasser, ourPubkey: ourPubkey);
+        await pumpEventQueue();
+
+        expectUpdate(updates().last, add: {harasser});
+        expect(
+          prefs.getStringList('$hiddenCommenterRemovalsPrefsPrefix$ourPubkey'),
+          isNull,
+        );
+      });
     });
 
     test('waits until the session can sign', () async {

@@ -493,6 +493,10 @@ void blockedFollowReconciler(Ref ref) {
   });
 }
 
+/// Prefix of the per-account preferences key holding the unblocks
+/// [blockedCommenterReconcilerProvider] has not published yet.
+const hiddenCommenterRemovalsPrefsPrefix = 'hidden_commenter_removals.';
+
 /// Keeps the commenters an account auto-hides on its videos in step with its
 /// blocks (#5044).
 ///
@@ -501,17 +505,36 @@ void blockedFollowReconciler(Ref ref) {
 /// [CommentModerationRepository]. A block adds them and a fresh unblock
 /// removes them. Once the session can sign, blocks the list is missing — made
 /// before it existed, or while it could not be published — are added too.
-/// Nothing else removes an entry, so a device still loading its blocks never
-/// strips one another device added.
+/// An unblock that could not be published is kept per account and removed at
+/// the next block, unblock, session start or return to the app, also after a
+/// restart. Nothing
+/// else removes an entry, so a device still loading its blocks never strips
+/// one another device added.
 ///
 /// Activated by `AppShellSideEffects`.
 @Riverpod(keepAlive: true)
 void blockedCommenterReconciler(Ref ref) {
   final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
   final moderationRepository = ref.watch(commentModerationRepositoryProvider);
+  final prefs = ref.watch(sharedPreferencesProvider);
 
-  // Unblocks not yet published; retried with the next reconcile.
-  final pendingRemovals = <String>{};
+  // Unblocks not yet published, per account. Kept on disk, or an unblock
+  // that failed before a restart would hide the account for good.
+  String pendingKey(String owner) =>
+      '$hiddenCommenterRemovalsPrefsPrefix$owner';
+  Set<String> pendingRemovalsOf(String owner) => {
+    ...?prefs.getStringList(pendingKey(owner)),
+  };
+  void savePendingRemovals(String owner, Set<String> pending) {
+    runProviderDetached(
+      pending.isEmpty
+          ? prefs.remove(pendingKey(owner))
+          : prefs.setStringList(pendingKey(owner), pending.toList()),
+      'save pending auto-hidden commenter removals',
+      logName: 'BlockedCommenterReconciler',
+    );
+  }
+
   var queue = Future<void>.value();
   var scheduled = false;
   var disposed = false;
@@ -523,16 +546,18 @@ void blockedCommenterReconciler(Ref ref) {
     if (!readiness.isReadyForActiveClient || owner == null) return;
 
     final blocked = blocklistRepository.blockedPubkeysForAccount(owner);
-    final removals = pendingRemovals.difference(blocked);
+    final removals = pendingRemovalsOf(owner).difference(blocked);
     if (blocked.isEmpty && removals.isEmpty) return;
     try {
       await moderationRepository.updateAutoHiddenAuthors(
         add: blocked,
         remove: removals,
       );
-      pendingRemovals.removeAll(removals);
+      // Read again: an unblock may have been added during the publish.
+      savePendingRemovals(owner, pendingRemovalsOf(owner).difference(removals));
     } on CommentModerationFailedException catch (e) {
-      // The next block, unblock or session start tries again.
+      // The next block, unblock, session start or return to the app tries
+      // again.
       Log.warning(
         'Failed to sync auto-hidden commenters: $e',
         name: 'BlockedCommenterReconciler',
@@ -560,12 +585,23 @@ void blockedCommenterReconciler(Ref ref) {
   }
 
   final subscription = blocklistRepository.changes.listen((change) {
+    final owner = ref.read(nostrSessionProvider).pubkey;
     switch (change.op) {
       case BlocklistOp.blocked:
-        pendingRemovals.remove(change.pubkey);
+        if (owner != null) {
+          savePendingRemovals(
+            owner,
+            pendingRemovalsOf(owner)..remove(change.pubkey),
+          );
+        }
         schedule();
       case BlocklistOp.unblocked:
-        pendingRemovals.add(change.pubkey);
+        if (owner != null) {
+          savePendingRemovals(
+            owner,
+            pendingRemovalsOf(owner)..add(change.pubkey),
+          );
+        }
         schedule();
       case BlocklistOp.muted ||
           BlocklistOp.unmuted ||
@@ -577,9 +613,14 @@ void blockedCommenterReconciler(Ref ref) {
     }
   });
 
-  ref.listen<NostrSessionReadiness>(nostrSessionProvider, (_, next) {
-    if (next.isReadyForActiveClient) schedule();
-  });
+  ref
+    ..listen<NostrSessionReadiness>(nostrSessionProvider, (_, next) {
+      if (next.isReadyForActiveClient) schedule();
+    })
+    // An unblock that failed offline is tried again when the app returns.
+    ..listen<bool>(appForegroundProvider, (previous, next) {
+      if (next && previous != true) schedule();
+    });
   schedule();
 
   ref.onDispose(() {
