@@ -770,7 +770,35 @@ void main() {
     });
 
     group(MyFollowingEditRequested, () {
-      test('drops an Unfollow sent while a Follow is still publishing', () async {
+      // FollowRepository publishes one contact list at a time, so the bloc
+      // hands every edit over at once rather than holding the second back.
+      test('a Follow on another account reaches the repository while the '
+          'first is still publishing', () async {
+        final first = validPubkey('first');
+        final second = validPubkey('second');
+        final finishFirst = Completer<void>();
+        when(() => mockFollowRepository.followWithResult(first)).thenAnswer(
+          (_) => finishFirst.future.then((_) => FollowOutcome.published),
+        );
+        when(
+          () => mockFollowRepository.followWithResult(second),
+        ).thenAnswer((_) async => FollowOutcome.published);
+
+        final bloc = createBloc();
+        addTearDown(() async {
+          if (!finishFirst.isCompleted) finishFirst.complete();
+          await bloc.close();
+        });
+        bloc.add(MyFollowingFollowRequested(first));
+        await untilCalled(() => mockFollowRepository.followWithResult(first));
+        bloc.add(MyFollowingFollowRequested(second));
+        await pumpEventQueue();
+
+        verify(() => mockFollowRepository.followWithResult(second)).called(1);
+      });
+
+      test('an Unfollow sent while a Follow on the same account is still '
+          'publishing reaches the repository too', () async {
         final pubkey = validPubkey('user');
         final finishFollow = Completer<void>();
         when(
@@ -789,19 +817,10 @@ void main() {
         });
         bloc.add(MyFollowingFollowRequested(pubkey));
         await untilCalled(() => mockFollowRepository.followWithResult(pubkey));
-        // Keep the follow pending while the Unfollow drains, so the assertion
-        // checks overlap rather than elapsed time. Separate buckets per event
-        // type would run it concurrently and publish two contact lists at once.
         bloc.add(MyFollowingUnfollowRequested(pubkey));
         await pumpEventQueue();
 
-        verifyNever(() => mockFollowRepository.unfollow(pubkey));
-
-        finishFollow.complete();
-        await pumpEventQueue();
-        // A sequential transformer would run the queued Unfollow now.
-        verifyNever(() => mockFollowRepository.unfollow(pubkey));
-        verify(() => mockFollowRepository.followWithResult(pubkey)).called(1);
+        verify(() => mockFollowRepository.unfollow(pubkey)).called(1);
       });
     });
 

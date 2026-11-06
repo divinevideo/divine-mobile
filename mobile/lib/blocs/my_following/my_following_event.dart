@@ -15,8 +15,8 @@ final class MyFollowingListLoadRequested extends MyFollowingEvent {
 
 /// A follow or unfollow the user chose.
 ///
-/// Sealed so [MyFollowingBloc] handles both in one droppable bucket: a Follow
-/// and an Unfollow never publish the contact list at the same time.
+/// Sealed so [MyFollowingBloc] handles both with one handler, which follows or
+/// unfollows exactly what the event names.
 sealed class MyFollowingEditRequested extends MyFollowingEvent {
   const MyFollowingEditRequested(this.pubkey);
 
