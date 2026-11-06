@@ -323,6 +323,23 @@ void main() {
         expect(bloc.state.error, CommentsListError.moderationFailed);
       });
 
+      test('takes the hide back after an unexpected failure', () async {
+        when(
+          () => moderationRepository.hideComment(
+            rootAddressableId: any(named: 'rootAddressableId'),
+            comment: any(named: 'comment'),
+          ),
+        ).thenThrow(StateError('No public key available'));
+        final bloc = await loaded(buildBloc(viewerPubkey: _owner));
+        addTearDown(bloc.close);
+
+        bloc.add(CommentModerationRequested(kind, hide: true));
+        await pumpEventQueue();
+
+        expect(bloc.state.isHiddenByOwner(kind), isFalse);
+        expect(bloc.state.error, CommentsListError.moderationFailed);
+      });
+
       test('puts the hidden comments away after a new hide', () async {
         when(
           () => moderationRepository.hideComment(

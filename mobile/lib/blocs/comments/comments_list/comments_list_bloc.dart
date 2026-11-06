@@ -685,14 +685,27 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
       }
     } on CommentsRepositoryException catch (e, stackTrace) {
       _logRepoFailure(e, stackTrace, 'Error saving comment moderation');
-      emit(
-        _withModeration(
-          // Keep commenters auto-hidden meanwhile, such as one just blocked.
-          previous.withAutoHiddenAuthors(state.moderation.autoHiddenAuthors),
-        ).copyWith(error: CommentsListError.moderationFailed),
+      emit(_moderationReverted(previous));
+    } catch (e, stackTrace) {
+      // A defect, such as a signer error the repository does not wrap; the
+      // unsaved change still has to go back.
+      _logUnexpectedFailure(
+        e,
+        stackTrace,
+        CommentsListBlocReportableSites.onCommentModerationRequested,
+        'Error saving comment moderation',
       );
+      emit(_moderationReverted(previous));
     }
   }
+
+  /// [state] with the moderation back at [previous] and the failure
+  /// reported.
+  CommentsListState _moderationReverted(CommentModeration previous) =>
+      _withModeration(
+        // Keep commenters auto-hidden meanwhile, such as one just blocked.
+        previous.withAutoHiddenAuthors(state.moderation.autoHiddenAuthors),
+      ).copyWith(error: CommentsListError.moderationFailed);
 
   /// Removes the [comments] whose author asked for their deletion.
   ///
