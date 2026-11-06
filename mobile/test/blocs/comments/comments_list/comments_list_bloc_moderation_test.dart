@@ -29,6 +29,7 @@ Comment _comment(
   String id, {
   String authorPubkey = _friend,
   String? replyToEventId,
+  String? replyToAuthorPubkey,
   DateTime? createdAt,
 }) => Comment(
   id: id,
@@ -39,6 +40,7 @@ Comment _comment(
   rootAuthorPubkey: _owner,
   rootAddressableId: _coordinate,
   replyToEventId: replyToEventId,
+  replyToAuthorPubkey: replyToAuthorPubkey,
 );
 
 void main() {
@@ -396,6 +398,65 @@ void main() {
             rootAddressableId: any(named: 'rootAddressableId'),
             comment: any(named: 'comment'),
           ),
+        );
+      });
+    });
+
+    group('shownAuthorPubkeys', () {
+      test('suggests no author whose comments the owner hid', () async {
+        ownerHid(const CommentModeration(autoHiddenAuthors: {_harasser}));
+        final bloc = await loaded(buildBloc());
+        addTearDown(bloc.close);
+
+        expect(bloc.state.shownAuthorPubkeys, isNot(contains(_harasser)));
+        expect(bloc.state.shownAuthorPubkeys, contains(_friend));
+      });
+    });
+
+    group('repliesToHiddenComment', () {
+      test("leaves out a hidden comment's author until it is shown", () async {
+        ownerHid(const CommentModeration(autoHiddenAuthors: {_harasser}));
+        final bloc = await loaded(buildBloc());
+        addTearDown(bloc.close);
+
+        expect(bloc.state.repliesToHiddenComment(replyToHarassment), isTrue);
+        expect(
+          bloc.state.repliesToHiddenComment(
+            _comment('to-kind', replyToEventId: 'kind'),
+          ),
+          isFalse,
+        );
+
+        bloc.add(const HiddenCommentsVisibilityToggled());
+        await pumpEventQueue();
+
+        expect(bloc.state.repliesToHiddenComment(replyToHarassment), isFalse);
+      });
+
+      test('leaves out a hidden author whose comment is not loaded', () async {
+        ownerHid(const CommentModeration(autoHiddenAuthors: {_harasser}));
+        final bloc = await loaded(buildBloc());
+        addTearDown(bloc.close);
+
+        expect(
+          bloc.state.repliesToHiddenComment(
+            _comment(
+              'to-missing',
+              replyToEventId: 'missing',
+              replyToAuthorPubkey: _harasser,
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          bloc.state.repliesToHiddenComment(
+            _comment(
+              'to-missing-friend',
+              replyToEventId: 'missing',
+              replyToAuthorPubkey: _friend,
+            ),
+          ),
+          isFalse,
         );
       });
     });

@@ -51,6 +51,7 @@ class CommentItem extends ConsumerStatefulWidget {
     this.depth = 0,
     this.isHiddenByOwner = false,
     this.viewerOwnsVideo = false,
+    this.repliesToHiddenComment = false,
     super.key,
   });
 
@@ -66,6 +67,10 @@ class CommentItem extends ConsumerStatefulWidget {
 
   /// Whether the viewer owns the video, and so can hide or show the comment.
   final bool viewerOwnsVideo;
+
+  /// Whether the comment answers one the video owner hid, whose author the
+  /// reply line then leaves out.
+  final bool repliesToHiddenComment;
 
   @override
   ConsumerState<CommentItem> createState() => _CommentItemState();
@@ -186,7 +191,8 @@ class _CommentItemState extends ConsumerState<CommentItem> {
                         // Show reply indicator only for orphaned
                         // replies at depth 0
                         if (widget.depth == 0 &&
-                            widget.comment.replyToAuthorPubkey != null)
+                            widget.comment.replyToAuthorPubkey != null &&
+                            !widget.repliesToHiddenComment)
                           _ReplyIndicator(
                             parentAuthorPubkey:
                                 widget.comment.replyToAuthorPubkey!,

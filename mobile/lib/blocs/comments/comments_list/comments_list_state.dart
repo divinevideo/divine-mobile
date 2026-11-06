@@ -190,6 +190,26 @@ final class CommentsListState extends Equatable {
   bool isHiddenByOwner(Comment comment) =>
       comment.authorPubkey != viewerPubkey && moderation.hides(comment);
 
+  /// Whether [comment] answers a comment the list leaves out because the
+  /// video owner hid it, so its reply line must not name that comment's
+  /// author.
+  bool repliesToHiddenComment(Comment comment) {
+    if (showHiddenComments) return false;
+    final parentId = comment.replyToEventId;
+    final parent = parentId == null ? null : commentsById[parentId];
+    if (parent != null) return isHiddenByOwner(parent);
+    // Not loaded: its author tells whether the owner hides it.
+    final author = comment.replyToAuthorPubkey;
+    return author != null &&
+        author != viewerPubkey &&
+        moderation.autoHiddenAuthors.contains(author);
+  }
+
+  /// The authors of the comments the list shows, for mention suggestions:
+  /// the authors of comments the owner hid stay out.
+  Iterable<String> get shownAuthorPubkeys =>
+      shownCommentsById.values.map((comment) => comment.authorPubkey);
+
   /// How many loaded comments the video owner hid.
   int get hiddenCommentCount =>
       commentsById.values.where(isHiddenByOwner).length;

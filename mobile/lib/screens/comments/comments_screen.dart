@@ -271,11 +271,8 @@ abstract final class CommentsScreen {
                     ),
                     profileRepository: profileRepository,
                     mentionCandidatePubkeysProvider: () => <String>[
-                      // Thread participants first — restored after the split
-                      // (pre-split CommentsBloc seeded these from state.commentsById).
-                      ...listBloc.state.commentsById.values.map(
-                        (c) => c.authorPubkey,
-                      ),
+                      // Thread participants first, as the list shows them.
+                      ...listBloc.state.shownAuthorPubkeys,
                       ...followRepository.followingPubkeys,
                     ],
                     // Live duplicate check against the canonical store so a

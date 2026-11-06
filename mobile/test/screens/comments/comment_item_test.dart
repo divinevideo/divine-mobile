@@ -97,6 +97,7 @@ void main() {
     Comment? comment,
     List<Override>? overrides,
     bool isHiddenByOwner = false,
+    bool repliesToHiddenComment = false,
     _MockListBloc? listBloc,
   }) {
     comment ??= CommentBuilder()
@@ -124,6 +125,7 @@ void main() {
                 comment: comment,
                 isHiddenByOwner: isHiddenByOwner,
                 viewerOwnsVideo: listBloc != null,
+                repliesToHiddenComment: repliesToHiddenComment,
               ),
             ),
           ),
@@ -172,6 +174,64 @@ void main() {
       );
 
       expect(find.text(l10n.commentHiddenByYou), findsOneWidget);
+    });
+
+    group('on a reply to a comment the owner hid', () {
+      const hiddenAuthor =
+          'b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012a1';
+      final reply = CommentBuilder()
+          .withAuthorPubkey(_testHexPubkey)
+          .withRootEventId(_testRootEventId)
+          .withRootAuthorPubkey(_testRootAuthorPubkey)
+          .withContent('a reply')
+          .withReplyToEventId('f' * 64)
+          .withReplyToAuthorPubkey(hiddenAuthor)
+          .build();
+      final overrides = <Override>[
+        _signedOutSession,
+        userProfileReactiveProvider(hiddenAuthor).overrideWith((ref) async* {
+          yield UserProfile(
+            pubkey: hiddenAuthor,
+            rawData: const {},
+            createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+            eventId: 'e' * 64,
+            displayName: 'Hidden Author',
+          );
+        }),
+      ];
+
+      testWidgets('leaves its author out of the reply line', (tester) async {
+        final mocks = buildMocks();
+        await tester.pumpWidget(
+          buildTestWidget(
+            'a reply',
+            comment: reply,
+            composerBloc: mocks.composer,
+            reactionsBloc: mocks.reactions,
+            overrides: overrides,
+            repliesToHiddenComment: true,
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Hidden Author'), findsNothing);
+      });
+
+      testWidgets('names its author once it is shown', (tester) async {
+        final mocks = buildMocks();
+        await tester.pumpWidget(
+          buildTestWidget(
+            'a reply',
+            comment: reply,
+            composerBloc: mocks.composer,
+            reactionsBloc: mocks.reactions,
+            overrides: overrides,
+          ),
+        );
+        await tester.pump();
+
+        expect(find.text('Hidden Author'), findsOneWidget);
+      });
     });
 
     testWidgets('labels nothing on a shown comment', (tester) async {
