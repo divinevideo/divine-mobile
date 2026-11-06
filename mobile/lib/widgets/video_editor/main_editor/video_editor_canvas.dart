@@ -1882,9 +1882,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
   /// Initializes (or reinitializes) the native video player with [clips].
   ///
-  /// The caller names the clips: a detach rebuilds the player from the
-  /// [ClipEditorBloc]'s new list while the clip manager still holds the old
-  /// one, until the detach reaches the editor history.
+  /// The clips are passed in rather than read from the clip manager: the
+  /// detach that moves the player onto the legacy surface rebuilds it from
+  /// the [ClipEditorBloc]'s list, which the clip manager only matches once
+  /// the detach reaches the editor history.
   Future<void> _initializePlayer(
     List<DivineVideoClip> clips, {
     Duration? startPosition,
