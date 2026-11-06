@@ -19,7 +19,8 @@ part 'feed_top_comment_state.dart';
 /// Top ordering. Ties go to the newer comment, so the most recent one wins
 /// when none has an upvote or a reply. Text replies are ranked too, unlike
 /// the sheet, which nests them under their parent. The creator's own comments,
-/// video replies, blank comments and pending placeholders are not candidates.
+/// video replies, blank comments, pending placeholders and comments dated more
+/// than [maxFutureSkew] ahead are not candidates.
 ///
 /// The overlay shows once the video has finished its first loop and the top
 /// comment is known, whichever happens last, and stays hidden after the
@@ -48,6 +49,11 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
 
   /// How many comments are ranked — the first page the comments sheet loads.
   static const commentPageSize = 50;
+
+  /// Tolerated author clock skew. `created_at` is author-signed, so a comment
+  /// dated further ahead is implausible: it would rank as the newest comment
+  /// for as long as it stays ahead, and past two hours its score breaks.
+  static const maxFutureSkew = Duration(minutes: 5);
 
   final CommentsRepository _commentsRepository;
   final LikesRepository _likesRepository;
@@ -94,13 +100,15 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
       return;
     }
 
+    final latestPlausible = _now().add(maxFutureSkew);
     final candidates = comments
         .where(
           (comment) =>
               comment.authorPubkey != _rootAuthorPubkey &&
               !comment.hasVideo &&
               comment.content.trim().isNotEmpty &&
-              !comment.id.startsWith(commentPlaceholderIdPrefix),
+              !comment.id.startsWith(commentPlaceholderIdPrefix) &&
+              !comment.createdAt.isAfter(latestPlausible),
         )
         .toList();
     if (candidates.isEmpty) {
@@ -172,13 +180,8 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
     final replyCounts = computeReplyCounts({
       for (final comment in allComments) comment.id: comment,
     });
-    // Its author sets created_at, so a comment dated after [now] counts as
-    // posted now. Dated ahead it would score ever higher as the decay's base
-    // shrinks, then Infinity and NaN past two hours, and win the tie-break.
-    DateTime postedAt(Comment comment) =>
-        comment.createdAt.isAfter(now) ? now : comment.createdAt;
     double score(Comment comment) => commentEngagementScore(
-      comment: comment.copyWith(createdAt: postedAt(comment)),
+      comment: comment,
       now: now,
       likeCounts: upvotes,
       replyCounts: replyCounts,
@@ -190,7 +193,7 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
       if (commentScore != bestScore) {
         return commentScore > bestScore ? comment : best;
       }
-      return postedAt(comment).isAfter(postedAt(best)) ? comment : best;
+      return comment.createdAt.isAfter(best.createdAt) ? comment : best;
     });
   }
 

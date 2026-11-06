@@ -354,19 +354,20 @@ void main() {
       );
 
       group('a comment dated in the future', () {
+        // Newest first, as the repository returns a page.
         for (final (ahead, label) in [
-          (const Duration(minutes: 115), 'just under two hours'),
-          (const Duration(hours: 2), 'exactly two hours'),
-          (const Duration(hours: 3), 'over two hours'),
+          (const Duration(minutes: 6), 'just past the clock-skew allowance'),
+          (const Duration(hours: 2), 'two hours'),
+          (const Duration(days: 365), 'a year'),
         ]) {
           blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-            'scores as if posted now when $label ahead',
+            'is not a candidate when $label ahead',
             setUp: () {
               stubComments([
                 _comment('future', age: -ahead),
-                _comment('popular'),
+                _comment('older', age: const Duration(days: 1)),
               ]);
-              stubUpvotes({'future': 1, 'popular': 10});
+              stubUpvotes({'future': 1});
             },
             build: buildCubit,
             act: (cubit) => cubit.load(),
@@ -375,18 +376,18 @@ void main() {
               isA<FeedTopCommentState>().having(
                 (s) => s.topComment?.id,
                 'topComment',
-                'popular',
+                'older',
               ),
             ],
           );
         }
 
         blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-          'ties with a comment posted now rather than winning the tie-break',
+          'is a candidate within the clock-skew allowance',
           setUp: () {
             stubComments([
-              _comment('now', age: Duration.zero),
-              _comment('future', age: const Duration(minutes: -90)),
+              _comment('skewed', age: const Duration(minutes: -4)),
+              _comment('older'),
             ]);
             stubUpvotes({});
           },
@@ -397,7 +398,24 @@ void main() {
             isA<FeedTopCommentState>().having(
               (s) => s.topComment?.id,
               'topComment',
-              'now',
+              'skewed',
+            ),
+          ],
+        );
+
+        blocTest<FeedTopCommentCubit, FeedTopCommentState>(
+          'leaves nothing to show when it is the only comment',
+          setUp: () => stubComments([
+            _comment('future', age: const Duration(hours: -3)),
+          ]),
+          build: buildCubit,
+          act: (cubit) => cubit.load(),
+          skip: 1,
+          expect: () => [
+            isA<FeedTopCommentState>().having(
+              (s) => s.status,
+              'status',
+              FeedTopCommentStatus.empty,
             ),
           ],
         );
