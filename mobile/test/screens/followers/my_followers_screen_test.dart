@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for MyFollowersScreen's sort control
 // ABOUTME: Ensures the app bar button opens the sheet and re-orders the list
 
+import 'dart:async';
+
 import 'package:cache_sync/cache_sync.dart';
 import 'package:clock/clock.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
@@ -488,6 +490,32 @@ void main() {
       verify(() => mockFollowRepository.followWithResult(newestFollower))
           .called(1);
       verifyNever(() => mockFollowRepository.unfollow(any()));
+    });
+
+    testWidgets('tapping Follow on a second row while the first is still '
+        'publishing follows it too', (tester) async {
+      final finishFirst = Completer<FollowOutcome>();
+      addTearDown(() {
+        if (!finishFirst.isCompleted) {
+          finishFirst.complete(FollowOutcome.published);
+        }
+      });
+      when(
+        () => mockFollowRepository.followWithResult(newestFollower),
+      ).thenAnswer((_) => finishFirst.future);
+      when(
+        () => mockFollowRepository.followWithResult(oldestFollower),
+      ).thenAnswer((_) async => FollowOutcome.published);
+      await pumpScreen(tester);
+
+      await tester.tap(_rowIcon(newestFollower, DivineIconName.userPlus));
+      await tester.pump();
+      await tester.tap(_rowIcon(oldestFollower, DivineIconName.userPlus));
+      await tester.pump();
+
+      verify(
+        () => mockFollowRepository.followWithResult(oldestFollower),
+      ).called(1);
     });
   });
 }
