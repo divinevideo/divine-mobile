@@ -96,6 +96,7 @@ void main() {
     Widget buildSubject({
       bool reducedMotion = false,
       TextScaler textScaler = TextScaler.noScaling,
+      double topInset = 0,
       Locale? locale,
       List<Override> extraOverrides = const [],
     }) => ProviderScope(
@@ -113,6 +114,8 @@ void main() {
           data: MediaQueryData(
             disableAnimations: reducedMotion,
             textScaler: textScaler,
+            padding: EdgeInsets.only(top: topInset),
+            viewPadding: EdgeInsets.only(top: topInset),
           ),
           child: Scaffold(
             body: BlocProvider<FeedTopCommentCubit>.value(
@@ -313,6 +316,40 @@ void main() {
         await tester.pump();
 
         expect(tester.takeException(), isNull);
+        expect(
+          tester.getRect(find.byType(UserAvatar)).bottom,
+          lessThanOrEqualTo(
+            tester.getRect(find.byType(FeedReactionsOverlay)).bottom,
+          ),
+        );
+      });
+
+      testWidgets('a long comment on a short phone at a large text size', (
+        tester,
+      ) async {
+        // A 360x640 dp phone's feed item, under its status bar and bottom nav.
+        await tester.binding.setSurfaceSize(const Size(360, 544));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final content = List.filled(40, 'reaction').join(' ');
+        when(() => cubit.state).thenReturn(
+          _visibleState.copyWith(
+            topComment: Comment(
+              id: _topComment.id,
+              content: content,
+              authorPubkey: _commenter,
+              createdAt: DateTime(2026, 10, 28),
+              rootEventId: _video.id,
+              rootAuthorPubkey: _creator,
+            ),
+          ),
+        );
+        await tester.pumpWidget(
+          buildSubject(textScaler: const TextScaler.linear(2), topInset: 24),
+        );
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text(content), findsOneWidget);
         expect(
           tester.getRect(find.byType(UserAvatar)).bottom,
           lessThanOrEqualTo(

@@ -1,6 +1,8 @@
 // ABOUTME: "Show reactions" overlay for the playing feed video: after its first
 // ABOUTME: loop, darkens the video with a scrim and shows its top comment.
 
+import 'dart:math' as math;
+
 import 'package:comments_repository/comments_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -274,6 +276,79 @@ class _ReactionContent extends StatelessWidget {
         MediaQuery.viewPaddingOf(context).top +
         FeedReactionsOverlayLayout.topBarHeight +
         FeedReactionsOverlayLayout.gapBelowTopBar;
+    return LayoutBuilder(
+      builder: (context, constraints) => _ReactionLayers(
+        video: video,
+        top: top,
+        commentMaxLines: _commentLinesThatFit(
+          context,
+          height: constraints.maxHeight,
+          top: top,
+        ),
+      ),
+    );
+  }
+}
+
+/// How many lines of the comment fit in [height] once [top], the bubble's
+/// padding and tail, the author row and the solid strip below it are taken,
+/// at the text scale the comment is drawn at: a short phone at a large text
+/// size gets fewer than [FeedReactionsOverlayLayout.commentMaxLines].
+int _commentLinesThatFit(
+  BuildContext context, {
+  required double height,
+  required double top,
+}) {
+  final scaler = MediaQuery.textScalerOf(
+    context,
+  ).clamp(maxScaleFactor: FeedReactionsOverlayLayout.maxTextScale);
+  final direction = Directionality.of(context);
+  double lineHeight(TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: ' ', style: style),
+      textScaler: scaler,
+      textDirection: direction,
+    )..layout();
+    final lineHeight = painter.height;
+    painter.dispose();
+    return lineHeight;
+  }
+
+  final commentLine = lineHeight(
+    VineTheme.headlineLargeFont(
+      color: FeedReactionsOverlayLayout.bubbleTextColor,
+    ),
+  );
+  final authorRow = math.max(
+    FeedReactionsOverlayLayout.authorAvatarSize,
+    lineHeight(VineTheme.titleSmallFont(color: VineTheme.whiteText)),
+  );
+  final chrome =
+      top +
+      2 * FeedReactionsOverlayLayout.bubbleVerticalPadding +
+      FeedReactionsOverlayLayout.tailHeight +
+      FeedReactionsOverlayLayout.gapBelowBubble +
+      authorRow +
+      FeedReactionsOverlayLayout.solidBelowContent;
+  return ((height - chrome) / commentLine).floor().clamp(
+    1,
+    FeedReactionsOverlayLayout.commentMaxLines,
+  );
+}
+
+class _ReactionLayers extends StatelessWidget {
+  const _ReactionLayers({
+    required this.video,
+    required this.top,
+    required this.commentMaxLines,
+  });
+
+  final VideoEvent video;
+  final double top;
+  final int commentMaxLines;
+
+  @override
+  Widget build(BuildContext context) {
     return Stack(
       children: [
         // The scrim paints nothing hit-testable, so every tap outside the
@@ -310,7 +385,10 @@ class _ReactionContent extends StatelessWidget {
                       FeedReactionsOverlayLayout.sidePadding,
                       FeedReactionsOverlayLayout.solidBelowContent,
                     ),
-                    child: _TopCommentContent(video: video),
+                    child: _TopCommentContent(
+                      video: video,
+                      commentMaxLines: commentMaxLines,
+                    ),
                   ),
                 ],
               ),
@@ -340,9 +418,13 @@ class _ReactionContent extends StatelessWidget {
 }
 
 class _TopCommentContent extends ConsumerWidget {
-  const _TopCommentContent({required this.video});
+  const _TopCommentContent({
+    required this.video,
+    required this.commentMaxLines,
+  });
 
   final VideoEvent video;
+  final int commentMaxLines;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -368,7 +450,12 @@ class _TopCommentContent extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             spacing: FeedReactionsOverlayLayout.gapBelowBubble,
             children: [
-              ExcludeSemantics(child: _SpeechBubble(content: content)),
+              ExcludeSemantics(
+                child: _SpeechBubble(
+                  content: content,
+                  maxLines: commentMaxLines,
+                ),
+              ),
               _TopCommentAuthor(authorPubkey: comment.authorPubkey),
             ],
           ),
@@ -406,9 +493,10 @@ class _TopCommentContent extends ConsumerWidget {
 /// White speech bubble holding the top comment, its tail hanging from the
 /// bottom edge near the left, towards the author row below.
 class _SpeechBubble extends StatelessWidget {
-  const _SpeechBubble({required this.content});
+  const _SpeechBubble({required this.content, required this.maxLines});
 
   final String content;
+  final int maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -434,7 +522,7 @@ class _SpeechBubble extends StatelessWidget {
                 horizontal: FeedReactionsOverlayLayout.bubbleHorizontalPadding,
                 vertical: FeedReactionsOverlayLayout.bubbleVerticalPadding,
               ),
-              child: _TopCommentText(content: content),
+              child: _TopCommentText(content: content, maxLines: maxLines),
             ),
           ),
         ),
@@ -464,9 +552,10 @@ class _SpeechBubble extends StatelessWidget {
 /// Tapping a mention or link follows it, as in the sheet; a tap anywhere else
 /// reaches the surrounding detector and opens the sheet.
 class _TopCommentText extends StatelessWidget {
-  const _TopCommentText({required this.content});
+  const _TopCommentText({required this.content, required this.maxLines});
 
   final String content;
+  final int maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -491,7 +580,7 @@ class _TopCommentText extends StatelessWidget {
         decoration: TextDecoration.underline,
         decorationColor: linkColor,
       ),
-      maxLines: FeedReactionsOverlayLayout.commentMaxLines,
+      maxLines: maxLines,
       overflow: TextOverflow.ellipsis,
       // Hug the longest line, so the bubble ends where the text does.
       textWidthBasis: TextWidthBasis.longestLine,
@@ -587,6 +676,7 @@ abstract final class FeedReactionsOverlayLayout {
 
   static const fadeDuration = Duration(milliseconds: 250);
 
+  /// Most lines of the comment shown; fewer when the item is too short.
   static const commentMaxLines = 6;
 
   /// Largest text scale the comment and its author grow to, as in the
