@@ -502,7 +502,10 @@ class TimelineOverlayBloc
     emit(
       state.copyWith(
         items: [...unchanged, ...reassigned],
-        trimPosition: event.isStart ? newStart : newEnd,
+        // The end handle parks the playhead just inside the window: the item
+        // no longer shows at its end, and the trim should preview its last
+        // frame.
+        trimPosition: event.isStart ? newStart : items[idx].lastShownTime,
       ),
     );
   }

@@ -90,6 +90,56 @@ void main() {
       });
     });
 
+    group('isWithinWindow', () {
+      late _MockDivineVideoPlayerController controller;
+      late DetachedClipPlayer player;
+      late ValueNotifier<Duration> playhead;
+
+      setUp(() {
+        controller = _MockDivineVideoPlayerController();
+        when(
+          () => controller.setLooping(looping: any(named: 'looping')),
+        ).thenAnswer((_) async {});
+        when(() => controller.seekTo(any())).thenAnswer((_) async {});
+        when(() => controller.play()).thenAnswer((_) async {});
+        when(() => controller.pause()).thenAnswer((_) async {});
+        when(
+          () => controller.state,
+        ).thenReturn(const DivineVideoPlayerState());
+        playhead = ValueNotifier(Duration.zero);
+        player = DetachedClipPlayer.withController(controller, _clip());
+        addTearDown(() {
+          player.detach();
+          playhead.dispose();
+        });
+      });
+
+      test('holds the clip from its start up to, but not at, its end', () {
+        player.follow(
+          playhead: playhead,
+          windowStart: const Duration(seconds: 1),
+          windowEnd: const Duration(seconds: 3),
+        );
+
+        expect(
+          player.isWithinWindow(const Duration(milliseconds: 999)),
+          isFalse,
+        );
+        expect(player.isWithinWindow(const Duration(seconds: 1)), isTrue);
+        expect(
+          player.isWithinWindow(const Duration(milliseconds: 2999)),
+          isTrue,
+        );
+        expect(player.isWithinWindow(const Duration(seconds: 3)), isFalse);
+      });
+
+      test('has no end without a window end', () {
+        player.follow(playhead: playhead);
+
+        expect(player.isWithinWindow(const Duration(hours: 1)), isTrue);
+      });
+    });
+
     group('setVolume', () {
       late _MockDivineVideoPlayerController controller;
       late DetachedClipPlayer player;

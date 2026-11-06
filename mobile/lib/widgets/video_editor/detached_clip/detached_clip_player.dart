@@ -216,7 +216,9 @@ class DetachedClipPlayer {
     _onTick();
   }
 
-  /// Whether the playhead is inside the layer's window.
+  /// Whether the playhead is inside the layer's window: from its start up to,
+  /// but not at, its end, the half-open rule the editor's layers and the
+  /// export share (#9786).
   ///
   /// The canvas asks before rendering the texture: outside the window the
   /// editor hides a layer with an opacity-0 compositing layer, which a platform
@@ -225,7 +227,7 @@ class DetachedClipPlayer {
   bool isWithinWindow(Duration playTime) {
     if (playTime < _windowStart) return false;
     final end = _windowEnd;
-    return end == null || playTime <= end;
+    return end == null || playTime < end;
   }
 
   /// Silences the clip, or lets it play at its own volume again.

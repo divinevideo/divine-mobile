@@ -77,8 +77,9 @@ class TimelineOverlayState extends Equatable {
 
   /// The live position of the trim handle currently being dragged.
   ///
-  /// Set to the dragged item's `startTime` or `endTime` while a trim gesture
-  /// is active; `null` when no trim is in progress.
+  /// Set to the dragged item's `startTime`, or its `lastShownTime` for the
+  /// end handle, while a trim gesture is active; `null` when no trim is in
+  /// progress.
   final Duration? trimPosition;
 
   /// Strip types that are in collapsed view.
