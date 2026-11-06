@@ -926,7 +926,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
     // Initialize the player with the current clips.
     if (_clipPaths.isNotEmpty) {
-      _runDetached(_initializePlayer(_clipPaths), 'initialize video player');
+      _runDetached(
+        _initializePlayer(ref.read(clipManagerProvider).clips),
+        'initialize video player',
+      );
     }
 
     // A stop-motion composition never runs _initializePlayer (no mp4), so its
@@ -1877,9 +1880,14 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     }
   }
 
-  /// Initializes (or reinitializes) the native video player with [clipPaths].
+  /// Initializes (or reinitializes) the native video player with [clips].
+  ///
+  /// The clips are passed in rather than read from the clip manager: the
+  /// detach that moves the player onto the legacy surface rebuilds it from
+  /// the [ClipEditorBloc]'s list, which the clip manager only matches once
+  /// the detach reaches the editor history.
   Future<void> _initializePlayer(
-    List<String> clipPaths, {
+    List<DivineVideoClip> clips, {
     Duration? startPosition,
   }) async {
     // Dispose old player if it exists.
@@ -1887,14 +1895,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     await _videoPlayer?.dispose();
     final generation = _beginClipLoad();
 
-    final clips = ref.read(clipManagerProvider).clips;
-
     // The clip list is named, not just counted: when the preview shows footage
     // the timeline no longer contains — a clip detached onto the canvas, say —
     // the question is always *which* files the player was handed, and a bare
     // count cannot answer it.
     Log.debug(
-      '🎬 Initializing video player with ${clipPaths.length} clip(s): '
+      '🎬 Initializing video player with ${clips.length} clip(s): '
       '${clips.map((c) => '${c.id}->'
           '${(c.video?.file?.path ?? '?').split('/').last}').join(', ')}',
       name: 'VideoEditorCanvas',
@@ -2788,7 +2794,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // [_initializePlayer] asks for them again.
     _composition.resumeRenders();
     if (_isStopMotionComposition || _clipPaths.isEmpty) return;
-    await _initializePlayer(_clipPaths, startPosition: resumePosition);
+    await _initializePlayer(
+      ref.read(clipManagerProvider).clips,
+      startPosition: resumePosition,
+    );
     if (mounted && wasPlaying) {
       await _videoPlayer?.play();
     }
@@ -3344,11 +3353,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               _isSeeking = true;
               final ownerEpoch = _seekEpoch;
               try {
+                // From the bloc: the clip manager catches up with the detach
+                // only once it reaches the editor history.
                 await _initializePlayer(
-                  state.clips
-                      .map((clip) => clip.video?.file?.path)
-                      .whereType<String>()
-                      .toList(),
+                  state.clips,
                   startPosition: startPosition,
                 );
                 if (!mounted) return;
