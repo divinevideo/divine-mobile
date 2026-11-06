@@ -90,7 +90,8 @@ void main() {
     }
 
     /// Stubs the reads that must tell a complete answer from a short one —
-    /// the sync's — with [responses] in call order, each a complete read.
+    /// the sync's and the like check's — with [responses] in call order,
+    /// each a complete read.
     void mockReadEventsSequence(List<List<Event>> responses) {
       var callCount = 0;
       when(
@@ -1036,6 +1037,8 @@ void main() {
           () => mockLocalStorage.deleteLikeRecord(any()),
         ).thenAnswer((_) async => true);
 
+        // The relay holds no like, so the tap goes on to publish.
+        mockReadEventsSequence([<Event>[]]);
         var queueCalls = 0;
         repository = createRepository(
           queueOfflineAction:
@@ -1448,6 +1451,8 @@ void main() {
             () => mockNostrClient.deleteEvent('reaction_a'),
           ).thenAnswer((_) async => null);
 
+          // The relay holds no like, so the tap goes on to publish.
+          mockReadEventsSequence([<Event>[]]);
           bool? queuedIsLike;
           String? queuedEventId;
           repository = createRepository(
@@ -5486,6 +5491,8 @@ void main() {
 
     group('executeLikeAction', () {
       test('logs a replayed like missing its coordinate (#6980)', () async {
+        // The relay holds no like, so the replay goes on to publish.
+        mockReadEventsSequence([<Event>[]]);
         stubAnyPublish();
         repository = createReportingRepository();
 
@@ -5500,6 +5507,8 @@ void main() {
       });
 
       test('publishes like directly to relays', () async {
+        // The relay holds no like, so the replay goes on to publish.
+        mockReadEventsSequence([<Event>[]]);
         when(
           () => mockNostrClient.sendLike(
             any(),
@@ -5536,6 +5545,8 @@ void main() {
       });
 
       test('updates placeholder record with real event ID', () async {
+        // The relay holds no like, so the replay goes on to publish.
+        mockReadEventsSequence([<Event>[]]);
         when(
           () => mockNostrClient.sendLike(
             any(),
@@ -5645,7 +5656,7 @@ void main() {
               ['a', coordinate],
             ],
           );
-          mockQueryEventsSequence([
+          mockReadEventsSequence([
             [otherDeviceReaction],
             <Event>[],
           ]);
@@ -5803,6 +5814,8 @@ void main() {
       test(
         'terminalizes a trusted account restriction during replay',
         () async {
+          // The relay holds no like, so the replay goes on to publish.
+          mockReadEventsSequence([<Event>[]]);
           final event = MockEvent();
           when(
             () => mockNostrClient.sendLike(

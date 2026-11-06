@@ -61,9 +61,18 @@ class _ScriptedRelay extends Relay {
   final List<Event> store = [];
   Map<_Read, _Reply> replies = {};
   bool hidesDeleted = false;
+
+  /// Whether a published event is stored and acknowledged with `OK true`;
+  /// otherwise the relay refuses it.
+  bool acceptsEvents = true;
   final List<_Read> reads = [];
   final List<Event> published = [];
   final List<Timer> _lateAnswers = [];
+  final Map<_Read, Completer<void>> _awaitedReads = {};
+
+  /// Completes when this relay next receives a read of [read].
+  Future<void> nextRead(_Read read) =>
+      (_awaitedReads[read] ??= Completer<void>()).future;
 
   @override
   Future<bool> doConnect() async {
@@ -96,13 +105,14 @@ class _ScriptedRelay extends Relay {
       ];
       final read = _classify(filters);
       reads.add(read);
+      _awaitedReads.remove(read)?.complete();
       unawaited(_answer(subId, filters, replies[read] ?? _Reply.answer));
     } else if (type == 'EVENT' && message.length > 1) {
       final event = Event.fromJson(
         Map<String, dynamic>.from(message[1] as Map),
       );
       published.add(event);
-      store.add(event);
+      if (acceptsEvents) store.add(event);
       unawaited(_ack(event.id));
     }
     return true;
@@ -117,7 +127,12 @@ class _ScriptedRelay extends Relay {
 
   Future<void> _ack(String id) async {
     await pumpEventQueue();
-    await _deliver(['OK', id, true, '']);
+    await _deliver([
+      'OK',
+      id,
+      acceptsEvents,
+      if (acceptsEvents) '' else 'error: this relay refuses events',
+    ]);
   }
 
   Future<void> _answer(String subId, List<Filter> filters, _Reply reply) async {
@@ -235,6 +250,8 @@ class _Harness {
     required this.storage,
     required this.signer,
     required this.user,
+    required this.queued,
+    required this.connectivity,
   });
 
   final LikesRepository repo;
@@ -242,6 +259,11 @@ class _Harness {
   final _MemoryLikesStorage storage;
   final LocalNostrSigner signer;
   final String user;
+
+  /// Every action handed to the offline queue, as `like:<id>` or
+  /// `unlike:<id>`.
+  final List<String> queued;
+  final _Connectivity connectivity;
 
   Future<Event> _sign(Event event) async => (await signer.signEvent(event))!;
 
@@ -277,11 +299,44 @@ class _Harness {
       createdAt: createdAt,
     ),
   );
+
+  /// This account's `+` reactions on [target] the relay holds and has no
+  /// deletion for.
+  Iterable<Event> livePlusOn(String target) => relay.store.where(
+    (e) =>
+        e.kind == EventKind.reaction &&
+        e.content == '+' &&
+        e.pubkey == user &&
+        e.tags.any((t) => t.length > 1 && t[0] == 'e' && t[1] == target) &&
+        !relay.isDeleted(e),
+  );
+
+  Iterable<Event> get publishedReactions =>
+      relay.published.where((e) => e.kind == EventKind.reaction);
+
+  Future<String> likeTarget() => repo.likeEvent(
+    eventId: _target,
+    authorPubkey: _author,
+    addressableId: _coord,
+    targetKind: 34236,
+  );
+
+  Future<String> replayQueuedLike() => repo.executeLikeAction(
+    eventId: _target,
+    authorPubkey: _author,
+    addressableId: _coord,
+    targetKind: 34236,
+  );
+}
+
+class _Connectivity {
+  bool online = true;
 }
 
 Future<_Harness> _harness({
   AppDatabase? cacheDb,
   List<_ScriptedRelay> otherRelays = const [],
+  bool withQueue = true,
 }) async {
   final signer = LocalNostrSigner(_userSecret);
   final nostr = Nostr(signer, [], _ScriptedRelay.new);
@@ -312,7 +367,24 @@ Future<_Harness> _harness({
     dbClient: dbClient,
   );
   final storage = _MemoryLikesStorage();
-  final repo = LikesRepository(nostrClient: client, localStorage: storage);
+  final queued = <String>[];
+  final connectivity = _Connectivity();
+  final repo = LikesRepository(
+    nostrClient: client,
+    localStorage: storage,
+    isOnline: () => connectivity.online,
+    queueOfflineAction: withQueue
+        ? ({
+            required isLike,
+            required eventId,
+            required authorPubkey,
+            addressableId,
+            targetKind,
+          }) async {
+            queued.add('${isLike ? 'like' : 'unlike'}:$eventId');
+          }
+        : null,
+  );
   addTearDown(() async {
     repo.dispose();
     await client.dispose();
@@ -323,6 +395,8 @@ Future<_Harness> _harness({
     storage: storage,
     signer: signer,
     user: user,
+    queued: queued,
+    connectivity: connectivity,
   );
 }
 
@@ -332,6 +406,372 @@ void main() {
   tearDown(Nip89ClientTag.resetForTest);
 
   group('LikesRepository when a relay read ends short (#9004)', () {
+    group('likeEvent', () {
+      /// The account already likes [_target] on the relay, and the startup
+      /// snapshot is incomplete, so the tap has to ask the relay. A newer
+      /// like on another target is what the live subscription replays.
+      Future<(_Harness, Event)> likedOnRelay({
+        List<_ScriptedRelay> otherRelays = const [],
+        AppDatabase? cacheDb,
+      }) async {
+        final h = await _harness(otherRelays: otherRelays, cacheDb: cacheDb);
+        final existing = await h.reaction(
+          _target,
+          createdAt: _now - 7200,
+          coord: _coord,
+        );
+        final newer = await h.reaction(_otherTarget, createdAt: _now - 60);
+        h.relay
+          ..store.addAll([existing, newer])
+          ..replies = {_Read.reactions: _Reply.closed};
+        await h.repo.initialize();
+        expect(await h.repo.isLiked(_target), isFalse, reason: 'precondition');
+        return (h, existing);
+      }
+
+      test('queues the like instead of publishing when a relay refuses '
+          'the check', () async {
+        final (h, _) = await likedOnRelay();
+        h.relay.replies = {_Read.targetedReactions: _Reply.closed};
+
+        final returned = await h.likeTarget();
+
+        expect(h.relay.reads, contains(_Read.targetedReactions));
+        expect(h.publishedReactions, isEmpty);
+        expect(h.queued, equals(['like:$_target']));
+        expect(returned, startsWith('pending_like_'));
+        expect(await h.repo.isLiked(_target), isTrue);
+        expect(h.livePlusOn(_target), hasLength(1));
+      });
+
+      test('adopts the existing like when the check completes', () async {
+        final (h, existing) = await likedOnRelay();
+        h.relay.replies = {};
+
+        await expectLater(
+          h.likeTarget(),
+          throwsA(isA<AlreadyLikedException>()),
+        );
+
+        expect(h.publishedReactions, isEmpty);
+        expect(h.queued, isEmpty);
+        expect(h.storage.records[_target]?.reactionEventId, existing.id);
+      });
+
+      test('waits for a relay that answers after the settle window', () async {
+        final fast = _ScriptedRelay('wss://fast.example');
+        final (h, existing) = await likedOnRelay(otherRelays: [fast]);
+        // The fast relay holds nothing and answers at once; the relay that
+        // holds the like answers a moment later.
+        h.relay.replies = {_Read.targetedReactions: _Reply.late};
+
+        await expectLater(
+          h.likeTarget(),
+          throwsA(isA<AlreadyLikedException>()),
+        );
+
+        expect(h.publishedReactions, isEmpty);
+        expect(h.queued, isEmpty);
+        expect(h.storage.records[_target]?.reactionEventId, existing.id);
+      });
+
+      test('adopts a like this device cached even when a relay refuses '
+          'the check', () async {
+        final db = AppDatabase.test(NativeDatabase.memory());
+        addTearDown(db.close);
+        final (h, existing) = await likedOnRelay(cacheDb: db);
+        await db.nostrEventsDao.upsertEvent(existing);
+        h.relay.replies = {_Read.targetedReactions: _Reply.closed};
+
+        await expectLater(
+          h.likeTarget(),
+          throwsA(isA<AlreadyLikedException>()),
+        );
+
+        expect(h.publishedReactions, isEmpty);
+        expect(h.queued, isEmpty);
+        expect(h.livePlusOn(_target), hasLength(1));
+      });
+
+      group('when the account liked the target and took it back', () {
+        Future<(_Harness, Event)> retractedOnRelay({
+          bool withQueue = true,
+        }) async {
+          final h = await _harness(withQueue: withQueue);
+          final retracted = await h.reaction(
+            _target,
+            createdAt: _now - 7200,
+            coord: _coord,
+          );
+          final unlike = await h.deletion(
+            [retracted.id],
+            createdAt: _now - 3600,
+          );
+          final newer = await h.reaction(_otherTarget, createdAt: _now - 60);
+          h.relay
+            ..store.addAll([retracted, unlike, newer])
+            ..replies = {_Read.reactions: _Reply.closed};
+          await h.repo.initialize();
+          expect(
+            await h.repo.isLiked(_target),
+            isFalse,
+            reason: 'precondition',
+          );
+          return (h, retracted);
+        }
+
+        test('queues the like when the check cannot read the '
+            'deletion', () async {
+          final (h, retracted) = await retractedOnRelay();
+          h.relay.replies = {_Read.deletions: _Reply.closed};
+
+          final returned = await h.likeTarget();
+
+          expect(h.relay.reads, contains(_Read.deletions));
+          expect(h.relay.published, isEmpty);
+          expect(h.queued, equals(['like:$_target']));
+          expect(returned, startsWith('pending_like_'));
+          expect(
+            h.storage.records[_target]?.reactionEventId,
+            isNot(retracted.id),
+          );
+        });
+
+        test('publishes a fresh like when the check reads the '
+            'deletion', () async {
+          final (h, retracted) = await retractedOnRelay();
+          h.relay.replies = {};
+
+          final returned = await h.likeTarget();
+
+          expect(returned, isNot(retracted.id));
+          expect(h.publishedReactions, hasLength(1));
+          expect(h.livePlusOn(_target).single.id, returned);
+          expect(h.queued, isEmpty);
+        });
+
+        test('publishes a fresh like rather than adopt the old one when '
+            'no queue is wired', () async {
+          final (h, retracted) = await retractedOnRelay(withQueue: false);
+          h.relay.replies = {_Read.deletions: _Reply.closed};
+
+          final returned = await h.likeTarget();
+
+          expect(returned, isNot(retracted.id));
+          expect(h.publishedReactions, hasLength(1));
+          expect(h.storage.records[_target]?.reactionEventId, returned);
+        });
+      });
+
+      test(
+        'queues the like when the startup snapshot was capped',
+        () async {
+          final h = await _harness();
+          h.relay.store.add(
+            await h.reaction(_target, createdAt: _now - 100000, coord: _coord),
+          );
+          for (var i = 0; i < 500; i++) {
+            final id = '1${i.toRadixString(16).padLeft(63, '0')}';
+            h.relay.store.add(
+              await h.reaction(id, createdAt: _now - 50000 + i),
+            );
+          }
+          await h.repo.initialize();
+          // The newest 500 synced, which left the target's older like out.
+          expect(await h.repo.getLikedEventIds(), hasLength(500));
+          expect(await h.repo.isLiked(_target), isFalse);
+          h.relay.replies = {_Read.targetedReactions: _Reply.closed};
+
+          await h.likeTarget();
+
+          expect(h.publishedReactions, isEmpty);
+          expect(h.queued, equals(['like:$_target']));
+          expect(h.livePlusOn(_target), hasLength(1));
+        },
+        timeout: const Timeout(Duration(minutes: 2)),
+      );
+    });
+
+    group('executeLikeAction', () {
+      /// A tap whose relay check was refused, so the like waits in the
+      /// queue for the replay below. With [likedOnRelay] the account already
+      /// holds a live like on the target, which is returned.
+      Future<(_Harness, Event?)> queuedLike({bool likedOnRelay = false}) async {
+        final h = await _harness();
+        final existing = likedOnRelay
+            ? await h.reaction(_target, createdAt: _now - 7200, coord: _coord)
+            : null;
+        final newer = await h.reaction(_otherTarget, createdAt: _now - 60);
+        h.relay
+          ..store.addAll([?existing, newer])
+          ..replies = {_Read.reactions: _Reply.closed};
+        await h.repo.initialize();
+        h.relay.replies = {_Read.targetedReactions: _Reply.closed};
+        await h.likeTarget();
+        expect(h.queued, equals(['like:$_target']), reason: 'precondition');
+        expect(h.publishedReactions, isEmpty, reason: 'precondition');
+        return (h, existing);
+      }
+
+      test('adopts the existing like once the check completes', () async {
+        final (h, existing) = await queuedLike(likedOnRelay: true);
+        h.relay.replies = {};
+
+        final returned = await h.replayQueuedLike();
+
+        expect(returned, existing!.id);
+        expect(h.publishedReactions, isEmpty);
+        expect(h.storage.records[_target]?.reactionEventId, existing.id);
+        expect(h.livePlusOn(_target), hasLength(1));
+      });
+
+      test('publishes once the check proves there is no like', () async {
+        final (h, _) = await queuedLike();
+        h.relay.replies = {};
+
+        final returned = await h.replayQueuedLike();
+
+        expect(h.publishedReactions, hasLength(1));
+        expect(h.livePlusOn(_target).single.id, returned);
+        expect(h.storage.records[_target]?.reactionEventId, returned);
+      });
+
+      test('checks again when the re-check ends short, and adopts the like '
+          'once the relay answers', () async {
+        final (h, existing) = await queuedLike(likedOnRelay: true);
+
+        // A throw is what makes the queue retry the action after a backoff.
+        await expectLater(
+          h.replayQueuedLike(),
+          throwsA(isA<LikeFailedException>()),
+        );
+        expect(h.publishedReactions, isEmpty);
+        h.relay.replies = {};
+
+        expect(await h.replayQueuedLike(), existing!.id);
+        expect(h.publishedReactions, isEmpty);
+        expect(h.livePlusOn(_target), hasLength(1));
+      });
+
+      test('publishes on the last attempt when every re-check ends short, so '
+          'the like is not lost', () async {
+        final (h, _) = await queuedLike();
+
+        for (var attempt = 1; attempt < 3; attempt++) {
+          await expectLater(
+            h.replayQueuedLike(),
+            throwsA(isA<LikeFailedException>()),
+          );
+        }
+        expect(h.publishedReactions, isEmpty);
+
+        final returned = await h.replayQueuedLike();
+
+        expect(h.publishedReactions, hasLength(1));
+        expect(h.storage.records[_target]?.reactionEventId, returned);
+      });
+
+      test('drops a like taken back between re-checks', () async {
+        final (h, _) = await queuedLike();
+        await expectLater(
+          h.replayQueuedLike(),
+          throwsA(isA<LikeFailedException>()),
+        );
+
+        await h.repo.unlikeEvent(_target, addressableId: _coord);
+        expect(h.queued, equals(['like:$_target', 'unlike:$_target']));
+        h.relay.replies = {};
+
+        expect(await h.replayQueuedLike(), startsWith('pending_like_'));
+        expect(h.relay.published, isEmpty);
+        expect(await h.repo.isLiked(_target), isFalse);
+      });
+
+      test('retracts what it published when the like is taken back '
+          'meanwhile', () async {
+        final (h, _) = await queuedLike();
+        h.relay.replies = {_Read.targetedReactions: _Reply.late};
+
+        final checkStarted = h.relay.nextRead(_Read.targetedReactions);
+        final replay = h.replayQueuedLike();
+        await checkStarted;
+        await h.repo.unlikeEvent(_target, addressableId: _coord);
+        await replay;
+
+        expect(h.publishedReactions, hasLength(1));
+        expect(h.livePlusOn(_target), isEmpty);
+        expect(await h.repo.isLiked(_target), isFalse);
+        expect(h.storage.records, isNot(contains(_target)));
+      });
+
+      test('ends without a retry when the like is taken back while its '
+          'publish fails', () async {
+        final (h, _) = await queuedLike();
+        h.relay
+          ..replies = {_Read.targetedReactions: _Reply.late}
+          ..acceptsEvents = false;
+
+        final checkStarted = h.relay.nextRead(_Read.targetedReactions);
+        final replay = h.replayQueuedLike();
+        await checkStarted;
+        await h.repo.unlikeEvent(_target, addressableId: _coord);
+
+        // A replay that threw would be retried, and the retry would publish
+        // the like the user took back.
+        expect(await replay, startsWith('pending_like_'));
+        expect(h.livePlusOn(_target), isEmpty);
+        expect(await h.repo.isLiked(_target), isFalse);
+      });
+
+      test('publishes rather than adopt a like whose deletion the check '
+          'still cannot read', () async {
+        final h = await _harness();
+        final retracted = await h.reaction(
+          _target,
+          createdAt: _now - 7200,
+          coord: _coord,
+        );
+        final unlike = await h.deletion([retracted.id], createdAt: _now - 3600);
+        final newer = await h.reaction(_otherTarget, createdAt: _now - 60);
+        h.relay
+          ..store.addAll([retracted, unlike, newer])
+          ..replies = {_Read.reactions: _Reply.closed};
+        await h.repo.initialize();
+        h.relay.replies = {_Read.deletions: _Reply.closed};
+        await h.likeTarget();
+        expect(h.queued, equals(['like:$_target']), reason: 'precondition');
+
+        for (var attempt = 1; attempt < 3; attempt++) {
+          await expectLater(
+            h.replayQueuedLike(),
+            throwsA(isA<LikeFailedException>()),
+          );
+        }
+        final returned = await h.replayQueuedLike();
+
+        expect(returned, isNot(retracted.id));
+        expect(h.livePlusOn(_target).single.id, returned);
+        expect(h.storage.records[_target]?.reactionEventId, returned);
+      });
+    });
+
+    group('unlikeEvent', () {
+      test('queues the unlike of a like still waiting in the queue, so the '
+          'queue drops both', () async {
+        final h = await _harness();
+        h.connectivity.online = false;
+        await h.likeTarget();
+        expect(h.queued, equals(['like:$_target']), reason: 'precondition');
+        h.connectivity.online = true;
+
+        await h.repo.unlikeEvent(_target, addressableId: _coord);
+
+        expect(h.queued, equals(['like:$_target', 'unlike:$_target']));
+        expect(h.relay.published, isEmpty);
+        expect(await h.repo.isLiked(_target), isFalse);
+      });
+    });
+
     group('syncUserReactions', () {
       /// A like taken back with a kind 5, a live like on another target,
       /// and a relay that keeps reactions after their deletion.

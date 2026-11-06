@@ -54,6 +54,22 @@ const int _reqTagValueChunkBytes = 128 * 1024;
 /// client's own default.
 const _settledReadTimeout = Duration(seconds: 5);
 
+/// How long a queued like's replay waits for the relays on each attempt.
+///
+/// A tap whose relay check could not tell whether the account already likes
+/// the target queues the like rather than risk a second one (#9004). Its
+/// replay checks again with this longer budget, so a slow relay can still
+/// answer.
+const _queuedLikeCheckTimeout = Duration(seconds: 15);
+
+/// How many replay attempts a queued like gets before it is published
+/// without the relays' answer.
+///
+/// An unconfirmed attempt throws, so the queue retries after its backoff,
+/// past a reconnect or a burst of reads that cut the attempt short. The last
+/// attempt publishes, so the like is not lost.
+const _queuedLikeCheckAttempts = 3;
+
 /// What a relay read returned, and whether that answer was complete (see
 /// `LikesRepository._provesAbsence`).
 typedef _RelayRead = ({List<Event> events, bool isComplete});
@@ -61,6 +77,11 @@ typedef _RelayRead = ({List<Event> events, bool isComplete});
 /// What this account's deletions say about some of its reactions, by id: the
 /// ones a deletion names, and the ones a short read leaves unknown.
 typedef _Retractions = ({Set<String> retracted, Set<String> undecided});
+
+/// A relay check for this account's live like on one target: the newest like
+/// no deletion was seen for, if any, and whether the check proves it (see
+/// `LikesRepository._checkRelayForLiveLike`).
+typedef _LikeCheck = ({LikeRecord? newest, bool isConclusive});
 
 /// Callback to check if the device is currently online
 typedef IsOnlineCallback = bool Function();
@@ -182,8 +203,15 @@ class LikesRepository {
   final Map<String, LikeRecord> _likeRecordsByAddressableId = {};
 
   /// Pending like placeholder ids currently owned by an awaiting [likeEvent]
-  /// publish.
+  /// publish, or by an [executeLikeAction] replay of a queued like.
   final Set<String> _inFlightLikePublishPlaceholders = {};
+
+  /// Queued likes whose replay found the relays unable to confirm whether the
+  /// account already likes the target, by target event id: how many attempts
+  /// came back unconfirmed, and the placeholder the queued like holds. The
+  /// queue retries the action; see [_queuedLikeCheckAttempts].
+  final Map<String, ({int attempts, String? placeholderId})>
+  _unconfirmedLikeReplays = {};
 
   /// Pending like placeholder ids whose in-flight publish must be retracted as
   /// soon as it resolves.
@@ -674,7 +702,9 @@ class LikesRepository {
   /// - [targetKind]: Optional kind of the event being liked (e.g., 34236)
   ///
   /// Returns the reaction event ID (needed for unlikes), or a placeholder
-  /// ID if the action was queued for offline sync.
+  /// ID if the action was queued for offline sync. A like is also queued
+  /// when the relays could not tell whether this account already likes the
+  /// target, so the queue's replay checks again before publishing (#9004).
   ///
   /// Throws `LikeFailedException` if the operation fails.
   /// Throws `AlreadyLikedException` if the event is already liked — by a
@@ -764,14 +794,45 @@ class LikesRepository {
       // check above.
       _inFlightLikePublishPlaceholders.add(placeholderId);
       await _joinStartupReconciliation();
-      final liveRecord =
-          _reconciledLikeRecord(eventId, addressableId: addressableId) ??
-          (_hasCompleteRelayReactionSnapshot
-              ? null
-              : await _resolveRemoteLikeRecordOrNull(
-                  eventId,
-                  addressableId: addressableId,
-                ));
+      final reconciled = _reconciledLikeRecord(
+        eventId,
+        addressableId: addressableId,
+      );
+      final check = reconciled != null || _hasCompleteRelayReactionSnapshot
+          ? (newest: reconciled, isConclusive: true)
+          : await _checkRelayForLiveLikeOrUnknown(
+              eventId,
+              addressableId: addressableId,
+              timeout: _settledReadTimeout,
+            );
+      if (!check.isConclusive && _queueOfflineAction != null) {
+        // The relays could not say whether this account already likes the
+        // target: publishing could mint a second live `+`, and adopting what
+        // came back could revive a like it took back. The queue's replay
+        // checks again before it publishes (#9004).
+        _inFlightLikePublishPlaceholders.remove(placeholderId);
+        if (_unlikeRequestedWhilePending.remove(placeholderId)) {
+          // Taken back while the check ran, and nothing was published.
+          return placeholderId;
+        }
+        Log.info(
+          'Relays did not confirm whether $eventId is already liked; '
+          'queuing the like to check again before publishing',
+          name: 'LikesRepository',
+          category: LogCategory.relay,
+        );
+        await _queueOfflineAction(
+          isLike: true,
+          eventId: eventId,
+          authorPubkey: authorPubkey,
+          addressableId: addressableId,
+          targetKind: targetKind,
+        );
+        return placeholderId;
+      }
+      // Without a queue an unconfirmed check still publishes, as it always
+      // has, but never adopts a like it could not prove live.
+      final liveRecord = check.isConclusive ? check.newest : null;
       if (liveRecord != null) {
         _inFlightLikePublishPlaceholders.remove(placeholderId);
         if (_unlikeRequestedWhilePending.remove(placeholderId)) {
@@ -1056,6 +1117,19 @@ class LikesRepository {
   /// * The relay already holds this account's live `+` on the target — the
   ///   original publish landed without its OK reaching this client, so the
   ///   queue knows only its own placeholder. Adopts that reaction instead.
+  ///   This check waits up to [_queuedLikeCheckTimeout] for every relay
+  ///   (#9004).
+  ///
+  /// When the relays cannot tell, the replay throws `LikeFailedException` so
+  /// the queue retries it, and publishes on the last of
+  /// [_queuedLikeCheckAttempts] attempts rather than hold the like back for
+  /// good. An unlike that arrives while the replay runs, or between its
+  /// attempts, takes back what it published or adopted, as [likeEvent] does
+  /// for a tap.
+  ///
+  /// Throws `LikeFailedException` when the relays could not confirm the like
+  /// or the publish failed, and `LikeAccountRestrictedException` when account
+  /// policy rejects it.
   Future<String> executeLikeAction({
     required String eventId,
     required String authorPubkey,
@@ -1066,6 +1140,9 @@ class LikesRepository {
     // build, and the guards below are memory-only, so an empty cache would
     // make them blind to a persisted reaction.
     await _ensureInitialized();
+    // Earlier attempts that came back unconfirmed. Taken here so every exit
+    // below leaves the next replay of this target starting fresh.
+    final unconfirmed = _unconfirmedLikeReplays.remove(eventId);
 
     if (addressableId != null && addressableId.isNotEmpty) {
       final byCoordinate = _likeRecordsByAddressableId[addressableId];
@@ -1093,21 +1170,142 @@ class LikesRepository {
         !_isPlaceholderId(indexedRecord.reactionEventId)) {
       return indexedRecord.reactionEventId;
     }
-
-    final remoteRecord = await _resolveRemoteLikeRecordOrNull(
-      eventId,
-      addressableId: addressableId,
-    );
-    if (remoteRecord != null) {
-      await _adoptRemoteLikeRecord(
-        remoteRecord,
-        site: LikesRepositoryReportableSites.executeLikeActionSaveAdopted,
-      );
-      _emitLikedIds();
-      return remoteRecord.reactionEventId;
+    final earlierPlaceholder = unconfirmed?.placeholderId;
+    if (earlierPlaceholder != null && indexedRecord == null) {
+      // The placeholder an earlier attempt held is gone: the like was taken
+      // back between attempts, so there is nothing left to publish.
+      return earlierPlaceholder;
     }
 
-    // Publish Kind 7 reaction event via NostrClient
+    // While this replay checks the relays and publishes, an unlike of its
+    // placeholder records the intent instead of acting on it, as during a
+    // tap's own publish, and the replay takes back what it ends up holding.
+    // Once the outcome is known the placeholder leaves the in-flight set, so
+    // a later unlike goes to the queue like any other.
+    final placeholderId = indexedRecord?.reactionEventId;
+    if (placeholderId != null) {
+      _inFlightLikePublishPlaceholders.add(placeholderId);
+    }
+    bool settleTakenBack() {
+      if (placeholderId == null) return false;
+      _inFlightLikePublishPlaceholders.remove(placeholderId);
+      return _unlikeRequestedWhilePending.remove(placeholderId);
+    }
+
+    try {
+      final check = await _checkRelayForLiveLikeOrUnknown(
+        eventId,
+        addressableId: addressableId,
+        timeout: _queuedLikeCheckTimeout,
+      );
+      final remoteRecord = check.isConclusive ? check.newest : null;
+      if (remoteRecord != null) {
+        if (settleTakenBack()) {
+          await _retractLikeUnlikedMidPublish(
+            confirmed: remoteRecord,
+            restoredCount: _readCachedLikeCount(
+              eventId,
+              addressableId: addressableId,
+            ),
+            countEventId: eventId,
+            countAddressableId: addressableId,
+            alreadyCounted: true,
+          );
+          return remoteRecord.reactionEventId;
+        }
+        await _adoptRemoteLikeRecord(
+          remoteRecord,
+          site: LikesRepositoryReportableSites.executeLikeActionSaveAdopted,
+        );
+        _emitLikedIds();
+        return remoteRecord.reactionEventId;
+      }
+      if (!check.isConclusive) {
+        final attempts = (unconfirmed?.attempts ?? 0) + 1;
+        if (attempts < _queuedLikeCheckAttempts) {
+          _unconfirmedLikeReplays[eventId] = (
+            attempts: attempts,
+            placeholderId: placeholderId,
+          );
+          throw const LikeFailedException(
+            'Relays did not confirm whether this account already likes the '
+            'target; the queue will check again',
+          );
+        }
+        // Still unconfirmed on the last attempt. Publishing risks a second
+        // `+`; holding the like back for good would lose it, which is worse.
+        Log.warning(
+          'Relays still did not confirm whether $eventId is already liked; '
+          'publishing the queued like',
+          name: 'LikesRepository',
+          category: LogCategory.relay,
+        );
+      }
+
+      final Event reactionEvent;
+      try {
+        reactionEvent = await _publishQueuedLike(
+          eventId: eventId,
+          authorPubkey: authorPubkey,
+          addressableId: addressableId,
+          targetKind: targetKind,
+        );
+      } on Object {
+        // Taken back while it was being sent: there is nothing left to retry.
+        if (settleTakenBack()) return placeholderId!;
+        rethrow;
+      }
+
+      if (settleTakenBack()) {
+        final shownCount = _readCachedLikeCount(
+          eventId,
+          addressableId: addressableId,
+        );
+        await _retractLikeUnlikedMidPublish(
+          confirmed: LikeRecord(
+            targetEventId: eventId,
+            reactionEventId: reactionEvent.id,
+            createdAt: indexedRecord?.createdAt ?? DateTime.now(),
+            addressableId: addressableId ?? indexedRecord?.addressableId,
+          ),
+          restoredCount: shownCount == null ? null : shownCount + 1,
+          countEventId: eventId,
+          countAddressableId: addressableId,
+          alreadyCounted: false,
+        );
+        return reactionEvent.id;
+      }
+
+      // Update local record with real event ID if we have a placeholder
+      final existingRecord = _likeRecords[eventId];
+      if (existingRecord != null &&
+          _isPlaceholderId(existingRecord.reactionEventId)) {
+        final record = LikeRecord(
+          targetEventId: eventId,
+          reactionEventId: reactionEvent.id,
+          createdAt: existingRecord.createdAt,
+          addressableId: addressableId ?? existingRecord.addressableId,
+        );
+        _indexLikeRecord(record);
+        await _localStorage?.saveLikeRecord(record);
+      }
+
+      return reactionEvent.id;
+    } finally {
+      settleTakenBack();
+    }
+  }
+
+  /// Publishes the Kind 7 for a queued like.
+  ///
+  /// Throws `LikeAccountRestrictedException` when account policy rejects it,
+  /// and `LikeFailedException` when the publish otherwise fails.
+  Future<Event> _publishQueuedLike({
+    required String eventId,
+    required String authorPubkey,
+    required String? addressableId,
+    required int? targetKind,
+  }) async {
     final Event? reactionEvent;
     try {
       _warnMissingCoordinate(
@@ -1143,22 +1341,7 @@ class LikesRepository {
     if (reactionEvent == null) {
       throw const LikeFailedException('Failed to publish like reaction');
     }
-
-    // Update local record with real event ID if we have a placeholder
-    final existingRecord = _likeRecords[eventId];
-    if (existingRecord != null &&
-        _isPlaceholderId(existingRecord.reactionEventId)) {
-      final record = LikeRecord(
-        targetEventId: eventId,
-        reactionEventId: reactionEvent.id,
-        createdAt: existingRecord.createdAt,
-        addressableId: addressableId ?? existingRecord.addressableId,
-      );
-      _indexLikeRecord(record);
-      await _localStorage?.saveLikeRecord(record);
-    }
-
-    return reactionEvent.id;
+    return reactionEvent;
   }
 
   /// Unlike an event.
@@ -1256,12 +1439,21 @@ class LikesRepository {
       if (_isPlaceholderId(snapshotRecord.reactionEventId)) {
         // The real reaction id does not exist yet, so nothing can be referenced
         // in a Kind 5 here. If this placeholder belongs to a currently awaited
-        // publish, record the intent for that exact attempt — [likeEvent]
-        // retracts it the moment the publish resolves (#7001).
+        // publish, record the intent for that exact attempt — [likeEvent] or
+        // [executeLikeAction] retracts it the moment the publish resolves
+        // (#7001).
         if (_inFlightLikePublishPlaceholders.contains(
           snapshotRecord.reactionEventId,
         )) {
           _unlikeRequestedWhilePending.add(snapshotRecord.reactionEventId);
+        } else if (_queueOfflineAction != null) {
+          // Otherwise the like is waiting in the queue, which drops it when
+          // this unlike arrives instead of publishing it later (#9004).
+          await _queueOfflineAction(
+            isLike: false,
+            eventId: resolvedEventId,
+            authorPubkey: '', // Not needed for unlike
+          );
         }
         return;
       }
@@ -3201,7 +3393,7 @@ class LikesRepository {
 
   /// The live reaction that startup reconciliation or the live subscription
   /// has already indexed for [eventId] or its coordinate, shaped exactly as
-  /// [_resolveRemoteLikeRecord] would return it: keyed under [eventId], so
+  /// [_checkRelayForLiveLike] would return it: keyed under [eventId], so
   /// the caller's later unlike resolves it, and carrying [addressableId] when
   /// the reaction itself has no `a` tag, so adopting it evicts this tap's
   /// placeholder from the coordinate index too.
@@ -3286,49 +3478,120 @@ class LikesRepository {
     }
   }
 
-  /// [_resolveRemoteLikeRecord] that fails open.
+  /// [_checkRelayForLiveLike] that never throws.
   ///
-  /// An unreachable relay must not turn a like into a silent no-op; the
-  /// publish that follows fails the same way and takes the existing retry
-  /// path, which runs this check again before it publishes.
-  Future<LikeRecord?> _resolveRemoteLikeRecordOrNull(
+  /// A check that fails proves nothing either way, so it comes back
+  /// inconclusive and the caller treats it as a relay that did not finish.
+  Future<_LikeCheck> _checkRelayForLiveLikeOrUnknown(
     String eventId, {
-    String? addressableId,
+    required String? addressableId,
+    required Duration timeout,
   }) async {
     try {
-      return await _resolveRemoteLikeRecord(
+      return await _checkRelayForLiveLike(
         eventId,
         addressableId: addressableId,
+        timeout: timeout,
       );
     } on Object catch (e) {
       Log.warning(
-        'Could not check the relay for an existing like on $eventId; '
-        'publishing without that check: $e',
+        'Could not check the relay for an existing like on $eventId: $e',
         name: 'LikesRepository',
         category: LogCategory.relay,
       );
-      return null;
+      return (newest: null, isConclusive: false);
     }
   }
 
-  /// Resolves the current user's still-live `+` on [eventId] from relays.
+  /// Checks the relays for the current user's still-live `+` on [eventId] or
+  /// its coordinate. Backs the pre-publish check in [likeEvent] and the
+  /// replay guard in [executeLikeAction] (#7001).
   ///
-  /// Returns the newest non-deleted kind-7 like this account has published
-  /// against [eventId] or its coordinate, or `null` when there is none. Backs
-  /// the pre-publish check in [likeEvent] and the replay guard in
-  /// [executeLikeAction] (#7001).
-  Future<LikeRecord?> _resolveRemoteLikeRecord(
+  /// The check is conclusive when it proves its answer: that the newest like
+  /// it found has no deletion, or, when it found none, that the relays hold
+  /// none. A read that ended short proves neither (#9004).
+  Future<_LikeCheck> _checkRelayForLiveLike(
     String eventId, {
-    String? addressableId,
-  }) => _resolveRemoteReactionRecord(
-    eventId,
-    addressableId: addressableId,
+    required String? addressableId,
+    required Duration timeout,
+  }) async {
+    final pubkey = await _currentUserPubkey();
+    if (pubkey == null) return (newest: null, isConclusive: true);
+
+    final hasCoordinate = addressableId != null && addressableId.isNotEmpty;
+    Filter likesOf(List<String>? e, List<String>? a) => Filter(
+      kinds: const [EventKind.reaction],
+      authors: [pubkey],
+      e: e,
+      a: a,
+      limit: _defaultReactionFetchLimit,
+    );
+    final reads = await Future.wait([
+      _readChunked([eventId], (ids) => likesOf(ids, null), timeout: timeout),
+      if (hasCoordinate)
+        _readChunked(
+          [addressableId],
+          (coordinates) => likesOf(null, coordinates),
+          timeout: timeout,
+        ),
+    ]);
+
     // The REQ carries `authors`, but a relay that ignores it, or a merged
-    // cache hit, must not hand this account someone else's reaction to
-    // adopt as its own.
-    isMatch: (event, pubkey) =>
-        event.pubkey == pubkey && _isLikeReaction(event),
-  );
+    // cache hit, must not hand this account someone else's reaction to adopt
+    // as its own.
+    final candidatesById = {
+      for (final read in reads)
+        for (final event in read.events)
+          if (event.pubkey == pubkey &&
+              _isLikeReaction(event) &&
+              _isReactionOn(event, eventId, addressableId))
+            event.id: event,
+    };
+    final retractions = await _readRetractions(
+      candidatesById,
+      pubkey: pubkey,
+      timeout: timeout,
+    );
+    final unretracted = candidatesById.values
+        .where((event) => !retractions.retracted.contains(event.id))
+        .toList();
+    if (unretracted.isEmpty) {
+      return (
+        newest: null,
+        isConclusive: reads.every((read) => read.isComplete),
+      );
+    }
+    return (
+      newest: _newestAsRecord(unretracted, eventId, addressableId),
+      isConclusive: retractions.undecided.isEmpty,
+    );
+  }
+
+  /// Whether [reaction] targets [eventId], or the coordinate [addressableId]
+  /// when one is given.
+  bool _isReactionOn(Event reaction, String eventId, String? addressableId) =>
+      _extractTargetEventId(reaction) == eventId ||
+      (addressableId != null &&
+          addressableId.isNotEmpty &&
+          _extractAddressableId(reaction) == addressableId);
+
+  /// The newest of [reactions] as the record for [eventId], carrying
+  /// [addressableId] when the reaction itself has no `a` tag.
+  LikeRecord _newestAsRecord(
+    List<Event> reactions,
+    String eventId,
+    String? addressableId,
+  ) {
+    final newest = ([
+      ...reactions,
+    ]..sort((a, b) => b.createdAt.compareTo(a.createdAt))).first;
+    return LikeRecord(
+      targetEventId: eventId,
+      reactionEventId: newest.id,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(newest.createdAt * 1000),
+      addressableId: _extractAddressableId(newest) ?? addressableId,
+    );
+  }
 
   /// Resolves the current user's still-live downvote on [eventId] from relays.
   ///
@@ -3339,20 +3602,6 @@ class LikesRepository {
   Future<LikeRecord?> _resolveRemoteDownvoteRecord(
     String eventId, {
     String? addressableId,
-  }) => _resolveRemoteReactionRecord(
-    eventId,
-    addressableId: addressableId,
-    isMatch: (event, pubkey) =>
-        event.pubkey == pubkey && event.content == _downvoteContent,
-  );
-
-  /// Resolves the newest still-live kind-7 reaction the current user has
-  /// published against [eventId] or its coordinate that satisfies [isMatch],
-  /// or `null` when there is none.
-  Future<LikeRecord?> _resolveRemoteReactionRecord(
-    String eventId, {
-    required String? addressableId,
-    required bool Function(Event event, String currentUserPubkey) isMatch,
   }) async {
     final pubkey = await _currentUserPubkey();
     if (pubkey == null) return null;
@@ -3366,14 +3615,13 @@ class LikesRepository {
       authors: [pubkey],
     );
 
-    final candidatesById = <String, Event>{};
-    for (final event in reactions) {
-      if (!isMatch(event, pubkey)) continue;
-      final matches =
-          _extractTargetEventId(event) == eventId ||
-          (hasCoordinate && _extractAddressableId(event) == addressableId);
-      if (matches) candidatesById[event.id] = event;
-    }
+    final candidatesById = <String, Event>{
+      for (final event in reactions)
+        if (event.pubkey == pubkey &&
+            event.content == _downvoteContent &&
+            _isReactionOn(event, eventId, addressableId))
+          event.id: event,
+    };
     final candidates = candidatesById.values.toList();
     if (candidates.isEmpty) return null;
 
@@ -3395,17 +3643,10 @@ class LikesRepository {
       }
     }
 
-    final live =
-        candidates.where((event) => !deletedIds.contains(event.id)).toList()
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final live = candidates
+        .where((event) => !deletedIds.contains(event.id))
+        .toList();
     if (live.isEmpty) return null;
-
-    final newest = live.first;
-    return LikeRecord(
-      targetEventId: eventId,
-      reactionEventId: newest.id,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(newest.createdAt * 1000),
-      addressableId: _extractAddressableId(newest) ?? addressableId,
-    );
+    return _newestAsRecord(live, eventId, addressableId);
   }
 }
