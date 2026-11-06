@@ -110,7 +110,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> pumpAnalyticsErrorScreen(
+  Future<CreatorAnalyticsRepository> pumpAnalyticsErrorScreen(
     WidgetTester tester, {
     required Object error,
   }) async {
@@ -135,6 +135,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    return repository;
   }
 
   VideoEvent analyticsVideo({
@@ -487,6 +488,56 @@ void main() {
       );
 
       expect(find.text(l10n.analyticsConnectionIssue), findsOneWidget);
+    });
+
+    group('when a reload fails', () {
+      testWidgets('shows a failed retry without leaking the error', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final repository = await pumpAnalyticsErrorScreen(
+          tester,
+          error: const CreatorAnalyticsLoadException(
+            CreatorAnalyticsFailureKind.serverUnavailable,
+          ),
+        );
+        when(() => repository.fetchCreatorAnalytics(any())).thenAnswer(
+          (_) async => throw const CreatorAnalyticsLoadException(
+            CreatorAnalyticsFailureKind.unableToLoad,
+          ),
+        );
+
+        await tester.tap(find.text(l10n.analyticsRetry));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text(l10n.analyticsUnableToLoad), findsOneWidget);
+        verify(() => repository.fetchCreatorAnalytics(any())).called(2);
+      });
+
+      testWidgets('shows a failed pull-to-refresh without leaking the error', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final repository = await pumpAnalyticsScreen(
+          tester,
+          videos: [analyticsVideo(id: 'video-1', views: 120)],
+        );
+        when(() => repository.fetchCreatorAnalytics(any())).thenAnswer(
+          (_) async => throw const CreatorAnalyticsLoadException(
+            CreatorAnalyticsFailureKind.serverUnavailable,
+          ),
+        );
+
+        final refresh = tester
+            .state<RefreshIndicatorState>(find.byType(RefreshIndicator))
+            .show();
+        await tester.pumpAndSettle();
+        await refresh;
+
+        expect(tester.takeException(), isNull);
+        expect(find.text(l10n.analyticsServerUnavailable), findsOneWidget);
+      });
     });
 
     testWidgets('shows sign-in copy when no user is authenticated', (
