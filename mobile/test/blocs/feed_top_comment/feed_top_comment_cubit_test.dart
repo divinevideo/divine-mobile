@@ -332,11 +332,12 @@ void main() {
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
         'breaks a tie in favour of the newer comment',
-        // Same age and votes, so both score the same.
+        // Age is scored in whole minutes, so equal votes within one minute
+        // tie and only the tie-break orders them.
         setUp: () {
           stubComments([
-            _comment('older', age: const Duration(hours: 2)),
-            _comment('newer', age: const Duration(minutes: 119)),
+            _comment('older', age: const Duration(hours: 2, seconds: 40)),
+            _comment('newer', age: const Duration(hours: 2, seconds: 10)),
           ]);
           stubUpvotes({'older': 1, 'newer': 1});
         },
@@ -455,16 +456,17 @@ void main() {
       );
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
-        'still selects a replied-to comment when vote counts fail',
+        'still ranks by replies when vote counts fail',
         setUp: () {
           stubComments([
-            _comment('only'),
+            _comment('discussed', age: const Duration(hours: 2)),
             _comment(
               'answer',
               content: '',
-              replyToEventId: 'only',
+              replyToEventId: 'discussed',
               replyToAuthorPubkey: _alice,
             ),
+            _comment('newer', age: const Duration(minutes: 5)),
           ]);
           when(
             () => likesRepository.getVoteCounts(
@@ -480,7 +482,7 @@ void main() {
         expect: () => [
           isA<FeedTopCommentState>()
               .having((s) => s.status, 'status', FeedTopCommentStatus.ready)
-              .having((s) => s.topComment?.id, 'topComment', 'only'),
+              .having((s) => s.topComment?.id, 'topComment', 'discussed'),
         ],
       );
 
