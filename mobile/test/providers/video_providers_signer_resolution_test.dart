@@ -232,11 +232,41 @@ void main() {
       expect(keyless.subscribedAuthors, isEmpty);
       expect(keyless.queriedAuthors, isEmpty);
       expect(keyed.signer, isA<KeycastNostrIdentity>());
-      expect(keyed.resolvedKeys, everyElement(equals(pubkey)));
+      expect(
+        keyed.resolvedKeys,
+        allOf(isNotEmpty, everyElement(equals(pubkey))),
+      );
       expect(keyed.subscribedAuthors, contains(equals([pubkey])));
       expect(keyed.queriedAuthors, contains(equals([pubkey])));
       expect(repositories, hasLength(greaterThan(1)));
       expect(repositories.toSet(), hasLength(repositories.length));
+    });
+  });
+
+  group('likesRepositoryProvider after an offline restore', () {
+    test('rebuilds onto the client built once the identity can sign', () async {
+      currentIdentity = PubkeyOnlyNostrIdentity(pubkey: pubkey);
+      currentAuthState = AuthState.authenticated;
+      final container = createContainer();
+      addTearDown(container.dispose);
+      final repositories = <LikesRepository>[];
+      container.listen(
+        likesRepositoryProvider,
+        (_, next) => repositories.add(next),
+        fireImmediately: true,
+      );
+      await pumpEventQueue();
+
+      // The RPC upgrade on resume: same pubkey, same AuthState, re-emitted.
+      currentIdentity = keycastIdentityWithoutRpc();
+      authStates.add(AuthState.authenticated);
+      await pumpEventQueue();
+
+      expect(clients, hasLength(2));
+      expect(clients.first.signer, isA<PubkeyOnlyNostrIdentity>());
+      expect(clients.last.signer, isA<KeycastNostrIdentity>());
+      expect(clients.last.subscribedAuthors, contains(equals([pubkey])));
+      expect(repositories, hasLength(2));
     });
   });
 
@@ -259,7 +289,10 @@ void main() {
       final (keyless, keyed) = (clients.first, clients.last);
       expect(keyless.resolvedKeys, equals([null]));
       expect(keyless.subscribedAuthors, isEmpty);
-      expect(keyed.resolvedKeys, everyElement(equals(pubkey)));
+      expect(
+        keyed.resolvedKeys,
+        allOf(isNotEmpty, everyElement(equals(pubkey))),
+      );
       expect(keyed.subscribedAuthors, contains(equals([pubkey])));
       expect(repositories, hasLength(greaterThan(1)));
     });

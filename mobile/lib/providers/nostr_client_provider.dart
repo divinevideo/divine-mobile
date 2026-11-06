@@ -15,6 +15,7 @@ import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/repositories/relay_list_repository.dart';
+import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nostr_service_factory.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
@@ -212,9 +213,16 @@ class NostrService extends _$NostrService {
   /// a same-pubkey auth re-emission (e.g. the Divine RPC-upgrade nudge) that
   /// lands while the client is still connecting relays is recognised as
   /// already-served and does not tear the connecting client down to rebuild an
-  /// identical one (#5909). Cleared on init failure so failure-recovery
+  /// identical one (#5909). The one exception is a client holding a
+  /// pubkey-only identity, rebuilt once its identity can sign
+  /// ([_gainsSigner]). Cleared on init failure so failure-recovery
   /// re-emissions still recreate.
   String? _pendingPubkey;
+
+  /// Identity the current client was created with, and so the one it signs
+  /// with. Tracked because a same-pubkey identity can still differ in what it
+  /// can do: see [_gainsSigner].
+  NostrIdentity? _clientIdentity;
   Future<void> _authStateChangeQueue = Future<void>.value();
   int _clientGeneration = 0;
   int _initializationFailureCount = 0;
@@ -240,7 +248,8 @@ class NostrService extends _$NostrService {
       },
     );
 
-    final initialPubkey = authService.currentIdentity?.pubkey;
+    final initialIdentity = authService.currentIdentity;
+    final initialPubkey = initialIdentity?.pubkey;
 
     unawaited(_authSubscription?.cancel());
     _authSubscription = authService.authStateStream.listen(
@@ -257,7 +266,8 @@ class NostrService extends _$NostrService {
     // Create the initial NostrClient using the atomic identity as signer.
     // currentIdentity is nullable; signed-out startup still exposes a placeholder
     // client for consumers, but the placeholder must not initialize relays.
-    final client = _createClient(authService.currentIdentity);
+    final client = _createClient(initialIdentity);
+    _clientIdentity = initialIdentity;
     final clientGeneration = _nextClientGeneration();
     _pendingPubkey = initialPubkey;
 
@@ -517,6 +527,7 @@ class NostrService extends _$NostrService {
       authService.registerBootstrapRelayListCallback(null);
       _disposeClient(oldClient);
       state = client;
+      _clientIdentity = identity;
       _lastPubkey = pubkey;
       _initializationFailureCount = 0;
       _initializationRetryTimer?.cancel();
@@ -604,17 +615,23 @@ class NostrService extends _$NostrService {
     // re-emission (the Divine RPC-upgrade nudge landing during startup relay
     // connect) must not tear that connecting client down to rebuild an
     // identical one. Recreate only when the current/in-flight client is NOT
-    // already serving newPubkey. Cleared-on-failure semantics keep recovery
-    // re-emissions (see the failure path) free to recreate.
+    // already serving newPubkey, or when it serves newPubkey through a
+    // pubkey-only identity that can now sign. Cleared-on-failure semantics
+    // keep recovery re-emissions (see the failure path) free to recreate.
     final alreadyServingNewPubkey =
         newPubkey != null && newPubkey == _pendingPubkey;
-    if (!alreadyServingNewPubkey &&
-        (newPubkey != _lastPubkey ||
-            (newPubkey == null && activeClientPubkey != null))) {
+    final gainsSigner = _gainsSigner(newIdentity);
+    if (gainsSigner ||
+        (!alreadyServingNewPubkey &&
+            (newPubkey != _lastPubkey ||
+                (newPubkey == null && activeClientPubkey != null)))) {
       _invalidateClientGeneration();
       Log.info(
-        '[NostrService] Public key changed from ${pubkeyForLogs(_lastPubkey)} to ${pubkeyForLogs(newPubkey)}, '
-        'recreating NostrClient',
+        gainsSigner
+            ? '[NostrService] ${pubkeyForLogs(newPubkey)} can sign now, '
+                  'recreating NostrClient that held its pubkey-only identity'
+            : '[NostrService] Public key changed from ${pubkeyForLogs(_lastPubkey)} to ${pubkeyForLogs(newPubkey)}, '
+                  'recreating NostrClient',
         name: 'NostrService',
         category: LogCategory.system,
       );
@@ -647,6 +664,7 @@ class NostrService extends _$NostrService {
       _pendingPubkey = newPubkey;
 
       state = newClient;
+      _clientIdentity = newIdentity;
       _setSessionIdentityState(newPubkey);
 
       if (newPubkey == null) {
@@ -671,6 +689,22 @@ class NostrService extends _$NostrService {
         source: 'authStateChanged',
       );
     }
+  }
+
+  /// Whether [identity] can sign for the pubkey the current client only
+  /// holds a [PubkeyOnlyNostrIdentity] for.
+  ///
+  /// An offline Divine OAuth restore builds the client for a pubkey-only
+  /// identity, and the RPC upgrade on resume replaces it with a signing one
+  /// for the same pubkey, reported only as a same-state auth re-emission.
+  /// Unlike the #5909 re-emissions, keeping the client here would leave it,
+  /// and every service built from its signer, unable to sign for the session.
+  bool _gainsSigner(NostrIdentity? identity) {
+    final clientIdentity = _clientIdentity;
+    return identity != null &&
+        identity is! PubkeyOnlyNostrIdentity &&
+        clientIdentity is PubkeyOnlyNostrIdentity &&
+        clientIdentity.pubkey == identity.pubkey;
   }
 
   void _setSessionIdentityState(String? pubkey) {
