@@ -2,7 +2,6 @@
 // ABOUTME: While on, the feed surfaces the top comment after each video's loop.
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:openvine/blocs/close_guard.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Owns the "Show reactions" toggle of the feed playback pill.
@@ -10,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// The state is whether reactions mode is on. Like the captions toggle it is
 /// one preference for the whole app, so turning it on from one video applies
 /// to every feed. It defaults to off.
-class FeedReactionsCubit extends Cubit<bool> with CloseGuardedEmit<bool> {
+class FeedReactionsCubit extends Cubit<bool> {
   /// Reads the persisted preference from [sharedPreferences] synchronously.
   FeedReactionsCubit({required SharedPreferences sharedPreferences})
     : _prefs = sharedPreferences,
