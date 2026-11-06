@@ -88,6 +88,24 @@ void main() {
       expect(cachedKey, equals(relayKey));
     });
 
+    test('keeps the key when a regular video learns its kind', () {
+      final cachedKey = videoInteractionsBlocKey(
+        likesRepository: likesRepository,
+        commentsRepository: commentsRepository,
+        repostsRepository: repostsRepository,
+        video: _video(id: 'video-a'),
+      );
+      final relayKey = videoInteractionsBlocKey(
+        likesRepository: likesRepository,
+        commentsRepository: commentsRepository,
+        repostsRepository: repostsRepository,
+        video: _video(id: 'video-a', eventKind: 22),
+      );
+
+      // A like on a regular video names no kind either way.
+      expect(cachedKey, equals(relayKey));
+    });
+
     testWidgets('does not keep fetched counts after feed cell reuse', (
       tester,
     ) async {

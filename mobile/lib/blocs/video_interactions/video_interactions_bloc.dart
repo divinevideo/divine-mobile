@@ -53,12 +53,10 @@ class VideoInteractionsBloc
        _commentsRepository = commentsRepository,
        _repostsRepository = repostsRepository,
        _addressableId = addressableId,
-       _likeTargetKind = addressableId != null
-           ? NIP71VideoKinds.addressableShortVideo
-           : eventKind == NIP71VideoKinds.addressableShortVideo ||
-                 eventKind == NIP71VideoKinds.addressableNormalVideo
-           ? eventKind
-           : null,
+       _likeTargetKind = likeTargetKindFor(
+         addressableId: addressableId,
+         eventKind: eventKind,
+       ),
        _archivedLikeCount = archivedLikeCount,
        _includeVideoReplies = includeVideoReplies,
        _consumptionAnalytics = consumptionAnalytics,
@@ -100,9 +98,18 @@ class VideoInteractionsBloc
   /// Null if the video doesn't have a d-tag (non-addressable event).
   final String? _addressableId;
 
-  /// NIP-25 `k` value for likes: 34236 when matching the legacy `34236:` key
-  /// of [_addressableId] (#5720). Without a coordinate, use the known
-  /// addressable kind (#6980). Null for a regular video.
+  /// The NIP-25 `k` value for a like on a video: 34236 when [addressableId]
+  /// is set, matching its legacy `34236:` key (#5720). Without a coordinate,
+  /// the known addressable [eventKind] (#6980). Null for a regular video.
+  static int? likeTargetKindFor({String? addressableId, int? eventKind}) {
+    if (addressableId != null) return NIP71VideoKinds.addressableShortVideo;
+    return eventKind == NIP71VideoKinds.addressableShortVideo ||
+            eventKind == NIP71VideoKinds.addressableNormalVideo
+        ? eventKind
+        : null;
+  }
+
+  /// See [likeTargetKindFor].
   final int? _likeTargetKind;
 
   /// Archival (classic Vine) like count baseline, kept separate from the
