@@ -21,6 +21,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart' show NostrClient;
 import 'package:nostr_sdk/event.dart' as nostr;
 import 'package:openvine/config/app_config.dart';
 import 'package:openvine/config/official_accounts.dart';
@@ -1212,33 +1213,43 @@ CommentsRepository commentsRepository(Ref ref) {
   final funnelcakeClient = ref.watch(funnelcakeApiClientProvider);
   final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
 
-  final engine = ref.watch(contentPolicyEngineProvider);
-  bool blockFilter(String pubkey, {String? rootAuthorPubkey}) {
-    if (isOwnBlockOnOwnVideo(
-      authorPubkey: pubkey,
-      rootAuthorPubkey: rootAuthorPubkey,
-      viewerPubkey: nostrClient.publicKey,
-      blocklistRepository: blocklistRepository,
-    )) {
-      // On their own video the owner's block is comment moderation: the
-      // comment stays, hidden by default, so they can review and restore it.
-      return false;
-    }
-    final decision = engine.evaluate(
-      PolicyInput(pubkey: pubkey),
-      blocklistRepository.currentState,
-    );
-    return decision is Block;
-  }
-
   final repository = CommentsRepository(
     nostrClient: nostrClient,
     funnelcakeApiClient: funnelcakeClient,
-    blockFilter: blockFilter,
+    blockFilter: commentBlockFilter(
+      nostrClient: nostrClient,
+      blocklistRepository: blocklistRepository,
+      engine: ref.watch(contentPolicyEngineProvider),
+    ),
   );
   ref.onDispose(repository.clearCommentCountCache);
   return repository;
 }
+
+/// The comments filter: drops the authors [engine] blocks for the signed-in
+/// account of [nostrClient], except that account's own blocks on its own
+/// video, see [isOwnBlockOnOwnVideo].
+BlockedCommentFilter commentBlockFilter({
+  required NostrClient nostrClient,
+  required ContentBlocklistRepository blocklistRepository,
+  required ContentPolicyEngine engine,
+}) => (pubkey, {rootAuthorPubkey}) {
+  if (isOwnBlockOnOwnVideo(
+    authorPubkey: pubkey,
+    rootAuthorPubkey: rootAuthorPubkey,
+    viewerPubkey: nostrClient.publicKey,
+    blocklistRepository: blocklistRepository,
+  )) {
+    // On their own video the owner's block is comment moderation: the
+    // comment stays, hidden by default, so they can review and restore it.
+    return false;
+  }
+  final decision = engine.evaluate(
+    PolicyInput(pubkey: pubkey),
+    blocklistRepository.currentState,
+  );
+  return decision is Block;
+};
 
 /// Whether [viewerPubkey] owns the video and has blocked [authorPubkey].
 ///

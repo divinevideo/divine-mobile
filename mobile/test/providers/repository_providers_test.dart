@@ -6,7 +6,10 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:comments_repository/comments_repository.dart'
+    show BlockedCommentFilter;
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
+import 'package:content_policy/content_policy.dart' show ContentPolicyEngine;
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -145,6 +148,32 @@ void main() {
 
     test('ignores authors the owner did not block', () {
       expect(check(authorPubkey: stranger), isFalse);
+    });
+
+    group(commentBlockFilter, () {
+      late BlockedCommentFilter filter;
+
+      setUp(() {
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(owner);
+        filter = commentBlockFilter(
+          nostrClient: client,
+          blocklistRepository: blocklistRepository,
+          engine: ContentPolicyEngine.defaultRules(),
+        );
+      });
+
+      test("keeps a blocked author's comment on the owner's own video", () {
+        expect(filter(blocked, rootAuthorPubkey: owner), isFalse);
+      });
+
+      test("drops a blocked author's comment on someone else's video", () {
+        expect(filter(blocked, rootAuthorPubkey: stranger), isTrue);
+      });
+
+      test('keeps the comments of authors nobody blocked', () {
+        expect(filter(stranger, rootAuthorPubkey: owner), isFalse);
+      });
     });
   });
 

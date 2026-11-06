@@ -3372,6 +3372,56 @@ void main() {
       );
 
       test(
+        'tells the filter the owner named in the coordinate on the live '
+        'stream, not the one a comment claims',
+        () async {
+          const forgedRootAuthor =
+              'ffffffffffffffffffffffffffffffff'
+              'ffffffffffffffffffffffffffffffff';
+          final rootAuthors = <String?>[];
+          final filteredRepo = CommentsRepository(
+            nostrClient: mockNostrClient,
+            blockFilter: (pubkey, {rootAuthorPubkey}) {
+              rootAuthors.add(rootAuthorPubkey);
+              return false;
+            },
+          );
+          final controller = StreamController<Event>.broadcast();
+          addTearDown(controller.close);
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+            ),
+          ).thenAnswer((_) => controller.stream);
+
+          final sub = filteredRepo
+              .watchComments(
+                rootEventId: testRootEventId,
+                rootEventKind: _testRootEventKind,
+                rootAddressableId: '34236:$testRootAuthorPubkey:video-dtag',
+                since: DateTime.fromMillisecondsSinceEpoch(1000000),
+              )
+              .listen((_) {});
+          addTearDown(sub.cancel);
+          controller.add(
+            _createCommentEvent(
+              id: 'forged_root_live',
+              content: 'Claims another root author',
+              pubkey: blockedPubkey,
+              rootEventId: testRootEventId,
+              rootAuthorPubkey: forgedRootAuthor,
+              rootEventKind: _testRootEventKind,
+              createdAt: 3000,
+            ),
+          );
+          await pumpEventQueue();
+
+          expect(rootAuthors, equals([testRootAuthorPubkey]));
+        },
+      );
+
+      test(
         'returns all comments when blockFilter is null',
         () async {
           // Default repository has no blockFilter.

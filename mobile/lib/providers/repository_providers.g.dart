@@ -1374,7 +1374,7 @@ final class CommentsRepositoryProvider
 }
 
 String _$commentsRepositoryHash() =>
-    r'46309222751ebc7222aa6758dde7caa979b47a32';
+    r'c5ea8d0d00a706aedca839f4fd1526bce76fdffd';
 
 /// Provider for [CommentModerationRepository]: the moderation video owners
 /// publish for the comments on their videos (NIP-78 kind 30078).
