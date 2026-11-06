@@ -28,10 +28,10 @@ const Color defaultClipMaskBackgroundColor = VineTheme.backgroundColor;
 /// A clip's mask is drawn over the whole picture as a cover of [color] with
 /// the shape cut out of it, so it shows exactly while the clip does: from
 /// [start] up to, but not at, [end], on the editor timeline. Across an overlap
-/// transition (every type but the dips) both clips play at once, so the cover fades in
-/// over [fadeIn] and out over [fadeOut] instead of cutting the other clip's
-/// half of the blend. A dip to black or white plays one clip at a time and
-/// fades nothing.
+/// transition (every type but the dips) both clips play at once, so the cover
+/// fades in over [fadeIn] and out over [fadeOut] instead of cutting the other
+/// clip's half of the blend. A dip to black or white plays one clip at a time
+/// and fades nothing.
 ///
 /// A mask with keyframes changes while the clip plays; its keyframes are
 /// measured from [origin], the clip's own start (see [maskAt]).
