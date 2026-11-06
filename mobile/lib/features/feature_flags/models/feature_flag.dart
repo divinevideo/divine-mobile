@@ -94,7 +94,7 @@ enum FeatureFlag {
   ),
   b2PlaybackCanary(
     'B2 Playback Canary',
-    'Try the B2 mirror for public Divine originals before canonical playback. '
+    'Use B2 for public Divine originals after normal rendition selection. '
         'Internal per-device test; off restores canonical playback.',
     audience: FeatureFlagAudience.internal,
   ),

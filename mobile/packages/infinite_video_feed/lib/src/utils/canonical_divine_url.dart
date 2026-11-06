@@ -1,6 +1,17 @@
 /// Helpers for extracting and rebuilding canonical Divine blob URLs.
 library;
 
+import 'package:flutter/foundation.dart';
+
+const _requestedB2Host = String.fromEnvironment('B2_PLAYBACK_HOST');
+
+/// Debug builds may target the reviewed outer CDN without changing preferences.
+/// Release builds always retain the existing direct-canary host.
+const b2PlaybackHost =
+    kDebugMode && _requestedB2Host == 'media-b2-cdn.divine.video'
+    ? 'media-b2-cdn.divine.video'
+    : 'media-b2.divine.video';
+
 /// Returns the 64-character hex blob hash from a Divine media URL, or `null`
 /// when [url] does not point to a Divine blob.
 String? extractCanonicalDivineBlobHash(String url) {
@@ -72,7 +83,7 @@ String? b2OriginalPlaybackUrl(String? url) {
       url.contains('%')) {
     return null;
   }
-  return 'https://media-b2.divine.video${uri.path.toLowerCase()}';
+  return 'https://$b2PlaybackHost${uri.path.toLowerCase()}';
 }
 
 /// Whether this is an exact original URL on the dedicated canary host.
@@ -80,7 +91,10 @@ bool isB2OriginalPlaybackSource(String source) {
   final uri = Uri.tryParse(source);
   return uri != null &&
       uri.scheme == 'https' &&
-      uri.host == 'media-b2.divine.video' &&
+      const {
+        'media-b2.divine.video',
+        'media-b2-cdn.divine.video',
+      }.contains(uri.host) &&
       uri.port == 443 &&
       uri.userInfo.isEmpty &&
       !uri.hasQuery &&

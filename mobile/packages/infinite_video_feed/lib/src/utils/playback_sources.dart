@@ -11,8 +11,8 @@ import 'package:models/models.dart';
 /// [VideoEvent.videoUrl]. For Divine blob URLs the list is expanded with
 /// canonical alternatives so the runtime can fail over between them.
 ///
-/// [preferB2Original] prepends the dedicated B2 original for eligible public
-/// original URLs, leaving the canonical ladder as its fallback.
+/// [preferB2Original] inserts the dedicated B2 original immediately before an
+/// eligible original in the normal ladder. Resolved renditions stay preferred.
 ///
 /// Derivative-resolved Divine blobs use the bare blob as their final fallback,
 /// after quality-specific and HLS sources have been attempted.
@@ -22,19 +22,27 @@ List<String> resolvePlaybackSources(
   DerivativeFailureCache? derivativeFailureCache,
   bool preferB2Original = false,
 }) {
-  final canary = preferB2Original
-      ? b2OriginalPlaybackUrl(video.videoUrl)
-      : null;
-  if (canary != null) {
-    return orderedUniqueSources([
-      canary,
-      ...resolvePlaybackSources(
-        video,
-        urlResolver: urlResolver,
-        derivativeFailureCache: derivativeFailureCache,
-      ),
-    ]);
+  final sources = _resolveCanonicalPlaybackSources(
+    video,
+    urlResolver: urlResolver,
+    derivativeFailureCache: derivativeFailureCache,
+  );
+  if (!preferB2Original || b2OriginalPlaybackUrl(video.videoUrl) == null) {
+    return sources;
   }
+  return orderedUniqueSources([
+    for (final source in sources) ...[
+      b2OriginalPlaybackUrl(source),
+      source,
+    ],
+  ]);
+}
+
+List<String> _resolveCanonicalPlaybackSources(
+  VideoEvent video, {
+  String? Function(VideoEvent video)? urlResolver,
+  DerivativeFailureCache? derivativeFailureCache,
+}) {
   final resolvedSource = urlResolver?.call(video) ?? video.videoUrl;
   final originalUrl = video.videoUrl;
 

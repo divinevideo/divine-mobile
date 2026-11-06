@@ -2,6 +2,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:infinite_video_feed/src/utils/canonical_divine_url.dart';
 
 void main() {
+  group('B2 host recognition', () {
+    const hash =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    for (final host in ['media-b2.divine.video', 'media-b2-cdn.divine.video']) {
+      test('recognizes exact original on $host', () {
+        expect(isB2OriginalPlaybackSource('https://$host/$hash'), isTrue);
+        for (final suffix in ['/720p.mp4', '?token=private', '#fragment']) {
+          expect(
+            isB2OriginalPlaybackSource('https://$host/$hash$suffix'),
+            isFalse,
+          );
+        }
+      });
+    }
+    test('rejects an unapproved host', () {
+      expect(
+        isB2OriginalPlaybackSource(
+          'https://media-b2-cdn.divine.video.evil.test/$hash',
+        ),
+        isFalse,
+      );
+    });
+  });
   group('extractCanonicalDivineBlobHash', () {
     const validHash =
         'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';

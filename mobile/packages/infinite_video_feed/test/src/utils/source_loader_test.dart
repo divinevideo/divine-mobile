@@ -152,6 +152,49 @@ void main() {
       }
     });
 
+    group('outer CDN original policy', () {
+      const b2 =
+          'https://media-b2-cdn.divine.video/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const canonical =
+          'https://media.divine.video/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      for (final (code, fallsBack) in [
+        ('not_found', false),
+        ('http_server_error', false),
+        ('service_unavailable', true),
+        ('network_error', true),
+      ]) {
+        test(
+          '$code ${fallsBack ? "permits" : "blocks"} canonical failover',
+          () async {
+            final clips = <VideoClip>[];
+            final failure = PlatformException(code: code);
+            final controller = _RecordingControllerWithFailures(
+              clips.add,
+              failures: [failure],
+            );
+            addTearDown(controller.dispose);
+            final result = setSourceWithFallbacks(
+              index: 0,
+              controller: controller,
+              sources: [b2, canonical],
+              log: logs.add,
+              trimToCommonTrackEnd: true,
+              applyTypedFailoverPolicy: true,
+            );
+            if (fallsBack) {
+              expect(await result, (canonical, 1));
+            } else {
+              await expectLater(result, throwsA(same(failure)));
+            }
+            expect(
+              clips.map((clip) => clip.uri),
+              fallsBack ? [b2, canonical] : [b2],
+            );
+          },
+        );
+      }
+    });
+
     test('returns (source, 0) when first source succeeds', () async {
       final controller = FakeController();
       addTearDown(controller.dispose);

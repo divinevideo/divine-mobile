@@ -179,31 +179,33 @@ class VideoCacheTest {
     }
 
     @Test
-    fun `open always checks the B2 canary host instead of replaying cached bytes`() {
-        val cachedFactory = mockk<DataSource.Factory> {
-            every { createDataSource() } returns mockk(relaxed = true)
-        }
-        val uncachedFactory = mockk<DataSource.Factory> {
-            every { createDataSource() } returns mockk(relaxed = true)
-        }
-        val uri = mockk<Uri>(relaxed = true) {
-            every { scheme } returns "https"
-            every { host } returns "media-b2.divine.video"
-        }
-        val source = CacheBypassDataSource(
-            cachedFactory = cachedFactory,
-            uncachedFactory = uncachedFactory,
-            httpHeadersForUri = {
-                mapOf("X-Playback-Load-Id" to "11111111-1111-4111-8111-111111111111")
-            },
-        )
+    fun `open always checks both B2 hosts instead of replaying cached bytes`() {
+        for (canaryHost in listOf("media-b2.divine.video", "media-b2-cdn.divine.video")) {
+            val cachedFactory = mockk<DataSource.Factory> {
+                every { createDataSource() } returns mockk(relaxed = true)
+            }
+            val uncachedFactory = mockk<DataSource.Factory> {
+                every { createDataSource() } returns mockk(relaxed = true)
+            }
+            val uri = mockk<Uri>(relaxed = true) {
+                every { scheme } returns "https"
+                every { host } returns canaryHost
+            }
+            val source = CacheBypassDataSource(
+                cachedFactory = cachedFactory,
+                uncachedFactory = uncachedFactory,
+                httpHeadersForUri = {
+                    mapOf("X-Playback-Load-Id" to "11111111-1111-4111-8111-111111111111")
+                },
+            )
 
-        source.open(DataSpec.Builder().setUri(uri).setHttpRequestHeaders(
-            mapOf("Icy-MetaData" to "1", "If-Range" to "\"media-etag\""),
-        ).build())
+            source.open(DataSpec.Builder().setUri(uri).setHttpRequestHeaders(
+                mapOf("Icy-MetaData" to "1", "If-Range" to "\"media-etag\""),
+            ).build())
 
-        verify(exactly = 1) { uncachedFactory.createDataSource() }
-        verify(exactly = 0) { cachedFactory.createDataSource() }
+            verify(exactly = 1) { uncachedFactory.createDataSource() }
+            verify(exactly = 0) { cachedFactory.createDataSource() }
+        }
     }
 
     @Test

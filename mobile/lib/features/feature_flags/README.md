@@ -161,15 +161,19 @@ or blossom.divine.video are eligible. Signed/query URLs, derivatives, and
 third-party media keep their existing source selection. Signed Nostr events and
 uploads are unchanged.
 
-Eligible feed playback attempts `https://media-b2.divine.video/{hash}` before
-the normal MP4/HLS/original ladder. A typed HTTP 503 or connection failure can
+Eligible feed playback preserves the normal resolver/MP4/HLS/original order.
+When that ladder reaches an eligible original, it attempts
+`https://media-b2.divine.video/{hash}` before the canonical original. Optimized
+derivatives remain on their existing canonical route until replicated support
+is available; enabling this flag does not mean all playback uses B2. A typed HTTP 503 or connection failure can
 fall back. A B2 404 may hide a moderation/deletion denial and stops the ladder;
 401, 403, other 4xx, origin/configuration 5xx, and ambiguous errors also stop.
 The native player preserves HTTP 503 separately; older native binaries that
 only report a generic server error fail closed.
 
-The feed bypasses its event-ID disk cache and disk prefetch for eligible
-canary videos. Android also bypasses its native disk cache for the canary host.
+The feed bypasses its event-ID disk cache only when the selected first source
+is a B2 original. Canonical renditions retain disk playback and prefetch;
+prefetch stops before a B2 original rather than caching its raw fallback. Android also bypasses its native disk cache for the canary host.
 Apple uses a temporary per-player download rather than a persistent native
 cache. Logs distinguish `B2 canary attempt`,
 `B2 canary result`, and `B2 canary fallback` with the selected URL. A successful
@@ -180,3 +184,6 @@ Turning the flag off rebuilds feed players on canonical sources for subsequent
 playback and preserves existing canonical disk caches. No global purge is
 needed. This local flag is not a remote kill switch; endpoint activation and
 approved-public replication readiness remain separate operator steps.
+
+For the debug-only allowlisted host override and an isolated native QA entry,
+see [private B2 playback QA](../../../../docs/testing/b2-playback-qa.md).
