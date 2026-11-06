@@ -224,7 +224,8 @@ abstract final class CommentsScreen {
                 create: (_) => CommentsListBloc(
                   commentsRepository: commentsRepository,
                   rootEventId: video.id,
-                  rootEventKind: NIP71VideoKinds.addressableShortVideo,
+                  rootEventKind:
+                      video.eventKind ?? NIP71VideoKinds.addressableShortVideo,
                   rootAuthorPubkey: video.pubkey,
                   rootAddressableId: video.addressableId,
                   initialTotalCount: seedCommentCount,
@@ -244,7 +245,9 @@ abstract final class CommentsScreen {
                     commentsRepository: commentsRepository,
                     authService: authService,
                     rootEventId: video.id,
-                    rootEventKind: NIP71VideoKinds.addressableShortVideo,
+                    rootEventKind:
+                        video.eventKind ??
+                        NIP71VideoKinds.addressableShortVideo,
                     rootAuthorPubkey: video.pubkey,
                     rootAddressableId: video.addressableId,
                     consumptionAnalytics: container.read(

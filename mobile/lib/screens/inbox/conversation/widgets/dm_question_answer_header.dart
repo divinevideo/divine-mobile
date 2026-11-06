@@ -104,7 +104,8 @@ class DmQuestionAnswerHeader extends ConsumerWidget {
     // citation may spell the address differently, or cite one version only.
     return VideoReplyContext(
       rootEventId: citedVideo.id,
-      rootEventKind: NIP71VideoKinds.addressableShortVideo,
+      rootEventKind:
+          citedVideo.eventKind ?? NIP71VideoKinds.addressableShortVideo,
       rootAuthorPubkey: creator,
       rootAddressableId: citedVideo.addressableId,
       replyToName: _bounded(asked, VideoStickerRegion.maxLabelLength),
