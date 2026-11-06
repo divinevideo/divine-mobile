@@ -4699,6 +4699,7 @@
   "videoRecorderFlashValueAuto": "Auto",
   "videoRecorderTimerValueOff": "Mati",
   "videoRecorderTimerValueThreeSeconds": "3 saat",
+  "videoRecorderTimerValueFiveSeconds": "5 saat",
   "videoRecorderTimerValueTenSeconds": "10 saat",
   "videoRecorderAspectRatioValueSquare": "Segi empat sama",
   "videoRecorderAspectRatioValueVertical": "Menegak",

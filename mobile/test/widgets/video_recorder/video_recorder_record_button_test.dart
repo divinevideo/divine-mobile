@@ -11,6 +11,7 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -41,6 +42,8 @@ void main() {
       bool isStoppingRecording = false,
       bool canRecord = true,
       bool isCameraInitialized = true,
+      VideoRecorderMode recorderMode = VideoRecorderMode.capture,
+      bool isIntervalCaptureRunning = false,
       List<DivineVideoClip>? clips,
       Stream<VideoRecorderBlocState>? stateChanges,
     }) {
@@ -49,6 +52,8 @@ void main() {
         isStoppingRecording: isStoppingRecording,
         canRecord: canRecord,
         isCameraInitialized: isCameraInitialized,
+        recorderMode: recorderMode,
+        isIntervalCaptureRunning: isIntervalCaptureRunning,
       );
       if (stateChanges != null) {
         whenListen(recorderBloc, stateChanges, initialState: initialState);
@@ -140,6 +145,28 @@ void main() {
 
         final semantics = tester.getSemantics(find.byType(RecordButton));
         expect(semantics.tooltip, equals('Stop recording'));
+      });
+
+      testWidgets('offers to stop a running stop-motion interval loop', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            recorderMode: VideoRecorderMode.stopMotion,
+            isIntervalCaptureRunning: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final semantics = tester.getSemantics(find.byType(RecordButton));
+        expect(
+          semantics.tooltip,
+          equals(
+            lookupAppLocalizations(
+              const Locale('en'),
+            ).videoRecorderStopRecordingTooltip,
+          ),
+        );
       });
     });
 

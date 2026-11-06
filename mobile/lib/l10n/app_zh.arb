@@ -4699,6 +4699,7 @@
   "videoRecorderFlashValueAuto": "自动",
   "videoRecorderTimerValueOff": "关闭",
   "videoRecorderTimerValueThreeSeconds": "3秒",
+  "videoRecorderTimerValueFiveSeconds": "5秒",
   "videoRecorderTimerValueTenSeconds": "10秒",
   "videoRecorderAspectRatioValueSquare": "正方形",
   "videoRecorderAspectRatioValueVertical": "竖屏",

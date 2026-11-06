@@ -70,6 +70,62 @@ void main() {
       expect(find.byType(AnimatedOpacity), findsOneWidget);
     });
 
+    group('between stop-motion interval stills', () {
+      setUp(() {
+        when(() => recorderBloc.state).thenReturn(
+          const VideoRecorderBlocState(
+            isIntervalCaptureRunning: true,
+            countdownValue: 2,
+          ),
+        );
+      });
+
+      testWidgets('lets the shutter underneath stop the loop', (tester) async {
+        var shutterTaps = 0;
+        await tester.pumpWidget(
+          BlocProvider<VideoRecorderBloc>.value(
+            value: recorderBloc,
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: Stack(
+                  children: [
+                    Center(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => shutterTaps++,
+                        child: const SizedBox.square(dimension: 96),
+                      ),
+                    ),
+                    const VideoRecorderCountdownOverlay(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('2'), findsOneWidget);
+
+        await tester.tapAt(tester.getCenter(find.byType(Scaffold)));
+        expect(shutterTaps, equals(1));
+      });
+
+      testWidgets('leaves the preview undimmed', (tester) async {
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        final backdrop = tester.widget<ColoredBox>(
+          find.descendant(
+            of: find.byType(VideoRecorderCountdownOverlay),
+            matching: find.byType(ColoredBox),
+          ),
+        );
+        expect(backdrop.color.a, equals(0));
+      });
+    });
+
     testWidgets('updates when countdown value changes', (tester) async {
       await tester.pumpWidget(buildTestWidget());
       await tester.pump();

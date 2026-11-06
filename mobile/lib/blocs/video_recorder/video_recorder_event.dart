@@ -285,7 +285,8 @@ final class VideoRecorderRecorderModeSet extends VideoRecorderEvent {
   List<Object?> get props => [mode, keepAutosavedDraft];
 }
 
-/// Cycles timer duration `off → 3s → 10s → off`.
+/// Moves the timer to the next of the mode's
+/// [VideoRecorderMode.timerDurations], wrapping back to off.
 final class VideoRecorderTimerCycled extends VideoRecorderEvent {
   const VideoRecorderTimerCycled();
 }
@@ -477,4 +478,11 @@ final class _VideoRecorderFocusPointTimerFired extends VideoRecorderEvent {
 /// [VideoRecorderBlocState.showZoomIndicator] once the pinch settles.
 final class _VideoRecorderZoomIndicatorTimerFired extends VideoRecorderEvent {
   const _VideoRecorderZoomIndicatorTimerFired();
+}
+
+/// Internal event: one second of the stop-motion interval countdown passed.
+/// Counts [VideoRecorderBlocState.countdownValue] down, and takes the next
+/// still once it runs out.
+final class _VideoRecorderIntervalCaptureTicked extends VideoRecorderEvent {
+  const _VideoRecorderIntervalCaptureTicked();
 }

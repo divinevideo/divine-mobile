@@ -9143,6 +9143,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoRecorderTimerValueThreeSeconds => '3 секунди';
 
   @override
+  String get videoRecorderTimerValueFiveSeconds => '5 секунди';
+
+  @override
   String get videoRecorderTimerValueTenSeconds => '10 секунди';
 
   @override

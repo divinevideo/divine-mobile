@@ -9159,6 +9159,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoRecorderTimerValueThreeSeconds => '3 segundos';
 
   @override
+  String get videoRecorderTimerValueFiveSeconds => '5 segundos';
+
+  @override
   String get videoRecorderTimerValueTenSeconds => '10 segundos';
 
   @override

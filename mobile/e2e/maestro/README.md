@@ -214,7 +214,7 @@ bar, its own action rows, and no record button at all.
 | `camera_flash_button` | ✅ | ✅ | ✅ | — |
 | `camera_aspect_ratio_button` | ✅ | ✅ | ✅ | — |
 | `camera_switch_camera_button` | ✅ | ✅ | ✅ | ✅ |
-| `camera_timer_button` | ✅ | ✅ | — | — |
+| `camera_timer_button` | ✅ | ✅ | ✅ | — |
 | `camera_stabilization_button` | ✅ | ✅ | — | — |
 | `camera_ghost_frame_button` | ✅ | ✅ | ✅ | ✅ |
 | `camera_grid_button` | — | — | ✅ | ✅ |
@@ -228,13 +228,13 @@ the anchor itself at the widget level.
 
 Stop-motion is not that case, and its `assertNotVisible` block is there for a
 different reason. Its rail and capture's **overlap without either containing
-the other** — both have the ghost frame, but only capture has timer and
+the other** — both have the timer and the ghost frame, but only capture has
 stabilization and only stop-motion has the grid — so each assert already fails
 on the other's viewfinder on the rail alone. What settles
 which viewfinder is up before either gets that far is the mode wheel's
 `selected` state, asserted on the first line of all four files.
 
-So the pairs those two asserts carry — `assertStopMotionMode` pinning timer and
+So the lines those two asserts carry — `assertStopMotionMode` pinning
 stabilization absent, `assertCaptureMode` pinning grid and the budget absent —
 are **leak guards**, not mode separators: they fail when a
 control starts rendering in a mode that does not declare it, which nothing else

@@ -18,21 +18,22 @@ class VideoRecorderBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.select(
       (VideoRecorderBloc b) => (
-        isRecording: b.state.isRecording,
+        isShutterActive: b.state.isShutterActive,
         recorderMode: b.state.recorderMode,
       ),
     );
 
     return SafeArea(
       top: false,
-      // The bar fades out while recording — a mode switch there would discard
-      // work the user can't get back. Opacity alone still hit-tests, so the
-      // gate has to ignore pointers rather than just fade.
+      // The bar fades out while recording or capturing on an interval — a mode
+      // switch there would discard work the user can't get back. Opacity alone
+      // still hit-tests, so the gate has to ignore pointers rather than just
+      // fade.
       child: IgnorePointer(
-        ignoring: state.isRecording,
+        ignoring: state.isShutterActive,
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 220),
-          opacity: state.isRecording ? 0 : 1,
+          opacity: state.isShutterActive ? 0 : 1,
           child: Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Stack(

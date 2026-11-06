@@ -2960,6 +2960,7 @@
   "videoRecorderFlashValueAuto": "자동",
   "videoRecorderTimerValueOff": "끔",
   "videoRecorderTimerValueThreeSeconds": "3초",
+  "videoRecorderTimerValueFiveSeconds": "5초",
   "videoRecorderTimerValueTenSeconds": "10초",
   "videoRecorderAspectRatioValueSquare": "정사각형",
   "videoRecorderAspectRatioValueVertical": "세로",

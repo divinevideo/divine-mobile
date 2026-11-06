@@ -1943,6 +1943,7 @@
   "videoRecorderFlashValueAuto": "Auto",
   "videoRecorderTimerValueOff": "Naka-off",
   "videoRecorderTimerValueThreeSeconds": "3 segundo",
+  "videoRecorderTimerValueFiveSeconds": "5 segundo",
   "videoRecorderTimerValueTenSeconds": "10 segundo",
   "videoRecorderAspectRatioValueSquare": "Parisukat",
   "videoRecorderAspectRatioValueVertical": "Patayo",

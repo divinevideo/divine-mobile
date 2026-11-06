@@ -15,10 +15,11 @@ appId: co.openvine.app.staging
 - assertVisible:
     id: camera_library_button
 
-# Control rail, top to bottom. Timer and stabilization are rendered only by
-# the modes that declare `supportsCountdownTimer` / `supportsVideoStabilization`
-# (capture and lip-sync), so this set is also what separates capture mode from
-# classic and stop-motion. The ghost-frame toggle is shared with both of them.
+# Control rail, top to bottom. Stabilization is rendered only by the modes
+# that declare `supportsVideoStabilization` (capture and lip-sync), and the
+# timer by those that declare `supportsCountdownTimer` (those two and
+# stop-motion), so this set is also what separates capture mode from classic
+# and stop-motion. The ghost-frame toggle is shared with both of them.
 - assertVisible:
     id: camera_flash_button
 - assertVisible:
@@ -42,7 +43,7 @@ appId: co.openvine.app.staging
 # shot budget in that same center slot. Unlike the line above these are not
 # load-bearing for telling the screens apart — each rail has a control the
 # other lacks, so this file already fails on a stop-motion viewfinder at
-# `camera_timer_button`. They are a leak guard, the mirror of the pair
+# `camera_stabilization_button`. They are a leak guard, the mirror of the one
 # assertStopMotionMode carries: a control starting to render in a mode that
 # does not declare it fails a run rather than passing quietly.
 - assertNotVisible:

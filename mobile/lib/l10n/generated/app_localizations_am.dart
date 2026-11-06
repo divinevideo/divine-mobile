@@ -8848,6 +8848,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoRecorderTimerValueThreeSeconds => '3 ሰከንድ';
 
   @override
+  String get videoRecorderTimerValueFiveSeconds => '5 ሰከንድ';
+
+  @override
   String get videoRecorderTimerValueTenSeconds => '10 ሰከንድ';
 
   @override

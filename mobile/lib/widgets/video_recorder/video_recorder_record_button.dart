@@ -20,7 +20,10 @@ class RecordButton extends ConsumerWidget {
     final state = context.select(
       (VideoRecorderBloc b) => (
         isRecording: b.state.isRecording,
-        showsActiveRecording: b.state.showsActiveRecording,
+        // A running stop-motion loop shows as a take in progress: the next
+        // tap is the one that ends it.
+        showsActiveRecording:
+            b.state.showsActiveRecording || b.state.isIntervalCaptureRunning,
         isStoppingRecording: b.state.isStoppingRecording,
         timerDuration: b.state.timerDuration,
         canRecord: b.state.canRecord,

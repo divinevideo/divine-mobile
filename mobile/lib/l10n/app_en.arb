@@ -6459,6 +6459,10 @@
   "@videoRecorderTimerValueThreeSeconds": {
     "description": "Screen-reader state of the recorder's countdown-timer button when recording starts after a 3 second delay."
   },
+  "videoRecorderTimerValueFiveSeconds": "5 seconds",
+  "@videoRecorderTimerValueFiveSeconds": {
+    "description": "Screen-reader state of the recorder's timer button in Stop Motion when a still is captured hands-free every 5 seconds."
+  },
   "videoRecorderTimerValueTenSeconds": "10 seconds",
   "@videoRecorderTimerValueTenSeconds": {
     "description": "Screen-reader state of the recorder's countdown-timer button when recording starts after a 10 second delay."

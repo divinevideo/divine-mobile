@@ -15149,6 +15149,12 @@ abstract class AppLocalizations {
   /// **'3 seconds'**
   String get videoRecorderTimerValueThreeSeconds;
 
+  /// Screen-reader state of the recorder's timer button in Stop Motion when a still is captured hands-free every 5 seconds.
+  ///
+  /// In en, this message translates to:
+  /// **'5 seconds'**
+  String get videoRecorderTimerValueFiveSeconds;
+
   /// Screen-reader state of the recorder's countdown-timer button when recording starts after a 10 second delay.
   ///
   /// In en, this message translates to:
