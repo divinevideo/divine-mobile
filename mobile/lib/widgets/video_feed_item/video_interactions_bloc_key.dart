@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 
 /// Key for the per-video interaction bloc host.
 ValueKey<Object> videoInteractionsBlocKey({
@@ -15,6 +16,11 @@ ValueKey<Object> videoInteractionsBlocKey({
     repostsRepository,
     video.stableId,
     video.addressableId,
+    // The bloc captures this kind for the like's k tag (#6980).
+    VideoInteractionsBloc.likeTargetKindFor(
+      addressableId: video.addressableId,
+      eventKind: video.eventKind,
+    ),
     includeVideoReplies,
   ));
 }

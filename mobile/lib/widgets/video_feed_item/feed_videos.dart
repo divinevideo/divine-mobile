@@ -1297,6 +1297,7 @@ class __OverlayState extends ConsumerState<_Overlay> {
                     commentsRepository: commentsRepository,
                     repostsRepository: repostsRepository,
                     addressableId: addressableId,
+                    eventKind: video.eventKind,
                     initialLikeCount: liveLikeCountSeed(video),
                     archivedLikeCount: video.originalLikes,
                     initialCommentCount: liveCommentCountSeed(video),
