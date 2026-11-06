@@ -5,16 +5,27 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_volume.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+
+class _MockProImageEditorState extends Mock implements ProImageEditorState {
+  @override
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
+      '_MockProImageEditorState';
+}
+
+class _FakeLayer extends Fake implements Layer {}
 
 void main() {
   group(VideoEditorTimelineVolume, () {
@@ -275,7 +286,137 @@ void main() {
 
       handle.dispose();
     });
+
+    group('with a clip detached onto the canvas', () {
+      late _MockProImageEditorState editor;
+      late WidgetLayer layer;
+
+      setUpAll(() => registerFallbackValue(_FakeLayer()));
+
+      setUp(() {
+        layer = _detachedLayer();
+        editor = _MockProImageEditorState();
+        when(() => editor.activeLayers).thenReturn([layer]);
+        when(
+          () => editor.replaceLayer(
+            index: any(named: 'index'),
+            layer: any(named: 'layer'),
+          ),
+        ).thenAnswer((_) {});
+        overlayBloc.add(
+          TimelineOverlayItemsUpdate(
+            layers: [layer],
+            filters: const <FilterState>[],
+            audioTracks: const [],
+            totalVideoDuration: const Duration(seconds: 10),
+          ),
+        );
+      });
+
+      /// The panel inside the editor scope whose editor takes the writes.
+      Future<void> pumpPanel(WidgetTester tester) async {
+        await tester.pumpWidget(
+          VideoEditorScope(
+            editorKey: GlobalKey(),
+            removeAreaKey: GlobalKey(),
+            originalClipAspectRatio: 9 / 16,
+            bodySizeNotifier: ValueNotifier(const Size(400, 600)),
+            zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
+            playTimeNotifier: ValueNotifier(Duration.zero),
+            playheadAdvancingNotifier: ValueNotifier<bool>(false),
+            fromLibrary: false,
+            onOpenCamera: () {},
+            onOpenClipsEditor: () {},
+            onAddStickers: () {},
+            onAddEditTextLayer: ([layer]) async => null,
+            onOpenMusicLibrary: () {},
+            onOpenVoiceOver: () {},
+            onOpenCaptions: () {},
+            onOpenEffects: () {},
+            editorOverride: editor,
+            child: buildWidget(),
+          ),
+        );
+        await tester.pump();
+      }
+
+      /// The volume the panel wrote onto the detached clip's layer.
+      double writtenVolume() {
+        final written =
+            verify(
+                  () => editor.replaceLayer(
+                    index: 0,
+                    layer: captureAny(named: 'layer'),
+                  ),
+                ).captured.single
+                as WidgetLayer;
+        return DetachedClipLayerData.volumeOf(
+          DetachedClipLayerData.metaOf(written),
+        );
+      }
+
+      testWidgets('gives it an arc of its own', (tester) async {
+        await pumpPanel(tester);
+
+        expect(find.bySemanticsLabel('Detached clip'), findsOneWidget);
+      });
+
+      testWidgets('tap mutes it on its layer', (tester) async {
+        await pumpPanel(tester);
+
+        await tester.tap(find.bySemanticsLabel('Detached clip'));
+        await tester.pump();
+
+        expect(writtenVolume(), 0);
+      });
+
+      testWidgets('reports its volume live for its own player and writes it '
+          'on release', (tester) async {
+        await pumpPanel(tester);
+
+        final gesture = await tester.startGesture(
+          tester.getCenter(find.bySemanticsLabel('Detached clip')),
+        );
+        await gesture.moveBy(const Offset(0, -30));
+        await gesture.moveBy(const Offset(0, -60));
+        await tester.pump();
+
+        final live = liveVolumeNotifier.value;
+        // The layer drives its own player; the composition's has no part.
+        expect(live?.layerId, 'layer-d');
+        expect(live?.clipId, isNull);
+        expect(live?.volume, greaterThan(1));
+        verifyNever(
+          () => editor.replaceLayer(
+            index: any(named: 'index'),
+            layer: any(named: 'layer'),
+          ),
+        );
+
+        await gesture.up();
+        await tester.pump();
+
+        expect(liveVolumeNotifier.value, isNull);
+        expect(writtenVolume(), live?.volume);
+      });
+    });
   });
+}
+
+/// A clip detached onto the canvas as the layer `layer-d`, at full volume.
+WidgetLayer _detachedLayer() {
+  final meta = DetachedClipLayerData(
+    clip: _createTestClip(id: 'clip-d'),
+    layerId: 'layer-d',
+  ).toMeta();
+  return WidgetLayer(
+    id: 'layer-d',
+    widget: const SizedBox.shrink(),
+    meta: meta,
+    exportConfigs: WidgetLayerExportConfigs(id: 'layer-d', meta: meta),
+    startTime: Duration.zero,
+    endTime: const Duration(seconds: 3),
+  );
 }
 
 DivineVideoClip _createTestClip({required String id, double volume = 1}) {

@@ -404,6 +404,64 @@ void main() {
       });
     });
 
+    group('volume', () {
+      test("reads the detached clip's own volume", () {
+        // The canvas player and the export both play the clip at this.
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+        ).toMeta();
+
+        expect(DetachedClipLayerData.volumeOf(meta), 0.5);
+      });
+
+      test('keeps a stored value inside the range the editor offers', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+        ).toMeta();
+        Map<String, dynamic> withRaw(Object? volume) => {
+          ...meta,
+          detachedClipLayerClipKey: {
+            ...meta[detachedClipLayerClipKey] as Map<String, dynamic>,
+            'volume': volume,
+          },
+        };
+
+        expect(DetachedClipLayerData.volumeOf(withRaw(4)), 3);
+        expect(DetachedClipLayerData.volumeOf(withRaw(-1)), 0);
+        expect(DetachedClipLayerData.volumeOf(withRaw('loud')), 1);
+        expect(DetachedClipLayerData.volumeOf({'kind': 'sticker'}), 1);
+      });
+
+      test('withVolume sets the value and leaves the rest of the layer', () {
+        final meta = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+          sourceOffset: const Duration(seconds: 2),
+          opacity: 0.4,
+        ).toMeta();
+
+        final muted = DetachedClipLayerData.withVolume(meta, 0);
+
+        expect(DetachedClipLayerData.volumeOf(muted), 0);
+        // What the export reads: the clip the meta carries.
+        expect(DetachedClipLayerData.fromMeta(muted, '/docs')!.clip.volume, 0);
+        expect(DetachedClipLayerData.opacityOf(muted), 0.4);
+        expect(
+          DetachedClipLayerData.sourceOffsetOf(muted),
+          const Duration(seconds: 2),
+        );
+        // The original map is left as it was, so the history entry it came
+        // from keeps its volume.
+        expect(DetachedClipLayerData.volumeOf(meta), 0.5);
+        expect(
+          DetachedClipLayerData.withVolume({'kind': 'sticker'}, 0),
+          isNull,
+        );
+      });
+    });
+
     group('withClip', () {
       test("swaps the footage and keeps the layer's own settings", () {
         final meta = DetachedClipLayerData(

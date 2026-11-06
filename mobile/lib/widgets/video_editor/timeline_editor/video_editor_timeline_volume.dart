@@ -10,14 +10,18 @@ import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bl
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_volume.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/utils/volume_boost_color.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_volume_mute_toggle.dart';
 
 /// Panel shown when the user taps the volume button in the timeline header.
 ///
-/// Displays one arc volume control per video clip and per custom audio
-/// track. No labels, percentages, or section headers — just the arcs.
+/// Displays one arc volume control per video clip, per custom audio track
+/// and per clip detached onto the canvas. No labels, percentages, or section
+/// headers — just the arcs.
 class VideoEditorTimelineVolume extends StatelessWidget {
   const VideoEditorTimelineVolume({
     required this.volumePreviewNotifier,
@@ -55,8 +59,17 @@ class VideoEditorTimelineVolume extends StatelessWidget {
     final customTracks = audioTracks
         .where((t) => !t.isClipAnchoredOriginalSound)
         .toList(growable: false);
+    // In the order the overlay strips give them their rows in volume mode.
+    // An item carries its layer, whose meta takes part in equality, so a
+    // volume an undo puts back reaches the arc too.
+    final detachedClips = context.select(
+      (TimelineOverlayBloc b) => [
+        for (final item in b.state.items)
+          if (item.isDetachedClip) item,
+      ],
+    );
 
-    if (clips.isEmpty && customTracks.isEmpty) {
+    if (clips.isEmpty && customTracks.isEmpty && detachedClips.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -76,106 +89,200 @@ class VideoEditorTimelineVolume extends StatelessWidget {
             stops: const [0.0, 0.1739],
           ),
         ),
-        child: Padding(
-          padding: const .only(
-            top:
-                TimelineConstants.rulerHeight +
-                TimelineConstants.rulerToBodyGap,
-          ),
-          child: Column(
-            spacing: 12,
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: .start,
-            children: [
-              Flexible(
-                child: Column(
-                  crossAxisAlignment: .start,
-                  spacing: TimelineConstants.thumbnailVerticalRowGap,
-                  children: [
-                    for (var i = 0; i < clips.length; i++)
-                      _VolumeArc(
-                        key: ValueKey(('clip-volume', clips[i].id)),
-                        height: TimelineConstants.thumbnailStripHeight,
-                        semanticLabel: context.l10n.videoEditorClipVolumeLabel(
-                          i + 1,
-                        ),
-                        semanticLongPressHint:
-                            context.l10n.videoEditorVolumeLongPressHint,
-                        volume: clips[i].volume,
-                        volumePreviewNotifier: volumePreviewNotifier,
-                        onLivePreview: (v, session) {
-                          final live = LiveVolume.clip(
-                            clips[i].id,
-                            v,
-                            session: session,
-                          );
-                          liveVolumeNotifier?.value = live;
-                          return liveVolumeNotifier?.value ?? live;
-                        },
-                        onPreviewEnded: () => liveVolumeNotifier?.value = null,
-                        onPreviewCancelled: onPreviewCancelled,
-                        onChanged: (v) => context.read<ClipEditorBloc>().add(
-                          ClipEditorClipVolumeChanged(
-                            clipId: clips[i].id,
-                            volume: v,
+        // The backdrop fills whatever height the timeline hands the panel,
+        // down to its bottom edge; the arcs keep their natural height so each
+        // stays beside its row.
+        child: UnconstrainedBox(
+          alignment: Alignment.topLeft,
+          constrainedAxis: Axis.horizontal,
+          child: Padding(
+            padding: const .only(
+              top:
+                  TimelineConstants.rulerHeight +
+                  TimelineConstants.rulerToBodyGap,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: .start,
+              children: [
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: .start,
+                    spacing: TimelineConstants.thumbnailVerticalRowGap,
+                    children: [
+                      for (var i = 0; i < clips.length; i++)
+                        _VolumeArc(
+                          key: ValueKey(('clip-volume', clips[i].id)),
+                          height: TimelineConstants.thumbnailStripHeight,
+                          semanticLabel: context.l10n
+                              .videoEditorClipVolumeLabel(
+                                i + 1,
+                              ),
+                          semanticLongPressHint:
+                              context.l10n.videoEditorVolumeLongPressHint,
+                          volume: clips[i].volume,
+                          volumePreviewNotifier: volumePreviewNotifier,
+                          onLivePreview: (v, session) {
+                            final live = LiveVolume.clip(
+                              clips[i].id,
+                              v,
+                              session: session,
+                            );
+                            liveVolumeNotifier?.value = live;
+                            return liveVolumeNotifier?.value ?? live;
+                          },
+                          onPreviewEnded: () =>
+                              liveVolumeNotifier?.value = null,
+                          onPreviewCancelled: onPreviewCancelled,
+                          onChanged: (v) => context.read<ClipEditorBloc>().add(
+                            ClipEditorClipVolumeChanged(
+                              clipId: clips[i].id,
+                              volume: v,
+                            ),
                           ),
+                          onLongPress: () =>
+                              toggleAllTimelineVolumeMuted(context),
                         ),
-                        onLongPress: () =>
-                            toggleAllTimelineVolumeMuted(context),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-
-              Flexible(
-                child: Column(
-                  spacing: 6,
-                  children: [
-                    for (var i = 0; i < customTracks.length; i++)
-                      _VolumeArc(
-                        key: ValueKey(('track-volume', customTracks[i].id)),
-                        height:
-                            TimelineConstants.soundOverlayRowHeight -
-                            TimelineConstants.overlayRowGap,
-                        semanticLabel:
-                            customTracks[i].title != null &&
-                                customTracks[i].title!.isNotEmpty
-                            ? customTracks[i].title!
-                            : context.l10n.videoEditorAudioUntitledSound,
-                        semanticLongPressHint:
-                            context.l10n.videoEditorVolumeLongPressHint,
-                        volume: customTracks[i].volume,
-                        volumePreviewNotifier: volumePreviewNotifier,
-                        onLivePreview: (v, session) {
-                          final live = LiveVolume.track(
-                            customTracks[i].id,
-                            v,
-                            session: session,
-                          );
-                          liveVolumeNotifier?.value = live;
-                          return liveVolumeNotifier?.value ?? live;
-                        },
-                        onPreviewEnded: () => liveVolumeNotifier?.value = null,
-                        onPreviewCancelled: onPreviewCancelled,
-                        onChanged: (v) =>
-                            context.read<TimelineOverlayBloc>().add(
-                              TimelineOverlayAudioVolumeChanged(
-                                trackId: customTracks[i].id,
-                                volume: v,
+                if (customTracks.isNotEmpty) ...[
+                  const SizedBox(height: _clipsToSoundsGap),
+                  Flexible(
+                    child: Column(
+                      spacing: 6,
+                      children: [
+                        for (var i = 0; i < customTracks.length; i++)
+                          _VolumeArc(
+                            key: ValueKey(('track-volume', customTracks[i].id)),
+                            height:
+                                TimelineConstants.soundOverlayRowHeight -
+                                TimelineConstants.overlayRowGap,
+                            semanticLabel:
+                                customTracks[i].title != null &&
+                                    customTracks[i].title!.isNotEmpty
+                                ? customTracks[i].title!
+                                : context.l10n.videoEditorAudioUntitledSound,
+                            semanticLongPressHint:
+                                context.l10n.videoEditorVolumeLongPressHint,
+                            volume: customTracks[i].volume,
+                            volumePreviewNotifier: volumePreviewNotifier,
+                            onLivePreview: (v, session) {
+                              final live = LiveVolume.track(
+                                customTracks[i].id,
+                                v,
+                                session: session,
+                              );
+                              liveVolumeNotifier?.value = live;
+                              return liveVolumeNotifier?.value ?? live;
+                            },
+                            onPreviewEnded: () =>
+                                liveVolumeNotifier?.value = null,
+                            onPreviewCancelled: onPreviewCancelled,
+                            onChanged: (v) =>
+                                context.read<TimelineOverlayBloc>().add(
+                                  TimelineOverlayAudioVolumeChanged(
+                                    trackId: customTracks[i].id,
+                                    volume: v,
+                                  ),
+                                ),
+                            onLongPress: () =>
+                                toggleAllTimelineVolumeMuted(context),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (detachedClips.isNotEmpty) ...[
+                  SizedBox(
+                    height: customTracks.isNotEmpty
+                        ? _soundsToDetachedClipsGap
+                        : _clipsToDetachedClipsGap,
+                  ),
+                  Flexible(
+                    child: Column(
+                      spacing: TimelineConstants.overlayRowGap,
+                      children: [
+                        for (var i = 0; i < detachedClips.length; i++)
+                          _VolumeArc(
+                            key: ValueKey((
+                              'detached-clip-volume',
+                              detachedClips[i].id,
+                            )),
+                            height:
+                                TimelineConstants.overlayRowHeight -
+                                TimelineConstants.overlayRowGap,
+                            // Unnumbered, as an untitled sound is: no quantity to
+                            // inflect, so no count in the label.
+                            semanticLabel:
+                                context.l10n.videoEditorDetachedClipLabel,
+                            semanticLongPressHint:
+                                context.l10n.videoEditorVolumeLongPressHint,
+                            volume: DetachedClipLayerData.volumeOf(
+                              DetachedClipLayerData.metaOf(
+                                detachedClips[i].layer!,
                               ),
                             ),
-                        onLongPress: () =>
-                            toggleAllTimelineVolumeMuted(context),
-                      ),
-                  ],
-                ),
-              ),
-            ],
+                            volumePreviewNotifier: volumePreviewNotifier,
+                            onLivePreview: (v, session) {
+                              final live = LiveVolume.layer(
+                                detachedClips[i].id,
+                                v,
+                                session: session,
+                              );
+                              liveVolumeNotifier?.value = live;
+                              return liveVolumeNotifier?.value ?? live;
+                            },
+                            onPreviewEnded: () =>
+                                liveVolumeNotifier?.value = null,
+                            onPreviewCancelled: onPreviewCancelled,
+                            onChanged: (v) {
+                              final editor = VideoEditorScope.maybeOf(
+                                context,
+                              )?.editor;
+                              if (editor == null) return;
+                              setDetachedClipVolume(
+                                editor,
+                                detachedClips[i].id,
+                                v,
+                              );
+                            },
+                            onLongPress: () =>
+                                toggleAllTimelineVolumeMuted(context),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  /// Gap between the clip arcs and the sound arcs.
+  static const double _clipsToSoundsGap = 12;
+
+  /// Gap from the clip arcs to the first detached clip arc when there are no
+  /// sounds. The overlay strips start below the last clip row by the strips'
+  /// scroll padding (4) and their own top gap; the arc then sits
+  /// [TimelineConstants.overlayRowGap] / 2 into its row, which centres it.
+  static const double _clipsToDetachedClipsGap =
+      4 +
+      TimelineConstants.overlayStripGap +
+      TimelineConstants.overlayRowGap / 2;
+
+  /// Gap from the last sound arc to the first detached clip arc. That sound
+  /// arc ends 2 above the end of its row (it sits 4 below the row and is
+  /// [TimelineConstants.overlayRowGap] shorter), the detached clips' strip
+  /// follows the sound strip by the strip gap, and the arc is centred as
+  /// above.
+  static const double _soundsToDetachedClipsGap =
+      2 +
+      TimelineConstants.overlayStripGap +
+      TimelineConstants.overlayRowGap / 2;
 }
 
 class _VolumeArc extends StatefulWidget {

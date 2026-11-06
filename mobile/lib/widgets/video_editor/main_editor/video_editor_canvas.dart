@@ -1029,7 +1029,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// one before it and only the newest volume is sent.
   void _onLiveVolumeChanged() {
     final live = _liveVolumeNotifier?.value;
-    if (live == null) return;
+    // A detached clip plays on its own player, which its layer drives.
+    if (live == null || live.layerId != null) return;
     _queuedLiveVolume = live;
     if (_isApplyingLiveVolume) return;
     _runDetached(_drainLiveVolume(), 'apply live volume');

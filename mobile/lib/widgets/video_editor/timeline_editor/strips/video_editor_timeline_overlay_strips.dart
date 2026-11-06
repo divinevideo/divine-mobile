@@ -198,8 +198,29 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
         ? _soundItems.length
         : _soundRowCount;
 
+    // A clip detached onto the canvas carries a sound of its own, so in
+    // volume edit mode it leaves the layer strip for a row of its own right
+    // under the sounds, beside its arc in the volume panel.
+    final detachedClipItems = isVolumeEditMode
+        ? [
+            for (final item in _layerItems)
+              if (item.isDetachedClip) item,
+          ]
+        : const <TimelineOverlayItem>[];
+    final layerItemsForDisplay = detachedClipItems.isEmpty
+        ? _layerItems
+        : [
+            for (final item in _layerItems)
+              if (!item.isDetachedClip) item,
+          ];
+    final layerRowCountForDisplay = detachedClipItems.isEmpty
+        ? _layerRowCount
+        : layerItemsForDisplay.fold(-1, (top, i) => i.row > top ? i.row : top) +
+              1;
+
     final stripConfigs = [
       (
+        key: 'sound',
         items: soundItemsForDisplay,
         rowCount: soundRowCountForDisplay,
         isCollapsed:
@@ -210,6 +231,19 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
         rowHeight: TimelineConstants.soundOverlayRowHeight,
       ),
       (
+        key: 'detachedClip',
+        items: [
+          for (var i = 0; i < detachedClipItems.length; i++)
+            detachedClipItems[i].copyWith(row: i),
+        ],
+        rowCount: detachedClipItems.length,
+        isCollapsed: false,
+        type: TimelineOverlayType.layer,
+        color: VineTheme.accentVioletBackground,
+        rowHeight: TimelineConstants.overlayRowHeight,
+      ),
+      (
+        key: 'filter',
         items: _filterItems,
         rowCount: _filterRowCount,
         isCollapsed: collapsedTypes.contains(TimelineOverlayType.filter),
@@ -218,6 +252,7 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
         rowHeight: TimelineConstants.overlayRowHeight,
       ),
       (
+        key: 'tune',
         items: _tuneItems,
         rowCount: _tuneRowCount,
         isCollapsed: collapsedTypes.contains(TimelineOverlayType.tune),
@@ -226,6 +261,7 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
         rowHeight: TimelineConstants.overlayRowHeight,
       ),
       (
+        key: 'effect',
         items: _effectItems,
         rowCount: _effectRowCount,
         isCollapsed: collapsedTypes.contains(TimelineOverlayType.effect),
@@ -234,14 +270,16 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
         rowHeight: TimelineConstants.overlayRowHeight,
       ),
       (
-        items: _layerItems,
-        rowCount: _layerRowCount,
+        key: 'layer',
+        items: layerItemsForDisplay,
+        rowCount: layerRowCountForDisplay,
         isCollapsed: collapsedTypes.contains(TimelineOverlayType.layer),
         type: TimelineOverlayType.layer,
         color: VineTheme.accentVioletBackground,
         rowHeight: TimelineConstants.overlayRowHeight,
       ),
       (
+        key: 'caption',
         items: _captionItems,
         rowCount: _captionRowCount,
         isCollapsed: collapsedTypes.contains(TimelineOverlayType.captions),
@@ -261,6 +299,9 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
           for (final config in stripConfigs)
             if (config.items.isNotEmpty)
               TimelineOverlayStrip(
+                // Keyed, so entering volume edit mode, which adds and drops
+                // strips, never hands one strip's state to another.
+                key: ValueKey(config.key),
                 items: config.items,
                 rowCount: config.rowCount,
                 totalWidth: widget.totalWidth,

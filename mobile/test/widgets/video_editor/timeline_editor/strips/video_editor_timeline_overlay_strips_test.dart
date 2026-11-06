@@ -6,18 +6,31 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/video_editor/detached_clip_thumbnails/detached_clip_thumbnails_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strip.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_overlay_strips.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show PaintLayer, PaintMode, PaintedModel;
+    show
+        PaintLayer,
+        PaintMode,
+        PaintedModel,
+        WidgetLayer,
+        WidgetLayerExportConfigs;
+import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 class _MockTimelineOverlayBloc
     extends MockBloc<TimelineOverlayEvent, TimelineOverlayState>
     implements TimelineOverlayBloc {}
+
+class _MockVideoEditorMainBloc
+    extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
+    implements VideoEditorMainBloc {}
 
 void main() {
   group(TimelineOverlayStrips, () {
@@ -36,7 +49,7 @@ void main() {
       await mainBloc.close();
     });
 
-    Widget build() {
+    Widget build({VideoEditorMainBloc? main}) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -44,7 +57,7 @@ void main() {
           body: MultiBlocProvider(
             providers: [
               BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
-              BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
+              BlocProvider<VideoEditorMainBloc>.value(value: main ?? mainBloc),
             ],
             child: TimelineOverlayStrips(
               totalWidth: 600,
@@ -99,6 +112,78 @@ void main() {
       await tester.pumpWidget(build());
 
       expect(find.byType(TimelineOverlayStrip), findsNWidgets(3));
+    });
+
+    testWidgets('gives a detached clip a row of its own beside its arc in '
+        'volume edit mode', (tester) async {
+      final meta = DetachedClipLayerData(
+        clip: DivineVideoClip(
+          id: 'clip-d',
+          video: EditorVideo.file('/tmp/clip-d.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime(2025),
+          originalAspectRatio: 9 / 16,
+          targetAspectRatio: .vertical,
+        ),
+        layerId: 'detached',
+      ).toMeta();
+      when(() => overlayBloc.state).thenReturn(
+        TimelineOverlayState(
+          items: [
+            const TimelineOverlayItem(
+              id: 'text',
+              type: TimelineOverlayType.layer,
+              startTime: Duration.zero,
+              endTime: Duration(seconds: 1),
+            ),
+            TimelineOverlayItem(
+              id: 'detached',
+              type: TimelineOverlayType.layer,
+              startTime: const Duration(seconds: 2),
+              endTime: const Duration(seconds: 3),
+              layer: WidgetLayer(
+                id: 'detached',
+                widget: const SizedBox.shrink(),
+                meta: meta,
+                exportConfigs: WidgetLayerExportConfigs(
+                  id: 'detached',
+                  meta: meta,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      List<List<String>> stripItemIds() => [
+        for (final strip in tester.widgetList<TimelineOverlayStrip>(
+          find.byType(TimelineOverlayStrip),
+        ))
+          [for (final item in strip.items) item.id],
+      ];
+
+      await tester.pumpWidget(build());
+      expect(stripItemIds(), [
+        ['text', 'detached'],
+      ]);
+
+      final volumeMode = _MockVideoEditorMainBloc();
+      whenListen(
+        volumeMode,
+        const Stream<VideoEditorMainState>.empty(),
+        initialState: const VideoEditorMainState(isVolumeEditMode: true),
+      );
+      await tester.pumpWidget(build(main: volumeMode));
+
+      // First, under the sounds, where the volume panel puts its arc.
+      expect(stripItemIds(), [
+        ['detached'],
+        ['text'],
+      ]);
+
+      // Unmounting the clip's thumbnails arms the pool's grace timer, which
+      // flutter_test would report as pending before tearDown ran.
+      await tester.pumpWidget(const SizedBox.shrink());
+      detachedClipThumbnailPool.resetForTesting();
     });
 
     testWidgets(

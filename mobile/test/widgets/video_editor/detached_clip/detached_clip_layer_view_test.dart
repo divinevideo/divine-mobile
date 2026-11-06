@@ -15,6 +15,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
@@ -78,6 +79,14 @@ class _FakeDetachedClipPlayer implements DetachedClipPlayer {
     muteCalls.add(muted);
   }
 
+  /// Every volume handed to [setVolume], in call order.
+  final List<double> volumeCalls = [];
+
+  @override
+  Future<void> setVolume(double volume) async {
+    volumeCalls.add(volume);
+  }
+
   /// Whether [dispose] tore this player down.
   bool disposed = false;
 
@@ -115,6 +124,7 @@ Future<void> _pumpEditorLayer(
   required Map<String, dynamic> meta,
   required VideoEditorMainBloc editor,
   ValueNotifier<bool>? previewReleased,
+  ValueNotifier<LiveVolume?>? liveVolume,
 }) async {
   final bodySize = ValueNotifier<Size>(Size.zero);
   addTearDown(bodySize.dispose);
@@ -148,6 +158,9 @@ Future<void> _pumpEditorLayer(
           playTimeNotifier: playTime,
           playheadAdvancingNotifier: advancing,
           previewReleasedNotifier: previewReleased,
+          liveVolumeNotifier: liveVolume,
+          // The scope insists on an owner for the notifier it hands out.
+          cancelLiveVolumePreview: liveVolume == null ? null : (_) => false,
           fromLibrary: false,
           child: _layerHost(DetachedClipLayerView(meta: meta)),
         ),
@@ -478,7 +491,7 @@ void main() {
     });
   });
 
-  group('VoiceOverPreview mute wiring', () {
+  group('companion audio wiring', () {
     late Directory tempDir;
     late PathProviderPlatform originalPathProvider;
     late StreamController<VideoEditorMainState> editorStates;
@@ -545,6 +558,81 @@ void main() {
       editorStates.add(const VideoEditorMainState());
       await tester.pump();
       expect(fake.muteCalls, [false, true, false]);
+    });
+
+    testWidgets('plays a new volume on the running companion instead of '
+        'opening another', (tester) async {
+      final editor = _MockVideoEditorMainBloc();
+      whenListen(
+        editor,
+        editorStates.stream,
+        initialState: const VideoEditorMainState(),
+      );
+      final meta = DetachedClipLayerData(
+        clip: _clip(),
+        layerId: 'layer-1',
+      ).toMeta();
+      final fake = await pumpLayer(tester, meta: meta, editor: editor);
+      expect(fake.volumeCalls, [1]);
+
+      // A confirmed change or an undo hands the layer a new meta.
+      await _pumpEditorLayer(
+        tester,
+        meta: DetachedClipLayerData.withVolume(meta, 0)!,
+        editor: editor,
+      );
+
+      expect(fake.volumeCalls.last, 0);
+      // Still the pooled companion: reopening one for a volume would blank the
+      // layer and restart the clip.
+      expect(
+        tester
+            .widget<DivineVideoPlayer>(find.byType(DivineVideoPlayer))
+            .controller,
+        same(fake.controller),
+      );
+    });
+
+    testWidgets('plays the volume dragged for it in the volume panel', (
+      tester,
+    ) async {
+      final editor = _MockVideoEditorMainBloc();
+      whenListen(
+        editor,
+        editorStates.stream,
+        initialState: const VideoEditorMainState(),
+      );
+      final liveVolume = ValueNotifier<LiveVolume?>(null);
+      addTearDown(liveVolume.dispose);
+      final meta = DetachedClipLayerData(
+        clip: _clip(),
+        layerId: 'layer-1',
+      ).toMeta();
+      final fake = _fakePlayer();
+      await detachedClipPlayers.acquire(
+        detachedClipPlayerKey(meta)!,
+        () async => fake,
+      );
+      await _pumpEditorLayer(
+        tester,
+        meta: meta,
+        editor: editor,
+        liveVolume: liveVolume,
+      );
+
+      liveVolume.value = const LiveVolume.layer('layer-1', 2.5);
+      expect(fake.volumeCalls.last, 2.5);
+
+      // Another layer's drag, or a timeline clip's, is not this one's.
+      liveVolume.value = const LiveVolume.layer('layer-2', 0);
+      expect(fake.volumeCalls.last, 1);
+      liveVolume.value = const LiveVolume.clip('clip-1', 0);
+      expect(fake.volumeCalls.last, 1);
+
+      // An ended drag leaves the clip on its stored volume.
+      liveVolume.value = const LiveVolume.layer('layer-1', 0.5);
+      liveVolume.value = null;
+      expect(fake.volumeCalls.last, 1);
     });
 
     testWidgets('leaves the companion audible for a sub-editor that keeps the '

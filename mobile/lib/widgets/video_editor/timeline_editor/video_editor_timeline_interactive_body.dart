@@ -108,6 +108,10 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
           .where((i) => i.type == TimelineOverlayType.sound)
           .length,
     );
+    final detachedClipCount = context.select(
+      (TimelineOverlayBloc b) =>
+          b.state.items.where((i) => i.isDetachedClip).length,
+    );
     final rawVolumeContentHeight =
         TimelineConstants.rulerHeight +
         4 +
@@ -117,7 +121,12 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
         TimelineConstants.thumbnailVerticalRowGap +
         4 +
         TimelineConstants.overlayStripGap +
-        soundItemCount * TimelineConstants.soundOverlayRowHeight;
+        soundItemCount * TimelineConstants.soundOverlayRowHeight +
+        // Detached clips get a row each under the sounds in volume mode.
+        (detachedClipCount == 0
+            ? 0
+            : TimelineConstants.overlayStripGap +
+                  detachedClipCount * TimelineConstants.overlayRowHeight);
     final volumeContentHeight =
         rawVolumeContentHeight > TimelineConstants.height
         ? rawVolumeContentHeight
@@ -231,9 +240,12 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // Full height, so the panel's backdrop runs down the whole
+                  // timeline instead of stopping under the last arc.
                   Positioned(
                     left: 0,
                     top: 0,
+                    bottom: 0,
                     child: ClipRect(
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 220),
@@ -260,13 +272,16 @@ class VideoEditorTimelineInteractiveBody extends StatelessWidget {
                               ],
                             ),
                         child: isVolumeEditMode
-                            ? VideoEditorTimelineVolume(
+                            ? SizedBox(
                                 key: const ValueKey('volume'),
-                                volumePreviewNotifier: volumePreviewNotifier,
-                                onPreviewCancelled: onVolumePreviewCancelled,
-                                liveVolumeNotifier: VideoEditorScope.maybeOf(
-                                  context,
-                                )?.liveVolumeNotifier,
+                                height: double.infinity,
+                                child: VideoEditorTimelineVolume(
+                                  volumePreviewNotifier: volumePreviewNotifier,
+                                  onPreviewCancelled: onVolumePreviewCancelled,
+                                  liveVolumeNotifier: VideoEditorScope.maybeOf(
+                                    context,
+                                  )?.liveVolumeNotifier,
+                                ),
                               )
                             : const SizedBox.shrink(key: ValueKey('empty')),
                       ),
