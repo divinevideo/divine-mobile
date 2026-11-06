@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for CreatorAnalyticsScreen settings-linked layout.
 // ABOUTME: Verifies analytics content aligns with settings menu max width.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -537,6 +539,32 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.text(l10n.analyticsServerUnavailable), findsOneWidget);
+      });
+
+      testWidgets('still reports a failed retry that is not an Exception', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final repository = await pumpAnalyticsErrorScreen(
+          tester,
+          error: const CreatorAnalyticsLoadException(
+            CreatorAnalyticsFailureKind.serverUnavailable,
+          ),
+        );
+        when(
+          () => repository.fetchCreatorAnalytics(any()),
+        ).thenAnswer((_) async => throw StateError('invariant broken'));
+
+        // An Error is a broken invariant, so it must stay reportable rather
+        // than being absorbed with the expected load failures. It escapes as
+        // an unhandled async error, which only a guarded zone can observe.
+        final unhandled = <Object>[];
+        await runZonedGuarded(() async {
+          await tester.tap(find.text(l10n.analyticsRetry));
+          await tester.pumpAndSettle();
+        }, (error, _) => unhandled.add(error));
+
+        expect(unhandled, [isA<StateError>()]);
       });
     });
 
