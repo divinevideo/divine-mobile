@@ -165,6 +165,56 @@ void main() {
         expect(find.text(l10n.commentsHiddenNoticeOwner), findsOneWidget);
         expect(find.text(l10n.commentHiddenByYou), findsOneWidget);
       });
+
+      // A reply to a hidden comment is listed on its own, and its reply line
+      // must not name the author the owner hid.
+      group('a reply to one of them', () {
+        final reply = CommentBuilder()
+            .withId('3' * 64)
+            .withRootEventId(testVideoEventId)
+            .withRootAuthorPubkey(testVideoAuthorPubkey)
+            .withReplyToEventId(hidden.id)
+            .withReplyToAuthorPubkey(harasserPubkey)
+            .withContent('A reply')
+            .build();
+
+        CommentItem replyItem(WidgetTester tester) => tester.widget(
+          find.ancestor(
+            of: find.text('A reply'),
+            matching: find.byType(CommentItem),
+          ),
+        );
+
+        testWidgets('leaves the hidden author out of its reply line', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildTestWidget(
+              listState: stateWith().copyWith(
+                commentsById: {hidden.id: hidden, reply.id: reply},
+              ),
+            ),
+          );
+          await tester.pump();
+
+          expect(replyItem(tester).repliesToHiddenComment, isTrue);
+        });
+
+        testWidgets('names the author once the hidden comments are shown', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildTestWidget(
+              listState: stateWith(showHiddenComments: true).copyWith(
+                commentsById: {hidden.id: hidden, reply.id: reply},
+              ),
+            ),
+          );
+          await tester.pump();
+
+          expect(replyItem(tester).repliesToHiddenComment, isFalse);
+        });
+      });
     });
 
     testWidgets('shows skeleton loader when loading', (tester) async {
