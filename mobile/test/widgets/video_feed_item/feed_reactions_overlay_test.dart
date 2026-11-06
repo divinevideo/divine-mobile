@@ -537,6 +537,7 @@ void main() {
     Widget buildSubject({
       required bool enabled,
       required VoidCallback onMount,
+      VideoEvent? video,
     }) => ProviderScope(
       overrides: [
         commentsRepositoryProvider.overrideWithValue(commentsRepository),
@@ -547,7 +548,7 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         home: FeedTopCommentHost(
           enabled: enabled,
-          video: _video,
+          video: video ?? _video,
           loopCompletions: const Stream<void>.empty(),
           child: _MountCounter(onMount: onMount),
         ),
@@ -596,6 +597,66 @@ void main() {
         );
         expect(find.text('no cubit'), findsOneWidget);
         expect(mounts, 1);
+      });
+    });
+
+    group('lifecycle', () {
+      // close() awaits a subscription cancel whose already-completed future
+      // belongs to the root zone, so it finishes only on the real event loop.
+      Future<void> letCloseFinish(WidgetTester tester) =>
+          tester.runAsync(() async {});
+
+      FeedTopCommentCubit hostedCubit(WidgetTester tester) => tester
+          .element(find.byType(_MountCounter))
+          .read<FeedTopCommentCubit?>()!;
+
+      testWidgets('closes its cubit once disabled', (tester) async {
+        await tester.pumpWidget(buildSubject(enabled: true, onMount: () {}));
+        final cubit = hostedCubit(tester);
+        expect(cubit.isClosed, isFalse);
+
+        await tester.pumpWidget(buildSubject(enabled: false, onMount: () {}));
+        await letCloseFinish(tester);
+
+        expect(cubit.isClosed, isTrue);
+      });
+
+      testWidgets('closes its cubit when it goes away', (tester) async {
+        await tester.pumpWidget(buildSubject(enabled: true, onMount: () {}));
+        final cubit = hostedCubit(tester);
+
+        await tester.pumpWidget(const SizedBox());
+        await letCloseFinish(tester);
+
+        expect(cubit.isClosed, isTrue);
+      });
+
+      testWidgets('replaces its cubit for another video', (tester) async {
+        final otherVideo = VideoEvent(
+          id: '7777777777777777777777777777777777777777777777777777777777777777',
+          pubkey: _creator,
+          createdAt: 1761650000,
+          content: 'another loop',
+          timestamp: DateTime(2026, 10, 28),
+        );
+        await tester.pumpWidget(buildSubject(enabled: true, onMount: () {}));
+        final first = hostedCubit(tester);
+
+        await tester.pumpWidget(
+          buildSubject(enabled: true, onMount: () {}, video: otherVideo),
+        );
+        await letCloseFinish(tester);
+
+        expect(hostedCubit(tester), isNot(same(first)));
+        expect(first.isClosed, isTrue);
+        verify(
+          () => commentsRepository.loadComments(
+            rootEventId: otherVideo.id,
+            rootEventKind: any(named: 'rootEventKind'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+            limit: any(named: 'limit'),
+          ),
+        ).called(1);
       });
     });
   });
