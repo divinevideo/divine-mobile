@@ -878,6 +878,49 @@ void main() {
       expect(snapshot.data.count, 0);
     });
 
+    group('watchMyFollowersCached network failure', () {
+      const timeout = FunnelcakeTimeoutException(
+        'https://api.example/followers',
+      );
+      late Completer<void> started;
+      late Completer<PaginatedPubkeys> response;
+
+      setUp(() async {
+        await CacheSync.init(dao: FakeCacheDao());
+        started = Completer<void>();
+        response = Completer<PaginatedPubkeys>();
+        when(() => api.isAvailable).thenReturn(true);
+        // The same outage fails the count request, which falls back quietly.
+        when(() => api.getSocialCounts(owner)).thenThrow(timeout);
+        when(() => api.getFollowers(pubkey: owner, limit: 5000)).thenAnswer((
+          _,
+        ) {
+          started.complete();
+          return response.future;
+        });
+      });
+
+      test('reaches a listener that is still subscribed', () async {
+        final emitted = expectLater(
+          repository.watchMyFollowersCached(),
+          emitsInOrder([emitsError(timeout), emitsDone]),
+        );
+        await started.future;
+        response.completeError(timeout);
+        await emitted;
+      });
+
+      test('is not raised through cancel once the listener has left', () async {
+        final subscription = repository.watchMyFollowersCached().listen(null);
+        await started.future;
+        // Emitter.onEach drops this future, so an error delivered through it
+        // has no handler and reaches the app zone as an uncaught error.
+        final canceled = subscription.cancel();
+        response.completeError(timeout);
+        await expectLater(canceled, completes);
+      });
+    });
+
     test('partial source failure merges instead of replacing', () async {
       dao.rows[owner] = {stale: 50};
       when(() => api.isAvailable).thenReturn(true);

@@ -1087,16 +1087,19 @@ class FollowRepository {
       }
     }
     if (_isDisposed || owner != _nostrClient.publicKey) return;
-    await for (final result in CacheSync.watchOne<FollowersSnapshot>(
-      key: _myFollowersCacheKey(owner),
-      fetch: fetchMyFollowersSnapshot,
-      fromJson: FollowersSnapshot.fromJson,
-      toJson: (s) => s.toJson(),
-      ttl: _profileListCacheTtl,
-    )) {
-      if (_isDisposed || owner != _nostrClient.publicKey) return;
-      if (result.isLive || !deliveredDurable) yield result;
-    }
+    // Delegate rather than `await for`: a cancelled `await for` keeps waiting
+    // on the fetch, and its late failure would then complete the listener's
+    // cancel future with an error nobody awaits. `yield*` passes the cancel on
+    // to CacheSync, which drops a fetch error once nobody is listening.
+    yield* CacheSync.watchOne<FollowersSnapshot>(
+          key: _myFollowersCacheKey(owner),
+          fetch: fetchMyFollowersSnapshot,
+          fromJson: FollowersSnapshot.fromJson,
+          toJson: (s) => s.toJson(),
+          ttl: _profileListCacheTtl,
+        )
+        .takeWhile((_) => !_isDisposed && owner == _nostrClient.publicKey)
+        .where((result) => result.isLive || !deliveredDurable);
   }
 
   /// Cache-backed stream of the current user's following list.
