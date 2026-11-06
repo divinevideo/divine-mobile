@@ -19,14 +19,17 @@ import 'package:openvine/blocs/comments/comment_reactions/comment_reactions_bloc
 import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/comments/widgets/comment_item.dart';
 import 'package:openvine/screens/comments/widgets/video_comment_player.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
@@ -63,6 +66,9 @@ class _MockComposerBloc
 class _MockReactionsBloc
     extends MockBloc<CommentReactionsEvent, CommentReactionsState>
     implements CommentReactionsBloc {}
+
+class _MockContentReportingService extends Mock
+    implements ContentReportingService {}
 
 class _MockListBloc extends MockBloc<CommentsListEvent, CommentsListState>
     implements CommentsListBloc {}
@@ -277,6 +283,70 @@ void main() {
               as CommentModerationRequested;
       expect(added.comment, comment);
       expect(added.hide, isTrue);
+    });
+
+    testWidgets('offers to report a comment right after hiding it', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      final comment = CommentBuilder()
+          .withAuthorPubkey(_testHexPubkey)
+          .withRootEventId(_testRootEventId)
+          .withRootAuthorPubkey(_testRootAuthorPubkey)
+          .withContent('unwanted')
+          .build();
+      await tester.binding.setSurfaceSize(const Size(800, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        buildTestWidget(
+          'unwanted',
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          comment: comment,
+          listBloc: _MockListBloc(),
+          overrides: [
+            _signedOutSession,
+            contentReportingServiceProvider.overrideWith(
+              (ref) async => _MockContentReportingService(),
+            ),
+          ],
+        ),
+      );
+
+      await tester.longPress(find.text('unwanted'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.commentOptionsHideLabel));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.commentHiddenReportPrompt), findsOneWidget);
+
+      await tester.tap(find.text(l10n.commentHiddenReportAction));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ReportContentDialog), findsOneWidget);
+      expect(find.text(l10n.commentHiddenReportPrompt), findsNothing);
+    });
+
+    testWidgets('offers no report when the owner shows a comment again', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      await tester.pumpWidget(
+        buildTestWidget(
+          'unwanted',
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          isHiddenByOwner: true,
+          listBloc: _MockListBloc(),
+        ),
+      );
+
+      await tester.longPress(find.text('unwanted'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.commentOptionsShowLabel));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.commentHiddenReportPrompt), findsNothing);
     });
   });
 

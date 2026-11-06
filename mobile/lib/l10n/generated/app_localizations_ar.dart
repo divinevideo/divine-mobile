@@ -8751,7 +8751,14 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'هذه التعليقات مخفية من قِبلك. لا يراها الآخرون إلا إذا اختاروا عرضها.';
+      'أخفيت هذه التعليقات في Divine. قد تظل التطبيقات والمواقع الأخرى تعرضها، لذا أبلغ عن أي محتوى ضار.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'هل تريد الإبلاغ عن هذا التعليق أيضًا؟';
+
+  @override
+  String get commentHiddenReportAction => 'إبلاغ';
 
   @override
   String get commentHiddenByCreator => 'مخفي من قِبل الصانع';

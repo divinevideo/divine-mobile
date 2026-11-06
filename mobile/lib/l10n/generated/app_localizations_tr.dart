@@ -8657,7 +8657,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'Bu yorumları sen gizledin. Diğerleri onları yalnızca kendileri seçerse görür.';
+      'Bu yorumları Divine\'da sen gizledin. Diğer uygulamalar ve siteler onları hâlâ gösterebilir, bu yüzden zararlı olan her şeyi bildir.';
+
+  @override
+  String get commentHiddenReportPrompt => 'Bu yorumu bildirmek de ister misin?';
+
+  @override
+  String get commentHiddenReportAction => 'Bildir';
 
   @override
   String get commentHiddenByCreator => 'İçerik üreticisi gizledi';

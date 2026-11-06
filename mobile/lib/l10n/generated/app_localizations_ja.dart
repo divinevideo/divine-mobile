@@ -8301,7 +8301,13 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'これらのコメントはあなたが非表示にしました。他の人は自分で選んだ場合にのみ表示されます。';
+      'これらのコメントはDivineであなたが非表示にしました。他のアプリやサイトではまだ表示されることがあるので、有害なものは報告してください。';
+
+  @override
+  String get commentHiddenReportPrompt => 'このコメントを報告もしますか？';
+
+  @override
+  String get commentHiddenReportAction => '報告';
 
   @override
   String get commentHiddenByCreator => 'クリエイターにより非表示';

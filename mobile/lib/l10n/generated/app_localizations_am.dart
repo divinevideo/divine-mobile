@@ -8536,7 +8536,13 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'እነዚህን አስተያየቶች ደብቀዋቸዋል። ሌሎች የሚያዩዋቸው ራሳቸው ከመረጡ ብቻ ነው።';
+      'እነዚህን አስተያየቶች በDivine ውስጥ ደብቀዋቸዋል። ሌሎች መተግበሪያዎችና ድረ-ገጾች አሁንም ሊያሳዩዋቸው ይችላሉ፣ ስለዚህ ጎጂ የሆነውን ሁሉ ሪፖርት ያድርጉ።';
+
+  @override
+  String get commentHiddenReportPrompt => 'ይህንን አስተያየት ሪፖርትም ማድረግ ይፈልጋሉ?';
+
+  @override
+  String get commentHiddenReportAction => 'ሪፖርት አድርግ';
 
   @override
   String get commentHiddenByCreator => 'በፈጣሪው የተደበቀ';

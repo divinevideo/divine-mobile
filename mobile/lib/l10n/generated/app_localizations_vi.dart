@@ -8696,7 +8696,14 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'Bạn đã ẩn những bình luận này. Người khác chỉ thấy chúng nếu họ chọn xem.';
+      'Bạn đã ẩn những bình luận này trên Divine. Ứng dụng và trang web khác vẫn có thể hiển thị chúng, nên hãy báo cáo bất cứ điều gì gây hại.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Bạn có muốn báo cáo bình luận này luôn không?';
+
+  @override
+  String get commentHiddenReportAction => 'Báo cáo';
 
   @override
   String get commentHiddenByCreator => 'Nhà sáng tạo đã ẩn';

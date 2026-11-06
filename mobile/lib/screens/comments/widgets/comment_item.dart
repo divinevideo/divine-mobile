@@ -29,9 +29,12 @@ import 'package:openvine/screens/comments/widgets/comment_options_modal.dart';
 import 'package:openvine/screens/comments/widgets/pending_video_reply_tile.dart';
 import 'package:openvine/screens/comments/widgets/video_comment_player.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_name.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Widget that renders a single comment in a flat list.
 ///
@@ -294,6 +297,11 @@ class _CommentItemState extends ConsumerState<CommentItem> {
     final listBloc = widget.viewerOwnsVideo
         ? context.read<CommentsListBloc>()
         : null;
+    // The sheet's messenger and the root navigator outlive this row, which a
+    // hide removes.
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final l10n = context.l10n;
 
     final CommentOptionResult? result;
 
@@ -325,6 +333,11 @@ class _CommentItemState extends ConsumerState<CommentItem> {
         reactionsBloc.add(CommentBlockUserRequested(authorPubkey));
       case CommentModerationResult(:final hide):
         listBloc?.add(CommentModerationRequested(widget.comment, hide: hide));
+        // Hiding keeps a comment out of Divine only; moderators never see it
+        // unless it is reported too.
+        if (hide && messenger != null) {
+          _offerReport(messenger, navigator, l10n);
+        }
       case CommentEditResult(:final commentId, :final content):
         // Editing a comment whose row is gone has nothing to edit.
         if (!mounted) return;
@@ -338,6 +351,36 @@ class _CommentItemState extends ConsumerState<CommentItem> {
           ),
         );
     }
+  }
+
+  void _offerReport(
+    ScaffoldMessengerState messenger,
+    NavigatorState navigator,
+    AppLocalizations l10n,
+  ) {
+    final comment = widget.comment;
+    messenger.showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        l10n.commentHiddenReportPrompt,
+        actionLabel: l10n.commentHiddenReportAction,
+        duration: const Duration(seconds: 6),
+        onActionPressed: () {
+          // A plain button: unlike a SnackBarAction it does not dismiss the
+          // banner itself.
+          messenger.hideCurrentSnackBar();
+          runDetached(
+            ReportContentDialog.showForComment(
+              navigator.context,
+              commentId: comment.id,
+              authorPubkey: comment.authorPubkey,
+            ),
+            'report a comment the owner hid',
+            logName: 'CommentItem',
+            category: LogCategory.ui,
+          );
+        },
+      ),
+    );
   }
 }
 

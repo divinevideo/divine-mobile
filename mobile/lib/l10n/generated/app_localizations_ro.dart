@@ -8945,7 +8945,14 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'Ai ascuns aceste comentarii. Celelalte persoane le văd doar dacă aleg asta.';
+      'Ai ascuns aceste comentarii în Divine. Alte aplicații și site-uri le pot afișa în continuare, așa că raportează orice e dăunător.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Vrei să raportezi și acest comentariu?';
+
+  @override
+  String get commentHiddenReportAction => 'Raportează';
 
   @override
   String get commentHiddenByCreator => 'Ascuns de creator';

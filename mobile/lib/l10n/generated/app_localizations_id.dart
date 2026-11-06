@@ -8649,7 +8649,13 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'Kamu menyembunyikan komentar ini. Orang lain hanya melihatnya kalau mereka memilih untuk melihatnya.';
+      'Kamu menyembunyikan komentar ini di Divine. Aplikasi dan situs lain mungkin masih menampilkannya, jadi laporkan apa pun yang berbahaya.';
+
+  @override
+  String get commentHiddenReportPrompt => 'Mau melaporkan komentar ini juga?';
+
+  @override
+  String get commentHiddenReportAction => 'Laporkan';
 
   @override
   String get commentHiddenByCreator => 'Disembunyikan oleh kreator';

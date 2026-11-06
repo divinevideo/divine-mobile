@@ -8802,7 +8802,14 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'Itinago mo ang mga komentong ito. Makikita lang ito ng iba kung pipiliin nila.';
+      'Itinago mo ang mga komentong ito sa Divine. Puwede pa rin itong ipakita ng ibang app at site, kaya i-report ang anumang nakakapinsala.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Gusto mo rin bang i-report ang komentong ito?';
+
+  @override
+  String get commentHiddenReportAction => 'I-report';
 
   @override
   String get commentHiddenByCreator => 'Itinago ng creator';

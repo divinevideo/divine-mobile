@@ -8857,7 +8857,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'Du hast diese Kommentare ausgeblendet. Andere sehen sie nur, wenn sie das möchten.';
+      'Du hast diese Kommentare in Divine ausgeblendet. Andere Apps und Websites können sie weiter zeigen, also melde alles, was schadet.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Willst du den Kommentar auch melden?';
+
+  @override
+  String get commentHiddenReportAction => 'Melden';
 
   @override
   String get commentHiddenByCreator => 'Vom Creator ausgeblendet';

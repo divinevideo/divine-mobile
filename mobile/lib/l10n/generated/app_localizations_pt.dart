@@ -8822,7 +8822,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'Você ocultou estes comentários. As outras pessoas só os veem se escolherem ver.';
+      'Você ocultou estes comentários no Divine. Outros apps e sites ainda podem mostrá-los, então denuncie o que for prejudicial.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Quer denunciar este comentário também?';
+
+  @override
+  String get commentHiddenReportAction => 'Denunciar';
 
   @override
   String get commentHiddenByCreator => 'Oculto pelo criador';

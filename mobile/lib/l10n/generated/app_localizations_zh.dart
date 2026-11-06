@@ -8224,7 +8224,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commentsHiddenNotice => '创作者有意隐藏了这些评论。';
 
   @override
-  String get commentsHiddenNoticeOwner => '这些评论是你隐藏的。其他人只有在自己选择时才会看到。';
+  String get commentsHiddenNoticeOwner =>
+      '这些评论是你在 Divine 中隐藏的。其他应用和网站仍可能显示它们，如有有害内容请举报。';
+
+  @override
+  String get commentHiddenReportPrompt => '要同时举报这条评论吗？';
+
+  @override
+  String get commentHiddenReportAction => '举报';
 
   @override
   String get commentHiddenByCreator => '已被创作者隐藏';

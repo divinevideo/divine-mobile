@@ -8780,7 +8780,13 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'Je hebt deze reacties verborgen. Anderen zien ze alleen als ze daarvoor kiezen.';
+      'Je hebt deze reacties in Divine verborgen. Andere apps en sites kunnen ze nog tonen, dus meld alles wat schadelijk is.';
+
+  @override
+  String get commentHiddenReportPrompt => 'Wil je deze reactie ook melden?';
+
+  @override
+  String get commentHiddenReportAction => 'Melden';
 
   @override
   String get commentHiddenByCreator => 'Verborgen door de maker';

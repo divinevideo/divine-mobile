@@ -8734,7 +8734,14 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'Du har dolt de här kommentarerna. Andra ser dem bara om de väljer det.';
+      'Du har dolt de här kommentarerna i Divine. Andra appar och webbplatser kan fortfarande visa dem, så rapportera allt som är skadligt.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Vill du rapportera kommentaren också?';
+
+  @override
+  String get commentHiddenReportAction => 'Rapportera';
 
   @override
   String get commentHiddenByCreator => 'Dold av kreatören';

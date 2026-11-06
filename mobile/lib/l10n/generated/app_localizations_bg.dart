@@ -8821,7 +8821,14 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'Ти скри тези коментари. Другите ги виждат само ако сами изберат.';
+      'Ти скри тези коментари в Divine. Други приложения и сайтове може още да ги показват, затова докладвай всичко вредно.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'Искаш ли да докладваш и този коментар?';
+
+  @override
+  String get commentHiddenReportAction => 'Докладвай';
 
   @override
   String get commentHiddenByCreator => 'Скрит от създателя';

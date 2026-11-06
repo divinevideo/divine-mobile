@@ -8993,7 +8993,14 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'మీరు ఈ వ్యాఖ్యలను దాచారు. ఇతరులు ఎంచుకుంటేనే వాటిని చూస్తారు.';
+      'మీరు ఈ వ్యాఖ్యలను Divineలో దాచారు. ఇతర యాప్‌లు, సైట్‌లు వాటిని ఇంకా చూపించవచ్చు, కాబట్టి హానికరమైనదేదైనా నివేదించండి.';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'ఈ వ్యాఖ్యను కూడా నివేదించాలనుకుంటున్నారా?';
+
+  @override
+  String get commentHiddenReportAction => 'నివేదించు';
 
   @override
   String get commentHiddenByCreator => 'సృష్టికర్త దాచారు';

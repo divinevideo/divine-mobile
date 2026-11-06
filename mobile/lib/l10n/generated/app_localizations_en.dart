@@ -8838,7 +8838,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'You hid these comments. Others only see them if they choose to.';
+      'You hid these in Divine. Other apps and sites may still show them, so report anything harmful.';
+
+  @override
+  String get commentHiddenReportPrompt => 'Want to report this comment too?';
+
+  @override
+  String get commentHiddenReportAction => 'Report';
 
   @override
   String get commentHiddenByCreator => 'Hidden by the creator';

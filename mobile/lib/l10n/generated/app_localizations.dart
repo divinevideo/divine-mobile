@@ -14621,11 +14621,23 @@ abstract class AppLocalizations {
   /// **'The creator hid these comments on purpose.'**
   String get commentsHiddenNotice;
 
-  /// Short notice above the comments while the video owner looks at the comments they hid. Other viewers only see them by choosing to.
+  /// Short notice above the comments while the video owner looks at the comments they hid. Divine leaves them out for its viewers, but other apps and sites may still show them, so it points the owner to reporting what is harmful.
   ///
   /// In en, this message translates to:
-  /// **'You hid these comments. Others only see them if they choose to.'**
+  /// **'You hid these in Divine. Other apps and sites may still show them, so report anything harmful.'**
   String get commentsHiddenNoticeOwner;
+
+  /// Snackbar right after the video owner hid a comment, offering to report it as well, since hiding does not reach moderators.
+  ///
+  /// In en, this message translates to:
+  /// **'Want to report this comment too?'**
+  String get commentHiddenReportPrompt;
+
+  /// Action of that snackbar: opens the report form for the comment.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get commentHiddenReportAction;
 
   /// Small label on a comment the video owner hid, shown while a viewer has chosen to see hidden comments.
   ///

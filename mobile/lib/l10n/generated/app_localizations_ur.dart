@@ -8742,7 +8742,14 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get commentsHiddenNoticeOwner =>
-      'آپ نے یہ تبصرے چھپائے ہیں۔ دوسرے انہیں صرف تب دیکھتے ہیں جب وہ خود چاہیں۔';
+      'آپ نے یہ تبصرے Divine میں چھپائے ہیں۔ دوسری ایپس اور سائٹس انہیں اب بھی دکھا سکتی ہیں، اس لیے کوئی بھی نقصان دہ چیز رپورٹ کریں۔';
+
+  @override
+  String get commentHiddenReportPrompt =>
+      'کیا آپ اس تبصرے کو رپورٹ بھی کرنا چاہتے ہیں؟';
+
+  @override
+  String get commentHiddenReportAction => 'رپورٹ کریں';
 
   @override
   String get commentHiddenByCreator => 'کریئیٹر نے چھپایا';
