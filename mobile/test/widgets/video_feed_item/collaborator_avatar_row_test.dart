@@ -618,6 +618,34 @@ void main() {
       expect(sheetBottom - lastRowBottom, moreOrLessEquals(16));
     });
 
+    testWidgets('dragging a picker row down closes the picker', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          CollaboratorAvatarRowBody(
+            visibility: _allConfirmed(const [_collab1, _collab2]),
+          ),
+          overrides: [
+            fetchUserProfileProvider(
+              _collab1,
+            ).overrideWith((ref) async => _makeProfile(_collab1, 'Alice')),
+            fetchUserProfileProvider(
+              _collab2,
+            ).overrideWith((ref) async => _makeProfile(_collab2, 'Bob')),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(_l10n.videoCollaboratorWithMore('Alice', 1)));
+      await tester.pumpAndSettle();
+      expect(find.byType(VineBottomSheet), findsOneWidget);
+
+      await tester.drag(find.text('Bob'), const Offset(0, 400));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VineBottomSheet), findsNothing);
+    });
+
     testWidgets('expanded picker omits collaborator ignored by current user', (
       tester,
     ) async {

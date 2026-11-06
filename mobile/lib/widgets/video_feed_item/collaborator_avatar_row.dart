@@ -266,6 +266,9 @@ class _CollaboratorPickerList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
+      // Not primary, so rows that fit leave vertical drags to the sheet and a
+      // swipe down still closes it.
+      primary: false,
       shrinkWrap: true,
       padding: const EdgeInsets.only(bottom: 16),
       itemCount: pubkeys.length,
