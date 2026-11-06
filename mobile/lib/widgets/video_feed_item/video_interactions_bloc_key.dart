@@ -15,6 +15,7 @@ ValueKey<Object> videoInteractionsBlocKey({
     repostsRepository,
     video.stableId,
     video.addressableId,
+    video.eventKind,
     includeVideoReplies,
   ));
 }

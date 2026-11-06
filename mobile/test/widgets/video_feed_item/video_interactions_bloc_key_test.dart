@@ -51,6 +51,24 @@ void main() {
       expect(firstKey, isNot(equals(secondKey)));
     });
 
+    test('changes when a coordinate-less copy learns its kind', () {
+      final cachedKey = videoInteractionsBlocKey(
+        likesRepository: likesRepository,
+        commentsRepository: commentsRepository,
+        repostsRepository: repostsRepository,
+        video: _video(id: 'video-a'),
+      );
+      final relayKey = videoInteractionsBlocKey(
+        likesRepository: likesRepository,
+        commentsRepository: commentsRepository,
+        repostsRepository: repostsRepository,
+        video: _video(id: 'video-a', eventKind: 34236),
+      );
+
+      // The bloc captures the kind for the like's k tag (#6980).
+      expect(cachedKey, isNot(equals(relayKey)));
+    });
+
     testWidgets('does not keep fetched counts after feed cell reuse', (
       tester,
     ) async {
@@ -161,12 +179,13 @@ class _InteractionHost extends StatelessWidget {
   }
 }
 
-VideoEvent _video({required String id}) {
+VideoEvent _video({required String id, int? eventKind}) {
   return VideoEvent(
     id: id,
     pubkey: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
     createdAt: 1757385263,
     content: 'Test video',
     timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
+    eventKind: eventKind,
   );
 }
