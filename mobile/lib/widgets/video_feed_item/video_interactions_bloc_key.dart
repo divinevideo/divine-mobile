@@ -10,17 +10,23 @@ ValueKey<Object> videoInteractionsBlocKey({
   required VideoEvent video,
   bool includeVideoReplies = false,
 }) {
+  final likeTargetKind = VideoInteractionsBloc.likeTargetKindFor(
+    addressableId: video.addressableId,
+    eventKind: video.eventKind,
+  );
   return ValueKey((
     likesRepository,
     commentsRepository,
     repostsRepository,
     video.stableId,
     video.addressableId,
-    // The bloc captures this kind for the like's k tag (#6980).
-    VideoInteractionsBloc.likeTargetKindFor(
-      addressableId: video.addressableId,
-      eventKind: video.eventKind,
-    ),
+    // The bloc captures this kind for the like's k tag (#6980). A regular
+    // kind stays out: its k is optional (NIP-25), and rebuilding when a copy
+    // learns it would drop an in-flight like or repost.
+    likeTargetKind == NIP71VideoKinds.shortVideo ||
+            likeTargetKind == NIP71VideoKinds.normalVideo
+        ? null
+        : likeTargetKind,
     includeVideoReplies,
   ));
 }

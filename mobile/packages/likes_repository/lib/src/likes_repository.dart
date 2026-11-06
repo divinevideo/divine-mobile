@@ -380,7 +380,34 @@ class LikesRepository {
     final byId = _downvoteRecords[eventId];
     if (byId != null) return byId;
     if (addressableId == null || addressableId.isEmpty) return null;
-    return _downvoteRecordsByAddressableId[addressableId];
+    return _recordForCoordinate(_downvoteRecordsByAddressableId, addressableId);
+  }
+
+  /// The like record for [addressableId], or for its legacy `34236:` key
+  /// (#10776): Divine stored likes of a Kind 34235 video under that key.
+  LikeRecord? _likeRecordForCoordinate(String addressableId) =>
+      _recordForCoordinate(_likeRecordsByAddressableId, addressableId);
+
+  static LikeRecord? _recordForCoordinate(
+    Map<String, LikeRecord> byCoordinate,
+    String addressableId,
+  ) {
+    final legacy = legacyVideoCoordinateFor(addressableId);
+    return byCoordinate[addressableId] ??
+        (legacy == null ? null : byCoordinate[legacy]);
+  }
+
+  /// The stored like record for [addressableId], or for its legacy key.
+  static Future<LikeRecord?> _storedLikeRecordForCoordinate(
+    LikesLocalStorage localStorage,
+    String addressableId,
+  ) async {
+    final stored = await localStorage.getLikeRecordByAddressableId(
+      addressableId,
+    );
+    final legacy = legacyVideoCoordinateFor(addressableId);
+    if (stored != null || legacy == null) return stored;
+    return localStorage.getLikeRecordByAddressableId(legacy);
   }
 
   /// Emits the current liked event IDs ordered by recency (most recent
@@ -478,7 +505,7 @@ class LikesRepository {
   /// the edit, even though [isLiked] with the new event id would miss.
   Future<LikeRecord?> getLikeRecordByCoordinate(String addressableId) async {
     await _ensureInitialized();
-    return _likeRecordsByAddressableId[addressableId];
+    return _likeRecordForCoordinate(addressableId);
   }
 
   /// Check if a specific addressable coordinate is liked.
@@ -728,7 +755,7 @@ class LikesRepository {
     final alreadyLikedByCoordinate =
         addressableId != null &&
         addressableId.isNotEmpty &&
-        _likeRecordsByAddressableId.containsKey(addressableId);
+        _likeRecordForCoordinate(addressableId) != null;
     if (_likeRecords.containsKey(eventId) || alreadyLikedByCoordinate) {
       throw AlreadyLikedException(eventId);
     }
@@ -1145,7 +1172,7 @@ class LikesRepository {
     final unconfirmed = _unconfirmedLikeReplays.remove(eventId);
 
     if (addressableId != null && addressableId.isNotEmpty) {
-      final byCoordinate = _likeRecordsByAddressableId[addressableId];
+      final byCoordinate = _likeRecordForCoordinate(addressableId);
       final ownReactionEventId = _likeRecords[eventId]?.reactionEventId;
       if (byCoordinate != null &&
           byCoordinate.reactionEventId != ownReactionEventId) {
@@ -1369,7 +1396,7 @@ class LikesRepository {
     // different (pre-edit) event id than the one the caller passed in.
     var record = _likeRecords[eventId];
     if (record == null && addressableId != null && addressableId.isNotEmpty) {
-      record = _likeRecordsByAddressableId[addressableId];
+      record = _likeRecordForCoordinate(addressableId);
     }
     final localStorage = _localStorage;
     if (record == null && localStorage != null) {
@@ -1378,7 +1405,7 @@ class LikesRepository {
           final stored = await localStorage.getLikeRecord(eventId);
           if (stored != null) return stored;
           if (addressableId == null || addressableId.isEmpty) return null;
-          return localStorage.getLikeRecordByAddressableId(addressableId);
+          return _storedLikeRecordForCoordinate(localStorage, addressableId);
         },
         description: 'reading the like record',
         site: LikesRepositoryReportableSites.unlikeEventReadRecord,
@@ -1564,12 +1591,13 @@ class LikesRepository {
     // Try to get the record - it may not exist if the like was also offline
     var record = _likeRecords[eventId];
     if (record == null && addressableId != null && addressableId.isNotEmpty) {
-      record = _likeRecordsByAddressableId[addressableId];
+      record = _likeRecordForCoordinate(addressableId);
     }
     if (record == null && _localStorage != null) {
       record = await _localStorage.getLikeRecord(eventId);
       if (record == null && addressableId != null && addressableId.isNotEmpty) {
-        record = await _localStorage.getLikeRecordByAddressableId(
+        record = await _storedLikeRecordForCoordinate(
+          _localStorage,
           addressableId,
         );
       }
@@ -1668,7 +1696,7 @@ class LikesRepository {
     final likedByCoordinate =
         addressableId != null &&
         addressableId.isNotEmpty &&
-        _likeRecordsByAddressableId.containsKey(addressableId);
+        _likeRecordForCoordinate(addressableId) != null;
     final isCurrentlyLiked = likedByEventId || likedByCoordinate;
 
     if (isCurrentlyLiked) {
@@ -2010,6 +2038,10 @@ class LikesRepository {
       final coordinate = addressableIds[eventId];
       if (coordinate != null && coordinate.isNotEmpty) {
         byCoordinate[coordinate] = eventId;
+        // Divine tagged votes on a Kind 34235 video with this key (#10776).
+        // A real coordinate keeps its entry over an alias.
+        final legacy = legacyVideoCoordinateFor(coordinate);
+        if (legacy != null) byCoordinate.putIfAbsent(legacy, () => eventId);
       }
     }
     return byCoordinate;
@@ -2689,9 +2721,16 @@ class LikesRepository {
     if (eventIds.isEmpty) return const {};
 
     final eventIdSet = eventIds.toSet();
-    final aTagToEventId = <String, String>{
+    final coordinates = {
       for (final entry in (addressableIds ?? const <String, String>{}).entries)
-        if (entry.value.isNotEmpty) entry.value: entry.key,
+        if (entry.value.isNotEmpty) entry.key: entry.value,
+    };
+    final aTagToEventId = <String, String>{
+      // Divine tagged likes of a Kind 34235 video with its legacy key
+      // (#10776). Real coordinates come after, so one wins over an alias.
+      for (final entry in coordinates.entries)
+        ?legacyVideoCoordinateFor(entry.value): entry.key,
+      for (final entry in coordinates.entries) entry.value: entry.key,
     };
 
     final eEventsFuture = _queryReactionsByEventIds(eventIds);
@@ -3412,7 +3451,7 @@ class LikesRepository {
         byEventId != null && !_isPlaceholderId(byEventId.reactionEventId)
         ? byEventId
         : hasCoordinate
-        ? _likeRecordsByAddressableId[addressableId]
+        ? _likeRecordForCoordinate(addressableId)
         : null;
     if (indexed == null || _isPlaceholderId(indexed.reactionEventId)) {
       return null;
