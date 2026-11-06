@@ -2,6 +2,19 @@
 // ABOUTME: Applied to every ProfileFeedCubit emit so no path drops the pins.
 
 import 'package:models/models.dart';
+import 'package:nostr_sdk/aid.dart' show legacyVideoCoordinateFor;
+
+/// The coordinate a pin names a video by.
+extension PinCoordinate on VideoEvent {
+  /// [VideoEvent.addressableId], except for a Kind 34235 video, which keeps
+  /// the `34236:` key pins have always used (#10776): the pin list is a
+  /// Divine extension that Divine Web reads as kind-34236 coordinates.
+  String? get pinCoordinate {
+    final coordinate = addressableId;
+    if (coordinate == null) return null;
+    return legacyVideoCoordinateFor(coordinate) ?? coordinate;
+  }
+}
 
 /// Moves the videos named by [pinnedCoordinates] to the front of [base],
 /// in stored pin order, followed by the rest of [base] in its own order.
@@ -21,7 +34,7 @@ List<VideoEvent> overlayPinnedVideos({
 
   final byCoordinate = <String, VideoEvent>{};
   for (final video in base) {
-    final coordinate = video.addressableId;
+    final coordinate = video.pinCoordinate;
     if (coordinate != null) byCoordinate.putIfAbsent(coordinate, () => video);
   }
 
@@ -35,6 +48,6 @@ List<VideoEvent> overlayPinnedVideos({
 
   return [
     ...pinned,
-    ...base.where((video) => !pinnedSet.contains(video.addressableId)),
+    ...base.where((video) => !pinnedSet.contains(video.pinCoordinate)),
   ];
 }
