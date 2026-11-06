@@ -30,8 +30,12 @@ class CommentModeration extends Equatable {
   /// The [keyOf] each comment the owner hid one by one.
   final Set<String> hiddenCommentIds;
 
-  /// The [keyOf] each comment the owner restored although its author is
+  /// The event id of each comment the owner restored although its author is
   /// auto-hidden.
+  ///
+  /// By event id, unlike a hide: a restore approves one version, so a video
+  /// reply its author replaces under the same address is hidden again until
+  /// the owner shows the new version.
   final Set<String> restoredCommentIds;
 
   /// Commenters whose comments are hidden on all of the owner's videos.
@@ -42,9 +46,8 @@ class CommentModeration extends Equatable {
   /// A restore wins over a hide, and a hide over an auto-hidden commenter, so
   /// the owner can keep one comment from someone they otherwise hide.
   bool hides(Comment comment) {
-    final keys = _keysOf(comment);
-    if (keys.any(restoredCommentIds.contains)) return false;
-    if (keys.any(hiddenCommentIds.contains)) return true;
+    if (restoredCommentIds.contains(comment.id.toLowerCase())) return false;
+    if (_keysOf(comment).any(hiddenCommentIds.contains)) return true;
     return autoHiddenAuthors.contains(comment.authorPubkey);
   }
 
@@ -66,7 +69,7 @@ class CommentModeration extends Equatable {
     final keys = _keysOf(comment);
     final restored = {...restoredCommentIds}..removeAll(keys);
     if (autoHiddenAuthors.contains(comment.authorPubkey)) {
-      restored.add(keyOf(comment));
+      restored.add(comment.id.toLowerCase());
     }
     return CommentModeration(
       hiddenCommentIds: {...hiddenCommentIds}..removeAll(keys),

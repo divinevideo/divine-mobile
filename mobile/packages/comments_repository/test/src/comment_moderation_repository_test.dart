@@ -619,6 +619,28 @@ void main() {
 
         expect(publishedEvent().tags.skip(2), isEmpty);
       });
+
+      test('restores one version of a video reply by its event id', () async {
+        answerReads([
+          _moderationEvent(
+            identifier: _videoIdentifier,
+            tags: [
+              ['a', _videoReplyAddress, '', 'hidden'],
+            ],
+          ),
+        ]);
+        answerPublishes();
+
+        await repository.restoreComment(
+          rootAddressableId: _coordinate,
+          comment: _comment(_commentA, addressableId: _videoReplyAddress),
+          authorAutoHidden: true,
+        );
+
+        expect(publishedEvent().tags.skip(2), [
+          ['e', _commentA, '', 'restored'],
+        ]);
+      });
     });
 
     group('updateAutoHiddenAuthors', () {

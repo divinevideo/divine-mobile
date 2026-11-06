@@ -547,8 +547,10 @@ class VideoResponsesRepository {
     final restored = {...latest.restoredIds}
       ..addAll(curation.restoredIds.difference(previous.restoredIds))
       ..removeAll(previous.restoredIds.difference(curation.restoredIds));
-    // Hiding a reply takes back its restored mark, and showing it again the
-    // hide, also when the other mark came from another device.
+    // Hiding a reply takes back its restored mark, and showing it again a
+    // hide by the same key, also when the other mark came from another
+    // device. A hide by address stays; the restore of one version wins over
+    // it until the reply is replaced.
     hidden.removeAll(curation.restoredIds.difference(previous.restoredIds));
     restored.removeAll(curation.hiddenIds.difference(previous.hiddenIds));
     final pinChanged = curation.pinnedId != previous.pinnedId;

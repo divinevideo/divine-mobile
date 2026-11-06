@@ -2113,23 +2113,27 @@ void main() {
         final previous = RepliesCuration(hiddenAuthors: {_viewer});
 
         final reconciled = await repository().saveCuration(
-          previous.shown(key, authorHidden: true),
+          previous.shown(key, restoredEventId: _hex(201)),
           videoAddress: _rootAddress,
           previous: previous,
         );
 
+        // The restore names the version shown, so it wins over the hide of
+        // the address only until the reply is replaced.
         expect(
           reconciled,
           RepliesCuration(
-            restoredIds: {key, _hex(202)},
+            hiddenIds: {key},
+            restoredIds: {_hex(201), _hex(202)},
             hiddenAuthors: {_viewer},
           ),
         );
         expect(signed.single.tags, [
           ['d', RepliesCuration.dTagFor(_rootAddress)],
           ['a', _rootAddress],
+          ['a', key, '', 'hidden'],
           ['e', _hex(202), '', 'restored'],
-          ['a', key, '', 'restored'],
+          ['e', _hex(201), '', 'restored'],
         ]);
       });
 
@@ -2488,7 +2492,7 @@ void main() {
         _video(id: 203, createdAt: 700, pubkey: _hex(5)),
       );
       final curation = RepliesCuration(
-        restoredIds: {RepliesCuration.keyOf(restored)},
+        restoredIds: {restored.id},
         hiddenAuthors: {_viewer},
       );
 
@@ -2502,26 +2506,46 @@ void main() {
       expect(curation.hidden(_hex(203)).hides(other), isTrue);
     });
 
+    test('hides again a shown reply its author replaced', () {
+      final shownVersion = VideoEvent.fromNostrEvent(
+        _video(id: 201, createdAt: 900, dTag: 'reply-201'),
+      );
+      final replacement = VideoEvent.fromNostrEvent(
+        _video(id: 301, createdAt: 1200, dTag: 'reply-201'),
+      );
+      final curation =
+          RepliesCuration(
+            hiddenAuthors: {_viewer},
+          ).shown(
+            RepliesCuration.keyOf(shownVersion),
+            restoredEventId: shownVersion.id,
+          );
+
+      expect(curation.hides(shownVersion), isFalse);
+      expect(curation.hides(replacement), isTrue);
+    });
+
     test('hides and shows a reply of a hidden author', () {
       final curation = RepliesCuration(
         pinnedId: _hex(201),
         hiddenAuthors: {_viewer},
       );
 
-      final shown = curation.shown(_hex(202), authorHidden: true);
+      final address = '34236:$_viewer:reply-202';
+      final shown = curation.shown(address, restoredEventId: _hex(202));
       expect(shown.restoredIds, equals({_hex(202)}));
       expect(shown.hiddenAuthors, equals({_viewer}));
-      final hidden = shown.hidden(_hex(202));
+      final hidden = shown.hidden(address, eventId: _hex(202));
       expect(hidden.restoredIds, isEmpty);
-      expect(hidden.hiddenIds, equals({_hex(202)}));
-      expect(hidden.shown(_hex(202)).restoredIds, isEmpty);
-      expect(hidden.pinned(_hex(202)).hiddenAuthors, equals({_viewer}));
-      expect(hidden.pinned(_hex(202)).restoredIds, isEmpty);
+      expect(hidden.hiddenIds, equals({address}));
+      expect(hidden.shown(address).restoredIds, isEmpty);
+      expect(hidden.pinned(address).hiddenAuthors, equals({_viewer}));
+      expect(hidden.pinned(address).restoredIds, isEmpty);
       // Pinning shows the reply, also one whose author is hidden.
-      final pinned = curation.pinned(_hex(203), authorHidden: true);
+      final pinned = curation.pinned(_hex(203), restoredEventId: _hex(203));
       expect(pinned.pinnedId, equals(_hex(203)));
       expect(pinned.restoredIds, equals({_hex(203)}));
-      expect(pinned.pinned(null, authorHidden: true).restoredIds, {_hex(203)});
+      expect(pinned.pinned(null).restoredIds, {_hex(203)});
       expect(
         const RepliesCuration().withHiddenAuthors({_viewer}).hiddenAuthors,
         equals({_viewer}),

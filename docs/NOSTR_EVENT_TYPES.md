@@ -176,7 +176,8 @@ one of their videos, and the ones they hid
 - The same event holds the creator's decisions about comments (kind 1111) on
   the video (#5044): `["e", "<comment id>", "", "hidden"]`, and `restored` in
   place of `hidden` for a comment kept although its author is auto-hidden
-  (below). The comments sheet leaves hidden comments and video replies out
+  (below). A restore always names the event id, also for a video reply, so
+  a reply its author replaces under the same address is hidden again. The comments sheet leaves hidden comments and video replies out
   until the viewer chooses to see them; their authors always see their own.
   Read and published by `CommentModerationRepository` in
   `mobile/packages/comments_repository`. Both writers keep the tags the other

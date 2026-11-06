@@ -202,7 +202,12 @@ class CommentModerationRepository {
             !_isVideoAssociation(tag, rootAddressableId) &&
             !_isModerationOf(tag, keys))
           tag,
-      if (marker != null) _entry(CommentModeration.keyOf(comment), marker),
+      if (marker == _restoredMarker)
+        // One version only: a replacement under the same address is hidden
+        // again.
+        _entry(comment.id.toLowerCase(), _restoredMarker)
+      else if (marker != null)
+        _entry(CommentModeration.keyOf(comment), marker),
     ]);
   }
 

@@ -81,7 +81,7 @@ class VideoRepliesCubit extends Cubit<VideoRepliesState>
     final curation = state.curation;
     if (curation.pinnedId == replyKey) return _save(curation.pinned(null));
     return _save(
-      curation.pinned(replyKey, authorHidden: _isAuthorHidden(replyKey)),
+      curation.pinned(replyKey, restoredEventId: _approvedVersion(replyKey)),
     );
   }
 
@@ -91,14 +91,16 @@ class VideoRepliesCubit extends Cubit<VideoRepliesState>
   Future<void> hideToggled(String replyKey) {
     final curation = state.curation;
     final reply = _replyOf(replyKey);
-    final authorHidden = _isAuthorHidden(replyKey);
     final hidden = reply == null
         ? curation.hiddenIds.contains(replyKey)
         : curation.hides(reply);
     return _save(
       hidden
-          ? curation.shown(replyKey, authorHidden: authorHidden)
-          : curation.hidden(replyKey),
+          ? curation.shown(
+              replyKey,
+              restoredEventId: _approvedVersion(replyKey),
+            )
+          : curation.hidden(replyKey, eventId: reply?.id),
     );
   }
 
@@ -106,10 +108,15 @@ class VideoRepliesCubit extends Cubit<VideoRepliesState>
       .where((reply) => RepliesCuration.keyOf(reply) == replyKey)
       .firstOrNull;
 
-  /// Whether the creator blocked the author of the reply [replyKey] names.
-  bool _isAuthorHidden(String replyKey) {
+  /// The event id of the version of the reply [replyKey] names that showing
+  /// or pinning it approves, when the creator blocked its author; `null`
+  /// otherwise, as it then needs no approval.
+  String? _approvedVersion(String replyKey) {
     final reply = _replyOf(replyKey);
-    return reply != null && state.curation.hiddenAuthors.contains(reply.pubkey);
+    if (reply == null) return null;
+    return state.curation.hiddenAuthors.contains(reply.pubkey)
+        ? reply.id
+        : null;
   }
 
   Future<void> _save(RepliesCuration curation) async {

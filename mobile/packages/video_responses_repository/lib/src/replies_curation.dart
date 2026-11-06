@@ -111,8 +111,12 @@ class RepliesCuration extends Equatable {
   /// The [keyOf] each hidden reply.
   final Set<String> hiddenIds;
 
-  /// The [keyOf] each reply shown although its author is among
+  /// The event id of each reply shown although its author is among
   /// [hiddenAuthors].
+  ///
+  /// By event id, unlike a pin or a hide: showing a reply approves that
+  /// version, so one its author replaces under the same address is hidden
+  /// again until the creator shows it.
   final Set<String> restoredIds;
 
   /// The accounts whose replies the creator hides on all their videos: those
@@ -123,42 +127,43 @@ class RepliesCuration extends Equatable {
   /// Whether viewers do not see [reply]: the creator hid it, or hid its
   /// author and did not show it again.
   bool hides(VideoEvent reply) {
-    bool marks(Set<String> ids) =>
-        ids.contains(keyOf(reply)) || ids.contains(reply.id);
-    if (marks(restoredIds)) return false;
-    return marks(hiddenIds) || hiddenAuthors.contains(reply.pubkey);
+    if (restoredIds.contains(reply.id)) return false;
+    return hiddenIds.contains(keyOf(reply)) ||
+        hiddenIds.contains(reply.id) ||
+        hiddenAuthors.contains(reply.pubkey);
   }
 
   /// This curation with [replyId] pinned to the front instead, shown again
-  /// when it was hidden, and marked `restored` when [authorHidden], since its
-  /// author's replies are hidden otherwise; `null` pins none.
-  RepliesCuration pinned(String? replyId, {bool authorHidden = false}) =>
+  /// when it was hidden; `null` pins none. [restoredEventId], the version the
+  /// creator approves, is marked `restored` when the reply's author is among
+  /// [hiddenAuthors].
+  RepliesCuration pinned(String? replyId, {String? restoredEventId}) =>
       RepliesCuration(
         pinnedId: replyId,
         hiddenIds: {...hiddenIds}..remove(replyId),
-        restoredIds: authorHidden && replyId != null
-            ? {...restoredIds, replyId}
-            : restoredIds,
+        restoredIds: {...restoredIds, ?restoredEventId},
         hiddenAuthors: hiddenAuthors,
       );
 
-  /// This curation with [replyId] hidden, and no longer pinned.
-  RepliesCuration hidden(String replyId) => RepliesCuration(
+  /// This curation with [replyId] hidden, no longer pinned, and the version
+  /// [eventId] names no longer restored.
+  RepliesCuration hidden(String replyId, {String? eventId}) => RepliesCuration(
     pinnedId: pinnedId == replyId ? null : pinnedId,
     hiddenIds: {...hiddenIds, replyId},
-    restoredIds: {...restoredIds}..remove(replyId),
+    restoredIds: {...restoredIds}
+      ..remove(replyId)
+      ..remove(eventId),
     hiddenAuthors: hiddenAuthors,
   );
 
-  /// This curation with [replyId] shown again; marked `restored` when
-  /// [authorHidden], since its author's replies are hidden otherwise.
-  RepliesCuration shown(String replyId, {bool authorHidden = false}) =>
+  /// This curation with [replyId] shown again. [restoredEventId], the
+  /// version the creator approves, is marked `restored` when the reply's
+  /// author is among [hiddenAuthors].
+  RepliesCuration shown(String replyId, {String? restoredEventId}) =>
       RepliesCuration(
         pinnedId: pinnedId,
         hiddenIds: {...hiddenIds}..remove(replyId),
-        restoredIds: authorHidden
-            ? {...restoredIds, replyId}
-            : ({...restoredIds}..remove(replyId)),
+        restoredIds: {...restoredIds, ?restoredEventId},
         hiddenAuthors: hiddenAuthors,
       );
 

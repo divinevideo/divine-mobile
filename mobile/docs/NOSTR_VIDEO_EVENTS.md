@@ -351,9 +351,10 @@ then show the sticker only as it is in the frames.
   one replaces the one before. The replies of the accounts the creator
   blocked are hidden too: they are named in the creator's
   `["d", "divine:hidden-commenters"]` event (see `docs/NOSTR_EVENT_TYPES.md`),
-  and one the creator shows again in the list is marked `restored` instead of
-  `hidden`. Viewers see the pinned reply first and none of the hidden ones, on
-  the sticker and in the feed.
+  and one the creator shows or pins in the list is marked `restored` by its
+  event id, so a version its author replaces is hidden again. Viewers see
+  the pinned reply first and none of the hidden ones, on the sticker and in
+  the feed.
 
 Funnelcake counts both and returns the latest
 (`GET /api/videos/{id}/responses?type=replies|joined&tag=<hashtag>`). For

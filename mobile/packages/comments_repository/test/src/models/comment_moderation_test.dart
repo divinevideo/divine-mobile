@@ -148,6 +148,27 @@ void main() {
         expect(restored.restoredCommentIds, equals({'c1'}));
         expect(restored.hides(_comment('c2')), isTrue);
       });
+
+      test('approves one version of a video reply, not its address', () {
+        const moderation = CommentModeration(
+          autoHiddenAuthors: {_authorPubkey},
+        );
+
+        final restored = moderation.restore(
+          _comment('v1', addressableId: _replyAddress),
+        );
+
+        expect(restored.restoredCommentIds, equals({'v1'}));
+        expect(
+          restored.hides(_comment('v1', addressableId: _replyAddress)),
+          isFalse,
+        );
+        // Its author replaced it under the same address.
+        expect(
+          restored.hides(_comment('v2', addressableId: _replyAddress)),
+          isTrue,
+        );
+      });
     });
 
     group('withAutoHiddenAuthors', () {

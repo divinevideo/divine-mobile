@@ -16,6 +16,17 @@ String _hex(int n) => n.toRadixString(16).padLeft(64, '0');
 final String _creator = _hex(1);
 final String _address = '34236:$_creator:root-d';
 
+/// A reply published at an address, which its author can replace.
+final VideoEvent _addressableReply = VideoEvent(
+  id: _hex(9),
+  pubkey: _hex(1009),
+  createdAt: 991,
+  content: '',
+  timestamp: DateTime.fromMillisecondsSinceEpoch(0),
+  vineId: 'reply-d',
+  addressableDTag: 'reply-d',
+);
+
 VideoEvent _reply(int id) => VideoEvent(
   id: _hex(id),
   pubkey: _hex(1000 + id),
@@ -283,6 +294,29 @@ void main() {
           loaded.copyWith(curation: RepliesCuration(hiddenIds: {_hex(1)})),
           loaded.copyWith(saveStatus: VideoRepliesSaveStatus.saving),
           loaded,
+        ],
+      );
+
+      blocTest<VideoRepliesCubit, VideoRepliesState>(
+        'approves the version shown of an addressable reply, not its address',
+        build: build,
+        seed: () => VideoRepliesState(
+          status: VideoRepliesStatus.loaded,
+          replies: [_addressableReply],
+          curation: RepliesCuration(hiddenAuthors: {_hex(1009)}),
+        ),
+        act: (cubit) =>
+            cubit.hideToggled(RepliesCuration.keyOf(_addressableReply)),
+        skip: 1,
+        expect: () => [
+          VideoRepliesState(
+            status: VideoRepliesStatus.loaded,
+            replies: [_addressableReply],
+            curation: RepliesCuration(
+              restoredIds: {_hex(9)},
+              hiddenAuthors: {_hex(1009)},
+            ),
+          ),
         ],
       );
 
