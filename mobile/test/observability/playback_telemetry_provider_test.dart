@@ -97,6 +97,71 @@ void main() {
   tearDown(() => FeedPlaybackTelemetry.configure(enabled: false));
 
   group('playbackTelemetryProvider', () {
+    for (final finishAfterPause in [true, false]) {
+      testWidgets(
+        'pause cancels an active attempt with later finish=$finishAfterPause',
+        (tester) async {
+          final requests = <http.Request>[];
+          final fixture = _DeliveryFixture((request) async {
+            requests.add(request);
+            return http.Response('{"accepted":true}', 202);
+          });
+          addTearDown(fixture.dispose);
+          final timer = FeedFirstFrameMetrics.start(
+            videoId: 'synthetic',
+            index: 0,
+          );
+          fixture.ownership.pause();
+          if (finishAfterPause) {
+            timer.finish(outcome: FeedPlaybackOutcome.cancelled);
+          }
+          await tester.pump();
+          await tester.pump();
+          expect(requests, hasLength(1));
+          final events =
+              (jsonDecode(requests.single.body) as Map)['events'] as List;
+          expect(events, hasLength(1));
+          expect(events.single['outcome'], 'cancelled');
+          fixture.ownership.resume();
+          await tester.pump();
+          fixture.event();
+          fixture.ownership.pause();
+          await tester.pump();
+          await tester.pump();
+          expect(requests, hasLength(2));
+          final resumed =
+              (jsonDecode(requests.last.body) as Map)['events'] as List;
+          expect(resumed, hasLength(1));
+          expect(
+            resumed.single['attempt_id'],
+            isNot(events.single['attempt_id']),
+          );
+          fixture.ownership.close();
+          fixture.container.dispose();
+        },
+      );
+    }
+
+    testWidgets('privacy reset before pause drops active old attempts', (
+      tester,
+    ) async {
+      final requests = <http.Request>[];
+      final fixture = _DeliveryFixture((request) async {
+        requests.add(request);
+        return http.Response('{"accepted":true}', 202);
+      });
+      addTearDown(fixture.dispose);
+      final timer = FeedFirstFrameMetrics.start(videoId: 'synthetic', index: 0);
+      fixture.changes.add(null);
+      fixture.ownership.pause();
+      timer.finish(outcome: FeedPlaybackOutcome.cancelled);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 60));
+      expect(requests, isEmpty);
+      fixture.ownership.close();
+      fixture.container.dispose();
+    });
+
     testWidgets('resume after an idle pause creates a fresh owned client', (
       tester,
     ) async {
@@ -320,6 +385,9 @@ void main() {
     test(
       'off-cohort feeds do not construct analytics or HTTP dependencies',
       () {
+        final events = <Map<String, Object?>>[];
+        final subscription = FeedPlaybackTelemetry.events.listen(events.add);
+        addTearDown(subscription.cancel);
         final container = ProviderContainer(
           overrides: [
             isFeatureEnabledProvider(FeatureFlag.b2PlaybackCanary)
@@ -341,6 +409,13 @@ void main() {
           returnsNormally,
         );
         expect(FeedPlaybackTelemetry.startLoad(), isNull);
+        final timer = FeedFirstFrameMetrics.start(
+          videoId: 'synthetic',
+          index: 0,
+        );
+        FeedFirstFrameMetrics.cancelActivePlaybackAttempts();
+        timer.finish(outcome: FeedPlaybackOutcome.cancelled);
+        expect(events, isEmpty);
       },
     );
 

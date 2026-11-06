@@ -47,9 +47,20 @@ abstract final class FeedFirstFrameMetrics {
   static final _controller = StreamController<FeedFirstFrameMetric>.broadcast(
     sync: true,
   );
+  static final _activePlaybackAttempts = <FeedFirstFrameTimer>{};
 
   /// Completed measurements from every mounted fullscreen feed widget.
   static Stream<FeedFirstFrameMetric> get events => _controller.stream;
+
+  /// Ends active operational attempts before ordinary collection suspension.
+  ///
+  /// Success measurements remain available for a later actual first frame.
+  /// Privacy withdrawal must invalidate telemetry instead of calling this.
+  static void cancelActivePlaybackAttempts() {
+    for (final timer in _activePlaybackAttempts.toList()) {
+      timer.finish(outcome: FeedPlaybackOutcome.cancelled);
+    }
+  }
 
   /// Starts a monotonic measurement for one active feed item.
   static FeedFirstFrameTimer start({
@@ -81,6 +92,7 @@ class FeedFirstFrameTimer {
     : _stopwatch = Stopwatch()..start(),
       _attempt = FeedPlaybackTelemetry.startAttempt() {
     if (_attempt != null) {
+      FeedFirstFrameMetrics._activePlaybackAttempts.add(this);
       _timeout = Timer(const Duration(seconds: 60), () {
         finish(
           outcome: FeedPlaybackOutcome.noFrame,
@@ -115,6 +127,7 @@ class FeedFirstFrameTimer {
     String localCache = 'unknown',
   }) {
     _timeout?.cancel();
+    FeedFirstFrameMetrics._activePlaybackAttempts.remove(this);
     _attempt?.finish(
       outcome: outcome,
       elapsed: _stopwatch.elapsed,

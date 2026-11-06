@@ -56,6 +56,10 @@ class PlaybackTelemetryQueue {
 
   /// Navigation ends correlation, not consent for already collected rows.
   void setCollecting(bool collecting) {
+    if (!collecting && _collecting) {
+      // Emit cancellations while the current context can still enqueue them.
+      FeedFirstFrameMetrics.cancelActivePlaybackAttempts();
+    }
     _collecting = collecting;
     _changingCollection = true;
     try {
