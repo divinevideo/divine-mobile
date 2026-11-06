@@ -52,7 +52,10 @@ class ListAuthorByline extends ConsumerWidget {
     return Semantics(
       button: true,
       label: l10n.listByAuthor(name),
+      // excludeSemantics drops the GestureDetector's own tap action, so the
+      // row has to carry it for a screen reader to open the author.
       excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
