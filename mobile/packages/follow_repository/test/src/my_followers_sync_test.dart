@@ -921,6 +921,49 @@ void main() {
       });
     });
 
+    group('watchMyFollowersCached mid-fetch boundary', () {
+      Future<List<CacheResult<FollowersSnapshot>>> resultsAcross(
+        Future<void> Function() midFetch,
+      ) async {
+        await CacheSync.init(dao: FakeCacheDao());
+        final started = Completer<void>();
+        final response = Completer<List<Event>>();
+        when(() => client.queryEvents(any())).thenAnswer((_) {
+          if (!started.isCompleted) started.complete();
+          return response.future;
+        });
+        final results = <CacheResult<FollowersSnapshot>>[];
+        final done = Completer<void>();
+        repository.watchMyFollowersCached().listen(
+          results.add,
+          onDone: done.complete,
+        );
+        await started.future;
+        await midFetch();
+        response.complete([contact(second, 200)]);
+        await done.future;
+        return results;
+      }
+
+      test('emits the live result when nothing changes', () async {
+        final results = await resultsAcross(() async {});
+        expect(results.single.isLive, isTrue);
+        expect(results.single.data.pubkeys, [second]);
+      });
+
+      test('drops the live result once the account switches', () async {
+        final results = await resultsAcross(() async {
+          when(() => client.publicKey).thenReturn(otherOwner);
+        });
+        expect(results, isEmpty);
+      });
+
+      test('drops the live result once the repository is disposed', () async {
+        final results = await resultsAcross(repository.dispose);
+        expect(results, isEmpty);
+      });
+    });
+
     test('partial source failure merges instead of replacing', () async {
       dao.rows[owner] = {stale: 50};
       when(() => api.isAvailable).thenReturn(true);
