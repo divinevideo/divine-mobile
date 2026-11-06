@@ -230,7 +230,11 @@ class _ReactorRow extends ConsumerWidget {
           context.l10n.dmReactionChipUnconfirmedA11yLabel(reaction.emoji),
         DmReactionPublishStatus.removalRefused =>
           context.l10n.dmReactionRemovalRefusedA11yLabel(reaction.emoji),
-        _ => context.l10n.dmReactionChipOwnA11yLabel(reaction.emoji),
+        // An own `received` row came from another device or a re-sync.
+        DmReactionPublishStatus.sent ||
+        DmReactionPublishStatus.blocked ||
+        DmReactionPublishStatus.received =>
+          context.l10n.dmReactionChipOwnA11yLabel(reaction.emoji),
       };
     }
     return Semantics(
