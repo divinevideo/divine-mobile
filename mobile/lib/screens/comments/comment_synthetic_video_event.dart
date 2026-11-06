@@ -21,7 +21,7 @@ extension CommentSyntheticVideoEventX on Comment {
       vineId: ownCoordinate?.dTag,
       addressableDTag: ownCoordinate?.dTag,
       // Retain a known addressable kind even if its coordinate is missing,
-      // so the like writer can name the kind and report the missing a tag.
+      // so the like writer can name the kind and log the missing a tag.
       eventKind: ownCoordinate != null || eventKind == EventKind.videoVertical
           ? EventKind.videoVertical
           : null,
