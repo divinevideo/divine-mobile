@@ -77,8 +77,9 @@ const int _membersFeedApiAuthorCap = 100;
 const int _membersFeedApiConcurrency = 20;
 
 /// How many events naming one file a file-hash lookup reads. Normally one
-/// post names a file, so this only bounds a file many events claim.
-const int _fileHashLookupLimit = 20;
+/// post names a file. Relays answer newest first, so the window is wide
+/// enough that newer posts naming a file do not push its oldest post out.
+const int _fileHashLookupLimit = 500;
 
 /// In-memory cache key prefix for a single author's feed.
 const String _authorFeedCacheKeyPrefix = 'author:';
@@ -3570,6 +3571,37 @@ class VideosRepository {
       return null;
     }
     return _funnelcakeApiClient.getVideoViews(eventId);
+  }
+
+  /// Fetches the REST rows for [eventIds], keyed by event id, in as few
+  /// requests as the server allows.
+  ///
+  /// Bulk results apply feed visibility filters, so an omitted id is checked
+  /// through exact-event stats before being treated as missing. Ids neither
+  /// endpoint knows are absent. Returns null if Funnelcake API is unavailable.
+  ///
+  /// Throws [FunnelcakeException] subtypes on API errors.
+  Future<Map<String, VideoStats>?> getVideoStatsByIds(
+    List<String> eventIds,
+  ) async {
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) return null;
+
+    final rows = <String, VideoStats>{};
+    const batchSize = FunnelcakeApiClient.maxVideosPerBulkRequest;
+    for (var start = 0; start < eventIds.length; start += batchSize) {
+      final end = min(start + batchSize, eventIds.length);
+      final batch = await client.getVideosByIds(eventIds.sublist(start, end));
+      for (final row in batch) {
+        rows[row.id] = row;
+      }
+      for (final id in eventIds.sublist(start, end)) {
+        if (rows.containsKey(id)) continue;
+        final row = await client.getVideoStats(id);
+        if (row != null) rows[id] = row;
+      }
+    }
+    return rows;
   }
 
   /// Fetches bulk video stats for multiple event IDs.

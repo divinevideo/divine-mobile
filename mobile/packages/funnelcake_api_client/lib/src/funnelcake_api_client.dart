@@ -3147,6 +3147,60 @@ class FunnelcakeApiClient {
     }
   }
 
+  /// The most event ids one `POST /api/videos/bulk` takes, the server's limit.
+  static const maxVideosPerBulkRequest = 100;
+
+  /// Fetches the video rows for [eventIds] in one request, including each
+  /// row's archive verdict (`verified_archive` and
+  /// `archive_provenance_available`).
+  ///
+  /// Ids the server has no row for are left out of the result.
+  ///
+  /// Throws:
+  /// - [FunnelcakeNotConfiguredException] if the API is not configured.
+  /// - [FunnelcakeException] if [eventIds] is empty or longer than
+  ///   [maxVideosPerBulkRequest], or for other errors.
+  /// - [FunnelcakeApiException] if the request fails.
+  /// - [FunnelcakeTimeoutException] if the request times out.
+  Future<List<VideoStats>> getVideosByIds(List<String> eventIds) async {
+    if (!isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+    if (eventIds.isEmpty) {
+      throw const FunnelcakeException('Event IDs list cannot be empty');
+    }
+    if (eventIds.length > maxVideosPerBulkRequest) {
+      throw const FunnelcakeException(
+        'Event IDs list exceeds $maxVideosPerBulkRequest',
+      );
+    }
+
+    final uri = Uri.parse('$_baseUrl/api/videos/bulk');
+
+    try {
+      final response = await _post(uri, body: {'event_ids': eventIds});
+      if (response.statusCode != 200) {
+        throw FunnelcakeApiException(
+          message: 'Failed to fetch videos in bulk',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final videos = data['videos'] as List<dynamic>? ?? const [];
+      return [
+        for (final video in videos)
+          if (video is Map<String, dynamic>) VideoStats.fromJson(video),
+      ];
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (e) {
+      throw FunnelcakeException('Failed to fetch videos in bulk: $e');
+    }
+  }
+
   /// Fetches video stats for multiple videos in bulk.
   ///
   /// [eventIds] is the list of Nostr event IDs to fetch stats for.
