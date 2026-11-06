@@ -1038,7 +1038,9 @@ class FollowRepository {
   /// Cache-backed stream of the current user's followers.
   ///
   /// Emits a [CacheResult.cached] if disk-cached data exists, then a single
-  /// [CacheResult.live] once the network fetch resolves.
+  /// [CacheResult.live] once the network fetch succeeds, or the fetch's error
+  /// if it fails. If the account changes or the repository is disposed before
+  /// the result arrives, the stream ends without it; an error can still arrive.
   ///
   /// Durable relationship rows take precedence over an older CacheSync entry.
   /// They are explicitly stale; only the completed network snapshot is live.
@@ -1087,16 +1089,18 @@ class FollowRepository {
       }
     }
     if (_isDisposed || owner != _nostrClient.publicKey) return;
-    await for (final result in CacheSync.watchOne<FollowersSnapshot>(
-      key: _myFollowersCacheKey(owner),
-      fetch: fetchMyFollowersSnapshot,
-      fromJson: FollowersSnapshot.fromJson,
-      toJson: (s) => s.toJson(),
-      ttl: _profileListCacheTtl,
-    )) {
-      if (_isDisposed || owner != _nostrClient.publicKey) return;
-      if (result.isLive || !deliveredDurable) yield result;
-    }
+    // `yield*`, not `await for`: a cancelled subscription stops an async*
+    // body only at a yield, so an `await for` would keep waiting on the fetch
+    // and fail the listener's cancel future with the fetch's late error.
+    yield* CacheSync.watchOne<FollowersSnapshot>(
+          key: _myFollowersCacheKey(owner),
+          fetch: fetchMyFollowersSnapshot,
+          fromJson: FollowersSnapshot.fromJson,
+          toJson: (s) => s.toJson(),
+          ttl: _profileListCacheTtl,
+        )
+        .takeWhile((_) => !_isDisposed && owner == _nostrClient.publicKey)
+        .where((result) => result.isLive || !deliveredDurable);
   }
 
   /// Cache-backed stream of the current user's following list.
