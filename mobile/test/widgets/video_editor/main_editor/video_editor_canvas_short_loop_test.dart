@@ -1,5 +1,5 @@
 // ABOUTME: Pins how the canvas drives the timeline position on a short loop,
-// ABOUTME: and that it hands the frame effects to the player after each load.
+// ABOUTME: and which clips and frame effects it hands the player on a load.
 
 import 'dart:async';
 import 'dart:io';
@@ -357,6 +357,67 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
   }
+
+  group('clip detach', () {
+    DivineVideoClip clipFile(String name, Duration duration) => DivineVideoClip(
+      id: name,
+      video: EditorVideo.file(
+        File('${tempDir.path}/$name.mp4')..writeAsBytesSync(const [0]),
+      ),
+      duration: duration,
+      recordedAt: DateTime(2026),
+      targetAspectRatio: model.AspectRatio.vertical,
+      originalAspectRatio: 9 / 16,
+    );
+
+    testWidgets('rebuilds the player from the clips left on the timeline', (
+      tester,
+    ) async {
+      final detached = clipFile('detached', const Duration(seconds: 3));
+      final remaining = clipFile('remaining', const Duration(seconds: 6));
+      final states = StreamController<ClipEditorState>.broadcast();
+      addTearDown(states.close);
+      await pumpCanvas(
+        tester,
+        const Duration(seconds: 3),
+        clips: [detached, remaining],
+        clipStates: states.stream,
+      );
+      // A first detach replaces the player with one on the legacy surface.
+      final reloads = <MethodCall>[];
+      installMockDivineVideoPlayer(
+        playerId: 1,
+        onMethodCall: (call) async {
+          if (call.method == 'setClips') reloads.add(call);
+          return null;
+        },
+      );
+
+      // The clip manager still lists both clips, as it does until the detach
+      // reaches the editor history.
+      states.add(
+        ClipEditorState(
+          clips: [remaining],
+          lastDetachResult: ClipDetachSuccess(
+            previousClips: [detached, remaining],
+            detachedClip: detached,
+          ),
+        ),
+      );
+      // The rebuild needs real async turns to finish.
+      for (var i = 0; i < 10; i++) {
+        await tester.pump();
+        await tester.runAsync(pumpEventQueue);
+      }
+      await unmount(tester);
+
+      expect(reloads, isNotEmpty);
+      final uris = ((reloads.last.arguments as Map)['clips'] as List)
+          .map((clip) => (clip as Map)['uri'])
+          .toList();
+      expect(uris, [endsWith('remaining.mp4')]);
+    });
+  });
 
   group('clip motion editing', () {
     /// Holds the next player reload until the seek has been sent.
