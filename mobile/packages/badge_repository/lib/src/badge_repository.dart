@@ -2390,7 +2390,6 @@ class BadgeRepository {
     required String label,
     required List<List<String>> tags,
     bool Function(Event event)? canPublish,
-    int? createdAt,
     String content = '',
     String? expectedPubkey,
     int? createdAt,

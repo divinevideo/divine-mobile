@@ -2109,6 +2109,7 @@ void main() {
                     pubkey: account,
                     kind: kind,
                     tags: tags,
+                    createdAt: createdAt ?? 1000,
                   ),
             );
             addTearDown(scoped.dispose);
