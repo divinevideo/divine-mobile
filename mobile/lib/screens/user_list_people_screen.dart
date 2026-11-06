@@ -996,8 +996,8 @@ class _MemberVideosFailedView extends StatelessWidget {
   }
 }
 
-/// Empty state of a list with no members yet; the owner adds people from
-/// the app bar.
+/// Empty state of a list with no members yet; the owner adds people through
+/// Manage in the header above it.
 class _NoPeopleView extends StatelessWidget {
   const _NoPeopleView();
 
