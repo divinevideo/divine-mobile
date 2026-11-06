@@ -618,27 +618,27 @@ class LikesRepository {
     _emitLikedIds();
   }
 
-  /// Reports a reaction on an addressable target (Kind 30000-39999) that
+  /// Logs a reaction on an addressable target (Kind 30000-39999) that
   /// arrived without its coordinate. NIP-25 makes the `a` tag a SHOULD, so the
   /// reaction still goes out, but it cannot be found by coordinate once the
   /// target is edited (#6980).
-  void _reportMissingCoordinate({
+  void _warnMissingCoordinate({
     required String eventId,
     required String? addressableId,
     required int? targetKind,
-    required String site,
   }) {
     if (targetKind == null ||
         !EventKind.isParameterizedReplaceable(targetKind)) {
       return;
     }
     if (addressableId != null && addressableId.isNotEmpty) return;
-    final error = StateError(
+    // Missing source metadata can come from remote events, not just an app
+    // invariant. Keep the degradation in bug-report logs, not Crashlytics.
+    Log.warning(
       'Reaction on addressable kind $targetKind target $eventId has no '
       'coordinate; publishing without an a tag',
+      name: 'LikesRepository',
     );
-    Log.warning(error.message, name: 'LikesRepository');
-    _errorReporter?.call(error, StackTrace.current, site: site);
   }
 
   /// Like an event.
@@ -657,7 +657,7 @@ class LikesRepository {
   ///   (format: "kind:pubkey:d-tag"). When provided, adds an 'a' tag for
   ///   better discoverability of likes on addressable events like videos.
   ///   When [targetKind] is addressable and this is missing, the like is
-  ///   still published and the gap is reported (#6980).
+  ///   still published and the gap is logged (#6980).
   /// - [targetKind]: Optional kind of the event being liked (e.g., 34236)
   ///
   /// Returns the reaction event ID (needed for unlikes), or a placeholder
@@ -797,11 +797,10 @@ class LikesRepository {
       // to rollback + rethrow to preserve the original contract for tests
       // and non-app embedders.
       try {
-        _reportMissingCoordinate(
+        _warnMissingCoordinate(
           eventId: eventId,
           addressableId: addressableId,
           targetKind: targetKind,
-          site: LikesRepositoryReportableSites.likeEventMissingCoordinate,
         );
         final reactionEvent = await _nostrClient.sendLike(
           eventId,
@@ -1098,11 +1097,10 @@ class LikesRepository {
     // Publish Kind 7 reaction event via NostrClient
     final Event? reactionEvent;
     try {
-      _reportMissingCoordinate(
+      _warnMissingCoordinate(
         eventId: eventId,
         addressableId: addressableId,
         targetKind: targetKind,
-        site: LikesRepositoryReportableSites.executeLikeActionMissingCoordinate,
       );
       reactionEvent = await _nostrClient.sendLike(
         eventId,
@@ -1855,7 +1853,7 @@ class LikesRepository {
   /// Pass [addressableId] (`kind:pubkey:d-tag`) when the target is
   /// addressable, so the reaction carries NIP-25's `a` tag and survives an
   /// edit of the target. When [targetKind] is addressable and it is missing,
-  /// the downvote is still published and the gap is reported (#6980).
+  /// the downvote is still published and the gap is logged (#6980).
   ///
   /// Throws [AlreadyDownvotedException] if the event is already downvoted.
   /// Throws [LikeFailedException] if the publish fails.
@@ -1897,11 +1895,10 @@ class LikesRepository {
     // 2. Online → publish kind 7 with '-'; on success swap the placeholder
     // for the real id, on failure roll back memory + stream.
     try {
-      _reportMissingCoordinate(
+      _warnMissingCoordinate(
         eventId: eventId,
         addressableId: addressableId,
         targetKind: targetKind,
-        site: LikesRepositoryReportableSites.downvoteEventMissingCoordinate,
       );
       final reactionEvent = await _nostrClient.sendLike(
         eventId,

@@ -8,6 +8,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:test/test.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class MockNostrClient extends Mock implements NostrClient {}
 
@@ -622,6 +623,18 @@ void main() {
     });
 
     late List<({Object error, String site})> reported;
+    late Set<LogEntry> priorLogs;
+
+    List<LogEntry> missingCoordinateWarnings() => LogCaptureService()
+        .getRecentLogs()
+        .where(
+          (entry) =>
+              !priorLogs.contains(entry) &&
+              entry.name == 'LikesRepository' &&
+              entry.level == LogLevel.warning &&
+              entry.message.contains('publishing without an a tag'),
+        )
+        .toList();
 
     /// Stubs every publish to succeed with a reaction for [testEventId].
     void stubAnyPublish() {
@@ -644,6 +657,7 @@ void main() {
     /// A repository with no local storage that records reporter calls.
     LikesRepository createReportingRepository() {
       reported = [];
+      priorLogs = LogCaptureService().getRecentLogs().toSet();
       return createRepository(
         withLocalStorage: false,
         errorReporter: (error, stackTrace, {required site}) {
@@ -674,7 +688,7 @@ void main() {
           ).called(1);
         });
 
-        test('reports the missing coordinate', () async {
+        test('logs missing remote data without a crash report', () async {
           stubAnyPublish();
           repository = createReportingRepository();
 
@@ -684,15 +698,11 @@ void main() {
             targetKind: 34236,
           );
 
-          expect(reported, hasLength(1));
-          expect(reported.single.error, isA<StateError>());
-          expect(
-            reported.single.site,
-            equals(LikesRepositoryReportableSites.likeEventMissingCoordinate),
-          );
+          expect(missingCoordinateWarnings(), hasLength(1));
+          expect(reported, isEmpty);
         });
 
-        test('reports nothing for a like it does not publish', () async {
+        test('adds no warning for a like it does not publish', () async {
           stubAnyPublish();
           repository = createReportingRepository();
           await repository.likeEvent(
@@ -700,7 +710,7 @@ void main() {
             authorPubkey: testAuthorPubkey,
             targetKind: 34236,
           );
-          expect(reported, hasLength(1));
+          expect(missingCoordinateWarnings(), hasLength(1));
 
           await expectLater(
             repository.likeEvent(
@@ -711,10 +721,11 @@ void main() {
             throwsA(isA<AlreadyLikedException>()),
           );
 
-          expect(reported, hasLength(1));
+          expect(missingCoordinateWarnings(), hasLength(1));
+          expect(reported, isEmpty);
         });
 
-        test('reports nothing when the coordinate is known', () async {
+        test('logs no warning when the coordinate is known', () async {
           stubAnyPublish();
           repository = createReportingRepository();
 
@@ -725,10 +736,11 @@ void main() {
             targetKind: 34236,
           );
 
+          expect(missingCoordinateWarnings(), isEmpty);
           expect(reported, isEmpty);
         });
 
-        test('reports nothing for a regular target kind', () async {
+        test('logs no warning for a regular target kind', () async {
           stubAnyPublish();
           repository = createReportingRepository();
 
@@ -738,6 +750,7 @@ void main() {
             targetKind: 1111,
           );
 
+          expect(missingCoordinateWarnings(), isEmpty);
           expect(reported, isEmpty);
         });
       });
@@ -1959,7 +1972,7 @@ void main() {
     });
 
     group('downvoteEvent', () {
-      test('reports a missing coordinate on an addressable target '
+      test('logs a missing coordinate on an addressable target '
           '(#6980)', () async {
         stubAnyPublish();
         repository = createReportingRepository();
@@ -1970,12 +1983,8 @@ void main() {
           targetKind: 34236,
         );
 
-        expect(
-          reported.map((r) => r.site),
-          equals([
-            LikesRepositoryReportableSites.downvoteEventMissingCoordinate,
-          ]),
-        );
+        expect(missingCoordinateWarnings(), hasLength(1));
+        expect(reported, isEmpty);
       });
 
       test('ticks watchDownvotedEventIds before sendLike completes', () async {
@@ -5432,7 +5441,7 @@ void main() {
     });
 
     group('executeLikeAction', () {
-      test('reports a replayed like missing its coordinate (#6980)', () async {
+      test('logs a replayed like missing its coordinate (#6980)', () async {
         stubAnyPublish();
         repository = createReportingRepository();
 
@@ -5442,12 +5451,8 @@ void main() {
           targetKind: 34236,
         );
 
-        expect(
-          reported.map((r) => r.site),
-          equals([
-            LikesRepositoryReportableSites.executeLikeActionMissingCoordinate,
-          ]),
-        );
+        expect(missingCoordinateWarnings(), hasLength(1));
+        expect(reported, isEmpty);
       });
 
       test('publishes like directly to relays', () async {
