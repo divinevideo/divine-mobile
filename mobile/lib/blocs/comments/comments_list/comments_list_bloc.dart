@@ -41,9 +41,9 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     CommentModerationRepository? commentModerationRepository,
     String? viewerPubkey,
     Set<String> viewerBlockedAuthors = const {},
+    Stream<Set<String>>? viewerBlockedAuthorsChanges,
   }) : _commentsRepository = commentsRepository,
        _commentModerationRepository = commentModerationRepository,
-       _viewerBlockedAuthors = viewerBlockedAuthors,
        _initialTotalCount = initialTotalCount,
        _includeVideoReplies = includeVideoReplies,
        super(
@@ -54,6 +54,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
            rootAddressableId: rootAddressableId,
            pendingFocusCommentId: focusCommentId,
            viewerPubkey: viewerPubkey,
+           viewerBlockedAuthors: viewerBlockedAuthors,
          ),
        ) {
     on<CommentsLoadRequested>(_onLoadRequested);
@@ -72,9 +73,25 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     on<CommentsRemovedByAuthorFromStore>(_onCommentsRemovedByAuthorFromStore);
     on<CommentDeletionReceived>(_onCommentDeletionReceived);
     on<HiddenCommentsVisibilityToggled>(_onHiddenCommentsVisibilityToggled);
+    on<_ViewerBlockedAuthorsChanged>((event, emit) {
+      if (!state.isViewerRootAuthor) return;
+      final removed = state.viewerBlockedAuthors.difference(event.authors);
+      final next = state.copyWith(
+        viewerBlockedAuthors: event.authors,
+        moderation: _withoutAutoHiddenAuthors(state.moderation, removed),
+      );
+      emit(
+        next.hiddenCommentCount == 0
+            ? next.copyWith(showHiddenComments: false)
+            : next,
+      );
+    });
     on<CommentModerationRequested>(
       _onCommentModerationRequested,
       transformer: sequential(),
+    );
+    _viewerBlocksSubscription = viewerBlockedAuthorsChanges?.listen(
+      (authors) => addIfOpen(_ViewerBlockedAuthorsChanged(Set.of(authors))),
     );
   }
 
@@ -97,7 +114,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
 
   final CommentsRepository _commentsRepository;
   final CommentModerationRepository? _commentModerationRepository;
-  final Set<String> _viewerBlockedAuthors;
+  StreamSubscription<Set<String>>? _viewerBlocksSubscription;
   final bool _includeVideoReplies;
   BatchedSubscription<Comment>? _commentStreamSubscription;
   StreamSubscription<CommentDeletion>? _commentDeletionSubscription;
@@ -576,9 +593,12 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   ) {
     if (state.isViewerRootAuthor) {
       emit(
-        _withModeration(
-          state.moderation.withAutoHiddenAuthors([event.authorPubkey]),
-          closeHidden: true,
+        state.copyWith(
+          viewerBlockedAuthors: {
+            ...state.viewerBlockedAuthors,
+            event.authorPubkey,
+          },
+          showHiddenComments: false,
         ),
       );
       return;
@@ -602,21 +622,17 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     );
   }
 
-  /// The video owner's moderation of this thread, including the viewer's own
-  /// blocks when the viewer is the owner.
+  /// The video owner's published moderation. Local owner block snapshots
+  /// remain separate so they cannot be lost behind this asynchronous read.
   Future<CommentModeration> _loadModeration() async {
-    final ownBlocks = state.isViewerRootAuthor
-        ? _viewerBlockedAuthors
-        : const <String>{};
     final repository = _commentModerationRepository;
     final coordinate = state.rootAddressableId;
     if (repository == null || coordinate == null || coordinate.isEmpty) {
-      return CommentModeration.empty.withAutoHiddenAuthors(ownBlocks);
+      return CommentModeration.empty;
     }
-    final moderation = await repository.loadModeration(
+    return repository.loadModeration(
       rootAddressableId: coordinate,
     );
-    return moderation.withAutoHiddenAuthors(ownBlocks);
   }
 
   /// [state] with [moderation] applied.
@@ -662,9 +678,18 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     }
 
     final previous = state.moderation;
+    final ownBlocksBefore = state.viewerBlockedAuthors;
+    final effectivePrevious = state.effectiveModeration;
+    final edited = event.hide
+        ? effectivePrevious.hide(comment)
+        : effectivePrevious.restore(comment);
     emit(
       _withModeration(
-        event.hide ? previous.hide(comment) : previous.restore(comment),
+        CommentModeration(
+          hiddenCommentIds: edited.hiddenCommentIds,
+          restoredCommentIds: edited.restoredCommentIds,
+          autoHiddenAuthors: previous.autoHiddenAuthors,
+        ),
         closeHidden: event.hide,
       ),
     );
@@ -678,14 +703,14 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         await repository.restoreComment(
           rootAddressableId: coordinate,
           comment: comment,
-          authorAutoHidden: previous.autoHiddenAuthors.contains(
+          authorAutoHidden: effectivePrevious.autoHiddenAuthors.contains(
             comment.authorPubkey,
           ),
         );
       }
     } on CommentsRepositoryException catch (e, stackTrace) {
       _logRepoFailure(e, stackTrace, 'Error saving comment moderation');
-      emit(_moderationReverted(previous));
+      emit(_moderationReverted(previous, ownBlocksBefore));
     } catch (e, stackTrace) {
       // A defect, such as a signer error the repository does not wrap; the
       // unsaved change still has to go back.
@@ -695,17 +720,30 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         CommentsListBlocReportableSites.onCommentModerationRequested,
         'Error saving comment moderation',
       );
-      emit(_moderationReverted(previous));
+      emit(_moderationReverted(previous, ownBlocksBefore));
     }
   }
 
   /// [state] with the moderation back at [previous] and the failure
   /// reported.
-  CommentsListState _moderationReverted(CommentModeration previous) =>
-      _withModeration(
-        // Keep commenters auto-hidden meanwhile, such as one just blocked.
-        previous.withAutoHiddenAuthors(state.moderation.autoHiddenAuthors),
-      ).copyWith(error: CommentsListError.moderationFailed);
+  CommentsListState _moderationReverted(
+    CommentModeration previous,
+    Set<String> ownBlocksBefore,
+  ) => _withModeration(
+    _withoutAutoHiddenAuthors(
+      previous.withAutoHiddenAuthors(state.moderation.autoHiddenAuthors),
+      ownBlocksBefore.difference(state.viewerBlockedAuthors),
+    ),
+  ).copyWith(error: CommentsListError.moderationFailed);
+
+  static CommentModeration _withoutAutoHiddenAuthors(
+    CommentModeration moderation,
+    Set<String> removed,
+  ) => CommentModeration(
+    hiddenCommentIds: moderation.hiddenCommentIds,
+    restoredCommentIds: moderation.restoredCommentIds,
+    autoHiddenAuthors: moderation.autoHiddenAuthors.difference(removed),
+  );
 
   /// Removes the [comments] whose author asked for their deletion.
   ///
@@ -819,6 +857,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   Future<void> close() async {
     await _commentStreamSubscription?.cancel();
     await _commentDeletionSubscription?.cancel();
+    await _viewerBlocksSubscription?.cancel();
     await _commentsRepository.stopWatchingComments();
     return super.close();
   }

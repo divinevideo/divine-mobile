@@ -9,7 +9,8 @@ import 'dart:convert';
 import 'package:comments_repository/comments_repository.dart'
     show BlockedCommentFilter, Comment;
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
-import 'package:content_policy/content_policy.dart' show ContentPolicyEngine;
+import 'package:content_policy/content_policy.dart'
+    show ContentPolicyEngine, ContentPolicyState;
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -66,6 +67,9 @@ class _TestEnvironment extends CurrentEnvironmentNotifier {
 }
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockBlocklistRepository extends Mock
+    implements ContentBlocklistRepository {}
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -178,6 +182,32 @@ void main() {
       test('keeps the comments of authors nobody blocked', () {
         expect(filter(stranger, rootAuthorPubkey: owner), isFalse);
       });
+    });
+  });
+
+  group('owner comment policy', () {
+    test('preserves independent account policy while reviewing own blocks', () {
+      final owner = 'a' * 64;
+      final author = 'b' * 64;
+      final client = _MockNostrClient();
+      final blocks = _MockBlocklistRepository();
+      when(() => client.publicKey).thenReturn(owner);
+      when(() => blocks.blockedPubkeysForAccount(owner)).thenReturn({author});
+      when(() => blocks.currentState).thenReturn(
+        ContentPolicyState(
+          currentUserPubkey: owner,
+          mutedPubkeys: {author},
+          blockedPubkeys: {author},
+          pubkeysBlockingUs: {author},
+          pubkeysMutingUs: const {},
+        ),
+      );
+      final filter = commentBlockFilter(
+        nostrClient: client,
+        blocklistRepository: blocks,
+        engine: ContentPolicyEngine.defaultRules(),
+      );
+      expect(filter(author, rootAuthorPubkey: owner), isTrue);
     });
   });
 

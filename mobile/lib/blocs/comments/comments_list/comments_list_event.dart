@@ -1,5 +1,11 @@
 part of 'comments_list_bloc.dart';
 
+/// A fresh snapshot of the viewer's account-scoped blocks.
+final class _ViewerBlockedAuthorsChanged extends CommentsListEvent {
+  const _ViewerBlockedAuthorsChanged(this.authors);
+  final Set<String> authors;
+}
+
 /// Base class for all comments-list events.
 sealed class CommentsListEvent {
   const CommentsListEvent();

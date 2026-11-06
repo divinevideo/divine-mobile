@@ -83,6 +83,7 @@ final class CommentsListState extends Equatable {
     this.scrollToCommentId,
     this.pendingFocusCommentId,
     this.viewerPubkey,
+    this.viewerBlockedAuthors = const {},
     this.moderation = CommentModeration.empty,
     this.showHiddenComments = false,
   });
@@ -168,6 +169,14 @@ final class CommentsListState extends Equatable {
   /// The signed-in viewer, or `null` while signed out.
   final String? viewerPubkey;
 
+  /// The viewer's current account-scoped blocks, including late hydration.
+  final Set<String> viewerBlockedAuthors;
+
+  /// The creator's decisions plus the owner's local blocks while syncing.
+  CommentModeration get effectiveModeration => isViewerRootAuthor
+      ? moderation.withAutoHiddenAuthors(viewerBlockedAuthors)
+      : moderation;
+
   /// What the video owner hid from the thread's default view (#5044).
   ///
   /// For the owner it also covers everyone they blocked, so their comments
@@ -188,7 +197,8 @@ final class CommentsListState extends Equatable {
   /// Never true for the viewer's own comments: their authors keep seeing
   /// them as they posted them.
   bool isHiddenByOwner(Comment comment) =>
-      comment.authorPubkey != viewerPubkey && moderation.hides(comment);
+      comment.authorPubkey != viewerPubkey &&
+      effectiveModeration.hides(comment);
 
   /// Whether [comment] answers a comment the list leaves out because the
   /// video owner hid it, so its reply line must not name that comment's
@@ -202,7 +212,7 @@ final class CommentsListState extends Equatable {
     final author = comment.replyToAuthorPubkey;
     return author != null &&
         author != viewerPubkey &&
-        moderation.autoHiddenAuthors.contains(author);
+        effectiveModeration.autoHiddenAuthors.contains(author);
   }
 
   /// The authors of the comments the list shows, for mention suggestions:
@@ -340,6 +350,7 @@ final class CommentsListState extends Equatable {
     bool? isBackfillComplete,
     String? scrollToCommentId,
     CommentModeration? moderation,
+    Set<String>? viewerBlockedAuthors,
     bool? showHiddenComments,
     bool clearError = false,
     bool clearScrollTo = false,
@@ -371,6 +382,7 @@ final class CommentsListState extends Equatable {
       // Only the constructor sets it; copyWith can only clear it.
       pendingFocusCommentId: clearPendingFocus ? null : pendingFocusCommentId,
       viewerPubkey: viewerPubkey,
+      viewerBlockedAuthors: viewerBlockedAuthors ?? this.viewerBlockedAuthors,
       moderation: moderation ?? this.moderation,
       showHiddenComments: showHiddenComments ?? this.showHiddenComments,
     );
@@ -395,6 +407,7 @@ final class CommentsListState extends Equatable {
     scrollToCommentId,
     pendingFocusCommentId,
     viewerPubkey,
+    viewerBlockedAuthors,
     moderation,
     showHiddenComments,
   ];

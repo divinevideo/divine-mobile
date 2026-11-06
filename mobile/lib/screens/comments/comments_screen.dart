@@ -244,6 +244,12 @@ abstract final class CommentsScreen {
                   focusCommentId: focusCommentId,
                   commentModerationRepository: commentModerationRepository,
                   viewerPubkey: viewerPubkey,
+                  viewerBlockedAuthorsChanges: viewerPubkey == null
+                      ? null
+                      : contentBlocklistRepository.stateStream.map(
+                          (_) => contentBlocklistRepository
+                              .blockedPubkeysForAccount(viewerPubkey),
+                        ),
                   viewerBlockedAuthors: viewerPubkey == null
                       ? const {}
                       : contentBlocklistRepository.blockedPubkeysForAccount(

@@ -1,6 +1,8 @@
 // ABOUTME: The newest version of each addressable event the app read or
 // ABOUTME: published, shared by writers that replace the same event.
 
+import 'dart:async';
+
 import 'package:nostr_sdk/nostr_sdk.dart' show Event;
 
 /// The newest version of each addressable event the app read or published,
@@ -16,6 +18,35 @@ import 'package:nostr_sdk/nostr_sdk.dart' show Event;
 /// with a valid id and signature.
 class LatestAddressableEvents {
   final _events = <String, Event>{};
+  final _operations = <String, Future<void>>{};
+
+  /// Serializes the whole read/modify/publish operation at one coordinate.
+  /// An accepted revision alone cannot protect a second writer while the
+  /// first writer is still awaiting its relay acknowledgement.
+  Future<T> run<T>({
+    required String pubkey,
+    required int kind,
+    required String dTag,
+    required Future<T> Function() operation,
+  }) {
+    final key = _key(pubkey, kind, dTag);
+    final result = (_operations[key] ?? Future<void>.value()).then(
+      (_) => operation(),
+    );
+    final tail = result.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    _operations[key] = tail;
+    unawaited(
+      tail.then((_) {
+        if (identical(_operations[key], tail)) {
+          unawaited(_operations.remove(key));
+        }
+      }),
+    );
+    return result;
+  }
 
   /// The newest version known of [pubkey]'s event of [kind] whose `d` tag is
   /// [dTag], or `null` when none is.

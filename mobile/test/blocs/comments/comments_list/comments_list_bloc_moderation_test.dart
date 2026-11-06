@@ -115,6 +115,7 @@ void main() {
     CommentsListBloc buildBloc({
       String? viewerPubkey = _viewer,
       Set<String> viewerBlockedAuthors = const {},
+      Stream<Set<String>>? viewerBlockedAuthorsChanges,
       String? rootAddressableId = _coordinate,
       bool withModeration = true,
     }) => CommentsListBloc(
@@ -126,6 +127,7 @@ void main() {
       commentModerationRepository: withModeration ? moderationRepository : null,
       viewerPubkey: viewerPubkey,
       viewerBlockedAuthors: viewerBlockedAuthors,
+      viewerBlockedAuthorsChanges: viewerBlockedAuthorsChanges,
     );
 
     void ownerHid(CommentModeration moderation) {
@@ -144,6 +146,108 @@ void main() {
     List<String> shownIds(CommentsListState state) => [
       for (final node in state.threadedCommentsWith()) node.comment.id,
     ];
+
+    group('block snapshots', () {
+      test(
+        'retains a block snapshot received during the initial read',
+        () async {
+          final blocks = StreamController<Set<String>>.broadcast();
+          addTearDown(blocks.close);
+          final read = Completer<CommentModeration>();
+          when(
+            () => moderationRepository.loadModeration(
+              rootAddressableId: _coordinate,
+            ),
+          ).thenAnswer((_) => read.future);
+          final bloc = buildBloc(
+            viewerPubkey: _owner,
+            viewerBlockedAuthorsChanges: blocks.stream,
+          );
+          addTearDown(bloc.close);
+          bloc.add(const CommentsLoadRequested());
+          await bloc.stream.firstWhere(
+            (s) => s.status == CommentsStatus.loading,
+          );
+          final hydrated = bloc.stream.firstWhere(
+            (s) => s.viewerBlockedAuthors.contains(_harasser),
+          );
+          blocks.add({_harasser});
+          await hydrated;
+          final success = bloc.stream.firstWhere(
+            (s) => s.status == CommentsStatus.success,
+          );
+          read.complete(CommentModeration.empty);
+          await success;
+          expect(bloc.state.isHiddenByOwner(harassment), isTrue);
+        },
+      );
+
+      test('hides late blocks without reopening the owner thread', () async {
+        final blocks = StreamController<Set<String>>.broadcast();
+        addTearDown(blocks.close);
+        final bloc = await loaded(
+          buildBloc(
+            viewerPubkey: _owner,
+            viewerBlockedAuthorsChanges: blocks.stream,
+          ),
+        );
+        addTearDown(bloc.close);
+        expect(bloc.state.isHiddenByOwner(harassment), isFalse);
+        final changed = bloc.stream.firstWhere(
+          (s) => s.hiddenCommentCount == 1,
+        );
+        blocks.add({_harasser});
+        await changed;
+        expect(bloc.state.isHiddenByOwner(harassment), isTrue);
+      });
+
+      for (final fails in [false, true]) {
+        test(
+          'keeps an unblock across a pending hide; failure: $fails',
+          () async {
+            final blocks = StreamController<Set<String>>.broadcast();
+            addTearDown(blocks.close);
+            final save = Completer<void>();
+            when(
+              () => moderationRepository.hideComment(
+                rootAddressableId: any(named: 'rootAddressableId'),
+                comment: any(named: 'comment'),
+              ),
+            ).thenAnswer((_) => save.future);
+            ownerHid(const CommentModeration(autoHiddenAuthors: {_harasser}));
+            final bloc = await loaded(
+              buildBloc(
+                viewerPubkey: _owner,
+                viewerBlockedAuthors: {_harasser},
+                viewerBlockedAuthorsChanges: blocks.stream,
+              ),
+            );
+            addTearDown(bloc.close);
+            expect(bloc.state.isHiddenByOwner(harassment), isTrue);
+            final hidden = bloc.stream.firstWhere(
+              (s) => s.isHiddenByOwner(kind),
+            );
+            bloc.add(CommentModerationRequested(kind, hide: true));
+            await hidden;
+            final unblocked = bloc.stream.firstWhere(
+              (s) => s.viewerBlockedAuthors.isEmpty,
+            );
+            blocks.add({});
+            await unblocked;
+            if (fails) {
+              save.completeError(
+                const CommentModerationFailedException('synthetic'),
+              );
+            } else {
+              save.complete();
+            }
+            await pumpEventQueue();
+            expect(bloc.state.isHiddenByOwner(harassment), isFalse);
+            expect(bloc.state.isHiddenByOwner(kind), !fails);
+          },
+        );
+      }
+    });
 
     group('CommentsLoadRequested', () {
       test(

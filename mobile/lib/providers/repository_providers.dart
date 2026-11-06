@@ -1253,7 +1253,8 @@ BlockedCommentFilter commentBlockFilter({
   )) {
     // On their own video the owner's block is comment moderation: the
     // comment stays, hidden by default, so they can review and restore it.
-    return false;
+    // The other account's policy still applies independently.
+    return blocklistRepository.currentState.isBlockedBy(pubkey);
   }
   final decision = engine.evaluate(
     PolicyInput(pubkey: pubkey),

@@ -35,6 +35,21 @@ void main() {
     Event? latest({String? pubkey, String dTag = 'divine:replies:video'}) =>
         store.latest(pubkey: pubkey ?? _owner, kind: 30078, dTag: dTag);
 
+    test('continues the coordinate queue after a failed operation', () async {
+      Future<T> run<T>(Future<T> Function() operation) => store.run(
+        pubkey: _owner,
+        kind: 30078,
+        dTag: 'synthetic',
+        operation: operation,
+      );
+      final failure = run<void>(() async => throw StateError('synthetic'));
+      final assertion = expectLater(failure, throwsStateError);
+      final next = run(() async => 'saved');
+      await assertion;
+      expect(await next, 'saved');
+      expect(await run(() async => 'again'), 'again');
+    });
+
     test('knows nothing it was not told', () {
       expect(latest(), isNull);
     });

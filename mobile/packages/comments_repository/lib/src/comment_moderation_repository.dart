@@ -162,6 +162,20 @@ class CommentModerationRepository {
     if (!_hex64.hasMatch(owner)) {
       throw const CommentModerationFailedException('No signed-in account');
     }
+    return _latestEvents.run(
+      pubkey: owner,
+      kind: commentModerationKind,
+      dTag: hiddenCommentersIdentifier,
+      operation: () =>
+          _updateAutoHiddenAuthors(owner, add: add, remove: remove),
+    );
+  }
+
+  Future<void> _updateAutoHiddenAuthors(
+    String owner, {
+    required Iterable<String> add,
+    required Iterable<String> remove,
+  }) async {
     final current = await _readLatestOwn(owner, hiddenCommentersIdentifier);
     final currentAuthors = _autoHiddenAuthorsOf(current);
     final authors = <String>{
@@ -196,6 +210,27 @@ class CommentModerationRepository {
       );
     }
     final identifier = _videoIdentifier(rootAddressableId);
+    return _latestEvents.run(
+      pubkey: owner,
+      kind: commentModerationKind,
+      dTag: identifier,
+      operation: () => _saveVideoEntry(
+        owner: owner,
+        identifier: identifier,
+        rootAddressableId: rootAddressableId,
+        comment: comment,
+        marker: marker,
+      ),
+    );
+  }
+
+  Future<void> _saveVideoEntry({
+    required String owner,
+    required String identifier,
+    required String rootAddressableId,
+    required Comment comment,
+    required String? marker,
+  }) async {
     final current = await _readLatestOwn(owner, identifier);
     final keys = {comment.id.toLowerCase(), ?comment.addressableId};
     await _publish(owner, current, [
@@ -225,6 +260,7 @@ class CommentModerationRepository {
   /// A replacement built on a partial read would erase whatever only the
   /// unread event held, so a read that times out or reaches no relay throws.
   Future<Event?> _readLatestOwn(String owner, String identifier) async {
+    _requireOwner(owner);
     final ({List<Event> events, bool noRelays, bool timedOut}) result;
     try {
       result = await _nostrClient.queryEventsDetailed([
@@ -237,6 +273,7 @@ class CommentModerationRepository {
     } on Exception catch (e) {
       throw CommentModerationFailedException('Moderation read failed: $e');
     }
+    _requireOwner(owner);
     if (result.timedOut || result.noRelays) {
       throw const CommentModerationFailedException(
         'Moderation could not be read in full',
@@ -253,6 +290,7 @@ class CommentModerationRepository {
     Event? current,
     List<List<String>> tags,
   ) async {
+    _requireOwner(owner);
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     // A replacement must be newer than the event it replaces, or relays keep
     // the old one.
@@ -281,6 +319,14 @@ class CommentModerationRepository {
       );
     }
     _remember([event]);
+  }
+
+  void _requireOwner(String owner) {
+    if (_nostrClient.publicKey != owner) {
+      throw const CommentModerationFailedException(
+        'The signed-in account changed',
+      );
+    }
   }
 
   void _remember(Iterable<Event> events) {

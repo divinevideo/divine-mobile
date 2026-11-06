@@ -132,6 +132,31 @@ void main() {
       ),
     );
 
+    group('account changes', () {
+      test(
+        'refuses publication if the account changes during the read',
+        () async {
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((_) async {
+            when(() => nostrClient.publicKey).thenReturn(_stranger);
+            return (events: <Event>[], timedOut: false, noRelays: false);
+          });
+          await expectLater(
+            repository.hideComment(
+              rootAddressableId: _coordinate,
+              comment: _comment(_commentA),
+            ),
+            throwsA(isA<CommentModerationFailedException>()),
+          );
+          expectNothingPublished();
+        },
+      );
+    });
+
     group('ownerOf', () {
       test('returns the pubkey a coordinate names', () {
         expect(CommentModerationRepository.ownerOf(_coordinate), _owner);

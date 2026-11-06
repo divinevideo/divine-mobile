@@ -122,10 +122,6 @@ class VideoResponsesRepository {
   /// holding the first; the next one is signed after it instead.
   final _curationSignedAt = <String, int>{};
 
-  /// The last save queued for each account and video; the next one waits for
-  /// it.
-  final _curationOperations = <String, Future<void>>{};
-
   /// The newest authenticated curations read or saved, here or by a writer
   /// sharing the store, retained when a later read returns only older
   /// revisions.
@@ -501,9 +497,11 @@ class VideoResponsesRepository {
   }) {
     final owner = _nostrClient.publicKey;
     final key = '$owner:${RepliesCuration.dTagFor(videoAddress)}';
-    final tail = _curationOperations[key] ?? Future<void>.value();
-    final result = tail.then(
-      (_) => _saveCuration(
+    return _latestEvents.run(
+      pubkey: owner,
+      kind: RepliesCuration.kind,
+      dTag: RepliesCuration.dTagFor(videoAddress),
+      operation: () => _saveCuration(
         curation,
         previous: previous,
         videoAddress: videoAddress,
@@ -511,10 +509,6 @@ class VideoResponsesRepository {
         key: key,
       ),
     );
-    // The next save waits for this one but not on its error, which the
-    // caller gets from `result`.
-    _curationOperations[key] = result.then((_) {}, onError: (_, _) {});
-    return result;
   }
 
   Future<RepliesCuration> _saveCuration(
