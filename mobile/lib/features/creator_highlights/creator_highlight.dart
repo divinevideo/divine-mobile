@@ -41,6 +41,7 @@ class CreatorHighlight extends Equatable {
     this.likes,
     this.comments,
     this.rotation = 0,
+    this.selectedSpotlight,
   });
 
   final String owner;
@@ -63,6 +64,9 @@ class CreatorHighlight extends Equatable {
   /// Position in the spotlight rotation; advances once per presentation.
   final int rotation;
 
+  /// The fact held stable for this showing while refreshed metrics arrive.
+  final CreatorSpotlight? selectedSpotlight;
+
   /// Every spotlight backed by a known, non-zero fact, in rotation order.
   List<CreatorSpotlight> get spotlights => [
     if (createdToday > 0) CreatorSpotlight.createdToday,
@@ -77,24 +81,32 @@ class CreatorHighlight extends Equatable {
 
   /// The spotlight this presentation leads with.
   CreatorSpotlight get spotlight {
+    if (selectedSpotlight case final selected?) return selected;
     final available = spotlights;
     return available[rotation % available.length];
   }
 
-  CreatorHighlight copyWith({bool? celebrate, int? rotation}) =>
-      CreatorHighlight(
-        owner: owner,
-        localDate: localDate,
-        createdToday: createdToday,
-        creationDaysThisWeek: creationDaysThisWeek,
-        views: views,
-        topVideo: topVideo,
-        topVideoViews: topVideoViews,
-        likes: likes,
-        comments: comments,
-        celebrate: celebrate ?? this.celebrate,
-        rotation: rotation ?? this.rotation,
-      );
+  CreatorHighlight copyWith({
+    bool? celebrate,
+    int? rotation,
+    CreatorSpotlight? selectedSpotlight,
+    bool clearSelection = false,
+  }) => CreatorHighlight(
+    owner: owner,
+    localDate: localDate,
+    createdToday: createdToday,
+    creationDaysThisWeek: creationDaysThisWeek,
+    views: views,
+    topVideo: topVideo,
+    topVideoViews: topVideoViews,
+    likes: likes,
+    comments: comments,
+    celebrate: celebrate ?? this.celebrate,
+    rotation: rotation ?? this.rotation,
+    selectedSpotlight: clearSelection
+        ? null
+        : selectedSpotlight ?? this.selectedSpotlight,
+  );
 
   @override
   List<Object?> get props => [
@@ -109,5 +121,6 @@ class CreatorHighlight extends Equatable {
     comments,
     celebrate,
     rotation,
+    selectedSpotlight,
   ];
 }

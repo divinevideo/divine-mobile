@@ -54,7 +54,11 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
       // Lead with the next fact now, rather than after the network round trip.
       emit(
         CreatorHighlightsState(
-          card: card.copyWith(rotation: _nextRotation, celebrate: false),
+          card: card.copyWith(
+            rotation: _nextRotation,
+            celebrate: false,
+            clearSelection: true,
+          ),
           loading: state.loading,
         ),
       );
@@ -74,15 +78,27 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
         final currentDate = _today();
         if (requestedDate != currentDate && attempt == 0) continue;
         // Fresh facts must not swap the spotlight already on screen.
-        final shown = state.card?.localDate == currentDate
-            ? state.card?.rotation
-            : null;
-        final rotation = shown ?? _nextRotation;
-        final owned = card?.owner == owner && card?.localDate == currentDate
-            ? (rotation == null || rotation == card!.rotation
-                  ? card
-                  : card.copyWith(rotation: rotation))
-            : null;
+        final shown = state.card?.localDate == currentDate ? state.card : null;
+        final rotation = shown?.rotation ?? _nextRotation;
+        // A numeric position can point at another fact when availability
+        // changes. Pin the fact, without changing presentation identity. If it
+        // is no longer supported, hide the optional card rather than inventing
+        // a zero count or retaining a removed watch target.
+        final selection = shown?.spotlight;
+        CreatorHighlight? owned;
+        if (card != null &&
+            card.owner == owner &&
+            card.localDate == currentDate &&
+            (selection == null || card.spotlights.contains(selection))) {
+          owned =
+              selection == null &&
+                  (rotation == null || rotation == card.rotation)
+              ? card
+              : card.copyWith(
+                  rotation: rotation,
+                  selectedSpotlight: selection,
+                );
+        }
         final current = owned != null && owned.localDate == _presentedDate
             ? owned.copyWith(celebrate: false)
             : owned;

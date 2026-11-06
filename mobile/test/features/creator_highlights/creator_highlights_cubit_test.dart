@@ -199,6 +199,77 @@ void main() {
   });
 
   group('presented', () {
+    test('hides a shown fact that refreshed data no longer supports', () async {
+      final repository = _Repository();
+      final cubit = CreatorHighlightsCubit(
+        repository: repository,
+        owner: _owner,
+        now: () => DateTime(2026, 10, 30),
+      );
+      addTearDown(cubit.close);
+      repository.pending.complete(_card);
+      await cubit.refresh();
+      expect(cubit.state.card?.spotlight, CreatorSpotlight.createdToday);
+      final load = cubit.refresh();
+      repository.next.complete(
+        const CreatorHighlight(
+          owner: _owner,
+          localDate: '2026-10-30',
+          createdToday: 0,
+          creationDaysThisWeek: 1,
+          views: null,
+          topVideo: null,
+          celebrate: false,
+        ),
+      );
+      await load;
+      expect(cubit.state.card, isNull);
+      expect(cubit.state.loading, isFalse);
+      await cubit.refresh();
+      expect(cubit.state.card?.spotlight, CreatorSpotlight.creativeDays);
+    });
+
+    test('new facts do not replace a spotlight during its showing', () async {
+      final repository = _Repository();
+      final cubit = CreatorHighlightsCubit(
+        repository: repository,
+        owner: _owner,
+        now: () => DateTime(2026, 10, 30),
+      );
+      addTearDown(cubit.close);
+      repository.pending.complete(_card);
+      await cubit.refresh();
+      await cubit.presented(cubit.state.card!);
+      final load = cubit.refresh();
+      final shown = cubit.state.card!;
+      expect(shown.spotlight, CreatorSpotlight.creativeDays);
+      await cubit.presented(shown);
+      const updated = CreatorHighlight(
+        owner: _owner,
+        localDate: '2026-10-30',
+        createdToday: 1,
+        creationDaysThisWeek: 2,
+        views: null,
+        topVideo: null,
+        likes: 3,
+        celebrate: false,
+      );
+      repository.next.complete(updated);
+      await load;
+      expect(cubit.state.card?.spotlight, CreatorSpotlight.creativeDays);
+      expect(cubit.state.card?.rotation, shown.rotation);
+      expect(cubit.state.card?.likes, 3);
+      await cubit.presented(cubit.state.card!);
+      expect(repository.presented, [
+        (_owner, '2026-10-30', 1),
+        (_owner, '2026-10-30', 2),
+      ]);
+      await cubit.refresh();
+      await cubit.presented(cubit.state.card!);
+      await cubit.refresh();
+      expect(cubit.state.card?.spotlight, CreatorSpotlight.createdToday);
+    });
+
     const rich = CreatorHighlight(
       owner: _owner,
       localDate: '2026-10-30',
