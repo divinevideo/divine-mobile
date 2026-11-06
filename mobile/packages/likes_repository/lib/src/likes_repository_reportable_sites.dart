@@ -1,10 +1,11 @@
-// ABOUTME: Stable identifiers for the local-storage swallow sites in
+// ABOUTME: Stable identifiers for the reporter call sites in
 // ABOUTME: LikesRepository, used as the `site:` annotation on reporter calls.
 
-/// Stable site identifiers for the best-effort local-storage swallow
-/// points in `LikesRepository`. The wiring layer forwards each call to
-/// Crashlytics with `reason: 'LikesRepository.<site>'` so the dashboard
-/// aggregates per site.
+/// Stable site identifiers for the reporter calls in `LikesRepository`: the
+/// best-effort local-storage swallow points, and reactions on an addressable
+/// target published without its coordinate. The wiring layer forwards each
+/// call to Crashlytics with `reason: 'LikesRepository.<site>'` so the
+/// dashboard aggregates per site.
 ///
 /// Only programming-invariant violations (`Error` subtypes) reach the
 /// reporter; expected IO and corruption failures stay in the unified log
@@ -64,6 +65,21 @@ abstract class LikesRepositoryReportableSites {
   /// live cross-device subscription threw.
   static const String processIncomingReactionSaveRecord =
       'processIncomingReaction.saveRecord';
+
+  /// `likeEvent`: an addressable target (Kind 30000-39999) arrived without
+  /// its coordinate, so the reaction goes out without an `a` tag (#6980).
+  static const String likeEventMissingCoordinate =
+      'likeEvent.missingCoordinate';
+
+  /// `executeLikeAction`: a queued like on an addressable target is replayed
+  /// without its coordinate, so it goes out without an `a` tag (#6980).
+  static const String executeLikeActionMissingCoordinate =
+      'executeLikeAction.missingCoordinate';
+
+  /// `downvoteEvent`: an addressable target arrived without its coordinate,
+  /// so the downvote goes out without an `a` tag (#6980).
+  static const String downvoteEventMissingCoordinate =
+      'downvoteEvent.missingCoordinate';
 
   /// `likeEvent`: persisting a reaction adopted from the relay — this account
   /// already had a live `+` on the target (#7001) — threw.

@@ -621,7 +621,127 @@ void main() {
       });
     });
 
+    late List<({Object error, String site})> reported;
+
+    /// Stubs every publish to succeed with a reaction for [testEventId].
+    void stubAnyPublish() {
+      when(
+        () => mockNostrClient.sendLike(
+          any(),
+          content: any(named: 'content'),
+          addressableId: any(named: 'addressableId'),
+          targetAuthorPubkey: any(named: 'targetAuthorPubkey'),
+          targetKind: any(named: 'targetKind'),
+        ),
+      ).thenAnswer(
+        (_) async => createMockReaction(
+          id: testReactionEventId,
+          targetEventId: testEventId,
+        ),
+      );
+    }
+
+    /// A repository with no local storage that records reporter calls.
+    LikesRepository createReportingRepository() {
+      reported = [];
+      return createRepository(
+        withLocalStorage: false,
+        errorReporter: (error, stackTrace, {required site}) {
+          reported.add((error: error, site: site));
+        },
+      );
+    }
+
     group('likeEvent', () {
+      group('on an addressable target with no coordinate (#6980)', () {
+        test('still publishes the like with its kind', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            targetKind: 34236,
+          );
+
+          verify(
+            () => mockNostrClient.sendLike(
+              testEventId,
+              content: '+',
+              targetAuthorPubkey: testAuthorPubkey,
+              targetKind: 34236,
+            ),
+          ).called(1);
+        });
+
+        test('reports the missing coordinate', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            targetKind: 34236,
+          );
+
+          expect(reported, hasLength(1));
+          expect(reported.single.error, isA<StateError>());
+          expect(
+            reported.single.site,
+            equals(LikesRepositoryReportableSites.likeEventMissingCoordinate),
+          );
+        });
+
+        test('reports nothing for a like it does not publish', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            targetKind: 34236,
+          );
+          expect(reported, hasLength(1));
+
+          await expectLater(
+            repository.likeEvent(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              targetKind: 34236,
+            ),
+            throwsA(isA<AlreadyLikedException>()),
+          );
+
+          expect(reported, hasLength(1));
+        });
+
+        test('reports nothing when the coordinate is known', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            addressableId: '34236:$testAuthorPubkey:test-d-tag',
+            targetKind: 34236,
+          );
+
+          expect(reported, isEmpty);
+        });
+
+        test('reports nothing for a regular target kind', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            targetKind: 1111,
+          );
+
+          expect(reported, isEmpty);
+        });
+      });
+
       test('publishes like reaction and stores record', () async {
         final mockEvent = MockEvent();
         when(() => mockEvent.id).thenReturn(testReactionEventId);
@@ -1839,6 +1959,25 @@ void main() {
     });
 
     group('downvoteEvent', () {
+      test('reports a missing coordinate on an addressable target '
+          '(#6980)', () async {
+        stubAnyPublish();
+        repository = createReportingRepository();
+
+        await repository.downvoteEvent(
+          eventId: testEventId,
+          authorPubkey: testAuthorPubkey,
+          targetKind: 34236,
+        );
+
+        expect(
+          reported.map((r) => r.site),
+          equals([
+            LikesRepositoryReportableSites.downvoteEventMissingCoordinate,
+          ]),
+        );
+      });
+
       test('ticks watchDownvotedEventIds before sendLike completes', () async {
         // Block sendLike on a completer so the optimistic stream emit
         // is observable before the network call returns.
@@ -5293,6 +5432,24 @@ void main() {
     });
 
     group('executeLikeAction', () {
+      test('reports a replayed like missing its coordinate (#6980)', () async {
+        stubAnyPublish();
+        repository = createReportingRepository();
+
+        await repository.executeLikeAction(
+          eventId: testEventId,
+          authorPubkey: testAuthorPubkey,
+          targetKind: 34236,
+        );
+
+        expect(
+          reported.map((r) => r.site),
+          equals([
+            LikesRepositoryReportableSites.executeLikeActionMissingCoordinate,
+          ]),
+        );
+      });
+
       test('publishes like directly to relays', () async {
         when(
           () => mockNostrClient.sendLike(
