@@ -18,6 +18,7 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/comments/comments.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
+import 'package:openvine/widgets/linkified_text/linkified_text_support.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_name.dart';
@@ -161,40 +162,50 @@ class FeedReactionsOverlay extends StatelessWidget {
   }
 }
 
-class _FeedReactionsOverlayView extends StatefulWidget {
+class _FeedReactionsOverlayView extends ConsumerStatefulWidget {
   const _FeedReactionsOverlayView({required this.video});
 
   final VideoEvent video;
 
   @override
-  State<_FeedReactionsOverlayView> createState() =>
+  ConsumerState<_FeedReactionsOverlayView> createState() =>
       _FeedReactionsOverlayViewState();
 }
 
-class _FeedReactionsOverlayViewState extends State<_FeedReactionsOverlayView> {
+class _FeedReactionsOverlayViewState
+    extends ConsumerState<_FeedReactionsOverlayView> {
   /// Whether the reaction has finished fading in. Until then it takes no
   /// taps, so a tap meant for the video is not spent on something unseen.
   bool _fadedIn = true;
+
+  /// The top comment as the bubble shows it, so a screen reader hears a
+  /// mention as a name rather than a `nostr:` code.
+  String _spokenText = '';
 
   @override
   Widget build(BuildContext context) {
     final isVisible = context.select(
       (FeedTopCommentCubit cubit) => cubit.state.isOverlayVisible,
     );
+    final comment = context.select(
+      (FeedTopCommentCubit cubit) => cubit.state.topComment,
+    );
+    _spokenText = comment == null
+        ? ''
+        : _spokenComment(context, ref, comment.content.trim());
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     return BlocListener<FeedTopCommentCubit, FeedTopCommentState>(
       listenWhen: (previous, current) =>
           !previous.isOverlayVisible && current.isOverlayVisible,
       listener: (context, state) {
-        // The reaction covers the video after a loop with no input from the
-        // viewer, so a screen reader is told what appeared.
-        announceDetached(
-          context,
-          state.topComment!.content.trim(),
-          description: 'announce feed reaction',
-          logName: 'FeedReactionsOverlay',
-        );
-        if (!reduceMotion) setState(() => _fadedIn = false);
+        if (!reduceMotion) {
+          setState(() => _fadedIn = false);
+          return;
+        }
+        // No fade to wait for: announce once the reaction is drawn.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _announce();
+        });
       },
       child: IgnorePointer(
         ignoring: !isVisible || !_fadedIn,
@@ -205,7 +216,9 @@ class _FeedReactionsOverlayViewState extends State<_FeedReactionsOverlayView> {
               : FeedReactionsOverlayLayout.fadeDuration,
           // Also called when a fade-out ends, after which nothing is pending.
           onEnd: () {
-            if (!_fadedIn) setState(() => _fadedIn = true);
+            if (_fadedIn) return;
+            setState(() => _fadedIn = true);
+            _announce();
           },
           child: isVisible
               ? _ReactionContent(video: widget.video)
@@ -214,6 +227,32 @@ class _FeedReactionsOverlayViewState extends State<_FeedReactionsOverlayView> {
       ),
     );
   }
+
+  /// The reaction covers the video after a loop with no input from the
+  /// viewer, so a screen reader is told what appeared.
+  void _announce() => announceDetached(
+    context,
+    _spokenText,
+    description: 'announce feed reaction',
+    logName: 'FeedReactionsOverlay',
+  );
+}
+
+/// [content] as plain text, with mentions resolved the way the bubble's
+/// [LinkifiedText] shows them.
+String _spokenComment(BuildContext context, WidgetRef ref, String content) {
+  final style = VineTheme.bodyMediumFont();
+  return TextSpan(
+    children: LinkifiedTextSpanBuilder(
+      text: content,
+      defaultStyle: style,
+      linkStyle: style,
+      profileLabelForHex: (hexPubkey) =>
+          LinkifiedTextSupport.profileDisplayText(ref, hexPubkey),
+      videoLabel: context.l10n.clickableTextViewVideoLink,
+      allowWidgetSpans: false,
+    ).build(),
+  ).toPlainText();
 }
 
 class _ReactionContent extends StatelessWidget {

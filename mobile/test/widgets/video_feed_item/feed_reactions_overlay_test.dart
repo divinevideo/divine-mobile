@@ -437,10 +437,81 @@ void main() {
         );
         await tester.pumpWidget(buildSubject());
         await tester.pump();
+        expect(
+          tester.takeAnnouncements(),
+          isEmpty,
+          reason: 'not before it has faded in',
+        );
+
+        await tester.pumpAndSettle();
+        expect(
+          tester.takeAnnouncements().map((a) => a.message),
+          [_topComment.content],
+        );
+        handle.dispose();
+      });
+
+      testWidgets('announces at once under reduced motion', (tester) async {
+        final handle = tester.ensureSemantics();
+        whenListen(
+          cubit,
+          Stream.value(_visibleState),
+          initialState: _visibleState.copyWith(hasCompletedLoop: false),
+        );
+        await tester.pumpWidget(buildSubject(reducedMotion: true));
+        await tester.pump();
 
         expect(
           tester.takeAnnouncements().map((a) => a.message),
           [_topComment.content],
+        );
+        handle.dispose();
+      });
+
+      testWidgets('announces a mention by name, as the bubble shows it', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        const mentionedHex =
+            '6666666666666666666666666666666666666666666666666666666666666666';
+        final npub = NostrKeyUtils.encodePubKey(mentionedHex);
+        final withMention = _visibleState.copyWith(
+          topComment: Comment(
+            id: _topComment.id,
+            content: 'yesss nostr:$npub so good',
+            authorPubkey: _commenter,
+            createdAt: DateTime(2026, 10, 28),
+            rootEventId: _video.id,
+            rootAuthorPubkey: _creator,
+          ),
+        );
+        whenListen(
+          cubit,
+          Stream.value(withMention),
+          initialState: withMention.copyWith(hasCompletedLoop: false),
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            extraOverrides: [
+              userProfileReactiveProvider(mentionedHex).overrideWith(
+                (ref) => Stream<UserProfile?>.value(
+                  UserProfile(
+                    pubkey: mentionedHex,
+                    rawData: const {},
+                    createdAt: DateTime(2026),
+                    eventId: _topComment.id,
+                    displayName: 'Ryohei Nakatake',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.takeAnnouncements().map((a) => a.message),
+          ['yesss @Ryohei Nakatake so good'],
         );
         handle.dispose();
       });
