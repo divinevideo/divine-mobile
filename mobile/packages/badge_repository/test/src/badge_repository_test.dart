@@ -95,7 +95,13 @@ void main() {
           requireAllRelaysSettled: true,
         ),
       ).thenAnswer(
-        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+        (call) async => (
+          events: await nostrClient.queryEvents(
+            call.positionalArguments.single as List<Filter>,
+          ),
+          timedOut: false,
+          noRelays: false,
+        ),
       );
 
       repository = BadgeRepository(
@@ -2103,6 +2109,7 @@ void main() {
                     pubkey: account,
                     kind: kind,
                     tags: tags,
+                    createdAt: createdAt ?? 1000,
                   ),
             );
             addTearDown(scoped.dispose);
@@ -3304,6 +3311,854 @@ void main() {
       },
     );
 
+    group('profile badge replacement reads', () {
+      final coordinate = '30009:${_pubkey(2)}:new-badge';
+      final retainedCoordinate = '30009:${_pubkey(3)}:retained-badge';
+
+      BadgeAwardViewData award(String value, int id) => BadgeAwardViewData(
+        award: Nip58BadgeParser.parseAward(
+          _awardEvent(
+            id: _eventId(id),
+            issuerPubkey: _pubkey(2),
+            definitionCoordinate: value,
+            recipients: [_pubkey(1)],
+          ),
+        )!,
+      );
+
+      void stubRead({
+        List<Event> events = const [],
+        bool timedOut = false,
+        bool noRelays = false,
+      }) {
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (
+            events: events,
+            timedOut: timedOut,
+            noRelays: noRelays,
+          ),
+        );
+      }
+
+      for (final remove in [false, true]) {
+        test('${remove ? 'removing' : 'accepting'} keeps the fresh relay list '
+            'and unknown data', () async {
+          // Ordinary display reads still return an empty stale snapshot.
+          final source = _signed(
+            _event(
+              id: _eventId(120),
+              pubkey: _pubkey(1),
+              kind: EventKind.profileBadges,
+              content: 'opaque profile badge data',
+              tags: [
+                ['custom', 'keep me'],
+                ['a', retainedCoordinate, 'wss://definition.example'],
+                ['e', _eventId(121), 'wss://award.example', 'extra'],
+                if (remove) ...[
+                  ['a', coordinate],
+                  ['e', _eventId(122)],
+                ],
+              ],
+            ),
+          );
+          stubRead(events: [source]);
+
+          if (remove) {
+            await repository.removeAward(award(coordinate, 122));
+          } else {
+            await repository.acceptAward(award(coordinate, 122));
+          }
+
+          expect(lastSignedEvent(), isNotNull);
+          final published = lastSignedEvent()!;
+          expect(published.content, 'opaque profile badge data');
+          expect(published.tags, [
+            ['custom', 'keep me'],
+            ['a', retainedCoordinate, 'wss://definition.example'],
+            ['e', _eventId(121), 'wss://award.example', 'extra'],
+            if (!remove) ...[
+              ['a', coordinate],
+              ['e', _eventId(122)],
+            ],
+          ]);
+        });
+
+        for (final noRelays in [false, true]) {
+          test('${remove ? 'remove' : 'accept'} refuses '
+              '${noRelays ? 'a relayless' : 'a timed out'} read', () async {
+            stubRead(timedOut: !noRelays, noRelays: noRelays);
+            final target = award(coordinate, 122);
+
+            await expectLater(
+              remove
+                  ? repository.removeAward(target)
+                  : repository.acceptAward(target),
+              throwsA(
+                isA<ProfileBadgesWriteRefusedException>().having(
+                  (error) => error.toString(),
+                  'toString',
+                  'ProfileBadgesWriteRefusedException: Could not confirm the '
+                      'latest profile badges from relays',
+                ),
+              ),
+            );
+
+            expect(lastSignedEvent(), isNull);
+            verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+          });
+        }
+      }
+
+      test(
+        'removing a badge cannot fuse unpaired tags into a new pin',
+        () async {
+          stubRead(
+            events: [
+              _signed(
+                _event(
+                  id: _eventId(140),
+                  pubkey: _pubkey(1),
+                  kind: EventKind.profileBadges,
+                  tags: [
+                    ['a', '30009:${_pubkey(3)}:orphan'],
+                    ['a', coordinate],
+                    ['e', _eventId(122)],
+                    ['e', _eventId(141)],
+                  ],
+                ),
+              ),
+            ],
+          );
+
+          await repository.removeAward(award(coordinate, 122));
+
+          final published = lastSignedEvent()!;
+          expect(
+            Nip58BadgeParser.parseProfileBadges(published)!.badges,
+            isEmpty,
+          );
+          expect(published.tags, isEmpty);
+        },
+      );
+
+      test('leaves client attribution to the signer', () async {
+        stubRead(
+          events: [
+            _signed(
+              _event(
+                id: _eventId(157),
+                pubkey: _pubkey(1),
+                kind: EventKind.profileBadges,
+                tags: [
+                  ['client', 'Another app'],
+                  ['a', retainedCoordinate],
+                  ['e', _eventId(121)],
+                ],
+              ),
+            ),
+          ],
+        );
+
+        await repository.acceptAward(award(coordinate, 122));
+
+        expect(lastSignedEvent()!.tags, [
+          ['a', retainedCoordinate],
+          ['e', _eventId(121)],
+          ['a', coordinate],
+          ['e', _eventId(122)],
+        ]);
+      });
+
+      test('replaces only a list the owner actually signed', () async {
+        final genuine = _signed(
+          _event(
+            id: _eventId(150),
+            pubkey: _pubkey(1),
+            kind: EventKind.profileBadges,
+            tags: [
+              ['a', retainedCoordinate],
+              ['e', _eventId(121)],
+            ],
+          ),
+        );
+        // A relay exempted from signature checks can serve the owner's pubkey
+        // with a correct id but someone else's signature...
+        final wronglySigned = Event(
+          _pubkey(1),
+          EventKind.profileBadges,
+          [
+            ['expiration', '1'],
+          ],
+          'chosen by the relay',
+          createdAt: 2000,
+        )..sign(_eventId(103));
+        // ...or a real signature over an id that no longer matches the body.
+        final tampered = Event.fromJson({
+          ..._signed(
+            _event(
+              id: _eventId(152),
+              pubkey: _pubkey(1),
+              kind: EventKind.profileBadges,
+              createdAt: 3000,
+            ),
+          ).toJson(),
+          'content': 'rewritten by the relay',
+        });
+        stubRead(events: [wronglySigned, tampered, genuine]);
+
+        await repository.acceptAward(award(coordinate, 122));
+
+        final published = lastSignedEvent()!;
+        expect(published.content, isEmpty);
+        expect(published.tags, [
+          ['a', retainedCoordinate],
+          ['e', _eventId(121)],
+          ['a', coordinate],
+          ['e', _eventId(122)],
+        ]);
+      });
+
+      test(
+        'migrates the newest legacy list while preserving its data',
+        () async {
+          final legacy = _signed(
+            _event(
+              id: _eventId(125),
+              pubkey: _pubkey(1),
+              kind: EventKind.badgeSet,
+              createdAt: 2000,
+              content: 'legacy opaque data',
+              tags: [
+                ['d', 'profile_badges'],
+                ['custom', 'legacy metadata'],
+                ['a', retainedCoordinate, 'wss://definition.example'],
+                ['e', _eventId(121), 'wss://award.example'],
+              ],
+            ),
+          );
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((call) async {
+            final filters = call.positionalArguments.single as List<Filter>;
+            return (
+              events: [
+                for (final filter in filters)
+                  if (filter.kinds!.contains(EventKind.profileBadges))
+                    _signed(
+                      _profileBadgesEvent(
+                        id: _eventId(126),
+                        pubkey: _pubkey(1),
+                        tags: [],
+                      ),
+                    )
+                  else if (filter.kinds!.contains(EventKind.badgeSet) &&
+                      filter.d!.contains('profile_badges'))
+                    legacy,
+              ],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+
+          await repository.acceptAward(award(coordinate, 122));
+
+          expect(lastSignedEvent()!.kind, EventKind.profileBadges);
+          expect(lastSignedEvent()!.content, 'legacy opaque data');
+          expect(lastSignedEvent()!.tags, [
+            ['custom', 'legacy metadata'],
+            ['a', retainedCoordinate, 'wss://definition.example'],
+            ['e', _eventId(121), 'wss://award.example'],
+            ['a', coordinate],
+            ['e', _eventId(122)],
+          ]);
+        },
+      );
+
+      test('refuses publication when the signer changes accounts', () async {
+        repository = BadgeRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: preferences,
+          currentPubkey: () => _pubkey(1),
+          signer: () => dismissalSigner,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => _event(
+                id: _eventId(127),
+                pubkey: _pubkey(4),
+                kind: kind,
+                content: content,
+                createdAt: createdAt ?? 1000,
+                tags: tags,
+              ),
+        );
+        stubRead();
+
+        await expectLater(
+          repository.acceptAward(award(coordinate, 122)),
+          throwsStateError,
+        );
+
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test('serializes the read through relay acknowledgement', () async {
+        final firstPublishStarted = Completer<void>();
+        final firstPublishFinished = Completer<void>();
+        var readCount = 0;
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer((_) async {
+          readCount++;
+          return (events: <Event>[], timedOut: false, noRelays: false);
+        });
+        when(() => nostrClient.queryEvents(any())).thenAnswer((call) async {
+          final filters = call.positionalArguments.single as List<Filter>;
+          if (filters.first.kinds!.contains(EventKind.profileBadges)) {
+            readCount++;
+          }
+          return <Event>[];
+        });
+        final published = <Event>[];
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
+          invocation,
+        ) async {
+          final event = invocation.positionalArguments.single as Event;
+          published.add(event);
+          if (published.length == 1) {
+            firstPublishStarted.complete();
+            await firstPublishFinished.future;
+          }
+          return _acceptedPublishOutcome(event);
+        });
+
+        final first = repository.acceptAward(award(coordinate, 122));
+        await firstPublishStarted.future;
+        final second = repository.acceptAward(award(retainedCoordinate, 123));
+        // Drain the event queue so an incorrectly concurrent read can start.
+        await pumpEventQueue();
+        expect(readCount, 1);
+        firstPublishFinished.complete();
+        await Future.wait([first, second]);
+
+        expect(readCount, 2);
+        expect(published.last.tags, [
+          ['a', coordinate],
+          ['e', _eventId(122)],
+          ['a', retainedCoordinate],
+          ['e', _eventId(123)],
+        ]);
+      });
+
+      test('a failed read does not strand the next change', () async {
+        stubRead(timedOut: true);
+        await expectLater(
+          repository.acceptAward(award(coordinate, 122)),
+          throwsA(isA<ProfileBadgesWriteRefusedException>()),
+        );
+        stubRead();
+
+        await repository.acceptAward(award(retainedCoordinate, 123));
+
+        expect(lastSignedEvent()!.tags, [
+          ['a', retainedCoordinate],
+          ['e', _eventId(123)],
+        ]);
+      });
+
+      test('a failed read releases the edit queued behind it', () async {
+        final firstRead = Completer<void>();
+        var reads = 0;
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer((_) async {
+          final read = ++reads;
+          if (read == 1) await firstRead.future;
+          return (events: <Event>[], timedOut: read == 1, noRelays: false);
+        });
+
+        final first = expectLater(
+          repository.acceptAward(award(coordinate, 122)),
+          throwsA(isA<ProfileBadgesWriteRefusedException>()),
+        );
+        final second = repository.acceptAward(award(retainedCoordinate, 123));
+        await pumpEventQueue();
+        firstRead.complete();
+        await first;
+        await second;
+
+        expect(reads, 2);
+        expect(lastSignedEvent()!.tags, [
+          ['a', retainedCoordinate],
+          ['e', _eventId(123)],
+        ]);
+      });
+
+      test('queues every edit made before the first is acknowledged', () async {
+        final thirdCoordinate = '30009:${_pubkey(3)}:third-badge';
+        final firstPublish = Completer<void>();
+        final published = <Event>[];
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
+          invocation,
+        ) async {
+          final event = invocation.positionalArguments.single as Event;
+          published.add(event);
+          if (published.length == 1) await firstPublish.future;
+          return _acceptedPublishOutcome(event);
+        });
+
+        final edits = [
+          repository.acceptAward(award(coordinate, 122)),
+          repository.acceptAward(award(retainedCoordinate, 123)),
+          repository.acceptAward(award(thirdCoordinate, 124)),
+        ];
+        await pumpEventQueue();
+        firstPublish.complete();
+        await Future.wait(edits);
+
+        expect(published, hasLength(3));
+        expect(published.last.tags, [
+          ['a', coordinate],
+          ['e', _eventId(122)],
+          ['a', retainedCoordinate],
+          ['e', _eventId(123)],
+          ['a', thirdCoordinate],
+          ['e', _eventId(124)],
+        ]);
+      });
+
+      test('ignores a list published by another account', () async {
+        stubRead(
+          events: [
+            _signed(
+              _event(
+                id: _eventId(155),
+                pubkey: _pubkey(3),
+                kind: EventKind.profileBadges,
+                createdAt: 2000,
+                content: 'someone else',
+                tags: [
+                  ['a', retainedCoordinate],
+                  ['e', _eventId(121)],
+                ],
+              ),
+            ),
+          ],
+        );
+
+        await repository.acceptAward(award(coordinate, 122));
+
+        final published = lastSignedEvent()!;
+        expect(published.content, isEmpty);
+        expect(published.tags, [
+          ['a', coordinate],
+          ['e', _eventId(122)],
+        ]);
+      });
+
+      test('an account switch while signing cannot publish', () async {
+        var owner = _pubkey(1);
+        repository = BadgeRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: preferences,
+          currentPubkey: () => owner,
+          signer: () => dismissalSigner,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async {
+                // The signer answers for the account it was asked about, but
+                // the user switched accounts while it was working.
+                owner = _pubkey(4);
+                return _event(
+                  id: _eventId(156),
+                  pubkey: _pubkey(1),
+                  kind: kind,
+                  tags: tags,
+                  content: content,
+                  createdAt: createdAt ?? 1000,
+                );
+              },
+        );
+        stubRead();
+
+        await expectLater(
+          repository.acceptAward(award(coordinate, 122)),
+          throwsA(isA<ProfileBadgesWriteRefusedException>()),
+        );
+
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test('a sign-out while signing is a refused edit', () async {
+        String? owner = _pubkey(1);
+        repository = BadgeRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: preferences,
+          currentPubkey: () => owner,
+          signer: () => dismissalSigner,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async {
+                // The session ends while a remote signer is working, and it
+                // gives up rather than signing.
+                owner = null;
+                return null;
+              },
+        );
+        stubRead();
+
+        await expectLater(
+          repository.acceptAward(award(coordinate, 122)),
+          throwsA(isA<ProfileBadgesWriteRefusedException>()),
+        );
+      });
+
+      test(
+        'an account switch during the read cannot publish its result',
+        () async {
+          var owner = _pubkey(1);
+          repository = BadgeRepository(
+            nostrClient: nostrClient,
+            sharedPreferences: preferences,
+            currentPubkey: () => owner,
+            signer: () => dismissalSigner,
+            signEvent:
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async {
+                  return signedEvent = _event(
+                    id: _eventId(124),
+                    pubkey: owner,
+                    kind: kind,
+                    tags: tags,
+                    content: content,
+                    createdAt: createdAt ?? 1000,
+                  );
+                },
+          );
+          final readStarted = Completer<void>();
+          final readFinished = Completer<List<Event>>();
+          when(
+            () => nostrClient.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((_) async {
+            readStarted.complete();
+            return (
+              events: await readFinished.future,
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+          // Hold the cached display read too, so a write built on it is caught.
+          when(() => nostrClient.queryEvents(any())).thenAnswer((_) async {
+            if (!readStarted.isCompleted) readStarted.complete();
+            return readFinished.future;
+          });
+          final mutation = expectLater(
+            repository.acceptAward(award(coordinate, 122)),
+            throwsA(isA<ProfileBadgesWriteRefusedException>()),
+          );
+          await readStarted.future;
+          owner = _pubkey(4);
+          readFinished.complete([]);
+          await mutation;
+
+          // The new account's signer is never asked to sign the old list.
+          expect(lastSignedEvent(), isNull);
+          verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+        },
+      );
+    });
+
+    group('profile badge replacement ordering', () {
+      final firstCoordinate = '30009:${_pubkey(2)}:first';
+      final remoteCoordinate = '30009:${_pubkey(2)}:remote';
+      final nextCoordinate = '30009:${_pubkey(2)}:next';
+      late int now;
+      late List<Event> remote;
+      late List<Event> attempts;
+
+      BadgeAwardViewData award(String coordinate, int id) => BadgeAwardViewData(
+        award: Nip58BadgeParser.parseAward(
+          _awardEvent(
+            id: _eventId(id),
+            issuerPubkey: _pubkey(2),
+            definitionCoordinate: coordinate,
+            recipients: [_pubkey(1)],
+          ),
+        )!,
+      );
+
+      setUp(() {
+        now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+        remote = [];
+        attempts = [];
+        repository = BadgeRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: preferences,
+          currentPubkey: () => _pubkey(1),
+          signer: () => dismissalSigner,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async {
+                final event = _event(
+                  id: 'f' * 64,
+                  pubkey: _pubkey(1),
+                  kind: kind,
+                  content: content,
+                  tags: tags,
+                  createdAt: createdAt ?? now,
+                );
+                attempts.add(event);
+                return event;
+              },
+        );
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer(
+          (_) async => (events: remote, timedOut: false, noRelays: false),
+        );
+      });
+
+      test(
+        'keeps the canonical lower-id relay winner in the same second',
+        () async {
+          await repository.acceptAward(award(firstCoordinate, 130));
+          remote = [
+            _signed(
+              _profileBadgesEvent(
+                id: _eventId(138),
+                pubkey: _pubkey(1),
+                createdAt: attempts.single.createdAt,
+                tags: [
+                  ['a', firstCoordinate],
+                  ['e', _eventId(130)],
+                  ['a', remoteCoordinate],
+                  ['e', _eventId(131)],
+                ],
+              ),
+            ),
+          ];
+          // The remote list must sort first on the tie for this to test it.
+          expect(
+            remote.single.id.compareTo(attempts.single.id),
+            lessThan(0),
+          );
+
+          await repository.acceptAward(award(nextCoordinate, 132));
+
+          expect(attempts.last.tags, [
+            ['a', firstCoordinate],
+            ['e', _eventId(130)],
+            ['a', remoteCoordinate],
+            ['e', _eventId(131)],
+            ['a', nextCoordinate],
+            ['e', _eventId(132)],
+          ]);
+        },
+      );
+
+      test(
+        'signs strictly after a relay revision within the clock budget',
+        () async {
+          remote = [
+            _signed(
+              _profileBadgesEvent(
+                id: _eventId(133),
+                pubkey: _pubkey(1),
+                createdAt: now + 10,
+                tags: [],
+              ),
+            ),
+          ];
+
+          await repository.acceptAward(award(nextCoordinate, 132));
+
+          expect(attempts.single.createdAt, now + 11);
+        },
+      );
+
+      test('refuses a signer that changes the reserved timestamp', () async {
+        repository = BadgeRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: preferences,
+          currentPubkey: () => _pubkey(1),
+          signer: () => dismissalSigner,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async => _event(
+                id: _eventId(135),
+                pubkey: _pubkey(1),
+                kind: kind,
+                content: content,
+                tags: tags,
+                createdAt: now,
+              ),
+        );
+        remote = [
+          _signed(
+            _profileBadgesEvent(
+              id: _eventId(136),
+              pubkey: _pubkey(1),
+              createdAt: now + 10,
+              tags: [],
+            ),
+          ),
+        ];
+
+        await expectLater(
+          repository.acceptAward(award(nextCoordinate, 132)),
+          throwsStateError,
+        );
+
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test('a retry is later than an unconfirmed signed attempt', () async {
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer(
+          (call) async => _rejectedPublishOutcome(
+            call.positionalArguments.single as Event,
+          ),
+        );
+        await expectLater(
+          repository.acceptAward(award(firstCoordinate, 130)),
+          throwsA(isA<BadgePublishException>()),
+        );
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer(
+          (call) async => _acceptedPublishOutcome(
+            call.positionalArguments.single as Event,
+          ),
+        );
+
+        await repository.acceptAward(award(firstCoordinate, 130));
+
+        expect(attempts.last.createdAt, greaterThan(attempts.first.createdAt));
+      });
+
+      test('backdates a list that no newer revision has to follow', () async {
+        await repository.acceptAward(award(nextCoordinate, 132));
+
+        // Allow for the clock ticking once between setUp and the write.
+        expect(
+          attempts.single.createdAt,
+          inInclusiveRange(now - 30, now - 29),
+        );
+      });
+
+      test('signs after a source near the end of the clock window', () async {
+        remote = [
+          _signed(
+            _profileBadgesEvent(
+              id: _eventId(137),
+              pubkey: _pubkey(1),
+              createdAt: now + 28,
+              tags: [],
+            ),
+          ),
+        ];
+
+        await repository.acceptAward(award(nextCoordinate, 132));
+
+        expect(attempts.single.createdAt, now + 29);
+      });
+
+      test('refuses a source beyond the bounded future clock window', () async {
+        // A few seconds past the window, so a clock tick during the test
+        // cannot carry the source back inside it.
+        remote = [
+          _signed(
+            _profileBadgesEvent(
+              id: _eventId(134),
+              pubkey: _pubkey(1),
+              createdAt: now + 35,
+              tags: [],
+            ),
+          ),
+        ];
+
+        await expectLater(
+          repository.acceptAward(award(nextCoordinate, 132)),
+          throwsA(isA<ProfileBadgesWriteRefusedException>()),
+        );
+
+        expect(attempts, isEmpty);
+        verifyNever(() => nostrClient.publishEventAwaitOk(any()));
+      });
+
+      test('stops advancing retries once the clock window is spent', () async {
+        when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer(
+          (call) async => _rejectedPublishOutcome(
+            call.positionalArguments.single as Event,
+          ),
+        );
+
+        ProfileBadgesWriteRefusedException? refusal;
+        for (var attempt = 0; attempt < 200 && refusal == null; attempt++) {
+          try {
+            await repository.acceptAward(award(firstCoordinate, 130));
+          } on BadgePublishException {
+            // Rejected everywhere; the next attempt has to stamp later.
+          } on ProfileBadgesWriteRefusedException catch (error) {
+            refusal = error;
+          }
+        }
+
+        expect(refusal, isNotNull);
+        final windowEnd = DateTime.now().millisecondsSinceEpoch ~/ 1000 + 30;
+        expect(
+          attempts.map((event) => event.createdAt),
+          everyElement(lessThanOrEqualTo(windowEnd)),
+        );
+      });
+    });
+
     test('acceptAward publishes a kind 10008 profile badges event', () async {
       final award = _awardEvent(
         id: _eventId(5),
@@ -3311,13 +4166,15 @@ void main() {
         definitionCoordinate: '30009:${_pubkey(2)}:daily-diviner',
         recipients: [_pubkey(1)],
       );
-      final existingProfileBadges = _profileBadgesEvent(
-        id: _eventId(6),
-        pubkey: _pubkey(1),
-        tags: [
-          ['a', '30009:${_pubkey(3)}:weekly-diviner'],
-          ['e', _eventId(7)],
-        ],
+      final existingProfileBadges = _signed(
+        _profileBadgesEvent(
+          id: _eventId(6),
+          pubkey: _pubkey(1),
+          tags: [
+            ['a', '30009:${_pubkey(3)}:weekly-diviner'],
+            ['e', _eventId(7)],
+          ],
+        ),
       );
       _stubQueries(nostrClient, {
         'profileCurrent:${_pubkey(1)}': [existingProfileBadges],
@@ -3346,15 +4203,17 @@ void main() {
         definitionCoordinate: '30009:${_pubkey(2)}:daily-diviner',
         recipients: [_pubkey(1)],
       );
-      final existingProfileBadges = _profileBadgesEvent(
-        id: _eventId(9),
-        pubkey: _pubkey(1),
-        tags: [
-          ['a', '30009:${_pubkey(2)}:daily-diviner'],
-          ['e', _eventId(8)],
-          ['a', '30009:${_pubkey(3)}:weekly-diviner'],
-          ['e', _eventId(10)],
-        ],
+      final existingProfileBadges = _signed(
+        _profileBadgesEvent(
+          id: _eventId(9),
+          pubkey: _pubkey(1),
+          tags: [
+            ['a', '30009:${_pubkey(2)}:daily-diviner'],
+            ['e', _eventId(8)],
+            ['a', '30009:${_pubkey(3)}:weekly-diviner'],
+            ['e', _eventId(10)],
+          ],
+        ),
       );
       _stubQueries(nostrClient, {
         'profileCurrent:${_pubkey(1)}': [existingProfileBadges],
@@ -3384,15 +4243,17 @@ void main() {
           definitionCoordinate: coordinate,
           recipients: [_pubkey(1)],
         );
-        final existingProfileBadges = _profileBadgesEvent(
-          id: _eventId(12),
-          pubkey: _pubkey(1),
-          tags: [
-            ['a', coordinate],
-            ['e', _eventId(8)],
-            ['a', '30009:${_pubkey(3)}:weekly-diviner'],
-            ['e', _eventId(10)],
-          ],
+        final existingProfileBadges = _signed(
+          _profileBadgesEvent(
+            id: _eventId(12),
+            pubkey: _pubkey(1),
+            tags: [
+              ['a', coordinate],
+              ['e', _eventId(8)],
+              ['a', '30009:${_pubkey(3)}:weekly-diviner'],
+              ['e', _eventId(10)],
+            ],
+          ),
         );
         _stubQueries(nostrClient, {
           'profileCurrent:${_pubkey(1)}': [existingProfileBadges],
@@ -3416,14 +4277,16 @@ void main() {
         _stubQueries(nostrClient, {
           'awarded': const [],
           'profileCurrent:${_pubkey(1)}': [
-            _profileBadgesEvent(
-              id: _eventId(50),
-              pubkey: _pubkey(1),
-              createdAt: 4000,
-              tags: [
-                ['a', coordinate],
-                ['e', _eventId(51)],
-              ],
+            _signed(
+              _profileBadgesEvent(
+                id: _eventId(50),
+                pubkey: _pubkey(1),
+                createdAt: 4000,
+                tags: [
+                  ['a', coordinate],
+                  ['e', _eventId(51)],
+                ],
+              ),
             ),
           ],
         });
@@ -3593,6 +4456,7 @@ void main() {
               pubkey: _pubkey(1),
               kind: kind,
               content: content,
+              createdAt: createdAt ?? 1000,
               tags: tags,
             ),
       );
@@ -4379,13 +5243,15 @@ void main() {
           definitionCoordinate: coordinate,
           recipients: [_pubkey(1)],
         );
-        final existingProfileBadges = _profileBadgesEvent(
-          id: _eventId(43),
-          pubkey: _pubkey(1),
-          tags: [
-            ['a', coordinate],
-            ['e', _eventId(42), 'wss://relay.divine.video'],
-          ],
+        final existingProfileBadges = _signed(
+          _profileBadgesEvent(
+            id: _eventId(43),
+            pubkey: _pubkey(1),
+            tags: [
+              ['a', coordinate],
+              ['e', _eventId(42), 'wss://relay.divine.video'],
+            ],
+          ),
         );
         _stubQueries(nostrClient, {
           'profileCurrent:${_pubkey(1)}': [existingProfileBadges],
@@ -4415,13 +5281,15 @@ void main() {
       );
       _stubQueries(nostrClient, {
         'profileCurrent:${_pubkey(1)}': [
-          _profileBadgesEvent(
-            id: _eventId(46),
-            pubkey: _pubkey(1),
-            tags: [
-              ['a', coordinate],
-              ['e', _eventId(44)],
-            ],
+          _signed(
+            _profileBadgesEvent(
+              id: _eventId(46),
+              pubkey: _pubkey(1),
+              tags: [
+                ['a', coordinate],
+                ['e', _eventId(44)],
+              ],
+            ),
           ),
         ],
       });
@@ -4551,6 +5419,7 @@ void main() {
               kind: kind,
               tags: tags,
               content: content,
+              createdAt: createdAt ?? 1000,
             ),
       );
       final award = _awardEvent(
@@ -4583,25 +5452,29 @@ void main() {
           definitionCoordinate: '30009:${_pubkey(2)}:daily-diviner',
           recipients: [_pubkey(1)],
         );
-        final olderProfileBadges = _event(
-          id: _eventId(48),
-          pubkey: _pubkey(1),
-          kind: EventKind.profileBadges,
-          createdAt: 500,
-          tags: [
-            ['a', '30009:${_pubkey(3)}:older-badge'],
-            ['e', _eventId(49)],
-          ],
+        final olderProfileBadges = _signed(
+          _event(
+            id: _eventId(48),
+            pubkey: _pubkey(1),
+            kind: EventKind.profileBadges,
+            createdAt: 500,
+            tags: [
+              ['a', '30009:${_pubkey(3)}:older-badge'],
+              ['e', _eventId(49)],
+            ],
+          ),
         );
-        final newerProfileBadges = _event(
-          id: _eventId(50),
-          pubkey: _pubkey(1),
-          kind: EventKind.profileBadges,
-          createdAt: 2000,
-          tags: [
-            ['a', '30009:${_pubkey(3)}:newer-badge'],
-            ['e', _eventId(51)],
-          ],
+        final newerProfileBadges = _signed(
+          _event(
+            id: _eventId(50),
+            pubkey: _pubkey(1),
+            kind: EventKind.profileBadges,
+            createdAt: 2000,
+            tags: [
+              ['a', '30009:${_pubkey(3)}:newer-badge'],
+              ['e', _eventId(51)],
+            ],
+          ),
         );
         _stubQueries(nostrClient, {
           'profileCurrent:${_pubkey(1)}': [
@@ -4860,11 +5733,13 @@ void main() {
         _stubQueries(nostrClient, {
           'awarded': [award],
           'profileCurrent:${_pubkey(1)}': [
-            _profileBadgesEvent(
-              id: _eventId(71),
-              pubkey: _pubkey(1),
-              tags: const [],
-              createdAt: 500,
+            _signed(
+              _profileBadgesEvent(
+                id: _eventId(71),
+                pubkey: _pubkey(1),
+                tags: const [],
+                createdAt: 500,
+              ),
             ),
           ],
         });
@@ -4882,20 +5757,21 @@ void main() {
       test('a genuinely newer list from another device still wins', () async {
         _stubQueries(nostrClient, {
           'awarded': [award],
+        });
+        await repository.acceptAward(
+          BadgeAwardViewData(award: Nip58BadgeParser.parseAward(award)!),
+        );
+        _stubQueries(nostrClient, {
+          'awarded': [award],
           'profileCurrent:${_pubkey(1)}': [
             _profileBadgesEvent(
               id: _eventId(72),
               pubkey: _pubkey(1),
               tags: const [],
-              // The signer stamps the published event with createdAt 1000.
-              createdAt: 4000,
+              createdAt: lastSignedEvent()!.createdAt + 1,
             ),
           ],
         });
-
-        await repository.acceptAward(
-          BadgeAwardViewData(award: Nip58BadgeParser.parseAward(award)!),
-        );
 
         expect(
           (await repository.loadAwardedBadges()).single.isAccepted,
@@ -6232,13 +7108,15 @@ void main() {
             ),
           ],
           'profileCurrent:${_pubkey(1)}': [
-            _profileBadgesEvent(
-              id: _eventId(68),
-              pubkey: _pubkey(1),
-              tags: [
-                ['a', coordinate.value],
-                ['e', _eventId(67)],
-              ],
+            _signed(
+              _profileBadgesEvent(
+                id: _eventId(68),
+                pubkey: _pubkey(1),
+                tags: [
+                  ['a', coordinate.value],
+                  ['e', _eventId(67)],
+                ],
+              ),
             ),
           ],
         });
@@ -6258,18 +7136,90 @@ void main() {
         expect(published.last.tags, isEmpty);
       });
 
+      test(
+        'leaves the next account pinned after a switch mid-revoke',
+        () async {
+          var owner = _pubkey(1);
+          repository = BadgeRepository(
+            nostrClient: nostrClient,
+            sharedPreferences: preferences,
+            currentPubkey: () => owner,
+            signer: () => dismissalSigner,
+            signEvent:
+                ({
+                  required kind,
+                  required content,
+                  required tags,
+                  createdAt,
+                }) async {
+                  final event = _event(
+                    id: _eventId(900 + kind),
+                    pubkey: owner,
+                    kind: kind,
+                    tags: tags,
+                    content: content,
+                    createdAt: createdAt ?? 1000,
+                  );
+                  // The user switches accounts once the deletion is signed.
+                  if (kind == EventKind.eventDeletion) owner = _pubkey(4);
+                  return event;
+                },
+          );
+          _stubQueries(nostrClient, {
+            'awardsFor:${coordinate.value}': [
+              _awardEvent(
+                id: _eventId(72),
+                issuerPubkey: _pubkey(1),
+                definitionCoordinate: coordinate.value,
+                recipients: [_pubkey(1)],
+              ),
+            ],
+            // The account switched to has pinned the same badge itself.
+            'profileCurrent:${_pubkey(4)}': [
+              _signed(
+                _profileBadgesEvent(
+                  id: _eventId(73),
+                  pubkey: _pubkey(4),
+                  tags: [
+                    ['a', coordinate.value],
+                    ['e', _eventId(74)],
+                  ],
+                ),
+              ),
+            ],
+          });
+
+          await expectLater(
+            repository.revokeAward(
+              coordinate: coordinate,
+              recipientPubkey: _pubkey(1),
+            ),
+            throwsA(isA<ProfileBadgesWriteRefusedException>()),
+          );
+
+          final published = verify(
+            () => nostrClient.publishEventAwaitOk(captureAny()),
+          ).captured.cast<Event>();
+          expect(published.map((event) => event.kind), [
+            EventKind.eventDeletion,
+          ]);
+        },
+      );
+
       test('unpins on a retry after the awards are already gone', () async {
         // The first attempt deleted the award but failed before the unpin,
         // so the retry finds no award to revoke and must still get there.
         _stubQueries(nostrClient, {
           'profileCurrent:${_pubkey(1)}': [
-            _profileBadgesEvent(
-              id: _eventId(69),
-              pubkey: _pubkey(1),
-              tags: [
-                ['a', coordinate.value],
-                ['e', _eventId(67)],
-              ],
+            _signed(
+              _profileBadgesEvent(
+                id: _eventId(69),
+                pubkey: _pubkey(1),
+                tags: [
+                  ['a', coordinate.value],
+                  ['e', _eventId(67)],
+                ],
+              ),
             ),
           ],
         });
@@ -6882,6 +7832,21 @@ BadgeAwardViewData _byCoordinate(
   return awards.firstWhere(
     (award) => award.definitionCoordinate == coordinate,
   );
+}
+
+/// [event] as its author's test key really signs it, the way a relay serves a
+/// list the owner published. The fixture's own id is replaced by the real one.
+Event _signed(Event event) {
+  final seed = _pubkeys.entries
+      .firstWhere((entry) => entry.value == event.pubkey)
+      .key;
+  return Event(
+    event.pubkey,
+    event.kind,
+    event.tags,
+    event.content,
+    createdAt: event.createdAt,
+  )..sign(_eventId(seed + 100));
 }
 
 String _eventId(int seed) => seed.toRadixString(16).padLeft(64, '0');
