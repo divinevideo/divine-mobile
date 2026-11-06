@@ -708,6 +708,40 @@ void main() {
       });
     });
 
+    // Relays keep the lowest id of two versions signed in the same second
+    // (NIP-01), so that is the one whose decisions count.
+    group('two versions signed in the same second', () {
+      test('honors the one relays keep, whichever arrives first', () async {
+        final versions = [
+          _moderationEvent(
+            identifier: _videoIdentifier,
+            tags: [
+              ['e', _commentA, '', 'hidden'],
+            ],
+          ),
+          _moderationEvent(
+            identifier: _videoIdentifier,
+            tags: [
+              ['e', _commentB, '', 'hidden'],
+            ],
+          ),
+        ]..sort((a, b) => b.id.compareTo(a.id));
+        final kept = versions.last;
+        final keptHides = kept.tags.any((tag) => tag[1] == _commentA)
+            ? _commentA
+            : _commentB;
+        final droppedHides = keptHides == _commentA ? _commentB : _commentA;
+        answerReads(versions);
+
+        final moderation = await repository.loadModeration(
+          rootAddressableId: _coordinate,
+        );
+
+        expect(moderation.hides(_comment(keptHides)), isTrue);
+        expect(moderation.hides(_comment(droppedHides)), isFalse);
+      });
+    });
+
     // Only the owner's own signed event may count, or be signed again.
     group('an event the owner did not sign', () {
       /// The owner's moderation with a signature that does not verify.

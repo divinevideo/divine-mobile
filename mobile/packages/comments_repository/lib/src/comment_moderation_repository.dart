@@ -277,7 +277,12 @@ class CommentModerationRepository {
       if (identifier == null) continue;
       final key = _key(event.pubkey, identifier);
       final known = _latestEvents[key];
-      if (known == null || event.createdAt > known.createdAt) {
+      // Of two versions signed in the same second relays keep the lower id
+      // (NIP-01), as the replies writer does.
+      if (known == null ||
+          event.createdAt > known.createdAt ||
+          (event.createdAt == known.createdAt &&
+              event.id.compareTo(known.id) < 0)) {
         _latestEvents[key] = event;
       }
     }
