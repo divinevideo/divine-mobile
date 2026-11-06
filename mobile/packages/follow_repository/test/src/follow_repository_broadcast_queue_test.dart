@@ -28,6 +28,8 @@ const _otherAccount =
 const _alice =
     'b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012a1';
 const _bob = 'c3d4e5f6789012345678901234567890abcdef1234567890123456789012ab12';
+const _carol =
+    'd4e5f6789012345678901234567890abcdef1234567890123456789012ab12c3';
 
 /// A relay whose kind 3 publishes stay in flight until [release]d.
 class _GatedRelay {
@@ -79,14 +81,23 @@ class _GatedRelay {
     });
   }
 
-  /// Lets every publish started so far complete, until none is left.
+  /// Lets every publish complete, including ones that start meanwhile.
   Future<void> release() async {
-    for (var round = 0; round < 6; round++) {
+    for (var round = 0; round < 50; round++) {
       await pumpEventQueue();
-      for (final gate in List.of(_gates)) {
-        if (!gate.isCompleted) gate.complete();
+      final open = _gates.where((gate) => !gate.isCompleted).toList();
+      if (open.isEmpty) return;
+      for (final gate in open) {
+        gate.complete();
       }
     }
+    fail('publishes kept starting after 50 rounds');
+  }
+
+  /// Lets only the oldest publish still in flight complete.
+  Future<void> releaseOldest() async {
+    _gates.firstWhere((gate) => !gate.isCompleted).complete();
+    await pumpEventQueue();
   }
 
   /// Waits until [count] publishes have started.
@@ -177,6 +188,46 @@ void main() {
       ]);
     });
 
+    test(
+      'a third follow waits for the second publish, not only the first',
+      () async {
+        final first = repository.followWithResult(_alice);
+        await relay.untilStarted(1);
+        final second = repository.followWithResult(_bob);
+        await pumpEventQueue();
+        await relay.releaseOldest();
+        await relay.untilStarted(2);
+        final third = repository.followWithResult(_carol);
+        await pumpEventQueue();
+
+        expect(relay.started, hasLength(2), reason: 'third publish waited');
+
+        await relay.release();
+        await Future.wait([first, second, third]);
+
+        expect(relay.maxInFlight, equals(1));
+        expect(relay.accepted, [
+          [_alice],
+          [_alice, _bob],
+          [_alice, _bob, _carol],
+        ]);
+      },
+    );
+
+    test(
+      'a follow undone before its publish reports nothing changed',
+      () async {
+        final followed = repository.followWithResult(_alice);
+        final unfollowed = repository.unfollow(_alice);
+        await relay.release();
+
+        expect(await followed, FollowOutcome.unchanged);
+        await unfollowed;
+        expect(relay.accepted, [<String>[]]);
+        expect(repository.followingPubkeys, isEmpty);
+      },
+    );
+
     test('a follow the publish ahead of it already carried is not published '
         'again', () async {
       final first = repository.followWithResult(_alice);
@@ -233,7 +284,8 @@ void main() {
       await relay.release();
 
       await first;
-      expect(await second, isA<Exception>());
+      // Terminal, so PendingActionService does not retry it under the new key.
+      expect(await second, isA<TerminalSocialActionException>());
       expect(relay.started, hasLength(1));
       // The follow already publishing saves under whichever key the client
       // reports when it lands; only the queued one is this test's concern.

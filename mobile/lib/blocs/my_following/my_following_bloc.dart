@@ -288,6 +288,8 @@ class MyFollowingBloc extends Bloc<MyFollowingEvent, MyFollowingState>
     Emitter<MyFollowingState> emit,
   ) async {
     // Clear the previous failure so a retry's failure is a new transition.
+    // Edits already in flight are not retries: two that fail together emit
+    // the same failure state, so the screen shows one message for both.
     if (state.status == MyFollowingStatus.toggleFailure) {
       emit(state.copyWith(status: MyFollowingStatus.success));
     }

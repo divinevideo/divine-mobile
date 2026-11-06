@@ -58,7 +58,8 @@ typedef _WebSocketFollowerStats = ({
 
 /// The signed-in account changed while a contact-list publish waited for the
 /// one ahead of it, so the edit it carried belongs to another account.
-class _AccountChangedWhileQueuedException implements Exception {
+class _AccountChangedWhileQueuedException
+    implements TerminalSocialActionException {
   const _AccountChangedWhileQueuedException();
 
   @override
@@ -470,7 +471,8 @@ class FollowRepository {
 
   // A contact-list broadcast withheld because the read that precedes it came
   // back inconclusive. Flushed by [retryPendingContactListBroadcast] and by
-  // the next follow or unfollow, which rebroadcasts the whole list anyway.
+  // the next follow or unfollow that publishes, since every publish carries
+  // the whole list.
   bool _contactListBroadcastPending = false;
 
   // Completes when the newest contact-list broadcast so far has finished,
@@ -2579,6 +2581,8 @@ class FollowRepository {
   ///
   /// Preserves the optimistic local update and errors of [follow]. A queued
   /// result includes offline sync and a publish withheld until a safe relay read.
+  /// The result is unchanged when an unfollow undid the follow before its
+  /// contact list was published.
   Future<FollowOutcome> followWithResult(String pubkey) async {
     if (!_nostrClient.hasKeys) {
       Log.error(
@@ -2659,7 +2663,12 @@ class FollowRepository {
         name: 'FollowRepository',
         category: LogCategory.system,
       );
-      return published ? FollowOutcome.published : FollowOutcome.queued;
+      if (!published) return FollowOutcome.queued;
+      // An unfollow sent meanwhile can undo the follow before its list is
+      // built; then nothing about this account reached the relay.
+      return _followingPubkeys.contains(pubkey)
+          ? FollowOutcome.published
+          : FollowOutcome.unchanged;
     } catch (e) {
       // Roll back this follow only. Restoring a whole pre-follow snapshot
       // would also throw away a newer contact list the pre-publish read
