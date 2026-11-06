@@ -114,6 +114,30 @@ void main() {
         expect(find.text(l10n.videoStickerRepliesShow), findsOneWidget);
       });
 
+      testWidgets('a reply of an account the creator blocked as hidden, even '
+          'when pinned', (tester) async {
+        await pump(
+          tester,
+          VideoRepliesState(
+            status: VideoRepliesStatus.loaded,
+            replies: [
+              _reply(1, name: 'Alice'),
+              _reply(2, name: 'Bob'),
+            ],
+            curation: RepliesCuration(
+              pinnedId: _reply(1).id,
+              hiddenAuthors: {_reply(1).pubkey},
+            ),
+          ),
+        );
+
+        // Viewers do not see it, pinned or not.
+        expect(find.text(l10n.videoStickerRepliesHidden), findsOneWidget);
+        expect(find.text(l10n.videoStickerRepliesPinned), findsNothing);
+        expect(find.text(l10n.videoStickerRepliesShow), findsOneWidget);
+        expect(find.text(l10n.videoStickerRepliesUnpin), findsOneWidget);
+      });
+
       testWidgets("the name in a reply's profile when it came without one", (
         tester,
       ) async {

@@ -268,6 +268,41 @@ void main() {
       );
 
       blocTest<VideoRepliesCubit, VideoRepliesState>(
+        'shows the reply of an account the creator blocked again, then hides '
+        'it',
+        build: build,
+        seed: () => loaded.copyWith(
+          curation: RepliesCuration(hiddenAuthors: {_hex(1001)}),
+        ),
+        act: (cubit) async {
+          await cubit.hideToggled(_hex(1));
+          await cubit.hideToggled(_hex(1));
+        },
+        skip: 1,
+        expect: () => [
+          loaded.copyWith(
+            curation: RepliesCuration(
+              restoredIds: {_hex(1)},
+              hiddenAuthors: {_hex(1001)},
+            ),
+          ),
+          loaded.copyWith(
+            curation: RepliesCuration(
+              hiddenIds: {_hex(1)},
+              hiddenAuthors: {_hex(1001)},
+            ),
+            saveStatus: VideoRepliesSaveStatus.saving,
+          ),
+          loaded.copyWith(
+            curation: RepliesCuration(
+              hiddenIds: {_hex(1)},
+              hiddenAuthors: {_hex(1001)},
+            ),
+          ),
+        ],
+      );
+
+      blocTest<VideoRepliesCubit, VideoRepliesState>(
         'goes back to how it was when the change could not be saved',
         setUp: () => when(
           () => repository.saveCuration(

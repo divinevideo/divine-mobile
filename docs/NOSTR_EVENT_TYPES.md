@@ -185,7 +185,9 @@ one of their videos, and the ones they hid
 - Commenters hidden on all of a creator's videos: an addressable event of the
   creator's with `["d", "divine:hidden-commenters"]` and a `p` tag per
   commenter. Divine adds the accounts the creator blocks and removes them on
-  unblock (`blockedCommenterReconcilerProvider`)
+  unblock (`blockedCommenterReconcilerProvider`). Their video replies are
+  hidden on the replies sticker and in its feed as well, except one marked
+  `restored`
 - Kind 30078 is also used for the app's own encrypted sync and DM read-state
   markers, which are self-addressed; those readers ignore other `d` tags
 

@@ -83,12 +83,24 @@ class VideoRepliesCubit extends Cubit<VideoRepliesState>
   );
 
   /// Hides the reply [replyKey] names, its [RepliesCuration.keyOf], or shows
-  /// it again when it is hidden.
-  Future<void> hideToggled(String replyKey) => _save(
-    state.curation.hiddenIds.contains(replyKey)
-        ? state.curation.shown(replyKey)
-        : state.curation.hidden(replyKey),
-  );
+  /// it again when it is hidden, also when it is hidden because the creator
+  /// blocked its author.
+  Future<void> hideToggled(String replyKey) {
+    final curation = state.curation;
+    final reply = state.replies
+        .where((reply) => RepliesCuration.keyOf(reply) == replyKey)
+        .firstOrNull;
+    final authorHidden =
+        reply != null && curation.hiddenAuthors.contains(reply.pubkey);
+    final hidden = reply == null
+        ? curation.hiddenIds.contains(replyKey)
+        : curation.hides(reply);
+    return _save(
+      hidden
+          ? curation.shown(replyKey, authorHidden: authorHidden)
+          : curation.hidden(replyKey),
+    );
+  }
 
   Future<void> _save(RepliesCuration curation) async {
     if (state.saveStatus == VideoRepliesSaveStatus.saving) return;
