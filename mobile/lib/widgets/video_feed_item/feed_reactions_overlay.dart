@@ -370,15 +370,18 @@ class _SpeechBubble extends StatelessWidget {
             ),
           ),
         ),
+        // On the start side, so in a right-to-left locale the tail sits by the
+        // bubble's right edge and is mirrored to point the same way.
         Padding(
-          padding: const EdgeInsets.only(
-            left: FeedReactionsOverlayLayout.tailInset,
+          padding: const EdgeInsetsDirectional.only(
+            start: FeedReactionsOverlayLayout.tailInset,
           ),
           child: ExcludeSemantics(
             child: SvgPicture.asset(
               FeedReactionsOverlayLayout.tailAsset,
               width: FeedReactionsOverlayLayout.tailWidth,
               height: FeedReactionsOverlayLayout.tailHeight,
+              matchTextDirection: true,
             ),
           ),
         ),
@@ -493,7 +496,7 @@ abstract final class FeedReactionsOverlayLayout {
   static const double tailWidth = 22;
   static const double tailHeight = 16;
 
-  /// The tail's offset from the bubble's left edge.
+  /// The tail's offset from the bubble's start edge.
   static const double tailInset = 28;
 
   /// Narrowest bubble that still holds the tail under its straight edge:

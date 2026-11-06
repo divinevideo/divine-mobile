@@ -93,6 +93,7 @@ void main() {
     Widget buildSubject({
       bool reducedMotion = false,
       TextScaler textScaler = TextScaler.noScaling,
+      Locale? locale,
       List<Override> extraOverrides = const [],
     }) => ProviderScope(
       overrides: [
@@ -102,6 +103,7 @@ void main() {
         ).overrideWith((ref) => Stream<UserProfile?>.value(null)),
       ],
       child: MaterialApp(
+        locale: locale,
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: MediaQuery(
@@ -176,6 +178,32 @@ void main() {
           greaterThanOrEqualTo(tailRect.bottom),
         );
       });
+
+      testWidgets(
+        'the tail by the start edge, mirrored, in a right-to-left locale',
+        (tester) async {
+          when(() => cubit.state).thenReturn(_visibleState);
+          await tester.pumpWidget(buildSubject(locale: const Locale('ar')));
+          await tester.pump();
+
+          final bubble = find.ancestor(
+            of: find.text(_topComment.content),
+            matching: find.byWidgetPredicate(
+              (w) =>
+                  w is DecoratedBox &&
+                  w.decoration is BoxDecoration &&
+                  (w.decoration as BoxDecoration).color ==
+                      FeedReactionsOverlayLayout.bubbleColor,
+            ),
+          );
+          final tail = find.byType(SvgPicture);
+          expect(
+            tester.getRect(tail).right,
+            tester.getRect(bubble).right - FeedReactionsOverlayLayout.tailInset,
+          );
+          expect(tester.widget<SvgPicture>(tail).matchTextDirection, isTrue);
+        },
+      );
 
       group('a bubble as wide as its comment', () {
         Finder bubbleOf(String content) => find.ancestor(
