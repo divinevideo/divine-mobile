@@ -22,13 +22,6 @@ import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-const _pickerBaseChildSize = 0.24;
-const _pickerChildSizePerCollaborator = 0.08;
-const _pickerMinInitialChildSize = 0.36;
-const _pickerMaxInitialChildSize = 0.68;
-const _pickerMinChildSize = 0.28;
-const _pickerMaxChildSize = 0.8;
-
 /// Resolves which of [video]'s collaborators the viewer can see.
 ///
 /// Hides the current user's own avatar when their local invite store says
@@ -230,23 +223,11 @@ class CollaboratorAvatarRowBody extends StatelessWidget {
         context.l10n.metadataCollaboratorsLabel,
         style: VineTheme.titleMediumFont(color: context.vineColors.onSurface),
       ),
-      buildScrollBody: (scrollController) => _CollaboratorPickerList(
-        pubkeys: pubkeys,
-        visibility: visibility,
-        scrollController: scrollController,
-      ),
-      initialChildSize: _initialPickerSize(pubkeys.length),
-      minChildSize: _pickerMinChildSize,
-      maxChildSize: _pickerMaxChildSize,
+      // Fixed mode with a shrink-wrapped list sizes the sheet to its rows;
+      // the list scrolls only once they outgrow the screen.
+      scrollable: false,
+      body: _CollaboratorPickerList(pubkeys: pubkeys, visibility: visibility),
     );
-  }
-
-  double _initialPickerSize(int count) {
-    final size =
-        _pickerBaseChildSize + (count * _pickerChildSizePerCollaborator);
-    if (size < _pickerMinInitialChildSize) return _pickerMinInitialChildSize;
-    if (size > _pickerMaxInitialChildSize) return _pickerMaxInitialChildSize;
-    return size;
   }
 
   String _semanticsLabel(BuildContext context, int count) {
@@ -277,17 +258,18 @@ class _CollaboratorPickerList extends StatelessWidget {
   const _CollaboratorPickerList({
     required this.pubkeys,
     required this.visibility,
-    required this.scrollController,
   });
 
   final List<String> pubkeys;
   final CollaboratorVisibility visibility;
-  final ScrollController scrollController;
 
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
-      controller: scrollController,
+      // Not primary, so rows that fit leave vertical drags to the sheet and a
+      // swipe down still closes it.
+      primary: false,
+      shrinkWrap: true,
       padding: const EdgeInsets.only(bottom: 16),
       itemCount: pubkeys.length,
       separatorBuilder: (context, index) => Divider(

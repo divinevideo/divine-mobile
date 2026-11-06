@@ -574,6 +574,123 @@ void main() {
       expect(find.text('Casey'), findsOneWidget);
     });
 
+    testWidgets('picker sizes to its rows instead of a fixed fraction', (
+      tester,
+    ) async {
+      // Phone-sized, so a sheet sized as a fraction of the screen would leave
+      // a visible gap under two rows.
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        _wrap(
+          CollaboratorAvatarRowBody(
+            visibility: _allConfirmed(const [_collab1, _collab2]),
+          ),
+          overrides: [
+            fetchUserProfileProvider(
+              _collab1,
+            ).overrideWith((ref) async => _makeProfile(_collab1, 'Alice')),
+            fetchUserProfileProvider(
+              _collab2,
+            ).overrideWith((ref) async => _makeProfile(_collab2, 'Bob')),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(_l10n.videoCollaboratorWithMore('Alice', 1)));
+      await tester.pumpAndSettle();
+
+      final sheetBottom = tester.getBottomLeft(find.byType(VineBottomSheet)).dy;
+      final lastRowBottom = tester
+          .getBottomLeft(
+            find.ancestor(
+              of: find.text('Bob'),
+              matching: find.byType(ListTile),
+            ),
+          )
+          .dy;
+
+      // Only the list's own 16px bottom padding sits under the last row.
+      expect(sheetBottom - lastRowBottom, moreOrLessEquals(16));
+    });
+
+    testWidgets('dragging a picker row down closes the picker', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          CollaboratorAvatarRowBody(
+            visibility: _allConfirmed(const [_collab1, _collab2]),
+          ),
+          overrides: [
+            fetchUserProfileProvider(
+              _collab1,
+            ).overrideWith((ref) async => _makeProfile(_collab1, 'Alice')),
+            fetchUserProfileProvider(
+              _collab2,
+            ).overrideWith((ref) async => _makeProfile(_collab2, 'Bob')),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(_l10n.videoCollaboratorWithMore('Alice', 1)));
+      await tester.pumpAndSettle();
+      expect(find.byType(VineBottomSheet), findsOneWidget);
+
+      await tester.drag(find.text('Bob'), const Offset(0, 400));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(VineBottomSheet), findsNothing);
+    });
+
+    testWidgets('picker scrolls when its rows outgrow the screen', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(375, 667);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final pubkeys = [
+        for (var i = 0; i < 20; i++) i.toRadixString(16).padLeft(64, '0'),
+      ];
+      await tester.pumpWidget(
+        _wrap(
+          CollaboratorAvatarRowBody(visibility: _allConfirmed(pubkeys)),
+          overrides: [
+            for (final (i, pubkey) in pubkeys.indexed)
+              fetchUserProfileProvider(pubkey).overrideWith(
+                (ref) async => _makeProfile(pubkey, 'Collaborator $i'),
+              ),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.text(_l10n.videoCollaboratorWithMore('Collaborator 0', 19)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final lastRow = find.text('Collaborator 19');
+      expect(lastRow, findsNothing);
+
+      await tester.scrollUntilVisible(
+        lastRow,
+        200,
+        scrollable: find.descendant(
+          of: find.byType(VineBottomSheet),
+          matching: find.byType(Scrollable),
+        ),
+      );
+
+      expect(lastRow, findsOneWidget);
+    });
+
     testWidgets('expanded picker omits collaborator ignored by current user', (
       tester,
     ) async {
