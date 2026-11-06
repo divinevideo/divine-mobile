@@ -577,8 +577,8 @@ void main() {
     testWidgets('picker sizes to its rows instead of a fixed fraction', (
       tester,
     ) async {
-      // A phone-sized viewport: the old fraction-of-screen sizing left a
-      // large empty band under two rows here.
+      // Phone-sized, so a sheet sized as a fraction of the screen would leave
+      // a visible gap under two rows.
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
