@@ -140,9 +140,11 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
     } on LikesRepositoryException catch (error, stackTrace) {
       addError(error, stackTrace);
       Log.warning(
-        'Ranking top comment without vote counts: $error',
+        'Ranking the top comment of video $_rootEventId without vote counts',
         name: 'FeedTopCommentCubit',
         category: LogCategory.ui,
+        error: error,
+        stackTrace: stackTrace,
       );
       return const {};
     } catch (error, stackTrace) {
@@ -189,11 +191,24 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
           : Reportable(error, context: 'FeedTopCommentCubit.load'),
       stackTrace,
     );
-    Log.error(
-      'Failed to load the top comment: $error',
-      name: 'FeedTopCommentCubit',
-      category: LogCategory.ui,
-    );
+    final message = 'Failed to load the top comment of video $_rootEventId';
+    if (isExpected) {
+      Log.warning(
+        message,
+        name: 'FeedTopCommentCubit',
+        category: LogCategory.ui,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    } else {
+      Log.error(
+        message,
+        name: 'FeedTopCommentCubit',
+        category: LogCategory.ui,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
     emitIfOpen(state.copyWith(status: FeedTopCommentStatus.failure));
   }
 
