@@ -3,10 +3,16 @@ import 'dart:io';
 
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/foundation.dart'
-    show ValueListenable, kIsWeb, visibleForTesting;
+    show
+        TargetPlatform,
+        ValueListenable,
+        defaultTargetPlatform,
+        kIsWeb,
+        visibleForTesting;
 import 'package:flutter/widgets.dart';
 import 'package:infinite_video_feed/src/models/builders.dart';
 import 'package:infinite_video_feed/src/models/feed_first_frame_metric.dart';
+import 'package:infinite_video_feed/src/models/feed_playback_telemetry.dart';
 import 'package:infinite_video_feed/src/models/video_error_type.dart';
 import 'package:infinite_video_feed/src/models/video_retry_result.dart';
 import 'package:infinite_video_feed/src/services/controller_subscriptions.dart';
@@ -391,6 +397,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   // hit the network instead of replaying the corrupt bytes.
   final _loadedFromCache = <int>{};
   FeedFirstFrameTimer? _activeFirstFrameTimer;
+  final _preloadGraceTimers = <Timer, Completer<void>>{};
+  final _telemetryLoads = <int, FeedPlaybackLoad>{};
+  final _networkSubscriptions =
+      <int, StreamSubscription<Map<String, Object?>>>{};
   int _currentIndex = 0;
 
   /// The autoplay-gate answer this widget last acted on for [_currentIndex].
@@ -710,6 +720,13 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
 
   @override
   void dispose() {
+    _activeFirstFrameTimer?.finish(outcome: FeedPlaybackOutcome.cancelled);
+    _cancelPreloadGraceTimers();
+    _telemetryLoads.clear();
+    for (final subscription in _networkSubscriptions.values) {
+      unawaited(subscription.cancel());
+    }
+    _networkSubscriptions.clear();
     _prefetcher.dispose();
     _watchdog.disposeAll();
     _staleDetector.disposeAll();
@@ -793,6 +810,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         unawaited(_onIndexChanged(_currentIndex));
       }
     } else {
+      _activeFirstFrameTimer?.finish(outcome: FeedPlaybackOutcome.cancelled);
+      _cancelPreloadGraceTimers();
       _pauseCurrentPlayback();
       _cancelAutoRetry(_currentIndex);
       if (widget.releaseCurrentWhenInactive) {
@@ -912,6 +931,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (isAllowed) {
       _resumeCurrentPlaybackIfReady();
     } else {
+      _activeFirstFrameTimer?.finish(outcome: FeedPlaybackOutcome.cancelled);
+      _cancelPreloadGraceTimers();
       _pauseCurrentPlayback();
     }
   }
@@ -978,7 +999,35 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     unawaited(_runPrefetch(index));
   }
 
+  Map<String, String> _sourceHeaders(int index, String source) {
+    final supportsTelemetry =
+        _controllers[index]?.supportsPlaybackTelemetry ?? false;
+    final nativeNetwork =
+        supportsTelemetry &&
+        !kIsWeb &&
+        {
+          TargetPlatform.android,
+          TargetPlatform.iOS,
+          TargetPlatform.macOS,
+        }.contains(defaultTargetPlatform) &&
+        !(Uri.tryParse(source)?.path.toLowerCase().endsWith('.m3u8') ?? false);
+    final load = FeedPlaybackTelemetry.startLoad(
+      networkSupported: nativeNetwork,
+    );
+    if (load == null) {
+      _telemetryLoads.remove(index);
+    } else {
+      _telemetryLoads[index] = load;
+    }
+    _firstFrameTimerFor(index)?.attachLoad(load);
+    return {
+      ...?_httpHeadersByIndex[index],
+      if (load != null && supportsTelemetry) 'X-Playback-Load-Id': load.id,
+    };
+  }
+
   void _beginFirstFrameMeasurement(int index) {
+    _activeFirstFrameTimer?.finish(outcome: FeedPlaybackOutcome.cancelled);
     if (index < 0 || index >= widget.videos.length || !_isActive) {
       _activeFirstFrameTimer = null;
       return;
@@ -986,7 +1035,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _activeFirstFrameTimer = FeedFirstFrameMetrics.start(
       videoId: widget.videos[index].id,
       index: index,
-    );
+    )..attachLoad(_telemetryLoads[index]);
   }
 
   FeedFirstFrameTimer? _firstFrameTimerFor(int index) {
@@ -1083,9 +1132,18 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     }
   }
 
+  void _cancelPreloadGraceTimers() {
+    for (final entry in _preloadGraceTimers.entries) {
+      entry.key.cancel();
+      if (!entry.value.isCompleted) entry.value.complete();
+    }
+    _preloadGraceTimers.clear();
+  }
+
   Future<void> _waitForFirstFrameOrGracePeriod(
     DivineVideoPlayerController controller,
   ) async {
+    if (!mounted || !_isActive) return;
     final gracePeriodElapsed = Completer<void>();
     final graceTimer = Timer(widget.preloadGracePeriod, () {
       if (!gracePeriodElapsed.isCompleted) {
@@ -1093,12 +1151,14 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       }
     });
 
+    _preloadGraceTimers[graceTimer] = gracePeriodElapsed;
     try {
       await Future.any([
         controller.firstFrameRendered,
         gracePeriodElapsed.future,
       ]);
     } finally {
+      _preloadGraceTimers.remove(graceTimer);
       graceTimer.cancel();
     }
   }
@@ -1153,6 +1213,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   }
 
   void _teardownAllControllers() {
+    _cancelPreloadGraceTimers();
     _prefetcher.cancelActive();
     _playerWindowGeneration++;
 
@@ -1177,6 +1238,11 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _errors.clear();
     _errorTypes.clear();
     _httpHeadersByIndex.clear();
+    _telemetryLoads.clear();
+    for (final subscription in _networkSubscriptions.values) {
+      unawaited(subscription.cancel());
+    }
+    _networkSubscriptions.clear();
 
     for (final controller in _controllers.values) {
       unawaited(controller.dispose());
@@ -1202,6 +1268,8 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _processingRetryAttempts.remove(index);
     _loadedFromCache.remove(index);
     _errorTypes.remove(index);
+    unawaited(_networkSubscriptions.remove(index)?.cancel());
+    _telemetryLoads.remove(index);
     _httpHeadersByIndex.remove(index);
     _sources.remove(index);
     _controllerInitGenerations.remove(index);
@@ -1288,6 +1356,12 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     try {
       await controller.initialize();
       if (!guardInitOwnership('initialize')) return false;
+      unawaited(_networkSubscriptions.remove(index)?.cancel());
+      _networkSubscriptions[index] = controller.playbackNetworkEvents.listen((
+        sample,
+      ) {
+        _telemetryLoads[index]?.observeNetwork(sample);
+      });
       _firstFrameTimerFor(index)?.markControllerInitialized();
 
       // coverage:ignore-start
@@ -1305,10 +1379,13 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       );
       // Hash-bound auth applies to every resolved source for this index, so
       // the optimized/HLS/raw variants all authenticate, not just the bare URL.
-      Map<String, String>? httpHeadersForSource(String _) =>
-          _httpHeadersByIndex[index];
+      Map<String, String> httpHeadersForSource(String source) =>
+          _sourceHeaders(index, source);
 
       if (fromCache) {
+        final load = FeedPlaybackTelemetry.startLoad();
+        if (load != null) _telemetryLoads[index] = load;
+        _firstFrameTimerFor(index)?.attachLoad(load);
         try {
           await controller.setSource(
             VideoClip.file(
@@ -1425,6 +1502,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         guardInitOwnership('error handling');
         return false;
       }
+      _firstFrameTimerFor(index)?.finish(
+        outcome: FeedPlaybackOutcome.error,
+        errorCategory: FeedPlaybackError.initialization,
+      );
       final sourceDetail = lastFailedSource == null
           ? ''
           : ' failedSource=$lastFailedSource';
@@ -1632,7 +1713,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         VideoClip.network(
           nextSource,
           end: widget.maxPlaybackDuration,
-          httpHeaders: _httpHeadersByIndex[index] ?? const {},
+          httpHeaders: _sourceHeaders(index, nextSource),
           trimToCommonTrackEnd: true,
         ),
       );
@@ -1738,7 +1819,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         VideoClip.network(
           source,
           end: widget.maxPlaybackDuration,
-          httpHeaders: _httpHeadersByIndex[index] ?? const {},
+          httpHeaders: _sourceHeaders(index, source),
           trimToCommonTrackEnd: true,
         ),
       );
@@ -1825,6 +1906,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   /// Stops the controller at [index] (so audio/video cease immediately) and
   /// marks the slot as an error, triggering a rebuild.
   void _stopAndMarkError(int index, VideoErrorType type) {
+    _firstFrameTimerFor(index)?.finish(
+      outcome: FeedPlaybackOutcome.error,
+      errorCategory: FeedPlaybackError.playback,
+    );
     unawaited(_controllers[index]?.stop());
     _errors.add(index);
     _errorTypes[index] ??= type;
@@ -1835,6 +1920,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
   /// Like [_stopAndMarkError] but records the failure as terminal for this
   /// video id, so it will not auto-retry and is restored on revisit.
   void _stopAndMarkTerminalError(int index, VideoErrorType type) {
+    _firstFrameTimerFor(index)?.finish(
+      outcome: FeedPlaybackOutcome.error,
+      errorCategory: FeedPlaybackError.playback,
+    );
     final videoId = _videoIdAt(index);
     if (videoId != null) {
       _terminalErrorTypesByVideoId[videoId] = type;
@@ -1863,6 +1952,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (terminalType == null) return false;
     _errors.add(index);
     _errorTypes[index] = terminalType;
+    _firstFrameTimerFor(index)?.finish(
+      outcome: FeedPlaybackOutcome.error,
+      errorCategory: FeedPlaybackError.source,
+    );
     _rebuildPage(index);
     return true;
   }

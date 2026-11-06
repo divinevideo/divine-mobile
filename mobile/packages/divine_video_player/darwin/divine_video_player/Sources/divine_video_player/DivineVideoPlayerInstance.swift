@@ -138,6 +138,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     /// Streams a single remote clip to the player through a download it
     /// keeps; see [CachingAssetLoader].
     private var remoteClipLoader: CachingAssetLoader?
+    private var playbackTelemetryGeneration = 0
 
     /// A player item and everything the instance holds for it once it is
     /// installed. Builders return this instead of writing the instance's
@@ -411,6 +412,10 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
 
     private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         switch call.method {
+        case "clearPlaybackTelemetry":
+            playbackTelemetryGeneration += 1
+            CachingAssetLoader.clearAllPlaybackTelemetry()
+            result(nil)
         case "setClips":
             handleSetClips(call, result: result)
         case "play":
@@ -835,7 +840,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
         }
         let httpHeaders = clipMap["httpHeaders"] as? [String: String]
         let assetOptions: [String: Any]? = httpHeaders.map {
-            [Self.avURLAssetHTTPHeaderFieldsKey: $0]
+            [Self.avURLAssetHTTPHeaderFieldsKey: PlaybackNetworkObservation.withoutCorrelation($0)]
         }
         let asset = AVURLAsset(url: url, options: assetOptions)
         let isHls = url.pathExtension.lowercased() == "m3u8"
@@ -1072,6 +1077,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
     private func buildComposition(
         from clipsRaw: [[String: Any]]
     ) async throws -> BuiltComposition {
+        let telemetryGeneration = playbackTelemetryGeneration
         var loader: CachingAssetLoader?
         var built = false
         // A build that fails drops its download; one that succeeds hands it on.
@@ -1116,7 +1122,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             let endMs = clipMap["endMs"] as? NSNumber
             let clipVol = (clipMap["volume"] as? NSNumber)?.floatValue ?? 1.0
             let clipSpeed = (clipMap["playbackSpeed"] as? NSNumber)?.doubleValue ?? 1.0
-            let httpHeaders = clipMap["httpHeaders"] as? [String: String]
+            let rawHeaders = clipMap["httpHeaders"] as? [String: String] ?? [:]
+            let httpHeaders = telemetryGeneration == playbackTelemetryGeneration
+                ? rawHeaders : PlaybackNetworkObservation.withoutCorrelation(rawHeaders)
             let trimToCommonTrackEnd =
                 (clipMap["trimToCommonTrackEnd"] as? NSNumber)?.boolValue ?? false
 
@@ -1133,9 +1141,7 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
                 continue
             }
 
-            let assetOptions: [String: Any]? = httpHeaders.map {
-                [Self.avURLAssetHTTPHeaderFieldsKey: $0]
-            }
+            let assetOptions: [String: Any] = [Self.avURLAssetHTTPHeaderFieldsKey: PlaybackNetworkObservation.withoutCorrelation(httpHeaders)]
             let asset: AVURLAsset
             // A single streamed clip loads through a download the player
             // keeps, so its audio can be decoded into the loop without
@@ -1147,7 +1153,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             if clipsRaw.count == 1, startMs == 0, clipVol == 1.0, clipSpeed == 1.0,
                 trimToCommonTrackEnd,
                 url.pathExtension.lowercased() != "m3u8",
-                let clipLoader = CachingAssetLoader(remoteURL: url, headers: httpHeaders ?? [:])
+                let clipLoader = CachingAssetLoader(remoteURL: url, headers: httpHeaders, onPlaybackNetwork: { [weak self] sample in
+                    DispatchQueue.main.async(execute: DispatchWorkItem { [weak self] in self?.eventSink?(sample) })
+                })
             {
                 loader = clipLoader
                 asset = clipLoader.asset

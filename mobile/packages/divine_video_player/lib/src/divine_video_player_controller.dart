@@ -443,6 +443,8 @@ class DivineVideoPlayerController {
           'debugLabel': debugLabel,
         },
       );
+      _supportsPlaybackTelemetry =
+          result?['playbackTelemetrySupported'] == true;
       if (useTexture && result != null) {
         _textureId = result['textureId'] as int?;
       }
@@ -456,6 +458,33 @@ class DivineVideoPlayerController {
     _initialized = true;
     _liveControllers.add(this);
   }
+
+  /// Clears future request correlation on live players without reloading them.
+  static Future<void> clearPlaybackTelemetryContext() async {
+    for (final controller in _liveControllers.toList()) {
+      if (controller._isWebBackend || controller._isLinuxBackend) continue;
+      try {
+        await controller._methodChannel.invokeMethod<void>(
+          'clearPlaybackTelemetry',
+        );
+      } on Object catch (_) {
+        // Older native binaries do not support operational telemetry.
+      }
+    }
+  }
+
+  final _playbackNetworkEvents =
+      StreamController<Map<String, Object?>>.broadcast(sync: true);
+
+  /// Actual upstream callback samples, separate from native playback state.
+  Stream<Map<String, Object?>> get playbackNetworkEvents =>
+      _playbackNetworkEvents.stream;
+
+  bool _supportsPlaybackTelemetry = false;
+
+  /// Native binary supports measured callbacks and correlation revocation.
+  /// Older binaries fail closed, including when applying a Dart-only update.
+  bool get supportsPlaybackTelemetry => _supportsPlaybackTelemetry;
 
   /// Sets a single video source.
   ///
@@ -732,6 +761,7 @@ class DivineVideoPlayerController {
       else if (_initialized)
         _globalChannel.invokeMethod<void>('dispose', {'id': _playerId}),
       _stateController.close(),
+      _playbackNetworkEvents.close(),
     ]);
   }
 
@@ -804,6 +834,12 @@ class DivineVideoPlayerController {
   void _handleEvent(dynamic event) {
     if (event is! Map) return;
     final map = event.cast<Object?, Object?>();
+    if (map['type'] == 'playback_network') {
+      if (!_playbackNetworkEvents.isClosed) {
+        _playbackNetworkEvents.add(map.cast<String, Object?>());
+      }
+      return;
+    }
     _state = DivineVideoPlayerState.fromMap(map);
 
     if (_state.isFirstFrameRendered && !_firstFrameCompleter.isCompleted) {

@@ -42,7 +42,34 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
     private var downloadedURL: URL?
 
     private let remoteURL: URL
-    private let headers: [String: String]
+    private static let telemetryLock = NSLock()
+    private static let telemetryLoaders = NSHashTable<CachingAssetLoader>.weakObjects()
+
+    /// Includes loaders still preparing an item, before the player owns it.
+    static func clearAllPlaybackTelemetry() {
+        telemetryLock.lock()
+        let loaders = telemetryLoaders.allObjects
+        telemetryLock.unlock()
+        loaders.forEach { $0.clearPlaybackTelemetry() }
+    }
+
+    private var headers: [String: String]
+    private let onPlaybackNetwork: ([String: Any]) -> Void
+    private var observations: [Int: PlaybackNetworkObservation] = [:]
+
+    /// Future requests stop carrying IDs; already-sent requests cannot be recalled.
+    func clearPlaybackTelemetry() {
+        queue.async { [self] in
+            headers = PlaybackNetworkObservation.withoutCorrelation(headers)
+            observations.values.forEach { $0.invalidate() }
+            observations.removeAll()
+        }
+    }
+
+    private func observe(_ task: URLSessionTask) {
+        guard let id = headers.first(where: { $0.key.lowercased() == "x-playback-load-id" })?.value else { return }
+        observations[task.taskIdentifier] = PlaybackNetworkObservation(loadID: id, emit: onPlaybackNetwork)
+    }
     private let queue = DispatchQueue(label: "co.divine.video_player.caching_asset_loader")
     private var session: URLSession?
     private var download: URLSessionDataTask?
@@ -64,7 +91,7 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
     private var proxied: [Int: AVAssetResourceLoadingRequest] = [:]
 
     /// A loader for [remoteURL], or nil for a URL it cannot serve.
-    init?(remoteURL: URL, headers: [String: String]) {
+    init?(remoteURL: URL, headers: [String: String], onPlaybackNetwork: @escaping ([String: Any]) -> Void = { _ in }) {
         guard var components = URLComponents(url: remoteURL, resolvingAgainstBaseURL: false),
             let scheme = components.scheme?.lowercased(),
             scheme == "https" || scheme == "http"
@@ -73,8 +100,12 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         guard let loaderURL = components.url else { return nil }
         self.remoteURL = remoteURL
         self.headers = headers
+        self.onPlaybackNetwork = onPlaybackNetwork
         self.asset = AVURLAsset(url: loaderURL)
         super.init()
+        Self.telemetryLock.lock()
+        Self.telemetryLoaders.add(self)
+        Self.telemetryLock.unlock()
         asset.resourceLoader.setDelegate(self, queue: queue)
     }
 
@@ -132,6 +163,7 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         didReceive response: URLResponse,
         completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
     ) {
+        observations[dataTask.taskIdentifier]?.headers()
         if let request = proxied[dataTask.taskIdentifier] {
             if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
                 proxied[dataTask.taskIdentifier] = nil
@@ -182,6 +214,7 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
     }
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive chunk: Data) {
+        observations[dataTask.taskIdentifier]?.received(chunk.count)
         if let request = proxied[dataTask.taskIdentifier] {
             request.dataRequest?.respond(with: chunk)
             return
@@ -200,6 +233,8 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        let outcome = error == nil ? "complete" : (error as NSError?)?.code == NSURLErrorCancelled ? "cancelled" : "error"
+        observations.removeValue(forKey: task.taskIdentifier)?.finish(outcome: outcome)
         if let request = proxied.removeValue(forKey: task.taskIdentifier) {
             if let error {
                 request.finishLoading(with: error)
@@ -236,6 +271,7 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         for (field, value) in headers { request.setValue(value, forHTTPHeaderField: field) }
         let task = makeSession().dataTask(with: request)
         download = task
+        observe(task)
         task.resume()
     }
 
@@ -341,6 +377,7 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
         urlRequest.setValue(range, forHTTPHeaderField: "Range")
         let task = makeSession().dataTask(with: urlRequest)
         proxied[task.taskIdentifier] = request
+        observe(task)
         task.resume()
     }
 

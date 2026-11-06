@@ -104,6 +104,17 @@ class AnalyticsIngestClient {
     );
   }
 
+  /// Operational playback batches use anonymous transport and no identity.
+  Future<AnalyticsIngestResult> publishPlaybackBatch(
+    List<Map<String, Object?>> events,
+  ) async {
+    if (events.isEmpty) return const AnalyticsIngestAccepted();
+    return _post(
+      _uriFor(anonymousEventsPath),
+      jsonEncode({'schema': 'divine.playback.batch.v1', 'events': events}),
+    );
+  }
+
   Future<AnalyticsIngestResult> _post(
     Uri uri,
     String body, {

@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -7,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:infinite_video_feed/src/models/feed_first_frame_metric.dart';
+import 'package:infinite_video_feed/src/models/feed_playback_telemetry.dart';
 import 'package:infinite_video_feed/src/models/video_error_type.dart';
 import 'package:infinite_video_feed/src/models/video_retry_result.dart';
 import 'package:infinite_video_feed/src/widgets/infinite_video_feed.dart';
@@ -53,11 +55,16 @@ class _NativePlayerHarness {
   Future<void> install({
     Iterable<int> playerIds = const <int>[0, 1, 2],
     bool firstFrameRenderedOnListen = true,
+    bool playbackTelemetrySupported = true,
   }) async {
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       _globalChannel,
       (call) async {
-        if (call.method == 'create') return <Object?, Object?>{};
+        if (call.method == 'create') {
+          return <Object?, Object?>{
+            'playbackTelemetrySupported': playbackTelemetrySupported,
+          };
+        }
         return null;
       },
     );
@@ -1287,6 +1294,213 @@ void main() {
             'isFirstFrameRendered': true,
           });
           await tester.pump();
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      });
+
+      testWidgets(
+        'native network observations reach an immutable terminal snapshot',
+        (tester) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(
+            playerIds: const <int>[0],
+            firstFrameRenderedOnListen: false,
+          );
+          FeedPlaybackTelemetry.configure(enabled: true);
+          final terminals = <Map<String, Object?>>[];
+          final subscription = FeedPlaybackTelemetry.events.listen(
+            terminals.add,
+          );
+          addTearDown(() async {
+            FeedPlaybackTelemetry.configure(enabled: false);
+            await subscription.cancel();
+          });
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('network-observation')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            final headers =
+                harness.clipsHandedToPlayer.single['httpHeaders']! as Map;
+            final loadId = headers['X-Playback-Load-Id'];
+            await harness.sendEvent(0, {
+              'type': 'playback_network',
+              'load_id': loadId,
+              'request_id': 'synthetic-upstream-open',
+              'network_headers_ms': 7,
+              'network_outcome': 'unavailable',
+            });
+            await tester.pump();
+            await harness.sendEvent(0, const {
+              'status': 'ready',
+              'videoWidth': 1280,
+              'videoHeight': 720,
+              'isFirstFrameRendered': true,
+            });
+            await tester.pump();
+            expect(terminals.single['network_coverage'], 'observed');
+            expect(terminals.single['network_headers_ms'], 7);
+            await harness.sendEvent(0, {
+              'type': 'playback_network',
+              'load_id': loadId,
+              'request_id': 'synthetic-upstream-open',
+              'network_headers_ms': 7,
+              'network_outcome': 'complete',
+              'network_duration_ms': 11,
+              'network_bytes': 9,
+            });
+            await tester.pump();
+            expect(terminals, hasLength(1));
+            expect(terminals.single['network_outcome'], 'unavailable');
+            expect(terminals.single, isNot(contains('network_duration_ms')));
+            expect(terminals.single, isNot(contains('network_bytes')));
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+          }
+        },
+      );
+
+      testWidgets('inactive and dispose terminate a pending activation once', (
+        tester,
+      ) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(
+          playerIds: const <int>[0],
+          firstFrameRenderedOnListen: false,
+        );
+        FeedPlaybackTelemetry.configure(enabled: true);
+        final terminals = <Map<String, Object?>>[];
+        final sub = FeedPlaybackTelemetry.events.listen(terminals.add);
+        addTearDown(() {
+          FeedPlaybackTelemetry.configure(enabled: false);
+          return sub.cancel();
+        });
+        try {
+          final videos = [_makeVideo('pending')];
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: videos,
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: videos,
+                cache: cache,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+                isActive: false,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          expect(terminals, hasLength(1));
+          expect(terminals.single['outcome'], 'cancelled');
+          final headers =
+              harness.clipsHandedToPlayer.single['httpHeaders']! as Map;
+          expect(headers['X-Playback-Load-Id'], terminals.single['load_id']);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      });
+
+      testWidgets(
+        'initial source failure emits one error and ignores later frames',
+        (tester) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(
+            playerIds: const <int>[0],
+            firstFrameRenderedOnListen: false,
+          );
+          harness.setClipsFailures[0] = [
+            PlatformException(
+              code: 'http_forbidden',
+              message: 'Synthetic failure',
+            ),
+          ];
+          FeedPlaybackTelemetry.configure(enabled: true);
+          final terminals = <Map<String, Object?>>[];
+          final sub = FeedPlaybackTelemetry.events.listen(terminals.add);
+          addTearDown(() {
+            FeedPlaybackTelemetry.configure(enabled: false);
+            return sub.cancel();
+          });
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('failure')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+            expect(terminals.single['outcome'], 'error');
+            expect(terminals.single['error_category'], 'initialization');
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            expect(terminals, hasLength(1));
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+          }
+        },
+      );
+
+      testWidgets('legacy native binary receives no telemetry headers', (
+        tester,
+      ) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(
+          playerIds: const <int>[0],
+          playbackTelemetrySupported: false,
+        );
+        FeedPlaybackTelemetry.configure(enabled: true);
+        addTearDown(() => FeedPlaybackTelemetry.configure(enabled: false));
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo('legacy')],
+                cache: cache,
+                prefetchCount: 0,
+              ),
+            ),
+          );
+          await tester.pump();
+          final headers =
+              harness.clipsHandedToPlayer.single['httpHeaders'] as Map? ?? {};
+          expect(headers, isNot(contains('X-Playback-Load-Id')));
         } finally {
           await tester.pumpWidget(const SizedBox.shrink());
           await tester.pump();
@@ -4330,6 +4544,15 @@ void main() {
           DivineVideoPlayerController.resetIdCounterForTesting();
           final harness = _NativePlayerHarness(tester);
           await harness.install(playerIds: const <int>[0, 1, 2, 3, 4, 5]);
+          FeedPlaybackTelemetry.configure(enabled: true);
+          final terminals = <Map<String, Object?>>[];
+          final telemetrySubscription = FeedPlaybackTelemetry.events.listen(
+            terminals.add,
+          );
+          addTearDown(() async {
+            FeedPlaybackTelemetry.configure(enabled: false);
+            await telemetrySubscription.cancel();
+          });
           final key = GlobalKey<InfiniteVideoFeedState>();
           final videos = [_makeVideo('terminal_init'), _makeVideo('next')];
           harness.setClipsFailures[0] = <Exception>[
@@ -4388,6 +4611,12 @@ void main() {
             expect(key.currentState!.currentIndex, equals(0));
 
             expect(find.text('VIDEO_ERROR'), findsOneWidget);
+            expect(terminals.map((event) => event['outcome']), [
+              'error',
+              'first_frame',
+              'error',
+            ]);
+            expect(terminals.last['error_category'], 'source');
             expect(
               harness.countCalls('setClips'),
               equals(setClipsAfterTerminalFailure),
@@ -4397,6 +4626,11 @@ void main() {
             await tester.pump();
             await harness.dispose();
           }
+          expect(terminals.map((event) => event['outcome']), [
+            'error',
+            'first_frame',
+            'error',
+          ]);
         },
       );
 

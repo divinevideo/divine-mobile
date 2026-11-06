@@ -34,7 +34,6 @@ import java.io.File
 internal object VideoCache {
 
     private var cache: SimpleCache? = null
-    private var cacheDataSourceFactory: CacheDataSource.Factory? = null
 
     /** Whether [configure] has been called successfully. */
     val isConfigured: Boolean get() = cache != null
@@ -56,12 +55,6 @@ internal object VideoCache {
         val databaseProvider = StandaloneDatabaseProvider(context)
 
         cache = SimpleCache(cacheDir, evictor, databaseProvider)
-
-        cacheDataSourceFactory = CacheDataSource.Factory()
-            .setCache(cache!!)
-            .setUpstreamDataSourceFactory(upstreamFactory(context))
-            // Read from cache first, fill progressively on miss.
-            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
     /**
@@ -74,10 +67,15 @@ internal object VideoCache {
      */
     fun dataSourceFactory(
         context: Context,
+        onPlaybackNetwork: (Map<String, Any>) -> Unit = {},
         httpHeadersForUri: (Uri) -> Map<String, String> = { emptyMap() },
     ): DataSource.Factory {
-        val cachedFactory = cacheDataSourceFactory ?: upstreamFactory(context)
-        val uncachedFactory = upstreamFactory(context)
+        val uncachedFactory = upstreamFactory(context, onPlaybackNetwork, httpHeadersForUri)
+        val cachedFactory = cache?.let { sharedCache ->
+            CacheDataSource.Factory().setCache(sharedCache)
+                .setUpstreamDataSourceFactory(uncachedFactory)
+                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        } ?: uncachedFactory
         return DataSource.Factory {
             CacheBypassDataSource(
                 cachedFactory = cachedFactory,
@@ -87,12 +85,22 @@ internal object VideoCache {
         }
     }
 
-    private fun upstreamFactory(context: Context): DataSource.Factory {
+    private fun upstreamFactory(
+        context: Context,
+        onPlaybackNetwork: (Map<String, Any>) -> Unit,
+        httpHeadersForUri: (Uri) -> Map<String, String>,
+    ): DataSource.Factory {
         val defaultHttpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
         val httpDataSourceFactory = DataSource.Factory {
-            ProcessingResponseDataSource(
-                defaultHttpDataSourceFactory.createDataSource(),
+            PlaybackNetworkDataSource(
+                ProcessingResponseDataSource(defaultHttpDataSourceFactory.createDataSource()),
+                onPlaybackNetwork,
+                isPlaybackLoadCurrent = { uri, id ->
+                    httpHeadersForUri(uri).any { (name, value) ->
+                        name.equals("X-Playback-Load-Id", ignoreCase = true) && value == id
+                    }
+                },
             )
         }
         return DefaultDataSource.Factory(context, httpDataSourceFactory)
@@ -103,7 +111,6 @@ internal object VideoCache {
     fun release() {
         cache?.release()
         cache = null
-        cacheDataSourceFactory = null
     }
 }
 
@@ -198,7 +205,21 @@ internal class CacheBypassDataSource(
             dataSpec.withRequestHeaders(dataSpec.httpRequestHeaders + httpHeaders)
         }
         val isB2Canary = dataSpec.uri.host.equals("media-b2.divine.video", ignoreCase = true)
-        val useCache = httpHeaders.isEmpty() &&
+        // Only correlation is exempt from the app-header bypass. In particular,
+        // an app-supplied ICY or If-Range header must not gain an exemption.
+        val cacheableAppHeaders = httpHeaders.keys.all {
+            it.equals("X-Playback-Load-Id", ignoreCase = true)
+        }
+        // Media3's ProgressiveMediaPeriod adds ICY to every load and If-Range
+        // on ETag resumes. Rejecting those disables caching for all MP4s.
+        // Keep checking the original DataSpec so Authorization/unknown headers
+        // supplied there also bypass, even if the app map overwrites them.
+        val cacheableDataSpecHeaders = dataSpec.httpRequestHeaders.all { (name, value) ->
+            name.equals("X-Playback-Load-Id", ignoreCase = true) ||
+                (name.equals("Icy-MetaData", ignoreCase = true) && value == "1") ||
+                name.equals("If-Range", ignoreCase = true)
+        }
+        val useCache = cacheableAppHeaders && cacheableDataSpecHeaders &&
             isCacheableScheme(dataSpec.uri.scheme) && !isB2Canary
         val selectedDelegate = if (useCache) {
             cachedFactory.createDataSource()

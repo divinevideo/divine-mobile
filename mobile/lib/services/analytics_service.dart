@@ -117,6 +117,14 @@ class AnalyticsService implements BackgroundAwareService {
 
   bool _analyticsEnabled = true; // Default to enabled
   bool _isInitialized = false;
+  final _privacyChanges = StreamController<void>.broadcast(sync: true);
+
+  /// Signals initialized consent and account/privacy boundaries without identity.
+  Stream<void> get privacyChanges => _privacyChanges.stream;
+
+  /// Fails closed until the stored analytics preference has been loaded.
+  bool get initializedAnalyticsConsent =>
+      _isInitialized && _analyticsEnabled && !_isDisposed;
   Future<void>? _initialization;
   // Not final: rotated at every identity or consent boundary so activity from
   // separate privacy contexts cannot be joined.
@@ -291,6 +299,7 @@ class AnalyticsService implements BackgroundAwareService {
   /// most likely to be quietly incomplete, since nobody is watching it happen.
   Future<void> _applyAnalyticsConsent(bool enabled) async {
     _analyticsEnabled = enabled;
+    if (!_privacyChanges.isClosed) _privacyChanges.add(null);
     _productEventQueue?.setSendingEnabled(_productAnalyticsEnabled && enabled);
     _viewEventRetryService?.setPublishingEnabled(enabled);
     await _applyFirebaseAnalyticsConsent(enabled: enabled);
@@ -411,6 +420,7 @@ class AnalyticsService implements BackgroundAwareService {
   /// account, while clearing the whole queue prevents older anonymous or
   /// account-owned rows from crossing the boundary later.
   Future<void> handleIdentityChange() async {
+    if (!_privacyChanges.isClosed) _privacyChanges.add(null);
     _productAnalyticsUtm.clear();
     _rotateProductAnalyticsIdentity();
     await _productEventQueue?.clear();
@@ -1060,6 +1070,7 @@ class AnalyticsService implements BackgroundAwareService {
   }
 
   void dispose() {
+    if (_isDisposed) return;
     // Unregister before tearing down. The manager outlives this service, so
     // an instance left in its registry keeps receiving lifecycle callbacks —
     // across provider rebuilds in the app, and across every later suite in
@@ -1069,6 +1080,8 @@ class AnalyticsService implements BackgroundAwareService {
       _isBackgroundRegistered = false;
     }
     _isDisposed = true;
+    _privacyChanges.add(null);
+    unawaited(_privacyChanges.close());
     _cleanupTimer?.cancel();
   }
 }

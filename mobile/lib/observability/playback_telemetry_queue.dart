@@ -1,0 +1,154 @@
+// ABOUTME: Bounded memory-only delivery for opt-in playback diagnostics.
+// ABOUTME: Privacy changes discard queued work and invalidate correlation.
+
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:infinite_video_feed/infinite_video_feed.dart';
+import 'package:openvine/services/analytics_ingest_client.dart';
+
+class PlaybackTelemetryQueue {
+  PlaybackTelemetryQueue({
+    required AnalyticsIngestClient client,
+    required String platform,
+    this.onIdle,
+  }) : _client = client,
+       _platform = platform {
+    _events = FeedPlaybackTelemetry.events.listen(_enqueue);
+    _resets = FeedPlaybackTelemetry.resets.listen((_) {
+      if (_changingCollection) return;
+      _generation++;
+      _pending.clear();
+      _notifyIdle();
+    });
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+      unawaited(flush());
+    });
+  }
+
+  final AnalyticsIngestClient _client;
+  final String _platform;
+  void Function()? onIdle;
+  final _pending = <_PendingPlayback>[];
+  late final StreamSubscription<Map<String, Object?>> _events;
+  late final StreamSubscription<void> _resets;
+  late final Timer _timer;
+  bool _enabled = false;
+  bool _sending = false;
+  bool _disposed = false;
+  bool _collecting = true;
+  bool _changingCollection = false;
+  int _generation = 0;
+
+  bool get isIdle => !_sending && _pending.isEmpty;
+
+  void configure({
+    required bool initializedConsent,
+    required bool b2OptIn,
+    bool reset = false,
+  }) {
+    _enabled = !_disposed && initializedConsent && b2OptIn;
+    FeedPlaybackTelemetry.configure(
+      enabled: _enabled && _collecting,
+      reset: reset,
+    );
+  }
+
+  /// Navigation ends correlation, not consent for already collected rows.
+  void setCollecting(bool collecting) {
+    if (!collecting && _collecting) {
+      // Emit cancellations while the current context can still enqueue them.
+      FeedFirstFrameMetrics.cancelActivePlaybackAttempts();
+    }
+    _collecting = collecting;
+    _changingCollection = true;
+    try {
+      FeedPlaybackTelemetry.configure(enabled: _enabled && collecting);
+    } finally {
+      _changingCollection = false;
+    }
+    if (!collecting) {
+      unawaited(flush());
+      _notifyIdle();
+    }
+  }
+
+  void _notifyIdle() {
+    if (!_disposed && isIdle) onIdle?.call();
+  }
+
+  void _enqueue(Map<String, Object?> event) {
+    if (!_enabled || !_collecting || _disposed) return;
+    if (_pending.length == 200) _pending.removeAt(0);
+    _pending.add(
+      _PendingPlayback(
+        Map.unmodifiable({
+          ...event,
+          'platform': _platform,
+        }),
+      ),
+    );
+  }
+
+  Future<void> flush() async {
+    if (!_enabled || _disposed || _sending || _pending.isEmpty) return;
+    final generation = _generation;
+    final selected = <_PendingPlayback>[];
+    for (final row in _pending) {
+      final candidate = [...selected.map((r) => r.event), row.event];
+      final size = utf8
+          .encode(
+            jsonEncode({
+              'schema': 'divine.playback.batch.v1',
+              'events': candidate,
+            }),
+          )
+          .length;
+      if (size > 65536 || selected.length == 50) break;
+      selected.add(row);
+    }
+    if (selected.isEmpty) {
+      _pending.removeAt(0);
+      _notifyIdle();
+      return;
+    }
+    _sending = true;
+    try {
+      for (final row in selected) {
+        row.attempts++;
+      }
+      final result = await _client.publishPlaybackBatch(
+        selected.map((row) => row.event).toList(growable: false),
+      );
+      if (generation != _generation) return;
+      for (final row in selected) {
+        if (result is! AnalyticsIngestTransientFailure || row.attempts >= 3) {
+          _pending.remove(row);
+        }
+      }
+    } catch (_) {
+      // Telemetry must never affect playback, including unexpected adapters.
+      if (generation == _generation) {
+        _pending.removeWhere((row) => row.attempts >= 3);
+      }
+    } finally {
+      _sending = false;
+      _notifyIdle();
+    }
+  }
+
+  Future<void> dispose() async {
+    _disposed = true;
+    onIdle = null;
+    configure(initializedConsent: false, b2OptIn: false, reset: true);
+    _timer.cancel();
+    await _events.cancel();
+    await _resets.cancel();
+  }
+}
+
+class _PendingPlayback {
+  _PendingPlayback(this.event);
+  final Map<String, Object?> event;
+  int attempts = 0;
+}

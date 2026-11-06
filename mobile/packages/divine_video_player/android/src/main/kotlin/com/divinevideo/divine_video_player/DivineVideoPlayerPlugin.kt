@@ -164,9 +164,9 @@ class DivineVideoPlayerPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, 
                         binding.textureRegistry,
                         useLegacySurface = useLegacySurface,
                     )
-                    result.success(mapOf("textureId" to textureId))
+                    result.success(mapOf("textureId" to textureId, "playbackTelemetrySupported" to true))
                 } else {
-                    result.success(null)
+                    result.success(mapOf("playbackTelemetrySupported" to true))
                 }
             }
             "dispose" -> {

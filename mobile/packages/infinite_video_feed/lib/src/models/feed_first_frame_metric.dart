@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:infinite_video_feed/src/models/feed_playback_telemetry.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// A measured activation-to-first-frame interval in the fullscreen feed.
@@ -46,9 +47,20 @@ abstract final class FeedFirstFrameMetrics {
   static final _controller = StreamController<FeedFirstFrameMetric>.broadcast(
     sync: true,
   );
+  static final _activePlaybackAttempts = <FeedFirstFrameTimer>{};
 
   /// Completed measurements from every mounted fullscreen feed widget.
   static Stream<FeedFirstFrameMetric> get events => _controller.stream;
+
+  /// Ends active operational attempts before ordinary collection suspension.
+  ///
+  /// Success measurements remain available for a later actual first frame.
+  /// Privacy withdrawal must invalidate telemetry instead of calling this.
+  static void cancelActivePlaybackAttempts() {
+    for (final timer in _activePlaybackAttempts.toList()) {
+      timer.finish(outcome: FeedPlaybackOutcome.cancelled);
+    }
+  }
 
   /// Starts a monotonic measurement for one active feed item.
   static FeedFirstFrameTimer start({
@@ -77,7 +89,18 @@ abstract final class FeedFirstFrameMetrics {
 /// A one-shot monotonic timer created by [FeedFirstFrameMetrics.start].
 class FeedFirstFrameTimer {
   FeedFirstFrameTimer._({required this.videoId, required this.index})
-    : _stopwatch = Stopwatch()..start();
+    : _stopwatch = Stopwatch()..start(),
+      _attempt = FeedPlaybackTelemetry.startAttempt() {
+    if (_attempt != null) {
+      FeedFirstFrameMetrics._activePlaybackAttempts.add(this);
+      _timeout = Timer(const Duration(seconds: 60), () {
+        finish(
+          outcome: FeedPlaybackOutcome.noFrame,
+          errorCategory: FeedPlaybackError.timeout,
+        );
+      });
+    }
+  }
 
   /// Full Nostr event id for the video being measured.
   final String videoId;
@@ -86,6 +109,36 @@ class FeedFirstFrameTimer {
   final int index;
 
   final Stopwatch _stopwatch;
+  final FeedPlaybackAttempt? _attempt;
+  Timer? _timeout;
+
+  /// Binds this activation to an observed source load in the same context.
+  void attachLoad(FeedPlaybackLoad? load) {
+    if (_completed) return;
+    _attempt?.attachLoad(load);
+  }
+
+  /// Terminates operational telemetry without creating a success trace.
+  ///
+  /// A retry or late first frame can still [complete] the success measurement.
+  void finish({
+    required FeedPlaybackOutcome outcome,
+    FeedPlaybackError errorCategory = FeedPlaybackError.none,
+    String localCache = 'unknown',
+  }) {
+    _timeout?.cancel();
+    FeedFirstFrameMetrics._activePlaybackAttempts.remove(this);
+    _attempt?.finish(
+      outcome: outcome,
+      elapsed: _stopwatch.elapsed,
+      localCache: localCache,
+      error: errorCategory,
+      controllerInitialized: _controllerInitializedAt,
+      sourceReady: _sourceReadyAt,
+      playbackRequested: _playbackRequestedAt,
+    );
+  }
+
   bool _completed = false;
   Duration? _controllerInitializedAt;
   Duration? _sourceReadyAt;
@@ -111,6 +164,10 @@ class FeedFirstFrameTimer {
     if (_completed) return null;
     _completed = true;
     _stopwatch.stop();
+    finish(
+      outcome: FeedPlaybackOutcome.firstFrame,
+      localCache: loadedFromCache ? 'hit' : 'unknown',
+    );
     final metric = FeedFirstFrameMetric(
       videoId: videoId,
       index: index,
