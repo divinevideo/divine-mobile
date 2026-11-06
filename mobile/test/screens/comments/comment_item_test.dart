@@ -7,6 +7,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -39,6 +40,20 @@ class _FakeNostrClient implements NostrClient {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+class _TestNostrSession extends NostrSession {
+  _TestNostrSession(this._initial);
+
+  final NostrSessionReadiness _initial;
+
+  @override
+  NostrSessionReadiness build() => _initial;
+}
+
+// Nobody is signed in, so no comment renders as the viewer's own.
+final Override _signedOutSession = nostrSessionProvider.overrideWith(
+  () => _TestNostrSession(const NostrSessionReadiness.signedOut()),
+);
 
 class _MockComposerBloc
     extends MockBloc<CommentComposerEvent, CommentComposerState>
@@ -75,6 +90,7 @@ void main() {
     required _MockComposerBloc composerBloc,
     required _MockReactionsBloc reactionsBloc,
     Comment? comment,
+    List<Override>? overrides,
   }) {
     comment ??= CommentBuilder()
         .withAuthorPubkey(_testHexPubkey)
@@ -84,9 +100,7 @@ void main() {
         .build();
 
     return ProviderScope(
-      overrides: [
-        nostrServiceProvider.overrideWithValue(const _FakeNostrClient()),
-      ],
+      overrides: overrides ?? [_signedOutSession],
       child: MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -290,7 +304,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              nostrServiceProvider.overrideWithValue(const _FakeNostrClient()),
+              _signedOutSession,
             ],
             child: MaterialApp(
               localizationsDelegates: appLocalizationsDelegates,
@@ -408,7 +422,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            nostrServiceProvider.overrideWithValue(const _FakeNostrClient()),
+            _signedOutSession,
           ],
           child: MaterialApp.router(
             routerConfig: router,
@@ -454,7 +468,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            nostrServiceProvider.overrideWithValue(const _FakeNostrClient()),
+            _signedOutSession,
           ],
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -591,7 +605,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            nostrServiceProvider.overrideWithValue(const _FakeNostrClient()),
+            _signedOutSession,
             userProfileReactiveProvider(
               _testHexPubkey,
             ).overrideWith((ref) => Stream.value(profile)),
@@ -623,5 +637,209 @@ void main() {
 
       expect(find.text('profile:$expectedNpub'), findsOneWidget);
     });
+  });
+
+  // A freshly built NostrClient reports an empty publicKey until something
+  // refreshes it from the signer, and filling that cache rebuilds nothing.
+  // Ownership must come from the session identity instead (#7049).
+  group('ownership comes from the session, not the client key cache', () {
+    const otherHexPubkey =
+        'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+    final l10n = lookupAppLocalizations(const Locale('en'));
+
+    Widget buildSessionTestWidget({
+      required _MockComposerBloc composerBloc,
+      required _MockReactionsBloc reactionsBloc,
+      required NostrSessionReadiness session,
+    }) {
+      final profile = UserProfile(
+        pubkey: _testHexPubkey,
+        displayName: 'Ada',
+        rawData: const {},
+        createdAt: DateTime.utc(2026, 6, 28),
+        eventId:
+            'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210',
+      );
+
+      return buildTestWidget(
+        'my own comment',
+        composerBloc: composerBloc,
+        reactionsBloc: reactionsBloc,
+        overrides: [
+          // The client cache stays empty, as on a fresh client: a widget that
+          // reads it instead of the session fails these tests (#7049).
+          nostrServiceProvider.overrideWithValue(const _FakeNostrClient()),
+          nostrSessionProvider.overrideWith(() => _TestNostrSession(session)),
+          userProfileReactiveProvider(
+            _testHexPubkey,
+          ).overrideWith((ref) => Stream.value(profile)),
+        ],
+      );
+    }
+
+    Future<void> openOptions(WidgetTester tester) async {
+      await tester.longPress(find.byType(CommentItem));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.commentOptionsTitle), findsOneWidget);
+    }
+
+    testWidgets('offers Edit and Delete on your own comment', (tester) async {
+      final mocks = buildMocks();
+      await tester.pumpWidget(
+        buildSessionTestWidget(
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          session: const NostrSessionReadiness.identityKnown(
+            pubkey: _testHexPubkey,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await openOptions(tester);
+
+      expect(find.text(l10n.profileEditLabel), findsOneWidget);
+      expect(find.text(l10n.commonDelete), findsOneWidget);
+      expect(find.text(l10n.commentOptionsFlagContentLabel), findsNothing);
+      expect(find.text(l10n.contentWarningBlockUserTooltip), findsNothing);
+    });
+
+    testWidgets('marks your own comment with the You indicator', (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      await tester.pumpWidget(
+        buildSessionTestWidget(
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          session: const NostrSessionReadiness.identityKnown(
+            pubkey: _testHexPubkey,
+          ),
+        ),
+      );
+      // Settle the profile skeleton's switch animation, which briefly keeps
+      // the outgoing header in the tree beside the incoming one.
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.commentAuthorYouIndicator), findsOneWidget);
+    });
+
+    testWidgets("offers Flag and Block on someone else's comment", (
+      tester,
+    ) async {
+      final mocks = buildMocks();
+      await tester.pumpWidget(
+        buildSessionTestWidget(
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          session: const NostrSessionReadiness.identityKnown(
+            pubkey: otherHexPubkey,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await openOptions(tester);
+
+      expect(find.text(l10n.commentOptionsFlagContentLabel), findsOneWidget);
+      expect(find.text(l10n.contentWarningBlockUserTooltip), findsOneWidget);
+      expect(find.text(l10n.commonDelete), findsNothing);
+      expect(find.text(l10n.commentAuthorYouIndicator), findsNothing);
+    });
+
+    testWidgets('offers Flag and Block when signed out', (tester) async {
+      final mocks = buildMocks();
+      await tester.pumpWidget(
+        buildSessionTestWidget(
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          session: const NostrSessionReadiness.signedOut(),
+        ),
+      );
+      await tester.pump();
+
+      await openOptions(tester);
+
+      expect(find.text(l10n.commentOptionsFlagContentLabel), findsOneWidget);
+      expect(find.text(l10n.commonDelete), findsNothing);
+    });
+
+    testWidgets('offers Edit and Delete on your own comment once Nostr is '
+        'ready', (tester) async {
+      final mocks = buildMocks();
+      await tester.pumpWidget(
+        buildSessionTestWidget(
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          session: const NostrSessionReadiness.nostrReady(
+            pubkey: _testHexPubkey,
+            client: _FakeNostrClient(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await openOptions(tester);
+
+      expect(find.text(l10n.commonDelete), findsOneWidget);
+      expect(find.text(l10n.commentOptionsFlagContentLabel), findsNothing);
+    });
+
+    testWidgets('offers Flag and Block on your own comment while the session '
+        'tears down', (tester) async {
+      final mocks = buildMocks();
+      await tester.pumpWidget(
+        buildSessionTestWidget(
+          composerBloc: mocks.composer,
+          reactionsBloc: mocks.reactions,
+          session: const NostrSessionReadiness.tearingDown(
+            pubkey: _testHexPubkey,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await openOptions(tester);
+
+      expect(find.text(l10n.commentOptionsFlagContentLabel), findsOneWidget);
+      expect(find.text(l10n.commonDelete), findsNothing);
+      expect(find.text(l10n.commentAuthorYouIndicator), findsNothing);
+    });
+
+    testWidgets(
+      'offers Edit and Delete once an account switch makes you the author',
+      (tester) async {
+        final mocks = buildMocks();
+        await tester.pumpWidget(
+          buildSessionTestWidget(
+            composerBloc: mocks.composer,
+            reactionsBloc: mocks.reactions,
+            session: const NostrSessionReadiness.identityKnown(
+              pubkey: otherHexPubkey,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await openOptions(tester);
+        expect(find.text(l10n.commentOptionsFlagContentLabel), findsOneWidget);
+        Navigator.of(tester.element(find.text(l10n.commentOptionsTitle))).pop();
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.commentOptionsTitle), findsNothing);
+
+        ProviderScope.containerOf(tester.element(find.byType(CommentItem)))
+            .read(nostrSessionProvider.notifier)
+            .update(
+              const NostrSessionReadiness.identityKnown(
+                pubkey: _testHexPubkey,
+              ),
+            );
+        await tester.pump();
+
+        await openOptions(tester);
+        expect(find.text(l10n.commonDelete), findsOneWidget);
+        expect(find.text(l10n.commentOptionsFlagContentLabel), findsNothing);
+      },
+    );
   });
 }

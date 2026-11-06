@@ -1,6 +1,7 @@
 // ABOUTME: Individual comment widget for flat list display
 // ABOUTME: Renders a single comment with author info, content, like button,
-// ABOUTME: and reply indicator. Long-press shows options (delete/report/block).
+// ABOUTME: and reply indicator. Long-press shows options (edit/delete or
+// ABOUTME: flag/block).
 
 import 'dart:async';
 import 'dart:math';
@@ -37,7 +38,7 @@ import 'package:openvine/widgets/user_name.dart';
 /// Shows author avatar, name, timestamp, and content.
 /// Includes a reply button and like button in the actions row.
 /// Long press opens options menu for any comment:
-/// - Own comments: Delete
+/// - Own comments: Edit, Delete
 /// - Other users' comments: Flag Content, Block User
 ///
 /// Uses [Comment] from the comments_repository package,
@@ -60,12 +61,18 @@ class _CommentItemState extends ConsumerState<CommentItem> {
 
   @override
   Widget build(BuildContext context) {
-    // Check if this comment is from the current user
-    final nostrService = ref.watch(nostrServiceProvider);
-    final currentUserPubkey = nostrService.publicKey;
-    final isCurrentUser =
-        currentUserPubkey.isNotEmpty &&
-        currentUserPubkey == widget.comment.authorPubkey;
+    // The session knows who is signed in before the client's publicKey cache
+    // is filled, and filling that cache rebuilds nothing (#7049).
+    final signedInPubkey = ref.watch(
+      nostrSessionProvider.select(
+        (session) => switch (session.phase) {
+          NostrSessionPhase.identityKnown ||
+          NostrSessionPhase.nostrReady => session.pubkey,
+          NostrSessionPhase.signedOut || NostrSessionPhase.tearingDown => null,
+        },
+      ),
+    );
+    final isCurrentUser = signedInPubkey == widget.comment.authorPubkey;
     final textScaler = MediaQuery.textScalerOf(
       context,
     ).clamp(maxScaleFactor: 1.5);
@@ -142,6 +149,7 @@ class _CommentItemState extends ConsumerState<CommentItem> {
                       children: [
                         _CommentHeader(
                           authorPubkey: widget.comment.authorPubkey,
+                          isCurrentUser: isCurrentUser,
                           relativeTime:
                               LocalizedTimeFormatter.formatRelativeVerbose(
                                 context.l10n,
@@ -301,16 +309,21 @@ class _CommentItemState extends ConsumerState<CommentItem> {
 
 /// Header for a comment showing avatar, user info, timestamp, and "You" indicator.
 ///
-/// Fetches author profile and determines if the comment is from the current user.
+/// Fetches the author profile; [isCurrentUser] comes from the parent row so the
+/// marker and the long-press menu always agree.
 class _CommentHeader extends ConsumerWidget {
   const _CommentHeader({
     required this.authorPubkey,
+    required this.isCurrentUser,
     required this.relativeTime,
     this.avatarSize = 36,
   });
 
   /// Public key of the comment author
   final String authorPubkey;
+
+  /// Whether the signed-in user wrote this comment.
+  final bool isCurrentUser;
 
   /// Relative time string (e.g., "2h ago")
   final String relativeTime;
@@ -321,12 +334,6 @@ class _CommentHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userProfileReactiveProvider(authorPubkey)).value;
-
-    // Check if this comment is from the current user
-    final nostrService = ref.watch(nostrServiceProvider);
-    final currentUserPubkey = nostrService.publicKey;
-    final isCurrentUser =
-        currentUserPubkey.isNotEmpty && currentUserPubkey == authorPubkey;
 
     final profileLabel =
         profile?.bestDisplayName ?? UserProfile.generatedNameFor(authorPubkey);
