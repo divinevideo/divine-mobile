@@ -33,8 +33,10 @@ Comment _comment(
   String? replyToEventId,
   String? replyToAuthorPubkey,
   String? videoUrl,
+  String? addressableId,
 }) => Comment(
   id: id,
+  addressableId: addressableId,
   content: content,
   authorPubkey: author,
   createdAt: _now.subtract(age),
@@ -86,15 +88,17 @@ void main() {
       );
     }
 
-    FeedTopCommentCubit buildCubit() => FeedTopCommentCubit(
-      commentsRepository: commentsRepository,
-      likesRepository: likesRepository,
-      rootEventId: _rootId,
-      rootEventKind: 34236,
-      rootAuthorPubkey: _creator,
-      loopCompletions: loops.stream,
-      now: () => _now,
-    );
+    FeedTopCommentCubit buildCubit({String? rootAddressableId}) =>
+        FeedTopCommentCubit(
+          commentsRepository: commentsRepository,
+          likesRepository: likesRepository,
+          rootEventId: _rootId,
+          rootEventKind: 34236,
+          rootAuthorPubkey: _creator,
+          rootAddressableId: rootAddressableId,
+          loopCompletions: loops.stream,
+          now: () => _now,
+        );
 
     group('load', () {
       group('author deletions', () {
@@ -227,6 +231,32 @@ void main() {
               rootEventKind: any(named: 'rootEventKind'),
               rootAddressableId: any(named: 'rootAddressableId'),
               limit: any(named: 'limit'),
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<FeedTopCommentCubit, FeedTopCommentState>(
+        "asks for the video's first page and its votes by id and coordinate",
+        setUp: () {
+          stubComments([_comment('a', addressableId: '1111:$_alice:a')]);
+          stubUpvotes({});
+        },
+        build: () => buildCubit(rootAddressableId: '34236:$_creator:loop'),
+        act: (cubit) => cubit.load(),
+        verify: (_) {
+          verify(
+            () => commentsRepository.loadComments(
+              rootEventId: _rootId,
+              rootEventKind: 34236,
+              rootAddressableId: '34236:$_creator:loop',
+              limit: FeedTopCommentCubit.commentPageSize,
+            ),
+          ).called(1);
+          verify(
+            () => likesRepository.getVoteCounts(
+              ['a'],
+              addressableIds: {'a': '1111:$_alice:a'},
             ),
           ).called(1);
         },
@@ -447,6 +477,34 @@ void main() {
         act: (cubit) => cubit.load(),
         skip: 1,
         errors: () => [isA<LikesRepositoryException>()],
+        expect: () => [
+          isA<FeedTopCommentState>()
+              .having((s) => s.status, 'status', FeedTopCommentStatus.ready)
+              .having((s) => s.topComment?.id, 'topComment', 'only'),
+        ],
+      );
+
+      blocTest<FeedTopCommentCubit, FeedTopCommentState>(
+        'reports an unexpected vote-count failure and still shows a comment',
+        setUp: () {
+          stubComments([_comment('only')]);
+          when(
+            () => likesRepository.getVoteCounts(
+              any(),
+              addressableIds: any(named: 'addressableIds'),
+            ),
+          ).thenThrow(StateError('invariant'));
+        },
+        build: buildCubit,
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        errors: () => [
+          isA<Reportable<Object>>().having(
+            (r) => r.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        ],
         expect: () => [
           isA<FeedTopCommentState>()
               .having((s) => s.status, 'status', FeedTopCommentStatus.ready)
