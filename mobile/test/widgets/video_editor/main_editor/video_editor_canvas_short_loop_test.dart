@@ -411,11 +411,14 @@ void main() {
       }
       await unmount(tester);
 
-      expect(reloads, isNotEmpty);
-      final uris = ((reloads.last.arguments as Map)['clips'] as List)
-          .map((clip) => (clip as Map)['uri'])
-          .toList();
-      expect(uris, [endsWith('remaining.mp4')]);
+      final loads = [
+        for (final reload in reloads)
+          ((reload.arguments as Map)['clips'] as List)
+              .map((clip) => (clip as Map)['uri'])
+              .toList(),
+      ];
+      expect(loads, isNotEmpty);
+      expect(loads, everyElement([endsWith('remaining.mp4')]));
     });
   });
 
