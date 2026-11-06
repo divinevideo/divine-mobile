@@ -422,6 +422,72 @@ void main() {
       });
     });
 
+    group('opening the editor more than once', () {
+      setUp(() {
+        when(
+          () => mockAuthService.authState,
+        ).thenReturn(AuthState.authenticated);
+        // The bloc keeps the editor navigation in its state; the mock has to
+        // carry it for the guard to have anything to read.
+        var state = const VideoRecorderBlocState();
+        when(() => recorderBloc.state).thenAnswer((_) => state);
+        when(() => recorderBloc.add(any())).thenAnswer((invocation) {
+          switch (invocation.positionalArguments.single) {
+            case VideoRecorderEditorNavigationStarted():
+              state = state.copyWith(editorNavigationInProgress: true);
+            case VideoRecorderEditorNavigationEnded():
+              state = state.copyWith(editorNavigationInProgress: false);
+            case VideoRecorderCameraPausedForNavigation(:final completion):
+              completion?.complete();
+          }
+        });
+      });
+
+      testWidgets('openVideoEditorFromRecorder opens one editor when next is '
+          'tapped again before the first one opened', (tester) async {
+        final authStates = StreamController<AuthState>.broadcast();
+        addTearDown(authStates.close);
+        when(() => mockAuthService.authState).thenReturn(AuthState.checking);
+        when(
+          () => mockAuthService.authStateStream,
+        ).thenAnswer((_) => authStates.stream);
+
+        await tester.pumpWidget(buildHarness());
+        await tester.pumpAndSettle();
+
+        // Both taps land while the first one waits on the auth restore: the
+        // window a fast double tap on "next" hits before the editor is pushed.
+        await tester.tap(find.byKey(const Key('open-editor')));
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('open-editor')));
+        await tester.pump();
+
+        when(
+          () => mockAuthService.authState,
+        ).thenReturn(AuthState.authenticated);
+        authStates.add(AuthState.authenticated);
+        await tester.pumpAndSettle();
+
+        expect(find.text('editor', skipOffstage: false), findsOneWidget);
+      });
+
+      testWidgets('openVideoEditorFromRecorder opens the editor again once '
+          'the first one closed', (tester) async {
+        await tester.pumpWidget(buildHarness());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('open-editor')));
+        await tester.pumpAndSettle();
+        GoRouter.of(tester.element(find.text('editor'))).pop();
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('open-editor')));
+        await tester.pumpAndSettle();
+
+        expect(find.text('editor'), findsOneWidget);
+      });
+    });
+
     group('when restore resolves to terminal unauthenticated', () {
       setUp(() {
         when(() => mockAuthService.authState).thenReturn(AuthState.checking);

@@ -89,6 +89,7 @@ class VideoRecorderBlocState extends Equatable {
     this.isStoppingRecording = false,
     this.pendingStopAfterStart = false,
     this.recordingLockedForNavigation = false,
+    this.editorNavigationInProgress = false,
     this.baseZoomLevel = 1.0,
     this.snappedTo1x = false,
     this.lastRawZoom = 1.0,
@@ -240,6 +241,15 @@ class VideoRecorderBlocState extends Equatable {
   /// field) per `state_management.md`, alongside the other recording-lifecycle
   /// flags.
   final bool recordingLockedForNavigation;
+
+  /// True from the moment the recorder is asked to open the editor (or the
+  /// metadata screen, in modes without one) until the route it pushed returns,
+  /// or until the attempt stops before pushing one.
+  ///
+  /// Read by `openVideoEditorFromRecorder` to drop a second request: the way to
+  /// the editor awaits auth and analytics before it pushes, and a second tap on
+  /// "next" in that window would push a second editor over the first.
+  final bool editorNavigationInProgress;
 
   /// Zoom level captured at the start of the current pinch gesture.
   ///
@@ -412,6 +422,7 @@ class VideoRecorderBlocState extends Equatable {
     bool? isStoppingRecording,
     bool? pendingStopAfterStart,
     bool? recordingLockedForNavigation,
+    bool? editorNavigationInProgress,
     double? baseZoomLevel,
     bool? snappedTo1x,
     double? lastRawZoom,
@@ -470,6 +481,8 @@ class VideoRecorderBlocState extends Equatable {
           pendingStopAfterStart ?? this.pendingStopAfterStart,
       recordingLockedForNavigation:
           recordingLockedForNavigation ?? this.recordingLockedForNavigation,
+      editorNavigationInProgress:
+          editorNavigationInProgress ?? this.editorNavigationInProgress,
       baseZoomLevel: baseZoomLevel ?? this.baseZoomLevel,
       snappedTo1x: snappedTo1x ?? this.snappedTo1x,
       lastRawZoom: lastRawZoom ?? this.lastRawZoom,
@@ -527,6 +540,7 @@ class VideoRecorderBlocState extends Equatable {
     isStoppingRecording,
     pendingStopAfterStart,
     recordingLockedForNavigation,
+    editorNavigationInProgress,
     baseZoomLevel,
     snappedTo1x,
     lastRawZoom,
