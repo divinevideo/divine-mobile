@@ -1,3 +1,5 @@
+import 'package:nostr_sdk/event_kind.dart';
+
 /// Addressable event identifier (NIP-01).
 ///
 /// Addressable events are identified by `kind:pubkey:d-tag` format.
@@ -49,4 +51,19 @@ class AId {
 
   @override
   int get hashCode => Object.hash(kind, pubkey, dTag);
+}
+
+/// The `34236:` coordinate Divine wrote for a Kind 34235 [coordinate].
+///
+/// Until #10776 Divine built every video coordinate under kind 34236, so the
+/// likes and reposts it published for a Kind 34235 video, and the rows it
+/// stored for them, carry this key. Returns null for any other coordinate.
+String? legacyVideoCoordinateFor(String coordinate) {
+  final aid = AId.fromString(coordinate);
+  if (aid == null || aid.kind != EventKind.videoHorizontal) return null;
+  return AId(
+    kind: EventKind.videoVertical,
+    pubkey: aid.pubkey,
+    dTag: aid.dTag,
+  ).toAString();
 }
