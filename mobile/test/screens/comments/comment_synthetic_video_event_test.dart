@@ -95,8 +95,8 @@ void main() {
 
       final video = comment.toSyntheticVideoEvent();
 
-      // VideoSharingService cites by (shareKind, vineId): an addressable kind
-      // with no d tag builds no citation and the DM degrades to plain text.
+      // VideoSharingService cites by (shareKind, vineId): without the d tag
+      // the share falls back to the event id, which an edit leaves behind.
       expect(video.shareKind, equals(34236));
       expect(video.vineId, equals('reply-d-tag'));
     });

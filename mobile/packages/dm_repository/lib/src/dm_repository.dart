@@ -7901,9 +7901,10 @@ class DmRepository {
   /// so non-Nostr clients still render a link).
   ///
   /// [videoKind] selects the citation form — addressable (34236/34235) emits a
-  /// coordinate + `naddr`; regular (22) emits an id + `nevent`. When a valid
-  /// citation can't be built, falls back to a plain-text [sendMessage] so the
-  /// share still goes through (the URL remains in [baseContent]).
+  /// coordinate + `naddr`; regular (22), or addressable with no [videoDTag],
+  /// emits an id + `nevent`. When a valid citation can't be built, falls back
+  /// to a plain-text [sendMessage] so the share still goes through (the URL
+  /// remains in [baseContent]).
   ///
   /// [skipNip04Fallback] forwards to [sendMessage]: pass `true` to suppress the
   /// legacy plaintext kind-4 copy (recommended for shares — see the caller in
