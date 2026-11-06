@@ -500,7 +500,7 @@ class _TopCommentContent extends StatelessWidget {
 }
 
 /// White speech bubble holding the top comment, its tail hanging from the
-/// bottom edge near the left, towards the author row below.
+/// bottom edge near the start, towards the author row below.
 class _SpeechBubble extends StatelessWidget {
   const _SpeechBubble({required this.content, required this.maxLines});
 
