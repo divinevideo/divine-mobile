@@ -1,6 +1,6 @@
 # Scheduled Divine beta builds and store submissions
 
-Status: approved design, revision 6 (2026-11-05), checked against
+Status: approved design, revision 7 (2026-11-07), checked against
 `divine-mobile` main at `dbdfe110beb018e27d085cad43b9951753b49027`. Nothing is
 enabled. Rabble settled the open decisions on 2026-11-04 and 2026-11-05 (see
 Decisions). Google Play is in the first version, and both platforms share one
@@ -75,6 +75,11 @@ authorize canceling a pending review or treating a failed check as successful.
   behind it. Each internal Android build keeps its full six-hour availability
   period, and missing production claims are repaired. Rabble decided that Play
   rejections are handled by email and the Android kill switch.
+
+- **Revision 7** (2026-11-07): addresses allocator review feedback: separate
+  build-number floors from store-upload evidence, skip draft Play claims, and
+  make spent-identity retries explicit. The maintainer enabling Android
+  production owns rejection-email response; the November 5 policy is unchanged.
 
 ## What constrains the design
 
@@ -252,11 +257,19 @@ its own candidates, so one version can reach the App Store and Play from
 different builds of the same train. That already happens with manual releases.
 Build identifiers and provenance still pin each artifact to its exact source.
 
+Play reconciliation ignores `draft` releases, even when they carry version
+codes; those releases have not been submitted. `completed`, `inProgress` and
+`halted` releases keep their version claims. Unknown statuses and an empty
+submitted production code set fail closed. iOS claims include pending and
+rejected submissions; claims remain permanent.
+
 ### Build identifiers
 
 - The reserved number is one more than the larger of the store's latest build
-  number and the highest reservation for that platform. The store lookup fails
-  closed on both platforms. On a create conflict the allocator rereads the
+  number and the highest reservation for that platform, raised to the configured
+  minimum candidate number if needed. Keep `--build-number-floor` separate from
+  `--store-latest-build`: a CI floor is not evidence of an upload. The store
+  lookup fails closed on both platforms. On a create conflict the allocator rereads the
   ledger and tries the next number, a bounded number of times.
 - The coordinator passes a reservation key
   (`scheduled/<platform>/<candidate-sha>`) to scheduled builds. A retry with the
@@ -267,9 +280,10 @@ Build identifiers and provenance still pin each artifact to its exact source.
   build that failed during or after `shorebird release` has spent its number
   even when nothing reached the store. Its retry reserves a new number under
   the same key. A refused Play upload is the exception: it is retried without
-  rebuilding (see Google Play). If the store already has the number, the retry
-  fails closed instead of rebuilding under the same identity: the coordinator
-  should have found the upload. Manual builds use
+  rebuilding (see Google Play). If the store already has the number, the
+  coordinator resumes from that upload rather than triggering a rebuild. If
+  the allocator is invoked anyway, that reservation is spent and it reserves
+  a new number; it never rebuilds under the uploaded identity. Manual builds use
   `manual/<codemagic-build-id>`, so a manual build running beside a scheduled
   one never shares a number.
 - The allocator writes `SHOREBIRD_BUILD_NAME`, `SHOREBIRD_BUILD_NUMBER`, and
@@ -433,15 +447,24 @@ where a review starts between the status read and commit.
   its deployment too. Because Play supplies no promotion timestamp, that time
   conservatively starts a new 24-hour wait, rather than treating a manual
   promotion as permission to submit another release immediately.
-- **Rejections.** The Publishing API doesn't report review outcomes, so the
-  coordinator can't see a Play rejection. Rabble chose email-only handling on
-  2026-11-05 as an explicit limitation, which means the automated rejection
-  hold covers Apple's queues only. Play sends the rejection by email. Whoever
-  receives it sets `RELEASE_TRAIN_ANDROID` to `build` until the problem is
-  fixed. Until someone does, the coordinator keeps promoting at most one
-  candidate a day, so a missed email means rejected updates are resubmitted
+- **Rejections.** The selected Codemagic `google-play tracks get` / edit-track
+  integration does not expose review outcomes, so this version of the
+  coordinator cannot detect a Play rejection automatically. Rabble chose
+  email-only handling on 2026-11-05 as an explicit limitation, which means the automated rejection
+  hold covers Apple's queues only. The maintainer who enables Android
+  `production` owns monitoring Play Console's rejection emails and sets
+  `RELEASE_TRAIN_ANDROID` to `build` when a rejection arrives, until the
+  problem is fixed. They retain that responsibility unless another release
+  operator explicitly accepts it; the activation record names that operator.
+  Until someone applies the kill switch, the coordinator keeps promoting at
+  most one candidate a day, so a missed email means rejected updates are resubmitted
   daily. Any commit error other than changes-in-review still stops the Play
   production queue until a person acknowledges it.
+  Google's newer `applications.tracks.releases` API documents review lifecycle
+  states. That is a possible replacement for email handling, but it is not
+  consumed by this train and is not an assumed automated hold. Adding it
+  requires verifying the response, access and rejection transitions before
+  changing the selected integration or the accepted policy.
 - **Settings.** Read the managed-publishing state and never change it. If it
   holds approved changes for a manual publish step, stop the production queue
   and name the console step that remains.
@@ -575,7 +598,10 @@ starts only after the last step has merged, as Rabble asked.
    just as the iOS lookup already does. This is useful on its own.
 2. **Shared allocator and manual-build migration.** Add the ledger, allocation,
    reconciliation, bootstrap, and Android version validation. Both Codemagic
-   workflows allocate before signing.
+   workflows allocate before signing. Before any build caller uses the allocator,
+   add bounded conflict backoff, atomic output writes, and enforcement of one
+   active builder per scheduled platform/source key. Reuse intentionally returns
+   the same unspent number for that key; create-only writes arbitrate other keys.
 3. **Publisher and note-selection migration.** Use effective versions and keep
    historical `--promote-from` compatibility. Add `--build-name` to
    `build_apk`.
@@ -594,7 +620,8 @@ starts only after the last step has merged, as Rabble asked.
 
 Activation, observing each stage before the next:
 
-1. Run the bootstrap.
+1. Run the bootstrap from `main` after checking a dry run. The maintainer
+   enabling Android production records who owns rejection-email response.
 2. Set both levels to `dry-run`.
 3. Set `build`, and watch one iOS build reach Divine Internal and one Android
    build reach Play internal testing.
@@ -685,9 +712,10 @@ Cases to test with fakes:
    concurrent slots on a busy day. Measure queue waits before activation.
 5. **Play rejections (2026-11-05): email plus the kill switch.** The automated
    rejection hold covers Apple only. A Play rejection arrives by email, and
-   whoever receives it sets `RELEASE_TRAIN_ANDROID` to `build` until it is
-   fixed. Rabble chose this over a per-release confirmation click and over
-   waiting for Play vitals to show users on each release.
+   the maintainer enabling Android production owns monitoring it and setting
+   `RELEASE_TRAIN_ANDROID` to `build` until it is fixed, unless another release
+   operator explicitly accepts that responsibility. Rabble chose this over
+   a per-release confirmation click and over waiting for Play vitals to show users on each release.
 
 These defaults stand unless Rabble changes them:
 
@@ -722,3 +750,5 @@ These need a person with access:
 - https://codemagic.io/pricing/
 - https://developers.google.com/android-publisher/api-ref/rest/v3/edits/commit
 - https://developers.google.com/android-publisher/api-ref/rest/v3/edits.tracks
+- https://developers.google.com/android-publisher/api-ref/rest/v3/applications.tracks.releases/list
+- https://developers.google.com/android-publisher/api-ref/rest/v3/applications.tracks.releases
