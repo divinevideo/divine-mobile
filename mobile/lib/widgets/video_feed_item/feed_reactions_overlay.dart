@@ -245,17 +245,19 @@ String _spokenComment(BuildContext context, WidgetRef ref, String content) {
   final style = VineTheme.bodyMediumFont(
     color: FeedReactionsOverlayLayout.bubbleTextColor,
   );
-  return TextSpan(
-    children: LinkifiedTextSpanBuilder(
-      text: content,
-      defaultStyle: style,
-      linkStyle: style,
-      profileLabelForHex: (hexPubkey) =>
-          LinkifiedTextSupport.profileDisplayText(ref, hexPubkey),
-      videoLabel: context.l10n.clickableTextViewVideoLink,
-      allowWidgetSpans: false,
-    ).build(),
-  ).toPlainText();
+  final spans = LinkifiedTextSpanBuilder(
+    text: content,
+    defaultStyle: style,
+    linkStyle: style,
+    profileLabelForHex: (hexPubkey) =>
+        LinkifiedTextSupport.profileDisplayText(ref, hexPubkey),
+    videoLabel: context.l10n.clickableTextViewVideoLink,
+    allowWidgetSpans: false,
+  ).build();
+  final text = TextSpan(children: spans).toPlainText();
+  // The builder gives every link its own tap recognizer.
+  LinkifiedTextSupport.disposeSpans(spans);
+  return text;
 }
 
 class _ReactionContent extends StatelessWidget {
