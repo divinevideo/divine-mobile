@@ -168,12 +168,14 @@ derivatives remain on their existing canonical route until replicated support
 is available; enabling this flag does not mean all playback uses B2. A typed HTTP 503 or connection failure can
 fall back. A B2 404 may hide a moderation/deletion denial and stops the ladder;
 401, 403, other 4xx, origin/configuration 5xx, and ambiguous errors also stop.
-The native player preserves HTTP 503 separately; older native binaries that
-only report a generic server error fail closed.
+Because B2 sits later in the same ladder, a 401, 403 or other non-404 4xx from
+a canonical rendition also stops it, where the flag-off ladder would try the
+next rendition. The native player preserves HTTP 503 separately; older native
+binaries that only report a generic server error fail closed.
 
 The feed bypasses its event-ID disk cache only when the selected first source
 is a B2 original. Canonical renditions retain disk playback and prefetch;
-prefetch stops before a B2 original rather than caching its raw fallback. Android also bypasses its native disk cache for the canary host.
+prefetch stops before a B2 original rather than caching its raw fallback. Android also bypasses its native disk cache for both B2 hosts.
 Apple uses a temporary per-player download rather than a persistent native
 cache. Logs distinguish `B2 canary attempt`,
 `B2 canary result`, and `B2 canary fallback` with the selected URL. A successful

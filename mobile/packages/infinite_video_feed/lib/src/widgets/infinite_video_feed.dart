@@ -1217,12 +1217,12 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
                 urlResolver: widget.urlResolver,
                 preferB2Original: widget.preferB2Original,
                 derivativeFailureCache: _derivativeFailures,
-                // Exclude HLS manifests: prefetch writes static files to disk,
-                // but HLS playback needs re-streaming the manifest + segments.
               )
               // Never prefetch across a B2 attempt into its canonical raw
               // fallback: event-key disk bytes would mask that attempt.
               .takeWhile((url) => !isB2OriginalPlaybackSource(url))
+              // Exclude HLS manifests: prefetch writes static files to disk,
+              // but HLS playback needs re-streaming the manifest + segments.
               .where((url) => !isHlsManifest(url))
               .toList(),
     );
