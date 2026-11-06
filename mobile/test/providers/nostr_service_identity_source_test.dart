@@ -1395,6 +1395,89 @@ void main() {
     );
   });
 
+  // An offline Divine OAuth restore builds the client for a pubkey-only
+  // identity. The RPC upgrade on resume keeps the pubkey and only nudges the
+  // auth stream, so the client must be rebuilt for the identity that can sign.
+  group('same-pubkey identity that gains a signer', () {
+    test('recreates the client for the signing identity', () async {
+      final pubkeyOnly = PubkeyOnlyNostrIdentity(pubkey: pubkeyA);
+      when(() => mockAuth.currentIdentity).thenReturn(pubkeyOnly);
+      when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyA);
+
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      final pubkeyOnlyClient = container.read(nostrServiceProvider);
+      await pumpEventQueue(times: 2);
+      expect(factory.signers, equals([pubkeyOnly]));
+
+      when(() => mockAuth.currentIdentity).thenReturn(identityA);
+      authStream.add(AuthState.authenticated);
+      await pumpEventQueue(times: 3);
+
+      expect(
+        container.read(nostrServiceProvider),
+        isNot(same(pubkeyOnlyClient)),
+      );
+      expect(factory.signers.last, same(identityA));
+      expect(
+        container.read(nostrSessionProvider),
+        isA<NostrSessionReadiness>()
+            .having(
+              (readiness) => readiness.phase,
+              'phase',
+              NostrSessionPhase.nostrReady,
+            )
+            .having(
+              (readiness) => readiness.client,
+              'client',
+              same(container.read(nostrServiceProvider)),
+            ),
+      );
+    });
+
+    test('keeps the live client when a signing identity is replaced by '
+        'another for the same pubkey', () async {
+      when(() => mockAuth.currentIdentity).thenReturn(identityA);
+      when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyA);
+
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      final client = container.read(nostrServiceProvider);
+      await pumpEventQueue(times: 2);
+
+      final replacement = buildIdentity(pubkeyA);
+      when(() => mockAuth.currentIdentity).thenReturn(replacement);
+      authStream.add(AuthState.authenticated);
+      await pumpEventQueue(times: 3);
+
+      expect(container.read(nostrServiceProvider), same(client));
+      expect(factory.callCount, equals(1));
+    });
+
+    test('keeps the pubkey-only client when a failed upgrade re-emits the '
+        'same identity', () async {
+      final pubkeyOnly = PubkeyOnlyNostrIdentity(pubkey: pubkeyA);
+      when(() => mockAuth.currentIdentity).thenReturn(pubkeyOnly);
+      when(() => mockAuth.currentPublicKeyHex).thenReturn(pubkeyA);
+
+      final container = createContainer();
+      addTearDown(container.dispose);
+
+      final client = container.read(nostrServiceProvider);
+      await pumpEventQueue(times: 2);
+
+      // A failed startup upgrade still nudges the auth stream, with the
+      // pubkey-only identity left in place.
+      authStream.add(AuthState.authenticated);
+      await pumpEventQueue(times: 3);
+
+      expect(container.read(nostrServiceProvider), same(client));
+      expect(factory.callCount, equals(1));
+    });
+  });
+
   group('disposed-ref guard (#5602 / #5600 regression)', () {
     test(
       'does not touch ref when disposed before init microtask runs',

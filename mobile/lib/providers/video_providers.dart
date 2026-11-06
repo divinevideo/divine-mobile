@@ -993,17 +993,21 @@ VideosRepository videosRepository(Ref ref) {
 ///   *relay-bound* use of that predicate; `state_management.md` documents only
 ///   the relay-free NIP-98 one.
 ///
-/// Rebuilt on any `AuthState` change — sign-in, sign-out, account switch —
-/// which disposes the old instance and re-runs `initialize()`. **Not** rebuilt
-/// when a Keycast signer finishes warming up, because that moves
-/// `AuthRpcCapability`, not `AuthState`. A cold start that loses that race gets
-/// no live Kind-7 subscription and no backfill for the session (#6838, #7933).
+/// Rebuilt whenever `NostrService` swaps its client — sign-in, sign-out,
+/// account switch, and an offline-restored session whose identity can sign
+/// again — which disposes the old instance and re-runs `initialize()` on the
+/// new client. The `nostrServiceProvider` watch is what carries that last one:
+/// the signer upgrade keeps the same `AuthState`. A key never arrives late on
+/// one client: every `NostrIdentity` answers `getPublicKey()` with its stored
+/// pubkey whatever its RPC state, and the keyless client never has one, so
+/// `initialize()` subscribes and syncs with the key on every client that has
+/// an identity (#6838). `video_providers_signer_resolution_test` pins both.
 ///
-/// So an empty result from `syncUserReactions()` is not proof of emptiness.
-/// `ProfileLikedVideosBloc` currently renders one as `success` and persists it.
-/// The guards themselves are pinned by `likes_repository_test.dart`'s
-/// `signer readiness (#6813)` and `initialize` groups; what is not pinned is
-/// this provider's rebuild wiring.
+/// An empty result from `syncUserReactions()` is still not proof of emptiness:
+/// a relay read that times out returns whatever arrived, and
+/// `ProfileLikedVideosBloc` renders an empty sync as `success`. The guards are
+/// pinned by `likes_repository_test.dart`'s `signer readiness (#6813)` and
+/// `initialize` groups.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
@@ -1110,7 +1114,7 @@ LikesRepository likesRepository(Ref ref) {
 ///
 /// Manages user reposts (Kind 16 generic reposts). Same auth shape as
 /// [likesRepositoryProvider] — see its doc for which signal gates what, and
-/// for the cold-start race that leaves a session unsynced (#6838, #7933).
+/// for why a key never arrives late on one client (#6838).
 ///
 /// One asymmetry worth knowing: `RepostsRepository.initialize()` loads local
 /// storage and subscribes, but calls no reconciliation sync. `syncUserReposts()`
