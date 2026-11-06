@@ -21,9 +21,9 @@ enum Vote {
 
 /// Toggle a vote on a comment (optimistic update + relay publish).
 ///
-/// A single event for both upvotes and downvotes so that one `droppable()`
-/// handler serializes all votes — same-comment rapid up→down (or down→up)
-/// within publish-RTT can no longer run two handlers concurrently and produce
+/// A single event for both upvotes and downvotes so that one per-comment queue
+/// orders every tap on a comment — a rapid up→down (or down→up) within
+/// publish-RTT can no longer run two handlers concurrently and produce
 /// interleaved kind-7 / kind-5 publishes on the relay.
 final class CommentVoteToggled extends CommentReactionsEvent {
   const CommentVoteToggled({
