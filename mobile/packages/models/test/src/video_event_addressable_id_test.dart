@@ -97,5 +97,15 @@ void main() {
         expect(video.divineAddress, isNull);
       });
     });
+    group('referenceKind', () {
+      test('is the video own kind', () {
+        expect(build(eventKind: 34235).referenceKind, equals(34235));
+        expect(build(eventKind: 22).referenceKind, equals(22));
+      });
+
+      test('is 34236 when the kind is unknown', () {
+        expect(build().referenceKind, equals(34236));
+      });
+    });
   });
 }

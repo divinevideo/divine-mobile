@@ -1596,6 +1596,11 @@ class VideoEvent {
     _ => null,
   };
 
+  /// The kind other events name this video by in their `k` and `K` tags:
+  /// its own, or 34236, the only kind Divine publishes, for a row stored
+  /// before [eventKind] was kept.
+  int get referenceKind => eventKind ?? NIP71VideoKinds.addressableShortVideo;
+
   /// The coordinate Divine-only formats name this video by: profile pins,
   /// reply curation and Add yours chains. It is [addressableId], except that
   /// a Kind 34235 video keeps the 34236 key Divine gave it before #10776, so

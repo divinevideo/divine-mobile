@@ -4,10 +4,9 @@
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
-import 'package:models/models.dart' hide NIP71VideoKinds;
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
-import 'package:openvine/constants/nip71_migration.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -247,7 +246,7 @@ class ContentDeletionService {
     return _publishDeletion(
       originalEventId: video.id,
       addressableId: _addressableDeletionTarget(video),
-      originalEventKind: video.eventKind ?? NIP71VideoKinds.getPreferredKind(),
+      originalEventKind: video.referenceKind,
       reason: reason,
       additionalContext: additionalContext,
       // A video leaving the profile changes its counts; a sound does not.
