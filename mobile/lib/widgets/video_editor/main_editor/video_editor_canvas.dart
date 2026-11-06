@@ -1882,9 +1882,16 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     List<String> clipPaths, {
     Duration? startPosition,
   }) async {
-    // Dispose old player if it exists.
-    await _videoPlayerSubscription?.cancel();
-    await _videoPlayer?.dispose();
+    // Let go of the old player before disposing it, as [_releasePlayer] does.
+    // A disposed controller still reports `isInitialized`, so while its
+    // dispose is awaited an audio sync or a clip reload would otherwise find
+    // it here and call into it.
+    final previousPlayer = _videoPlayer;
+    final previousSubscription = _videoPlayerSubscription;
+    _videoPlayer = null;
+    _videoPlayerSubscription = null;
+    await previousSubscription?.cancel();
+    await previousPlayer?.dispose();
     final generation = _beginClipLoad();
 
     final clips = ref.read(clipManagerProvider).clips;
