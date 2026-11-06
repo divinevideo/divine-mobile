@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cache_sync/cache_sync.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -99,6 +101,33 @@ void main() {
       );
 
       await expectLater(stream, emitsError(isA<StateError>()));
+    });
+
+    // Callers often drop the future cancel() returns, so a late fetch error
+    // completing it would surface as an uncaught zone error (#10786).
+    test('a cancel during the fetch completes at once and drops a late '
+        'fetch error', () async {
+      final started = Completer<void>();
+      final response = Completer<int>();
+      final subscription = CacheSync.watchOne<int>(
+        key: 'cancel:err',
+        fetch: () {
+          started.complete();
+          return response.future;
+        },
+        fromJson: int.parse,
+        toJson: (v) => '$v',
+      ).listen(null);
+      await started.future;
+
+      var cancelSettled = false;
+      final cancel = subscription.cancel().then((_) => cancelSettled = true);
+      await pumpEventQueue();
+      expect(cancelSettled, isTrue, reason: 'cancel waited for the fetch');
+
+      response.completeError(StateError('late'));
+      await expectLater(cancel, completes);
+      await pumpEventQueue();
     });
 
     // UX contract: when a refresh fails the caller already received stale data

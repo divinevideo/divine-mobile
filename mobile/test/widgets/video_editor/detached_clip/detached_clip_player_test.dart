@@ -140,6 +140,38 @@ void main() {
       });
     });
 
+    group('setVolume', () {
+      late _MockDivineVideoPlayerController controller;
+      late DetachedClipPlayer player;
+
+      setUp(() {
+        controller = _MockDivineVideoPlayerController();
+        when(() => controller.setClipVolumes(any())).thenAnswer((_) async {});
+        when(() => controller.setVolume(any())).thenAnswer((_) async {});
+        player = DetachedClipPlayer.withController(controller, _clip());
+      });
+
+      test("sets the loaded clip's own volume, boost included, and leaves "
+          "the player's mute alone", () async {
+        await player.setVolume(2.5);
+
+        verify(() => controller.setClipVolumes([2.5])).called(1);
+        // The player's own volume is the mute; it tops out at 1 and would
+        // drop the boost.
+        verifyNever(() => controller.setVolume(any()));
+      });
+
+      test('sends nothing for the volume it already plays at', () async {
+        // The clip opened at its own volume, 1.
+        await player.setVolume(1);
+        await player.setVolume(0);
+        await player.setVolume(0);
+
+        verify(() => controller.setClipVolumes([0])).called(1);
+        verifyNoMoreInteractions(controller);
+      });
+    });
+
     group('detachedClipPlayerSource', () {
       // Four seconds under the Hero curve, trimmed so the body does not start
       // at the file's beginning.

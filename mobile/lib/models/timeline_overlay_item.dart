@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'dart:ui' show BlendMode;
 
 import 'package:equatable/equatable.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -233,6 +234,15 @@ class TimelineOverlayItem extends Equatable {
 
   /// Whether a sound item fades in or out at all.
   bool get hasFade => fadeIn > Duration.zero || fadeOut > Duration.zero;
+
+  /// Whether this is a clip detached onto the canvas, which carries a sound
+  /// of its own.
+  bool get isDetachedClip {
+    final layer = this.layer;
+    return type == TimelineOverlayType.layer &&
+        layer != null &&
+        DetachedClipLayerData.isDetachedClipLayer(layer);
+  }
 
   /// How long a sound item's window lasts that plays [source] of its audio.
   Duration timelineSpanOf(Duration source) => source * (1 / averageSpeed);

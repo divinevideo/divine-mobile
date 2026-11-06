@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/comments/comment_reactions/comment_reactions_bloc.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -17,7 +16,11 @@ import 'package:openvine/screens/comments/comments.dart';
 
 import '../../builders/comment_builder.dart';
 
-class _MockNostrClient extends Mock implements NostrClient {}
+// Nobody is signed in, so no comment renders as the viewer's own.
+class _SignedOutNostrSession extends NostrSession {
+  @override
+  NostrSessionReadiness build() => const NostrSessionReadiness.signedOut();
+}
 
 class _MockCommentsListBloc
     extends MockBloc<CommentsListEvent, CommentsListState>
@@ -35,7 +38,6 @@ const testVideoAuthorPubkey =
 
 void main() {
   group('CommentsList', () {
-    late _MockNostrClient mockNostrClient;
     late _MockCommentsListBloc mockListBloc;
     late _MockCommentReactionsBloc mockReactionsBloc;
 
@@ -45,11 +47,9 @@ void main() {
     });
 
     setUp(() {
-      mockNostrClient = _MockNostrClient();
       mockListBloc = _MockCommentsListBloc();
       mockReactionsBloc = _MockCommentReactionsBloc();
 
-      when(() => mockNostrClient.publicKey).thenReturn('');
       when(() => mockReactionsBloc.state).thenReturn(
         const CommentReactionsState(),
       );
@@ -66,7 +66,9 @@ void main() {
       when(() => mockListBloc.state).thenReturn(listState);
 
       return ProviderScope(
-        overrides: [nostrServiceProvider.overrideWithValue(mockNostrClient)],
+        overrides: [
+          nostrSessionProvider.overrideWith(_SignedOutNostrSession.new),
+        ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -265,7 +267,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              nostrServiceProvider.overrideWithValue(mockNostrClient),
+              nostrSessionProvider.overrideWith(_SignedOutNostrSession.new),
             ],
             child: MaterialApp(
               localizationsDelegates: appLocalizationsDelegates,
@@ -330,7 +332,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
-              nostrServiceProvider.overrideWithValue(mockNostrClient),
+              nostrSessionProvider.overrideWith(_SignedOutNostrSession.new),
             ],
             child: MaterialApp(
               localizationsDelegates: appLocalizationsDelegates,

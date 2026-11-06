@@ -51,6 +51,61 @@ void main() {
       expect(firstKey, isNot(equals(secondKey)));
     });
 
+    test('changes when a coordinate-less copy learns its kind', () {
+      final cachedKey = videoInteractionsBlocKey(
+        likesRepository: likesRepository,
+        commentsRepository: commentsRepository,
+        repostsRepository: repostsRepository,
+        video: _video(id: 'video-a'),
+      );
+      final relayKey = videoInteractionsBlocKey(
+        likesRepository: likesRepository,
+        commentsRepository: commentsRepository,
+        repostsRepository: repostsRepository,
+        video: _video(id: 'video-a', eventKind: 34236),
+      );
+
+      // The bloc captures the kind for the like's k tag (#6980).
+      expect(cachedKey, isNot(equals(relayKey)));
+    });
+
+    test('keeps the key when a copy with a coordinate learns its kind', () {
+      final cachedKey = videoInteractionsBlocKey(
+        likesRepository: likesRepository,
+        commentsRepository: commentsRepository,
+        repostsRepository: repostsRepository,
+        video: _video(id: 'video-a', dTag: 'video-a-d'),
+      );
+      final relayKey = videoInteractionsBlocKey(
+        likesRepository: likesRepository,
+        commentsRepository: commentsRepository,
+        repostsRepository: repostsRepository,
+        video: _video(id: 'video-a', dTag: 'video-a-d', eventKind: 34236),
+      );
+
+      // A coordinate fixes the like's kind, so rebuilding would only drop
+      // an in-flight like.
+      expect(cachedKey, equals(relayKey));
+    });
+
+    test('keeps the key when a regular video learns its kind', () {
+      final cachedKey = videoInteractionsBlocKey(
+        likesRepository: likesRepository,
+        commentsRepository: commentsRepository,
+        repostsRepository: repostsRepository,
+        video: _video(id: 'video-a'),
+      );
+      final relayKey = videoInteractionsBlocKey(
+        likesRepository: likesRepository,
+        commentsRepository: commentsRepository,
+        repostsRepository: repostsRepository,
+        video: _video(id: 'video-a', eventKind: 22),
+      );
+
+      // A like on a regular video names no kind either way.
+      expect(cachedKey, equals(relayKey));
+    });
+
     testWidgets('does not keep fetched counts after feed cell reuse', (
       tester,
     ) async {
@@ -161,12 +216,15 @@ class _InteractionHost extends StatelessWidget {
   }
 }
 
-VideoEvent _video({required String id}) {
+VideoEvent _video({required String id, int? eventKind, String? dTag}) {
   return VideoEvent(
     id: id,
     pubkey: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
     createdAt: 1757385263,
     content: 'Test video',
     timestamp: DateTime.fromMillisecondsSinceEpoch(1757385263 * 1000),
+    eventKind: eventKind,
+    vineId: dTag,
+    addressableDTag: dTag,
   );
 }

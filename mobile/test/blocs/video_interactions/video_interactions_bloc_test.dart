@@ -88,6 +88,7 @@ void main() {
 
     VideoInteractionsBloc createBloc({
       String? addressableId,
+      int? eventKind,
       int? initialLikeCount,
       int? archivedLikeCount,
       int? initialCommentCount,
@@ -99,6 +100,7 @@ void main() {
       commentsRepository: mockCommentsRepository,
       repostsRepository: mockRepostsRepository,
       addressableId: addressableId,
+      eventKind: eventKind,
       initialLikeCount: initialLikeCount,
       archivedLikeCount: archivedLikeCount,
       initialCommentCount: initialCommentCount,
@@ -976,6 +978,76 @@ void main() {
     });
 
     group('VideoInteractionsLikeToggled', () {
+      blocTest<VideoInteractionsBloc, VideoInteractionsState>(
+        'names the real kind of a coordinate-less 34235 video',
+        setUp: () {
+          when(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              targetKind: 34235,
+            ),
+          ).thenAnswer((_) async => true);
+        },
+        build: () => createBloc(eventKind: 34235),
+        act: (bloc) => bloc.add(const VideoInteractionsLikeToggled()),
+        verify: (_) {
+          verify(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              targetKind: 34235,
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<VideoInteractionsBloc, VideoInteractionsState>(
+        'names no kind for a regular video',
+        setUp: () {
+          when(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+            ),
+          ).thenAnswer((_) async => true);
+        },
+        build: () => createBloc(eventKind: 22),
+        act: (bloc) => bloc.add(const VideoInteractionsLikeToggled()),
+        verify: (_) {
+          verify(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<VideoInteractionsBloc, VideoInteractionsState>(
+        'names the kind of an addressable video that has no coordinate',
+        setUp: () {
+          when(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              targetKind: 34236,
+            ),
+          ).thenAnswer((_) async => true);
+        },
+        build: () => createBloc(eventKind: 34236),
+        act: (bloc) => bloc.add(const VideoInteractionsLikeToggled()),
+        verify: (_) {
+          verify(
+            () => mockLikesRepository.toggleLike(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              targetKind: 34236,
+            ),
+          ).called(1);
+        },
+      );
+
       blocTest<VideoInteractionsBloc, VideoInteractionsState>(
         'likes video when not already liked',
         setUp: () {

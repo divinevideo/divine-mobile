@@ -35,6 +35,9 @@ class DmSharedVideoCitation {
   /// - Addressable (34236/34235): `q = ["q", "<kind>:<author>:<d>", relay]`
   ///   with NO 4th element (the pubkey is already in the coordinate).
   /// - Regular (22): `q = ["q", "<event-id>", relay, "<author>"]`.
+  ///
+  /// An addressable video with no `d` tag has no coordinate, so it is cited by
+  /// [eventId] in the regular form instead.
   static DmSharedVideoCitation? build({
     required int videoKind,
     required String authorPubkey,
@@ -51,8 +54,7 @@ class DmSharedVideoCitation {
         videoKind == NIP71VideoKinds.addressableShortVideo ||
         videoKind == NIP71VideoKinds.addressableNormalVideo;
 
-    if (isAddressable) {
-      if (dTag == null || dTag.isEmpty) return null;
+    if (isAddressable && dTag != null && dTag.isNotEmpty) {
       final coordinate = '$videoKind:$authorPubkey:$dTag';
       final naddr = NIP19Tlv.encodeNaddr(
         Naddr(id: dTag, author: authorPubkey, kind: videoKind, relays: [relay]),

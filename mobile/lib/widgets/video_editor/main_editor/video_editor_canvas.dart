@@ -650,6 +650,19 @@ class _VideoEditor extends ConsumerStatefulWidget {
 
 class _VideoEditorState extends ConsumerState<_VideoEditor>
     with TickerProviderStateMixin {
+  /// How many [_heroTag]s have been handed out.
+  static int _heroTagCount = 0;
+
+  /// The tag of the editor's background [Hero], unique to this canvas.
+  ///
+  /// On the package default, every editor shares one tag, so closing an
+  /// editor that was pushed over another flew the hero back to the one
+  /// below. Flutter builds a flight in the navigator's overlay, which has
+  /// neither the [VideoEditorScope] nor the blocs the preview reads, so the
+  /// build threw. The crop-rotate editors avoid the same flight with
+  /// `transformEditorHeroTag`.
+  final String _heroTag = 'divine-video-editor-hero-${_heroTagCount++}';
+
   late final ProVideoController _proVideoController;
 
   /// The scope's fine-grained play-time notifier, cached from
@@ -1032,7 +1045,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// one before it and only the newest volume is sent.
   void _onLiveVolumeChanged() {
     final live = _liveVolumeNotifier?.value;
-    if (live == null) return;
+    // A detached clip plays on its own player, which its layer drives.
+    if (live == null || live.layerId != null) return;
     _queuedLiveVolume = live;
     if (_isApplyingLiveVolume) return;
     _runDetached(_drainLiveVolume(), 'apply live volume');
@@ -1890,9 +1904,16 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     List<DivineVideoClip> clips, {
     Duration? startPosition,
   }) async {
-    // Dispose old player if it exists.
-    await _videoPlayerSubscription?.cancel();
-    await _videoPlayer?.dispose();
+    // Let go of the old player before disposing it, as [_releasePlayer] does.
+    // A disposed controller still reports `isInitialized`, so while its
+    // dispose is awaited an audio sync or a clip reload would otherwise find
+    // it here and call into it.
+    final previousPlayer = _videoPlayer;
+    final previousSubscription = _videoPlayerSubscription;
+    _videoPlayer = null;
+    _videoPlayerSubscription = null;
+    await previousSubscription?.cancel();
+    await previousPlayer?.dispose();
     final generation = _beginClipLoad();
 
     // The clip list is named, not just counted: when the preview shows footage
@@ -3477,6 +3498,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           _proVideoController,
           key: scope.editorKey,
           configs: ProImageEditorConfigs(
+            heroTag: _heroTag,
             theme: Theme.of(context),
             stateHistory: StateHistoryConfigs(
               initStateHistory: _initStateHistory,

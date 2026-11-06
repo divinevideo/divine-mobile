@@ -14,11 +14,13 @@ import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bl
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player_registry.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:pro_image_editor/pro_image_editor.dart' show WidgetLayer;
 
 /// Corner rounding applied to a detached clip, so it reads as a placed object
 /// rather than a second full-bleed video.
@@ -35,17 +37,35 @@ const double detachedClipCornerRadius = 8;
 /// the scaling; the number itself is arbitrary and never reaches the screen.
 const double detachedClipLayoutWidth = 1000;
 
+/// [layer], a detached clip, carrying [meta] in place of the meta it had.
+///
+/// The meta is written to all three places that read it — the layer, its
+/// export configs and the canvas widget built from it — so a later edit, the
+/// export and a draft round-trip all see the same clip.
+WidgetLayer detachedClipLayerWithMeta(
+  WidgetLayer layer,
+  Map<String, dynamic> meta,
+) => layer.copyWith(
+  widget: DetachedClipLayerView(meta: meta),
+  meta: meta,
+  exportConfigs: layer.exportConfigs.copyWith(meta: meta),
+);
+
 /// Identifies the media a detached-clip [meta] describes.
 ///
-/// Two metas for the same clip share this key; a different clip, trim, speed
-/// or volume gets its own. Read straight off the serialized clip so it needs no
+/// Two metas for the same clip share this key; a different clip, trim or
+/// speed gets its own. Read straight off the serialized clip so it needs no
 /// documents path and cannot fail.
+///
+/// The volume is deliberately not part of it: the running player takes a new
+/// volume as it is, and reopening it for one would blank the layer and restart
+/// the clip for a change nobody can see.
 String? detachedClipSourceKey(Map<String, dynamic>? meta) {
   if (meta == null) return null;
   final raw = meta[detachedClipLayerClipKey];
   if (raw is! Map) return null;
   return '${raw['id']}|${raw['filePath']}|${raw['trimStartMs']}'
-      '|${raw['trimEndMs']}|${raw['playbackSpeed']}|${raw['volume']}'
+      '|${raw['trimEndMs']}|${raw['playbackSpeed']}'
       '${raw['speedRamp'] == null ? '' : '|${raw['speedRamp']}'}';
 }
 
@@ -131,6 +151,10 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
 
   bool get _isPreviewReleased => _previewReleased?.value ?? false;
 
+  /// The volume being dragged in the timeline's volume panel, or `null`
+  /// outside the editor.
+  ValueNotifier<LiveVolume?>? _liveVolume;
+
   @override
   void initState() {
     super.initState();
@@ -177,13 +201,21 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     if (detachedClipPlayerKey(oldWidget.meta) !=
         detachedClipPlayerKey(widget.meta)) {
       unawaited(_load());
-    } else if (!_chromaKeyEquality.equals(
+      return;
+    }
+    if (!_chromaKeyEquality.equals(
       oldWidget.meta[detachedClipLayerChromaKeyKey],
       widget.meta[detachedClipLayerChromaKeyKey],
     )) {
       // Only the green screen changed: re-read it without touching the
       // player, which would restart the clip on every slider nudge.
       unawaited(_reloadChromaKey());
+    }
+    // The volume is not part of the player key, so the running player takes
+    // a new one — a confirmed change, an undo — as it is.
+    if (DetachedClipLayerData.volumeOf(oldWidget.meta) !=
+        DetachedClipLayerData.volumeOf(widget.meta)) {
+      _applyVolume();
     }
   }
 
@@ -204,9 +236,9 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _listenForPreviewRelease(
-      VideoEditorScope.maybeOf(context)?.previewReleasedNotifier,
-    );
+    final scope = VideoEditorScope.maybeOf(context);
+    _listenForPreviewRelease(scope?.previewReleasedNotifier);
+    _listenForLiveVolume(scope?.liveVolumeNotifier);
     _follow();
   }
 
@@ -218,6 +250,12 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     // initState may have resumed a pooled player before the scope was known,
     // and a layer the old notifier held back needs its player again.
     if (_isPreviewReleased != wasReleased) _onPreviewReleasedChanged();
+  }
+
+  void _listenForLiveVolume(ValueNotifier<LiveVolume?>? liveVolume) {
+    if (identical(liveVolume, _liveVolume)) return;
+    _liveVolume?.removeListener(_applyVolume);
+    _liveVolume = liveVolume?..addListener(_applyVolume);
   }
 
   /// Gives the player back while an export holds the decoders, and opens a
@@ -265,10 +303,32 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
     // A remount under the voice-over recorder picks the pooled player back up
     // muted, and a player opened there starts muted.
     _applyMute(_mainBloc?.state.isVoiceOverPreview ?? false);
+    // A pooled player picked back up may still play at a volume an undo has
+    // since taken back.
+    _applyVolume();
   }
 
   void _applyMute(bool muted) {
     unawaited(_player?.setMuted(muted: muted));
+  }
+
+  /// Plays the clip at the volume its meta stores, or at the one being
+  /// dragged for this layer in the timeline's volume panel.
+  ///
+  /// Every other drag — another layer's, a timeline clip's, a sound's — leaves
+  /// this layer on its stored volume, which is also how an ended or cancelled
+  /// drag puts it back.
+  void _applyVolume() {
+    final player = _player;
+    if (player == null) return;
+    final live = _liveVolume?.value;
+    final layerId = live?.layerId;
+    final volume =
+        layerId != null &&
+            layerId == DetachedClipLayerData.layerIdOf(widget.meta)
+        ? live!.volume
+        : DetachedClipLayerData.volumeOf(widget.meta);
+    unawaited(player.setVolume(volume));
   }
 
   /// The timeline bloc, or `null` outside the editor.
@@ -315,6 +375,8 @@ class _DetachedClipLayerViewState extends State<DetachedClipLayerView> {
   void dispose() {
     _previewReleased?.removeListener(_onPreviewReleasedChanged);
     _previewReleased = null;
+    _liveVolume?.removeListener(_applyVolume);
+    _liveVolume = null;
     _loadGeneration++;
     // Detached, not torn down: the registry holds the player briefly so the
     // remount that follows a drag picks the same one back up, mid-playback.

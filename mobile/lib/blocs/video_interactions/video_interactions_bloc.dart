@@ -41,6 +41,7 @@ class VideoInteractionsBloc
     required RepostsRepository repostsRepository,
     required ConsumptionAnalyticsTracker consumptionAnalytics,
     String? addressableId,
+    int? eventKind,
     int? initialLikeCount,
     int? archivedLikeCount,
     int? initialCommentCount,
@@ -52,6 +53,10 @@ class VideoInteractionsBloc
        _commentsRepository = commentsRepository,
        _repostsRepository = repostsRepository,
        _addressableId = addressableId,
+       _likeTargetKind = likeTargetKindFor(
+         addressableId: addressableId,
+         eventKind: eventKind,
+       ),
        _archivedLikeCount = archivedLikeCount,
        _includeVideoReplies = includeVideoReplies,
        _consumptionAnalytics = consumptionAnalytics,
@@ -92,6 +97,20 @@ class VideoInteractionsBloc
   /// Addressable ID for repost operations (format: `kind:pubkey:d-tag`).
   /// Null if the video doesn't have a d-tag (non-addressable event).
   final String? _addressableId;
+
+  /// The NIP-25 `k` value for a like on a video: 34236 when [addressableId]
+  /// is set, matching its legacy `34236:` key (#5720). Without a coordinate,
+  /// the known addressable [eventKind] (#6980). Null for a regular video.
+  static int? likeTargetKindFor({String? addressableId, int? eventKind}) {
+    if (addressableId != null) return NIP71VideoKinds.addressableShortVideo;
+    return eventKind == NIP71VideoKinds.addressableShortVideo ||
+            eventKind == NIP71VideoKinds.addressableNormalVideo
+        ? eventKind
+        : null;
+  }
+
+  /// See [likeTargetKindFor].
+  final int? _likeTargetKind;
 
   /// Archival (classic Vine) like count baseline, kept separate from the
   /// live Nostr count so the addressable like floor (#6022) can raise only
@@ -334,9 +353,7 @@ class VideoInteractionsBloc
         eventId: _eventId,
         authorPubkey: _authorPubkey,
         addressableId: _addressableId,
-        targetKind: _addressableId != null
-            ? NIP71VideoKinds.addressableShortVideo
-            : null,
+        targetKind: _likeTargetKind,
       );
       outcome = isNowLiked == optimisticLiked
           ? _LikeSettleConfirmed(isLiked: isNowLiked)

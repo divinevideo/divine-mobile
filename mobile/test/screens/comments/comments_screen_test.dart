@@ -13,7 +13,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/comments/comment_composer/comment_composer_bloc.dart';
 import 'package:openvine/blocs/comments/comment_reactions/comment_reactions_bloc.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_bloc.dart';
@@ -32,7 +31,11 @@ import '../../helpers/test_helpers.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
 
-class _MockNostrClient extends Mock implements NostrClient {}
+// Nobody is signed in, so no comment renders as the viewer's own.
+class _SignedOutNostrSession extends NostrSession {
+  @override
+  NostrSessionReadiness build() => const NostrSessionReadiness.signedOut();
+}
 
 class _MockCommentsListBloc
     extends MockBloc<CommentsListEvent, CommentsListState>
@@ -146,7 +149,6 @@ void main() {
 
   group('CommentsScreen', () {
     late _MockAuthService mockAuthService;
-    late _MockNostrClient mockNostrClient;
     late _MockCommentsListBloc mockListBloc;
     late _MockCommentComposerBloc mockComposerBloc;
     late _MockCommentReactionsBloc mockReactionsBloc;
@@ -189,7 +191,6 @@ void main() {
       addTearDown(binding.platformDispatcher.views.first.resetDevicePixelRatio);
 
       mockAuthService = _MockAuthService();
-      mockNostrClient = _MockNostrClient();
       mockListBloc = _MockCommentsListBloc();
       mockComposerBloc = _MockCommentComposerBloc();
       mockReactionsBloc = _MockCommentReactionsBloc();
@@ -199,8 +200,6 @@ void main() {
         id: testVideoEventId,
         pubkey: testVideoAuthorPubkey,
       );
-
-      when(() => mockNostrClient.publicKey).thenReturn('');
 
       when(() => mockListBloc.state).thenReturn(
         const CommentsListState(
@@ -266,7 +265,7 @@ void main() {
       return ProviderScope(
         overrides: [
           authServiceProvider.overrideWithValue(mockAuthService),
-          nostrServiceProvider.overrideWithValue(mockNostrClient),
+          nostrSessionProvider.overrideWith(_SignedOutNostrSession.new),
           isFeatureEnabledProvider(FeatureFlag.videoReplies)
               .overrideWithValue(false),
         ],

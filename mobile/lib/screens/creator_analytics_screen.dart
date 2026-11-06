@@ -52,7 +52,12 @@ class _CreatorAnalyticsScreenState
     setState(() {
       _analyticsFuture = _loadAnalytics();
     });
-    await _analyticsFuture;
+    try {
+      await _analyticsFuture;
+    } on Exception {
+      // The FutureBuilder renders the failure. The Retry button and the
+      // RefreshIndicator drop this future, so a rethrow would go unhandled.
+    }
   }
 
   Future<_CreatorAnalyticsData> _loadAnalytics() async {

@@ -8,6 +8,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:test/test.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class MockNostrClient extends Mock implements NostrClient {}
 
@@ -621,7 +622,139 @@ void main() {
       });
     });
 
+    late List<({Object error, String site})> reported;
+    late Set<LogEntry> priorLogs;
+
+    List<LogEntry> missingCoordinateWarnings() => LogCaptureService()
+        .getRecentLogs()
+        .where(
+          (entry) =>
+              !priorLogs.contains(entry) &&
+              entry.name == 'LikesRepository' &&
+              entry.level == LogLevel.warning &&
+              entry.message.contains('publishing without an a tag'),
+        )
+        .toList();
+
+    /// Stubs every publish to succeed with a reaction for [testEventId].
+    void stubAnyPublish() {
+      when(
+        () => mockNostrClient.sendLike(
+          any(),
+          content: any(named: 'content'),
+          addressableId: any(named: 'addressableId'),
+          targetAuthorPubkey: any(named: 'targetAuthorPubkey'),
+          targetKind: any(named: 'targetKind'),
+        ),
+      ).thenAnswer(
+        (_) async => createMockReaction(
+          id: testReactionEventId,
+          targetEventId: testEventId,
+        ),
+      );
+    }
+
+    /// A repository with no local storage that records reporter calls.
+    LikesRepository createReportingRepository() {
+      reported = [];
+      priorLogs = LogCaptureService().getRecentLogs().toSet();
+      return createRepository(
+        withLocalStorage: false,
+        errorReporter: (error, stackTrace, {required site}) {
+          reported.add((error: error, site: site));
+        },
+      );
+    }
+
     group('likeEvent', () {
+      group('on an addressable target with no coordinate (#6980)', () {
+        test('still publishes the like with its kind', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            targetKind: 34236,
+          );
+
+          verify(
+            () => mockNostrClient.sendLike(
+              testEventId,
+              content: '+',
+              targetAuthorPubkey: testAuthorPubkey,
+              targetKind: 34236,
+            ),
+          ).called(1);
+        });
+
+        test('logs missing remote data without a crash report', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            targetKind: 34236,
+          );
+
+          expect(missingCoordinateWarnings(), hasLength(1));
+          expect(reported, isEmpty);
+        });
+
+        test('adds no warning for a like it does not publish', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            targetKind: 34236,
+          );
+          expect(missingCoordinateWarnings(), hasLength(1));
+
+          await expectLater(
+            repository.likeEvent(
+              eventId: testEventId,
+              authorPubkey: testAuthorPubkey,
+              targetKind: 34236,
+            ),
+            throwsA(isA<AlreadyLikedException>()),
+          );
+
+          expect(missingCoordinateWarnings(), hasLength(1));
+          expect(reported, isEmpty);
+        });
+
+        test('logs no warning when the coordinate is known', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            addressableId: '34236:$testAuthorPubkey:test-d-tag',
+            targetKind: 34236,
+          );
+
+          expect(missingCoordinateWarnings(), isEmpty);
+          expect(reported, isEmpty);
+        });
+
+        test('logs no warning for a regular target kind', () async {
+          stubAnyPublish();
+          repository = createReportingRepository();
+
+          await repository.likeEvent(
+            eventId: testEventId,
+            authorPubkey: testAuthorPubkey,
+            targetKind: 1111,
+          );
+
+          expect(missingCoordinateWarnings(), isEmpty);
+          expect(reported, isEmpty);
+        });
+      });
+
       test('publishes like reaction and stores record', () async {
         final mockEvent = MockEvent();
         when(() => mockEvent.id).thenReturn(testReactionEventId);
@@ -1839,6 +1972,21 @@ void main() {
     });
 
     group('downvoteEvent', () {
+      test('logs a missing coordinate on an addressable target '
+          '(#6980)', () async {
+        stubAnyPublish();
+        repository = createReportingRepository();
+
+        await repository.downvoteEvent(
+          eventId: testEventId,
+          authorPubkey: testAuthorPubkey,
+          targetKind: 34236,
+        );
+
+        expect(missingCoordinateWarnings(), hasLength(1));
+        expect(reported, isEmpty);
+      });
+
       test('ticks watchDownvotedEventIds before sendLike completes', () async {
         // Block sendLike on a completer so the optimistic stream emit
         // is observable before the network call returns.
@@ -5293,6 +5441,20 @@ void main() {
     });
 
     group('executeLikeAction', () {
+      test('logs a replayed like missing its coordinate (#6980)', () async {
+        stubAnyPublish();
+        repository = createReportingRepository();
+
+        await repository.executeLikeAction(
+          eventId: testEventId,
+          authorPubkey: testAuthorPubkey,
+          targetKind: 34236,
+        );
+
+        expect(missingCoordinateWarnings(), hasLength(1));
+        expect(reported, isEmpty);
+      });
+
       test('publishes like directly to relays', () async {
         when(
           () => mockNostrClient.sendLike(

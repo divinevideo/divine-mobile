@@ -24,15 +24,17 @@ bool cancelLiveVolumePreview({
         break;
       }
     }
-  } else {
+  } else if (expected.trackId case final trackId?) {
     for (final track in overlayState.audioTracks) {
-      if (track.id == expected.trackId) {
+      if (track.id == trackId) {
         restored = LiveVolume.track(track.id, track.volume);
         break;
       }
     }
   }
-  // Deleted targets have no gain to restore; their stale preview still clears.
+  // A detached clip's layer goes back to its stored volume once no preview
+  // names it, and deleted targets have no gain to restore; either way the
+  // stale preview still clears.
   if (restored != null) notifier.value = restored;
   // A synchronous listener may already have published a newer preview.
   if (identical(notifier.value, restored ?? expected)) notifier.value = null;

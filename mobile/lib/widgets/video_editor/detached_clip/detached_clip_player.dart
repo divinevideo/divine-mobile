@@ -36,7 +36,7 @@ class DetachedClipSpeedBodies {
 /// often — the layer blanks during each swap and the clip restarts from its
 /// first frame.
 class DetachedClipPlayer {
-  DetachedClipPlayer._(this._controller, this._clip);
+  DetachedClipPlayer._(this._controller, this._clip) : _volume = _clip.volume;
 
   /// A player around an already loaded [controller], for tests that drive the
   /// playhead coupling without a native player.
@@ -146,6 +146,9 @@ class DetachedClipPlayer {
   DateTime? _lastSeekAt;
   bool _isPlaying = false;
   bool _muted = false;
+
+  /// The clip volume the player plays at, which starts as the clip's own.
+  double _volume;
   bool _disposed = false;
 
   /// The controller to hand to a `DivineVideoPlayer`.
@@ -236,6 +239,18 @@ class DetachedClipPlayer {
     if (muted == _muted) return Future<void>.value();
     _muted = muted;
     return _controller.setVolume(muted ? 0 : 1);
+  }
+
+  /// Plays the clip at [volume] from now on, from 0 to 300 %, without
+  /// reloading it.
+  ///
+  /// This is the clip's own volume, the one the export plays it at, so a
+  /// change to it lands on the running player instead of opening a new one.
+  /// Independent of [setMuted], which silences the player on top of it.
+  Future<void> setVolume(double volume) {
+    if (volume == _volume) return Future<void>.value();
+    _volume = volume;
+    return _controller.setClipVolumes([volume]);
   }
 
   /// Stops following the playhead. The player itself stays open.

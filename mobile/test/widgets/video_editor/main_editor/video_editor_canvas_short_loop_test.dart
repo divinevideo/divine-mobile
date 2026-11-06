@@ -29,7 +29,9 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/adjust_video_effect.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -151,6 +153,25 @@ class _PlayerReports extends MockStreamHandler {
       'videoHeight': 1920,
     });
   }
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final recordedErrors = <Object>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stackTrace, {
+    String? reason,
+  }) async {
+    recordedErrors.add(error);
+  }
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
 }
 
 /// The streams the real `pro_video_editor` plugin listens on when the first
@@ -509,6 +530,99 @@ void main() {
             .map((call) => (call.arguments as Map)['positionMs']),
         [1200],
       );
+    });
+  });
+
+  group('player rebuild', () {
+    late _RecordingCrashReporter reporter;
+
+    setUp(() {
+      final originalReporter = detachedFailureReporter;
+      addTearDown(() => detachedFailureReporter = originalReporter);
+      reporter = _RecordingCrashReporter();
+      detachedFailureReporter = reporter;
+    });
+
+    /// Alternates real and fake turns until [done]: the rebuild awaits futures
+    /// completed on the real event loop as well as in the fake zone.
+    Future<void> drainUntil(WidgetTester tester, bool Function() done) async {
+      final drain = Stopwatch()..start();
+      while (!done() && drain.elapsed < const Duration(seconds: 10)) {
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+      }
+    }
+
+    testWidgets('keeps audio off the player it is disposing', (tester) async {
+      // The native dispose is held so the old player stays mid-teardown while
+      // an audio change arrives.
+      final disposeStarted = Completer<void>();
+      final disposeGate = Completer<void>();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('divine_video_player'),
+            (call) async {
+              if (call.method == 'dispose') {
+                if (!disposeStarted.isCompleted) disposeStarted.complete();
+                await disposeGate.future;
+              }
+              return call.method == 'create' ? {'textureId': 1} : null;
+            },
+          );
+      final rebuiltPlayerCalls = <String>[];
+      installMockDivineVideoPlayer(
+        playerId: 1,
+        onMethodCall: (call) async {
+          rebuiltPlayerCalls.add(call.method);
+          return null;
+        },
+      );
+      final overlay = StreamController<TimelineOverlayState>();
+      addTearDown(overlay.close);
+      whenListen(
+        overlayBloc,
+        overlay.stream,
+        initialState: const TimelineOverlayState(),
+      );
+      final clipStates = StreamController<ClipEditorState>();
+      addTearDown(clipStates.close);
+      final kept = clipOf(const Duration(seconds: 3));
+      final detached = kept.copyWith(id: 'detached');
+      await pumpCanvas(
+        tester,
+        const Duration(seconds: 3),
+        clipStates: clipStates.stream,
+        clips: [kept, detached],
+      );
+
+      // A detach moves the canvas onto the legacy surface, which rebuilds the
+      // player: the old one is disposed before the new one exists.
+      clipStates.add(
+        ClipEditorState(
+          clips: [kept],
+          lastDetachResult: ClipDetachSuccess(
+            previousClips: [kept, detached],
+            detachedClip: detached,
+          ),
+        ),
+      );
+      await tester.pump();
+      await drainUntil(tester, () => disposeStarted.isCompleted);
+      expect(disposeStarted.isCompleted, isTrue);
+
+      overlay.add(const TimelineOverlayState(audioTracksRevision: 1));
+      await tester.pump();
+
+      disposeGate.complete();
+      await drainUntil(
+        tester,
+        () => rebuiltPlayerCalls.contains('removeAllAudioTracks'),
+      );
+      await unmount(tester);
+
+      expect(reporter.recordedErrors, isEmpty);
+      // The rebuilt player still gets the audio sync.
+      expect(rebuiltPlayerCalls, contains('removeAllAudioTracks'));
     });
   });
 
