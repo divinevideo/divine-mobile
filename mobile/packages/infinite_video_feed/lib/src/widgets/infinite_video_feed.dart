@@ -1952,6 +1952,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     if (terminalType == null) return false;
     _errors.add(index);
     _errorTypes[index] = terminalType;
+    _firstFrameTimerFor(index)?.finish(
+      outcome: FeedPlaybackOutcome.error,
+      errorCategory: FeedPlaybackError.source,
+    );
     _rebuildPage(index);
     return true;
   }

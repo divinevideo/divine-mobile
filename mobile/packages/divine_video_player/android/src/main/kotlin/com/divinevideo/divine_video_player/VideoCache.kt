@@ -70,7 +70,7 @@ internal object VideoCache {
         onPlaybackNetwork: (Map<String, Any>) -> Unit = {},
         httpHeadersForUri: (Uri) -> Map<String, String> = { emptyMap() },
     ): DataSource.Factory {
-        val uncachedFactory = upstreamFactory(context, onPlaybackNetwork)
+        val uncachedFactory = upstreamFactory(context, onPlaybackNetwork, httpHeadersForUri)
         val cachedFactory = cache?.let { sharedCache ->
             CacheDataSource.Factory().setCache(sharedCache)
                 .setUpstreamDataSourceFactory(uncachedFactory)
@@ -87,7 +87,8 @@ internal object VideoCache {
 
     private fun upstreamFactory(
         context: Context,
-        onPlaybackNetwork: (Map<String, Any>) -> Unit = {},
+        onPlaybackNetwork: (Map<String, Any>) -> Unit,
+        httpHeadersForUri: (Uri) -> Map<String, String>,
     ): DataSource.Factory {
         val defaultHttpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
@@ -95,6 +96,11 @@ internal object VideoCache {
             PlaybackNetworkDataSource(
                 ProcessingResponseDataSource(defaultHttpDataSourceFactory.createDataSource()),
                 onPlaybackNetwork,
+                isPlaybackLoadCurrent = { uri, id ->
+                    httpHeadersForUri(uri).any { (name, value) ->
+                        name.equals("X-Playback-Load-Id", ignoreCase = true) && value == id
+                    }
+                },
             )
         }
         return DefaultDataSource.Factory(context, httpDataSourceFactory)

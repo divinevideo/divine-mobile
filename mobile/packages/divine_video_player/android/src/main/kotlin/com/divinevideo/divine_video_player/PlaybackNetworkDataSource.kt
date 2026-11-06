@@ -11,13 +11,16 @@ import java.util.UUID
 internal class PlaybackNetworkDataSource(
     private val delegate: DataSource,
     private val onSample: (Map<String, Any>) -> Unit,
+    private val isPlaybackLoadCurrent: (Uri, String) -> Boolean,
     private val nowMs: () -> Long = { System.nanoTime() / 1_000_000 },
 ) : DataSource {
     private var loadId: String? = null
+    private var sourceUri: Uri? = null
     private var requestId = ""
     private var started = 0L
     private var headersMs: Long? = null
     private var bytes = 0L
+    private var openedLength = C.LENGTH_UNSET.toLong()
     private var finished = false
 
     override fun addTransferListener(listener: TransferListener) = delegate.addTransferListener(listener)
@@ -28,13 +31,24 @@ internal class PlaybackNetworkDataSource(
         loadId = spec.httpRequestHeaders.entries.firstOrNull {
             it.key.equals("X-Playback-Load-Id", ignoreCase = true)
         }?.value?.takeIf { it.matches(Regex("[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")) }
+        sourceUri = spec.uri
+        loadId = loadId?.takeIf { isPlaybackLoadCurrent(spec.uri, it) }
+        // CacheDataSource retains its original DataSpec across cache holes.
+        // Revoke at every actual upstream open, not only at the outer router.
+        val requestSpec = if (loadId == null) spec.withRequestHeaders(
+            spec.httpRequestHeaders.filterKeys {
+                !it.equals("X-Playback-Load-Id", ignoreCase = true)
+            },
+        ) else spec
         requestId = UUID.randomUUID().toString()
         started = nowMs()
         bytes = 0
+        openedLength = C.LENGTH_UNSET.toLong()
         headersMs = null
         finished = false
         return try {
-            val length = delegate.open(spec)
+            val length = delegate.open(requestSpec)
+            openedLength = length
             headersMs = nowMs() - started
             emit("unavailable", terminal = false)
             length
@@ -54,7 +68,11 @@ internal class PlaybackNetworkDataSource(
     }
 
     override fun close() {
-        try { delegate.close() } finally { finish("cancelled") }
+        try { delegate.close() } finally {
+            // CacheDataSource may return its own EOF after the known range
+            // length is consumed, without asking upstream for one more read.
+            finish(if (openedLength >= 0 && bytes >= openedLength) "complete" else "cancelled")
+        }
     }
 
     private fun finish(outcome: String) {
@@ -65,6 +83,8 @@ internal class PlaybackNetworkDataSource(
 
     private fun emit(outcome: String, terminal: Boolean) {
         val id = loadId ?: return
+        val uri = sourceUri ?: return
+        if (!isPlaybackLoadCurrent(uri, id)) return
         val sample = mutableMapOf<String, Any>(
             "type" to "playback_network", "load_id" to id,
             "request_id" to requestId, "network_outcome" to outcome,

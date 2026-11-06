@@ -4472,6 +4472,15 @@ void main() {
           DivineVideoPlayerController.resetIdCounterForTesting();
           final harness = _NativePlayerHarness(tester);
           await harness.install(playerIds: const <int>[0, 1, 2, 3, 4, 5]);
+          FeedPlaybackTelemetry.configure(enabled: true);
+          final terminals = <Map<String, Object?>>[];
+          final telemetrySubscription = FeedPlaybackTelemetry.events.listen(
+            terminals.add,
+          );
+          addTearDown(() async {
+            FeedPlaybackTelemetry.configure(enabled: false);
+            await telemetrySubscription.cancel();
+          });
           final key = GlobalKey<InfiniteVideoFeedState>();
           final videos = [_makeVideo('terminal_init'), _makeVideo('next')];
           harness.setClipsFailures[0] = <Exception>[
@@ -4530,6 +4539,12 @@ void main() {
             expect(key.currentState!.currentIndex, equals(0));
 
             expect(find.text('VIDEO_ERROR'), findsOneWidget);
+            expect(terminals.map((event) => event['outcome']), [
+              'error',
+              'first_frame',
+              'error',
+            ]);
+            expect(terminals.last['error_category'], 'source');
             expect(
               harness.countCalls('setClips'),
               equals(setClipsAfterTerminalFailure),
@@ -4539,6 +4554,11 @@ void main() {
             await tester.pump();
             await harness.dispose();
           }
+          expect(terminals.map((event) => event['outcome']), [
+            'error',
+            'first_frame',
+            'error',
+          ]);
         },
       );
 

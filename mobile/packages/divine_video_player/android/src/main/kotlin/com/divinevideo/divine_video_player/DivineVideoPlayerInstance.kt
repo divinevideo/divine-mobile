@@ -85,14 +85,14 @@ internal class DivineVideoPlayerInstance(
 
     private var player: ExoPlayer? = null
     private var eventSink: EventChannel.EventSink? = null
-    private var httpHeadersByUri = emptyMap<String, Map<String, String>>()
+    @Volatile private var httpHeadersByUri = emptyMap<String, Map<String, String>>()
 
     // Viewer auth headers keyed by blob hash. HLS sub-playlist / segment
     // requests use URIs that differ from the clip URI but share the same
     // /<hash>/… prefix; BUD-01 (kind 24242) tokens are hash-bound, so one header
     // set authenticates every variant of a hash. Used when the exact-URI lookup
     // misses (e.g. HLS segments derived from an authenticated manifest).
-    private var httpHeadersByHash = emptyMap<String, Map<String, String>>()
+    @Volatile private var httpHeadersByHash = emptyMap<String, Map<String, String>>()
 
     // Texture rendering (non-null when useTexture is enabled).
     //
