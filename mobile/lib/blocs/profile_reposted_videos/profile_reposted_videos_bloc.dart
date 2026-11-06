@@ -11,6 +11,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/aid.dart' show legacyVideoCoordinateFor;
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/profile_shared/profile_tab_page_size.dart';
 import 'package:openvine/blocs/profile_shared/profile_tab_sync_completion.dart';
@@ -303,8 +304,7 @@ class ProfileRepostedVideosBloc
     final byId = <String, VideoEvent>{};
     for (final video in state.videos) {
       if (_deletedVideoFilter(video)) continue;
-      final id = _computeAddressableId(video);
-      if (id != null) byId[id] = video;
+      _indexByRepostKeys(byId, video);
     }
     // Anchor on the previous top ID rather than a length delta, so a capped
     // persisted ID list can't balloon the reconcile window into a full
@@ -330,8 +330,7 @@ class ProfileRepostedVideosBloc
       final fetchResult = await _fetchVideos(missingIds, cacheResults: true);
       resolvedVideoCount = fetchResult.resolvedVideoCount;
       for (final video in fetchResult.videos) {
-        final id = _computeAddressableId(video);
-        if (id != null) byId[id] = video;
+        _indexByRepostKeys(byId, video);
       }
     }
 
@@ -396,16 +395,15 @@ class ProfileRepostedVideosBloc
   ProfileVideoListSnapshot _filterDeletedSnapshot(
     ProfileVideoListSnapshot snapshot,
   ) {
-    final deletedAddressableIds = snapshot.videos
-        .where(_deletedVideoFilter)
-        .map(_computeAddressableId)
-        .whereType<String>()
-        .toSet();
-    if (deletedAddressableIds.isEmpty) return snapshot;
-
     final videos = snapshot.videos
         .where((video) => !_deletedVideoFilter(video))
         .toList();
+    final deletedAddressableIds = _removedRepostKeys(
+      removed: snapshot.videos.where(_deletedVideoFilter),
+      kept: videos,
+    );
+    if (deletedAddressableIds.isEmpty) return snapshot;
+
     final pruned = pruneProfileVideoListIds(
       itemIds: snapshot.itemIds,
       removedIds: deletedAddressableIds,
@@ -621,17 +619,16 @@ class ProfileRepostedVideosBloc
     ProfileRepostedVideosVideoRemoved event,
     Emitter<ProfileRepostedVideosState> emit,
   ) async {
-    final removedAddressableIds = <String>{};
+    final removed = <VideoEvent>[];
     final videos = <VideoEvent>[];
     for (final video in state.videos) {
       final isRemoved = video.id == event.videoId || _deletedVideoFilter(video);
-      if (isRemoved) {
-        final addressableId = _computeAddressableId(video);
-        if (addressableId != null) removedAddressableIds.add(addressableId);
-      } else {
-        videos.add(video);
-      }
+      (isRemoved ? removed : videos).add(video);
     }
+    final removedAddressableIds = _removedRepostKeys(
+      removed: removed,
+      kept: videos,
+    );
     final pruned = pruneProfileVideoListIds(
       itemIds: state.repostedAddressableIds,
       removedIds: removedAddressableIds,
@@ -707,6 +704,38 @@ class ProfileRepostedVideosBloc
   /// Returns null if the video doesn't have a real d-tag.
   String? _computeAddressableId(VideoEvent video) {
     return video.addressableId;
+  }
+
+  /// Files [video] under its own coordinate, replacing an earlier entry, and
+  /// under the 34236 key Divine stored reposts of a Kind 34235 video under
+  /// (#10776), which never displaces a real one.
+  static void _indexByRepostKeys(
+    Map<String, VideoEvent> byId,
+    VideoEvent video,
+  ) {
+    final coordinate = video.addressableId;
+    if (coordinate == null) return;
+    byId[coordinate] = video;
+    final legacy = legacyVideoCoordinateFor(coordinate);
+    if (legacy != null) byId.putIfAbsent(legacy, () => video);
+  }
+
+  /// The repost keys to prune for [removed]: each own coordinate, and its old
+  /// 34236 key unless a [kept] video owns that key.
+  static Set<String> _removedRepostKeys({
+    required Iterable<VideoEvent> removed,
+    required Iterable<VideoEvent> kept,
+  }) {
+    final keptKeys = {for (final video in kept) ?video.addressableId};
+    return {
+      for (final video in removed)
+        if (video.addressableId case final coordinate?) ...[
+          coordinate,
+          if (legacyVideoCoordinateFor(coordinate) case final legacy?
+              when !keptKeys.contains(legacy))
+            legacy,
+        ],
+    };
   }
 
   @override
