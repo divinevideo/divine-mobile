@@ -461,6 +461,10 @@ class FollowRepository {
   // back inconclusive. Flushed by [retryPendingContactListBroadcast] and by
   // the next follow or unfollow, which rebroadcasts the whole list anyway.
   bool _contactListBroadcastPending = false;
+
+  // Completes when the newest contact-list broadcast so far has finished,
+  // whichever way. See [_broadcastContactList].
+  Future<void>? _contactListBroadcastTail;
   bool _isInitialized = false;
   final Completer<void> _initializedCompleter = Completer<void>();
 
@@ -3464,8 +3468,57 @@ class FollowRepository {
     }
   }
 
-  /// Broadcast updated contact list to network (Kind 3 event)
+  /// Broadcast updated contact list to network (Kind 3 event), one at a time.
+  ///
+  /// Every publish replaces the whole list (NIP-02), so two in flight at once
+  /// race to replace each other, and one that fails rolls its own edit back
+  /// locally while the other carries it to the relay (#10784). A broadcast
+  /// that has to wait publishes nothing when the one ahead of it already
+  /// carried its edit, so a later refusal cannot roll back a follow that is on
+  /// the relay, and nothing when the account changed while it waited.
   Future<bool> _broadcastContactList() async {
+    final previous = _contactListBroadcastTail;
+    final turn = Completer<void>();
+    _contactListBroadcastTail = turn.future;
+    try {
+      if (previous == null) return await _broadcastContactListNow();
+
+      final owner = _nostrClient.publicKey;
+      await previous;
+      if (_nostrClient.publicKey != owner) {
+        Log.info(
+          'Dropping a queued contact list broadcast: the account changed '
+          'while it waited',
+          name: 'FollowRepository',
+          category: LogCategory.system,
+        );
+        return false;
+      }
+      if (_newestContactListMatchesPublishable()) return true;
+      return await _broadcastContactListNow();
+    } finally {
+      turn.complete();
+      if (identical(_contactListBroadcastTail, turn.future)) {
+        _contactListBroadcastTail = null;
+      }
+    }
+  }
+
+  /// Whether the newest contact list known to be on a relay already holds
+  /// exactly the follows a broadcast would publish now.
+  bool _newestContactListMatchesPublishable() {
+    final newest = _currentUserContactListEvent;
+    if (newest == null) return false;
+    final published = {
+      for (final tag in newest.tags)
+        if (tag.length > 1 && tag[0] == 'p') tag[1],
+    };
+    final publishable = _publishableFollows();
+    return publishable.length == published.length &&
+        publishable.every(published.contains);
+  }
+
+  Future<bool> _broadcastContactListNow() async {
     // Last line of defence: [executeFollowAction] appends without validating,
     // and an invalid pubkey here makes Contact's constructor throw and abort
     // the publish, blocking every follow and unfollow until the entry is gone.

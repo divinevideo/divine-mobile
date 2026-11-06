@@ -1,0 +1,252 @@
+// ABOUTME: Kind 3 publishes are serialized across every caller (#10784):
+// ABOUTME: two edits never replace the contact list at the same time.
+
+import 'dart:async';
+
+import 'package:cache_sync/cache_sync.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:follow_repository/follow_repository.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../cache_sync/test/fake_cache_dao.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockEvent extends Mock implements Event {}
+
+class _FakeContactList extends Fake implements ContactList {}
+
+typedef _ReadResult = ({List<Event> events, bool timedOut, bool noRelays});
+
+const _owner =
+    'a1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012';
+const _otherAccount =
+    'f6789012345678901234567890abcdef1234567890123456789012a1b2c3d4e5';
+const _alice =
+    'b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012a1';
+const _bob = 'c3d4e5f6789012345678901234567890abcdef1234567890123456789012ab12';
+
+/// A relay whose kind 3 publishes stay in flight until [release]d.
+class _GatedRelay {
+  _GatedRelay(this.client);
+
+  final _MockNostrClient client;
+
+  /// The p tags of every publish the client started, in order.
+  final started = <List<String>>[];
+
+  /// The p tags of every publish that succeeded, in order.
+  final accepted = <List<String>>[];
+
+  /// Indexes into [started] whose publish the relay refuses.
+  final refused = <int>{};
+
+  final _gates = <Completer<void>>[];
+  var _inFlight = 0;
+  int maxInFlight = 0;
+
+  void install() {
+    when(
+      () => client.sendContactList(
+        any(),
+        any(),
+        tempRelays: any(named: 'tempRelays'),
+        targetRelays: any(named: 'targetRelays'),
+      ),
+    ).thenAnswer((invocation) async {
+      final contacts = invocation.positionalArguments[0] as ContactList;
+      final follows = contacts
+          .toJson()
+          .where((tag) => tag.isNotEmpty && tag[0] == 'p')
+          .map((tag) => tag[1])
+          .toList();
+      final index = started.length;
+      started.add(follows);
+      _inFlight++;
+      if (_inFlight > maxInFlight) maxInFlight = _inFlight;
+      final gate = Completer<void>();
+      _gates.add(gate);
+      await gate.future;
+      _inFlight--;
+      if (refused.contains(index)) return null;
+      accepted.add(follows);
+      return Event(_owner, EventKind.contactList, [
+        for (final pubkey in follows) ['p', pubkey],
+      ], '');
+    });
+  }
+
+  /// Lets every publish started so far complete, until none is left.
+  Future<void> release() async {
+    for (var round = 0; round < 6; round++) {
+      await pumpEventQueue();
+      for (final gate in List.of(_gates)) {
+        if (!gate.isCompleted) gate.complete();
+      }
+    }
+  }
+
+  /// Waits until [count] publishes have started.
+  Future<void> untilStarted(int count) async {
+    for (var i = 0; i < 20 && started.length < count; i++) {
+      await pumpEventQueue();
+    }
+    expect(started, hasLength(count), reason: 'publishes started');
+  }
+}
+
+void main() {
+  group('FollowRepository contact list broadcast queue (#10784)', () {
+    late _MockNostrClient client;
+    late _GatedRelay relay;
+    late FollowRepository repository;
+    late List<_ReadResult> reads;
+
+    setUpAll(() {
+      registerFallbackValue(_MockEvent());
+      registerFallbackValue(<Filter>[]);
+      registerFallbackValue(_FakeContactList());
+      registerFallbackValue(Duration.zero);
+    });
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await CacheSync.init(dao: FakeCacheDao());
+      client = _MockNostrClient();
+      relay = _GatedRelay(client)..install();
+      reads = [];
+
+      when(() => client.hasKeys).thenReturn(true);
+      when(() => client.publicKey).thenReturn(_owner);
+      when(
+        () => client.subscribe(
+          any(),
+          subscriptionId: any(named: 'subscriptionId'),
+          tempRelays: any(named: 'tempRelays'),
+          targetRelays: any(named: 'targetRelays'),
+          relayTypes: any(named: 'relayTypes'),
+          sendAfterAuth: any(named: 'sendAfterAuth'),
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer((_) => const Stream<Event>.empty());
+      when(() => client.unsubscribe(any())).thenAnswer((_) async {});
+      // Each pre-publish read takes the next scripted answer; once the script
+      // runs out, the relay settles with no kind 3.
+      when(
+        () => client.queryEventsDetailed(
+          any(),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          timeout: any(named: 'timeout'),
+        ),
+      ).thenAnswer(
+        (_) async => reads.isEmpty
+            ? (events: <Event>[], timedOut: false, noRelays: false)
+            : reads.removeAt(0),
+      );
+
+      repository = FollowRepository(
+        nostrClient: client,
+        isCacheInitialized: () => true,
+        getCachedEventsByKind: (_) => [],
+        cacheUserEvent: (_) {},
+        indexerRelayUrls: const [],
+      );
+      await repository.initialize();
+    });
+
+    tearDown(() => repository.dispose());
+
+    test('a second follow waits for the first publish to finish', () async {
+      final first = repository.followWithResult(_alice);
+      await relay.untilStarted(1);
+      final second = repository.followWithResult(_bob);
+      await pumpEventQueue();
+
+      expect(relay.started, hasLength(1), reason: 'second publish waited');
+
+      await relay.release();
+      await Future.wait([first, second]);
+
+      expect(relay.maxInFlight, equals(1));
+      expect(relay.accepted, [
+        [_alice],
+        [_alice, _bob],
+      ]);
+    });
+
+    test('a follow the publish ahead of it already carried is not published '
+        'again', () async {
+      final first = repository.followWithResult(_alice);
+      final second = repository.followWithResult(_bob);
+      await relay.release();
+
+      expect(await first, FollowOutcome.published);
+      expect(await second, FollowOutcome.published);
+      expect(relay.accepted, [
+        [_alice, _bob],
+      ]);
+      expect(relay.started, hasLength(1));
+    });
+
+    test('a refused publish does not reach the relay through the follow '
+        'queued behind it', () async {
+      relay.refused.add(0);
+      final first = repository
+          .followWithResult(_alice)
+          .then<Object>((outcome) => outcome, onError: (Object e) => e);
+      final second = repository.followWithResult(_bob);
+      await relay.release();
+
+      expect(await first, isA<Exception>());
+      expect(await second, FollowOutcome.published);
+      expect(relay.accepted, [
+        [_bob],
+      ]);
+      expect(repository.followingPubkeys, [_bob]);
+    });
+
+    test('a follow queued behind a withheld publish still publishes', () async {
+      reads.add((events: <Event>[], timedOut: true, noRelays: false));
+      final first = repository.followWithResult(_alice);
+      final second = repository.followWithResult(_bob);
+      await relay.release();
+
+      expect(await first, FollowOutcome.queued);
+      expect(await second, FollowOutcome.published);
+      expect(relay.accepted, [
+        [_alice, _bob],
+      ]);
+    });
+
+    test('drops a queued publish when the signed-in account changes while it '
+        'waits', () async {
+      final first = repository.followWithResult(_alice);
+      await relay.untilStarted(1);
+      final second = repository.followWithResult(_bob);
+      await pumpEventQueue();
+      when(() => client.publicKey).thenReturn(_otherAccount);
+      await relay.release();
+
+      await first;
+      expect(await second, FollowOutcome.queued);
+      expect(relay.started, hasLength(1));
+    });
+
+    test('drops a queued publish when the repository is disposed while it '
+        'waits', () async {
+      final first = repository.followWithResult(_alice);
+      await relay.untilStarted(1);
+      final second = repository.followWithResult(_bob);
+      await pumpEventQueue();
+      await repository.dispose();
+      await relay.release();
+
+      await first;
+      expect(await second, FollowOutcome.queued);
+      expect(relay.started, hasLength(1));
+    });
+  });
+}
