@@ -180,12 +180,14 @@ one of their videos, and the ones they hid
   until the viewer chooses to see them; their authors always see their own.
   Read and published by `CommentModerationRepository` in
   `mobile/packages/comments_repository`. Both writers keep the tags the other
-  wrote, and only an event signed by the owner named in the video address
-  counts
+  wrote, except the NIP-89 `client` tag, which each sets from the user's
+  current attribution setting, and only an event signed by the owner named in
+  the video address counts
 - Commenters hidden on all of a creator's videos: an addressable event of the
   creator's with `["d", "divine:hidden-commenters"]` and a `p` tag per
   commenter. Divine adds the accounts the creator blocks and removes them on
-  unblock (`blockedCommenterReconcilerProvider`). Their video replies are
+  unblock, keeping an unblock it could not publish until it can
+  (`blockedCommenterReconcilerProvider`). Their video replies are
   hidden on the replies sticker and in its feed as well, except one marked
   `restored`
 - Kind 30078 is also used for the app's own encrypted sync and DM read-state

@@ -97,7 +97,8 @@ class VineBottomSheet extends StatelessWidget {
 
   /// Optional leading widget in header (e.g., a filter pill).
   ///
-  /// Ignored when [onComplete] is set, whose close button takes the slot.
+  /// Ignored when [onComplete] or [headerLeadingAction] is set, which take
+  /// the slot.
   final Widget? leading;
 
   /// Optional trailing widget in header (e.g., badge, button)
