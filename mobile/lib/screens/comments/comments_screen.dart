@@ -310,7 +310,15 @@ abstract final class CommentsScreen {
             child: OutboxBridges(
               onCommentCountChanged: onCommentCountChanged,
               currentUserPubkey: authService.currentPublicKeyHex,
-              child: child,
+              // The sheet's own messenger: its error snackbars would
+              // otherwise land on the page underneath the sheet.
+              child: ScaffoldMessenger(
+                child: Scaffold(
+                  backgroundColor: VineTheme.transparent,
+                  resizeToAvoidBottomInset: false,
+                  body: child,
+                ),
+              ),
             ),
           ),
           title: CommentsTitle(
