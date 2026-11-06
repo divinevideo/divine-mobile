@@ -2604,6 +2604,9 @@ class VideoRecorderBloc
         // The native take outlives a re-sync. Reading idle here would hide the
         // stop button and let the shutter start a second take on top of it.
         recordingState: state.recordingState,
+        // A native re-sync must not turn a running interval into a zero-second
+        // countdown or change the timer the user selected.
+        timerDuration: state.timerDuration,
         countdownValue: state.countdownValue,
         isStartingRecording: state.isStartingRecording,
         isStoppingRecording: state.isStoppingRecording,

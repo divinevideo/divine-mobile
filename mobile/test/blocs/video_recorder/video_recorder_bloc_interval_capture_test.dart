@@ -266,9 +266,16 @@ void main() {
           reportCameraUpdate();
           async.flushMicrotasks();
           expect(bloc.state.isIntervalCaptureRunning, isTrue);
+          expect(bloc.state.timerDuration, TimerDuration.three);
 
           elapse(async, const Duration(seconds: 3));
           expect(bloc.state.stopMotionFrames, hasLength(1));
+          expect(bloc.state.countdownValue, 3);
+
+          elapse(async, const Duration(seconds: 2));
+          expect(bloc.state.stopMotionFrames, hasLength(1));
+          elapse(async, const Duration(seconds: 1));
+          expect(bloc.state.stopMotionFrames, hasLength(2));
 
           closeBloc(bloc, async);
         });
