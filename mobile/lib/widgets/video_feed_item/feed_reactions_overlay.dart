@@ -17,6 +17,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/comments/comments.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/user_name.dart';
@@ -172,16 +173,28 @@ class _FeedReactionsOverlayView extends StatelessWidget {
       (FeedTopCommentCubit cubit) => cubit.state.isOverlayVisible,
     );
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    return IgnorePointer(
-      ignoring: !isVisible,
-      child: AnimatedOpacity(
-        opacity: isVisible ? 1 : 0,
-        duration: reduceMotion
-            ? Duration.zero
-            : FeedReactionsOverlayLayout.fadeDuration,
-        child: isVisible
-            ? _ReactionContent(video: video)
-            : const SizedBox.shrink(),
+    // The reaction covers the video after a loop with no input from the
+    // viewer, so a screen reader is told what appeared.
+    return BlocListener<FeedTopCommentCubit, FeedTopCommentState>(
+      listenWhen: (previous, current) =>
+          !previous.isOverlayVisible && current.isOverlayVisible,
+      listener: (context, state) => announceDetached(
+        context,
+        state.topComment!.content.trim(),
+        description: 'announce feed reaction',
+        logName: 'FeedReactionsOverlay',
+      ),
+      child: IgnorePointer(
+        ignoring: !isVisible,
+        child: AnimatedOpacity(
+          opacity: isVisible ? 1 : 0,
+          duration: reduceMotion
+              ? Duration.zero
+              : FeedReactionsOverlayLayout.fadeDuration,
+          child: isVisible
+              ? _ReactionContent(video: video)
+              : const SizedBox.shrink(),
+        ),
       ),
     );
   }

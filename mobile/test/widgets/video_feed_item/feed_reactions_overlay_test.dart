@@ -377,6 +377,25 @@ void main() {
         expect(opacity.duration, FeedReactionsOverlayLayout.fadeDuration);
       });
 
+      testWidgets('announces the comment to screen readers when it appears', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        whenListen(
+          cubit,
+          Stream.value(_visibleState),
+          initialState: _visibleState.copyWith(hasCompletedLoop: false),
+        );
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+
+        expect(
+          tester.takeAnnouncements().map((a) => a.message),
+          [_topComment.content],
+        );
+        handle.dispose();
+      });
+
       testWidgets('appears without a fade under reduced motion', (
         tester,
       ) async {
