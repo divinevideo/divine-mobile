@@ -36,11 +36,16 @@ class ListAuthorByline extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userProfileReactiveProvider(authorPubkey)).value;
-    final name =
-        profile?.betterDisplayName(null) ??
-        UserProfile.defaultDisplayNameFor(authorPubkey);
+    final isVanished = ref.watch(profileVanishedProvider(authorPubkey));
+    final name = vanishedAccountName(
+      context,
+      isVanished: isVanished,
+      fallbackName:
+          profile?.betterDisplayName(null) ??
+          UserProfile.defaultDisplayNameFor(authorPubkey),
+    );
     final pictureUrl = vanishedAccountPictureUrl(
-      isVanished: ref.watch(profileVanishedProvider(authorPubkey)),
+      isVanished: isVanished,
       pictureUrl: profile?.picture,
     );
     final l10n = context.l10n;
