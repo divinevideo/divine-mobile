@@ -684,6 +684,7 @@ void main() {
       testWidgets('keeps share hidden when the discovered list is private', (
         tester,
       ) async {
+        isSubscribed = false;
         final discovered = CuratedList(
           id: 'external-list',
           name: 'External List',
@@ -702,6 +703,36 @@ void main() {
         expect(find.byType(ShareListButton), findsNothing);
         expect(find.byType(FollowListButton), findsNothing);
       });
+
+      testWidgets(
+        'keeps Following on a followed list its author made private',
+        (
+          tester,
+        ) async {
+          final discovered = CuratedList(
+            id: 'external-list',
+            name: 'External List',
+            pubkey: 'external-pubkey',
+            isPublic: false,
+            videoEventIds: const [],
+            createdAt: DateTime(2026),
+            updatedAt: DateTime(2026),
+          );
+
+          await tester.pumpWidget(buildSubject(discoveredList: discovered));
+          await tester.pump();
+          await tester.pump();
+
+          // The follower still needs a way to unfollow it.
+          expect(find.text(l10n.listFollowingButton), findsOneWidget);
+          expect(find.byType(ShareListButton), findsNothing);
+          await tester.tap(find.byType(FollowListButton));
+          await tester.pumpAndSettle();
+          verify(
+            () => mockService.unsubscribeFromList('external-list'),
+          ).called(1);
+        },
+      );
 
       testWidgets('subscribing caches the relay-resolved list', (
         tester,

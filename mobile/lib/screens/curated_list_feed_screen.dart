@@ -205,8 +205,11 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
         ),
       // Not owned in the store does not mean someone else's: a link can
       // run ahead of sync, and Search opens an unclaimed draft under the
-      // viewer's own pubkey.
-      if (!isOwned && !_isViewer(widget.authorPubkey) && !isOthersPrivateList)
+      // viewer's own pubkey. A list followed before its author made it
+      // private keeps Following, so the follower can still unfollow it.
+      if (!isOwned &&
+          !_isViewer(widget.authorPubkey) &&
+          (!isOthersPrivateList || isSubscribed))
         FollowListButton(
           isFollowing: isSubscribed,
           isBusy: _isTogglingSubscription,
