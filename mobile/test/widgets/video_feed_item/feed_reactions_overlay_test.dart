@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for FeedReactionsOverlay — hidden until the top comment
 // ABOUTME: is due, its author row, dismissal, and reduced motion.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -449,6 +451,28 @@ void main() {
           tester.takeAnnouncements().map((a) => a.message),
           [_topComment.content],
         );
+        handle.dispose();
+      });
+
+      testWidgets('does not announce a reaction gone before its fade ended', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        final states = StreamController<FeedTopCommentState>();
+        addTearDown(states.close);
+        whenListen(
+          cubit,
+          states.stream,
+          initialState: _visibleState.copyWith(hasCompletedLoop: false),
+        );
+        await tester.pumpWidget(buildSubject());
+        states.add(_visibleState);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        states.add(_visibleState.copyWith(isDismissed: true));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeAnnouncements(), isEmpty);
         handle.dispose();
       });
 

@@ -214,11 +214,14 @@ class _FeedReactionsOverlayViewState
           duration: reduceMotion
               ? Duration.zero
               : FeedReactionsOverlayLayout.fadeDuration,
-          // Also called when a fade-out ends, after which nothing is pending.
+          // Also called when a fade-out ends, including one that cut a
+          // fade-in short; only a reaction still showing is announced.
           onEnd: () {
             if (_fadedIn) return;
             setState(() => _fadedIn = true);
-            _announce();
+            if (context.read<FeedTopCommentCubit>().state.isOverlayVisible) {
+              _announce();
+            }
           },
           child: isVisible
               ? _ReactionContent(video: widget.video)
