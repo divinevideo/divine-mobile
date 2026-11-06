@@ -6273,10 +6273,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "Deze week heeft een beetje meer van jou.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "Creatieve dagen deze week: {count}. Ga zo door.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -6300,16 +6296,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Maak er nog een",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "Weergaven tot nu toe: {count}, en de teller loopt.",
+  "creatorHighlightWeeklyLikes": "Totaal aantal likes tot nu toe op video’s die je deze week hebt geplaatst: {count}.",
+  "creatorHighlightWeeklyComments": "Totaal aantal reacties tot nu toe op video’s die je deze week hebt geplaatst: {count}.",
   "creatorHighlightAnalytics": "Bekijk je statistieken",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Bekijk video",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "Volgend",

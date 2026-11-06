@@ -6273,10 +6273,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "In dieser Woche steckt ein bisschen mehr von dir.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "Kreative Tage diese Woche: {count}. Mach weiter.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -6300,16 +6296,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Mach noch eins",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "Aufrufe bisher: {count} – und es werden mehr.",
+  "creatorHighlightWeeklyLikes": "Bisherige Likes für die Videos, die du diese Woche gepostet hast: {count}.",
+  "creatorHighlightWeeklyComments": "Bisherige Kommentare zu den Videos, die du diese Woche gepostet hast: {count}.",
   "creatorHighlightAnalytics": "Sieh dir deine Statistik an",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Video ansehen",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "Abonniert",

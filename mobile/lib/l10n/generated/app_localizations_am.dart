@@ -15403,9 +15403,6 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle => 'በዚህ ሳምንት ከእርስዎ የሆነ ነገር ትንሽ ተጨምሯል።';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'በዚህ ሳምንት የፈጠሩባቸው ቀናት፦ $count። ይቀጥሉ።';
   }
@@ -15423,13 +15420,34 @@ class AppLocalizationsAm extends AppLocalizations {
   String get creatorHighlightTopVideo => 'በዚህ ሳምንት ካሳተሟቸው ቪዲዮዎች በብዛት የታየው';
 
   @override
-  String get creatorHighlightCreate => 'ሌላ ይፍጠሩ';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'እስካሁን ያገኙት እይታዎች፦ $countString፤ አሁንም እየጨመሩ ነው።';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'በዚህ ሳምንት ያሳተሟቸው ቪዲዮዎች እስካሁን ያገኟቸው ጠቅላላ መውደዶች፦ $countString።';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'በዚህ ሳምንት ያሳተሟቸው ቪዲዮዎች እስካሁን ያገኟቸው ጠቅላላ አስተያየቶች፦ $countString።';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'ስታቲስቲክስዎን ይመልከቱ';
-
-  @override
-  String get creatorHighlightWatch => 'ቪዲዮውን ይመልከቱ';
 
   @override
   String get messagesPublicRoomsDisclosure =>

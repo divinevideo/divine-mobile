@@ -15055,9 +15055,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle => '이번 주에 나만의 색깔을 조금 더했어요.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return '이번 주에 창작한 날: $count일. 계속 만들어 봐요.';
   }
@@ -15075,13 +15072,34 @@ class AppLocalizationsKo extends AppLocalizations {
   String get creatorHighlightTopVideo => '이번 주에 올린 동영상 중 가장 많이 시청된 영상';
 
   @override
-  String get creatorHighlightCreate => '하나 더 만들기';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '지금까지 조회수: $countString회. 계속 늘어나는 중이에요.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '이번 주에 올린 동영상의 지금까지 누적 좋아요: $countString개.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '이번 주에 올린 동영상의 지금까지 누적 댓글: $countString개.';
+  }
 
   @override
   String get creatorHighlightAnalytics => '내 통계 보기';
-
-  @override
-  String get creatorHighlightWatch => '동영상 보기';
 
   @override
   String get messagesPublicRoomsDisclosure =>

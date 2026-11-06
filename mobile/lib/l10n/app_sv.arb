@@ -6273,10 +6273,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "Den här veckan har lite mer av dig i sig.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "Kreativa dagar den här veckan: {count}. Fortsätt så.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -6300,16 +6296,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Skapa en till",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "Visningar hittills: {count} och det fortsätter.",
+  "creatorHighlightWeeklyLikes": "Gilla-markeringar hittills på videorna du publicerade den här veckan: {count}.",
+  "creatorHighlightWeeklyComments": "Kommentarer hittills på videorna du publicerade den här veckan: {count}.",
   "creatorHighlightAnalytics": "Se din statistik",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Titta på videon",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "Prenumererar",

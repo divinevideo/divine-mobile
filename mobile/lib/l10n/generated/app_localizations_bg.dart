@@ -15930,10 +15930,6 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'В тази седмица има още малко от теб.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'Творчески дни тази седмица: $count. Продължавай.';
   }
@@ -15952,13 +15948,34 @@ class AppLocalizationsBg extends AppLocalizations {
       'Най-гледаното от видеата ти, публикувани тази седмица';
 
   @override
-  String get creatorHighlightCreate => 'Създай още едно';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Гледания досега: $countString и продължават.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Харесвания досега на видеата, които публикува тази седмица: $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Коментари досега към видеата, които публикува тази седмица: $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'Виж статистиката си';
-
-  @override
-  String get creatorHighlightWatch => 'Гледай видеото';
 
   @override
   String get messagesPublicRoomsDisclosure =>

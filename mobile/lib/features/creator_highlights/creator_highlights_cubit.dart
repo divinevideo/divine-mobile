@@ -1,5 +1,5 @@
 // ABOUTME: Account-bound loading and actual presentation of private highlights.
-// ABOUTME: Coalesces refreshes and discards results after account disposal.
+// ABOUTME: Rotates the spotlight per showing; discards results after disposal.
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -33,6 +33,10 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
   final DateTime Function() _now;
   Future<void>? _refreshing;
   String? _presentedDate;
+  // The card last presented, so a remount does not advance the rotation twice.
+  (String, int)? _presentedSpotlight;
+  // Where the next showing starts, even when persisting it failed.
+  int? _nextRotation;
 
   String _today() {
     final now = _now().toLocal();
@@ -41,8 +45,23 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
 
   Future<void> refresh() {
     if (isClosed) return Future.value();
-    if (state.card != null && state.card!.localDate != _today()) {
+    final card = state.card;
+    if (card != null && card.localDate != _today()) {
       emit(CreatorHighlightsState(loading: state.loading));
+    } else if (card != null &&
+        _nextRotation != null &&
+        card.rotation != _nextRotation) {
+      // Lead with the next fact now, rather than after the network round trip.
+      emit(
+        CreatorHighlightsState(
+          card: card.copyWith(
+            rotation: _nextRotation,
+            celebrate: false,
+            clearSelection: true,
+          ),
+          loading: state.loading,
+        ),
+      );
     }
     return _refreshing ??= _load().whenComplete(() => _refreshing = null);
   }
@@ -58,9 +77,28 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
         if (isClosed) return;
         final currentDate = _today();
         if (requestedDate != currentDate && attempt == 0) continue;
-        final owned = card?.owner == owner && card?.localDate == currentDate
-            ? card
-            : null;
+        // Fresh facts must not swap the spotlight already on screen.
+        final shown = state.card?.localDate == currentDate ? state.card : null;
+        final rotation = shown?.rotation ?? _nextRotation;
+        // A numeric position can point at another fact when availability
+        // changes. Pin the fact, without changing presentation identity. If it
+        // is no longer supported, hide the optional card rather than inventing
+        // a zero count or retaining a removed watch target.
+        final selection = shown?.spotlight;
+        CreatorHighlight? owned;
+        if (card != null &&
+            card.owner == owner &&
+            card.localDate == currentDate &&
+            (selection == null || card.spotlights.contains(selection))) {
+          owned =
+              selection == null &&
+                  (rotation == null || rotation == card.rotation)
+              ? card
+              : card.copyWith(
+                  rotation: rotation,
+                  selectedSpotlight: selection,
+                );
+        }
         final current = owned != null && owned.localDate == _presentedDate
             ? owned.copyWith(celebrate: false)
             : owned;
@@ -85,18 +123,27 @@ class CreatorHighlightsCubit extends Cubit<CreatorHighlightsState>
         !identical(state.card, card) ||
         card.owner != owner ||
         card.localDate != _today() ||
-        _presentedDate == card.localDate) {
+        _presentedSpotlight == (card.localDate, card.rotation)) {
       return;
     }
     _presentedDate = card.localDate;
-    emitIfOpen(
-      CreatorHighlightsState(
-        card: card.copyWith(celebrate: false),
-        loading: state.loading,
-      ),
-    );
+    _presentedSpotlight = (card.localDate, card.rotation);
+    final nextRotation = card.rotation + 1;
+    _nextRotation = nextRotation;
+    if (card.celebrate) {
+      emitIfOpen(
+        CreatorHighlightsState(
+          card: card.copyWith(celebrate: false),
+          loading: state.loading,
+        ),
+      );
+    }
     try {
-      await _repository.markPresented(owner, card.localDate);
+      await _repository.markPresented(
+        owner,
+        card.localDate,
+        nextRotation: nextRotation,
+      );
     } on Object catch (error, stackTrace) {
       if (isClosed) return;
       addError(

@@ -12901,10 +12901,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "Your week has a little more you in it.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "{count, plural, =1{One creative day this week. Keep going.} other{{count} creative days this week. Keep going.}}",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -12914,7 +12910,7 @@
       }
     }
   },
-  "creatorHighlightWeeklyViews": "{count, plural, =1{{count} view on videos you posted this week, so far.} other{{count} views on videos you posted this week, so far.}}",
+  "creatorHighlightWeeklyViews": "{count, plural, =1{{count} view on this week’s videos so far.} other{{count} views on this week’s videos so far.}}",
   "@creatorHighlightWeeklyViews": {
     "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
     "placeholders": {
@@ -12928,16 +12924,38 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Make another",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  "creatorHighlightTopVideoViews": "{count, plural, =1{{count} view and counting.} other{{count} views and counting.}}",
+  "@creatorHighlightTopVideoViews": {
+    "description": "Headline beside the creator's most-watched video published this local calendar week. Lifetime views on that video so far. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightWeeklyLikes": "{count, plural, =1{{count} like on this week’s videos so far.} other{{count} likes on this week’s videos so far.}}",
+  "@creatorHighlightWeeklyLikes": {
+    "description": "Lifetime likes so far across videos published this local calendar week, not likes received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "creatorHighlightWeeklyComments": "{count, plural, =1{{count} comment on this week’s videos so far.} other{{count} comments on this week’s videos so far.}}",
+  "@creatorHighlightWeeklyComments": {
+    "description": "Lifetime comments so far across videos published this local calendar week, not comments received this week. Format the count for the selected app language.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
   },
   "creatorHighlightAnalytics": "See your stats",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Watch video",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "messagesPublicRoomsDisclosure": "These rooms are public. Anyone with access can read your messages, and rooms linked to Discord show them there with your name and profile picture.",

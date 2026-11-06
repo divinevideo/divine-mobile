@@ -16121,10 +16121,6 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'W tym tygodniu jest trochę więcej ciebie.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'Dni twórczości w tym tygodniu: $count. Twórz dalej.';
   }
@@ -16143,13 +16139,34 @@ class AppLocalizationsPl extends AppLocalizations {
       'Najczęściej oglądany z twoich filmów opublikowanych w tym tygodniu';
 
   @override
-  String get creatorHighlightCreate => 'Stwórz kolejny';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Wyświetlenia do tej pory: $countString i wciąż przybywa.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Łączna liczba polubień do tej pory filmów opublikowanych przez ciebie w tym tygodniu: $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Łączna liczba komentarzy do tej pory pod filmami opublikowanymi przez ciebie w tym tygodniu: $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'Zobacz swoje statystyki';
-
-  @override
-  String get creatorHighlightWatch => 'Obejrzyj film';
 
   @override
   String get messagesPublicRoomsDisclosure =>
