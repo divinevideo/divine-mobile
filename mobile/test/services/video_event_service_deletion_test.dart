@@ -17,11 +17,12 @@ VideoEvent _videoEvent({
   required String id,
   required String pubkey,
   required String dTag,
+  int kind = 34236,
 }) {
   final event =
       Event(
           pubkey,
-          34236,
+          kind,
           [
             ['d', dTag],
             ['url', 'https://example.com/$id.mp4'],
@@ -31,7 +32,7 @@ VideoEvent _videoEvent({
         )
         ..id = id
         ..sig = 'sig-$id';
-  return VideoEvent.fromNostrEvent(event);
+  return VideoEvent.fromNostrEvent(event, permissive: true);
 }
 
 Event _deletionEvent({
@@ -318,6 +319,33 @@ void main() {
         expect(service.isVideoEventKnownDeleted(replacement), isTrue);
       },
     );
+
+    test('observed Kind 34235 deletion tombstones its coordinate', () {
+      const author =
+          'c3dd74d68e414f0305db9f7dc96ec32e616502e6ccf5bbf5739de19a96b67f3e';
+      const deletionId =
+          '8888888888888888888888888888888888888888888888888888888888888888';
+      final replacement = _videoEvent(
+        id: '9999999999999999999999999999999999999999999999999999999999999999',
+        pubkey: author,
+        dTag: 'normal-video',
+        kind: 34235,
+      );
+
+      service.handleEventForTesting(
+        _deletionEvent(
+          id: deletionId,
+          pubkey: author,
+          tags: [
+            ['a', '34235:$author:normal-video'],
+            ['k', '34235'],
+          ],
+        ),
+        SubscriptionType.profile,
+      );
+
+      expect(service.isVideoEventKnownDeleted(replacement), isTrue);
+    });
 
     test('dispose closes the stream', () async {
       final closed = expectLater(service.removedVideoIds, emitsDone);

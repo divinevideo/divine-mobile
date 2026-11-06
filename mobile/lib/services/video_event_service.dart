@@ -1127,7 +1127,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
     for (final entry in addressableDeletedAt.entries) {
       final parsed = AId.fromString(entry.key);
       if (parsed == null ||
-          parsed.kind != NIP71VideoKinds.addressableShortVideo ||
+          !_isAddressableVideoKind(parsed.kind) ||
           parsed.pubkey.isEmpty ||
           parsed.dTag.isEmpty) {
         continue;
@@ -1190,6 +1190,12 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
         stableId: video.stableId,
       );
 
+  /// Kinds whose `a` coordinate a deletion can tombstone: Divine's 34236, and
+  /// the 34235 it writes for an addressable normal video since #10776.
+  static bool _isAddressableVideoKind(int kind) =>
+      kind == NIP71VideoKinds.addressableShortVideo ||
+      kind == NIP71VideoKinds.addressableNormalVideo;
+
   String _knownDeletionCoordinateKeyFromParts({
     required String pubkey,
     required String stableId,
@@ -1246,7 +1252,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
       } else if (tagName == 'a' && tagValue.isNotEmpty) {
         final parsed = AId.fromString(tagValue);
         if (parsed == null ||
-            parsed.kind != NIP71VideoKinds.addressableShortVideo ||
+            !_isAddressableVideoKind(parsed.kind) ||
             parsed.pubkey.toLowerCase() != deletionPubkey ||
             parsed.dTag.isEmpty) {
           continue;

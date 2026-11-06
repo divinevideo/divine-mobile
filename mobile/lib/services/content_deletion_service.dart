@@ -242,11 +242,12 @@ class ContentDeletionService {
       );
     }
 
-    // OpenVine only uses kind 34236 (addressable short videos)
+    // Name the video's own kind (#10776); an unknown kind is read as the
+    // 34236 Divine publishes.
     return _publishDeletion(
       originalEventId: video.id,
       addressableId: _addressableDeletionTarget(video),
-      originalEventKind: NIP71VideoKinds.getPreferredKind(),
+      originalEventKind: video.eventKind ?? NIP71VideoKinds.getPreferredKind(),
       reason: reason,
       additionalContext: additionalContext,
       // A video leaving the profile changes its counts; a sound does not.
