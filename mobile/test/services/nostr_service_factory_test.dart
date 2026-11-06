@@ -94,5 +94,56 @@ void main() {
         expect(client.isRelayAllowed('wss://relay.example.com'), isFalse);
       });
     });
+
+    // #6838: an author-scoped query skips when resolvePublicKey() is null.
+    // That can only be re-driven if the same client later resolves a key, so
+    // pin that an identity-backed client resolves on the first call, before
+    // initialize() and whatever its inner remote signer answers.
+    group('resolvePublicKey before initialize', () {
+      late _MockNostrSigner unavailableRemote;
+
+      setUp(() {
+        unavailableRemote = _MockNostrSigner();
+        when(unavailableRemote.getPublicKey).thenAnswer((_) async => null);
+      });
+
+      final identities = <String, NostrIdentity Function(NostrSigner)>{
+        'LocalNostrIdentity': (_) {
+          final keyContainer = _MockSecureKeyContainer();
+          when(() => keyContainer.publicKeyHex).thenReturn(testPublicKey);
+          when(() => keyContainer.isDisposed).thenReturn(false);
+          return LocalNostrIdentity(keyContainer: keyContainer);
+        },
+        'PubkeyOnlyNostrIdentity': (_) =>
+            PubkeyOnlyNostrIdentity(pubkey: testPublicKey),
+        'KeycastNostrIdentity with an unavailable RPC signer': (remote) =>
+            KeycastNostrIdentity(pubkey: testPublicKey, rpcSigner: remote),
+        'BunkerNostrIdentity with an unavailable remote signer': (remote) =>
+            BunkerNostrIdentity(pubkey: testPublicKey, remoteSigner: remote),
+        'AmberNostrIdentity with an unavailable signer': (remote) =>
+            AmberNostrIdentity(pubkey: testPublicKey, amberSigner: remote),
+        'Nip07NostrIdentity with an unavailable extension': (remote) =>
+            Nip07NostrIdentity(pubkey: testPublicKey, nip07Signer: remote),
+      };
+
+      for (final MapEntry(key: name, value: build) in identities.entries) {
+        test('$name resolves its pubkey on the first call', () async {
+          final client = NostrServiceFactory.create(
+            signer: build(unavailableRemote),
+          );
+
+          expect(client.publicKey, isEmpty);
+          expect(await client.resolvePublicKey(), equals(testPublicKey));
+          verifyNever(unavailableRemote.getPublicKey);
+        });
+      }
+
+      test('the keyless client resolves no key on any call', () async {
+        final client = NostrServiceFactory.create();
+
+        expect(await client.resolvePublicKey(), isNull);
+        expect(await client.resolvePublicKey(), isNull);
+      });
+    });
   });
 }
