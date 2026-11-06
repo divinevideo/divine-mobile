@@ -565,10 +565,25 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     String query, {
     int limit = 50,
     String? viewerPubkey,
-  }) async* {
+  }) {
     final trimmed = query.trim();
-    if (trimmed.isEmpty || limit <= 0) return;
+    if (trimmed.isEmpty || limit <= 0) return const Stream.empty();
 
+    // Not async*: a generator whose read fails after its listener cancelled
+    // completes the cancel future with that error, and the bloc emitter
+    // never awaits it, so it surfaced as an unhandled zone error.
+    return Rx.defer(
+      () => Stream.fromFuture(
+        _searchPublicLists(trimmed, limit: limit, viewerPubkey: viewerPubkey),
+      ).where((results) => results.isNotEmpty),
+    );
+  }
+
+  Future<List<PeopleListSearchResult>> _searchPublicLists(
+    String trimmed, {
+    required int limit,
+    required String? viewerPubkey,
+  }) async {
     final lowerQuery = trimmed.toLowerCase();
     final results = await _queryPublicLists(
       limit: limit > 500 ? limit : 500,
@@ -583,9 +598,7 @@ class PeopleListsRepositoryImpl implements PeopleListsRepository {
     // The candidate window is independent of the displayed result limit.
     // Keep main's deterministic revision/coordinate order before that cut.
     results.sort(_newestFirst);
-    if (results.isNotEmpty) {
-      yield List.unmodifiable(results.take(limit));
-    }
+    return List.unmodifiable(results.take(limit));
   }
 
   @override

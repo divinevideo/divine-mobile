@@ -3719,6 +3719,83 @@ void main() {
 
         expect(emissions, isEmpty);
       });
+
+      group('inconclusive read', () {
+        void stubRead(
+          _MockNostrClient client,
+          Future<({List<Event> events, bool timedOut, bool noRelays})> read,
+        ) {
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) => read);
+        }
+
+        test(
+          'emits $PublicPeopleListReadUnavailableException to its listener',
+          () async {
+            final client = _MockNostrClient();
+            stubRead(
+              client,
+              Future.value((
+                events: <Event>[],
+                timedOut: true,
+                noRelays: false,
+              )),
+            );
+            final repository = buildRepository(nostrClient: client);
+
+            await expectLater(
+              repository.searchPublicLists('crew'),
+              emitsInOrder([
+                emitsError(isA<PublicPeopleListReadUnavailableException>()),
+                emitsDone,
+              ]),
+            );
+          },
+        );
+
+        test('is dropped once the listener has cancelled', () async {
+          final client = _MockNostrClient();
+          final read =
+              Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+          stubRead(client, read.future);
+          final repository = buildRepository(nostrClient: client);
+
+          final subscription = repository
+              .searchPublicLists('crew')
+              .listen(
+                (_) => fail('a cancelled search emitted'),
+                onError: (Object error) =>
+                    fail('a cancelled search reported $error'),
+              );
+          await pumpEventQueue();
+          verify(
+            () => client.queryEventsDetailed(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              useCache: any(named: 'useCache'),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+            ),
+          ).called(1);
+
+          // ListSearchBloc's emitter never awaits this future, so a failure
+          // completing it is an unhandled zone error.
+          final cancelled = subscription.cancel();
+          read.complete((events: <Event>[], timedOut: true, noRelays: false));
+
+          await expectLater(cancelled, completes);
+          await pumpEventQueue();
+        });
+      });
     });
 
     group('watchLists', () {

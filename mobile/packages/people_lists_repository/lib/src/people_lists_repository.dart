@@ -118,7 +118,8 @@ abstract interface class PeopleListsRepository {
   ///
   /// An inconclusive relay read throws
   /// `PublicPeopleListReadUnavailableException` rather than reporting no
-  /// matches.
+  /// matches. Cancelling before the read completes discards its outcome,
+  /// failure included.
   /// Deployment-configured exclusions affect search/discovery only.
   ///
   /// Two owners publishing a list with the same `d` tag both survive the
