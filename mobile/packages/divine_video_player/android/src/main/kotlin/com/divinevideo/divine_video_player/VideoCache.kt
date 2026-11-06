@@ -204,7 +204,8 @@ internal class CacheBypassDataSource(
         } else {
             dataSpec.withRequestHeaders(dataSpec.httpRequestHeaders + httpHeaders)
         }
-        val isB2Canary = dataSpec.uri.host.equals("media-b2.divine.video", ignoreCase = true)
+        val isB2Canary = dataSpec.uri.host.equals("media-b2.divine.video", ignoreCase = true) ||
+            dataSpec.uri.host.equals("media-b2-cdn.divine.video", ignoreCase = true)
         // Only correlation is exempt from the app-header bypass. In particular,
         // an app-supplied ICY or If-Range header must not gain an exemption.
         val cacheableAppHeaders = httpHeaders.keys.all {

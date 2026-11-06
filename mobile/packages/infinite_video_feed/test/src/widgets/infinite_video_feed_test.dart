@@ -214,6 +214,80 @@ void main() {
     const raw = 'https://media.divine.video/$hash';
     const b2 = 'https://media-b2.divine.video/$hash';
 
+    testWidgets('B2 opt-in preserves canonical rendition disk playback', (
+      tester,
+    ) async {
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install();
+      when(
+        () => cache.getCachedFileSync('rendition'),
+      ).thenReturn(File('/cache/720p.mp4'));
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              videos: [_makeVideo('rendition', videoUrl: raw)],
+              cache: cache,
+              preferB2Original: true,
+              urlResolver: (_) => '$raw/720p.mp4',
+              prefetchCount: 0,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+          '/cache/720p.mp4',
+        ]);
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+
+    testWidgets('B2 opt-in preserves canonical rendition prefetch', (
+      tester,
+    ) async {
+      DivineVideoPlayerController.resetIdCounterForTesting();
+      final harness = _NativePlayerHarness(tester);
+      await harness.install(playerIds: const [0]);
+      try {
+        await tester.pumpWidget(
+          _wrapFeed(
+            InfiniteVideoFeed(
+              videos: [
+                _makeVideo('first', videoUrl: raw),
+                _makeVideo('next', videoUrl: raw),
+              ],
+              cache: cache,
+              preferB2Original: true,
+              urlResolver: (_) => '$raw/720p.mp4',
+              keepNextAlive: false,
+              prefetchCount: 4,
+              preloadGracePeriod: Duration.zero,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+          '$raw/720p.mp4',
+        ]);
+        verify(
+          () => cache.cacheFileCancellable('$raw/720p.mp4', key: 'next'),
+        ).called(1);
+        verifyNever(() => cache.cacheFileCancellable(raw, key: 'next'));
+        verifyNever(() => cache.cacheFileCancellable(b2, key: 'next'));
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await harness.dispose();
+      }
+    });
+
     testWidgets(
       'OFF ON OFF with the same list bypasses canonical disk bytes '
       'and rebuilds players',
@@ -233,7 +307,7 @@ void main() {
                 key: key,
                 videos: videos,
                 cache: cache,
-                urlResolver: (_) => '$raw/720p.mp4',
+                urlResolver: (_) => raw,
                 preferB2Original: enabled,
                 prefetchCount: 0,
                 preloadGracePeriod: Duration.zero,
@@ -269,6 +343,48 @@ void main() {
       },
     );
 
+    for (final code in ['forbidden', 'http_client_error']) {
+      testWidgets(
+        'runtime canonical rendition $code stops the B2 asset ladder',
+        (tester) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(playerIds: const [0]);
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('policy', videoUrl: raw)],
+                  cache: cache,
+                  preferB2Original: true,
+                  urlResolver: (_) => '$raw/720p.mp4',
+                  prefetchCount: 0,
+                  autoRetryMaxAttempts: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+            await harness.sendEvent(0, {
+              'status': 'error',
+              'errorCode': code,
+              'errorMessage': 'Synthetic policy denial',
+            });
+            await tester.pump();
+            await tester.pump();
+            expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+              '$raw/720p.mp4',
+            ]);
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+          }
+        },
+      );
+    }
+
     for (final (code, fallsBack) in [
       ('not_found', false),
       ('http_server_error', false),
@@ -287,7 +403,7 @@ void main() {
                   videos: [_makeVideo('canary', videoUrl: raw)],
                   cache: cache,
                   preferB2Original: true,
-                  urlResolver: (_) => '$raw/720p.mp4',
+                  urlResolver: (_) => raw,
                   prefetchCount: 0,
                   autoRetryMaxAttempts: 0,
                   preloadGracePeriod: Duration.zero,
@@ -308,7 +424,7 @@ void main() {
             await tester.pump();
             expect(
               harness.clipsHandedToPlayer.map((clip) => clip['uri']),
-              fallsBack ? [b2, '$raw/720p.mp4'] : [b2],
+              fallsBack ? [b2, raw] : [b2],
             );
           } finally {
             await tester.pumpWidget(const SizedBox.shrink());
@@ -318,6 +434,67 @@ void main() {
         },
       );
     }
+
+    testWidgets(
+      'runtime B2 fallback after renditions failed is logged as a B2 fallback',
+      (tester) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        await LogCaptureService().clearAllLogs();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(playerIds: const [0]);
+        harness.setClipsFailures[0] = <Exception>[
+          PlatformException(code: 'not_found'),
+          PlatformException(code: 'not_found'),
+        ];
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [_makeVideo('canary', videoUrl: raw)],
+                cache: cache,
+                preferB2Original: true,
+                urlResolver: (_) => '$raw/720p.mp4',
+                prefetchCount: 0,
+                autoRetryMaxAttempts: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+            '$raw/720p.mp4',
+            '$raw/hls/master.m3u8',
+            b2,
+          ]);
+          await harness.sendEvent(0, {
+            'status': 'error',
+            'errorCode': 'service_unavailable',
+            'errorMessage': 'Synthetic playback failure',
+          });
+          await tester.pump();
+          await tester.pump();
+          expect(
+            harness.clipsHandedToPlayer.map((clip) => clip['uri']).last,
+            raw,
+          );
+          expect(
+            LogCaptureService()
+                .getRecentLogs(minLevel: LogLevel.debug)
+                .map((log) => log.message),
+            contains(
+              'B2 canary fallback index 0: '
+              'failedSource=$b2 retrySource=$raw',
+            ),
+          );
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+          await LogCaptureService().clearAllLogs();
+        }
+      },
+    );
 
     testWidgets(
       'prefetch never aliases B2 or canonical bytes into a canary event key',

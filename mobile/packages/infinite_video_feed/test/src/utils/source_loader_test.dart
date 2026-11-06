@@ -120,6 +120,26 @@ void main() {
         expect(logs, contains(contains('B2 canary fallback')));
       });
 
+      test('does not label a rendition fallback as a B2 fallback', () async {
+        final clips = <VideoClip>[];
+        final controller = _RecordingControllerWithFailures(
+          clips.add,
+          failures: [PlatformException(code: 'not_found')],
+        );
+        addTearDown(controller.dispose);
+        final result = await setSourceWithFallbacks(
+          index: 0,
+          controller: controller,
+          sources: [canonical, b2],
+          log: logs.add,
+          trimToCommonTrackEnd: true,
+          applyTypedFailoverPolicy: true,
+        );
+        expect(result, (b2, 1));
+        expect(logs, contains(contains('B2 canary attempt')));
+        expect(logs, isNot(contains(contains('B2 canary fallback'))));
+      });
+
       for (final message in [
         'HTTP 401',
         'HTTP 403',
@@ -149,6 +169,49 @@ void main() {
           );
           expect(clips.map((clip) => clip.uri), [b2]);
         });
+      }
+    });
+
+    group('outer CDN original policy', () {
+      const b2 =
+          'https://media-b2-cdn.divine.video/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const canonical =
+          'https://media.divine.video/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      for (final (code, fallsBack) in [
+        ('not_found', false),
+        ('http_server_error', false),
+        ('service_unavailable', true),
+        ('network_error', true),
+      ]) {
+        test(
+          '$code ${fallsBack ? "permits" : "blocks"} canonical failover',
+          () async {
+            final clips = <VideoClip>[];
+            final failure = PlatformException(code: code);
+            final controller = _RecordingControllerWithFailures(
+              clips.add,
+              failures: [failure],
+            );
+            addTearDown(controller.dispose);
+            final result = setSourceWithFallbacks(
+              index: 0,
+              controller: controller,
+              sources: [b2, canonical],
+              log: logs.add,
+              trimToCommonTrackEnd: true,
+              applyTypedFailoverPolicy: true,
+            );
+            if (fallsBack) {
+              expect(await result, (canonical, 1));
+            } else {
+              await expectLater(result, throwsA(same(failure)));
+            }
+            expect(
+              clips.map((clip) => clip.uri),
+              fallsBack ? [b2, canonical] : [b2],
+            );
+          },
+        );
       }
     });
 

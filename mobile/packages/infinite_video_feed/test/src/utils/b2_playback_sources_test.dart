@@ -30,10 +30,27 @@ void main() {
     test('OFF retains the canonical ladder', () {
       expect(_resolve(_video(_raw), enabled: false), [_mp4, _hls, _raw]);
     });
-    test('ON attempts the B2 original before every canonical rendition', () {
+    test('ON preserves the selected rendition before the B2 original', () {
       final video = _video(_raw);
-      expect(_resolve(video), [_b2, _mp4, _hls, _raw]);
+      expect(_resolve(video), [_mp4, _hls, _b2, _raw]);
       expect(video.videoUrl, _raw);
+    });
+    test('raw selection still tries B2 before its canonical original', () {
+      expect(resolvePlaybackSources(_video(_raw), preferB2Original: true), [
+        _b2,
+        _raw,
+        _hls,
+      ]);
+    });
+    test('HLS resolver remains first without unsupported B2 derivatives', () {
+      expect(
+        resolvePlaybackSources(
+          _video(_raw),
+          preferB2Original: true,
+          urlResolver: (_) => _hls,
+        ),
+        [_hls, _b2, _raw],
+      );
     });
     for (final host in [
       'media.divine.video',
@@ -41,7 +58,12 @@ void main() {
       'blossom.divine.video',
     ]) {
       test('accepts original blobs on $host', () {
-        expect(_resolve(_video('https://$host/$_hash')).first, _b2);
+        expect(_resolve(_video('https://$host/$_hash')), [
+          _mp4,
+          _hls,
+          _b2,
+          _raw,
+        ]);
       });
     }
     for (final url in [

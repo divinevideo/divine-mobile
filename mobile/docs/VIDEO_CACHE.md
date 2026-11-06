@@ -64,8 +64,9 @@ holds:
   carry them in practice; the player decides on the presence of headers rather
   than on how the origin marks the response, so those bytes are never
   persisted.
-- it goes to the B2 playback canary host (`media-b2.divine.video`), so every
-  open checks the endpoint's policy instead of replaying an earlier copy.
+- it goes to a B2 playback host (`media-b2.divine.video` or
+  `media-b2-cdn.divine.video`), so every open checks the endpoint's policy
+  instead of replaying an earlier copy.
 
 ## iOS and macOS
 

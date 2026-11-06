@@ -179,7 +179,8 @@ served from disk the next time. Three kinds of source deliberately bypass it:
   sources carry, and their bytes must not be persisted, so the player decides
   this on the client rather than relying on how the origin marks the
   response.
-- The B2 playback canary host (`media-b2.divine.video`), so every new open
+- The B2 playback hosts (`media-b2.divine.video` and
+  `media-b2-cdn.divine.video`), so every new open
   checks the endpoint's policy instead of replaying an earlier approved copy.
 
 On iOS and macOS there is no disk cache to configure: AVFoundation loads

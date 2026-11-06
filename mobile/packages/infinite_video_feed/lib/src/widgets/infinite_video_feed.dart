@@ -120,8 +120,8 @@ class InfiniteVideoFeed extends StatefulWidget {
   /// Falls back to [VideoEvent.videoUrl] when `null`.
   final String? Function(VideoEvent video)? urlResolver;
 
-  /// Internal original-only mirror canary. Eligible videos bypass event-ID
-  /// disk caching and prefetch so canonical cached bytes cannot mask B2.
+  /// Internal original-only mirror canary, after normal rendition selection.
+  /// Only a selected B2 original bypasses event-ID disk caching and prefetch.
   /// Switching this off rebuilds subsequent playback with canonical sources.
   final bool preferB2Original;
 
@@ -970,8 +970,15 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _staleDetector.start(index, controller);
   }
 
-  bool _usesB2Original(VideoEvent video) =>
-      widget.preferB2Original && b2OriginalPlaybackUrl(video.videoUrl) != null;
+  bool _usesB2Original(VideoEvent video) {
+    final sources = resolvePlaybackSources(
+      video,
+      urlResolver: widget.urlResolver,
+      preferB2Original: widget.preferB2Original,
+      derivativeFailureCache: _derivativeFailures,
+    );
+    return sources.isNotEmpty && isB2OriginalPlaybackSource(sources.first);
+  }
 
   bool _canaryStopsFallback(
     VideoEvent video,
@@ -979,7 +986,13 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     NativePlayerErrorCode? code,
     String? message,
   ) =>
-      _usesB2Original(video) &&
+      (resolvePlaybackSources(
+            video,
+            urlResolver: widget.urlResolver,
+            preferB2Original: widget.preferB2Original,
+            derivativeFailureCache: _derivativeFailures,
+          ).any(isB2OriginalPlaybackSource) ||
+          isB2OriginalPlaybackSource(source ?? '')) &&
       (blocksB2CanaryFallback(errorCode: code, errorMessage: message) ||
           (isB2OriginalPlaybackSource(source ?? '') &&
               !canFailOverB2Original(code)));
@@ -1198,16 +1211,20 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       startIndex: prefetchStart,
       endIndex: prefetchEnd,
       videos: widget.videos,
-      resolveUrls: (video) => _usesB2Original(video)
-          ? const []
-          : resolvePlaybackSources(
-              video,
-              urlResolver: widget.urlResolver,
-              preferB2Original: widget.preferB2Original,
-              derivativeFailureCache: _derivativeFailures,
+      resolveUrls: (video) =>
+          resolvePlaybackSources(
+                video,
+                urlResolver: widget.urlResolver,
+                preferB2Original: widget.preferB2Original,
+                derivativeFailureCache: _derivativeFailures,
+              )
+              // Never prefetch across a B2 attempt into its canonical raw
+              // fallback: event-key disk bytes would mask that attempt.
+              .takeWhile((url) => !isB2OriginalPlaybackSource(url))
               // Exclude HLS manifests: prefetch writes static files to disk,
               // but HLS playback needs re-streaming the manifest + segments.
-            ).where((url) => !isHlsManifest(url)).toList(),
+              .where((url) => !isHlsManifest(url))
+              .toList(),
     );
     // coverage:ignore-end
   }
@@ -1673,7 +1690,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       'Source failover index $index: '
       'failedSource=$failedSource source=$nextSource',
     );
-    if (_usesB2Original(widget.videos[index])) {
+    if (isB2OriginalPlaybackSource(failedSource ?? '')) {
       _log(
         'B2 canary fallback index $index: '
         'failedSource=$failedSource retrySource=$nextSource',
