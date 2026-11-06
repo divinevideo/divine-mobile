@@ -41,6 +41,7 @@ class VideoInteractionsBloc
     required RepostsRepository repostsRepository,
     required ConsumptionAnalyticsTracker consumptionAnalytics,
     String? addressableId,
+    int? eventKind,
     int? initialLikeCount,
     int? archivedLikeCount,
     int? initialCommentCount,
@@ -52,6 +53,12 @@ class VideoInteractionsBloc
        _commentsRepository = commentsRepository,
        _repostsRepository = repostsRepository,
        _addressableId = addressableId,
+       _likeTargetKind =
+           addressableId != null ||
+               eventKind == NIP71VideoKinds.addressableShortVideo ||
+               eventKind == NIP71VideoKinds.addressableNormalVideo
+           ? NIP71VideoKinds.addressableShortVideo
+           : null,
        _archivedLikeCount = archivedLikeCount,
        _includeVideoReplies = includeVideoReplies,
        _consumptionAnalytics = consumptionAnalytics,
@@ -92,6 +99,11 @@ class VideoInteractionsBloc
   /// Addressable ID for repost operations (format: `kind:pubkey:d-tag`).
   /// Null if the video doesn't have a d-tag (non-addressable event).
   final String? _addressableId;
+
+  /// NIP-25 `k` value for likes: 34236 for any addressable video, matching
+  /// the legacy `34236:` key of [_addressableId] (#5720), and named even when
+  /// the coordinate is missing (#6980). Null for a regular video.
+  final int? _likeTargetKind;
 
   /// Archival (classic Vine) like count baseline, kept separate from the
   /// live Nostr count so the addressable like floor (#6022) can raise only
@@ -334,9 +346,7 @@ class VideoInteractionsBloc
         eventId: _eventId,
         authorPubkey: _authorPubkey,
         addressableId: _addressableId,
-        targetKind: _addressableId != null
-            ? NIP71VideoKinds.addressableShortVideo
-            : null,
+        targetKind: _likeTargetKind,
       );
       outcome = isNowLiked == optimisticLiked
           ? _LikeSettleConfirmed(isLiked: isNowLiked)

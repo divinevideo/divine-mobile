@@ -672,6 +672,34 @@ void main() {
       await _settle(tester);
     }
 
+    testWidgets('names the kind of an addressable video with no d tag', (
+      tester,
+    ) async {
+      final rig = await _pumpReadyFeed(
+        tester,
+        video: VideoEvent(
+          id: _testVideoId,
+          pubkey: _testPubkey,
+          createdAt: 1704067200,
+          content: 'Test video',
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
+          videoUrl: 'https://example.com/video.mp4',
+          eventKind: 34236,
+        ),
+      );
+
+      await doubleTapToLike(tester);
+
+      verify(
+        () => rig.likes.toggleLike(
+          eventId: _testVideoId,
+          authorPubkey: _testPubkey,
+          targetKind: 34236,
+        ),
+      ).called(1);
+      await _unmount(tester);
+    });
+
     testWidgets('tags a video reply opened from comments with its coordinate', (
       tester,
     ) async {
