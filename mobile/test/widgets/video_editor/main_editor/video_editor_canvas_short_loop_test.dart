@@ -386,7 +386,7 @@ void main() {
       // A first detach replaces the player with one on the legacy surface.
       final reloads = <MethodCall>[];
       installMockDivineVideoPlayer(
-        playerId: 1,
+        playerId: DivineVideoPlayerController.nextId,
         onMethodCall: (call) async {
           if (call.method == 'setClips') reloads.add(call);
           return null;
