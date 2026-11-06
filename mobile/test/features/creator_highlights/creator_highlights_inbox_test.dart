@@ -235,6 +235,21 @@ void main() {
           findsOneWidget,
         );
         expect(find.text(l10n.creatorHighlightCreatedToday(1)), findsNothing);
+        // Control Center, Notification Center and system prompts only make
+        // the app inactive; coming back from them is not a new showing.
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        await tester.pumpAndSettle();
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await tester.pumpAndSettle();
+        expect(authorRequests, 3);
+        expect(
+          find.text(l10n.creatorHighlightTopVideoViews(3)),
+          findsOneWidget,
+        );
         await tester.tap(
           find.descendant(
             of: find.byType(CreatorHighlightCard),
