@@ -3438,6 +3438,130 @@ void main() {
     );
   });
 
+  group('reactions mode', () {
+    testWidgets(
+      "a loop shows the active video's top comment and does not advance",
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final reactions = FeedReactionsCubit(sharedPreferences: prefs);
+        await reactions.setEnabled(enabled: true);
+        final auto = FeedAutoAdvanceCubit()..setEnabled(enabled: true);
+        addTearDown(reactions.close);
+        addTearDown(auto.close);
+        final video = _makeVideo();
+        final nextVideo = _makeVideo(
+          id: '7777777777777777777777777777777777777777777777777777777777777777',
+        );
+        final topComment = Comment(
+          id: '8888888888888888888888888888888888888888888888888888888888888888',
+          content: 'this loop is everything',
+          authorPubkey: '9999999999999999999999999999999999999999999999999999999999999999',
+          createdAt: DateTime(2024),
+          rootEventId: video.id,
+          rootAuthorPubkey: video.pubkey,
+        );
+        final commentsRepository = _MockCommentsRepository()..stubAll();
+        when(
+          () => commentsRepository.loadComments(
+            rootEventId: any(named: 'rootEventId'),
+            rootEventKind: any(named: 'rootEventKind'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (invocation) async => CommentThread(
+            rootEventId: invocation.namedArguments[#rootEventId]! as String,
+            comments: [topComment],
+          ),
+        );
+        when(
+          () => commentsRepository.findAuthorDeletedComments(any()),
+        ).thenAnswer((_) async => <String>{});
+        final likesRepository = _MockLikesRepository()..stubAll();
+        when(
+          () => likesRepository.getVoteCounts(
+            any(),
+            addressableIds: any(named: 'addressableIds'),
+          ),
+        ).thenAnswer(
+          (_) async => (
+            upvotes: const <String, int>{},
+            downvotes: const <String, int>{},
+          ),
+        );
+        final container = ProviderContainer(
+          overrides: _buildOverrides(
+            commentsRepository: commentsRepository,
+            likesRepository: likesRepository,
+          ).cast(),
+        );
+        addTearDown(container.dispose);
+        final playback = _MockVideoPlaybackStatusCubit()
+          ..stub(PlaybackStatus.ready, video.id);
+        final volume = _MockVideoVolumeCubit()..stub();
+        addTearDown(playback.close);
+        addTearDown(volume.close);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: MultiBlocProvider(
+                providers: [
+                  BlocProvider<FeedAutoAdvanceCubit>.value(value: auto),
+                  BlocProvider<FeedReactionsCubit>.value(value: reactions),
+                  BlocProvider<VideoPlaybackStatusCubit>.value(
+                    value: playback,
+                  ),
+                  BlocProvider<VideoVolumeCubit>.value(value: volume),
+                ],
+                child: Scaffold(
+                  body: FeedVideos(
+                    videos: [video, nextVideo],
+                    currentIndex: 0,
+                    onNearEnd: () {},
+                    hasMore: false,
+                    isLoadingMore: false,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(seconds: 4));
+        final feed = tester.state<InfiniteVideoFeedState>(
+          find.byType(InfiniteVideoFeed),
+        );
+        expect(feed.currentIndex, 0);
+        expect(find.text(topComment.content), findsNothing);
+
+        tester
+            .widget<InfiniteVideoFeed>(
+              find.byType(InfiniteVideoFeed),
+            )
+            .onVideoLoopCompleted!(0);
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 4));
+
+        expect(feed.currentIndex, 0, reason: 'reactions hold the video');
+        expect(find.text(topComment.content), findsOneWidget);
+        verifyNever(
+          () => commentsRepository.loadComments(
+            rootEventId: nextVideo.id,
+            rootEventKind: any(named: 'rootEventKind'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+            limit: any(named: 'limit'),
+          ),
+        );
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump(const Duration(seconds: 4));
+      },
+    );
+  });
+
   // -------------------------------------------------------------------------
   // Pagination flush (didUpdateWidget)
   // -------------------------------------------------------------------------
