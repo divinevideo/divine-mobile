@@ -6262,10 +6262,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "Săptămâna asta are ceva mai mult din tine.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "Zile de creație săptămâna asta: {count}. Continuă așa.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -6289,16 +6285,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Creează încă unul",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "Vizionări până acum: {count} și continuă.",
+  "creatorHighlightWeeklyLikes": "Aprecieri până acum la videoclipurile pe care le-ai publicat săptămâna asta: {count}.",
+  "creatorHighlightWeeklyComments": "Comentarii până acum la videoclipurile pe care le-ai publicat săptămâna asta: {count}.",
   "creatorHighlightAnalytics": "Vezi statisticile tale",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Urmărește videoclipul",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "Abonat",

@@ -1,6 +1,8 @@
 // ABOUTME: Builds personal creator highlights from existing, bounded Funnelcake data.
 // ABOUTME: Keeps missing metrics unknown and presentation markers account-scoped.
 
+import 'dart:math' as math;
+
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/creator_highlights/creator_highlight.dart';
@@ -10,10 +12,14 @@ import 'package:videos_repository/videos_repository.dart';
 abstract interface class CreatorHighlightsRepository {
   Future<CreatorHighlight?> load(String owner);
 
-  /// Saves the daily presentation marker.
+  /// Saves the daily presentation marker and the next spotlight to show.
   ///
   /// Throws [CreatorHighlightPresentationException] when storage rejects it.
-  Future<void> markPresented(String owner, String localDate);
+  Future<void> markPresented(
+    String owner,
+    String localDate, {
+    required int nextRotation,
+  });
 }
 
 /// The device could not persist a daily presentation marker.
@@ -40,6 +46,9 @@ class FunnelcakeCreatorHighlightsRepository
 
   static const presentationPrefix = 'creator_highlight_presented_';
   static String presentationKey(String owner) => '$presentationPrefix$owner';
+
+  /// Stored as `<localDate>|<nextRotation>`; a bare date predates rotation.
+  static const _markerSeparator = '|';
   static const pageSize = 100;
   static const maxPages = 4;
   final FunnelcakeApiClient _client;
@@ -139,6 +148,10 @@ class FunnelcakeCreatorHighlightsRepository
         )
         .toList();
     final hydrated = <VideoEvent>[];
+    // Edit siblings carry separate engagement; keep each work's highest count,
+    // as the profile merge does for views.
+    final likesByWork = <String, int>{};
+    final commentsByWork = <String, int>{};
     for (var start = 0; start < eligible.length; start += pageSize) {
       final chunk = eligible.sublist(
         start,
@@ -153,7 +166,19 @@ class FunnelcakeCreatorHighlightsRepository
         /* Publication evidence remains useful without engagement metrics. */
       }
       for (final video in chunk) {
-        final views = stats[video.id]?.views;
+        final entry = stats[video.id];
+        if (entry != null) {
+          final work = canonicalProfileFeedVideoKey(video);
+          likesByWork[work] = math.max(
+            likesByWork[work] ?? 0,
+            math.max(entry.reactions, 0),
+          );
+          commentsByWork[work] = math.max(
+            commentsByWork[work] ?? 0,
+            math.max(entry.comments, 0),
+          );
+        }
+        final views = entry?.views;
         // Event tags are creator-authored metadata, not measured engagement.
         // Only the bulk statistics response can establish a view claim here.
         final tags = {...video.rawTags}
@@ -210,6 +235,19 @@ class FunnelcakeCreatorHighlightsRepository
       final local = video.timestamp.toLocal();
       return DateTime(local.year, local.month, local.day);
     }).toSet();
+    int? totalOf(Map<String, int> byWork) {
+      final works = videos.map(canonicalProfileFeedVideoKey).toList();
+      if (!complete || !works.every(byWork.containsKey)) return null;
+      return works.fold<int>(0, (total, work) => total + byWork[work]!);
+    }
+
+    final marker = _preferences
+        .getString(presentationKey(owner))
+        ?.split(_markerSeparator);
+    final rotation = marker != null && marker.length > 1
+        ? int.tryParse(marker[1])
+        : null;
+    final topVideo = known ? ranked.first : null;
     return CreatorHighlight(
       owner: owner,
       localDate: date,
@@ -220,16 +258,24 @@ class FunnelcakeCreatorHighlightsRepository
       views: known
           ? counts.fold<int>(0, (total, count) => total + count!)
           : null,
-      topVideo: known ? ranked.first : null,
-      celebrate: _preferences.getString(presentationKey(owner)) != date,
+      topVideo: topVideo,
+      topVideoViews: topVideo == null ? null : viewsOf(topVideo),
+      likes: totalOf(likesByWork),
+      comments: totalOf(commentsByWork),
+      celebrate: marker?.first != date,
+      rotation: rotation != null && rotation >= 0 ? rotation : 0,
     );
   }
 
   @override
-  Future<void> markPresented(String owner, String localDate) async {
+  Future<void> markPresented(
+    String owner,
+    String localDate, {
+    required int nextRotation,
+  }) async {
     final saved = await _preferences.setString(
       presentationKey(owner),
-      localDate,
+      '$localDate$_markerSeparator$nextRotation',
     );
     if (!saved) throw const CreatorHighlightPresentationException();
   }

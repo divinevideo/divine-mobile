@@ -5282,10 +5282,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "May dagdag na bahagi mo sa linggong ito.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "Mga araw na gumawa ka ngayong linggo: {count}. Tuloy lang.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -5309,16 +5305,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Gumawa pa",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "Views sa ngayon: {count}, at dumarami pa.",
+  "creatorHighlightWeeklyLikes": "Kabuuang like sa ngayon ng mga video na pinost mo ngayong linggo: {count}.",
+  "creatorHighlightWeeklyComments": "Kabuuang komento sa ngayon ng mga video na pinost mo ngayong linggo: {count}.",
   "creatorHighlightAnalytics": "Tingnan ang stats mo",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Panoorin ang video",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "Naka-subscribe",

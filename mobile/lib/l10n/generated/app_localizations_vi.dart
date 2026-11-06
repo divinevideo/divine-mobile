@@ -15693,10 +15693,6 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'Tuần này có thêm một chút dấu ấn của bạn.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'Số ngày sáng tạo trong tuần này: $count. Cứ tiếp tục nhé.';
   }
@@ -15715,13 +15711,34 @@ class AppLocalizationsVi extends AppLocalizations {
       'Video được xem nhiều nhất trong số video bạn đăng tuần này';
 
   @override
-  String get creatorHighlightCreate => 'Tạo thêm video';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Lượt xem đến nay: $countString và vẫn tiếp tục.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Tổng lượt thích tính đến hiện tại của các video bạn đăng trong tuần này: $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Tổng bình luận tính đến hiện tại của các video bạn đăng trong tuần này: $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'Xem số liệu của bạn';
-
-  @override
-  String get creatorHighlightWatch => 'Xem video';
 
   @override
   String get messagesPublicRoomsDisclosure =>

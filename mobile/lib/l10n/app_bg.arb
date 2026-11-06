@@ -6379,10 +6379,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "В тази седмица има още малко от теб.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "Творчески дни тази седмица: {count}. Продължавай.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -6406,16 +6402,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Създай още едно",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "Гледания досега: {count} и продължават.",
+  "creatorHighlightWeeklyLikes": "Харесвания досега на видеата, които публикува тази седмица: {count}.",
+  "creatorHighlightWeeklyComments": "Коментари досега към видеата, които публикува тази седмица: {count}.",
   "creatorHighlightAnalytics": "Виж статистиката си",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Гледай видеото",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "Абониран",

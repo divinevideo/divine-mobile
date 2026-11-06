@@ -12,10 +12,12 @@ import 'package:http/testing.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:notification_repository/notification_repository.dart';
+import 'package:openvine/features/creator_highlights/creator_highlight_card.dart';
 import 'package:openvine/features/creator_highlights/creator_highlights_repository.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/notifications/view/inbox_notifications_page.dart';
+import 'package:openvine/notifications/widgets/notification_video_thumbnail.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/shell_obscured_provider.dart';
@@ -141,11 +143,6 @@ void main() {
               },
             ),
             GoRoute(
-              path: RoutePaths.videoRecorder,
-              builder: (_, _) =>
-                  const Scaffold(body: Text('Camera destination')),
-            ),
-            GoRoute(
               path: RoutePaths.creatorAnalytics,
               builder: (_, _) =>
                   const Scaffold(body: Text('Analytics destination')),
@@ -226,7 +223,24 @@ void main() {
         expect(find.text(l10n.creatorHighlightCreatedToday(1)), findsOneWidget);
         expect(tester.takeException(), isNull);
         expect(authorRequests, 2);
-        await tester.tap(find.text(l10n.creatorHighlightWatch));
+        expect(find.text(l10n.creatorHighlightTopVideoViews(3)), findsNothing);
+        // Each new showing leads with the next real fact.
+        visibility.value = false;
+        await tester.pumpAndSettle();
+        visibility.value = true;
+        await tester.pumpAndSettle();
+        expect(authorRequests, 3);
+        expect(
+          find.text(l10n.creatorHighlightTopVideoViews(3)),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.creatorHighlightCreatedToday(1)), findsNothing);
+        await tester.tap(
+          find.descendant(
+            of: find.byType(CreatorHighlightCard),
+            matching: find.byType(NotificationVideoThumbnail),
+          ),
+        );
         await tester.pumpAndSettle();
         expect(find.text('Video destination'), findsOneWidget);
         expect(receivedExtra, isA<VideoDetailRouteExtra>());
@@ -234,11 +248,6 @@ void main() {
           (receivedExtra! as VideoDetailRouteExtra).initialVideo?.id,
           _video,
         );
-        router.pop();
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(l10n.creatorHighlightCreate));
-        await tester.pumpAndSettle();
-        expect(find.text('Camera destination'), findsOneWidget);
         router.pop();
         await tester.pumpAndSettle();
         await tester.tap(find.text(l10n.creatorHighlightAnalytics));
@@ -249,11 +258,11 @@ void main() {
         await tester.tap(find.text(l10n.notificationsTabLikes));
         await tester.pumpAndSettle();
         expect(find.text(l10n.creatorHighlightLabel), findsNothing);
-        expect(authorRequests, 2);
+        expect(authorRequests, 3);
         await tester.tap(find.text(l10n.notificationsTabAll));
         await tester.pumpAndSettle();
         expect(find.text(l10n.creatorHighlightLabel), findsOneWidget);
-        expect(authorRequests, 3);
+        expect(authorRequests, 4);
         await tester.drag(
           find.byType(CustomScrollView).first,
           const Offset(0, 350),
@@ -261,7 +270,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(
           authorRequests,
-          4,
+          5,
           reason: 'Pull-to-refresh refreshes both content sources.',
         );
         when(() => auth.isAuthenticated).thenReturn(false);

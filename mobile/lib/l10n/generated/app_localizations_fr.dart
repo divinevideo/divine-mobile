@@ -15998,10 +15998,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'Cette semaine, il y a un peu plus de toi.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'Jours de création cette semaine : $count. Continue comme ça.';
   }
@@ -16020,13 +16016,34 @@ class AppLocalizationsFr extends AppLocalizations {
       'La plus regardée de tes vidéos publiées cette semaine';
 
   @override
-  String get creatorHighlightCreate => 'Crée une autre vidéo';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Vues à ce jour : $countString, et ça continue.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Total des J\'aime à ce jour sur les vidéos que tu as publiées cette semaine : $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Total des commentaires à ce jour sur les vidéos que tu as publiées cette semaine : $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'Regarde tes stats';
-
-  @override
-  String get creatorHighlightWatch => 'Regarde la vidéo';
 
   @override
   String get messagesPublicRoomsDisclosure =>

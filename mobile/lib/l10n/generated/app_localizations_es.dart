@@ -15941,10 +15941,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'Esta semana tiene un poquito más de vos.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'Días de creación esta semana: $count. Seguí así.';
   }
@@ -15963,13 +15959,34 @@ class AppLocalizationsEs extends AppLocalizations {
       'El más visto de los videos que publicaste esta semana';
 
   @override
-  String get creatorHighlightCreate => 'Creá otro';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Visualizaciones hasta ahora: $countString, y siguen sumando.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Me gusta hasta ahora en los videos que publicaste esta semana: $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Comentarios hasta ahora en los videos que publicaste esta semana: $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'Mirá tus estadísticas';
-
-  @override
-  String get creatorHighlightWatch => 'Mirá el video';
 
   @override
   String get messagesPublicRoomsDisclosure =>

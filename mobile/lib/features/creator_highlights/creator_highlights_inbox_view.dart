@@ -138,34 +138,34 @@ class _HighlightsInboxBodyState extends State<_HighlightsInboxBody>
   }
 
   @override
-  Widget build(
-    BuildContext context,
-  ) => BlocBuilder<CreatorHighlightsCubit, CreatorHighlightsState>(
-    builder: (context, state) => NotificationsView(
-      onRefresh: _refresh,
-      header: state.card == null
-          ? null
-          : CreatorHighlightCard(
-              highlight: state.card!,
-              isVisible: _isVisible,
-              onPresented: () => runDetached(
-                context.read<CreatorHighlightsCubit>().presented(state.card!),
-                'record creator highlight presentation',
-                logName: 'CreatorHighlights',
-                category: LogCategory.ui,
-              ),
-              onCreate: () => _open(RoutePaths.videoRecorder),
-              onAnalytics: () => _open(RoutePaths.creatorAnalytics),
-              onWatch: () {
-                final video = state.card?.topVideo;
-                if (video != null) {
-                  _open(
-                    RoutePaths.videoDetailForId(video.id),
-                    extra: VideoDetailRouteExtra(initialVideo: video),
-                  );
-                }
-              },
-            ),
-    ),
-  );
+  Widget build(BuildContext context) =>
+      BlocBuilder<CreatorHighlightsCubit, CreatorHighlightsState>(
+        builder: (context, state) => NotificationsView(
+          onRefresh: _refresh,
+          header: state.card == null
+              ? null
+              : CreatorHighlightCard(
+                  highlight: state.card!,
+                  isVisible: _isVisible,
+                  onPresented: () => runDetached(
+                    context.read<CreatorHighlightsCubit>().presented(
+                      state.card!,
+                    ),
+                    'record creator highlight presentation',
+                    logName: 'CreatorHighlights',
+                    category: LogCategory.ui,
+                  ),
+                  onAnalytics: () => _open(RoutePaths.creatorAnalytics),
+                  onWatch: () {
+                    final video = state.card?.topVideo;
+                    if (video != null) {
+                      _open(
+                        RoutePaths.videoDetailForId(video.id),
+                        extra: VideoDetailRouteExtra(initialVideo: video),
+                      );
+                    }
+                  },
+                ),
+        ),
+      );
 }

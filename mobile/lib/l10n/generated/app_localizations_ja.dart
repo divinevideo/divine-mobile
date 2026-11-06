@@ -15005,9 +15005,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle => 'あなたらしさが、今週を少し彩りました。';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return '今週、創作した日数：$count日。この調子で続けましょう。';
   }
@@ -15025,13 +15022,34 @@ class AppLocalizationsJa extends AppLocalizations {
   String get creatorHighlightTopVideo => '今週投稿した動画で最も再生された動画';
 
   @override
-  String get creatorHighlightCreate => 'もう一本つくる';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'これまでの再生回数：$countString回。まだまだ続きます。';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '今週投稿した動画の、これまでの合計いいね数：$countString件。';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '今週投稿した動画の、これまでの合計コメント数：$countString件。';
+  }
 
   @override
   String get creatorHighlightAnalytics => '自分の統計を見る';
-
-  @override
-  String get creatorHighlightWatch => '動画を見る';
 
   @override
   String get messagesPublicRoomsDisclosure =>

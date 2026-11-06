@@ -22,7 +22,7 @@ class _Repository implements CreatorHighlightsRepository {
   final pending = Completer<CreatorHighlight?>();
   final next = Completer<CreatorHighlight?>();
   int loads = 0;
-  final presented = <(String, String)>[];
+  final presented = <(String, String, int)>[];
   Object? presentationError;
 
   @override
@@ -32,9 +32,13 @@ class _Repository implements CreatorHighlightsRepository {
   }
 
   @override
-  Future<void> markPresented(String owner, String localDate) async {
+  Future<void> markPresented(
+    String owner,
+    String localDate, {
+    required int nextRotation,
+  }) async {
     if (presentationError case final error?) throw error;
-    presented.add((owner, localDate));
+    presented.add((owner, localDate, nextRotation));
   }
 }
 
@@ -195,6 +199,80 @@ void main() {
   });
 
   group('presented', () {
+    const rich = CreatorHighlight(
+      owner: _owner,
+      localDate: '2026-10-30',
+      createdToday: 1,
+      creationDaysThisWeek: 2,
+      views: null,
+      topVideo: null,
+      likes: 7,
+      celebrate: true,
+      rotation: 3,
+    );
+
+    test('the next showing leads with the next spotlight at once', () async {
+      final repository = _Repository();
+      final cubit = CreatorHighlightsCubit(
+        repository: repository,
+        owner: _owner,
+        now: () => DateTime(2026, 10, 30),
+      );
+      repository.pending.complete(rich);
+      await cubit.refresh();
+      final first = cubit.state.card!;
+      expect(first.spotlight, CreatorSpotlight.createdToday);
+      await cubit.presented(first);
+      expect(repository.presented, [(_owner, '2026-10-30', 4)]);
+      expect(
+        cubit.state.card?.rotation,
+        3,
+        reason: 'A presented spotlight stays put while it is on screen.',
+      );
+
+      final load = cubit.refresh();
+      expect(cubit.state.card?.rotation, 4);
+      expect(cubit.state.card?.spotlight, CreatorSpotlight.weeklyLikes);
+      // The repository still reports the stored rotation; the session's
+      // own advance wins so the spotlight does not flip back.
+      repository.next.complete(rich);
+      await load;
+      expect(cubit.state.card?.rotation, 4);
+      expect(cubit.state.card?.celebrate, isFalse);
+
+      await cubit.presented(cubit.state.card!);
+      expect(repository.presented.last, (_owner, '2026-10-30', 5));
+      await cubit.close();
+    });
+
+    test(
+      'a load finishing after presentation keeps the shown spotlight',
+      () async {
+        final repository = _Repository();
+        final cubit = CreatorHighlightsCubit(
+          repository: repository,
+          owner: _owner,
+          now: () => DateTime(2026, 10, 30),
+        );
+        repository.pending.complete(rich);
+        await cubit.refresh();
+        await cubit.presented(cubit.state.card!);
+        final load = cubit.refresh();
+        final shown = cubit.state.card!;
+        expect(shown.rotation, 4);
+        await cubit.presented(shown);
+        expect(repository.presented.last.$3, 5);
+        repository.next.complete(rich);
+        await load;
+        expect(
+          cubit.state.card?.rotation,
+          4,
+          reason: 'Fresh facts must not swap the spotlight being read.',
+        );
+        await cubit.close();
+      },
+    );
+
     test('reports storage failure without replaying the celebration', () async {
       final repository = _Repository()
         ..presentationError = const CreatorHighlightPresentationException();
@@ -222,7 +300,7 @@ void main() {
         await cubit.refresh();
         await cubit.presented(_card);
         await cubit.presented(_card);
-        expect(repository.presented, [(_owner, '2026-10-30')]);
+        expect(repository.presented, [(_owner, '2026-10-30', 1)]);
         expect(
           cubit.state.card?.celebrate,
           isFalse,

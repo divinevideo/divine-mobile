@@ -7573,10 +7573,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "اس ہفتے میں آپ کا رنگ کچھ اور بڑھ گیا ہے۔",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "اس ہفتے تخلیق کے دن: {count}۔ بناتے رہیے۔",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -7600,15 +7596,13 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "ایک اور بنائیں",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "اب تک کے ویوز: {count}، اور سلسلہ جاری ہے۔",
+  "creatorHighlightWeeklyLikes": "اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز پر اب تک کی کل پسندیں: {count}۔",
+  "creatorHighlightWeeklyComments": "اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز پر اب تک کے کل تبصرے: {count}۔",
   "creatorHighlightAnalytics": "اپنے اعداد و شمار دیکھیں",
   "@creatorHighlightAnalytics": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightWatch": "ویڈیو دیکھیں",
   "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   }

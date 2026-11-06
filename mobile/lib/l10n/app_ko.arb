@@ -5808,10 +5808,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "이번 주에 나만의 색깔을 조금 더했어요.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "이번 주에 창작한 날: {count}일. 계속 만들어 봐요.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -5835,16 +5831,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "하나 더 만들기",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "지금까지 조회수: {count}회. 계속 늘어나는 중이에요.",
+  "creatorHighlightWeeklyLikes": "이번 주에 올린 동영상의 지금까지 누적 좋아요: {count}개.",
+  "creatorHighlightWeeklyComments": "이번 주에 올린 동영상의 지금까지 누적 댓글: {count}개.",
   "creatorHighlightAnalytics": "내 통계 보기",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "동영상 보기",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "구독 중",

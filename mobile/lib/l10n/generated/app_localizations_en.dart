@@ -15851,10 +15851,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'Your week has a little more you in it.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -15874,8 +15870,8 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$countString views on videos you posted this week, so far.',
-      one: '$countString view on videos you posted this week, so far.',
+      other: '$countString views on this week’s videos so far.',
+      one: '$countString view on this week’s videos so far.',
     );
     return '$_temp0';
   }
@@ -15884,13 +15880,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get creatorHighlightTopVideo => 'Most-watched of this week’s videos';
 
   @override
-  String get creatorHighlightCreate => 'Make another';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString views and counting.',
+      one: '$countString view and counting.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString likes on this week’s videos so far.',
+      one: '$countString like on this week’s videos so far.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$countString comments on this week’s videos so far.',
+      one: '$countString comment on this week’s videos so far.',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'See your stats';
-
-  @override
-  String get creatorHighlightWatch => 'Watch video';
 
   @override
   String get messagesPublicRoomsDisclosure =>

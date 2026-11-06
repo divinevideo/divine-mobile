@@ -5,6 +5,7 @@ import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/features/creator_highlights/creator_highlight.dart';
 import 'package:openvine/features/creator_highlights/creator_highlights_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -21,6 +22,8 @@ Map<String, Object?> video({
   String id = videoId,
   String pubkey = owner,
   int? views = 0,
+  int likes = 0,
+  int comments = 0,
   DateTime? published,
   String dTag = 'one',
   bool archive = false,
@@ -35,6 +38,8 @@ Map<String, Object?> video({
   'video_url': 'https://example.com/video.mp4',
   'title': 'A tiny dance',
   'views': views,
+  'likes': likes,
+  'comments': comments,
   'verified_archive': archive,
 };
 
@@ -72,7 +77,12 @@ void main() {
               : jsonEncode({
                   'stats': {
                     for (final v in videos)
-                      v['id']: {'event_id': v['id'], 'views': v['views']},
+                      v['id']: {
+                        'event_id': v['id'],
+                        'views': v['views'],
+                        'reactions': v['likes'],
+                        'comments': v['comments'],
+                      },
                   },
                 }),
           bulkFails ? 503 : 200,
@@ -214,7 +224,7 @@ void main() {
         var time = now;
         final repo = repository([video()], clock: () => time);
         final first = (await repo.load(owner))!;
-        await repo.markPresented(owner, first.localDate);
+        await repo.markPresented(owner, first.localDate, nextRotation: 1);
         time = now.add(const Duration(days: 1));
         final next = (await repo.load(owner))!;
         expect(next.createdToday, 0);
@@ -321,19 +331,76 @@ void main() {
         );
       },
     );
+    test('totals likes and comments across this week’s works', () async {
+      final card = await repository([
+        video(views: 9, likes: 2, comments: 1),
+        // An edit sibling of the first work: its counts do not add up.
+        video(id: other, views: 4, likes: 5),
+        video(
+          id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+          dTag: 'two',
+          views: 20,
+          likes: 3,
+          comments: 4,
+        ),
+      ]).load(owner);
+      expect(card?.likes, 8);
+      expect(card?.comments, 5);
+      expect(card?.views, 29);
+      expect(card?.topVideoViews, 20);
+      expect(card?.spotlights, [
+        CreatorSpotlight.createdToday,
+        CreatorSpotlight.topVideo,
+        CreatorSpotlight.weeklyViews,
+        CreatorSpotlight.weeklyLikes,
+        CreatorSpotlight.weeklyComments,
+        CreatorSpotlight.creativeDays,
+      ]);
+    });
+    test('engagement stays unknown when statistics are unavailable', () async {
+      final card = await repository([
+        video(likes: 2, comments: 1),
+      ], bulkFails: true).load(owner);
+      expect(card?.likes, isNull);
+      expect(card?.comments, isNull);
+      expect(card?.spotlights, [
+        CreatorSpotlight.createdToday,
+        CreatorSpotlight.creativeDays,
+      ]);
+    });
     test('an empty creator account does not invent activity', () async {
       expect(await repository([]).load(owner), isNull);
     });
   });
 
   group('markPresented', () {
+    test('the next showing resumes the spotlight rotation', () async {
+      final repo = repository([video()]);
+      final first = (await repo.load(owner))!;
+      expect(first.rotation, 0);
+      await repo.markPresented(owner, first.localDate, nextRotation: 3);
+      final card = (await repo.load(owner))!;
+      expect(card.rotation, 3);
+      expect(card.celebrate, isFalse);
+    });
+    test('a marker saved before rotation existed still suppresses', () async {
+      final repo = repository([video()]);
+      final first = (await repo.load(owner))!;
+      await prefs.setString(
+        FunnelcakeCreatorHighlightsRepository.presentationKey(owner),
+        first.localDate,
+      );
+      final card = (await repo.load(owner))!;
+      expect(card.rotation, 0);
+      expect(card.celebrate, isFalse);
+    });
     test('a rejected storage write throws an operational exception', () async {
       final storage = _Preferences();
       prefs = storage;
       when(() => storage.setString(any(), any()))
           .thenAnswer((_) async => false);
       await expectLater(
-        repository([]).markPresented(owner, '2026-10-30'),
+        repository([]).markPresented(owner, '2026-10-30', nextRotation: 1),
         throwsA(isA<CreatorHighlightPresentationException>()),
       );
     });
@@ -343,7 +410,7 @@ void main() {
         final repo = repository([video()]);
         final card = (await repo.load(owner))!;
         expect(card.celebrate, isTrue);
-        await repo.markPresented(owner, card.localDate);
+        await repo.markPresented(owner, card.localDate, nextRotation: 1);
         expect((await repo.load(owner))?.celebrate, isFalse);
         expect(
           prefs.getString(

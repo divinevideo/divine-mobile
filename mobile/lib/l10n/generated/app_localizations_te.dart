@@ -16120,10 +16120,6 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'ఈ వారంలో మీ ముద్ర మరికాస్త పెరిగింది.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'ఈ వారం మీరు సృష్టించిన రోజులు: $count. ఇలాగే కొనసాగించండి.';
   }
@@ -16142,13 +16138,34 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఈ వారం మీరు పోస్ట్ చేసిన వీడియోల్లో అత్యధికంగా చూసిన వీడియో';
 
   @override
-  String get creatorHighlightCreate => 'మరొకటి సృష్టించండి';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'ఇప్పటివరకు వీక్షణలు: $countString, ఇంకా కొనసాగుతున్నాయి.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'ఈ వారం మీరు పోస్ట్ చేసిన వీడియోలకు ఇప్పటివరకు వచ్చిన మొత్తం ఇష్టాలు: $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'ఈ వారం మీరు పోస్ట్ చేసిన వీడియోలకు ఇప్పటివరకు వచ్చిన మొత్తం వ్యాఖ్యలు: $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'మీ గణాంకాలను చూడండి';
-
-  @override
-  String get creatorHighlightWatch => 'వీడియో చూడండి';
 
   @override
   String get messagesPublicRoomsDisclosure =>

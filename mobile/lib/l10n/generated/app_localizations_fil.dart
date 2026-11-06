@@ -15882,10 +15882,6 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'May dagdag na bahagi mo sa linggong ito.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'Mga araw na gumawa ka ngayong linggo: $count. Tuloy lang.';
   }
@@ -15904,13 +15900,34 @@ class AppLocalizationsFil extends AppLocalizations {
       'Pinakapinanood sa mga video na pinost mo ngayong linggo';
 
   @override
-  String get creatorHighlightCreate => 'Gumawa pa';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Views sa ngayon: $countString, at dumarami pa.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Kabuuang like sa ngayon ng mga video na pinost mo ngayong linggo: $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Kabuuang komento sa ngayon ng mga video na pinost mo ngayong linggo: $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'Tingnan ang stats mo';
-
-  @override
-  String get creatorHighlightWatch => 'Panoorin ang video';
 
   @override
   String get messagesPublicRoomsDisclosure =>

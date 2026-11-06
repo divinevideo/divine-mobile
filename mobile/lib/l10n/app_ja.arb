@@ -6262,10 +6262,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "あなたらしさが、今週を少し彩りました。",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "今週、創作した日数：{count}日。この調子で続けましょう。",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -6289,16 +6285,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "もう一本つくる",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "これまでの再生回数：{count}回。まだまだ続きます。",
+  "creatorHighlightWeeklyLikes": "今週投稿した動画の、これまでの合計いいね数：{count}件。",
+  "creatorHighlightWeeklyComments": "今週投稿した動画の、これまでの合計コメント数：{count}件。",
   "creatorHighlightAnalytics": "自分の統計を見る",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "動画を見る",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "購読中",

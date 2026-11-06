@@ -6262,10 +6262,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "Minggu ini jadi sedikit lebih mencerminkan dirimu.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "Hari berkarya minggu ini: {count}. Terus berkarya.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -6289,16 +6285,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "Buat lagi",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "Tayangan sejauh ini: {count}, dan terus bertambah.",
+  "creatorHighlightWeeklyLikes": "Total suka sejauh ini pada video yang kamu posting minggu ini: {count}.",
+  "creatorHighlightWeeklyComments": "Total komentar sejauh ini pada video yang kamu posting minggu ini: {count}.",
   "creatorHighlightAnalytics": "Lihat statistikmu",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "Tonton video",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "Diikuti",

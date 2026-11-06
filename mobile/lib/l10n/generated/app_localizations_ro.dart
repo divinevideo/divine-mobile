@@ -16068,10 +16068,6 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle =>
-      'Săptămâna asta are ceva mai mult din tine.';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return 'Zile de creație săptămâna asta: $count. Continuă așa.';
   }
@@ -16090,13 +16086,34 @@ class AppLocalizationsRo extends AppLocalizations {
       'Cel mai vizionat dintre videoclipurile tale publicate săptămâna asta';
 
   @override
-  String get creatorHighlightCreate => 'Creează încă unul';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Vizionări până acum: $countString și continuă.';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Aprecieri până acum la videoclipurile pe care le-ai publicat săptămâna asta: $countString.';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Comentarii până acum la videoclipurile pe care le-ai publicat săptămâna asta: $countString.';
+  }
 
   @override
   String get creatorHighlightAnalytics => 'Vezi statisticile tale';
-
-  @override
-  String get creatorHighlightWatch => 'Urmărește videoclipul';
 
   @override
   String get messagesPublicRoomsDisclosure =>

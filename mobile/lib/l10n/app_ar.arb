@@ -6262,10 +6262,6 @@
       }
     }
   },
-  "creatorHighlightWeekTitle": "هذا الأسبوع يحمل المزيد منك.",
-  "@creatorHighlightWeekTitle": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
   "creatorHighlightCreationDays": "أيام الإبداع هذا الأسبوع: {count}. لنواصل الإبداع.",
   "@creatorHighlightCreationDays": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
@@ -6289,16 +6285,11 @@
   "@creatorHighlightTopVideo": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
-  "creatorHighlightCreate": "إنشاء فيديو آخر",
-  "@creatorHighlightCreate": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
+  "creatorHighlightTopVideoViews": "المشاهدات حتى الآن: {count}، والعدد مستمر.",
+  "creatorHighlightWeeklyLikes": "إجمالي الإعجابات على فيديوهاتك المنشورة هذا الأسبوع حتى الآن: {count}.",
+  "creatorHighlightWeeklyComments": "إجمالي التعليقات على فيديوهاتك المنشورة هذا الأسبوع حتى الآن: {count}.",
   "creatorHighlightAnalytics": "عرض إحصاءاتك",
   "@creatorHighlightAnalytics": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
-  },
-  "creatorHighlightWatch": "مشاهدة الفيديو",
-  "@creatorHighlightWatch": {
     "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
   },
   "badgeSubscribedAction": "مشترك",

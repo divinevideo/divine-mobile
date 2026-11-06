@@ -14824,9 +14824,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get creatorHighlightWeekTitle => '这周又多了一点你的色彩。';
-
-  @override
   String creatorHighlightCreationDays(int count) {
     return '本周创作天数：$count 天。继续创作吧。';
   }
@@ -14844,13 +14841,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get creatorHighlightTopVideo => '你本周发布的视频中播放次数最多的一条';
 
   @override
-  String get creatorHighlightCreate => '再创作一个';
+  String creatorHighlightTopVideoViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '目前播放次数：$countString 次，还在继续。';
+  }
+
+  @override
+  String creatorHighlightWeeklyLikes(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '你本周发布的视频截至目前的总点赞数：$countString 个。';
+  }
+
+  @override
+  String creatorHighlightWeeklyComments(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '你本周发布的视频截至目前的总评论数：$countString 条。';
+  }
 
   @override
   String get creatorHighlightAnalytics => '查看你的数据';
-
-  @override
-  String get creatorHighlightWatch => '观看视频';
 
   @override
   String get messagesPublicRoomsDisclosure =>
