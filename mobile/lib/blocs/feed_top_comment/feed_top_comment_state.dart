@@ -17,7 +17,7 @@ class FeedTopCommentState extends Equatable {
   /// The comment shown, set once [status] is [FeedTopCommentStatus.ready].
   final Comment? topComment;
 
-  /// Whether the video has finished playing through once.
+  /// Whether the video has looped since this cubit was created.
   final bool hasCompletedLoop;
 
   /// Whether the viewer dismissed the overlay.

@@ -26,11 +26,11 @@ import 'package:provider/provider.dart' as inherited_provider;
 /// Owns the [FeedTopCommentCubit] of one feed item and shares it with
 /// [child], so the overlay and the captions read the same state.
 ///
-/// The cubit exists only while [enabled] — reactions mode is on and this is
-/// the video that is playing. It loads the top comment as soon as it is
-/// created, and goes away, overlay and all, when the viewer scrolls to
-/// another video. [child] receives `null` otherwise. The tree under [child]
-/// keeps its shape either way, so flipping [enabled] never remounts it.
+/// The cubit exists only while [enabled], which the feed sets for its active
+/// item while reactions mode is on. It loads the top comment as soon as it is
+/// created and is closed once [enabled] turns off or the item goes away;
+/// meanwhile [child] reads `null`. The tree under [child] keeps its shape
+/// either way, so flipping [enabled] does not remount the item.
 class FeedTopCommentHost extends ConsumerStatefulWidget {
   const FeedTopCommentHost({
     required this.enabled,
@@ -140,9 +140,8 @@ class HiddenWhileTopCommentShown extends StatelessWidget {
   }
 }
 
-/// Darkens the playing video with a scrim and shows its top comment over it,
-/// once [FeedTopCommentState.isOverlayVisible]. The video itself keeps full
-/// opacity underneath.
+/// Lays a scrim over the playing video and shows its top comment on it, once
+/// [FeedTopCommentState.isOverlayVisible].
 ///
 /// Tapping the scrim dismisses it; tapping the comment opens the
 /// comments sheet at that comment.
@@ -477,7 +476,7 @@ abstract final class FeedReactionsOverlayLayout {
   /// plus 16 px padding above and below.
   static const double topBarHeight = 80;
 
-  /// Space between the top bar and the author row.
+  /// Space between the top bar and the speech bubble.
   static const double gapBelowTopBar = 13;
 
   static const double sidePadding = 16;
@@ -489,10 +488,12 @@ abstract final class FeedReactionsOverlayLayout {
   static const double bubbleHorizontalPadding = 20;
   static const double bubbleVerticalPadding = 16;
 
-  /// The bubble's tail, from the design, and its offset from the left edge.
+  /// The bubble's tail, from the design.
   static const tailAsset = 'assets/reactions/bubble_tail.svg';
   static const double tailWidth = 22;
   static const double tailHeight = 16;
+
+  /// The tail's offset from the bubble's left edge.
   static const double tailInset = 28;
 
   /// Narrowest bubble that still holds the tail under its straight edge:
@@ -502,8 +503,7 @@ abstract final class FeedReactionsOverlayLayout {
   /// Space between the bubble's tail and the author row.
   static const double gapBelowBubble = 8;
 
-  /// Darkens the video behind the comment: solid down to the end of the
-  /// comment, then a gradient to fully transparent at the bottom.
+  /// Scrim behind the comment.
   static const Color scrim = VineTheme.scrim70;
 
   /// Solid scrim kept below the author row before the gradient starts.

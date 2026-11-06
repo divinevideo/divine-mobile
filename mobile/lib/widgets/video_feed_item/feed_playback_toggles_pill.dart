@@ -1,4 +1,4 @@
-// ABOUTME: Scrim-30 capsule with four playback toggles
+// ABOUTME: Scrim-30 capsule with the feed playback toggles
 // ABOUTME: (compilations / mute / closed-captions / reactions). Rendered both
 // ABOUTME: as the body of the top-bar settings popover and above the play
 // ABOUTME: affordance in the paused-video overlay. Compilations, captions
@@ -21,7 +21,7 @@ import 'package:unified_logger/unified_logger.dart';
 /// Scrim-30 backdrop-blurred capsule housing the playback toggles:
 /// auto-advance ("compilations"), audio mute, closed-captions, and reactions.
 ///
-/// All four are feed-wide controls; captions and reactions persist a global
+/// All are feed-wide controls; captions and reactions persist a global
 /// preference.
 class FeedPlaybackTogglesPill extends StatelessWidget {
   const FeedPlaybackTogglesPill({super.key, this.onAutoAdvanceToggled});

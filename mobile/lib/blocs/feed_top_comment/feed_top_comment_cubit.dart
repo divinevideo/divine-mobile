@@ -1,5 +1,5 @@
 // ABOUTME: Picks a video's top comment for the feed's "Show reactions" mode and
-// ABOUTME: decides when the reaction overlay is up: after the first loop, until dismissed.
+// ABOUTME: decides when it shows: after the first loop, until dismissed.
 
 import 'dart:async';
 
@@ -14,10 +14,12 @@ import 'package:unified_logger/unified_logger.dart';
 
 part 'feed_top_comment_state.dart';
 
-/// Loads one video's comments and their vote counts, and selects the comment
-/// the comments sheet's Top ordering would list first, falling back to the
-/// most recent comment when none has an upvote or a reply. The video
-/// creator's own comments are not candidates.
+/// Loads one video's comments and their vote counts, and selects the one with
+/// the highest [commentEngagementScore], the score behind the comments sheet's
+/// Top ordering. Ties go to the newer comment, so the most recent one wins
+/// when none has an upvote or a reply. Text replies are ranked too, unlike
+/// the sheet, which nests them under their parent. The creator's own comments,
+/// video replies, blank comments and pending placeholders are not candidates.
 ///
 /// The overlay shows once the video has finished its first loop and the top
 /// comment is known, whichever happens last, and stays hidden after the
@@ -159,9 +161,8 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
     }
   }
 
-  /// The comment [CommentsSortMode.topEngagement] lists first. Equal scores go
-  /// to the newer comment, so when no comment has an upvote or a reply the
-  /// most recent one is shown, and a lone comment is always shown.
+  /// The candidate with the highest [commentEngagementScore]; equal scores go
+  /// to the newer comment, so a lone comment is always shown.
   Comment _topComment(
     List<Comment> candidates,
     List<Comment> allComments,

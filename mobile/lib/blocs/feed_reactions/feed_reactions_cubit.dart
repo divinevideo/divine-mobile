@@ -1,5 +1,5 @@
 // ABOUTME: App-wide "Show reactions" feed preference, persisted on the device.
-// ABOUTME: While on, the feed surfaces the top comment after each video's loop.
+// ABOUTME: While on, the feed shows a video's top comment after its first loop.
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';

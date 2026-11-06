@@ -286,7 +286,8 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
       });
     }
     // When pagination settles (hasMore / isLoadingMore changed), flush any
-    // pending auto-advance that was waiting on more content.
+    // pending auto-advance that was waiting on more content, or drop it while
+    // reactions mode holds the viewer on the video.
     if (widget.hasMore != oldWidget.hasMore ||
         widget.isLoadingMore != oldWidget.isLoadingMore) {
       if (context.read<FeedReactionsCubit?>()?.state ?? false) {
@@ -341,7 +342,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
 
   void _handleVideoLoopCompleted(int currentIndex) {
     _loopCompletions.add(currentIndex);
-    // Reactions mode keeps the viewer on the video whose top comment is up.
+    // Reactions mode holds the viewer on every video, so Auto never advances.
     final reactionsEnabled =
         context.read<FeedReactionsCubit?>()?.state ?? false;
     if (reactionsEnabled) return;
@@ -1163,14 +1164,14 @@ class __OverlayState extends ConsumerState<_Overlay> {
       (FeedAutoAdvanceCubit cubit) => cubit.state.isEffectivelyActive,
     );
 
-    // Reactions mode holds the viewer on each video, so it also keeps Auto
-    // from moving past one. Nullable: surfaces without the app-wide cubit
-    // (tests, isolated previews) simply have reactions off.
+    // Nullable: surfaces without the app-wide cubit (tests, isolated
+    // previews) simply have reactions off.
     final reactionsEnabled = context.select<FeedReactionsCubit?, bool>(
       (cubit) => cubit?.state ?? false,
     );
 
-    // Gate the runtime on the user's reduced-motion preference. When Auto is
+    // Gate the runtime on the user's reduced-motion preference and on
+    // reactions mode, which holds the viewer on each video. When Auto is
     // unavailable, force it "off" at the view layer regardless of cubit state.
     final autoAdvanceAvailable =
         !MediaQuery.disableAnimationsOf(context) && !reactionsEnabled;
@@ -1366,15 +1367,16 @@ class __OverlayState extends ConsumerState<_Overlay> {
                             // Must match the translucent child below: with
                             // `deferToChild` a press on empty video area never
                             // adds this Listener to the hit-test path (the
-                            // translucent GestureDetector adds itself but still
-                            // reports a miss), so the pointer events would never
-                            // arrive.
+                            // translucent GestureDetector adds itself but
+                            // still reports a miss), so the pointer events
+                            // would never arrive.
                             behavior: HitTestBehavior.translucent,
                             // The raw pointer stream also owns the pinch that
-                            // toggles the persistent pin. A ScaleGestureRecognizer
-                            // would join the gesture arena and compete with the
-                            // PageView's vertical drag, breaking feed swiping;
-                            // measuring the raw pointers never enters the arena.
+                            // toggles the persistent pin. A
+                            // ScaleGestureRecognizer would join the gesture
+                            // arena and compete with the PageView's vertical
+                            // drag, breaking feed swiping; measuring the raw
+                            // pointers never enters the arena.
                             onPointerDown: _handleImmersivePointerDown,
                             onPointerMove: _handleImmersivePointerMove,
                             onPointerUp: (event) =>
@@ -1421,8 +1423,9 @@ class __OverlayState extends ConsumerState<_Overlay> {
                               // Only a pause the user can undo gets the
                               // affordance. A comments/share sheet, a pushed
                               // route or a backgrounded app pauses the player
-                              // too, but resumes it on its own — showing a play
-                              // button behind the sheet just reads as broken.
+                              // too, but resumes it on its own — showing a
+                              // play button behind the sheet just reads as
+                              // broken.
                               isVisible: widget.isActive && widget.isFeedActive,
                               pausedForHold: _pausedForHold,
                             ),
@@ -1443,12 +1446,13 @@ class __OverlayState extends ConsumerState<_Overlay> {
                             isOwnVideo: isOwnVideo,
                             onSuppressAutoAdvance: widget.onSuppressAutoAdvance,
                             // Captions fade with the rest of the chrome, by
-                            // design: the hold reveals the frame the UI covers,
-                            // and the caption is an overlay over that same frame,
-                            // so keeping it up would re-cover exactly what the
-                            // peek exposes. It is gone while the viewer holds,
-                            // returns the instant they release, and stays gone
-                            // while a pinch keeps the chrome pinned hidden.
+                            // design: the hold reveals the frame the UI
+                            // covers, and the caption is an overlay over that
+                            // same frame, so keeping it up would re-cover
+                            // exactly what the peek exposes. It is gone while
+                            // the viewer holds, returns the instant they
+                            // release, and stays gone while a pinch keeps the
+                            // chrome pinned hidden.
                             subtitleLayer:
                                 video.hasSubtitles && widget.controller != null
                                 ? HiddenWhileTopCommentShown(
