@@ -3796,6 +3796,48 @@ void main() {
           await pumpEventQueue();
         });
       });
+
+      test('reads the relays only once the search is listened to', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: true,
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+        );
+        final repository = buildRepository(nostrClient: client);
+
+        final search = repository.searchPublicLists('crew');
+        await pumpEventQueue();
+        verifyNever(
+          () => client.queryEventsDetailed(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            timeout: any(named: 'timeout'),
+          ),
+        );
+
+        await expectLater(search, emitsDone);
+        verify(
+          () => client.queryEventsDetailed(
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            relayTypes: any(named: 'relayTypes'),
+            useCache: any(named: 'useCache'),
+            requireAllRelaysSettled: true,
+            timeout: any(named: 'timeout'),
+          ),
+        ).called(1);
+      });
     });
 
     group('watchLists', () {
