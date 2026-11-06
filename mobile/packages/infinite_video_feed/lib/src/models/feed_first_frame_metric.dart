@@ -80,12 +80,14 @@ class FeedFirstFrameTimer {
   FeedFirstFrameTimer._({required this.videoId, required this.index})
     : _stopwatch = Stopwatch()..start(),
       _attempt = FeedPlaybackTelemetry.startAttempt() {
-    _timeout = Timer(const Duration(seconds: 60), () {
-      finish(
-        outcome: FeedPlaybackOutcome.noFrame,
-        errorCategory: FeedPlaybackError.timeout,
-      );
-    });
+    if (_attempt != null) {
+      _timeout = Timer(const Duration(seconds: 60), () {
+        finish(
+          outcome: FeedPlaybackOutcome.noFrame,
+          errorCategory: FeedPlaybackError.timeout,
+        );
+      });
+    }
   }
 
   /// Full Nostr event id for the video being measured.
@@ -104,16 +106,15 @@ class FeedFirstFrameTimer {
     _attempt?.attachLoad(load);
   }
 
-  /// Terminates an abandoned/failed activation without creating a success trace.
+  /// Terminates operational telemetry without creating a success trace.
+  ///
+  /// A retry or late first frame can still [complete] the success measurement.
   void finish({
     required FeedPlaybackOutcome outcome,
     FeedPlaybackError errorCategory = FeedPlaybackError.none,
     String localCache = 'unknown',
   }) {
-    if (_completed) return;
-    _completed = true;
     _timeout?.cancel();
-    _stopwatch.stop();
     _attempt?.finish(
       outcome: outcome,
       elapsed: _stopwatch.elapsed,
@@ -148,6 +149,8 @@ class FeedFirstFrameTimer {
   /// Stops and publishes this measurement once.
   FeedFirstFrameMetric? complete({required bool loadedFromCache}) {
     if (_completed) return null;
+    _completed = true;
+    _stopwatch.stop();
     finish(
       outcome: FeedPlaybackOutcome.firstFrame,
       localCache: loadedFromCache ? 'hit' : 'unknown',

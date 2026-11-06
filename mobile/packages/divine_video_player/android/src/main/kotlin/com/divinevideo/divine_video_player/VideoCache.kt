@@ -205,11 +205,21 @@ internal class CacheBypassDataSource(
             dataSpec.withRequestHeaders(dataSpec.httpRequestHeaders + httpHeaders)
         }
         val isB2Canary = dataSpec.uri.host.equals("media-b2.divine.video", ignoreCase = true)
-        // Correlation does not change a resource or its cache key. All other
-        // headers retain the existing bypass, including Authorization.
-        val useCache = resolvedDataSpec.httpRequestHeaders.keys.all {
+        // Only correlation is exempt from the app-header bypass. In particular,
+        // an app-supplied ICY or If-Range header must not gain an exemption.
+        val cacheableAppHeaders = httpHeaders.keys.all {
             it.equals("X-Playback-Load-Id", ignoreCase = true)
-        } &&
+        }
+        // Media3's ProgressiveMediaPeriod adds ICY to every load and If-Range
+        // on ETag resumes. Rejecting those disables caching for all MP4s.
+        // Keep checking the original DataSpec so Authorization/unknown headers
+        // supplied there also bypass, even if the app map overwrites them.
+        val cacheableDataSpecHeaders = dataSpec.httpRequestHeaders.all { (name, value) ->
+            name.equals("X-Playback-Load-Id", ignoreCase = true) ||
+                (name.equals("Icy-MetaData", ignoreCase = true) && value == "1") ||
+                name.equals("If-Range", ignoreCase = true)
+        }
+        val useCache = cacheableAppHeaders && cacheableDataSpecHeaders &&
             isCacheableScheme(dataSpec.uri.scheme) && !isB2Canary
         val selectedDelegate = if (useCache) {
             cachedFactory.createDataSource()

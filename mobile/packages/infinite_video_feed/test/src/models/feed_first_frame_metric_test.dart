@@ -1,8 +1,44 @@
+import 'dart:async';
+
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:infinite_video_feed/infinite_video_feed.dart';
 
 void main() {
   group(FeedFirstFrameMetrics, () {
+    test('disabled telemetry preserves first-frame success after retry', () {
+      fakeAsync((async) {
+        FeedPlaybackTelemetry.configure(enabled: false);
+        final successes = <FeedFirstFrameMetric>[];
+        final sub = FeedFirstFrameMetrics.events.listen(successes.add);
+        final timer = FeedFirstFrameMetrics.start(videoId: 'private', index: 2);
+        expect(async.pendingTimers, isEmpty);
+        async.elapse(const Duration(seconds: 1));
+        timer.finish(
+          outcome: FeedPlaybackOutcome.error,
+          errorCategory: FeedPlaybackError.initialization,
+        );
+        expect(successes, isEmpty);
+        async.elapse(const Duration(seconds: 2));
+        timer
+          ..markControllerInitialized()
+          ..markSourceReady()
+          ..markPlaybackRequested();
+        final recovered = timer.complete(loadedFromCache: true);
+        expect(recovered, same(successes.single));
+        expect(recovered!.duration, greaterThanOrEqualTo(Duration.zero));
+        expect(recovered.controllerInitializedAt, isNotNull);
+        expect(recovered.sourceReadyAt, isNotNull);
+        expect(recovered.playbackRequestedAt, isNotNull);
+        expect(recovered.loadedFromCache, isTrue);
+        expect(recovered.index, 2);
+        expect(timer.complete(loadedFromCache: false), isNull);
+        expect(successes, hasLength(1));
+        expect(async.pendingTimers, isEmpty);
+        unawaited(sub.cancel());
+      });
+    });
+
     test('publishes a full-id measurement exactly once', () async {
       const videoId =
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';

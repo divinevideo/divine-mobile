@@ -61,6 +61,79 @@ class VideoCacheTest {
     }
 
     @Test
+    fun `progressive Media3 headers preserve caching with and without telemetry`() {
+        // ProgressiveMediaPeriod.ExtractingLoadable adds ICY on every open,
+        // and If-Range when resuming with a strong ETag (Media3 1.11.1).
+        for (frameworkHeaders in listOf(
+            mapOf("Icy-MetaData" to "1"),
+            mapOf("Icy-MetaData" to "1", "If-Range" to "\"media-etag\""),
+        )) {
+            for (appHeaders in listOf(
+                emptyMap(),
+                mapOf("X-Playback-Load-Id" to "11111111-1111-4111-8111-111111111111"),
+            )) {
+                val cached = mockk<DataSource>(relaxed = true)
+                val uncached = mockk<DataSource>(relaxed = true)
+                val source = CacheBypassDataSource(
+                    cachedFactory = DataSource.Factory { cached },
+                    uncachedFactory = DataSource.Factory { uncached },
+                    httpHeadersForUri = { appHeaders },
+                )
+                source.open(dataSpec().withRequestHeaders(frameworkHeaders))
+                verify(exactly = 1) {
+                    cached.open(match { it.httpRequestHeaders == frameworkHeaders + appHeaders })
+                }
+                verify(exactly = 0) { uncached.open(any()) }
+            }
+        }
+    }
+
+    @Test
+    fun `app headers still bypass caching even when named like framework headers`() {
+        for (appHeaders in listOf(
+            authHeaders,
+            mapOf("Other" to "value"),
+            mapOf("Icy-MetaData" to "1"),
+            mapOf("If-Range" to "\"app-etag\""),
+        )) {
+            val headers = appHeaders + mapOf("X-Playback-Load-Id" to "11111111-1111-4111-8111-111111111111")
+            val cached = mockk<DataSource>(relaxed = true)
+            val uncached = mockk<DataSource>(relaxed = true)
+            val source = CacheBypassDataSource(
+                cachedFactory = DataSource.Factory { cached },
+                uncachedFactory = DataSource.Factory { uncached },
+                httpHeadersForUri = { headers },
+            )
+            val frameworkHeaders = mapOf("Icy-MetaData" to "1", "If-Range" to "\"media-etag\"")
+            source.open(dataSpec().withRequestHeaders(frameworkHeaders))
+            verify(exactly = 1) {
+                uncached.open(match { it.httpRequestHeaders == frameworkHeaders + headers })
+            }
+            verify(exactly = 0) { cached.open(any()) }
+        }
+    }
+
+    @Test
+    fun `unknown DataSpec headers and nonstandard ICY values bypass caching`() {
+        for (headers in listOf(
+            mapOf("Other" to "value"),
+            mapOf("Icy-MetaData" to "0"),
+            mapOf("Icy-MetaData" to "1", "Authorization" to "Nostr token"),
+        )) {
+            val cached = mockk<DataSource>(relaxed = true)
+            val uncached = mockk<DataSource>(relaxed = true)
+            val source = CacheBypassDataSource(
+                cachedFactory = DataSource.Factory { cached },
+                uncachedFactory = DataSource.Factory { uncached },
+                httpHeadersForUri = { emptyMap() },
+            )
+            source.open(dataSpec().withRequestHeaders(headers))
+            verify(exactly = 1) { uncached.open(any()) }
+            verify(exactly = 0) { cached.open(any()) }
+        }
+    }
+
+    @Test
     fun `headers already on DataSpec still enforce authorization cache bypass`() {
         val cached = mockk<DataSource>(relaxed = true)
         val uncached = mockk<DataSource>(relaxed = true)
@@ -120,10 +193,14 @@ class VideoCacheTest {
         val source = CacheBypassDataSource(
             cachedFactory = cachedFactory,
             uncachedFactory = uncachedFactory,
-            httpHeadersForUri = { emptyMap() },
+            httpHeadersForUri = {
+                mapOf("X-Playback-Load-Id" to "11111111-1111-4111-8111-111111111111")
+            },
         )
 
-        source.open(DataSpec.Builder().setUri(uri).build())
+        source.open(DataSpec.Builder().setUri(uri).setHttpRequestHeaders(
+            mapOf("Icy-MetaData" to "1", "If-Range" to "\"media-etag\""),
+        ).build())
 
         verify(exactly = 1) { uncachedFactory.createDataSource() }
         verify(exactly = 0) { cachedFactory.createDataSource() }

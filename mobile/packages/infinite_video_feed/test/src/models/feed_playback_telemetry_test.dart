@@ -29,7 +29,7 @@ void main() {
     );
 
     test(
-      'terminal failure is one shot and never reaches success stream',
+      'terminal failure alone is one shot and never fabricates success',
       () async {
         FeedPlaybackTelemetry.configure(enabled: true);
         final terminals = <Map<String, Object?>>[];
@@ -41,7 +41,7 @@ void main() {
             outcome: FeedPlaybackOutcome.error,
             errorCategory: FeedPlaybackError.initialization,
           )
-          ..complete(loadedFromCache: false);
+          ..finish(outcome: FeedPlaybackOutcome.cancelled);
         expect(terminals, hasLength(1));
         expect(terminals.single['outcome'], 'error');
         expect(terminals.single['error_category'], 'initialization');
@@ -50,6 +50,52 @@ void main() {
         expect(successes, isEmpty);
         await sub.cancel();
         await successSub.cancel();
+      },
+    );
+
+    test(
+      'recovered first frame preserves error terminal and success timing',
+      () {
+        fakeAsync((async) {
+          FeedPlaybackTelemetry.configure(enabled: true);
+          final terminals = <Map<String, Object?>>[];
+          final successes = <FeedFirstFrameMetric>[];
+          final sub = FeedPlaybackTelemetry.events.listen(terminals.add);
+          final successSub = FeedFirstFrameMetrics.events.listen(successes.add);
+          final timer = FeedFirstFrameMetrics.start(
+            videoId: 'private',
+            index: 0,
+          );
+          async.elapse(const Duration(seconds: 1));
+          timer.finish(
+            outcome: FeedPlaybackOutcome.error,
+            errorCategory: FeedPlaybackError.initialization,
+          );
+          expect(successes, isEmpty);
+          expect(terminals.single['elapsed_ms'], isNonNegative);
+          async.elapse(const Duration(seconds: 2));
+          timer
+            ..attachLoad(FeedPlaybackTelemetry.startLoad())
+            ..markControllerInitialized()
+            ..markSourceReady()
+            ..markPlaybackRequested();
+          final recovered = timer.complete(loadedFromCache: false);
+          expect(recovered, same(successes.single));
+          expect(recovered!.duration, greaterThanOrEqualTo(Duration.zero));
+          expect(recovered.controllerInitializedAt, isNotNull);
+          expect(recovered.sourceReadyAt, isNotNull);
+          expect(recovered.playbackRequestedAt, isNotNull);
+          expect(timer.complete(loadedFromCache: false), isNull);
+          expect(successes, hasLength(1));
+          expect(terminals, hasLength(1));
+          expect(terminals.single['outcome'], 'error');
+          expect(terminals.single['error_category'], 'initialization');
+          expect(terminals.single['load_id'], isNull);
+          expect(terminals.single, isNot(contains('ttff_ms')));
+          expect(async.pendingTimers, isEmpty);
+          unawaited(sub.cancel());
+          unawaited(successSub.cancel());
+        });
       },
     );
 
@@ -106,13 +152,25 @@ void main() {
       fakeAsync((async) {
         FeedPlaybackTelemetry.configure(enabled: true);
         final terminals = <Map<String, Object?>>[];
+        final successes = <FeedFirstFrameMetric>[];
         final sub = FeedPlaybackTelemetry.events.listen(terminals.add);
+        final successSub = FeedFirstFrameMetrics.events.listen(successes.add);
         final timer = FeedFirstFrameMetrics.start(videoId: 'private', index: 0);
         async.elapse(const Duration(seconds: 60));
-        timer.complete(loadedFromCache: false);
+        expect(successes, isEmpty);
         expect(terminals.single['outcome'], 'no_frame');
         expect(terminals.single['error_category'], 'timeout');
+        async.elapse(const Duration(seconds: 5));
+        final late = timer.complete(loadedFromCache: false);
+        expect(late, same(successes.single));
+        expect(late!.duration, greaterThanOrEqualTo(Duration.zero));
+        expect(timer.complete(loadedFromCache: false), isNull);
+        expect(successes, hasLength(1));
+        expect(terminals, hasLength(1));
+        expect(terminals.single['outcome'], 'no_frame');
+        expect(terminals.single, isNot(contains('ttff_ms')));
         unawaited(sub.cancel());
+        unawaited(successSub.cancel());
       });
     });
 
