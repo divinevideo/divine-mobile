@@ -87,7 +87,17 @@ class CommentModerationRepository {
           ],
         ),
       ], timeout: _loadTimeout);
-      _remember(result.events);
+      _remember(
+        result.events.where(
+          (event) =>
+              _isModerationBy(
+                event,
+                owner,
+                _videoIdentifier(rootAddressableId),
+              ) ||
+              _isModerationBy(event, owner, hiddenCommentersIdentifier),
+        ),
+      );
     } on Exception {
       // Fail open: the thread shows with what was seen last, see above.
     }
@@ -156,7 +166,11 @@ class CommentModerationRepository {
     }
     await _publish(owner, current, [
       ['d', hiddenCommentersIdentifier],
-      for (final tag in current?.tags ?? const <List<String>>[])
+      // The signing path re-derives Divine's `client` tag from the user's
+      // current choice, so the old one is not carried forward.
+      for (final tag in Nip89ClientTag.withoutClientTag(
+        current?.tags ?? const [],
+      ))
         if (tag.isNotEmpty && tag[0] != 'd' && tag[0] != 'p') tag,
       for (final author in authors) ['p', author],
     ]);
@@ -180,8 +194,10 @@ class CommentModerationRepository {
       ['d', identifier],
       ['a', rootAddressableId],
       // Everything else stays, including the pins and hides of video replies
-      // the replies sticker wrote.
-      for (final tag in current?.tags ?? const <List<String>>[])
+      // the replies sticker wrote; the `client` tag is re-derived.
+      for (final tag in Nip89ClientTag.withoutClientTag(
+        current?.tags ?? const [],
+      ))
         if (!_isIdentifier(tag) &&
             !_isVideoAssociation(tag, rootAddressableId) &&
             !_isModerationOf(tag, keys))
@@ -213,7 +229,9 @@ class CommentModerationRepository {
         'Moderation could not be read in full',
       );
     }
-    _remember(result.events);
+    _remember(
+      result.events.where((event) => _isModerationBy(event, owner, identifier)),
+    );
     return _latestEvents[_key(owner, identifier)];
   }
 
@@ -345,4 +363,13 @@ class CommentModerationRepository {
   }
 
   static String _key(String pubkey, String identifier) => '$pubkey:$identifier';
+
+  /// Whether a relay's [event] is [owner]'s signed moderation for
+  /// [identifier]: only then may its tags count, or be signed again.
+  static bool _isModerationBy(Event event, String owner, String identifier) =>
+      event.pubkey == owner &&
+      event.kind == commentModerationKind &&
+      event.dTagValue == identifier &&
+      event.isValid &&
+      event.isSigned;
 }

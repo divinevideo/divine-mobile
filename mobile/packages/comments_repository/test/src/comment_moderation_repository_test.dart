@@ -8,16 +8,18 @@ class _MockNostrClient extends Mock implements NostrClient {}
 
 class _FakeEvent extends Fake implements Event {}
 
-const _owner =
-    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-const _stranger =
-    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+String _hex(int n) => n.toRadixString(16).padLeft(64, '0');
+
+final String _ownerKey = _hex(1);
+final String _strangerKey = _hex(2);
+final String _owner = getPublicKey(_ownerKey);
+final String _stranger = getPublicKey(_strangerKey);
 const _commenter =
     'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 const _otherCommenter =
     'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
-const _coordinate = '34236:$_owner:video-dtag';
-const _videoIdentifier = '$videoRepliesModerationPrefix$_coordinate';
+final String _coordinate = '34236:$_owner:video-dtag';
+final String _videoIdentifier = '$videoRepliesModerationPrefix$_coordinate';
 const _videoReplyAddress = '34236:$_commenter:reply-dtag';
 
 const _commentA =
@@ -41,11 +43,11 @@ Comment _comment(String id, {String? addressableId}) => Comment(
 Event _moderationEvent({
   required String identifier,
   required List<List<String>> tags,
-  String pubkey = _owner,
+  String? pubkey,
   int createdAt = 1000,
   String content = '',
 }) => Event(
-  pubkey,
+  pubkey ?? _owner,
   commentModerationKind,
   [
     ['d', identifier],
@@ -53,7 +55,7 @@ Event _moderationEvent({
   ],
   content,
   createdAt: createdAt,
-);
+)..sign(pubkey == _stranger ? _strangerKey : _ownerKey);
 
 void main() {
   group(CommentModerationRepository, () {
@@ -345,6 +347,7 @@ void main() {
               content: 'kept',
               tags: [
                 ['a', _coordinate],
+                ['alt', 'kept'],
                 ['client', 'divine'],
                 ['a', _videoReplyAddress, '', 'pinned'],
                 ['e', _commentB, '', 'restored'],
@@ -366,7 +369,7 @@ void main() {
           expect(event.tags, [
             ['d', _videoIdentifier],
             ['a', _coordinate],
-            ['client', 'divine'],
+            ['alt', 'kept'],
             ['a', _videoReplyAddress, '', 'pinned'],
             ['e', _commentB, '', 'restored'],
             ['e', _commentA, '', 'hidden'],
@@ -626,6 +629,7 @@ void main() {
             tags: [
               ['p', _commenter],
               ['p', _stranger],
+              ['alt', 'kept'],
               ['client', 'divine'],
             ],
           ),
@@ -633,13 +637,13 @@ void main() {
         answerPublishes();
 
         await repository.updateAutoHiddenAuthors(
-          add: const [_otherCommenter, _owner, ''],
-          remove: const [_stranger],
+          add: [_otherCommenter, _owner, ''],
+          remove: [_stranger],
         );
 
         expect(publishedEvent().tags, [
           ['d', hiddenCommentersIdentifier],
-          ['client', 'divine'],
+          ['alt', 'kept'],
           ['p', _commenter],
           ['p', _otherCommenter],
         ]);
@@ -701,6 +705,100 @@ void main() {
           repository.updateAutoHiddenAuthors(add: const [_commenter]),
           throwsA(isA<CommentModerationFailedException>()),
         );
+      });
+    });
+
+    // Only the owner's own signed event may count, or be signed again.
+    group('an event the owner did not sign', () {
+      /// The owner's moderation with a signature that does not verify.
+      Event unsigned({
+        required String identifier,
+        required List<List<String>> tags,
+        String content = '',
+      }) => _moderationEvent(
+        identifier: identifier,
+        tags: tags,
+        content: content,
+        createdAt: 2000,
+      )..sig = 'ab' * 64;
+
+      test('is not honored by loadModeration', () async {
+        answerReads([
+          unsigned(
+            identifier: _videoIdentifier,
+            tags: [
+              ['e', _commentA, '', 'hidden'],
+            ],
+          ),
+        ]);
+
+        final moderation = await repository.loadModeration(
+          rootAddressableId: _coordinate,
+        );
+
+        expect(moderation.hides(_comment(_commentA)), isFalse);
+      });
+
+      test('is not honored when altered after signing', () async {
+        final altered = _moderationEvent(
+          identifier: _videoIdentifier,
+          tags: [
+            ['e', _commentA, '', 'restored'],
+          ],
+        )..tags.add(['e', _commentB, '', 'hidden']);
+        answerReads([altered]);
+
+        final moderation = await repository.loadModeration(
+          rootAddressableId: _coordinate,
+        );
+
+        expect(moderation.hides(_comment(_commentB)), isFalse);
+      });
+
+      test('does not have its tags or content signed again', () async {
+        answerReads([
+          unsigned(
+            identifier: _videoIdentifier,
+            tags: [
+              ['a', _videoReplyAddress, '', 'pinned'],
+              ['e', _commentB, '', 'hidden'],
+            ],
+            content: 'not the owner',
+          ),
+        ]);
+        answerPublishes();
+
+        await repository.hideComment(
+          rootAddressableId: _coordinate,
+          comment: _comment(_commentA),
+        );
+
+        final event = publishedEvent();
+        expect(event.content, isEmpty);
+        expect(event.tags, [
+          ['d', _videoIdentifier],
+          ['a', _coordinate],
+          ['e', _commentA, '', 'hidden'],
+        ]);
+      });
+
+      test('does not have its hidden commenters signed again', () async {
+        answerReads([
+          unsigned(
+            identifier: hiddenCommentersIdentifier,
+            tags: [
+              ['p', _otherCommenter],
+            ],
+          ),
+        ]);
+        answerPublishes();
+
+        await repository.updateAutoHiddenAuthors(add: const [_commenter]);
+
+        expect(publishedEvent().tags, [
+          ['d', hiddenCommentersIdentifier],
+          ['p', _commenter],
+        ]);
       });
     });
   });
