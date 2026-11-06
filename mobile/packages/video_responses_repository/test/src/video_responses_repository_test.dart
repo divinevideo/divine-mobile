@@ -1048,18 +1048,19 @@ void main() {
         );
       });
 
-      test('keeps the hidden accounts it found when the read timed '
-          'out', () async {
+      test('fails when the read timed out with only the hidden '
+          'accounts', () async {
         curationAnswers([
           _hiddenAuthorsEvent(createdAt: 1000, authors: [_hex(301)]),
         ], timedOut: true);
 
-        expect(
-          await repository().fetchCuration(
+        // Read as "nothing curated", the video's hidden replies would show.
+        await expectLater(
+          repository().fetchCuration(
             creatorPubkey: _creator,
             videoAddress: _rootAddress,
           ),
-          equals(RepliesCuration(hiddenAuthors: {_hex(301)})),
+          throwsA(isA<RepliesCurationUnavailableException>()),
         );
       });
     });

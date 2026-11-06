@@ -415,7 +415,9 @@ class VideoResponsesRepository {
           ),
         )
         .toList();
-    if (eligible.isEmpty && authorLists.isEmpty && (timedOut || noRelays)) {
+    // The hidden accounts alone say nothing about this video's pins and
+    // hides, so a read that missed the curation fails as before.
+    if (eligible.isEmpty && (timedOut || noRelays)) {
       throw RepliesCurationUnavailableException(
         noRelays ? 'No relay could be asked' : 'The relays did not answer',
       );
