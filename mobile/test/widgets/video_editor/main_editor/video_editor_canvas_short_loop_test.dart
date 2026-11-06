@@ -231,8 +231,8 @@ void main() {
         originalAspectRatio: 9 / 16,
       );
 
-  /// Mounts the canvas over one clip of [duration] and lets its player come
-  /// up on the mocked channel.
+  /// Mounts the canvas over [clips], or over one clip of [duration] when
+  /// [clips] is omitted, and lets its player come up on the mocked channel.
   Future<void> pumpCanvas(
     WidgetTester tester,
     Duration duration, {
