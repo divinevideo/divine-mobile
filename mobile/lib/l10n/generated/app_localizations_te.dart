@@ -8985,9 +8985,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get commentsSortSemanticLabel => 'వ్యాఖ్యల క్రమబద్ధీకరణ';
 
   @override
-  String get commentsHiddenLabel => 'దాచబడినవి';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => 'దాచిన వ్యాఖ్యలను చూపించండి';
 
   @override

@@ -8937,9 +8937,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Sortarea comentariilor';
 
   @override
-  String get commentsHiddenLabel => 'Ascunse';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => 'Arată comentariile ascunse';
 
   @override

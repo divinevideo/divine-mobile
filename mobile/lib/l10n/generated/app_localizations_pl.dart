@@ -8944,9 +8944,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Sortowanie komentarzy';
 
   @override
-  String get commentsHiddenLabel => 'Ukryte';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => 'Pokaż ukryte komentarze';
 
   @override

@@ -8688,9 +8688,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Sắp xếp bình luận';
 
   @override
-  String get commentsHiddenLabel => 'Đã ẩn';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => 'Hiện bình luận đã ẩn';
 
   @override

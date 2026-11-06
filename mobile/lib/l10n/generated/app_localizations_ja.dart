@@ -8294,9 +8294,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get commentsSortSemanticLabel => 'コメントの並び替え';
 
   @override
-  String get commentsHiddenLabel => '非表示';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => '非表示のコメントを表示';
 
   @override

@@ -8640,9 +8640,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Urutan komentar';
 
   @override
-  String get commentsHiddenLabel => 'Disembunyikan';
-
-  @override
   String get commentsHiddenToggleSemanticLabel =>
       'Tampilkan komentar yang disembunyikan';
 

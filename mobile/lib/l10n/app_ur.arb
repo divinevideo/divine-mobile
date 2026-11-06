@@ -4511,7 +4511,6 @@
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
-  "commentsHiddenLabel": "چھپے ہوئے",
   "commentsHiddenToggleSemanticLabel": "چھپے ہوئے تبصرے دکھائیں",
   "commentsHiddenNotice": "کریئیٹر نے یہ تبصرے جان بوجھ کر چھپائے ہیں۔",
   "commentsHiddenNoticeOwner": "آپ نے یہ تبصرے چھپائے ہیں۔ دوسرے انہیں صرف تب دیکھتے ہیں جب وہ خود چاہیں۔",

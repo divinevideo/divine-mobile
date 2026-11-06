@@ -1192,8 +1192,11 @@ class HiddenCommentsToggle extends StatelessWidget {
                 size: 14,
                 color: color,
               ),
+              // The count alone, no word beside it: the header centers its
+              // title, so a wider pill squeezed the title away on narrow
+              // phones. The semantics label above says what it counts.
               Text(
-                '${l10n.commentsHiddenLabel} $hiddenCount',
+                '$hiddenCount',
                 style: VineTheme.labelMediumFont(color: color),
               ),
             ],

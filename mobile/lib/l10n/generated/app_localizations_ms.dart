@@ -8732,9 +8732,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Isihan komen';
 
   @override
-  String get commentsHiddenLabel => 'Disembunyikan';
-
-  @override
   String get commentsHiddenToggleSemanticLabel =>
       'Tunjuk komen yang disembunyikan';
 

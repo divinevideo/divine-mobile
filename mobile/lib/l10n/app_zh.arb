@@ -4511,7 +4511,6 @@
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
-  "commentsHiddenLabel": "已隐藏",
   "commentsHiddenToggleSemanticLabel": "显示已隐藏的评论",
   "commentsHiddenNotice": "创作者有意隐藏了这些评论。",
   "commentsHiddenNoticeOwner": "这些评论是你隐藏的。其他人只有在自己选择时才会看到。",

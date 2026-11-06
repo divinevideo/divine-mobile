@@ -8529,9 +8529,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get commentsSortSemanticLabel => 'የአስተያየቶች ቅደም ተከተል';
 
   @override
-  String get commentsHiddenLabel => 'የተደበቁ';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => 'የተደበቁ አስተያየቶችን ማሳየት';
 
   @override

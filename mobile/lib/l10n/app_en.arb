@@ -6219,10 +6219,6 @@
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
-  "commentsHiddenLabel": "Hidden",
-  "@commentsHiddenLabel": {
-    "description": "Label of the comments-sheet header pill that shows, beside a count, how many comments the video owner hid. Tapping it shows or hides them again."
-  },
   "commentsHiddenToggleSemanticLabel": "Show hidden comments",
   "@commentsHiddenToggleSemanticLabel": {
     "description": "Accessibility label of the header toggle that shows the comments the video owner hid. Screen readers add the on/off state and the count."

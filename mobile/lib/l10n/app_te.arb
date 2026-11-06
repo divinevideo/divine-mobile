@@ -5247,7 +5247,6 @@
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
-  "commentsHiddenLabel": "దాచబడినవి",
   "commentsHiddenToggleSemanticLabel": "దాచిన వ్యాఖ్యలను చూపించండి",
   "commentsHiddenNotice": "సృష్టికర్త ఈ వ్యాఖ్యలను ఉద్దేశపూర్వకంగా దాచారు.",
   "commentsHiddenNoticeOwner": "మీరు ఈ వ్యాఖ్యలను దాచారు. ఇతరులు ఎంచుకుంటేనే వాటిని చూస్తారు.",

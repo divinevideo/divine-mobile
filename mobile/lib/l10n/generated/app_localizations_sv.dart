@@ -8726,9 +8726,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Sortering av kommentarer';
 
   @override
-  String get commentsHiddenLabel => 'Dolda';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => 'Visa dolda kommentarer';
 
   @override

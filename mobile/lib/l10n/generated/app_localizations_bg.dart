@@ -8813,9 +8813,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Подреждане на коментарите';
 
   @override
-  String get commentsHiddenLabel => 'Скрити';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => 'Покажи скритите коментари';
 
   @override

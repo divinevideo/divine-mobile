@@ -8772,9 +8772,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Sortering van reacties';
 
   @override
-  String get commentsHiddenLabel => 'Verborgen';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => 'Verborgen reacties tonen';
 
   @override

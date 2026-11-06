@@ -8863,9 +8863,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Tri des commentaires';
 
   @override
-  String get commentsHiddenLabel => 'Masqués';
-
-  @override
   String get commentsHiddenToggleSemanticLabel =>
       'Afficher les commentaires masqués';
 

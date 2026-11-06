@@ -8734,9 +8734,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get commentsSortSemanticLabel => 'تبصروں کی ترتیب';
 
   @override
-  String get commentsHiddenLabel => 'چھپے ہوئے';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => 'چھپے ہوئے تبصرے دکھائیں';
 
   @override

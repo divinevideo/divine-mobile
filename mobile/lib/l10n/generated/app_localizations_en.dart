@@ -8830,9 +8830,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Comments sorting';
 
   @override
-  String get commentsHiddenLabel => 'Hidden';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => 'Show hidden comments';
 
   @override

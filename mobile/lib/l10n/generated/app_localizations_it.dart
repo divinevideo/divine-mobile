@@ -8841,9 +8841,6 @@ class AppLocalizationsIt extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Ordinamento dei commenti';
 
   @override
-  String get commentsHiddenLabel => 'Nascosti';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => 'Mostra i commenti nascosti';
 
   @override

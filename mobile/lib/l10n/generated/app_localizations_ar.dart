@@ -8743,9 +8743,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get commentsSortSemanticLabel => 'ترتيب التعليقات';
 
   @override
-  String get commentsHiddenLabel => 'مخفية';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => 'عرض التعليقات المخفية';
 
   @override

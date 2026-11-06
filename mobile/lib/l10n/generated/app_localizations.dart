@@ -14609,12 +14609,6 @@ abstract class AppLocalizations {
   /// **'Comments sorting'**
   String get commentsSortSemanticLabel;
 
-  /// Label of the comments-sheet header pill that shows, beside a count, how many comments the video owner hid. Tapping it shows or hides them again.
-  ///
-  /// In en, this message translates to:
-  /// **'Hidden'**
-  String get commentsHiddenLabel;
-
   /// Accessibility label of the header toggle that shows the comments the video owner hid. Screen readers add the on/off state and the count.
   ///
   /// In en, this message translates to:

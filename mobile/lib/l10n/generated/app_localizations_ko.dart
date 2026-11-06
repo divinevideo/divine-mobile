@@ -8313,9 +8313,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get commentsSortSemanticLabel => '댓글 정렬';
 
   @override
-  String get commentsHiddenLabel => '숨김';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => '숨긴 댓글 보기';
 
   @override

@@ -8848,9 +8848,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Kommentare sortieren';
 
   @override
-  String get commentsHiddenLabel => 'Ausgeblendet';
-
-  @override
   String get commentsHiddenToggleSemanticLabel =>
       'Ausgeblendete Kommentare anzeigen';
 

@@ -4511,7 +4511,6 @@
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
-  "commentsHiddenLabel": "Disembunyikan",
   "commentsHiddenToggleSemanticLabel": "Tunjuk komen yang disembunyikan",
   "commentsHiddenNotice": "Pencipta sengaja menyembunyikan komen ini.",
   "commentsHiddenNoticeOwner": "Anda menyembunyikan komen ini. Orang lain hanya melihatnya jika mereka memilih untuk melihatnya.",

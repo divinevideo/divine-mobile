@@ -4511,7 +4511,6 @@
   "@commentsSortSemanticLabel": {
     "description": "Accessibility label for the comments-sort toggle group."
   },
-  "commentsHiddenLabel": "Đã ẩn",
   "commentsHiddenToggleSemanticLabel": "Hiện bình luận đã ẩn",
   "commentsHiddenNotice": "Nhà sáng tạo đã cố ý ẩn những bình luận này.",
   "commentsHiddenNoticeOwner": "Bạn đã ẩn những bình luận này. Người khác chỉ thấy chúng nếu họ chọn xem.",

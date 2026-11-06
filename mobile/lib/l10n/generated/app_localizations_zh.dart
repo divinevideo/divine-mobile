@@ -8218,9 +8218,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commentsSortSemanticLabel => '评论排序';
 
   @override
-  String get commentsHiddenLabel => '已隐藏';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => '显示已隐藏的评论';
 
   @override

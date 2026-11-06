@@ -8793,9 +8793,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Pagkakasunod-sunod ng mga komento';
 
   @override
-  String get commentsHiddenLabel => 'Nakatago';
-
-  @override
   String get commentsHiddenToggleSemanticLabel =>
       'Ipakita ang mga nakatagong komento';
 

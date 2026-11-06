@@ -8649,9 +8649,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get commentsSortSemanticLabel => 'Yorum sıralaması';
 
   @override
-  String get commentsHiddenLabel => 'Gizli';
-
-  @override
   String get commentsHiddenToggleSemanticLabel => 'Gizli yorumları göster';
 
   @override
