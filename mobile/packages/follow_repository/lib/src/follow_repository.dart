@@ -3497,6 +3497,9 @@ class FollowRepository {
 
       final owner = _nostrClient.publicKey;
       await previous;
+      // Dispose closes the following stream only after it unsubscribes, so
+      // the pre-publish read's own check can miss a dispose still under way.
+      if (_isDisposed) return false;
       // Failing rather than reporting it withheld keeps the caller from
       // saving this account's list under the new account's storage key.
       if (_nostrClient.publicKey != owner) {

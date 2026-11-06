@@ -245,17 +245,28 @@ void main() {
     });
 
     test('drops a queued publish when the repository is disposed while it '
-        'waits', () async {
+        'waits, before dispose has finished', () async {
+      // Dispose closes the following stream only after it unsubscribes, so
+      // a queued publish can resume while dispose is still under way.
+      final unsubscribed = Completer<void>();
+      addTearDown(() {
+        if (!unsubscribed.isCompleted) unsubscribed.complete();
+      });
+      when(
+        () => client.unsubscribe(any()),
+      ).thenAnswer((_) => unsubscribed.future);
       final first = repository.followWithResult(_alice);
       await relay.untilStarted(1);
       final second = repository.followWithResult(_bob);
       await pumpEventQueue();
-      await repository.dispose();
+      final disposed = repository.dispose();
       await relay.release();
 
       await first;
       expect(await second, FollowOutcome.queued);
       expect(relay.started, hasLength(1));
+      unsubscribed.complete();
+      await disposed;
     });
   });
 }
