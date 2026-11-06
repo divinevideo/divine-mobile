@@ -76,5 +76,26 @@ void main() {
       final video = build(eventKind: 34236);
       expect(video.addressableId, isNull);
     });
+    group('divineAddress', () {
+      test('is the own coordinate of a Kind 34236 video', () {
+        final video = build(eventKind: 34236, addressableDTag: 'vine123');
+        expect(video.divineAddress, equals('34236:$pubkey:vine123'));
+      });
+
+      test('keeps a Kind 34235 video on the 34236 key Divine gave it', () {
+        final video = build(eventKind: 34235, addressableDTag: 'reel456');
+        expect(video.divineAddress, equals('34236:$pubkey:reel456'));
+      });
+
+      test('is the 34236 key when the kind is unknown', () {
+        final video = build(addressableDTag: 'old789');
+        expect(video.divineAddress, equals('34236:$pubkey:old789'));
+      });
+
+      test('is null for a regular video, even with a d tag', () {
+        final video = build(eventKind: 22, addressableDTag: 'stray22');
+        expect(video.divineAddress, isNull);
+      });
+    });
   });
 }

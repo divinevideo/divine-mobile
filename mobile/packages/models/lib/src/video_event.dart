@@ -1596,6 +1596,16 @@ class VideoEvent {
     _ => null,
   };
 
+  /// The coordinate Divine-only formats name this video by: profile pins,
+  /// reply curation and Add yours chains. It is [addressableId], except that
+  /// a Kind 34235 video keeps the 34236 key Divine gave it before #10776, so
+  /// app versions from before then still read the same events.
+  String? get divineAddress {
+    final coordinate = addressableId;
+    if (coordinate == null) return null;
+    return legacyVideoCoordinateFor(coordinate) ?? coordinate;
+  }
+
   /// Canonical identity for feed/session deduplication.
   ///
   /// Addressable short-video events can be republished with a new event id
