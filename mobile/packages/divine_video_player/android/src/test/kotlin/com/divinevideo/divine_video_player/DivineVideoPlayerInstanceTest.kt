@@ -1664,8 +1664,8 @@ class DivineVideoPlayerInstanceTest {
         try {
             every { ClipAudioLoopTrack.create(any(), any(), any(), any(), any(), retainDecoded = any()) } returns null
             val headerFns = mutableListOf<(Uri) -> Map<String, String>>()
-            every { VideoCache.dataSourceFactory(any(), any()) } answers {
-                headerFns += secondArg<(Uri) -> Map<String, String>>()
+            every { VideoCache.dataSourceFactory(any(), any(), any()) } answers {
+                headerFns += thirdArg<(Uri) -> Map<String, String>>()
                 DataSource.Factory { mockk(relaxed = true) }
             }
             presentDuration(3_000L)

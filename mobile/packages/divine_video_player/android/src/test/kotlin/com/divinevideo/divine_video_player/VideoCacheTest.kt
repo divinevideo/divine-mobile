@@ -40,6 +40,41 @@ class VideoCacheTest {
     }
 
     @Test
+    fun `telemetry only headers preserve caching while mixed auth still bypasses`() {
+        for (headers in listOf(
+            mapOf("X-Playback-Load-Id" to "11111111-1111-4111-8111-111111111111"),
+            mapOf("x-playback-load-id" to "11111111-1111-4111-8111-111111111111"),
+            mapOf("X-Playback-Load-Id" to "11111111-1111-4111-8111-111111111111", "Authorization" to "Nostr token"),
+            mapOf("X-Playback-Load-Id" to "11111111-1111-4111-8111-111111111111", "Other" to "value"),
+        )) {
+            val cached = mockk<DataSource>(relaxed = true)
+            val uncached = mockk<DataSource>(relaxed = true)
+            val source = CacheBypassDataSource(
+                cachedFactory = DataSource.Factory { cached },
+                uncachedFactory = DataSource.Factory { uncached },
+                httpHeadersForUri = { headers },
+            )
+            source.open(dataSpec())
+            val expected = if (headers.size == 1) cached else uncached
+            verify(exactly = 1) { expected.open(match { it.httpRequestHeaders == headers }) }
+        }
+    }
+
+    @Test
+    fun `headers already on DataSpec still enforce authorization cache bypass`() {
+        val cached = mockk<DataSource>(relaxed = true)
+        val uncached = mockk<DataSource>(relaxed = true)
+        val source = CacheBypassDataSource(
+            cachedFactory = DataSource.Factory { cached },
+            uncachedFactory = DataSource.Factory { uncached },
+            httpHeadersForUri = { emptyMap() },
+        )
+        source.open(dataSpec().withRequestHeaders(authHeaders))
+        verify(exactly = 1) { uncached.open(any()) }
+        verify(exactly = 0) { cached.open(any()) }
+    }
+
+    @Test
     fun `open attaches viewer headers and bypasses the cache for gated content`() {
         val cachedDelegate = mockk<DataSource>(relaxed = true)
         val uncachedDelegate = mockk<DataSource>(relaxed = true)

@@ -34,7 +34,6 @@ import java.io.File
 internal object VideoCache {
 
     private var cache: SimpleCache? = null
-    private var cacheDataSourceFactory: CacheDataSource.Factory? = null
 
     /** Whether [configure] has been called successfully. */
     val isConfigured: Boolean get() = cache != null
@@ -56,12 +55,6 @@ internal object VideoCache {
         val databaseProvider = StandaloneDatabaseProvider(context)
 
         cache = SimpleCache(cacheDir, evictor, databaseProvider)
-
-        cacheDataSourceFactory = CacheDataSource.Factory()
-            .setCache(cache!!)
-            .setUpstreamDataSourceFactory(upstreamFactory(context))
-            // Read from cache first, fill progressively on miss.
-            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
     /**
@@ -74,10 +67,15 @@ internal object VideoCache {
      */
     fun dataSourceFactory(
         context: Context,
+        onPlaybackNetwork: (Map<String, Any>) -> Unit = {},
         httpHeadersForUri: (Uri) -> Map<String, String> = { emptyMap() },
     ): DataSource.Factory {
-        val cachedFactory = cacheDataSourceFactory ?: upstreamFactory(context)
-        val uncachedFactory = upstreamFactory(context)
+        val uncachedFactory = upstreamFactory(context, onPlaybackNetwork)
+        val cachedFactory = cache?.let { sharedCache ->
+            CacheDataSource.Factory().setCache(sharedCache)
+                .setUpstreamDataSourceFactory(uncachedFactory)
+                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        } ?: uncachedFactory
         return DataSource.Factory {
             CacheBypassDataSource(
                 cachedFactory = cachedFactory,
@@ -87,12 +85,16 @@ internal object VideoCache {
         }
     }
 
-    private fun upstreamFactory(context: Context): DataSource.Factory {
+    private fun upstreamFactory(
+        context: Context,
+        onPlaybackNetwork: (Map<String, Any>) -> Unit = {},
+    ): DataSource.Factory {
         val defaultHttpDataSourceFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
         val httpDataSourceFactory = DataSource.Factory {
-            ProcessingResponseDataSource(
-                defaultHttpDataSourceFactory.createDataSource(),
+            PlaybackNetworkDataSource(
+                ProcessingResponseDataSource(defaultHttpDataSourceFactory.createDataSource()),
+                onPlaybackNetwork,
             )
         }
         return DefaultDataSource.Factory(context, httpDataSourceFactory)
@@ -103,7 +105,6 @@ internal object VideoCache {
     fun release() {
         cache?.release()
         cache = null
-        cacheDataSourceFactory = null
     }
 }
 
@@ -198,7 +199,11 @@ internal class CacheBypassDataSource(
             dataSpec.withRequestHeaders(dataSpec.httpRequestHeaders + httpHeaders)
         }
         val isB2Canary = dataSpec.uri.host.equals("media-b2.divine.video", ignoreCase = true)
-        val useCache = httpHeaders.isEmpty() &&
+        // Correlation does not change a resource or its cache key. All other
+        // headers retain the existing bypass, including Authorization.
+        val useCache = resolvedDataSpec.httpRequestHeaders.keys.all {
+            it.equals("X-Playback-Load-Id", ignoreCase = true)
+        } &&
             isCacheableScheme(dataSpec.uri.scheme) && !isB2Canary
         val selectedDelegate = if (useCache) {
             cachedFactory.createDataSource()

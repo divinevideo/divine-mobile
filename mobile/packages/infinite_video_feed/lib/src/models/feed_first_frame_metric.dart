@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:infinite_video_feed/src/models/feed_playback_telemetry.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// A measured activation-to-first-frame interval in the fullscreen feed.
@@ -77,7 +78,15 @@ abstract final class FeedFirstFrameMetrics {
 /// A one-shot monotonic timer created by [FeedFirstFrameMetrics.start].
 class FeedFirstFrameTimer {
   FeedFirstFrameTimer._({required this.videoId, required this.index})
-    : _stopwatch = Stopwatch()..start();
+    : _stopwatch = Stopwatch()..start(),
+      _attempt = FeedPlaybackTelemetry.startAttempt() {
+    _timeout = Timer(const Duration(seconds: 60), () {
+      finish(
+        outcome: FeedPlaybackOutcome.noFrame,
+        errorCategory: FeedPlaybackError.timeout,
+      );
+    });
+  }
 
   /// Full Nostr event id for the video being measured.
   final String videoId;
@@ -86,6 +95,36 @@ class FeedFirstFrameTimer {
   final int index;
 
   final Stopwatch _stopwatch;
+  final FeedPlaybackAttempt? _attempt;
+  Timer? _timeout;
+
+  /// Binds this activation to an observed source load in the same context.
+  void attachLoad(FeedPlaybackLoad? load) {
+    if (_completed) return;
+    _attempt?.attachLoad(load);
+  }
+
+  /// Terminates an abandoned/failed activation without creating a success trace.
+  void finish({
+    required FeedPlaybackOutcome outcome,
+    FeedPlaybackError errorCategory = FeedPlaybackError.none,
+    String localCache = 'unknown',
+  }) {
+    if (_completed) return;
+    _completed = true;
+    _timeout?.cancel();
+    _stopwatch.stop();
+    _attempt?.finish(
+      outcome: outcome,
+      elapsed: _stopwatch.elapsed,
+      localCache: localCache,
+      error: errorCategory,
+      controllerInitialized: _controllerInitializedAt,
+      sourceReady: _sourceReadyAt,
+      playbackRequested: _playbackRequestedAt,
+    );
+  }
+
   bool _completed = false;
   Duration? _controllerInitializedAt;
   Duration? _sourceReadyAt;
@@ -109,8 +148,10 @@ class FeedFirstFrameTimer {
   /// Stops and publishes this measurement once.
   FeedFirstFrameMetric? complete({required bool loadedFromCache}) {
     if (_completed) return null;
-    _completed = true;
-    _stopwatch.stop();
+    finish(
+      outcome: FeedPlaybackOutcome.firstFrame,
+      localCache: loadedFromCache ? 'hit' : 'unknown',
+    );
     final metric = FeedFirstFrameMetric(
       videoId: videoId,
       index: index,

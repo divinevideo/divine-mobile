@@ -602,7 +602,9 @@ internal class DivineVideoPlayerInstance(
             .setMediaSourceFactory(
                 CommonTrackEndMediaSourceFactory(
                     DefaultMediaSourceFactory(
-                        VideoCache.dataSourceFactory(context) { uri: Uri ->
+                        VideoCache.dataSourceFactory(context, onPlaybackNetwork = { sample ->
+                            mainHandler.post { eventSink?.success(sample) }
+                        }) { uri: Uri ->
                             httpHeadersForRequest(uri.toString())
                         },
                         extractorsFactory,
@@ -643,7 +645,11 @@ internal class DivineVideoPlayerInstance(
      * on a range another holds locked would wait on itself.
      */
     private fun extractorDataSourceFactory(headers: Map<String, String>): DataSource.Factory =
-        VideoCache.dataSourceFactory(context) { _ -> headers }
+        VideoCache.dataSourceFactory(context) { _ ->
+            // Audio extraction can outlive the active source. It has no
+            // request observation and must not retain playback correlation.
+            headers.filterKeys { !it.equals("X-Playback-Load-Id", ignoreCase = true) }
+        }
 
     internal fun httpHeadersForRequest(url: String): Map<String, String> {
         httpHeadersByUri[url]?.let { return it }
@@ -703,6 +709,14 @@ internal class DivineVideoPlayerInstance(
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
+            "clearPlaybackTelemetry" -> {
+                fun scrub(headers: Map<String, String>) = headers.filterKeys {
+                    !it.equals("X-Playback-Load-Id", ignoreCase = true)
+                }
+                httpHeadersByUri = httpHeadersByUri.mapValues { scrub(it.value) }
+                httpHeadersByHash = httpHeadersByHash.mapValues { scrub(it.value) }
+                result.success(null)
+            }
             "setClips" -> handleSetClips(call, result)
             "play" -> handlePlay(result)
             "pause" -> handlePause(result)

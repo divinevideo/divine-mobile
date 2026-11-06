@@ -80,6 +80,31 @@ void main() {
     apiBaseUrl: () => apiBaseUrl,
   );
 
+  test(
+    'playback batches use explicit schema without identity or authorization',
+    () async {
+      http.Request? captured;
+      final client = buildClient(
+        MockClient((request) async {
+          captured = request;
+          return http.Response('{"accepted":true}', 202);
+        }),
+      );
+      final result = await client.publishPlaybackBatch([
+        {'event_id': '11111111-1111-4111-8111-111111111111'},
+      ]);
+      expect(result, isA<AnalyticsIngestAccepted>());
+      expect(captured!.url.path, '/api/analytics/events/anonymous');
+      expect(captured!.headers, isNot(contains('Authorization')));
+      expect(jsonDecode(captured!.body), {
+        'schema': 'divine.playback.batch.v1',
+        'events': [
+          {'event_id': '11111111-1111-4111-8111-111111111111'},
+        ],
+      });
+    },
+  );
+
   group('publishBatch', () {
     test('signed batches put the subject outside version-two events', () async {
       stubToken(buildToken());

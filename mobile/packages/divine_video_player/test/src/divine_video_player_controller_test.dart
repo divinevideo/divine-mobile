@@ -98,6 +98,28 @@ void main() {
     await controller.initialize();
   }
 
+  test(
+    'network telemetry preserves playback state '
+    'and privacy clears native context',
+    () async {
+      await initController();
+      final samples = <Map<String, Object?>>[];
+      final sub = controller.playbackNetworkEvents.listen(samples.add);
+      eventController.add({
+        'type': 'playback_network',
+        'load_id': '11111111-1111-4111-8111-111111111111',
+        'network_headers_ms': 17,
+      });
+      await Future<void>.delayed(Duration.zero);
+      expect(samples.single['network_headers_ms'], 17);
+      expect(controller.state.status, PlaybackStatus.idle);
+      await DivineVideoPlayerController.clearPlaybackTelemetryContext();
+      expect(playerCalls.last.method, 'clearPlaybackTelemetry');
+      await sub.cancel();
+      await controller.dispose();
+    },
+  );
+
   group(DivineVideoPlayerController, () {
     group('before initialize', () {
       test('isInitialized is false', () {

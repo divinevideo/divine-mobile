@@ -394,9 +394,9 @@ public class DivineVideoPlayerPlugin: NSObject, FlutterPlugin {
                 let textureId = instance.enableTextureOutput(
                     registry: textures
                 )
-                result(["textureId": textureId])
+                result(["textureId": textureId, "playbackTelemetrySupported": true])
             } else {
-                result(nil)
+                result(["playbackTelemetrySupported": true])
             }
 
         case "dispose":
