@@ -1,7 +1,6 @@
 // ABOUTME: Tests the write of a detached clip's volume onto its layer, which
 // ABOUTME: the timeline's volume panel makes when an arc is let go or tapped.
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
