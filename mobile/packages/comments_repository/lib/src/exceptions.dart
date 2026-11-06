@@ -60,3 +60,13 @@ class LoadCommentsByAuthorFailedException extends CommentsRepositoryException {
   /// Creates a new load comments by author failed exception.
   const LoadCommentsByAuthorFailedException([super.message]);
 }
+
+/// Exception thrown when a video owner's comment moderation cannot be saved.
+///
+/// Nothing was published: either the owner's current moderation could not be
+/// read in full, which a replacement would silently erase, or no relay
+/// accepted the new one.
+class CommentModerationFailedException extends CommentsRepositoryException {
+  /// Creates a new comment moderation failed exception.
+  const CommentModerationFailedException([super.message]);
+}
