@@ -148,6 +148,26 @@ void main() {
         );
       });
 
+      testWidgets('names a vanished account as deleted, not by its name', (
+        tester,
+      ) async {
+        await _pump(
+          tester,
+          overrides: [
+            userProfileReactiveProvider(
+              _author,
+            ).overrideWith((ref) => Stream.value(_profile())),
+            profileVanishedProvider(_author).overrideWith((ref) => true),
+          ],
+        );
+
+        _spanWith(tester, l10n.profileDeletedAccountName);
+        expect(
+          find.textContaining('Mackardigan', findRichText: true),
+          findsNothing,
+        );
+      });
+
       testWidgets('announces itself as one button naming the author', (
         tester,
       ) async {
