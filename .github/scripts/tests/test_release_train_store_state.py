@@ -19,6 +19,14 @@ def _ios(version, state, key="appVersionState"):
 
 
 class StoreStateTest(unittest.TestCase):
+    def test_stable_tags_ignore_non_ascii_versions(self):
+        self.assertEqual(
+            [Version(1, 0, 28)],
+            stable_tag_versions([
+                "refs/tags/١.0.29", "refs/tags/1.０.30", "refs/tags/1.0.28"
+            ]),
+        )
+
     def test_ios_keeps_submitted_and_released_states(self):
         entries = [
             _ios("1.0.1", "WAITING_FOR_REVIEW"),
@@ -66,6 +74,38 @@ class StoreStateTest(unittest.TestCase):
         }
         self.assertEqual(play_production_version_codes(track), [844, 845, 800])
 
+    def test_play_empty_production_view_fails_closed(self):
+        for releases in ([], [{"status": "draft"}], [{"status": "completed", "versionCodes": []}]):
+            with self.subTest(releases=releases):
+                with self.assertRaisesRegex(ValueError, "no version codes"):
+                    play_production_version_codes(
+                        {"track": "production", "releases": releases}
+                    )
+
+    def test_play_drafts_with_codes_do_not_claim_a_version(self):
+        self.assertEqual([844], play_production_version_codes({
+            "track": "production", "releases": [
+                {"status": "completed", "versionCodes": ["844"]},
+                {"status": "draft", "versionCodes": ["999"]},
+            ]}))
+        with self.assertRaisesRegex(ValueError, "no version codes"):
+            play_production_version_codes({"track": "production", "releases": [
+                {"status": "draft", "versionCodes": ["999"]}]})
+
+    def test_play_submitted_rollouts_remain_claimed(self):
+        for status in ("completed", "inProgress", "halted"):
+            with self.subTest(status=status):
+                self.assertEqual([844], play_production_version_codes({
+                    "track": "production", "releases": [
+                        {"status": status, "versionCodes": ["844"]}]}))
+
+    def test_play_missing_or_unknown_status_fails_closed(self):
+        for status in (None, "statusUnspecified", "future", []):
+            with self.subTest(status=status):
+                with self.assertRaisesRegex(ValueError, "status"):
+                    play_production_version_codes({"track": "production", "releases": [
+                        {"status": status, "versionCodes": ["844"]}]})
+
     def test_play_requires_the_production_track(self):
         with self.assertRaises(ValueError):
             play_production_version_codes({"track": "beta", "releases": []})
@@ -97,7 +137,7 @@ class StoreStateTest(unittest.TestCase):
             with self.subTest(codes=bad):
                 with self.assertRaises(ValueError):
                     play_production_version_codes(
-                        {"track": "production", "releases": [{"versionCodes": bad}]}
+                        {"track": "production", "releases": [{"status": "completed", "versionCodes": bad}]}
                     )
         with self.assertRaises(ValueError):
             play_production_version_codes(

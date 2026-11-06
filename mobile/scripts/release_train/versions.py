@@ -3,8 +3,10 @@ from __future__ import annotations
 import re
 from typing import NamedTuple
 
-_VERSION_RE = re.compile(r"^\d+(\.\d+){0,2}$")
-_PUBSPEC_RE = re.compile(r"^version:\s*(\d+\.\d+\.\d+)\+\d+\s*$", re.MULTILINE)
+_VERSION_RE = re.compile(r"^\d+(\.\d+){0,2}$", re.ASCII)
+_PUBSPEC_RE = re.compile(
+    r"^version:\s*(\d+\.\d+\.\d+)\+\d+\s*$", re.MULTILINE | re.ASCII
+)
 
 
 class Version(NamedTuple):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Allocate release versions and build numbers from the release ledger."""
+"""Bootstrap the release ledger or allocate release versions and build numbers."""
 
 from __future__ import annotations
 
@@ -52,6 +52,12 @@ def _parser():
     alloc.add_argument("--reservation-key", required=True)
     alloc.add_argument("--codemagic-build-id", required=True)
     alloc.add_argument("--store-latest-build", type=_build_number, required=True)
+    alloc.add_argument(
+        "--build-number-floor",
+        type=_build_number,
+        default=0,
+        help="minimum build number to allocate; separate from observed store uploads",
+    )
     alloc.add_argument("--shorebird-releases", required=True)
     alloc.add_argument("--stable-tags", required=True)
     alloc.add_argument("--app-store-versions")
@@ -88,6 +94,7 @@ def _allocate(args, ledger, now):
         reservation_key=args.reservation_key,
         codemagic_build_id=args.codemagic_build_id,
         store_latest=args.store_latest_build,
+        build_floor=args.build_number_floor,
         shorebird_versions=shorebird_release_versions(
             _json(args.shorebird_releases), args.platform
         ),

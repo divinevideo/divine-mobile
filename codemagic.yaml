@@ -1841,12 +1841,28 @@ workflows:
         script: |
           set -euo pipefail
           APP_STORE_APP_ID=6747959501 # co.openvine.app
+          # Fail closed: only an exact NO writes to the ledger.
+          DRY_RUN_FLAG=
+          if [ "${{ inputs.DRY_RUN }}" = "YES" ]; then
+            DRY_RUN_FLAG=--dry-run
+          elif [ "${{ inputs.DRY_RUN }}" = "NO" ]; then
+            DRY_RUN_FLAG=
+            # Ledger claims are create-only and permanent, so only main's
+            # code may write them, like every other provenance writer.
+            if [ "${CM_BRANCH:-}" != "main" ]; then
+              echo "ERROR: DRY_RUN=NO writes the release ledger and must run from main, got branch '${CM_BRANCH:-}'."
+              exit 1
+            fi
+          else
+            echo "ERROR: DRY_RUN must be YES or NO, got '${{ inputs.DRY_RUN }}'."
+            exit 1
+          fi
           LOOKUP_LOG=$(mktemp)
           ASC_VERSIONS_JSON=$(mktemp)
           PLAY_TRACK_JSON=$(mktemp)
           trap 'rm -f "$LOOKUP_LOG" "$ASC_VERSIONS_JSON" "$PLAY_TRACK_JSON"' EXIT
           # Fail closed: a partial store view would seed the ledger below the
-          # numbers the stores already hold.
+          # versions the stores already hold.
           if ! app-store-connect apps app-store-versions "$APP_STORE_APP_ID" \
             --platform IOS --json > "$ASC_VERSIONS_JSON" 2>"$LOOKUP_LOG"; then
             echo "ERROR: could not read the App Store versions."
@@ -1864,16 +1880,6 @@ workflows:
               echo "       Google Play lookup output:"
               sed 's/^/       /' "$LOOKUP_LOG"
             fi
-            exit 1
-          fi
-          # Fail closed: only an exact NO writes to the ledger.
-          DRY_RUN_FLAG=
-          if [ "${{ inputs.DRY_RUN }}" = "YES" ]; then
-            DRY_RUN_FLAG=--dry-run
-          elif [ "${{ inputs.DRY_RUN }}" = "NO" ]; then
-            DRY_RUN_FLAG=
-          else
-            echo "ERROR: DRY_RUN must be YES or NO, got '${{ inputs.DRY_RUN }}'."
             exit 1
           fi
           python3 scripts/release_identity.py bootstrap \

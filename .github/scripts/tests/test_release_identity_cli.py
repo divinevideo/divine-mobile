@@ -10,12 +10,16 @@ from unittest import mock
 from datetime import datetime, timezone
 from pathlib import Path
 
-from release_train_fakes import MemoryLedgerStore
-
-from release_train.ledger import BOOTSTRAP_PATH
-import release_identity
-
 REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT / "mobile" / "scripts"))
+
+from release_train_fakes import MemoryLedgerStore  # noqa: E402
+
+from release_train.ledger import BOOTSTRAP_PATH, reservation_path  # noqa: E402
+import release_identity  # noqa: E402
+
+# Play production code 300 maps to 1.2.7 through this provenance record.
+PLAY_PROVENANCE = "releases/android/1.2.7+300.json"
 SCRIPT = REPO_ROOT / "mobile" / "scripts" / "release_identity.py"
 NOW = datetime(2026, 11, 5, tzinfo=timezone.utc)
 SHA = "a" * 40
@@ -37,7 +41,7 @@ class CliTest(unittest.TestCase):
                 [
                     {
                         "attributes": {
-                            "versionString": "1.2.0",
+                            "versionString": "1.2.5",
                             "appVersionState": "READY_FOR_SALE",
                         }
                     }
@@ -47,7 +51,10 @@ class CliTest(unittest.TestCase):
         self.play = self.write(
             "play.json",
             json.dumps(
-                {"track": "production", "releases": [{"versionCodes": []}]}
+                {
+                    "track": "production",
+                    "releases": [{"status": "completed", "versionCodes": ["300"]}],
+                }
             ),
         )
         self.out = self.tmp / "out.env"
@@ -87,20 +94,40 @@ class CliTest(unittest.TestCase):
         return argv + extra
 
     def bootstrapped(self):
-        return MemoryLedgerStore({BOOTSTRAP_PATH: {"schema": 1}})
+        return MemoryLedgerStore(
+            {BOOTSTRAP_PATH: {"schema": 1}, PLAY_PROVENANCE: {}}
+        )
+
+    def env(self):
+        return dict(
+            line.split("=", 1) for line in self.out.read_text().splitlines()
+        )
 
     def test_allocate_writes_the_release_env(self):
-        code, _ = self.run_main(self.allocate_argv(), self.bootstrapped())
+        store = self.bootstrapped()
+        code, _ = self.run_main(self.allocate_argv(), store)
         self.assertEqual(0, code)
-        # 1.2.3 is a stable tag, so the version bumps to 1.2.4.
+        # The App Store's 1.2.5 is above the 1.2.3 tag, so it sets the train.
         self.assertEqual(
-            "SHOREBIRD_BUILD_NAME=1.2.4\n"
+            "SHOREBIRD_BUILD_NAME=1.2.6\n"
             "SHOREBIRD_BUILD_NUMBER=6\n"
-            "SHOREBIRD_RELEASE_VERSION=1.2.4+6\n"
+            "SHOREBIRD_RELEASE_VERSION=1.2.6+6\n"
             "RELEASE_TRAIN_RESERVATION_KEY=manual/abc\n"
             "RELEASE_TRAIN_RESERVATION_REUSED=false\n",
             self.out.read_text(),
         )
+        self.assertIn("allocations/claims/1.2.5/app-store.json", store.creates)
+        record = store.files[reservation_path("ios", 6)]
+        self.assertEqual("cm1", record["codemagic_build_id"])
+        self.assertEqual(SHA, record["source_sha"])
+
+    def test_allocate_android_follows_the_play_production_version(self):
+        store = self.bootstrapped()
+        code, out = self.run_main(self.allocate_argv("android"), store)
+        self.assertEqual(0, code, out)
+        # Play production code 300 is 1.2.7, above the tag and the pubspec.
+        self.assertEqual("1.2.8", self.env()["SHOREBIRD_BUILD_NAME"])
+        self.assertIn("allocations/claims/1.2.7/play-production.json", store.creates)
 
     def test_allocate_android_and_reuse(self):
         store = self.bootstrapped()
@@ -110,6 +137,68 @@ class CliTest(unittest.TestCase):
         self.assertIn(
             "RELEASE_TRAIN_RESERVATION_REUSED=true\n", self.out.read_text()
         )
+
+    def test_android_retry_after_its_shorebird_release_takes_a_new_number(self):
+        store = self.bootstrapped()
+        argv = self.allocate_argv("android")
+        self.assertEqual(0, self.run_main(argv, store)[0])
+        first = self.env()
+        released = first["SHOREBIRD_RELEASE_VERSION"]
+        # The same identity released for iOS only must not count as spent.
+        Path(self.shorebird).write_text(
+            json.dumps(
+                {
+                    "status": "success",
+                    "data": {
+                        "releases": [
+                            {"version": released, "platform_statuses": {"ios": "active"}}
+                        ]
+                    },
+                }
+            )
+        )
+        self.assertEqual(0, self.run_main(argv, store)[0])
+        self.assertEqual("true", self.env()["RELEASE_TRAIN_RESERVATION_REUSED"])
+        Path(self.shorebird).write_text(
+            json.dumps(
+                {
+                    "status": "success",
+                    "data": {
+                        "releases": [
+                            {
+                                "version": released,
+                                "platform_statuses": {"android": "active"},
+                            }
+                        ]
+                    },
+                }
+            )
+        )
+        self.assertEqual(0, self.run_main(argv, store)[0])
+        second = self.env()
+        self.assertEqual("false", second["RELEASE_TRAIN_RESERVATION_REUSED"])
+        self.assertEqual(
+            int(first["SHOREBIRD_BUILD_NUMBER"]) + 1,
+            int(second["SHOREBIRD_BUILD_NUMBER"]),
+        )
+
+    def test_build_floor_does_not_treat_a_retry_as_uploaded(self):
+        store = self.bootstrapped()
+        argv = self.allocate_argv("android") + ["--build-number-floor", "950"]
+        self.assertEqual(0, self.run_main(argv, store)[0])
+        self.assertEqual("950", self.env()["SHOREBIRD_BUILD_NUMBER"])
+        self.assertEqual(0, self.run_main(argv, store)[0])
+        self.assertEqual("true", self.env()["RELEASE_TRAIN_RESERVATION_REUSED"])
+
+    def test_bootstrap_ignores_an_unmapped_draft_code(self):
+        Path(self.play).write_text(json.dumps({"track": "production", "releases": [
+            {"status": "completed", "versionCodes": ["300"]},
+            {"status": "draft", "versionCodes": ["999"]}]}))
+        store = self.unbootstrapped()
+        code, out = self.run_main(self.bootstrap_argv(), store)
+        self.assertEqual(0, code, out)
+        self.assertIn("allocations/claims/1.2.7/play-production.json", store.creates)
+        self.assertEqual(BOOTSTRAP_PATH, store.creates[-1])
 
     def test_allocate_fails_closed_with_a_clear_error(self):
         code, out = self.run_main(self.allocate_argv(), MemoryLedgerStore())
@@ -211,8 +300,18 @@ class CliTest(unittest.TestCase):
                             )
                     self.assertEqual(2, raised.exception.code)
 
+    def unbootstrapped(self):
+        return MemoryLedgerStore({PLAY_PROVENANCE: {}})
+
+    def bootstrap_argv(self, play=None):
+        return [
+            "bootstrap",
+            "--app-store-versions", self.ios,
+            "--play-production-track", play or self.play,
+        ]
+
     def test_bootstrap_dry_run_prints_paths_without_writing(self):
-        store = MemoryLedgerStore()
+        store = self.unbootstrapped()
         code, out = self.run_main(
             [
                 "bootstrap",
@@ -225,28 +324,54 @@ class CliTest(unittest.TestCase):
         self.assertEqual(0, code)
         self.assertEqual([], store.creates)
         self.assertIn(BOOTSTRAP_PATH, out.splitlines())
-        self.assertIn("allocations/claims/1.2.0/app-store.json", out.splitlines())
+        self.assertIn("allocations/claims/1.2.5/app-store.json", out.splitlines())
+        self.assertIn(
+            "allocations/claims/1.2.7/play-production.json", out.splitlines()
+        )
         self.assertEqual("would create:", out.splitlines()[0])
 
-    def test_bootstrap_real_run_prints_created_header(self):
-        store = MemoryLedgerStore()
-        code, out = self.run_main(
-            [
-                "bootstrap",
-                "--app-store-versions", self.ios,
-                "--play-production-track", self.play,
-            ],
-            store,
-        )
-        self.assertEqual(0, code)
+    def test_bootstrap_real_run_claims_both_stores_then_writes_the_marker(self):
+        store = self.unbootstrapped()
+        code, out = self.run_main(self.bootstrap_argv(), store)
+        self.assertEqual(0, code, out)
         self.assertEqual("created:", out.splitlines()[0])
-        self.assertIn(BOOTSTRAP_PATH, out.splitlines())
+        self.assertEqual(
+            [
+                "allocations/claims/1.2.5/app-store.json",
+                "allocations/claims/1.2.7/play-production.json",
+                BOOTSTRAP_PATH,
+            ],
+            store.creates,
+        )
+        self.assertEqual(store.creates, out.splitlines()[1:])
+
+    def test_bootstrap_unmapped_play_code_writes_nothing(self):
+        store = MemoryLedgerStore()
+        for extra in ([], ["--dry-run"]):
+            with self.subTest(extra=extra):
+                code, out = self.run_main(self.bootstrap_argv() + extra, store)
+                self.assertEqual(1, code)
+                self.assertTrue(out.startswith("ERROR:"), out)
+                self.assertIn("300", out)
+                self.assertEqual([], store.creates)
+
+    def test_bootstrap_empty_play_production_view_writes_nothing(self):
+        empty = self.write(
+            "empty-play.json", json.dumps({"track": "production", "releases": []})
+        )
+        store = self.unbootstrapped()
+        code, out = self.run_main(self.bootstrap_argv(play=empty), store)
+        self.assertEqual(1, code)
+        self.assertTrue(out.startswith("ERROR:"), out)
+        self.assertEqual([], store.creates)
 
     def test_bootstrap_with_nothing_to_create_says_so(self):
         store = MemoryLedgerStore(
             {
                 BOOTSTRAP_PATH: {"schema": 1},
-                "allocations/claims/1.2.0/app-store.json": {},
+                PLAY_PROVENANCE: {},
+                "allocations/claims/1.2.5/app-store.json": {},
+                "allocations/claims/1.2.7/play-production.json": {},
             }
         )
         for extra in ([], ["--dry-run"]):
@@ -264,19 +389,6 @@ class CliTest(unittest.TestCase):
                 ["ledger already bootstrapped; nothing to create"], out.splitlines()
             )
         self.assertEqual([], store.creates)
-
-    def test_bootstrap_writes(self):
-        store = MemoryLedgerStore()
-        code, out = self.run_main(
-            [
-                "bootstrap",
-                "--app-store-versions", self.ios,
-                "--play-production-track", self.play,
-            ],
-            store,
-        )
-        self.assertEqual(0, code)
-        self.assertIn(BOOTSTRAP_PATH, store.creates)
 
     def test_script_runs_as_a_file(self):
         result = subprocess.run(

@@ -21,6 +21,11 @@ class ReleaseTrainVersionsTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_version("1.0.x")
 
+    def test_parse_rejects_non_ascii_digits(self) -> None:
+        for text in ("١.0.28", "1.０.28", "1.0.٢٨"):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                parse_version(text)
+
     def test_versions_order_numerically(self) -> None:
         self.assertGreater(parse_version("1.0.10"), parse_version("1.0.9"))
 
@@ -38,6 +43,11 @@ class ReleaseTrainVersionsTest(unittest.TestCase):
 
     def test_pubspec_version_requires_build_suffix(self) -> None:
         for text in ("version: 1.0.28\n", "version: 1.0+820\n"):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                pubspec_version(text)
+
+    def test_pubspec_version_rejects_non_ascii_version_or_build(self) -> None:
+        for text in ("version: ١.0.28+820\n", "version: 1.0.28+٨٢٠\n"):
             with self.subTest(text=text), self.assertRaises(ValueError):
                 pubspec_version(text)
 

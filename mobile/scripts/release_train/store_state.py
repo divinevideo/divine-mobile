@@ -9,7 +9,7 @@ from .versions import Version, parse_version
 
 _UNSUBMITTED_IOS_STATES = frozenset({"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW"})
 _ASCII_DIGITS = re.compile(r"[0-9]+")
-_STABLE_TAG = re.compile(r"refs/tags/(\d+\.\d+\.\d+)")
+_STABLE_TAG = re.compile(r"refs/tags/(\d+\.\d+\.\d+)", re.ASCII)
 
 
 def ios_submitted_versions(app_store_versions: list) -> list[Version]:
@@ -46,6 +46,11 @@ def play_production_version_codes(track: dict) -> list[int]:
     for release in releases:
         if not isinstance(release, dict):
             raise ValueError(f"Play release is not an object: {release!r}")
+        status = release.get("status")
+        if status == "draft":
+            continue
+        if status not in ("completed", "inProgress", "halted"):
+            raise ValueError(f"Play release has unknown or missing status: {status!r}")
         version_codes = release.get("versionCodes", [])
         if not isinstance(version_codes, list):
             raise ValueError(f"Play versionCodes is not a list: {version_codes!r}")
@@ -53,6 +58,10 @@ def play_production_version_codes(track: dict) -> list[int]:
             if not isinstance(code, str) or not _ASCII_DIGITS.fullmatch(code):
                 raise ValueError(f"Play versionCode is not a digit string: {code!r}")
             codes.append(int(code))
+    if not codes:
+        # Divine is live on Play, so an empty production view is a partial
+        # read, not a fact; seeding from it would miss every Play claim.
+        raise ValueError("Play production track lookup returned no version codes")
     return codes
 
 

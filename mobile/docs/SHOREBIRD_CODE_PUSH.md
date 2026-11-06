@@ -225,24 +225,37 @@ The release identity ledger lives in the `allocations/` tree of
 - `allocations/claims/<version>/<channel>.json` claims a version for a channel.
 - `allocations/bootstrap.json` marks that the ledger has been seeded.
 
-Every write is create-only: an existing file is never overwritten, so two
-runs cannot hand out the same number. `mobile/scripts/release_identity.py`
-owns these paths.
+The allocator makes create-only writes: it never overwrites an existing file.
+That arbitrates reservations made under different keys. A retry under the same
+key intentionally reuses its unspent number, so callers must ensure only one
+build runs under that key at a time. These are application guarantees, not
+credential restrictions: the token may still have update and delete permission.
+`mobile/scripts/release_train/ledger.py` defines these paths.
 
 Before builds start allocating from the ledger (a later pull request), seed it
 once from the live store data with the manual Codemagic workflow
 `release-identity-bootstrap`. It defaults to `DRY_RUN=YES`, which writes
 nothing. Run it as a dry run first, check the output, then run it again with
-`DRY_RUN=NO`. It fails closed if either store lookup (App Store Connect
-versions, Google Play production track) errors.
+`DRY_RUN=NO` from `main`; a write run from any other branch is refused before
+store lookups. It fails closed if either store lookup (App Store Connect
+versions, Google Play production track) errors or Play has no submitted codes.
+iOS claims include waiting, in-review and rejected versions; only
+`PREPARE_FOR_SUBMISSION` and `READY_FOR_REVIEW` are excluded. Once claimed,
+a version stays claimed even if its submission is rejected. Play drafts do not
+claim a marketing version.
 
 The dry run lists the ledger files a real run would create (`would create:`);
 the real run prints the same list under `created:`. `ledger already
 bootstrapped; nothing to create` means nothing is missing. If a Play
 production version code cannot be mapped to a version, the run stops before
 writing anything and names the code; add
-`releases/android/<version>+<code>.json` provenance or
-`allocations/builds/android/<code>.json` with a `"version"` string, then rerun.
+`allocations/builds/android/<code>.json` with a verified `"version"` string,
+then rerun. Never manufacture or edit patch provenance under `releases/` to
+repair an allocation mapping.
+
+Before builds use this allocator, add conflict backoff, atomic output writes,
+and enforcement of one active builder per scheduled platform/source key, as
+tracked in the allocator implementation plan's review corrections.
 
 ## Shipping a patch
 

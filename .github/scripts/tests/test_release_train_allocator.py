@@ -59,14 +59,13 @@ class ReconcileTest(unittest.TestCase):
             },
         )
 
-    def test_reconcile_repairs_a_claim_missing_beside_an_existing_allocation(
-        self,
-    ) -> None:
-        ledger = MemoryLedgerStore(
-            {"allocations/builds/ios/55.json": {"version": "1.0.29"}}
+    def test_a_claim_lost_to_a_concurrent_run_is_not_reported(self) -> None:
+        lost = "allocations/claims/1.0.27/app-store.json"
+        ledger = RacingStore(race=lost)
+        created = reconcile(
+            "ios", ledger=ledger, store_versions=[v("1.0.27"), v("1.0.28")], now=NOW
         )
-        created = reconcile("ios", ledger=ledger, store_versions=[v("1.0.29")], now=NOW)
-        self.assertEqual(created, ["allocations/claims/1.0.29/app-store.json"])
+        self.assertEqual(created, ["allocations/claims/1.0.28/app-store.json"])
 
     def test_android_reconcile_maps_codes_through_allocations_then_provenance(
         self,
@@ -160,8 +159,24 @@ class MapPlayVersionCodesTest(unittest.TestCase):
         self.assertIn("777", message)
         self.assertIn("888", message)
         self.assertNotIn("200", message)
-        self.assertIn("releases/android/<version>+<code>.json", message)
         self.assertIn("allocations/builds/android/<code>.json", message)
+        # releases/ is patch provenance; operators must not hand-write it.
+        self.assertNotIn("releases/", message)
+
+    def test_malformed_allocation_version_names_code_and_path(self) -> None:
+        path = "allocations/builds/android/200.json"
+        ledger = MemoryLedgerStore({path: {"version": "1.x"}})
+        with self.assertRaises(AllocationError) as caught:
+            map_play_version_codes(ledger, [200])
+        message = str(caught.exception)
+        self.assertIn("200", message)
+        self.assertIn(path, message)
+        self.assertIn("'1.x'", message)
+
+    def test_non_ascii_digits_are_not_build_numbers(self) -> None:
+        ledger = MemoryLedgerStore({"releases/android/1.0.28+\u0669.json": {}})
+        with self.assertRaises(AllocationError):
+            map_play_version_codes(ledger, [9])
 
     def test_non_string_allocation_version_is_an_error_naming_code_and_path(
         self,
@@ -282,7 +297,7 @@ SHA = "a" * 40
 SCHED = f"scheduled/ios/{SHA}"
 
 
-def reserve(ledger, key=SCHED, version="1.0.28", store_latest=906, shorebird=(), platform="ios"):
+def reserve(ledger, key=SCHED, version="1.0.28", store_latest=906, shorebird=(), platform="ios", build_floor=0):
     return reserve_build_number(
         platform,
         v(version),
@@ -291,6 +306,7 @@ def reserve(ledger, key=SCHED, version="1.0.28", store_latest=906, shorebird=(),
         reservation_key=key,
         codemagic_build_id="cm-1",
         store_latest=store_latest,
+        build_floor=build_floor,
         shorebird_versions=frozenset(shorebird),
         now=NOW,
     )
@@ -298,7 +314,7 @@ def reserve(ledger, key=SCHED, version="1.0.28", store_latest=906, shorebird=(),
 
 def reserved(n, version="1.0.28", key=SCHED, platform="ios"):
     return {
-        reservation_path(platform, n): {"version": version, "reservation_key": key},
+        reservation_path(platform, n): {"version": version, "reservation_key": key, "source_sha": SHA},
         key_path(platform, key, n): {"schema": 1},
     }
 
@@ -343,6 +359,31 @@ class ReserveBuildNumberTest(unittest.TestCase):
             ledger.files[key_path("ios", SCHED, 909)],
             {"schema": 1, "reservation_key": SCHED, "build_number": 909},
         )
+
+    def test_build_floor_sets_first_number_without_spending_a_retry(self):
+        ledger = MemoryLedgerStore()
+        self.assertEqual(reserve(ledger, build_floor=950), (950, False))
+        self.assertEqual(reserve(ledger, build_floor=950), (950, True))
+        self.assertEqual(reserve(ledger, build_floor=951), (951, False))
+
+    def test_non_ascii_reservation_and_key_numbers_are_ignored(self):
+        for path in (
+            "allocations/builds/ios/٩٠٩.json",
+            key_path("ios", SCHED, 0).replace("/0.json", "/٩٠٩.json"),
+        ):
+            with self.subTest(path=path):
+                ledger = MemoryLedgerStore({path: {}})
+                self.assertEqual(reserve(ledger), (907, False))
+
+    def test_reuse_requires_the_recorded_source_and_key(self):
+        for field, value in (("source_sha", "b" * 40), ("reservation_key", "manual/other")):
+            with self.subTest(field=field):
+                files = reserved(909)
+                files[reservation_path("ios", 909)][field] = value
+                ledger = MemoryLedgerStore(files)
+                with self.assertRaisesRegex(AllocationError, "reservation.*mismatch"):
+                    reserve(ledger)
+                self.assertEqual([], ledger.creates)
 
     def test_store_latest_above_ledger_wins(self) -> None:
         ledger = MemoryLedgerStore({reservation_path("ios", 5): {}})
@@ -407,6 +448,17 @@ class ReserveBuildNumberTest(unittest.TestCase):
     def test_retry_after_the_train_moved_reserves_a_new_number(self) -> None:
         ledger = MemoryLedgerStore(reserved(909, version="1.0.27"))
         self.assertEqual(reserve(ledger), (910, False))
+
+    def test_fresh_number_skips_a_pre_ledger_shorebird_release(self) -> None:
+        ledger = MemoryLedgerStore()
+        self.assertEqual(reserve(ledger, shorebird={"1.0.28+907"}), (908, False))
+        self.assertNotIn(reservation_path("ios", 907), ledger.files)
+
+    def test_fresh_number_skips_pre_ledger_provenance(self) -> None:
+        ledger = MemoryLedgerStore(
+            {provenance_path("ios", v("1.0.28"), 907): {}}
+        )
+        self.assertEqual(reserve(ledger), (908, False))
 
     def test_manual_builds_never_share_a_number_with_a_scheduled_build(self) -> None:
         ledger = MemoryLedgerStore()
@@ -474,6 +526,12 @@ class ValidateReservationKeyTest(unittest.TestCase):
         for sha in ("", "HEAD", "main", "a" * 39, "A" * 40, "a" * 41):
             with self.assertRaises(AllocationError, msg=sha):
                 validate_reservation_key(f"scheduled/ios/{sha}", "ios", sha)
+
+    def test_manual_keys_also_require_a_full_source_sha(self):
+        for sha in ("", "HEAD", "a" * 39, "A" * 40, "a" * 41):
+            with self.subTest(sha=sha):
+                with self.assertRaises(AllocationError):
+                    validate_reservation_key("manual/abc123", "ios", sha)
 
     def test_rejects_malformed_keys(self) -> None:
         for key in ("manual/", "manual/a/b", "manual/a-b", "other/x", "", "manual/x\n"):
@@ -599,6 +657,15 @@ class StaleViewStore(MemoryLedgerStore):
         return created
 
 
+class IosFloorGuardTest(unittest.TestCase):
+    def test_lost_race_claim_missing_from_view_stops_before_reserving(self):
+        lost = "allocations/claims/1.0.50/app-store.json"
+        ledger = StaleViewStore(dict(BOOT), lost)
+        with self.assertRaisesRegex(AllocationError, "1.0.28.*1.0.50"):
+            run_allocate(ledger, store_versions=iter([v("1.0.50")]))
+        self.assertFalse([p for p in ledger.creates if p.startswith("allocations/builds/")])
+
+
 class AndroidFloorGuardTest(unittest.TestCase):
     def test_lost_race_claim_missing_from_view_trips_the_floor_check(self) -> None:
         lost = "allocations/claims/1.0.50/play-production.json"
@@ -617,6 +684,25 @@ class AndroidFloorGuardTest(unittest.TestCase):
         )
 
 
+    def test_derived_version_equal_to_highest_play_version_is_allowed(
+        self,
+    ) -> None:
+        # Play accepts a higher code under the same versionName, so only a
+        # version strictly below production trips the guard.
+        lost = "allocations/claims/1.0.50/play-production.json"
+        ledger = StaleViewStore(
+            {**BOOT, "releases/android/1.0.50+300.json": {}}, lost
+        )
+        result = run_allocate(
+            ledger,
+            "android",
+            pubspec=v("1.0.50"),
+            store_version_codes=[300],
+            reservation_key="manual/abc",
+        )
+        self.assertEqual(result.version, v("1.0.50"))
+
+
 class BootstrapTest(unittest.TestCase):
     def test_bootstrap_dry_run_writes_nothing(self) -> None:
         ledger = MemoryLedgerStore()
@@ -631,6 +717,12 @@ class BootstrapTest(unittest.TestCase):
         self.assertEqual(
             paths, ["allocations/claims/1.0.27/app-store.json", BOOTSTRAP_PATH]
         )
+
+    def test_lost_marker_race_is_not_reported_as_created(self):
+        ledger = RacingStore(race=BOOTSTRAP_PATH)
+        paths = bootstrap(ledger=ledger, ios_store_versions=[], android_version_codes=[], now=NOW, dry_run=False)
+        self.assertEqual([], paths)
+        self.assertEqual({"winner": True}, ledger.files[BOOTSTRAP_PATH])
 
     def test_bootstrap_reports_every_unmappable_identity(self) -> None:
         ledger = MemoryLedgerStore()

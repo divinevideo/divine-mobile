@@ -16,12 +16,12 @@ This order splits design step 2 so the publisher is fixed before versions can di
 
 **Tech Stack:** Python 3 standard library (`unittest`, `json`, `subprocess`, `base64`, `dataclasses`), bash in `codemagic.yaml`, `gh api`, and codemagic-cli-tools (`app-store-connect`, `google-play`). The existing Ruby preflights are unchanged.
 
-**Spec:** `docs/superpowers/specs/2026-11-03-scheduled-store-releases-design.md` (revision 6): "Release identity allocator", "Direct distribution", and "Pull request sequence" steps 2–3. Tracking issue #10709.
+**Spec:** [scheduled store releases, revision 6](https://github.com/divinevideo/divine-mobile/blob/417b9972e730ce5688f87ce40fe9ccbbd6be3228/docs/superpowers/specs/2026-11-03-scheduled-store-releases-design.md) in #10706: "Release identity allocator", "Direct distribution", and "Pull request sequence" steps 2–3. Tracking issue #10709.
 
 ## Global Constraints
 
 - **Ledger:** repository `divinevideo/divine-release-provenance`, branch `main`, tree `allocations/`. Never touch `releases/`.
-- **Writes:** every ledger write is a create-only contents-API `PUT` without `sha`. No update or delete exists anywhere.
+- **Writes:** every ledger write is a create-only contents-API `PUT` without `sha`. The allocator implements no update or delete; the credential itself is not restricted to create-only writes.
 - **Version rule:** `version = max(pubspec, next patch after the highest claimed version)`. Versions only move forward.
 - **Claim channels:** `app-store`, `play-production`, `github-stable`. GitHub stable tags (`refs/tags/X.Y.Z`) count as `github-stable` claims and are read live, never written.
 - **Reservation keys:**
@@ -125,7 +125,7 @@ Branch `feat/release-identity-allocator`. No change to existing workflows' steps
 **Interfaces:**
 - Produces:
   - `ios_submitted_versions(app_store_versions: list) -> list[Version]`. It takes the `app-store-connect apps app-store-versions … --json` array and reads `attributes.appVersionState`, falling back to `appStoreState`. It keeps every state except `PREPARE_FOR_SUBMISSION` and `READY_FOR_REVIEW`. An empty array, or an entry without `versionString` or a state, raises `ValueError`.
-  - `play_production_version_codes(track: dict) -> list[int]`. It takes the `google-play tracks get --track production --json` Track resource, requires `track == "production"`, and returns the integers from `releases[].versionCodes[]`, which arrive as strings. A missing `releases` list raises `ValueError`.
+  - `play_production_version_codes(track: dict) -> list[int]`. It takes the `google-play tracks get --track production --json` Track resource, requires `track == "production"`, and returns the integers from non-draft `releases[].versionCodes[]`, which arrive as ASCII digit strings. Submitted statuses are `completed`, `inProgress`, and `halted`; draft codes are ignored. An unknown/missing status or an empty submitted code set raises `ValueError`.
   - `shorebird_release_versions(payload: dict, platform: str) -> frozenset[str]`. It requires `status == "success"` and returns `data.releases[].version` where `platform_statuses[platform]` is present.
   - `stable_tag_versions(refs: Iterable[str]) -> list[Version]`. It keeps only `refs/tags/<d>.<d>.<d>` exactly, so `-beta.N` and other tags are ignored.
 
@@ -155,7 +155,7 @@ Branch `feat/release-identity-allocator`. No change to existing workflows' steps
   - `AllocationError(RuntimeError)`.
   - `CHANNEL = {"ios": "app-store", "android": "play-production"}`.
   - `claimed_versions(paths: frozenset[str]) -> list[Version]`, parsed from `allocations/claims/<v>/<channel>.json` paths.
-  - `reconcile(platform: str, *, ledger: LedgerStore, store_versions: list[Version] = (), store_version_codes: list[int] = (), now: datetime) -> list[str]`. It returns the claim paths it created. Rules:
+  - `reconcile(platform: str, *, ledger: LedgerStore, store_versions: Iterable[Version] = (), store_version_codes: Iterable[int] = (), now: datetime, dry_run: bool = False) -> list[str]`. It returns the claim paths it created. Rules:
     - **iOS:** each version gets `claim_path(v, "app-store")`.
     - **Android:** each code maps to a version through `allocations/builds/android/<code>.json` (its `version` field) or through a `releases/android/<v>+<code>.json` path, then gets `claim_path(v, "play-production")`.
     - **Unmappable codes:** collect them all and raise one `AllocationError` that lists them.
@@ -184,8 +184,8 @@ Branch `feat/release-identity-allocator`. No change to existing workflows' steps
 
 **Interfaces:**
 - Produces:
-  - `validate_reservation_key(key: str, platform: str, source_sha: str) -> None`. It accepts `^manual/[A-Za-z0-9]+$` or `^scheduled/<platform>/<source_sha>$` and raises `AllocationError` otherwise.
-  - `reserve_build_number(platform: str, version: Version, *, ledger: LedgerStore, source_sha: str, reservation_key: str, codemagic_build_id: str, store_latest: int, shorebird_versions: frozenset[str], now: datetime, attempts: int = 20) -> tuple[int, bool]`. It returns `(number, reused)`.
+  - `validate_reservation_key(key: str, platform: str, source_sha: str) -> None`. It accepts `^manual/[A-Za-z0-9]+$` or `^scheduled/<platform>/<source_sha>$` and requires a full lowercase 40-hex source SHA for both forms, raising `AllocationError` otherwise.
+  - `reserve_build_number(platform: str, version: Version, *, ledger: LedgerStore, source_sha: str, reservation_key: str, codemagic_build_id: str, store_latest: int, build_floor: int = 0, shorebird_versions: frozenset[str], now: datetime, attempts: int = 20) -> tuple[int, bool]`. It returns `(number, reused)`.
 
 Algorithm. The rules are fixed by the spec; the order matters.
 
@@ -196,12 +196,14 @@ if mine:
     spent = (store_latest >= n
              or f"{version}+{n}" in shorebird_versions
              or provenance_path(platform, version, n) in ledger.paths())
-    if rec["version"] == str(version) and not spent:
+    require rec["source_sha"] == source_sha and rec["reservation_key"] == key
+    if rec["version"] == str(version) and n >= build_floor and not spent:
         return n, True
-n = max(store_latest, max(reserved numbers for platform, default 0)) + 1
+n = max(store_latest, build_floor - 1, max(reserved numbers for platform, default 0)) + 1
 repeat attempts times:
+    skip any number already held by a Shorebird release or provenance record
     if ledger.create_json(reservation_path(platform, n), record, msg):
-        ledger.create_json(key_path(platform, key, n), {"schema": 1, "reservation_key": key, "build_number": n}, msg)
+        require ledger.create_json(key_path(platform, key, n), {"schema": 1, "reservation_key": key, "build_number": n}, msg), else fail closed
         return n, False
     n += 1
 raise AllocationError("no free build number after <attempts> attempts")
@@ -233,11 +235,11 @@ The reservation record is `{"schema": 1, "platform", "build_number", "version", 
 **Interfaces:**
 - Produces:
   - `Allocation` (a frozen dataclass) with `platform`, `version: Version`, `build_number: int`, `reservation_key: str`, and `reused: bool`. Its `release_version` property is `f"{version}+{build_number}"`.
-  - `allocate(platform, *, ledger, pubspec: Version, source_sha, reservation_key, codemagic_build_id, store_latest: int, shorebird_versions, stable_tags: list[Version], store_versions=(), store_version_codes=(), now) -> Allocation`. Order:
+  - `allocate(platform, *, ledger, pubspec: Version, source_sha, reservation_key, codemagic_build_id, store_latest: int, build_floor: int = 0, shorebird_versions, stable_tags: list[Version], store_versions=(), store_version_codes=(), now) -> Allocation`. Order:
     1. Require `BOOTSTRAP_PATH` in `ledger.paths()`. Otherwise raise `AllocationError` with the message `the release ledger is not bootstrapped; run the release-identity-bootstrap workflow in Codemagic`.
     2. Run `reconcile`.
     3. Run `derive_version(pubspec, claimed_versions(paths) + stable_tags)`.
-    4. For Android, require the version to be at least the highest version `reconcile` mapped from the production codes.
+    4. Require the version to be at least the highest observed submitted App Store version (iOS) or mapped Play production version (Android), even if a concurrent claim is absent from the listing.
     5. Run `reserve_build_number`.
   - `bootstrap(*, ledger, ios_store_versions: list[Version], android_version_codes: list[int], now, dry_run: bool) -> list[str]`. It reconciles both platforms and collects every unmappable identity before raising. Unless this is a dry run, it then creates `BOOTSTRAP_PATH` with `{"schema": 1, "bootstrapped_at", "claims": [sorted claim paths]}`. It returns the paths it created or would create. A dry run writes nothing.
 
@@ -360,7 +362,7 @@ Branch `feat/builds-allocate-release-identity`, from `main` after PR B merges **
   6. iOS only: run `ios_store_version_preflight.rb` on `SHOREBIRD_BUILD_NAME`.
   7. Run `shorebird_release_preflight.rb` on `SHOREBIRD_RELEASE_VERSION`.
 
-  This removes the old version and build-number arithmetic from both steps. The Android `PROJECT_BUILD_NUMBER` floor moves into `--store-latest-build` as `max(Play latest, PROJECT_BUILD_NUMBER - 1)`, so the existing maximum still holds.
+  This removes the old version and build-number arithmetic from both steps. Pass the observed Play latest build unchanged as `--store-latest-build`, and pass `PROJECT_BUILD_NUMBER` separately as `--build-number-floor`. The floor is a minimum candidate number, not evidence of a store upload; an unspent reservation at the floor remains reusable.
 
 - [ ] **Step 1:** Update the Android harness from PR 1 to stub `gh` (bootstrap marker present, ledger tree) and assert the allocated env. Add the iOS harness. Write tests:
   - `test_allocator_output_feeds_the_shorebird_preflight`.
@@ -387,3 +389,20 @@ Branch `feat/builds-allocate-release-identity`, from `main` after PR B merges **
 - [ ] **Step 3:** Implement, and update the docs.
 - [ ] **Step 4:** Run the full suite and `git diff --check`. Expect OK.
 - [ ] **Step 5:** Commit `feat(release): give direct macOS releases the train version`, then open PR C.
+
+## Review corrections (2026-11-07)
+
+- Bootstrap writes require `CM_BRANCH=main`; `DRY_RUN=YES` remains available on any branch. Validate both inputs before store lookups. Execute the actual YAML step with stub CLIs to test dry-run argument propagation and independent lookup failures.
+- Refuse an empty submitted Play production view. Ignore draft release codes, while retaining completed, staged and halted releases. Claim iOS versions already submitted, including pending and rejected versions; claims never expire.
+- Mapping repairs go only in `allocations/builds/android/<code>.json`, never in patch provenance under `releases/`.
+- CLI tests must observe both stores affecting versions, the platform-specific Shorebird spent check, and the Codemagic build id. Bind reuse to the recorded source SHA and reservation key; require full lowercase 40-hex source SHAs for manual keys too.
+- Keep observed store uploads separate from the minimum build-number floor. A spent reservation gets a new number; the existing identity is never rebuilt. Refuse an iOS version below the observed submitted version even if a concurrent claim is absent from the ledger listing, matching the Android guard.
+- Report only claims and bootstrap markers actually created by this invocation. Fresh reservations skip identities already held by Shorebird or provenance.
+
+Before builds allocate (PR C), complete these explicit prerequisites:
+
+- [ ] Add bounded backoff to branch-conflict retries in `GhLedgerStore.create_json` (current retries are immediate).
+- [ ] Write `--output` atomically, and test interrupted/rejected output writes.
+- [ ] Enforce a single active build per scheduled platform/source key in the coordinator and all retry entry points. Reuse by the same key intentionally returns the same unspent number; create-only writes arbitrate different keys, not concurrent builders using one key.
+
+Keep these requirements in PR C and coordinator implementation reviews; schedules and existing build callers remain unchanged in PR A.

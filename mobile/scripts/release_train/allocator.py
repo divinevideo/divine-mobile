@@ -19,8 +19,11 @@ from release_train.versions import Version, bump_patch, parse_version
 CHANNEL = {"ios": "app-store", "android": "play-production"}
 
 _CLAIM_RE = re.compile(r"^allocations/claims/([^/]+)/[^/]+\.json$")
-_PROVENANCE_RE = re.compile(r"^releases/android/(\d+\.\d+\.\d+)\+(\d+)\.json$")
-_BUILD_RE = re.compile(r"^allocations/builds/([^/]+)/(\d+)\.json$")
+_PROVENANCE_RE = re.compile(
+    r"^releases/android/(\d+\.\d+\.\d+)\+(\d+)\.json$", re.ASCII
+)
+_BUILD_RE = re.compile(r"^allocations/builds/([^/]+)/(\d+)\.json$", re.ASCII)
+_DIGITS_RE = re.compile(r"[0-9]+")
 _SHA_RE = re.compile(r"[0-9a-f]{40}")
 _MANUAL_KEY_RE = re.compile(r"[A-Za-z0-9]+")
 
@@ -69,7 +72,12 @@ def map_play_version_codes(
                     )
                     continue
         if text:
-            mapped[code] = parse_version(text)
+            try:
+                mapped[code] = parse_version(text)
+            except ValueError:
+                unmappable.append(
+                    f"{code} (version {text!r} at {allocation} is not X.Y.Z)"
+                )
             continue
         candidates = provenance.get(code, set())
         if len(candidates) == 1:
@@ -85,8 +93,8 @@ def map_play_version_codes(
         listed = ", ".join(sorted(set(unmappable)))
         raise AllocationError(
             f"cannot map Play version codes to a version: {listed} "
-            "\u2014 add releases/android/<version>+<code>.json provenance or "
-            'allocations/builds/android/<code>.json with a "version" string'
+            "\u2014 for each code, add allocations/builds/android/<code>.json "
+            'with a "version" string, then rerun'
         )
     return mapped
 
@@ -109,7 +117,7 @@ def reconcile(
     created = []
     for version in _unique(versions):
         path = claim_path(version, channel)
-        if path in existing or path in created:
+        if path in existing:
             continue
         if not dry_run:
             record = {
@@ -120,7 +128,9 @@ def reconcile(
                 "source": "reconciled",
                 "observed_at": now.isoformat(),
             }
-            ledger.create_json(path, record, f"claim {version} ({channel})")
+            if not ledger.create_json(path, record, f"claim {version} ({channel})"):
+                # A concurrent run made this claim first; it is not ours.
+                continue
         created.append(path)
     return created
 
@@ -141,7 +151,11 @@ def derive_version(floor: Version, claimed: Iterable[Version]) -> Version:
 
 
 def validate_reservation_key(key: str, platform: str, source_sha: str) -> None:
-    if key == f"scheduled/{platform}/{source_sha}" and _SHA_RE.fullmatch(source_sha):
+    if not _SHA_RE.fullmatch(source_sha):
+        raise AllocationError(
+            "invalid reservation key source SHA: expected 40 lowercase hex digits"
+        )
+    if key == f"scheduled/{platform}/{source_sha}":
         return
     if key.startswith("manual/") and _MANUAL_KEY_RE.fullmatch(key[len("manual/") :]):
         return
@@ -166,7 +180,7 @@ def _key_numbers(paths: frozenset[str], platform: str, key: str) -> list[int]:
     for path in paths:
         if path.startswith(prefix) and path.endswith(".json"):
             number = path[len(prefix) : -len(".json")]
-            if number.isdigit():
+            if _DIGITS_RE.fullmatch(number):
                 found.append(int(number))
     return found
 
@@ -180,27 +194,42 @@ def reserve_build_number(
     reservation_key: str,
     codemagic_build_id: str,
     store_latest: int,
+    build_floor: int = 0,
     shorebird_versions: frozenset[str],
     now: datetime,
     attempts: int = 20,
 ) -> tuple[int, bool]:
     validate_reservation_key(reservation_key, platform, source_sha)
     paths = ledger.paths()
-    mine = _key_numbers(paths, platform, reservation_key)
-    if mine:
-        n = max(mine)
-        record = ledger.read_json(reservation_path(platform, n))
-        spent = (
+
+    def spent(n: int) -> bool:
+        return (
             store_latest >= n
             or f"{version}+{n}" in shorebird_versions
             or provenance_path(platform, version, n) in paths
         )
-        if record.get("version") == str(version) and not spent:
+
+    mine = _key_numbers(paths, platform, reservation_key)
+    if mine:
+        n = max(mine)
+        record = ledger.read_json(reservation_path(platform, n))
+        if (
+            record.get("source_sha") != source_sha
+            or record.get("reservation_key") != reservation_key
+        ):
+            raise AllocationError(
+                f"reservation identity mismatch at {reservation_path(platform, n)}"
+            )
+        if record.get("version") == str(version) and n >= build_floor and not spent(n):
             return n, True
-    n = max(store_latest, max(_numbers(paths, platform), default=0)) + 1
+    n = max(store_latest, build_floor - 1, max(_numbers(paths, platform), default=0)) + 1
     origin = "manual" if reservation_key.startswith("manual/") else "scheduled"
     message = f"chore(release): reserve {platform} build {{}} for {version}"
     for _ in range(attempts):
+        # A pre-ledger Shorebird release or provenance record can already
+        # hold this identity; building it again would only fail later.
+        while spent(n):
+            n += 1
         record = {
             "schema": 1,
             "platform": platform,
@@ -253,6 +282,7 @@ def allocate(
     reservation_key: str,
     codemagic_build_id: str,
     store_latest: int,
+    build_floor: int = 0,
     shorebird_versions: frozenset[str],
     stable_tags: list[Version],
     store_versions: Iterable[Version] = (),
@@ -266,16 +296,22 @@ def allocate(
             "release-identity-bootstrap workflow in Codemagic"
         )
     codes = list(store_version_codes)
+    observed_versions = list(store_versions)
     reconcile(
         platform,
         ledger=ledger,
-        store_versions=store_versions,
+        store_versions=observed_versions,
         store_version_codes=codes,
         now=now,
     )
     version = derive_version(
         pubspec, claimed_versions(ledger.paths()) + list(stable_tags)
     )
+    if platform == "ios" and observed_versions and version < max(observed_versions):
+        raise AllocationError(
+            f"derived version {version} is below the highest App Store "
+            f"submitted version {max(observed_versions)}"
+        )
     if platform == "android" and codes:
         mapped = map_play_version_codes(ledger, codes)
         highest = max(mapped.values(), default=None)
@@ -292,6 +328,7 @@ def allocate(
         reservation_key=reservation_key,
         codemagic_build_id=codemagic_build_id,
         store_latest=store_latest,
+        build_floor=build_floor,
         shorebird_versions=shorebird_versions,
         now=now,
     )
@@ -330,5 +367,6 @@ def bootstrap(
             "bootstrapped_at": now.isoformat(),
             "claims": sorted(created),
         }
-        ledger.create_json(BOOTSTRAP_PATH, record, "bootstrap the release ledger")
+        if not ledger.create_json(BOOTSTRAP_PATH, record, "bootstrap the release ledger"):
+            return created
     return created + [BOOTSTRAP_PATH]
