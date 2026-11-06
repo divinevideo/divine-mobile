@@ -186,6 +186,71 @@ void main() {
       detachedClipThumbnailPool.resetForTesting();
     });
 
+    testWidgets('leaves no empty row in the layer strip where a detached '
+        'clip sat, in volume edit mode', (tester) async {
+      final meta = DetachedClipLayerData(
+        clip: DivineVideoClip(
+          id: 'clip-d',
+          video: EditorVideo.file('/tmp/clip-d.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime(2025),
+          originalAspectRatio: 9 / 16,
+          targetAspectRatio: .vertical,
+        ),
+        layerId: 'detached',
+      ).toMeta();
+      // The two overlap in time, so the detached clip takes the top row and
+      // the text the one below it.
+      when(() => overlayBloc.state).thenReturn(
+        TimelineOverlayState(
+          items: [
+            TimelineOverlayItem(
+              id: 'detached',
+              type: TimelineOverlayType.layer,
+              startTime: Duration.zero,
+              endTime: const Duration(seconds: 3),
+              layer: WidgetLayer(
+                id: 'detached',
+                widget: const SizedBox.shrink(),
+                meta: meta,
+                exportConfigs: WidgetLayerExportConfigs(
+                  id: 'detached',
+                  meta: meta,
+                ),
+              ),
+            ),
+            const TimelineOverlayItem(
+              id: 'text',
+              type: TimelineOverlayType.layer,
+              startTime: Duration.zero,
+              endTime: Duration(seconds: 1),
+              row: 1,
+            ),
+          ],
+        ),
+      );
+      final volumeMode = _MockVideoEditorMainBloc();
+      whenListen(
+        volumeMode,
+        const Stream<VideoEditorMainState>.empty(),
+        initialState: const VideoEditorMainState(isVolumeEditMode: true),
+      );
+
+      await tester.pumpWidget(build(main: volumeMode));
+
+      final layerStrip = tester
+          .widgetList<TimelineOverlayStrip>(find.byType(TimelineOverlayStrip))
+          .last;
+      expect([for (final item in layerStrip.items) item.id], ['text']);
+      expect(layerStrip.rowCount, 1);
+      expect(layerStrip.items.single.row, 0);
+
+      // Unmounting the clip's thumbnails arms the pool's grace timer, which
+      // flutter_test would report as pending before tearDown ran.
+      await tester.pumpWidget(const SizedBox.shrink());
+      detachedClipThumbnailPool.resetForTesting();
+    });
+
     testWidgets(
       'dims non-mergeable items on every strip during draw multi-select',
       (tester) async {

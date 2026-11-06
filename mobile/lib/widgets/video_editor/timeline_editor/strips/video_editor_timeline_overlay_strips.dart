@@ -207,16 +207,27 @@ class _TimelineOverlayStripsState extends State<TimelineOverlayStrips> {
               if (item.isDetachedClip) item,
           ]
         : const <TimelineOverlayItem>[];
-    final layerItemsForDisplay = detachedClipItems.isEmpty
+    final remainingLayerItems = detachedClipItems.isEmpty
         ? _layerItems
         : [
             for (final item in _layerItems)
               if (!item.isDetachedClip) item,
           ];
+    // The rows the detached clips leave behind close up, as the sounds' rows
+    // are renumbered above. Display only: volume edit mode does not let a
+    // layer be dragged, so a renumbered row is never written back.
+    final remainingLayerRows = ({
+      for (final item in remainingLayerItems) item.row,
+    }.toList()..sort());
+    final layerItemsForDisplay = detachedClipItems.isEmpty
+        ? _layerItems
+        : [
+            for (final item in remainingLayerItems)
+              item.copyWith(row: remainingLayerRows.indexOf(item.row)),
+          ];
     final layerRowCountForDisplay = detachedClipItems.isEmpty
         ? _layerRowCount
-        : layerItemsForDisplay.fold(-1, (top, i) => i.row > top ? i.row : top) +
-              1;
+        : remainingLayerRows.length;
 
     final stripConfigs = [
       (
