@@ -354,6 +354,27 @@ void main() {
       );
 
       blocTest<FeedTopCommentCubit, FeedTopCommentState>(
+        'does not let a comment dated in the future win',
+        setUp: () {
+          stubComments([
+            _comment('future', age: const Duration(hours: -3)),
+            _comment('upvoted'),
+          ]);
+          stubUpvotes({'future': 5, 'upvoted': 1});
+        },
+        build: buildCubit,
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        expect: () => [
+          isA<FeedTopCommentState>().having(
+            (s) => s.topComment?.id,
+            'topComment',
+            'upvoted',
+          ),
+        ],
+      );
+
+      blocTest<FeedTopCommentCubit, FeedTopCommentState>(
         'is empty when only video replies and blank comments exist',
         setUp: () {
           stubComments([

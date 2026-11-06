@@ -172,12 +172,19 @@ class FeedTopCommentCubit extends Cubit<FeedTopCommentState>
     final replyCounts = computeReplyCounts({
       for (final comment in allComments) comment.id: comment,
     });
-    double score(Comment comment) => commentEngagementScore(
-      comment: comment,
-      now: now,
-      likeCounts: upvotes,
-      replyCounts: replyCounts,
-    );
+    // A comment dated more than two hours ahead of [now] scores NaN, which is
+    // neither higher nor lower than any score and so won whenever it came
+    // first. Rank it last instead.
+    double score(Comment comment) {
+      final value = commentEngagementScore(
+        comment: comment,
+        now: now,
+        likeCounts: upvotes,
+        replyCounts: replyCounts,
+      );
+      return value.isNaN ? double.negativeInfinity : value;
+    }
+
     return candidates.reduce((best, comment) {
       final bestScore = score(best);
       final commentScore = score(comment);
