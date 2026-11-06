@@ -1120,17 +1120,19 @@ String _$videosRepositoryHash() => r'0cfffe6cadfcb46e3d36327a3d3327279b230186';
 ///   *relay-bound* use of that predicate; `state_management.md` documents only
 ///   the relay-free NIP-98 one.
 ///
-/// Rebuilt on any `AuthState` change — sign-in, sign-out, account switch —
-/// which disposes the old instance and re-runs `initialize()`. **Not** rebuilt
-/// when a Keycast signer finishes warming up, because that moves
-/// `AuthRpcCapability`, not `AuthState`. A cold start that loses that race gets
-/// no live Kind-7 subscription and no backfill for the session (#6838, #7933).
+/// Rebuilt whenever the identity changes — sign-in, sign-out, account switch
+/// — which disposes the old instance and re-runs `initialize()` on the new
+/// client. A key never arrives late on one client: every `NostrIdentity`
+/// answers `getPublicKey()` with its stored pubkey whatever its RPC state, and
+/// the keyless client never has one, so `initialize()` subscribes and syncs
+/// with the key on every client that has an identity (#6838). Either watch
+/// below carries the rebuild on its own; `video_providers_signer_resolution_test`
+/// pins that.
 ///
-/// So an empty result from `syncUserReactions()` is not proof of emptiness.
-/// `ProfileLikedVideosBloc` currently renders one as `success` and persists it.
-/// The guards themselves are pinned by `likes_repository_test.dart`'s
-/// `signer readiness (#6813)` and `initialize` groups; what is not pinned is
-/// this provider's rebuild wiring.
+/// An empty result from `syncUserReactions()` therefore means the account has
+/// no reactions, or the caller holds an instance from before the identity
+/// changed. The guards are pinned by `likes_repository_test.dart`'s
+/// `signer readiness (#6813)` and `initialize` groups.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
@@ -1163,17 +1165,19 @@ final likesRepositoryProvider = LikesRepositoryProvider._();
 ///   *relay-bound* use of that predicate; `state_management.md` documents only
 ///   the relay-free NIP-98 one.
 ///
-/// Rebuilt on any `AuthState` change — sign-in, sign-out, account switch —
-/// which disposes the old instance and re-runs `initialize()`. **Not** rebuilt
-/// when a Keycast signer finishes warming up, because that moves
-/// `AuthRpcCapability`, not `AuthState`. A cold start that loses that race gets
-/// no live Kind-7 subscription and no backfill for the session (#6838, #7933).
+/// Rebuilt whenever the identity changes — sign-in, sign-out, account switch
+/// — which disposes the old instance and re-runs `initialize()` on the new
+/// client. A key never arrives late on one client: every `NostrIdentity`
+/// answers `getPublicKey()` with its stored pubkey whatever its RPC state, and
+/// the keyless client never has one, so `initialize()` subscribes and syncs
+/// with the key on every client that has an identity (#6838). Either watch
+/// below carries the rebuild on its own; `video_providers_signer_resolution_test`
+/// pins that.
 ///
-/// So an empty result from `syncUserReactions()` is not proof of emptiness.
-/// `ProfileLikedVideosBloc` currently renders one as `success` and persists it.
-/// The guards themselves are pinned by `likes_repository_test.dart`'s
-/// `signer readiness (#6813)` and `initialize` groups; what is not pinned is
-/// this provider's rebuild wiring.
+/// An empty result from `syncUserReactions()` therefore means the account has
+/// no reactions, or the caller holds an instance from before the identity
+/// changed. The guards are pinned by `likes_repository_test.dart`'s
+/// `signer readiness (#6813)` and `initialize` groups.
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
@@ -1207,17 +1211,19 @@ final class LikesRepositoryProvider
   ///   *relay-bound* use of that predicate; `state_management.md` documents only
   ///   the relay-free NIP-98 one.
   ///
-  /// Rebuilt on any `AuthState` change — sign-in, sign-out, account switch —
-  /// which disposes the old instance and re-runs `initialize()`. **Not** rebuilt
-  /// when a Keycast signer finishes warming up, because that moves
-  /// `AuthRpcCapability`, not `AuthState`. A cold start that loses that race gets
-  /// no live Kind-7 subscription and no backfill for the session (#6838, #7933).
+  /// Rebuilt whenever the identity changes — sign-in, sign-out, account switch
+  /// — which disposes the old instance and re-runs `initialize()` on the new
+  /// client. A key never arrives late on one client: every `NostrIdentity`
+  /// answers `getPublicKey()` with its stored pubkey whatever its RPC state, and
+  /// the keyless client never has one, so `initialize()` subscribes and syncs
+  /// with the key on every client that has an identity (#6838). Either watch
+  /// below carries the rebuild on its own; `video_providers_signer_resolution_test`
+  /// pins that.
   ///
-  /// So an empty result from `syncUserReactions()` is not proof of emptiness.
-  /// `ProfileLikedVideosBloc` currently renders one as `success` and persists it.
-  /// The guards themselves are pinned by `likes_repository_test.dart`'s
-  /// `signer readiness (#6813)` and `initialize` groups; what is not pinned is
-  /// this provider's rebuild wiring.
+  /// An empty result from `syncUserReactions()` therefore means the account has
+  /// no reactions, or the caller holds an instance from before the identity
+  /// changed. The guards are pinned by `likes_repository_test.dart`'s
+  /// `signer readiness (#6813)` and `initialize` groups.
   ///
   /// Uses:
   /// - NostrClient from nostrServiceProvider (for relay communication)
