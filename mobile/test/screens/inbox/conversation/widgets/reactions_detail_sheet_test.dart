@@ -540,6 +540,45 @@ void main() {
       semantics.dispose();
     });
 
+    // A settled own reaction reads the plain label. `received` is reachable on
+    // an own row: a reaction made on another device, or re-synced, arrives
+    // from relays with no local publish status (#8697).
+    group('settled own reaction', () {
+      for (final status in [
+        DmReactionPublishStatus.sent,
+        DmReactionPublishStatus.blocked,
+        DmReactionPublishStatus.received,
+      ]) {
+        testWidgets('announces the plain own-reaction label when '
+            '${status.name}', (tester) async {
+          final semantics = tester.ensureSemantics();
+          primeState([
+            makeReaction(
+              id: 'own-${status.name}',
+              reactorPubkey: ownerPubkey,
+              emoji: '🔥',
+              publishStatus: status,
+            ),
+          ]);
+
+          await open(tester);
+
+          // The row offers Remove, so the label comes from the status
+          // switch rather than the closed-thread branch above it.
+          expect(find.text(l10n.dmReactionRemoveAction), findsOneWidget);
+          // Read from the semantics tree: what a screen reader is given.
+          expect(
+            find.bySemanticsLabel(
+              RegExp(RegExp.escape(l10n.dmReactionChipOwnA11yLabel('🔥'))),
+            ),
+            findsOneWidget,
+          );
+
+          semantics.dispose();
+        });
+      }
+    });
+
     // Official branding follows recorded custody (#9963). A reactor can be any
     // participant, so the sheet resolves it through the same helpers as the
     // inbox row.
