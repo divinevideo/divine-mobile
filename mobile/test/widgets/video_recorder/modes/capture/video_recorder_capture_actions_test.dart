@@ -44,6 +44,7 @@ void main() {
 
     Widget buildWidget({
       VideoRecorderState recordingState = VideoRecorderState.idle,
+      bool isIntervalCaptureRunning = false,
       bool isStartingRecording = false,
       bool isStoppingRecording = false,
       VideoRecorderMode recorderMode = VideoRecorderMode.capture,
@@ -65,6 +66,7 @@ void main() {
       when(() => recorderBloc.state).thenReturn(
         VideoRecorderBlocState(
           recordingState: recordingState,
+          isIntervalCaptureRunning: isIntervalCaptureRunning,
           isStartingRecording: isStartingRecording,
           isStoppingRecording: isStoppingRecording,
           recorderMode: recorderMode,
@@ -170,6 +172,25 @@ void main() {
           ),
         );
         expect(ignorePointer.ignoring, isTrue);
+      });
+
+      testWidgets('fades out while stop-motion captures on its interval', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            recorderMode: VideoRecorderMode.stopMotion,
+            isIntervalCaptureRunning: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find
+              .bySemanticsIdentifier(SemanticIds.cameraTimerButton)
+              .hitTestable(),
+          findsNothing,
+        );
       });
 
       testWidgets('allows touches when not recording', (tester) async {
@@ -514,6 +535,24 @@ void main() {
         handle.dispose();
       });
 
+      testWidgets('announces the stop-motion interval', (tester) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          buildWidget(
+            recorderMode: VideoRecorderMode.stopMotion,
+            timerDuration: TimerDuration.five,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final node = tester.getSemantics(
+          findByTooltip(l10n.videoRecorderCycleTimerLabel),
+        );
+        expect(node.value, equals(l10n.videoRecorderTimerValueFiveSeconds));
+
+        handle.dispose();
+      });
+
       testWidgets('announces the active aspect ratio', (tester) async {
         final handle = tester.ensureSemantics();
         await tester.pumpWidget(
@@ -607,6 +646,7 @@ void main() {
         await tester.pumpAndSettle();
 
         for (final identifier in const [
+          SemanticIds.cameraTimerButton,
           SemanticIds.cameraGhostFrameButton,
           SemanticIds.cameraGridButton,
         ]) {
@@ -641,7 +681,7 @@ void main() {
         handle.dispose();
       });
 
-      testWidgets('keeps the capture-only controls out of stop-motion mode', (
+      testWidgets('keeps stabilization out of stop-motion mode', (
         tester,
       ) async {
         final handle = tester.ensureSemantics();
@@ -653,16 +693,10 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        for (final identifier in const [
-          SemanticIds.cameraTimerButton,
-          SemanticIds.cameraStabilizationButton,
-        ]) {
-          expect(
-            find.bySemanticsIdentifier(identifier),
-            findsNothing,
-            reason: '$identifier must not render in stop-motion mode',
-          );
-        }
+        expect(
+          find.bySemanticsIdentifier(SemanticIds.cameraStabilizationButton),
+          findsNothing,
+        );
 
         handle.dispose();
       });

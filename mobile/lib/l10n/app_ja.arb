@@ -3414,6 +3414,7 @@
   "videoRecorderFlashValueAuto": "自動",
   "videoRecorderTimerValueOff": "オフ",
   "videoRecorderTimerValueThreeSeconds": "3秒",
+  "videoRecorderTimerValueFiveSeconds": "5秒",
   "videoRecorderTimerValueTenSeconds": "10秒",
   "videoRecorderAspectRatioValueSquare": "正方形",
   "videoRecorderAspectRatioValueVertical": "縦型",

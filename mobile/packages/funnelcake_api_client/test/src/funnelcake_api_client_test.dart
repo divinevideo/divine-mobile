@@ -6352,6 +6352,165 @@ void main() {
       });
     });
 
+    group('getVideosByIds', () {
+      final verifiedId = 'a' * 64;
+      final uncheckedId = 'b' * 64;
+
+      void stubPost(http.Response response) {
+        when(
+          () => mockHttpClient.post(
+            any(),
+            headers: any(named: 'headers'),
+            body: any(named: 'body'),
+          ),
+        ).thenAnswer((_) async => response);
+      }
+
+      test('returns each row with its archive verdict', () async {
+        stubPost(
+          http.Response(
+            jsonEncode({
+              'videos': [
+                {
+                  'id': verifiedId,
+                  'pubkey': 'c' * 64,
+                  'created_at': 1458771798,
+                  'kind': 34236,
+                  'd_tag': 'vine-1',
+                  'verified_archive': true,
+                  'archive_provenance_available': true,
+                },
+                {
+                  'id': uncheckedId,
+                  'pubkey': 'c' * 64,
+                  'created_at': 1772932336,
+                  'kind': 34236,
+                  'd_tag': 'vine-2',
+                  'verified_archive': false,
+                  'archive_provenance_available': false,
+                },
+              ],
+              'missing': ['d' * 64],
+            }),
+            200,
+          ),
+        );
+
+        final rows = await client.getVideosByIds([
+          verifiedId,
+          uncheckedId,
+          'd' * 64,
+        ]);
+
+        expect(rows.map((row) => row.id), [verifiedId, uncheckedId]);
+        expect(rows.first.isVerifiedArchive, isTrue);
+        expect(rows.last.isArchiveVerificationUnknown, isTrue);
+      });
+
+      test('asks the bulk videos endpoint for the ids', () async {
+        stubPost(http.Response('{"videos": []}', 200));
+
+        await client.getVideosByIds([verifiedId]);
+
+        final captured = verify(
+          () => mockHttpClient.post(
+            captureAny(),
+            headers: any(named: 'headers'),
+            body: captureAny(named: 'body'),
+          ),
+        ).captured;
+        expect((captured[0] as Uri).path, equals('/api/videos/bulk'));
+        expect(
+          jsonDecode(captured[1] as String),
+          equals({
+            'event_ids': [verifiedId],
+          }),
+        );
+      });
+
+      test('throws FunnelcakeNotConfiguredException when not available', () {
+        final emptyClient = FunnelcakeApiClient(
+          baseUrl: '',
+          httpClient: mockHttpClient,
+        );
+        addTearDown(emptyClient.dispose);
+
+        expect(
+          () => emptyClient.getVideosByIds([verifiedId]),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+      });
+
+      test('throws FunnelcakeException for an empty list', () {
+        expect(
+          () => client.getVideosByIds([]),
+          throwsA(isA<FunnelcakeException>()),
+        );
+        verifyNever(
+          () => mockHttpClient.post(
+            any(),
+            headers: any(named: 'headers'),
+            body: any(named: 'body'),
+          ),
+        );
+      });
+
+      test(
+        'throws FunnelcakeException for more ids than one request takes',
+        () {
+          expect(
+            () => client.getVideosByIds(
+              List.generate(
+                FunnelcakeApiClient.maxVideosPerBulkRequest + 1,
+                (index) => index.toRadixString(16).padLeft(64, '0'),
+              ),
+            ),
+            throwsA(isA<FunnelcakeException>()),
+          );
+          verifyNever(
+            () => mockHttpClient.post(
+              any(),
+              headers: any(named: 'headers'),
+              body: any(named: 'body'),
+            ),
+          );
+        },
+      );
+
+      test('throws FunnelcakeApiException on error status codes', () async {
+        stubPost(http.Response('Internal Server Error', 500));
+
+        await expectLater(
+          client.getVideosByIds([verifiedId]),
+          throwsA(isA<FunnelcakeApiException>()),
+        );
+      });
+
+      test('throws FunnelcakeTimeoutException on timeout', () async {
+        when(
+          () => mockHttpClient.post(
+            any(),
+            headers: any(named: 'headers'),
+            body: any(named: 'body'),
+          ),
+        ).thenAnswer((_) async => throw TimeoutException('Request timed out'));
+
+        await expectLater(
+          client.getVideosByIds([verifiedId]),
+          throwsA(isA<FunnelcakeTimeoutException>()),
+        );
+      });
+
+      test('throws FunnelcakeException on a malformed body', () async {
+        stubPost(http.Response('not json', 200));
+
+        await expectLater(
+          client.getVideosByIds([verifiedId]),
+          throwsA(isA<FunnelcakeException>()),
+        );
+      });
+    });
+
     group('getBulkVideoStats', () {
       test('returns stats from list format response', () async {
         const validResponse = '''

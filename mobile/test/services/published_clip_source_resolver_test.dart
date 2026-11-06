@@ -64,7 +64,7 @@ void main() {
     late List<({String pubkey, int limit, int? before})> authorQueries;
 
     late List<String> hashQueries;
-    late List<String> verifyQueries;
+    late List<List<String>> verdictQueries;
 
     PublishedClipSourceResolver buildResolver({
       required http.Response Function() respond,
@@ -73,12 +73,13 @@ void main() {
       List<VideoEvent> hashVideos = const [],
       Object? hashError,
       Set<String> verifiedEventIds = const {},
+      Set<String> uncheckedEventIds = const {},
       Object? verifyError,
     }) {
       requested = [];
       authorQueries = [];
       hashQueries = [];
-      verifyQueries = [];
+      verdictQueries = [];
       return PublishedClipSourceResolver(
         mediaServer: Uri.parse('https://media.divine.video'),
         httpClientFactory: () => MockClient((request) async {
@@ -95,10 +96,18 @@ void main() {
           if (hashError != null) throw hashError;
           return hashVideos;
         },
-        isVerifiedArchive: (eventId) async {
-          verifyQueries.add(eventId);
+        archiveVerdicts: (eventIds) async {
+          verdictQueries.add(eventIds);
           if (verifyError != null) throw verifyError;
-          return verifiedEventIds.contains(eventId);
+          return {
+            for (final id in eventIds)
+              if (verifiedEventIds.contains(id))
+                id: ArchiveVerdict.verified
+              else if (uncheckedEventIds.contains(id))
+                id: ArchiveVerdict.unchecked
+              else
+                id: ArchiveVerdict.notVerified,
+          };
         },
       );
     }
@@ -200,8 +209,81 @@ void main() {
 
           expect(found, same(vine));
           expect(hashQueries, equals([_sha256]));
-          expect(verifyQueries, equals([vine.id]));
+          expect(
+            verdictQueries,
+            equals([
+              [vine.id, laterVine.id],
+            ]),
+          );
           expect(requested, isEmpty);
+        },
+      );
+
+      test(
+        'checks every Vine post naming the file in one request',
+        () async {
+          final claims = [
+            for (var index = 0; index < 30; index++)
+              _vine(
+                id: index.toRadixString(16).padLeft(64, '0'),
+                sha256: _sha256,
+                createdAt: 1772932336 + index,
+                pubkey: _otherAuthor,
+              ),
+          ];
+          final vine = _vine(id: 'e' * 64, sha256: _sha256);
+          final resolver = buildResolver(
+            respond: unused,
+            hashVideos: [...claims, vine],
+            verifiedEventIds: {vine.id},
+          );
+
+          expect(await resolver.findArchivedVine(_sha256), same(vine));
+          expect(verdictQueries, hasLength(1));
+          expect(verdictQueries.single, hasLength(31));
+        },
+      );
+
+      test(
+        'takes an older verified post before a newer one it could not check',
+        () async {
+          final vine = _vine(id: 'e' * 64, sha256: _sha256);
+          final unchecked = _vine(
+            id: 'd' * 64,
+            sha256: _sha256,
+            createdAt: 1772932336,
+          );
+          final resolver = buildResolver(
+            respond: unused,
+            hashVideos: [unchecked, vine],
+            verifiedEventIds: {vine.id},
+            uncheckedEventIds: {unchecked.id},
+          );
+
+          expect(await resolver.findArchivedVine(_sha256), same(vine));
+        },
+      );
+
+      test(
+        'throws when an older post naming the file could not be checked',
+        () async {
+          final unchecked = _vine(id: 'e' * 64, sha256: _sha256);
+          final laterVine = _vine(
+            id: 'd' * 64,
+            sha256: _sha256,
+            createdAt: 1772932336,
+          );
+          final resolver = buildResolver(
+            respond: unused,
+            hashVideos: [laterVine, unchecked],
+            verifiedEventIds: {laterVine.id},
+            uncheckedEventIds: {unchecked.id},
+          );
+
+          await expectLater(
+            resolver.findArchivedVine(_sha256),
+            throwsA(isA<PublishedClipSourceLookupException>()),
+          );
         },
       );
 
@@ -222,7 +304,12 @@ void main() {
           );
 
           expect(await resolver.findArchivedVine(_sha256), same(vine));
-          expect(verifyQueries, equals([selfTagged.id, vine.id]));
+          expect(
+            verdictQueries,
+            equals([
+              [selfTagged.id, vine.id],
+            ]),
+          );
         },
       );
 
@@ -257,7 +344,7 @@ void main() {
           );
 
           expect(await resolver.findArchivedVine(_sha256), isNull);
-          expect(verifyQueries, isEmpty);
+          expect(verdictQueries, isEmpty);
         },
       );
 

@@ -40,9 +40,15 @@ class VideoRecorderCaptureTopBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final (isRecording, capturesStills, stopMotionFrameCount) = context.select(
+    final (
+      isRecording,
+      isIntervalCaptureRunning,
+      capturesStills,
+      stopMotionFrameCount,
+    ) = context.select(
       (VideoRecorderBloc b) => (
         b.state.isRecording,
+        b.state.isIntervalCaptureRunning,
         b.state.recorderMode.capturesStills,
         b.state.stopMotionFrameCount,
       ),
@@ -53,7 +59,10 @@ class VideoRecorderCaptureTopBar extends ConsumerWidget {
     // straight back to a composition the user backed out of to shoot more —
     // without it the only way back to the editor was another still.
     final assemblesStills = capturesStills && stopMotionFrameCount > 0;
-    final showNext = assemblesStills || hasClips;
+    // A running interval loop keeps the shot budget up and puts the buttons
+    // away, as a recording does: the shutter is what ends it.
+    final showClose = !isIntervalCaptureRunning;
+    final showNext = (assemblesStills || hasClips) && !isIntervalCaptureRunning;
 
     return SafeArea(
       left: false,
@@ -69,15 +78,22 @@ class VideoRecorderCaptureTopBar extends ConsumerWidget {
                   spacing: 12,
                   mainAxisAlignment: .spaceBetween,
                   children: [
-                    DivineIconButton(
-                      icon: .x,
-                      semanticLabel: context.l10n.videoRecorderCloseLabel,
-                      semanticIdentifier: SemanticIds.cameraCloseButton,
-                      size: .small,
-                      type: .ghostOverMedia,
-                      onPressed: () => fromEditor
-                          ? context.pop(false)
-                          : closeVideoRecorder(context, ref),
+                    AnimatedOpacity(
+                      duration: _animationDuration,
+                      opacity: showClose ? 1 : 0,
+                      child: IgnorePointer(
+                        ignoring: !showClose,
+                        child: DivineIconButton(
+                          icon: .x,
+                          semanticLabel: context.l10n.videoRecorderCloseLabel,
+                          semanticIdentifier: SemanticIds.cameraCloseButton,
+                          size: .small,
+                          type: .ghostOverMedia,
+                          onPressed: () => fromEditor
+                              ? context.pop(false)
+                              : closeVideoRecorder(context, ref),
+                        ),
+                      ),
                     ),
                     ?center,
                     AnimatedOpacity(

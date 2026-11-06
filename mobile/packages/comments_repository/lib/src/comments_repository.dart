@@ -993,6 +993,9 @@ class CommentsRepository {
   /// - [reason]: Optional reason for the deletion
   ///
   /// The comment is treated as deleted only once a relay accepts the request.
+  /// A comment already known deleted returns without publishing again:
+  /// relays keep every deletion request, so a repeat would be a second
+  /// permanent record and a second decrement of the cached count.
   ///
   /// Throws [DeleteCommentFailedException] if no relay accepts the request
   /// within five seconds, or if publishing it fails.
@@ -1002,6 +1005,7 @@ class CommentsRepository {
     String? rootAddressableId,
     String? reason,
   }) async {
+    if (_deletedCommentIds.contains(commentId)) return;
     try {
       // NIP-09: Build deletion request tags
       final tags = <List<String>>[

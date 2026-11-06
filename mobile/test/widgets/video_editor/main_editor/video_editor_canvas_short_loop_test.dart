@@ -1,5 +1,5 @@
 // ABOUTME: Pins how the canvas drives the timeline position on a short loop,
-// ABOUTME: and that it hands the frame effects to the player after each load.
+// ABOUTME: and which clips and frame effects it hands the player on a load.
 
 import 'dart:async';
 import 'dart:io';
@@ -219,19 +219,20 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  DivineVideoClip clipOf(Duration duration) => DivineVideoClip(
-    id: 'clip',
-    video: EditorVideo.file(
-      File('${tempDir.path}/clip.mp4')..writeAsBytesSync(const [0]),
-    ),
-    duration: duration,
-    recordedAt: DateTime(2026),
-    targetAspectRatio: model.AspectRatio.vertical,
-    originalAspectRatio: 9 / 16,
-  );
+  DivineVideoClip clipOf(Duration duration, {String name = 'clip'}) =>
+      DivineVideoClip(
+        id: name,
+        video: EditorVideo.file(
+          File('${tempDir.path}/$name.mp4')..writeAsBytesSync(const [0]),
+        ),
+        duration: duration,
+        recordedAt: DateTime(2026),
+        targetAspectRatio: model.AspectRatio.vertical,
+        originalAspectRatio: 9 / 16,
+      );
 
-  /// Mounts the canvas over one clip of [duration] and lets its player come
-  /// up on the mocked channel.
+  /// Mounts the canvas over [clips], or over one clip of [duration] when
+  /// [clips] is omitted, and lets its player come up on the mocked channel.
   Future<void> pumpCanvas(
     WidgetTester tester,
     Duration duration, {
@@ -357,6 +358,59 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
   }
+
+  group('clip detach', () {
+    testWidgets('rebuilds the player from the clips left on the timeline', (
+      tester,
+    ) async {
+      final detached = clipOf(const Duration(seconds: 3), name: 'detached');
+      final remaining = clipOf(const Duration(seconds: 6), name: 'remaining');
+      final states = StreamController<ClipEditorState>.broadcast();
+      addTearDown(states.close);
+      await pumpCanvas(
+        tester,
+        const Duration(seconds: 3),
+        clips: [detached, remaining],
+        clipStates: states.stream,
+      );
+      // A first detach replaces the player with one on the legacy surface.
+      final reloads = <MethodCall>[];
+      installMockDivineVideoPlayer(
+        playerId: DivineVideoPlayerController.nextId,
+        onMethodCall: (call) async {
+          if (call.method == 'setClips') reloads.add(call);
+          return null;
+        },
+      );
+
+      // The clip manager still lists both clips, as it does until the detach
+      // reaches the editor history.
+      states.add(
+        ClipEditorState(
+          clips: [remaining],
+          lastDetachResult: ClipDetachSuccess(
+            previousClips: [detached, remaining],
+            detachedClip: detached,
+          ),
+        ),
+      );
+      // The rebuild needs real async turns to finish.
+      for (var i = 0; i < 10; i++) {
+        await tester.pump();
+        await tester.runAsync(pumpEventQueue);
+      }
+      await unmount(tester);
+
+      final loads = [
+        for (final reload in reloads)
+          ((reload.arguments as Map)['clips'] as List)
+              .map((clip) => (clip as Map)['uri'])
+              .toList(),
+      ];
+      expect(loads, isNotEmpty);
+      expect(loads, everyElement([endsWith('remaining.mp4')]));
+    });
+  });
 
   group('clip motion editing', () {
     /// Holds the next player reload until the seek has been sent.

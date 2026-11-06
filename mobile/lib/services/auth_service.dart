@@ -1287,7 +1287,13 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         name: 'AuthService',
         category: LogCategory.auth,
       );
-    } on UserDataCleanupException {
+    } on UserDataCleanupException catch (e) {
+      Log.error(
+        'SecureAuthService initialization could not restore the account: '
+        '${e.diagnostic}',
+        name: 'AuthService',
+        category: LogCategory.auth,
+      );
       _lastFailureReason = AuthFailureReason.accountCleanupFailed;
       _lastError = 'Could not clear account data safely';
       _resetTentativeSessionAfterCleanupFailure();

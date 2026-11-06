@@ -74,7 +74,7 @@ class CommentComposerBloc
     // droppable() on the two submit events: a rapid second tap on Send lands
     // BEFORE the first handler emits the cleared input, so both reads of
     // state.mainInputText would otherwise insert two placeholders + double-
-    // publish. Mirrors CommentReactionsBloc.CommentVoteToggled.
+    // publish.
     on<CommentSubmitted>(_onSubmitted, transformer: droppable());
     on<CommentComposerErrorCleared>(_onErrorCleared);
     on<CommentEditModeEntered>(_onEditModeEntered);

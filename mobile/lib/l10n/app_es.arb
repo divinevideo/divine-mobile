@@ -2644,6 +2644,7 @@
   "videoRecorderFlashValueAuto": "Automático",
   "videoRecorderTimerValueOff": "Desactivado",
   "videoRecorderTimerValueThreeSeconds": "3 segundos",
+  "videoRecorderTimerValueFiveSeconds": "5 segundos",
   "videoRecorderTimerValueTenSeconds": "10 segundos",
   "videoRecorderAspectRatioValueSquare": "Cuadrado",
   "videoRecorderAspectRatioValueVertical": "Vertical",

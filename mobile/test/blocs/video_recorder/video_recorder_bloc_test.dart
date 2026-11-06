@@ -1105,6 +1105,35 @@ void main() {
       );
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'cycles stop-motion through off → three → five → ten → off',
+        build: () => buildBloc()
+          ..emit(
+            const VideoRecorderBlocState(
+              recorderMode: VideoRecorderMode.stopMotion,
+            ),
+          ),
+        act: (bloc) async {
+          for (var i = 0; i < 4; i++) {
+            bloc.add(const VideoRecorderTimerCycled());
+            await pumpEventQueue();
+          }
+        },
+        expect: () => [
+          for (final timer in const [
+            TimerDuration.three,
+            TimerDuration.five,
+            TimerDuration.ten,
+            TimerDuration.off,
+          ])
+            isA<VideoRecorderBlocState>().having(
+              (s) => s.timerDuration,
+              'timerDuration',
+              timer,
+            ),
+        ],
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'does not enable the timer outside capture mode',
         build: () => buildBloc()
           ..emit(
@@ -3605,6 +3634,28 @@ void main() {
               keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
             ),
           ).called(1);
+        },
+      );
+
+      // A delayed start carried into stop-motion would turn the next shutter
+      // tap into a hands-free loop.
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'capture → stop-motion turns a delayed-start timer off',
+        setUp: () {
+          when(
+            () => cameraService.setVideoStabilizationMode(any()),
+          ).thenAnswer((_) async => true);
+        },
+        build: () => buildBloc()
+          ..emit(
+            const VideoRecorderBlocState(timerDuration: TimerDuration.three),
+          ),
+        act: (bloc) => bloc.add(
+          const VideoRecorderRecorderModeSet(VideoRecorderMode.stopMotion),
+        ),
+        verify: (bloc) {
+          expect(bloc.state.recorderMode, VideoRecorderMode.stopMotion);
+          expect(bloc.state.timerDuration, TimerDuration.off);
         },
       );
 

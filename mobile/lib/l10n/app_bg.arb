@@ -2876,6 +2876,7 @@
   "videoRecorderFlashValueAuto": "Авто",
   "videoRecorderTimerValueOff": "Изкл.",
   "videoRecorderTimerValueThreeSeconds": "3 секунди",
+  "videoRecorderTimerValueFiveSeconds": "5 секунди",
   "videoRecorderTimerValueTenSeconds": "10 секунди",
   "videoRecorderAspectRatioValueSquare": "Квадратно",
   "videoRecorderAspectRatioValueVertical": "Вертикално",

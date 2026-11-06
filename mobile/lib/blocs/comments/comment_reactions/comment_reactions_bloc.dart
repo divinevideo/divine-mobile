@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:openvine/blocs/comments/comment_reactions/reportable_sites.dart';
+import 'package:openvine/blocs/sequential_by_key.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -43,7 +44,13 @@ class CommentReactionsBloc
        _rootEventId = rootEventId,
        _rootAddressableId = rootAddressableId,
        super(const CommentReactionsState()) {
-    on<CommentVoteToggled>(_onVoteToggled, transformer: droppable());
+    // Per comment: votes on different comments publish side by side, and
+    // taps on one comment run in order, so an up and a down never interleave
+    // their kind 7 and kind 5 publishes (#8168).
+    on<CommentVoteToggled>(
+      _onVoteToggled,
+      transformer: sequentialByKey((event) => event.commentId),
+    );
     // restartable(): on a fast comment stream the UI bridge dispatches a
     // fetch for each new id batch. Without this, a slow earlier fetch
     // returning after a newer one could clobber the fresher counts.
@@ -51,11 +58,18 @@ class CommentReactionsBloc
       _onVoteCountsFetchRequested,
       transformer: restartable(),
     );
+    // sequential(): every block republishes the whole kind 10000 mute list,
+    // so two at once would race to replace it; each block still runs (#8168).
     on<CommentBlockUserRequested>(
       _onBlockUserRequested,
-      transformer: droppable(),
+      transformer: sequential(),
     );
-    on<CommentDeleteRequested>(_onDeleteRequested, transformer: droppable());
+    // Per comment: deleting one comment never waits on another's relay OK,
+    // and a repeat for the same comment queues behind the first (#8168).
+    on<CommentDeleteRequested>(
+      _onDeleteRequested,
+      transformer: sequentialByKey((event) => event.commentId),
+    );
     on<CommentReactionsErrorCleared>(_onErrorCleared);
     on<ReactionsOutboxConsumed>(_onOutboxConsumed);
   }

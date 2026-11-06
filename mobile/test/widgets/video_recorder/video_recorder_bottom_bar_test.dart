@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/widgets/video_recorder/video_recorder_bottom_bar.dart';
@@ -124,6 +125,24 @@ void main() {
           ),
         );
         expect(opacity.opacity, equals(1.0));
+      });
+
+      // A mode switch mid-loop would discard the session's stills.
+      testWidgets('puts the mode wheel away while stop-motion captures on '
+          'its interval', (tester) async {
+        when(() => recorderBloc.state).thenReturn(
+          const VideoRecorderBlocState(
+            recorderMode: VideoRecorderMode.stopMotion,
+            isIntervalCaptureRunning: true,
+          ),
+        );
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byType(VideoRecorderModeSelectorWheel).hitTestable(),
+          findsNothing,
+        );
       });
     });
   });

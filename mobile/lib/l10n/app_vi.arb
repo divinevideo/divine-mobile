@@ -4699,6 +4699,7 @@
   "videoRecorderFlashValueAuto": "Tự động",
   "videoRecorderTimerValueOff": "Tắt",
   "videoRecorderTimerValueThreeSeconds": "3 giây",
+  "videoRecorderTimerValueFiveSeconds": "5 giây",
   "videoRecorderTimerValueTenSeconds": "10 giây",
   "videoRecorderAspectRatioValueSquare": "Vuông",
   "videoRecorderAspectRatioValueVertical": "Dọc",

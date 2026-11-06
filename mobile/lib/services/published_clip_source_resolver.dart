@@ -21,28 +21,28 @@ typedef PublishedVideosByFileHash = Future<List<VideoEvent>> Function(
   String sha256,
 );
 
-/// Whether the server verifies the video event `eventId` as an archived Vine.
-///
-/// The answer is about that exact event, so another revision of the same
-/// address does not inherit it. Throws when the verification cannot be asked,
-/// or when the server says it could not check its archive
-/// ([ArchiveVerificationUnavailableException]).
-typedef IsVerifiedArchive = Future<bool> Function(String eventId);
+/// What the server says about one video event's archive provenance.
+enum ArchiveVerdict {
+  /// The server verifies the event as an archived Vine.
+  verified,
 
-/// The server could not check an event against its archive, so its answer is
-/// neither yes nor no.
-class ArchiveVerificationUnavailableException implements Exception {
-  /// Creates an [ArchiveVerificationUnavailableException] for [eventId].
-  const ArchiveVerificationUnavailableException(this.eventId);
+  /// The server checked the event and it is not an archived Vine.
+  notVerified,
 
-  /// The event that could not be checked.
-  final String eventId;
-
-  @override
-  String toString() =>
-      'ArchiveVerificationUnavailableException: the archive could not check '
-      '$eventId';
+  /// The server could not check the event against its archive, so its answer
+  /// is neither yes nor no.
+  unchecked,
 }
+
+/// Asks the server, in one lookup, for the [ArchiveVerdict] of each of the
+/// video events `eventIds`.
+///
+/// Each verdict is about that exact event, so another revision of the same
+/// address does not inherit it. An event the server has no row for is absent
+/// from the result. Throws when the server cannot be asked.
+typedef ArchiveVerdicts = Future<Map<String, ArchiveVerdict>> Function(
+  List<String> eventIds,
+);
 
 /// A Divine post whose exact file a received clip turned out to be.
 class PublishedClipSource {
@@ -85,12 +85,12 @@ class PublishedClipSourceResolver {
     required Uri mediaServer,
     required PublishedVideosByAuthor videosByAuthor,
     required PublishedVideosByFileHash videosByFileHash,
-    required IsVerifiedArchive isVerifiedArchive,
+    required ArchiveVerdicts archiveVerdicts,
     http.Client Function()? httpClientFactory,
   }) : _mediaServer = mediaServer,
        _videosByAuthor = videosByAuthor,
        _videosByFileHash = videosByFileHash,
-       _isVerifiedArchive = isVerifiedArchive,
+       _archiveVerdicts = archiveVerdicts,
        _httpClientFactory = httpClientFactory ?? http.Client.new;
 
   /// Upper bound on the provenance request.
@@ -108,7 +108,7 @@ class PublishedClipSourceResolver {
   final Uri _mediaServer;
   final PublishedVideosByAuthor _videosByAuthor;
   final PublishedVideosByFileHash _videosByFileHash;
-  final IsVerifiedArchive _isVerifiedArchive;
+  final ArchiveVerdicts _archiveVerdicts;
   final http.Client Function() _httpClientFactory;
 
   /// Returns who published the file with SHA-256 [sha256], or null when the
@@ -134,11 +134,12 @@ class PublishedClipSourceResolver {
   /// rather than the viner as its owner. Its post names the file in an `x`
   /// tag and says it is a Vine, but anyone can write both tags, so a post
   /// counts only once the server verifies that exact event as an archived
-  /// Vine. Posts are checked oldest first and the first verified one is
-  /// taken.
+  /// Vine. Every candidate post is checked in one lookup, and the oldest
+  /// verified one is taken.
   ///
   /// Throws a [PublishedClipSourceLookupException] when the relays or the
-  /// verification cannot be asked, since a null answer would then turn a
+  /// verification cannot be asked, or when the server could not check a post
+  /// older than the first verified one, since a null answer would then turn a
   /// real Vine away.
   Future<VideoEvent?> findArchivedVine(String sha256) async {
     final hash = sha256.toLowerCase();
@@ -153,15 +154,27 @@ class PublishedClipSourceResolver {
         if (video.isOriginalVine && video.sha256?.toLowerCase() == hash)
           video.id: video,
     }.values.toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    if (candidates.isEmpty) return null;
 
+    final Map<String, ArchiveVerdict> verdicts;
+    try {
+      verdicts = await _archiveVerdicts([
+        for (final video in candidates) video.id,
+      ]);
+    } on Exception catch (error) {
+      throw PublishedClipSourceLookupException('$error');
+    }
     for (final video in candidates) {
-      final bool verified;
-      try {
-        verified = await _isVerifiedArchive(video.id);
-      } on Exception catch (error) {
-        throw PublishedClipSourceLookupException('$error');
+      switch (verdicts[video.id]) {
+        case ArchiveVerdict.verified:
+          return video;
+        case ArchiveVerdict.unchecked:
+          throw PublishedClipSourceLookupException(
+            'the archive could not check ${video.id}',
+          );
+        case ArchiveVerdict.notVerified || null:
+          continue;
       }
-      if (verified) return video;
     }
     return null;
   }

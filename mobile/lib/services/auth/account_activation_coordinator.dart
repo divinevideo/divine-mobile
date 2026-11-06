@@ -159,6 +159,43 @@ class AccountActivationCoordinator {
     return active != null && _isCommitted(active) ? active.ownerPubkey : null;
   }
 
+  /// The one account a cold [begin] would admit, when the retained record
+  /// admits exactly one.
+  ///
+  /// An interrupted switch leaves a `pending` or `identityReady` record only
+  /// its owner can resume, and a `committed` record admits only the native
+  /// owner it names; [begin] refuses every other account. Null once this
+  /// process holds a ticket, and for a record that admits anybody or nobody.
+  /// Reading never writes, reloads or verifies the evidence.
+  String? get soleAdmittedOwnerPubkey {
+    if (_active != null) return null;
+    final raw = _preferences.get(storageKey);
+    if (raw is! String) return null;
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(raw);
+    } on FormatException {
+      return null;
+    }
+    if (decoded is! Map<String, dynamic> || decoded['version'] != 1) {
+      return null;
+    }
+    final token = decoded['token'];
+    final owner = decoded['ownerPubkey'];
+    if (token is! String ||
+        !RegExp(r'^[0-9a-f]{48}$').hasMatch(token) ||
+        owner is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(owner)) {
+      return null;
+    }
+    return switch (decoded['phase']) {
+      'pending' || 'identityReady' => owner,
+      'committed' when _preferences.get('current_user_pubkey_hex') == owner =>
+        owner,
+      _ => null,
+    };
+  }
+
   /// Only this live terminal capability can make repeated sign-out a no-op.
   bool isVerifiedSignedOut(AccountActivationTicket ticket) =>
       _ownerlessSignOut == null &&

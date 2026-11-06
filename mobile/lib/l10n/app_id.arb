@@ -3421,6 +3421,7 @@
   "videoRecorderFlashValueAuto": "Otomatis",
   "videoRecorderTimerValueOff": "Nonaktif",
   "videoRecorderTimerValueThreeSeconds": "3 detik",
+  "videoRecorderTimerValueFiveSeconds": "5 detik",
   "videoRecorderTimerValueTenSeconds": "10 detik",
   "videoRecorderAspectRatioValueSquare": "Persegi",
   "videoRecorderAspectRatioValueVertical": "Vertikal",

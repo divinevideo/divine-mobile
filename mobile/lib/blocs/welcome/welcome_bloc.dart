@@ -11,6 +11,7 @@ import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/models/known_account.dart';
+import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/npub_hex.dart';
@@ -30,9 +31,11 @@ class WelcomeBloc extends Bloc<WelcomeEvent, WelcomeState> {
   WelcomeBloc({
     required UserProfilesDao userProfilesDao,
     required AuthService authService,
+    required AccountActivationCoordinator activationGate,
     this.deletionPendingPubkeyHex,
   }) : _userProfilesDao = userProfilesDao,
        _authService = authService,
+       _activationGate = activationGate,
        super(const WelcomeState()) {
     on<WelcomeStarted>(_onStarted, transformer: droppable());
     on<WelcomeLastUserDismissed>(
@@ -55,6 +58,7 @@ class WelcomeBloc extends Bloc<WelcomeEvent, WelcomeState> {
 
   final UserProfilesDao _userProfilesDao;
   final AuthService _authService;
+  final AccountActivationCoordinator _activationGate;
   final String? deletionPendingPubkeyHex;
 
   Future<void> _onStarted(
@@ -109,21 +113,41 @@ class WelcomeBloc extends Bloc<WelcomeEvent, WelcomeState> {
         )
         .toList();
 
+    // An interrupted switch leaves the activation gate admitting one account;
+    // any other selection fails with the cleanup error until it is resumed.
+    final gateOwner = _activationGate.soleAdmittedOwnerPubkey;
+    final gatePubkey =
+        knownAccounts.any((account) => account.pubkeyHex == gateOwner)
+        ? gateOwner
+        : null;
+    if (gatePubkey != null) {
+      Log.info(
+        'WelcomeBloc: activation gate admits only '
+        '${pubkeyForLogs(gatePubkey)}',
+        name: 'WelcomeBloc',
+        category: LogCategory.auth,
+      );
+    }
+
     // Determine the initial selection:
     //
     // Priority order:
     //   1. pendingPubkey — explicit account-switch from settings (highest priority)
     //   2. event.initialSelectedPubkeyHex — router deep-link pre-selection
-    //   3. anchorPubkeyHex — the account the user was signed into at sign-out
+    //   3. gatePubkey — the only account the activation gate lets sign in
+    //   4. anchorPubkeyHex — the account the user was signed into at sign-out
     //      (avoids defaulting to a different account that was just restored
     //      via _redirectRecoveryToRemainingAccount and may show as "most recent")
-    //   4. null — falls back to previousAccounts.first (most recently used)
+    //   5. null — falls back to previousAccounts.first (most recently used)
     //
     // Using the anchor as the default pre-selection ensures the welcome screen
     // highlights the account the user was actually on, not the one that cold-
     // start recovery would have silently switched to.
     final initialSelection =
-        pendingPubkey ?? event.initialSelectedPubkeyHex ?? anchorPubkeyHex;
+        pendingPubkey ??
+        event.initialSelectedPubkeyHex ??
+        gatePubkey ??
+        anchorPubkeyHex;
 
     emit(
       state.copyWith(
@@ -241,6 +265,11 @@ class WelcomeBloc extends Bloc<WelcomeEvent, WelcomeState> {
         category: LogCategory.auth,
       );
     } on UserDataCleanupException catch (e, stackTrace) {
+      Log.warning(
+        'WelcomeBloc: sign-in refused: ${e.diagnostic}',
+        name: 'WelcomeBloc',
+        category: LogCategory.auth,
+      );
       // Cleanup failed before an incoming session could become active. Keep
       // the selected account and login actions so the user can retry safely.
       addError(e, stackTrace);
@@ -342,6 +371,11 @@ class WelcomeBloc extends Bloc<WelcomeEvent, WelcomeState> {
         previous.authSource,
       );
     } on UserDataCleanupException catch (e, stackTrace) {
+      Log.warning(
+        'WelcomeBloc: sign-in refused: ${e.diagnostic}',
+        name: 'WelcomeBloc',
+        category: LogCategory.auth,
+      );
       // Cleanup failed before an incoming session could become active. Keep
       // the selected account and login actions so the user can retry safely.
       addError(e, stackTrace);

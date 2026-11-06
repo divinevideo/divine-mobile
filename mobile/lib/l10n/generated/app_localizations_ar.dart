@@ -9077,6 +9077,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoRecorderTimerValueThreeSeconds => '3 ثوانٍ';
 
   @override
+  String get videoRecorderTimerValueFiveSeconds => '5 ثوانٍ';
+
+  @override
   String get videoRecorderTimerValueTenSeconds => '10 ثوانٍ';
 
   @override

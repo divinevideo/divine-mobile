@@ -235,6 +235,7 @@ enum DivineIconName {
   textOutlineShadow('text_outline_shadow'),
   timer('timer'),
   timer3('timer_3'),
+  timer5('timer_5'),
   timer10('timer_10'),
   trash('trash'),
   trashSimple('trash_simple'),

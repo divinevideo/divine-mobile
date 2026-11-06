@@ -1,7 +1,10 @@
 // ABOUTME: Tests for CommentReactionsBloc — votes (up/down/switch), vote-count
 // ABOUTME: batch fetch, block (with outbox), delete (with outbox).
 // ABOUTME: Asserts #4478 cache-fix: rootAddressableId threaded into
-// ABOUTME: CommentsRepository.deleteComment.
+// ABOUTME: CommentsRepository.deleteComment. Pins #8168: an action on one
+// ABOUTME: target is never dropped while another target's is in flight.
+
+import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:comments_repository/comments_repository.dart';
@@ -621,6 +624,201 @@ void main() {
             ReactionsError.deleteCommentFailed,
           ),
         ],
+      );
+    });
+
+    group('actions on a second target while the first is in flight', () {
+      test('a vote on another comment publishes without waiting', () async {
+        final firstPublish = Completer<String>();
+        when(
+          () => mockLikesRepository.likeEvent(
+            eventId: validId('c1'),
+            authorPubkey: any(named: 'authorPubkey'),
+            targetKind: any(named: 'targetKind'),
+          ),
+        ).thenAnswer((_) => firstPublish.future);
+        when(
+          () => mockLikesRepository.likeEvent(
+            eventId: validId('c2'),
+            authorPubkey: any(named: 'authorPubkey'),
+            targetKind: any(named: 'targetKind'),
+          ),
+        ).thenAnswer((_) async => 'like-c2');
+        final bloc = createBloc();
+        addTearDown(() async {
+          if (!firstPublish.isCompleted) firstPublish.complete('like-c1');
+          await bloc.close();
+        });
+
+        bloc
+          ..add(
+            CommentVoteToggled(
+              commentId: validId('c1'),
+              authorPubkey: validId('author1'),
+              vote: Vote.up,
+            ),
+          )
+          ..add(
+            CommentVoteToggled(
+              commentId: validId('c2'),
+              authorPubkey: validId('author2'),
+              vote: Vote.up,
+            ),
+          );
+        await pumpEventQueue();
+
+        verify(
+          () => mockLikesRepository.likeEvent(
+            eventId: validId('c2'),
+            authorPubkey: validId('author2'),
+            targetKind: any(named: 'targetKind'),
+          ),
+        ).called(1);
+        expect(bloc.state.upvotedCommentIds, {validId('c1'), validId('c2')});
+      });
+
+      test('a delete of another comment publishes without waiting', () async {
+        final firstDelete = Completer<void>();
+        when(
+          () => mockCommentsRepository.deleteComment(
+            commentId: validId('c1'),
+            rootEventId: any(named: 'rootEventId'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+          ),
+        ).thenAnswer((_) => firstDelete.future);
+        when(
+          () => mockCommentsRepository.deleteComment(
+            commentId: validId('c2'),
+            rootEventId: any(named: 'rootEventId'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+          ),
+        ).thenAnswer((_) async {});
+        final bloc = createBloc();
+        addTearDown(() async {
+          if (!firstDelete.isCompleted) firstDelete.complete();
+          await bloc.close();
+        });
+
+        bloc
+          ..add(CommentDeleteRequested(validId('c1')))
+          ..add(CommentDeleteRequested(validId('c2')));
+        await pumpEventQueue();
+
+        verify(
+          () => mockCommentsRepository.deleteComment(
+            commentId: validId('c2'),
+            rootEventId: any(named: 'rootEventId'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+          ),
+        ).called(1);
+      });
+
+      // The repository skips a comment it already deleted only once the
+      // first request has landed, so a repeat must not start before then.
+      test('a second delete of the same comment waits for the first', () async {
+        final firstDelete = Completer<void>();
+        var deleteCalls = 0;
+        when(
+          () => mockCommentsRepository.deleteComment(
+            commentId: validId('c1'),
+            rootEventId: any(named: 'rootEventId'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+          ),
+        ).thenAnswer(
+          (_) => ++deleteCalls == 1 ? firstDelete.future : Future.value(),
+        );
+        final bloc = createBloc();
+        addTearDown(() async {
+          if (!firstDelete.isCompleted) firstDelete.complete();
+          await bloc.close();
+        });
+
+        bloc
+          ..add(CommentDeleteRequested(validId('c1')))
+          ..add(CommentDeleteRequested(validId('c1')));
+        await pumpEventQueue();
+        expect(deleteCalls, equals(1));
+
+        firstDelete.complete();
+        await pumpEventQueue();
+
+        expect(deleteCalls, equals(2));
+      });
+
+      test('a block of another author runs once the first finishes', () async {
+        final firstBlock = Completer<bool>();
+        when(
+          () => mockContentBlocklistRepository.blockUser(validId('a1')),
+        ).thenAnswer((_) => firstBlock.future);
+        when(
+          () => mockContentBlocklistRepository.blockUser(validId('a2')),
+        ).thenAnswer((_) async => true);
+        final bloc = createBloc();
+        addTearDown(() async {
+          if (!firstBlock.isCompleted) firstBlock.complete(true);
+          await bloc.close();
+        });
+
+        bloc
+          ..add(CommentBlockUserRequested(validId('a1')))
+          ..add(CommentBlockUserRequested(validId('a2')));
+        await pumpEventQueue();
+        verifyNever(
+          () => mockContentBlocklistRepository.blockUser(validId('a2')),
+        );
+
+        firstBlock.complete(true);
+        await pumpEventQueue();
+
+        verify(
+          () => mockContentBlocklistRepository.blockUser(validId('a2')),
+        ).called(1);
+      });
+
+      test(
+        'a second tap on the same comment undoes the vote after it lands',
+        () async {
+          final firstPublish = Completer<String>();
+          when(
+            () => mockLikesRepository.likeEvent(
+              eventId: validId('c1'),
+              authorPubkey: any(named: 'authorPubkey'),
+              targetKind: any(named: 'targetKind'),
+            ),
+          ).thenAnswer((_) => firstPublish.future);
+          when(
+            () => mockLikesRepository.unlikeEvent(validId('c1')),
+          ).thenAnswer((_) async {});
+          final bloc = createBloc();
+          addTearDown(() async {
+            if (!firstPublish.isCompleted) firstPublish.complete('like-c1');
+            await bloc.close();
+          });
+          final tap = CommentVoteToggled(
+            commentId: validId('c1'),
+            authorPubkey: validId('author1'),
+            vote: Vote.up,
+          );
+
+          bloc
+            ..add(tap)
+            ..add(tap);
+          await pumpEventQueue();
+          verifyNever(() => mockLikesRepository.unlikeEvent(validId('c1')));
+
+          firstPublish.complete('like-c1');
+          await pumpEventQueue();
+
+          verifyInOrder([
+            () => mockLikesRepository.likeEvent(
+              eventId: validId('c1'),
+              authorPubkey: validId('author1'),
+              targetKind: any(named: 'targetKind'),
+            ),
+            () => mockLikesRepository.unlikeEvent(validId('c1')),
+          ]);
+          expect(bloc.state.upvotedCommentIds, isEmpty);
+        },
       );
     });
 

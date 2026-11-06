@@ -2497,6 +2497,42 @@ void main() {
         },
       );
 
+      test(
+        'publishes no second request for a comment already deleted',
+        () async {
+          await repository.deleteComment(commentId: testCommentId);
+          await repository.deleteComment(commentId: testCommentId);
+
+          verify(
+            () => mockNostrClient.publishEventAwaitOk(
+              any(),
+              timeout: any(named: 'timeout'),
+            ),
+          ).called(1);
+        },
+      );
+
+      test('retries a delete that no relay accepted', () async {
+        answerDeletionRequests(
+          acceptedBy: const [],
+          rejectedBy: refusingRelay,
+        );
+        await expectLater(
+          repository.deleteComment(commentId: testCommentId),
+          throwsA(isA<DeleteCommentFailedException>()),
+        );
+        answerDeletionRequests();
+
+        await repository.deleteComment(commentId: testCommentId);
+
+        verify(
+          () => mockNostrClient.publishEventAwaitOk(
+            any(),
+            timeout: any(named: 'timeout'),
+          ),
+        ).called(2);
+      });
+
       test('waits at most five seconds for relays to answer', () async {
         await repository.deleteComment(commentId: testCommentId);
 

@@ -43,24 +43,27 @@ VideoClipImportService videoClipImportService(Ref ref) {
       mediaServer: Uri.parse(ref.watch(currentEnvironmentProvider).blossomUrl),
       videosByAuthor: videosRepository.getVideosByAuthor,
       videosByFileHash: videosRepository.getVideosByFileHash,
-      isVerifiedArchive: verifiedArchiveLookup(videosRepository),
+      archiveVerdicts: archiveVerdictsLookup(videosRepository),
     ),
   );
 }
 
-/// Answers [IsVerifiedArchive] from the event's REST stats row, which the
-/// server classifies against that exact event.
+/// Answers [ArchiveVerdicts] from the events' REST rows, which the server
+/// classifies against each exact event, fetched in bulk.
 ///
-/// No row, or an API that is not configured, answers false, so the file is
-/// not credited. A failed request throws, and so does a row the server could
-/// not check against its archive ([ArchiveVerificationUnavailableException]),
-/// so the import reports a lookup it could not make rather than "not a Vine".
-IsVerifiedArchive verifiedArchiveLookup(VideosRepository repository) =>
-    (eventId) async {
-      final stats = await repository.getVideoStats(eventId);
-      if (stats == null) return false;
-      if (stats.isArchiveVerificationUnknown) {
-        throw ArchiveVerificationUnavailableException(eventId);
-      }
-      return stats.isVerifiedArchive;
+/// An event with no row, or every event when the API is not configured, gets
+/// no verdict, so its file is not credited. A failed request throws, so the
+/// import reports a lookup it could not make rather than "not a Vine".
+ArchiveVerdicts archiveVerdictsLookup(VideosRepository repository) =>
+    (eventIds) async {
+      final rows = await repository.getVideoStatsByIds(eventIds);
+      if (rows == null) return const {};
+      return {
+        for (final MapEntry(key: id, value: row) in rows.entries)
+          id: row.isVerifiedArchive
+              ? ArchiveVerdict.verified
+              : row.isArchiveVerificationUnknown
+              ? ArchiveVerdict.unchecked
+              : ArchiveVerdict.notVerified,
+      };
     };
