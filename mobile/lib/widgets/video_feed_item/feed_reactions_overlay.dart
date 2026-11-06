@@ -445,8 +445,8 @@ class _TopCommentContent extends StatelessWidget {
 
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: FeedReactionsOverlayLayout.maxTextScale,
-      // The bubble's text splits into one node per link, which left the
-      // button labelled with the author alone; it reads the whole comment.
+      // Label the complete comment once while its inline links keep their
+      // separate actions. LinkifiedText silences only non-interactive runs.
       child: Semantics(
         button: true,
         label: spokenText,
@@ -459,11 +459,9 @@ class _TopCommentContent extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             spacing: FeedReactionsOverlayLayout.gapBelowBubble,
             children: [
-              ExcludeSemantics(
-                child: _SpeechBubble(
-                  content: content,
-                  maxLines: commentMaxLines,
-                ),
+              _SpeechBubble(
+                content: content,
+                maxLines: commentMaxLines,
               ),
               _TopCommentAuthor(authorPubkey: comment.authorPubkey),
             ],
@@ -593,6 +591,7 @@ class _TopCommentText extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       // Hug the longest line, so the bubble ends where the text does.
       textWidthBasis: TextWidthBasis.longestLine,
+      excludeNonLinkSemantics: true,
     );
   }
 }

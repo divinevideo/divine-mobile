@@ -19,11 +19,15 @@ import 'package:openvine/blocs/feed_top_comment/feed_top_comment_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
+import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/video_feed_item/feed_reactions_overlay.dart';
 import 'package:riverpod/misc.dart' show Override;
+
+import '../../helpers/go_router.dart';
 
 class _MockFeedTopCommentCubit extends MockCubit<FeedTopCommentState>
     implements FeedTopCommentCubit {}
@@ -678,6 +682,135 @@ void main() {
         expect(data.hint, l10n.feedReactionOpenComment);
         handle.dispose();
       });
+
+      testWidgets(
+        'keeps inline profile and hashtag actions beside the whole comment',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          try {
+            const mentioned =
+                '6666666666666666666666666666666666666666666666666666666666666666';
+            final npub = NostrKeyUtils.encodePubKey(mentioned);
+            final router = MockGoRouter();
+            when(() => router.push<void>(any())).thenAnswer((_) async {});
+            when(() => router.push<Object?>(any()))
+                .thenAnswer((_) async => null);
+            when(() => cubit.state).thenReturn(
+              _visibleState.copyWith(
+                topComment: Comment(
+                  id: _topComment.id,
+                  content:
+                      'before nostr:$npub and #synthetic after 💚 '
+                      'https://example.com',
+                  authorPubkey: _commenter,
+                  createdAt: DateTime(2026, 10, 28),
+                  rootEventId: _video.id,
+                  rootAuthorPubkey: _creator,
+                ),
+              ),
+            );
+            await tester.pumpWidget(
+              MockGoRouterProvider(
+                goRouter: router,
+                child: buildSubject(
+                  extraOverrides: [
+                    userProfileReactiveProvider(mentioned).overrideWith(
+                      (ref) => Stream<UserProfile?>.value(
+                        UserProfile(
+                          pubkey: mentioned,
+                          rawData: const {},
+                          createdAt: DateTime(2026),
+                          eventId: _topComment.id,
+                          displayName: 'Synthetic Mention',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+
+            final wholeLabel =
+                'before @Synthetic Mention and #synthetic after 💚 '
+                'https://example.com\n'
+                '${UserProfile.generatedNameFor(_commenter)}';
+            final button = find.bySemanticsLabel(wholeLabel);
+            expect(button, findsOneWidget);
+            final commentNode = tester.getSemantics(button);
+            expect(
+              commentNode.getSemanticsData().hasAction(SemanticsAction.tap),
+              isTrue,
+            );
+            expect(
+              commentNode.getSemanticsData().hint,
+              l10n.feedReactionOpenComment,
+            );
+            final nodes = <SemanticsNode>[];
+            void collect(SemanticsNode node) {
+              nodes.add(node);
+              node.visitChildren((child) {
+                collect(child);
+                return true;
+              });
+            }
+
+            collect(commentNode.owner!.rootSemanticsNode!);
+            expect(
+              nodes.where(
+                (node) => const ['before', 'and', 'after', '💚'].contains(
+                  node.getSemanticsData().label.trim(),
+                ),
+              ),
+              isEmpty,
+              reason: 'plain runs are already read by the complete comment',
+            );
+            expect(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is DivineIcon &&
+                    widget.icon == DivineIconName.heartFill,
+              ),
+              findsOneWidget,
+              reason: 'decorative heart painting is unchanged',
+            );
+            SemanticsNode inlineAction(String label) {
+              final matches = nodes.where(
+                (node) =>
+                    node.getSemanticsData().label.trim() == label &&
+                    node.getSemanticsData().hasAction(SemanticsAction.tap),
+              );
+              expect(
+                matches,
+                hasLength(1),
+                reason: '$label has its own action',
+              );
+              return matches.single;
+            }
+
+            final mention = inlineAction('@Synthetic Mention');
+            mention.owner!.performAction(mention.id, SemanticsAction.tap);
+            await tester.pump();
+            verify(
+              () =>
+                  router.push<void>(OtherProfileRouteData(npub: npub).location),
+            ).called(1);
+            final hashtag = inlineAction('#synthetic');
+            hashtag.owner!.performAction(hashtag.id, SemanticsAction.tap);
+            await tester.pump();
+            verify(
+              () => router.push<Object?>(
+                const HashtagRouteData(tag: 'synthetic').location,
+              ),
+            ).called(1);
+            inlineAction('https://example.com');
+            verifyNever(() => cubit.dismiss());
+          } finally {
+            handle.dispose();
+          }
+        },
+      );
 
       testWidgets('ignores taps until the reaction has faded in', (
         tester,
