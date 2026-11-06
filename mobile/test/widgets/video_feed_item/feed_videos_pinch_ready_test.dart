@@ -28,6 +28,8 @@ import 'package:openvine/models/view_traffic_source.dart'
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/subtitle_providers.dart';
+import 'package:openvine/providers/video_reply_parent_provider.dart';
+import 'package:openvine/screens/comments/comment_synthetic_video_event.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
 import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
 import 'package:openvine/services/analytics_service.dart';
@@ -225,7 +227,7 @@ Future<bool> _toggleLike(_MockLikesRepository likes) => likes.toggleLike(
 
 /// Pumps a one-video [FeedVideos] whose player has rendered its first frame,
 /// so the tap and double-tap recognizers exist before any finger lands.
-Future<_Rig> _pumpReadyFeed(WidgetTester tester) async {
+Future<_Rig> _pumpReadyFeed(WidgetTester tester, {VideoEvent? video}) async {
   final harness = _NativePlayerHarness(tester)..install();
   addTearDown(harness.dispose);
 
@@ -233,6 +235,9 @@ Future<_Rig> _pumpReadyFeed(WidgetTester tester) async {
   when(
     likes.watchLikedEventIds,
   ).thenAnswer((_) => const Stream<List<String>>.empty());
+  when(
+    likes.watchLikedAddressableIds,
+  ).thenAnswer((_) => const Stream<Set<String>>.empty());
   when(
     () => likes.isLikedResolvingCoordinate(
       eventId: any(named: 'eventId'),
@@ -255,6 +260,8 @@ Future<_Rig> _pumpReadyFeed(WidgetTester tester) async {
     reposts.watchRepostedAddressableIds,
   ).thenAnswer((_) => const Stream<Set<String>>.empty());
   when(() => reposts.getRepostCountByEventId(any())).thenAnswer((_) async => 0);
+  when(() => reposts.getRepostCount(any())).thenAnswer((_) async => 0);
+  when(() => reposts.isReposted(any())).thenAnswer((_) async => false);
 
   final playbackCubit = _MockVideoPlaybackStatusCubit();
   when(() => playbackCubit.state).thenReturn(VideoPlaybackStatusState());
@@ -285,6 +292,8 @@ Future<_Rig> _pumpReadyFeed(WidgetTester tester) async {
       likesRepositoryProvider.overrideWithValue(likes),
       commentsRepositoryProvider.overrideWithValue(comments),
       repostsRepositoryProvider.overrideWithValue(reposts),
+      // A video reply's parent link looks up its root over the network.
+      videoReplyParentProvider.overrideWith((ref, routeId) async => null),
     ].cast(),
   );
   container.read(appForegroundProvider.notifier).setForeground(true);
@@ -304,7 +313,10 @@ Future<_Rig> _pumpReadyFeed(WidgetTester tester) async {
             BlocProvider<FeedImmersiveCubit>.value(value: immersive),
           ],
           child: Scaffold(
-            body: FeedVideos(videos: [_makeVideo()], onNearEnd: () {}),
+            body: FeedVideos(
+              videos: [video ?? _makeVideo()],
+              onNearEnd: () {},
+            ),
           ),
         ),
       ),
@@ -647,6 +659,48 @@ void main() {
       await tester.pump(kFeedImmersiveFadeDuration);
 
       expect(_pausedControls, findsOneWidget);
+      await _unmount(tester);
+    });
+  });
+
+  group('like tags (#6980)', () {
+    Future<void> doubleTapToLike(WidgetTester tester) async {
+      final center = tester.getCenter(find.byType(InfiniteVideoFeed));
+      await tester.tapAt(center);
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tapAt(center);
+      await _settle(tester);
+    }
+
+    testWidgets('tags a video reply opened from comments with its coordinate', (
+      tester,
+    ) async {
+      const replyCoordinate = '34236:$_testPubkey:reply-d-tag';
+      final rig = await _pumpReadyFeed(
+        tester,
+        video: Comment(
+          id: _testVideoId,
+          content: 'video reply',
+          authorPubkey: _testPubkey,
+          createdAt: DateTime.fromMillisecondsSinceEpoch(1704067200 * 1000),
+          rootEventId: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          rootAuthorPubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          eventKind: 34236,
+          addressableId: replyCoordinate,
+          videoUrl: 'https://example.com/video.mp4',
+        ).toSyntheticVideoEvent(),
+      );
+
+      await doubleTapToLike(tester);
+
+      verify(
+        () => rig.likes.toggleLike(
+          eventId: _testVideoId,
+          authorPubkey: _testPubkey,
+          addressableId: replyCoordinate,
+          targetKind: 34236,
+        ),
+      ).called(1);
       await _unmount(tester);
     });
   });
