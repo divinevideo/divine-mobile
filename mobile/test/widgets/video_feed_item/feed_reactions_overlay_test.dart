@@ -225,6 +225,27 @@ void main() {
           },
         );
 
+        testWidgets('its longest line for a comment that wraps short', (
+          tester,
+        ) async {
+          // Two words that each take over half a line, so the comment wraps
+          // after the first and its longest line ends well short of the edge.
+          final content = '${'w' * 16} ${'w' * 16}';
+          final width = await pumpWith(tester, content);
+          final available =
+              tester.getSize(find.byType(FeedReactionsOverlay)).width -
+              2 * FeedReactionsOverlayLayout.sidePadding;
+          final style = VineTheme.headlineLargeFont();
+          final lineHeight = style.height! * style.fontSize!;
+
+          expect(
+            tester.getSize(find.text(content)).height,
+            greaterThan(lineHeight * 1.5),
+            reason: 'the comment wraps',
+          );
+          expect(width, lessThan(available * 0.8));
+        });
+
         testWidgets('the full width for a comment that wraps', (tester) async {
           final width = await pumpWith(
             tester,
