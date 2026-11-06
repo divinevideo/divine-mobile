@@ -56,6 +56,17 @@ typedef _WebSocketFollowerStats = ({
   List<_FollowerCountObservation> followerCounts,
 });
 
+/// The signed-in account changed while a contact-list publish waited for the
+/// one ahead of it, so the edit it carried belongs to another account.
+class _AccountChangedWhileQueuedException implements Exception {
+  const _AccountChangedWhileQueuedException();
+
+  @override
+  String toString() =>
+      'AccountChangedWhileQueuedException: the signed-in account changed '
+      'while the contact list publish waited';
+}
+
 /// Repository for managing follow relationships.
 /// Single source of truth for follow data.
 ///
@@ -2556,7 +2567,8 @@ class FollowRepository {
   /// Throws:
   ///
   /// * [ArgumentError] if [pubkey] is not a 32-byte hex pubkey.
-  /// * [Exception] if the user is not authenticated.
+  /// * [Exception] if the user is not authenticated, or if the signed-in
+  ///   account changed while the publish waited for an earlier one.
   /// * Anything the Kind 3 publish or the local-storage write threw, after
   ///   rolling the optimistic update back.
   Future<void> follow(String pubkey) async {
@@ -3475,7 +3487,7 @@ class FollowRepository {
   /// locally while the other carries it to the relay (#10784). A broadcast
   /// that has to wait publishes nothing when the one ahead of it already
   /// carried its edit, so a later refusal cannot roll back a follow that is on
-  /// the relay, and nothing when the account changed while it waited.
+  /// the relay. It fails when the account changed while it waited.
   Future<bool> _broadcastContactList() async {
     final previous = _contactListBroadcastTail;
     final turn = Completer<void>();
@@ -3485,14 +3497,10 @@ class FollowRepository {
 
       final owner = _nostrClient.publicKey;
       await previous;
+      // Failing rather than reporting it withheld keeps the caller from
+      // saving this account's list under the new account's storage key.
       if (_nostrClient.publicKey != owner) {
-        Log.info(
-          'Dropping a queued contact list broadcast: the account changed '
-          'while it waited',
-          name: 'FollowRepository',
-          category: LogCategory.system,
-        );
-        return false;
+        throw const _AccountChangedWhileQueuedException();
       }
       if (_newestContactListMatchesPublishable()) return true;
       return await _broadcastContactListNow();

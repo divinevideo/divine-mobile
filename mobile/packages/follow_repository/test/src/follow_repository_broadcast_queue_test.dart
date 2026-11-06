@@ -221,18 +221,27 @@ void main() {
       ]);
     });
 
-    test('drops a queued publish when the signed-in account changes while it '
-        'waits', () async {
+    test('fails a queued follow when the signed-in account changes while it '
+        'waits, and keeps its follow out of the new account', () async {
       final first = repository.followWithResult(_alice);
       await relay.untilStarted(1);
-      final second = repository.followWithResult(_bob);
+      final second = repository
+          .followWithResult(_bob)
+          .then<Object>((outcome) => outcome, onError: (Object e) => e);
       await pumpEventQueue();
       when(() => client.publicKey).thenReturn(_otherAccount);
       await relay.release();
 
       await first;
-      expect(await second, FollowOutcome.queued);
+      expect(await second, isA<Exception>());
       expect(relay.started, hasLength(1));
+      // The follow already publishing saves under whichever key the client
+      // reports when it lands; only the queued one is this test's concern.
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getString('following_list_$_otherAccount') ?? '',
+        isNot(contains(_bob)),
+      );
     });
 
     test('drops a queued publish when the repository is disposed while it '
