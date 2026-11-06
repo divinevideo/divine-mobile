@@ -5,7 +5,9 @@ local clone has moved, re-read the line before quoting it: NIP-01 lines after
 141 moved by two when the empty-list rule landed. Command behaviour is `nak`
 0.20.6 as run on 2026-10-10, and a reviewer re-checked the recipes on 0.20.7.
 Later releases exist (0.22.1 on 2026-10-31) and have not been re-run: re-check
-flags after upgrading.
+flags after upgrading. The bulk-read limits in §3 (COUNT, `--paginate`, many
+one-shot connections) were measured against `relay.divine.video` on 2026-11-06
+with 0.20.6.
 
 ## 1. Name the authority the bug is against
 
@@ -89,8 +91,8 @@ Three rules before any command:
 | Is it well-formed | `… \| nak verify` (silent, exit 0 = valid; exit 123 and the reason otherwise) |
 | Would the app's filter match it | `nak filter '<event json>' '<filter json>'` (prints the event on a match, nothing otherwise; exit code is 0 both ways) |
 | Current version of a replaceable / addressable event | `nak req -k 10002 -a <hex> -l 1 …` / `nak req -k 34236 -a <hex> -d <d> …`, per relay: relays can hold different versions |
-| How many, without downloading | `nak count …` (the number is printed on **stderr** as `<relay>: <n>`); ids only: `nak req --ids-only …` |
-| History past a relay's clamp | `nak req --paginate …` |
+| How many, without downloading | `nak count …` (the number is printed on **stderr** as `<relay>: <n>`); ids only: `nak req --ids-only …`. A relay may return a probabilistic count (45.md:23), so COUNT sizes a read but cannot prove one complete: `relay.divine.video` counted 640 kind 7 in a 3-hour window that a REQ returned 492 of |
+| History past a relay's clamp | `nak req --paginate …`, then compare what came back with what you expected: on `relay.divine.video` it returned 15 kind 7 for a week COUNT put at 33,604, with no error on stderr. Fixed `--since`/`--until` slices under `max_limit` got closer and were still short. `since` and `until` are inclusive (01.md:145), so dedupe slices by id |
 | Relay limits and claimed NIPs | `nak relay <url>` (`limitation.auth_required`, `max_limit`, `max_subid_length`, `created_at_lower_limit` / `upper_limit`, `max_message_length`) |
 | AUTH-gated kinds (1059, 4) | `nak req --auth -k 1059 -p <hex> …` (with `NOSTR_SECRET_KEY` exported) |
 | AUTH-gated app data (78/30078) | `nak req --auth -k 30078 -a <owner hex> …` (with the owner's `NOSTR_SECRET_KEY` exported; 30078 carries `d`, not `p`) |
@@ -100,10 +102,21 @@ Three rules before any command:
 | NIP-98 request, Blossom, remote signer | `nak curl`, `nak blossom`, `nak bunker` |
 | A relay you control | `nak serve --port <p> [--auth] [--eager-auth] [--events seed.jsonl] </dev/null` (in memory; prints `relay running at ws://localhost:<p>`) |
 
-Against a slow relay use one long-lived connection and COUNT, not a process
-per query; parallel one-shot processes return silent partial sets. With raw
-`websocat`, hold stdin open (`{ printf …; sleep 12; }`) or the socket closes
-before the relay answers.
+Against a slow relay use one long-lived connection, not a process per query.
+Parallel one-shot processes return silent partial sets, and sequential ones
+get refused once there are enough of them: across about 110 one-shot `nak`
+calls to `relay.divine.video`, between a third and half of the time slices
+still failed to connect after four tries (`context deadline exceeded`), and
+later single reads failed too. Check every call's stderr for
+`failed to connect` and retry, or its empty output reads as a zero. With raw `websocat`,
+hold stdin open (`{ printf …; sleep 12; }`) or the socket closes before the
+relay answers.
+
+Per-target reads (`-e <id>`, `-t a=<coord>`) matched the likers API. A
+whole-window REQ did not come close to COUNT, so a question about a population
+("how often does this happen across all accounts") cannot be answered by
+paging the relay. Ask for a backend query instead; that is a credentialed
+read, so it is the user's call.
 
 ## 4. Four read paths, one moment
 
