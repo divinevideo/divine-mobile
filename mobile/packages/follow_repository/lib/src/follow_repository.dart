@@ -3565,6 +3565,9 @@ class FollowRepository {
       return false;
     }
 
+    // The list this publish is built from. An edit made while it is sending is
+    // still pending, so it must not become part of the adopted base.
+    final base = List<String>.from(_followingPubkeys);
     final contactList = ContactList();
     for (final pubkey in _publishableFollows()) {
       contactList.add(Contact(publicKey: pubkey));
@@ -3584,10 +3587,10 @@ class FollowRepository {
     _cacheUserEvent?.call(event);
 
     _currentUserContactListEvent = event;
-    // The event we just published is now the newest one we know of, and its
-    // tags are the new base for the next pending-change diff.
+    // The event we just published is now the newest one we know of, and the
+    // list it was built from is the base for the next pending-change diff.
     _followingProvenance = (createdAt: event.createdAt, id: event.id);
-    _adoptedFollows = List<String>.from(_followingPubkeys);
+    _adoptedFollows = base;
     _contactListBroadcastPending = false;
     _followingConfirmedByRelay = true;
 

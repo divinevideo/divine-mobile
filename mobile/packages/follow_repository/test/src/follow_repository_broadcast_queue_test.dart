@@ -242,6 +242,36 @@ void main() {
       expect(relay.started, hasLength(1));
     });
 
+    test('a follow made while the publish ahead of it is sending survives '
+        'a newer list from another device', () async {
+      final unfollowed = <String>[];
+      final subscription = repository.confirmedUnfollowStream.listen(
+        unfollowed.add,
+      );
+      addTearDown(subscription.cancel);
+      final first = repository.followWithResult(_alice);
+      await relay.untilStarted(1);
+      final second = repository.followWithResult(_bob);
+      await pumpEventQueue();
+      final otherDevice = Event(
+        _owner,
+        EventKind.contactList,
+        [
+          ['p', _alice],
+          ['p', _carol],
+        ],
+        '',
+        createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000 + 60,
+      );
+      reads.add((events: [otherDevice], timedOut: false, noRelays: false));
+      await relay.release();
+
+      expect(await first, FollowOutcome.published);
+      expect(await second, FollowOutcome.published);
+      expect(relay.accepted.last, [_alice, _carol, _bob]);
+      expect(unfollowed, isNot(contains(_bob)));
+    });
+
     test('a refused publish does not reach the relay through the follow '
         'queued behind it', () async {
       relay.refused.add(0);
