@@ -34,8 +34,16 @@ const hiddenCommentersIdentifier = 'divine:hidden-commenters';
 /// that video, so nobody can moderate someone else's comments.
 class CommentModerationRepository {
   /// Creates a repository that reads and publishes through [nostrClient].
-  CommentModerationRepository({required NostrClient nostrClient})
-    : _nostrClient = nostrClient;
+  ///
+  /// [latestEvents] holds the newest moderation events seen. Share it with
+  /// the replies writer of `video_responses_repository`, which replaces the
+  /// same per-video event, so neither builds on a version older than the
+  /// other just published.
+  CommentModerationRepository({
+    required NostrClient nostrClient,
+    LatestAddressableEvents? latestEvents,
+  }) : _nostrClient = nostrClient,
+       _latestEvents = latestEvents ?? LatestAddressableEvents();
 
   final NostrClient _nostrClient;
 
@@ -51,9 +59,9 @@ class CommentModerationRepository {
 
   static final _hex64 = RegExp(r'^[0-9a-f]{64}$');
 
-  /// The newest moderation event seen per `pubkey:d`, including the ones
-  /// this repository published, which relays may not serve back yet.
-  final Map<String, Event> _latestEvents = {};
+  /// The newest moderation events seen, including the ones published here
+  /// or by a writer sharing the store, which relays may not serve back yet.
+  final LatestAddressableEvents _latestEvents;
 
   /// The owner named in [rootAddressableId] (`kind:pubkey:d-tag`), or `null`
   /// when it names no valid pubkey.
@@ -237,7 +245,7 @@ class CommentModerationRepository {
     _remember(
       result.events.where((event) => _isModerationBy(event, owner, identifier)),
     );
-    return _latestEvents[_key(owner, identifier)];
+    return _latest(owner, identifier);
   }
 
   Future<void> _publish(
@@ -277,26 +285,21 @@ class CommentModerationRepository {
 
   void _remember(Iterable<Event> events) {
     for (final event in events) {
-      if (event.kind != commentModerationKind) continue;
-      final identifier = _identifierOf(event);
-      if (identifier == null) continue;
-      final key = _key(event.pubkey, identifier);
-      final known = _latestEvents[key];
-      // Of two versions signed in the same second relays keep the lower id
-      // (NIP-01), as the replies writer does.
-      if (known == null ||
-          event.createdAt > known.createdAt ||
-          (event.createdAt == known.createdAt &&
-              event.id.compareTo(known.id) < 0)) {
-        _latestEvents[key] = event;
-      }
+      // Of two versions signed in the same second the store keeps the lower
+      // id, as relays do (NIP-01).
+      if (event.kind == commentModerationKind) _latestEvents.remember(event);
     }
   }
 
+  Event? _latest(String owner, String identifier) => _latestEvents.latest(
+    pubkey: owner,
+    kind: commentModerationKind,
+    dTag: identifier,
+  );
+
   CommentModeration _moderationOf(String owner, String rootAddressableId) {
-    final videoEvent =
-        _latestEvents[_key(owner, _videoIdentifier(rootAddressableId))];
-    final accountEvent = _latestEvents[_key(owner, hiddenCommentersIdentifier)];
+    final videoEvent = _latest(owner, _videoIdentifier(rootAddressableId));
+    final accountEvent = _latest(owner, hiddenCommentersIdentifier);
     final hidden = <String>{};
     final restored = <String>{};
     for (final tag in videoEvent?.tags ?? const <List<String>>[]) {
@@ -364,15 +367,6 @@ class CommentModerationRepository {
       tag[0] == 'a' &&
       tag[1] == rootAddressableId &&
       (tag.length < 4 || tag[3].isEmpty);
-
-  static String? _identifierOf(Event event) {
-    for (final tag in event.tags) {
-      if (tag.length >= 2 && tag[0] == 'd') return tag[1];
-    }
-    return null;
-  }
-
-  static String _key(String pubkey, String identifier) => '$pubkey:$identifier';
 
   /// Whether a relay's [event] is [owner]'s signed moderation for
   /// [identifier]: only then may its tags count, or be signed again.

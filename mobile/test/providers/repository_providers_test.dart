@@ -7,7 +7,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:comments_repository/comments_repository.dart'
-    show BlockedCommentFilter;
+    show BlockedCommentFilter, Comment;
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart' show ContentPolicyEngine;
 import 'package:db_client/db_client.dart' hide Filter;
@@ -19,8 +19,10 @@ import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/client_utils/keys.dart' show getPublicKey;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
+import 'package:nostr_sdk/relay/publish_outcome.dart';
 import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
@@ -41,6 +43,8 @@ import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:video_responses_repository/video_responses_repository.dart'
+    show RepliesCuration;
 
 import '../helpers/committed_list_account.dart';
 import '../helpers/curated_list_publish_stubs.dart';
@@ -174,6 +178,102 @@ void main() {
       test('keeps the comments of authors nobody blocked', () {
         expect(filter(stranger, rootAuthorPubkey: owner), isFalse);
       });
+    });
+  });
+
+  group('latestAddressableEventsProvider', () {
+    setUpAll(() {
+      registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Duration.zero);
+      registerFallbackValue(Event('a' * 64, 1, const [], ''));
+    });
+
+    test('lets the reply list build on a hide the comments sheet just '
+        'published', () async {
+      final ownerKey = '1'.padLeft(64, '0');
+      final owner = getPublicKey(ownerKey);
+      final address = '34236:$owner:video-d';
+      final commentId = 'c' * 64;
+      final client = _MockNostrClient();
+      final auth = _MockAuthService();
+      when(() => client.publicKey).thenReturn(owner);
+      when(() => client.isDisposed).thenReturn(false);
+      // The relay does not serve the sheet's publish back yet.
+      when(
+        () => client.queryEventsDetailed(
+          any(),
+          timeout: any(named: 'timeout'),
+          useCache: any(named: 'useCache'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+        ),
+      ).thenAnswer(
+        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+      );
+      when(
+        () => client.publishEventAwaitOk(any(), timeout: any(named: 'timeout')),
+      ).thenAnswer(
+        (invocation) async => PublishOutcome(
+          eventId: (invocation.positionalArguments.first as Event).id,
+          acceptedBy: const ['wss://relay.divine.video'],
+          rejectedBy: const {},
+          noResponseFrom: const [],
+        ),
+      );
+      final signedTags = <List<List<String>>>[];
+      when(
+        () => auth.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
+        ),
+      ).thenAnswer((invocation) async {
+        final tags = invocation.namedArguments[#tags] as List<List<String>>;
+        signedTags.add(tags);
+        return Event(
+          owner,
+          invocation.namedArguments[#kind] as int,
+          tags,
+          invocation.namedArguments[#content] as String,
+          createdAt: invocation.namedArguments[#createdAt] as int?,
+        )..sign(ownerKey);
+      });
+      final container = ProviderContainer(
+        overrides: [
+          nostrServiceProvider.overrideWithValue(client),
+          authServiceProvider.overrideWithValue(auth),
+          funnelcakeApiClientProvider.overrideWithValue(
+            FunnelcakeApiClient(baseUrl: ''),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(commentModerationRepositoryProvider)
+          .hideComment(
+            rootAddressableId: address,
+            comment: Comment(
+              id: commentId,
+              content: 'unwanted',
+              authorPubkey: 'b' * 64,
+              createdAt: DateTime.utc(2026),
+              rootEventId: 'e' * 64,
+              rootAuthorPubkey: owner,
+            ),
+          );
+      await container
+          .read(videoResponsesRepositoryProvider)
+          .saveCuration(
+            RepliesCuration(hiddenIds: {'f' * 64}),
+            videoAddress: address,
+            previous: const RepliesCuration(),
+          );
+
+      expect(
+        signedTags.single,
+        anyElement(equals(['e', commentId, '', 'hidden'])),
+      );
     });
   });
 

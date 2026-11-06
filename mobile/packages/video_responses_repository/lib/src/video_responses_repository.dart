@@ -97,13 +97,20 @@ class VideoResponsesRepository {
   /// Creates the repository, reading and publishing through [nostrClient]
   /// and signing curations with [signEvent]. [funnelcakeApiClient] counts the
   /// responses when given.
+  ///
+  /// [latestEvents] holds the newest curations seen. Share it with the
+  /// comment moderation writer of `comments_repository`, which replaces the
+  /// same per-video event, so neither builds on a version older than the
+  /// other just published.
   VideoResponsesRepository({
     required NostrClient nostrClient,
     required ResponsesEventSigner signEvent,
     FunnelcakeApiClient? funnelcakeApiClient,
+    LatestAddressableEvents? latestEvents,
   }) : _nostrClient = nostrClient,
        _signEvent = signEvent,
-       _funnelcakeApiClient = funnelcakeApiClient;
+       _funnelcakeApiClient = funnelcakeApiClient,
+       _latestEvents = latestEvents ?? LatestAddressableEvents();
 
   final NostrClient _nostrClient;
   final ResponsesEventSigner _signEvent;
@@ -119,9 +126,10 @@ class VideoResponsesRepository {
   /// it.
   final _curationOperations = <String, Future<void>>{};
 
-  /// The newest authenticated curation read or saved for each account and
-  /// video, retained when a later read returns only older revisions.
-  final _knownCurations = <String, Event>{};
+  /// The newest authenticated curations read or saved, here or by a writer
+  /// sharing the store, retained when a later read returns only older
+  /// revisions.
+  final LatestAddressableEvents _latestEvents;
 
   /// The most responses one read from the relays asks for.
   static const int maxResponsesRead = 500;
@@ -394,7 +402,6 @@ class VideoResponsesRepository {
   }) async {
     final dTag = RepliesCuration.dTagFor(videoAddress);
     final key = '$creatorPubkey:$dTag';
-    final authorsKey = '$creatorPubkey:${RepliesCuration.hiddenAuthorsDTag}';
     final (:events, :timedOut, :noRelays) = await _nostrClient
         .queryEventsDetailed([
           Filter(
@@ -422,16 +429,18 @@ class VideoResponsesRepository {
         noRelays ? 'No relay could be asked' : 'The relays did not answer',
       );
     }
-    final latest = [...eligible, ?_knownCurations[key]]
+    final latest = [...eligible, ?_known(creatorPubkey, dTag)]
       ..sort(_compareCurationRevisions);
     if (latest.firstOrNull case final newest?) {
-      _rememberCuration(key, newest);
+      _latestEvents.remember(newest);
       _noteCurationSignedAt(key, newest.createdAt);
     }
-    final latestAuthors = [...authorLists, ?_knownCurations[authorsKey]]
-      ..sort(_compareCurationRevisions);
+    final latestAuthors = [
+      ...authorLists,
+      ?_known(creatorPubkey, RepliesCuration.hiddenAuthorsDTag),
+    ]..sort(_compareCurationRevisions);
     if (latestAuthors.firstOrNull case final newest?) {
-      _rememberCuration(authorsKey, newest);
+      _latestEvents.remember(newest);
     }
     final curation =
         latest.map(RepliesCuration.fromEvent).nonNulls.firstOrNull ??
@@ -455,12 +464,11 @@ class VideoResponsesRepository {
       ? b.createdAt.compareTo(a.createdAt)
       : a.id.compareTo(b.id);
 
-  void _rememberCuration(String key, Event event) {
-    final known = _knownCurations[key];
-    if (known == null || _compareCurationRevisions(event, known) < 0) {
-      _knownCurations[key] = Event.fromJson(event.toJson());
-    }
-  }
+  Event? _known(String pubkey, String dTag) => _latestEvents.latest(
+    pubkey: pubkey,
+    kind: RepliesCuration.kind,
+    dTag: dTag,
+  );
 
   void _noteCurationSignedAt(String key, int createdAt) =>
       _curationSignedAt[key] = math.max(
@@ -534,7 +542,7 @@ class VideoResponsesRepository {
     final revisions = [
       for (final event in read.events)
         if (_isCurationBy(event, owner, dTag)) event,
-      ?_knownCurations[key],
+      ?_known(owner, dTag),
     ]..sort(_compareCurationRevisions);
     final source = revisions.firstOrNull;
     final latest = source == null
@@ -574,7 +582,7 @@ class VideoResponsesRepository {
       hiddenAuthors: curation.hiddenAuthors,
     );
     if (source != null) {
-      _rememberCuration(key, source);
+      _latestEvents.remember(source);
       _noteCurationSignedAt(key, source.createdAt);
     }
     final now = NostrTimestamp.now(
@@ -607,7 +615,7 @@ class VideoResponsesRepository {
         outcome: outcome,
       );
     }
-    if (_isCurationBy(event, owner, dTag)) _rememberCuration(key, event);
+    if (_isCurationBy(event, owner, dTag)) _latestEvents.remember(event);
     return replacement;
   }
 

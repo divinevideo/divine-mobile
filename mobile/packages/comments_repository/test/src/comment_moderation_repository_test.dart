@@ -730,6 +730,53 @@ void main() {
       });
     });
 
+    group('with a store shared with the replies writer', () {
+      test('builds on what that writer just published', () async {
+        final shared = LatestAddressableEvents();
+        repository = CommentModerationRepository(
+          nostrClient: nostrClient,
+          latestEvents: shared,
+        );
+        // The replies list hid a video reply; the relay does not serve it
+        // back yet.
+        shared.remember(
+          _moderationEvent(
+            identifier: _videoIdentifier,
+            createdAt: 2000,
+            tags: [
+              ['a', _coordinate],
+              ['a', _videoReplyAddress, '', 'hidden'],
+            ],
+          ),
+        );
+        answerReads([
+          _moderationEvent(identifier: _videoIdentifier, tags: const []),
+        ]);
+        answerPublishes();
+
+        await repository.hideComment(
+          rootAddressableId: _coordinate,
+          comment: _comment(_commentA),
+        );
+
+        expect(publishedEvent().tags.skip(2), [
+          ['a', _videoReplyAddress, '', 'hidden'],
+          ['e', _commentA, '', 'hidden'],
+        ]);
+        expect(
+          shared
+              .latest(
+                pubkey: _owner,
+                kind: commentModerationKind,
+                dTag: _videoIdentifier,
+              )
+              ?.tags
+              .last,
+          ['e', _commentA, '', 'hidden'],
+        );
+      });
+    });
+
     // Relays keep the lowest id of two versions signed in the same second
     // (NIP-01), so that is the one whose decisions count.
     group('two versions signed in the same second', () {

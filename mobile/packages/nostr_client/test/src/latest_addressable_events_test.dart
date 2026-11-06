@@ -1,0 +1,89 @@
+// ABOUTME: Tests the store of the newest addressable events shared by the
+// ABOUTME: writers that replace the same event.
+
+import 'package:nostr_client/nostr_client.dart';
+import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:test/test.dart';
+
+String _hex(int n) => n.toRadixString(16).padLeft(64, '0');
+
+final String _owner = getPublicKey(_hex(1));
+final String _other = getPublicKey(_hex(2));
+
+Event _event({
+  required int createdAt,
+  String dTag = 'divine:replies:video',
+  String? pubkey,
+  int kind = 30078,
+  String content = '',
+}) => Event(
+  pubkey ?? _owner,
+  kind,
+  [
+    ['d', dTag],
+  ],
+  content,
+  createdAt: createdAt,
+)..sign(pubkey == _other ? _hex(2) : _hex(1));
+
+void main() {
+  group(LatestAddressableEvents, () {
+    late LatestAddressableEvents store;
+
+    setUp(() => store = LatestAddressableEvents());
+
+    Event? latest({String? pubkey, String dTag = 'divine:replies:video'}) =>
+        store.latest(pubkey: pubkey ?? _owner, kind: 30078, dTag: dTag);
+
+    test('knows nothing it was not told', () {
+      expect(latest(), isNull);
+    });
+
+    test('keeps the newer of two versions, in either order', () {
+      final older = _event(createdAt: 1000);
+      final newer = _event(createdAt: 2000);
+
+      store
+        ..remember(newer)
+        ..remember(older);
+
+      expect(latest()?.id, equals(newer.id));
+    });
+
+    test('keeps the lower id of two versions signed in one second', () {
+      final versions =
+          [
+              _event(createdAt: 1000, content: 'a'),
+              _event(createdAt: 1000, content: 'b'),
+            ]
+            ..sort((a, b) => b.id.compareTo(a.id))
+            ..forEach(store.remember);
+
+      expect(latest()?.id, equals(versions.last.id));
+    });
+
+    test('keeps each author, kind and d tag apart', () {
+      store
+        ..remember(_event(createdAt: 1000))
+        ..remember(_event(createdAt: 2000, pubkey: _other))
+        ..remember(_event(createdAt: 3000, dTag: 'divine:hidden-commenters'))
+        ..remember(_event(createdAt: 4000, kind: 30079));
+
+      expect(latest()?.createdAt, equals(1000));
+      expect(latest(pubkey: _other)?.createdAt, equals(2000));
+      expect(
+        latest(dTag: 'divine:hidden-commenters')?.createdAt,
+        equals(3000),
+      );
+    });
+
+    test('keeps a copy the caller cannot change', () {
+      final event = _event(createdAt: 1000);
+      store.remember(event);
+
+      event.tags.add(['e', _hex(9), '', 'hidden']);
+
+      expect(latest()?.tags, hasLength(1));
+    });
+  });
+}

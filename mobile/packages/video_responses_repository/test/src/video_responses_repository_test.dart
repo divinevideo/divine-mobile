@@ -2137,6 +2137,59 @@ void main() {
         ]);
       });
 
+      test('builds on what the comment writer sharing its store just '
+          'published', () async {
+        // The comments sheet hid a comment; the relay does not serve it back
+        // yet.
+        final shared = LatestAddressableEvents()
+          ..remember(
+            _curationEvent(
+              createdAt: NostrTimestamp.now(driftTolerance: 0),
+              tags: [
+                ['a', _rootAddress],
+                ['e', _hex(401), '', 'hidden'],
+              ],
+            ),
+          );
+        curationAnswers([_curationEvent(createdAt: 1000)]);
+        when(
+          () => nostrClient.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => _outcome(accepted: true));
+        final responses = VideoResponsesRepository(
+          nostrClient: nostrClient,
+          signEvent:
+              ({
+                required kind,
+                required content,
+                required tags,
+                createdAt,
+              }) async {
+                signed.add((
+                  kind: kind,
+                  content: content,
+                  tags: tags,
+                  createdAt: createdAt,
+                ));
+                return signedEvent;
+              },
+          latestEvents: shared,
+        );
+        const previous = RepliesCuration();
+
+        await responses.saveCuration(
+          previous.hidden(_hex(202)),
+          videoAddress: _rootAddress,
+          previous: previous,
+        );
+
+        expect(signed.single.tags, [
+          ['d', RepliesCuration.dTagFor(_rootAddress)],
+          ['a', _rootAddress],
+          ['e', _hex(401), '', 'hidden'],
+          ['e', _hex(202), '', 'hidden'],
+        ]);
+      });
+
       test('hiding a reply takes back a remote restored mark', () async {
         curationAnswers([
           _curationEvent(

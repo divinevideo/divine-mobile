@@ -21,7 +21,8 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart';
-import 'package:nostr_client/nostr_client.dart' show NostrClient;
+import 'package:nostr_client/nostr_client.dart'
+    show LatestAddressableEvents, NostrClient;
 import 'package:nostr_sdk/event.dart' as nostr;
 import 'package:openvine/config/app_config.dart';
 import 'package:openvine/config/official_accounts.dart';
@@ -155,8 +156,18 @@ final videoResponsesRepositoryProvider = Provider<VideoResponsesRepository>((
     nostrClient: ref.watch(nostrServiceProvider),
     signEvent: authService.createAndSignEvent,
     funnelcakeApiClient: ref.watch(funnelcakeApiClientProvider),
+    latestEvents: ref.watch(latestAddressableEventsProvider),
   );
 });
+
+/// The newest version of each addressable event the app read or published,
+/// shared by the replies writer of [videoResponsesRepositoryProvider] and the
+/// comment moderation writer of [commentModerationRepositoryProvider]: both
+/// replace a video's `divine:replies:` event, and the relay may not serve
+/// one's publish back before the other builds on it.
+final latestAddressableEventsProvider = Provider<LatestAddressableEvents>(
+  (ref) => LatestAddressableEvents(),
+);
 
 final FutureProviderFamily<List<ProfileBadgeViewData>, String>
 profileAcceptedBadgesProvider = FutureProvider.autoDispose
@@ -1273,7 +1284,10 @@ bool isOwnBlockOnOwnVideo({
 /// publish for the comments on their videos (NIP-78 kind 30078).
 @Riverpod(keepAlive: true)
 CommentModerationRepository commentModerationRepository(Ref ref) =>
-    CommentModerationRepository(nostrClient: ref.watch(nostrServiceProvider));
+    CommentModerationRepository(
+      nostrClient: ref.watch(nostrServiceProvider),
+      latestEvents: ref.watch(latestAddressableEventsProvider),
+    );
 
 /// Dormant until an explicit challenge flow requests it. No Explore/global
 /// discovery route is enabled, and no unshipped API DTO is consumed.
