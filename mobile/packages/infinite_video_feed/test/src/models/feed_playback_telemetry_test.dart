@@ -9,6 +9,26 @@ void main() {
 
   group(FeedPlaybackTelemetry, () {
     test(
+      'resets synchronously invalidate loads and ignore unchanged gates',
+      () async {
+        FeedPlaybackTelemetry.configure(enabled: true);
+        var load = FeedPlaybackTelemetry.startLoad()!;
+        final validityAtReset = <bool>[];
+        final subscription = FeedPlaybackTelemetry.resets.listen((_) {
+          validityAtReset.add(load.isCurrent);
+        });
+        FeedPlaybackTelemetry.configure(enabled: true);
+        expect(validityAtReset, isEmpty);
+        FeedPlaybackTelemetry.configure(enabled: true, reset: true);
+        expect(validityAtReset, [false]);
+        load = FeedPlaybackTelemetry.startLoad()!;
+        FeedPlaybackTelemetry.configure(enabled: false);
+        expect(validityAtReset, [false, false]);
+        await subscription.cancel();
+      },
+    );
+
+    test(
       'terminal failure is one shot and never reaches success stream',
       () async {
         FeedPlaybackTelemetry.configure(enabled: true);

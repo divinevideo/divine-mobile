@@ -28,6 +28,7 @@ import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/community_content_label_provider.dart';
 import 'package:openvine/providers/playback_eligibility_provider.dart';
+import 'package:openvine/providers/playback_telemetry_provider.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_coordinator.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
@@ -58,6 +59,7 @@ import 'package:openvine/widgets/video_feed_item/video_interactions_restriction_
 import 'package:openvine/widgets/video_feed_item/video_loading_placeholder.dart';
 import 'package:openvine/widgets/video_feed_item/video_sticker_tap_areas.dart';
 
+import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
 
 class FeedVideos extends ConsumerStatefulWidget {
@@ -186,6 +188,19 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   @override
   void initState() {
     super.initState();
+    // Own one subscription for this mounted feed, without rebuild churn.
+    ref.listenManual<void>(
+      playbackTelemetryProvider,
+      (_, _) {},
+      onError: (_, _) {
+        // Diagnostics must not block the feed if a collector dependency fails.
+        Log.warning(
+          'Playback telemetry is unavailable',
+          name: 'FeedVideos',
+          category: LogCategory.video,
+        );
+      },
+    );
     _consumptionAnalytics = ref.read(consumptionAnalyticsTrackerProvider);
     _resetActiveItem();
     _resetSeenVideos();

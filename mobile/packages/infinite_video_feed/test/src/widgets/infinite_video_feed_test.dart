@@ -1301,6 +1301,78 @@ void main() {
         }
       });
 
+      testWidgets(
+        'native network observations reach an immutable terminal snapshot',
+        (tester) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(
+            playerIds: const <int>[0],
+            firstFrameRenderedOnListen: false,
+          );
+          FeedPlaybackTelemetry.configure(enabled: true);
+          final terminals = <Map<String, Object?>>[];
+          final subscription = FeedPlaybackTelemetry.events.listen(
+            terminals.add,
+          );
+          addTearDown(() async {
+            FeedPlaybackTelemetry.configure(enabled: false);
+            await subscription.cancel();
+          });
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('network-observation')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            final headers =
+                harness.clipsHandedToPlayer.single['httpHeaders']! as Map;
+            final loadId = headers['X-Playback-Load-Id'];
+            await harness.sendEvent(0, {
+              'type': 'playback_network',
+              'load_id': loadId,
+              'request_id': 'synthetic-upstream-open',
+              'network_headers_ms': 7,
+              'network_outcome': 'unavailable',
+            });
+            await tester.pump();
+            await harness.sendEvent(0, const {
+              'status': 'ready',
+              'videoWidth': 1280,
+              'videoHeight': 720,
+              'isFirstFrameRendered': true,
+            });
+            await tester.pump();
+            expect(terminals.single['network_coverage'], 'observed');
+            expect(terminals.single['network_headers_ms'], 7);
+            await harness.sendEvent(0, {
+              'type': 'playback_network',
+              'load_id': loadId,
+              'request_id': 'synthetic-upstream-open',
+              'network_headers_ms': 7,
+              'network_outcome': 'complete',
+              'network_duration_ms': 11,
+              'network_bytes': 9,
+            });
+            await tester.pump();
+            expect(terminals, hasLength(1));
+            expect(terminals.single['network_outcome'], 'unavailable');
+            expect(terminals.single, isNot(contains('network_duration_ms')));
+            expect(terminals.single, isNot(contains('network_bytes')));
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+          }
+        },
+      );
+
       testWidgets('inactive and dispose terminate a pending activation once', (
         tester,
       ) async {

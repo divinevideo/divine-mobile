@@ -65,7 +65,7 @@ void main() {
   /// The event channel mock is set up inside the 'create' handler so that
   /// it is in place before [initialize] subscribes to
   /// `receiveBroadcastStream()`.
-  Future<void> initController() async {
+  Future<void> initController({bool? playbackTelemetrySupported}) async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('divine_video_player'),
@@ -90,6 +90,11 @@ void main() {
                     EventChannel('divine_video_player/player_$id/events'),
                     _TestStreamHandler(eventController),
                   );
+              if (playbackTelemetrySupported != null) {
+                return {
+                  'playbackTelemetrySupported': playbackTelemetrySupported,
+                };
+              }
             }
             return null;
           },
@@ -99,6 +104,21 @@ void main() {
   }
 
   group('DivineVideoPlayerController playbackTelemetry', () {
+    for (final (advertised, supported) in [
+      (null, false),
+      (false, false),
+      (true, true),
+    ]) {
+      test(
+        'native create capability $advertised reports revocation support',
+        () async {
+          await initController(playbackTelemetrySupported: advertised);
+          expect(controller.supportsPlaybackTelemetry, supported);
+          await controller.dispose();
+        },
+      );
+    }
+
     test(
       'network telemetry preserves playback state '
       'and privacy clears native context',

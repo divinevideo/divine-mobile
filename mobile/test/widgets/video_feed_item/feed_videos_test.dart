@@ -42,6 +42,7 @@ import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/community_content_label_provider.dart';
 import 'package:openvine/providers/playback_eligibility_provider.dart';
+import 'package:openvine/providers/playback_telemetry_provider.dart';
 import 'package:openvine/providers/subtitle_providers.dart';
 import 'package:openvine/repositories/community_content_label_repository.dart';
 import 'package:openvine/router/app_router.dart';
@@ -1104,6 +1105,22 @@ void main() {
         expect(feed.canAutoPlay!(video), isTrue);
       },
     );
+
+    testWidgets('telemetry dependency failure leaves the mounted feed usable', (
+      tester,
+    ) async {
+      await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        additionalOverrides: [
+          playbackTelemetryProvider.overrideWith(
+            (_) => throw StateError('collector unavailable'),
+          ),
+        ],
+      );
+      expect(find.byType(InfiniteVideoFeed), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('B2 canary flag changes the mounted feed in both directions', (
       tester,

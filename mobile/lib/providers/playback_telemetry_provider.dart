@@ -13,9 +13,17 @@ import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/services/analytics_ingest_client.dart';
 
-final playbackTelemetryProvider = Provider<void>((ref) {
+final Provider<void> playbackTelemetryProvider = Provider.autoDispose<void>((
+  ref,
+) {
+  // Mounted feeds already resolve this flag. Off-cohort playback must not
+  // construct analytics, signing or network dependencies just to observe it.
+  if (!ref.watch(isFeatureEnabledProvider(FeatureFlag.b2PlaybackCanary))) {
+    return;
+  }
   final analytics = ref.watch(analyticsServiceProvider);
   final httpClient = ref.watch(instrumentedHttpClientFactoryProvider)();
+  ref.onDispose(httpClient.close);
   final environment = ref.watch(currentEnvironmentProvider);
   final queue = PlaybackTelemetryQueue(
     client: AnalyticsIngestClient(
@@ -35,12 +43,25 @@ final playbackTelemetryProvider = Provider<void>((ref) {
             _ => 'unknown',
           },
   );
+  var observing = true;
   void configure({bool reset = false}) => queue.configure(
-    initializedConsent: analytics.initializedAnalyticsConsent,
+    initializedConsent: observing && analytics.initializedAnalyticsConsent,
     b2OptIn: ref.read(isFeatureEnabledProvider(FeatureFlag.b2PlaybackCanary)),
     reset: reset,
   );
   configure();
+  // Offstage consumers can be paused without disposing their providers.
+  // Stop delivery immediately so paused flag listeners cannot retain consent.
+  ref.onCancel(() {
+    observing = false;
+    queue.configure(initializedConsent: false, b2OptIn: false, reset: true);
+  });
+  ref.onResume(() {
+    observing = true;
+    scheduleMicrotask(() {
+      if (ref.mounted && observing) configure(reset: true);
+    });
+  });
   final subscription = analytics.privacyChanges.listen(
     (_) => configure(reset: true),
   );
@@ -50,6 +71,5 @@ final playbackTelemetryProvider = Provider<void>((ref) {
   ref.onDispose(() {
     unawaited(subscription.cancel());
     unawaited(queue.dispose());
-    httpClient.close();
   });
 });
