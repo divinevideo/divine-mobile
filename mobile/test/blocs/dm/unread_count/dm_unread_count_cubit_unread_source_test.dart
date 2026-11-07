@@ -21,6 +21,7 @@ class _MockNostrClient extends Mock implements NostrClient {}
 /// handed, which is whom a restricted gate re-checks in the background (#176).
 class _RecordingGate implements ProtectedMinorInboxGate {
   final askedAbout = <String>{};
+  final handed = <DmConversation>[];
 
   @override
   Stream<void> get changes => const Stream<void>.empty();
@@ -33,6 +34,7 @@ class _RecordingGate implements ProtectedMinorInboxGate {
     List<DmConversation> conversations, {
     required String userPubkey,
   }) {
+    handed.addAll(conversations);
     for (final conversation in conversations) {
       askedAbout.addAll(
         conversation.participantPubkeys.where((p) => p != userPubkey),
@@ -214,6 +216,53 @@ void main() {
           equals(2),
           reason: 'the read stand-in must not be counted',
         );
+      },
+    );
+
+    test(
+      'hands the gate the same support stand-in as the Messages list',
+      () async {
+        final supportPubkey = _peer(40);
+        final supportId = DmRepository.computeConversationId([
+          _owner,
+          supportPubkey,
+        ]);
+        final follows = _FakeFollowRepository({_peer(4), _peer(6)});
+        final listGate = _RecordingGate();
+        final badgeGate = _RecordingGate();
+        final bloc = ConversationListBloc(
+          dmRepository: repository,
+          followRepository: follows,
+          contentBlocklistRepository: blocklist,
+          protectedMinorInboxGate: listGate,
+          recomputeDebounce: Duration.zero,
+          supportRowPubkey: supportPubkey,
+        )..add(const ConversationListStarted());
+        final badge = DmUnreadCountCubit(
+          dmRepository: repository,
+          followRepository: follows,
+          contentBlocklistRepository: blocklist,
+          protectedMinorInboxGate: badgeGate,
+          recomputeDebounce: Duration.zero,
+          supportRowPubkey: supportPubkey,
+        );
+        addTearDown(() async {
+          await bloc.close();
+          await badge.close();
+        });
+
+        await Future.wait([
+          if (badge.state != 2) badge.stream.firstWhere((count) => count == 2),
+          if (bloc.state.status != ConversationListStatus.loaded)
+            bloc.stream.firstWhere(
+              (s) => s.status == ConversationListStatus.loaded,
+            ),
+        ]).timeout(const Duration(seconds: 5));
+
+        // No support thread exists, so both build a stand-in for the pin.
+        DmConversation standIn(_RecordingGate gate) =>
+            gate.handed.lastWhere((c) => c.id == supportId);
+        expect(standIn(badgeGate), equals(standIn(listGate)));
       },
     );
   });
