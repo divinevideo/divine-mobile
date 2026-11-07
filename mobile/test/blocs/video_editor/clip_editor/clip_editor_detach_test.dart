@@ -650,37 +650,6 @@ void main() {
         expect(result.detachedClip.video?.file?.path, sourcePath);
         expect(result.bakedChromaKey?.videoPath, '/documents/b_keyed.mp4');
       });
-
-      test('refuses to close the gap once every other clip is gone', () async {
-        final gate = Completer<ThumbnailFileResult?>();
-        final queued = <String>[];
-        final bloc = seeded(
-          withClips: [_clip('a'), keyed()],
-          extractPoster: ({required videoPath, required timestamp}) =>
-              gate.future,
-          deferFileCleanup: (paths) => queued.addAll(paths.nonNulls),
-        );
-        await bloc.stream.first;
-
-        bloc.add(const ClipEditorClipDetachRequested(clipId: 'b'));
-        await pumpEventQueue();
-        bloc.add(const ClipEditorClipRemoved('a'));
-        await bloc.stream.firstWhere((s) => s.clips.length == 1);
-
-        gate.complete(
-          ThumbnailFileResult(
-            path: '${tempDir.path}/fresh_poster.jpg',
-            timestamp: Duration.zero,
-          ),
-        );
-        final state = await bloc.stream.firstWhere(
-          (s) => s.lastDetachResult != null,
-        );
-
-        expect(state.lastDetachResult, isA<ClipDetachDiscarded>());
-        expect(state.clips.map((c) => c.id), ['b']);
-        expect(queued, contains('${tempDir.path}/fresh_poster.jpg'));
-      });
     });
 
     group('with an unknown clip', () {

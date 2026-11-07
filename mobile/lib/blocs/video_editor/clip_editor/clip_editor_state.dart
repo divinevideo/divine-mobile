@@ -1211,13 +1211,10 @@ final class ClipDetachSuccess extends ClipDetachResult {
 /// length, which is not what the user asked for when they picked a fill.
 final class ClipDetachFailure extends ClipDetachResult {}
 
-/// The clip was removed from the timeline while it was being detached, or
-/// every other clip was and closing its gap would leave no track, so the
-/// result was dropped.
+/// The render finished but the clip had been removed from the timeline
+/// meanwhile, so the result was dropped.
 ///
-/// Silent by design: either the user deleted the clip they asked to detach,
-/// or the detach is refused for the same reason it is when it starts with a
-/// lone clip.
+/// Silent by design: the user deleted the clip they asked to detach.
 final class ClipDetachDiscarded extends ClipDetachResult {}
 
 // === PLACEHOLDER FILL RESULT ===
