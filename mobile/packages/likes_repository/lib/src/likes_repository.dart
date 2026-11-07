@@ -3496,9 +3496,8 @@ class LikesRepository {
         site: LikesRepositoryReportableSites.adoptRemoteLikeDeleteAlias,
       );
     }
-    // The placeholder may use the own-kind coordinate while the adopted
-    // reaction carries its legacy key. Remove both placeholder indexes first.
-    _deindexLikeRecord(record.targetEventId);
+    // Also retires the placeholder this reaction replaces, under either
+    // coordinate form (see _indexLikeRecord).
     _indexLikeRecord(record);
     await _bestEffortLocalStorage(
       () async => _localStorage?.saveLikeRecord(record),
