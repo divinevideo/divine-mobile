@@ -10,9 +10,11 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
+import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tabs_prototype_screen.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/router/routes/dm_inbox_prototype_routes.dart';
 import 'package:openvine/screens/developer_options_screen.dart';
 import 'package:openvine/services/environment_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -199,6 +201,42 @@ void main() {
       // Returned to the previous screen; the dev options entry is gone.
       expect(find.byType(DeveloperOptionsScreen), findsNothing);
       expect(find.text('open-developer-options'), findsOneWidget);
+    });
+  });
+
+  group('DM inbox prototype (#8076)', () {
+    testWidgets('its tile opens the prototype in a debug build', (
+      tester,
+    ) async {
+      final prefs = await mockPrefs();
+      final router = GoRouter(
+        initialLocation: DeveloperOptionsScreen.path,
+        routes: [
+          GoRoute(
+            path: DeveloperOptionsScreen.path,
+            builder: (context, state) => const DeveloperOptionsScreen(),
+          ),
+          ...dmInboxPrototypeRoutes(),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: VineTheme.theme,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tapTile(tester, 'DM inbox: 4-tab prototype');
+
+      expect(find.byType(DmInboxTabsPrototypeScreen), findsOneWidget);
     });
   });
 

@@ -52,6 +52,7 @@ final _locations = <String, List<String>>{
   'crosspostingSettings': [RoutePaths.crosspostingSettings],
   'developerOptions': [RoutePaths.developerOptions],
   'discoverLists': [RoutePaths.discoverLists],
+  'dmInboxTabsPrototype': [RoutePaths.dmInboxTabsPrototype],
   'emailVerification': [RoutePaths.emailVerification],
   'explore': [RoutePaths.explore],
   'followedHashtags': [RoutePaths.followedHashtags],
