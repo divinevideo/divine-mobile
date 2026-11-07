@@ -323,6 +323,9 @@ class LikesRepository {
   /// subscription, load-from-storage) stays consistent — mirrors the
   /// `_writeCachedCommentCount` helper from #4478.
   void _indexLikeRecord(LikeRecord record) {
+    // Retire a canonical placeholder's index when sync replaces it with a
+    // reaction carrying the legacy coordinate.
+    _deindexLikeRecord(record.targetEventId);
     _likeRecords[record.targetEventId] = record;
     final addressableId = record.addressableId;
     if (addressableId != null && addressableId.isNotEmpty) {
@@ -3446,16 +3449,22 @@ class LikesRepository {
     required String? addressableId,
   }) {
     final hasCoordinate = addressableId != null && addressableId.isNotEmpty;
-    final byEventId = _likeRecords[eventId];
-    final indexed =
-        byEventId != null && !_isPlaceholderId(byEventId.reactionEventId)
-        ? byEventId
-        : hasCoordinate
-        ? _likeRecordForCoordinate(addressableId)
-        : null;
-    if (indexed == null || _isPlaceholderId(indexed.reactionEventId)) {
-      return null;
+    LikeRecord? indexed;
+    // Reconciliation needs a real reaction even when this tap's canonical
+    // placeholder is indexed ahead of a legacy reaction on an earlier revision.
+    for (final candidate in [
+      _likeRecords[eventId],
+      if (hasCoordinate) ...[
+        _likeRecordsByAddressableId[addressableId],
+        _likeRecordsByAddressableId[legacyVideoCoordinateFor(addressableId)],
+      ],
+    ]) {
+      if (candidate != null && !_isPlaceholderId(candidate.reactionEventId)) {
+        indexed = candidate;
+        break;
+      }
     }
+    if (indexed == null) return null;
     final indexedCoordinate = indexed.addressableId;
     return LikeRecord(
       targetEventId: eventId,
