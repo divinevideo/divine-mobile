@@ -25,6 +25,26 @@ Comment _comment(
 void main() {
   group(CommentModeration, () {
     group('keyOf', () {
+      test('keeps the Divine curation key for a horizontal video reply', () {
+        final reply = _comment(
+          'c1',
+          addressableId: '34235:$_authorPubkey:reply',
+        );
+        expect(CommentModeration.keyOf(reply), _replyAddress);
+        expect(
+          const CommentModeration(
+            hiddenCommentIds: {_replyAddress},
+          ).hides(reply),
+          isTrue,
+        );
+        expect(
+          const CommentModeration(
+            hiddenCommentIds: {_replyAddress},
+          ).restore(reply).hiddenCommentIds,
+          isEmpty,
+        );
+      });
+
       test('names a comment by its event id', () {
         expect(CommentModeration.keyOf(_comment('C1')), 'c1');
       });

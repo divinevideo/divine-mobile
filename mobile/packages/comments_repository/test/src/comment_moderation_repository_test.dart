@@ -157,6 +157,76 @@ void main() {
       );
     });
 
+    group('horizontal video coordinates', () {
+      final horizontalRoot = '34235:$_owner:video-dtag';
+      test(
+        'reads moderation under the existing Divine curation identifier',
+        () async {
+          answerReads([
+            _moderationEvent(
+              identifier: _videoIdentifier,
+              tags: [
+                ['e', _commentA, '', 'hidden'],
+              ],
+            ),
+          ]);
+          final moderation = await repository.loadModeration(
+            rootAddressableId: horizontalRoot,
+          );
+          expect(moderation.hides(_comment(_commentA)), isTrue);
+          final filters =
+              verify(
+                    () => nostrClient.queryEventsDetailed(
+                      captureAny(),
+                      timeout: any(named: 'timeout'),
+                    ),
+                  ).captured.single
+                  as List<Filter>;
+          expect(filters.single.toJson()['#d'], contains(_videoIdentifier));
+        },
+      );
+
+      test(
+        'writes the shared identifier and removes a legacy reply hide on restore',
+        () async {
+          answerReads([
+            _moderationEvent(
+              identifier: _videoIdentifier,
+              tags: [
+                ['a', _coordinate],
+                ['a', _videoReplyAddress, '', 'hidden'],
+              ],
+            ),
+          ]);
+          answerPublishes();
+          await repository.restoreComment(
+            rootAddressableId: horizontalRoot,
+            comment: _comment(
+              _commentA,
+              addressableId: '34235:$_commenter:reply-dtag',
+            ),
+            authorAutoHidden: false,
+          );
+          final event = publishedEvent();
+          expect(event.dTagValue, _videoIdentifier);
+          expect(event.tags, contains(equals(['a', horizontalRoot])));
+          expect(
+            event.tags,
+            isNot(contains(equals(['a', _videoReplyAddress, '', 'hidden']))),
+          );
+          expect(
+            event.tags.where(
+              (tag) =>
+                  tag.length >= 2 &&
+                  tag[0] == 'a' &&
+                  (tag.length < 4 || tag[3].isEmpty),
+            ),
+            hasLength(1),
+          );
+        },
+      );
+    });
+
     group('ownerOf', () {
       test('returns the pubkey a coordinate names', () {
         expect(CommentModerationRepository.ownerOf(_coordinate), _owner);

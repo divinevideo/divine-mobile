@@ -3,6 +3,7 @@
 
 import 'package:comments_repository/src/models/comment.dart';
 import 'package:equatable/equatable.dart';
+import 'package:nostr_sdk/nostr_sdk.dart' show legacyVideoCoordinateFor;
 
 /// A video owner's decisions about the comments on one of their videos.
 ///
@@ -21,11 +22,15 @@ class CommentModeration extends Equatable {
   /// No moderation: every comment is shown.
   static const empty = CommentModeration();
 
-  /// How the moderation names [comment]: its address when it is an
-  /// addressable video reply, so the decision outlives an edit of it, and
-  /// otherwise its event id.
-  static String keyOf(Comment comment) =>
-      comment.addressableId ?? comment.id.toLowerCase();
+  /// How the moderation names [comment]: its Divine curation address when
+  /// addressable, so hides survive edits and keep the legacy 34236 key of a
+  /// Kind 34235 video, and otherwise its event id.
+  static String keyOf(Comment comment) {
+    final address = comment.addressableId;
+    return address == null
+        ? comment.id.toLowerCase()
+        : legacyVideoCoordinateFor(address) ?? address;
+  }
 
   /// The [keyOf] each comment the owner hid one by one.
   final Set<String> hiddenCommentIds;
@@ -94,6 +99,7 @@ class CommentModeration extends Equatable {
   static Set<String> _keysOf(Comment comment) => {
     comment.id.toLowerCase(),
     ?comment.addressableId,
+    keyOf(comment),
   };
 
   @override

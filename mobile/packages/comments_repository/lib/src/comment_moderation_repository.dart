@@ -232,7 +232,11 @@ class CommentModerationRepository {
     required String? marker,
   }) async {
     final current = await _readLatestOwn(owner, identifier);
-    final keys = {comment.id.toLowerCase(), ?comment.addressableId};
+    final keys = {
+      comment.id.toLowerCase(),
+      ?comment.addressableId,
+      CommentModeration.keyOf(comment),
+    };
     await _publish(owner, current, [
       ['d', identifier],
       ['a', rootAddressableId],
@@ -365,8 +369,11 @@ class CommentModerationRepository {
     );
   }
 
+  // The replies writer keeps historical Divine-format keys for horizontal
+  // videos, even though native Nostr references now carry their real kind.
   static String _videoIdentifier(String rootAddressableId) =>
-      '$videoRepliesModerationPrefix$rootAddressableId';
+      '$videoRepliesModerationPrefix'
+      '${legacyVideoCoordinateFor(rootAddressableId) ?? rootAddressableId}';
 
   static Set<String> _autoHiddenAuthorsOf(Event? event) => {
     for (final tag in event?.tags ?? const <List<String>>[])
@@ -411,7 +418,8 @@ class CommentModerationRepository {
   static bool _isVideoAssociation(List<String> tag, String rootAddressableId) =>
       tag.length >= 2 &&
       tag[0] == 'a' &&
-      tag[1] == rootAddressableId &&
+      (legacyVideoCoordinateFor(tag[1]) ?? tag[1]) ==
+          (legacyVideoCoordinateFor(rootAddressableId) ?? rootAddressableId) &&
       (tag.length < 4 || tag[3].isEmpty);
 
   /// Whether a relay's [event] is [owner]'s signed moderation for
