@@ -317,9 +317,7 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
     // request, because the inbox renders it as the pin, unread dot and all —
     // and counting `pin.inbox` alone would silently drop it. A retired-key
     // thread needs nothing special; the partition leaves it in `pin.inbox`,
-    // which is where the list renders it too. The bloc's synthetic stand-in is
-    // deliberately NOT reproduced here: it is always read, so it can only ever
-    // add zero and one more gate pass.
+    // which is where the list renders it too.
     final pin = DmRepository.extractPinnedSupport(
       userPubkey: userPubkey,
       supportPubkey: _supportRowPubkey,
@@ -340,8 +338,30 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
     // Filtering the union in one pass rather than the pin separately keeps this
     // to a single gate call — `filter` can kick a receive-time revalidation, so
     // each extra call site is another revalidation trigger.
+    //
+    // The unread-only watches leave out a read support thread, so a read
+    // stand-in for the pin, built like the bloc's synthetic row, keeps the
+    // support account in this pass and its verdict re-checked while the inbox
+    // is closed. It is never rendered, and being read it counts for nothing
+    // (#7923).
+    final supportConversationId = pin.supportConversationId;
+    final supportPubkey = _supportRowPubkey;
+    final standIn =
+        adopted == null &&
+            supportConversationId != null &&
+            supportPubkey != null
+        ? DmConversation(
+            id: supportConversationId,
+            participantPubkeys: [userPubkey, supportPubkey],
+            isGroup: false,
+            createdAt: 0,
+          )
+        : null;
     final visible =
-        _protectedMinorInboxGate?.filter(blocklisted, userPubkey: userPubkey) ??
+        _protectedMinorInboxGate?.filter([
+          ...blocklisted,
+          ?standIn,
+        ], userPubkey: userPubkey) ??
         blocklisted;
     return visible.where((c) => !c.isRead).length;
   }

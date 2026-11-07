@@ -11,9 +11,35 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/dm/conversation_list/conversation_list_bloc.dart';
+import 'package:openvine/blocs/dm/conversation_list/protected_minor_inbox_gate.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+/// Lets every conversation through and records each counterparty it is
+/// handed, which is whom a restricted gate re-checks in the background (#176).
+class _RecordingGate implements ProtectedMinorInboxGate {
+  final askedAbout = <String>{};
+
+  @override
+  Stream<void> get changes => const Stream<void>.empty();
+
+  @override
+  void notifyRestrictionChanged() {}
+
+  @override
+  List<DmConversation> filter(
+    List<DmConversation> conversations, {
+    required String userPubkey,
+  }) {
+    for (final conversation in conversations) {
+      askedAbout.addAll(
+        conversation.participantPubkeys.where((p) => p != userPubkey),
+      );
+    }
+    return conversations;
+  }
+}
 
 class _FakeFollowRepository extends Fake implements FollowRepository {
   _FakeFollowRepository(this._following);
@@ -152,6 +178,43 @@ void main() {
             'DM write is the per-message cost #7923 measured',
       );
     });
+
+    test(
+      'still hands the protected-minor gate the support account while its '
+      'thread is read',
+      () async {
+        final supportPubkey = _peer(40);
+        await seed(supportPubkey, sent: false, isRead: true);
+        final gate = _RecordingGate();
+        final supportAware = DmUnreadCountCubit(
+          dmRepository: repository,
+          followRepository: _FakeFollowRepository({_peer(4), _peer(6)}),
+          contentBlocklistRepository: blocklist,
+          protectedMinorInboxGate: gate,
+          recomputeDebounce: Duration.zero,
+          supportRowPubkey: supportPubkey,
+        );
+        addTearDown(supportAware.close);
+
+        await expectLater(
+          supportAware.stream,
+          emitsThrough(2),
+        ).timeout(const Duration(seconds: 5));
+
+        expect(
+          gate.askedAbout,
+          contains(supportPubkey),
+          reason:
+              'the gate re-checks only whom it is handed, and with the inbox '
+              'closed the badge is the only caller left to hand it this one',
+        );
+        expect(
+          supportAware.state,
+          equals(2),
+          reason: 'the read stand-in must not be counted',
+        );
+      },
+    );
   });
 
   group('$DmUnreadCountCubit parity with $ConversationListBloc (#7923)', () {
