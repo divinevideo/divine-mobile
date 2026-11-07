@@ -7,22 +7,55 @@ import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
 import android.os.Build
 import android.widget.RemoteViews
+import java.util.concurrent.Executor
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
-class CameraQuickActionWidgetProvider : AppWidgetProvider() {
+class CameraQuickActionWidgetProvider internal constructor(
+    private val updateExecutor: Executor
+) : AppWidgetProvider() {
+    /** The constructor the system uses for the manifest receiver. */
+    constructor() : this(defaultUpdateExecutor)
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        appWidgetIds.forEach { appWidgetId ->
-            updateWidget(context, appWidgetManager, appWidgetId)
+        // Every step of an update calls into another process: the widget
+        // service and the package manager. On the broadcast's main thread a
+        // slow system server froze the app into an ANR.
+        val pendingResult = goAsync()
+        updateExecutor.execute {
+            try {
+                appWidgetIds.forEach { appWidgetId ->
+                    updateWidget(context, appWidgetManager, appWidgetId)
+                }
+            } finally {
+                pendingResult.finish()
+            }
         }
     }
 
     companion object {
         private const val REQUEST_CODE_OPEN_CAMERA = 4101
+        private const val UPDATE_THREAD_IDLE_SECONDS = 10L
 
-        internal fun updateWidget(
+        // One thread keeps updates in the order they were sent. It exits when
+        // idle: with no update period, the widget updates only now and then.
+        private val defaultUpdateExecutor: Executor by lazy {
+            ThreadPoolExecutor(
+                1,
+                1,
+                UPDATE_THREAD_IDLE_SECONDS,
+                TimeUnit.SECONDS,
+                LinkedBlockingQueue()
+            ) { runnable -> Thread(runnable, "DivineCameraWidgetUpdate") }
+                .apply { allowCoreThreadTimeOut(true) }
+        }
+
+        private fun updateWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int
