@@ -224,6 +224,7 @@ void main() {
 
     final blockedMember = _peer(30);
     final supportPubkey = _peer(40);
+    late String readGroup;
 
     Future<String> seed(
       List<String> peers, {
@@ -297,6 +298,18 @@ void main() {
       // The moderation thread arrives as a request and is lifted into the
       // pinned row, unread dot and all (#6283).
       await seed([supportPubkey], sent: false, isRead: false);
+      // Read rows only the list reads: a followed request, and a group stored
+      // read whose visible member wrote past its read cursor. The hidden-member
+      // pass may only turn a row read, so this one must stay read.
+      await seed([_peer(6)], sent: false, isRead: true);
+      readGroup = await seed(
+        [_peer(22), blockedMember],
+        sent: true,
+        isRead: true,
+        lastSender: blockedMember,
+      );
+      await message(readGroup, _peer(22), 1700000050);
+      await message(readGroup, blockedMember, 1700000100);
     });
 
     tearDown(() async {
@@ -306,7 +319,7 @@ void main() {
     });
 
     test('counts the unread rows the Messages list renders', () async {
-      final follows = _FakeFollowRepository({_peer(4)});
+      final follows = _FakeFollowRepository({_peer(4), _peer(6)});
       final bloc = ConversationListBloc(
         dmRepository: repository,
         followRepository: follows,
@@ -354,12 +367,29 @@ void main() {
       // and the pinned support row.
       await expectBoth(4);
       expect(bloc.state.pinnedSupport, isNotNull);
+      expect(
+        bloc.state.conversations.map((c) => c.id),
+        containsAll([
+          DmRepository.computeConversationId([_owner, _peer(1)]),
+          DmRepository.computeConversationId([_owner, _peer(6)]),
+          readGroup,
+        ]),
+        reason: 'the list still reads every row, read ones included',
+      );
 
       await db.conversationsDao.markAsRead(
         DmRepository.computeConversationId([_owner, _peer(2)]),
         ownerPubkey: _owner,
       );
       await expectBoth(3);
+
+      // Reading the support thread drops it from both, and the pin stays.
+      await db.conversationsDao.markAsRead(
+        DmRepository.computeConversationId([_owner, supportPubkey]),
+        ownerPubkey: _owner,
+      );
+      await expectBoth(2);
+      expect(bloc.state.pinnedSupport?.conversation.isRead, isTrue);
     });
   });
 }

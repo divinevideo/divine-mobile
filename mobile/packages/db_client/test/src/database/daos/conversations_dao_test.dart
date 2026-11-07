@@ -792,95 +792,130 @@ void main() {
       });
     });
 
-    group('unreadOnly watches (#7923)', () {
-      const owner = 'owner';
+    // Read and unread rows in both buckets, and unread rows another owner
+    // holds, for the `unreadOnly` watches (#7923).
+    const unreadOnlyOwner = 'owner';
 
-      Future<void> seed(
-        String id, {
-        required bool sent,
-        required bool isRead,
-        String ownerPubkey = owner,
-        int timestamp = 1700000100,
-      }) => dao.upsertConversation(
-        id: id,
-        participantPubkeys: '["$ownerPubkey","peer_$id"]',
-        isGroup: false,
-        createdAt: 1700000000,
-        lastMessageTimestamp: timestamp,
-        isRead: isRead,
-        currentUserHasSent: sent,
-        ownerPubkey: ownerPubkey,
+    Future<void> seedRow(
+      String id, {
+      required bool sent,
+      required bool isRead,
+      String ownerPubkey = unreadOnlyOwner,
+      int timestamp = 1700000100,
+    }) => dao.upsertConversation(
+      id: id,
+      participantPubkeys: '["$ownerPubkey","peer_$id"]',
+      isGroup: false,
+      createdAt: 1700000000,
+      lastMessageTimestamp: timestamp,
+      isRead: isRead,
+      currentUserHasSent: sent,
+      ownerPubkey: ownerPubkey,
+    );
+
+    Future<void> seedReadAndUnreadRows() async {
+      await seedRow('accepted_read', sent: true, isRead: true);
+      await seedRow('accepted_unread', sent: true, isRead: false);
+      await seedRow('request_read', sent: false, isRead: true);
+      await seedRow('request_unread', sent: false, isRead: false);
+      await seedRow(
+        'other_owner_accepted_unread',
+        sent: true,
+        isRead: false,
+        ownerPubkey: 'someone_else',
       );
+      await seedRow(
+        'other_owner_request_unread',
+        sent: false,
+        isRead: false,
+        ownerPubkey: 'someone_else',
+      );
+    }
 
-      setUp(() async {
-        await seed('accepted_read', sent: true, isRead: true);
-        await seed('accepted_unread', sent: true, isRead: false);
-        await seed('request_read', sent: false, isRead: true);
-        await seed('request_unread', sent: false, isRead: false);
-        await seed(
-          'other_owner_unread',
-          sent: true,
-          isRead: false,
-          ownerPubkey: 'someone_else',
+    group('watchAcceptedConversations', () {
+      setUp(seedReadAndUnreadRows);
+
+      test('returns every owned row by default', () async {
+        final rows = await dao
+            .watchAcceptedConversations(ownerPubkey: unreadOnlyOwner)
+            .first;
+
+        expect(
+          rows.map((r) => r.id),
+          unorderedEquals(['accepted_read', 'accepted_unread']),
         );
       });
 
-      test('watchAcceptedConversations keeps only unread rows', () async {
-        final everything = await dao
-            .watchAcceptedConversations(ownerPubkey: owner)
-            .first;
-        expect(
-          everything.map((r) => r.id),
-          containsAll(['accepted_read', 'accepted_unread']),
-        );
-
-        final unread = await dao
-            .watchAcceptedConversations(ownerPubkey: owner, unreadOnly: true)
+      test('returns only unread owned rows with unreadOnly (#7923)', () async {
+        final rows = await dao
+            .watchAcceptedConversations(
+              ownerPubkey: unreadOnlyOwner,
+              unreadOnly: true,
+            )
             .first;
 
-        expect(unread.map((r) => r.id), equals(['accepted_unread']));
+        expect(rows.map((r) => r.id), equals(['accepted_unread']));
       });
 
       test(
-        'watchPotentialRequestConversations keeps only unread rows',
+        'with unreadOnly, a row leaves when read and returns on a new message '
+        '(#7923)',
         () async {
-          final unread = await dao
-              .watchPotentialRequestConversations(
-                ownerPubkey: owner,
+          final emissions = <List<String>>[];
+          final subscription = dao
+              .watchAcceptedConversations(
+                ownerPubkey: unreadOnlyOwner,
                 unreadOnly: true,
               )
-              .first;
+              .listen((rows) => emissions.add(rows.map((r) => r.id).toList()));
+          addTearDown(subscription.cancel);
+          await pumpEventQueue();
 
-          expect(unread.map((r) => r.id), equals(['request_unread']));
+          await dao.markAsRead('accepted_unread', ownerPubkey: unreadOnlyOwner);
+          await pumpEventQueue();
+          await seedRow(
+            'accepted_read',
+            sent: true,
+            isRead: false,
+            timestamp: 1700000200,
+          );
+          await pumpEventQueue();
+
+          expect(
+            emissions,
+            equals([
+              ['accepted_unread'],
+              <String>[],
+              ['accepted_read'],
+            ]),
+          );
         },
       );
+    });
 
-      test('a row leaves when read and returns on a new message', () async {
-        final emissions = <List<String>>[];
-        final subscription = dao
-            .watchAcceptedConversations(ownerPubkey: owner, unreadOnly: true)
-            .listen((rows) => emissions.add(rows.map((r) => r.id).toList()));
-        addTearDown(subscription.cancel);
-        await pumpEventQueue();
+    group('watchPotentialRequestConversations', () {
+      setUp(seedReadAndUnreadRows);
 
-        await dao.markAsRead('accepted_unread', ownerPubkey: owner);
-        await pumpEventQueue();
-        await seed(
-          'accepted_read',
-          sent: true,
-          isRead: false,
-          timestamp: 1700000200,
-        );
-        await pumpEventQueue();
+      test('returns every owned row by default', () async {
+        final rows = await dao
+            .watchPotentialRequestConversations(ownerPubkey: unreadOnlyOwner)
+            .first;
 
         expect(
-          emissions,
-          equals([
-            ['accepted_unread'],
-            <String>[],
-            ['accepted_read'],
-          ]),
+          rows.map((r) => r.id),
+          unorderedEquals(['request_read', 'request_unread']),
         );
+      });
+
+      test('returns only unread owned rows with unreadOnly (#7923)', () async {
+        final rows = await dao
+            .watchPotentialRequestConversations(
+              ownerPubkey: unreadOnlyOwner,
+              unreadOnly: true,
+            )
+            .first;
+
+        expect(rows.map((r) => r.id), equals(['request_unread']));
       });
     });
 

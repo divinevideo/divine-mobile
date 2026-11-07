@@ -83,6 +83,9 @@ void main() {
           isRead: false,
         );
 
+        final all = await repository.watchPotentialRequests().first;
+        expect(all, hasLength(2), reason: 'the read row is in the full set');
+
         final rows = await repository
             .watchPotentialRequests(unreadOnly: true)
             .first;
