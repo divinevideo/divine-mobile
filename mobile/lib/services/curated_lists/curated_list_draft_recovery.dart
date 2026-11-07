@@ -249,6 +249,31 @@ extension _CuratedListDraftRecovery on CuratedListService {
                     CuratedListConverter.extractDTag(event) == current.id,
               )
               .toList();
+          final draft = current.localEditDraft;
+          if (events.isEmpty &&
+              current.nostrEventId == null &&
+              draft != null &&
+              draft.baseline.nostrEventId == null &&
+              _relayEvidence.allows(current) &&
+              _defaultAuthority.canMutate(current)) {
+            // No remote replacement exists. The original local list is the
+            // only proven baseline for this explicit discard choice.
+            final replacement = draft.baseline.copyWith(
+              createdAt: current.createdAt,
+              pendingPlaintextEventIds: current.pendingPlaintextEventIds,
+              clearLocalEditDraft: true,
+              hasRelayConflict: false,
+            );
+            _restoreList(replacement);
+            if (!await _saveLists()) {
+              if (_isCurrent(owner) &&
+                  getListById(current.authorScopedId) == replacement) {
+                _restoreList(current);
+              }
+              return false;
+            }
+            return _isCurrent(owner);
+          }
           if (events.length != 1) return false;
           final event = events.single;
           if (!event.isValid ||
