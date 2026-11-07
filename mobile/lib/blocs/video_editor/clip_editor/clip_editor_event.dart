@@ -612,6 +612,8 @@ class ClipEditorDetachedClipReattachRequested extends ClipEditorEvent {
     this.sourceOffset = Duration.zero,
     this.window,
     this.placeholderClipId,
+    this.chromaKey,
+    this.bakedChromaKey,
   });
 
   final String layerId;
@@ -630,6 +632,13 @@ class ClipEditorDetachedClipReattachRequested extends ClipEditorEvent {
   /// was closed.
   final String? placeholderClipId;
 
+  /// The green screen the layer applies live, or `null` for none.
+  final ClipChromaKey? chromaKey;
+
+  /// The key the clip had baked into its file before it was detached, or
+  /// `null` when it had none, kept it, or a crop on the canvas dropped it.
+  final DetachedClipBakedChromaKey? bakedChromaKey;
+
   @override
   List<Object?> get props => [
     layerId,
@@ -638,6 +647,8 @@ class ClipEditorDetachedClipReattachRequested extends ClipEditorEvent {
     sourceOffset,
     window,
     placeholderClipId,
+    chromaKey,
+    bakedChromaKey,
   ];
 }
 

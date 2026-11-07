@@ -21,6 +21,8 @@ import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/clip_stabilization.dart';
 import 'package:openvine/models/video_editor/clip_style.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart'
+    show DetachedClipBakedChromaKey;
 import 'package:openvine/models/video_editor/detached_clip_reattach.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/models/video_editor/loop_repair_input.dart';
@@ -2869,6 +2871,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   /// editor history is the widget layer's half, driven by
   /// [ClipEditorState.lastDetachResult]. Splitting it that way keeps the bloc
   /// free of the editor, and keeps the two changes in one undo entry.
+  ///
+  /// A key baked into the clip's file comes off onto the layer — see
+  /// [_liftBakedChromaKey].
   Future<void> _onClipDetachRequested(
     ClipEditorClipDetachRequested event,
     Emitter<ClipEditorState> emit,
@@ -2942,6 +2947,13 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       }
     }
 
+    final renders = <String>[];
+    final lifted = await _liftBakedChromaKey(clip, renders);
+    if (isClosed) {
+      _deferOrphanedPaths([...?placeholder?.ownedFilePaths, ...renders]);
+      return;
+    }
+
     final currentClips = state.clips;
     final currentIndex = currentClips.indexWhere((c) => c.id == clip.id);
     if (currentIndex == -1) {
@@ -2950,7 +2962,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         name: 'ClipEditorBloc',
         category: LogCategory.video,
       );
-      _deferOrphanedPaths(placeholder?.ownedFilePaths ?? const <String?>[]);
+      _deferOrphanedPaths([...?placeholder?.ownedFilePaths, ...renders]);
       emit(
         state.copyWith(
           isDetaching: false,
@@ -2968,8 +2980,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       newClips[currentIndex] = placeholder;
     }
 
-    // The detached clip's own file is deliberately *not* reaped: the layer
-    // that now carries it plays from exactly that file.
+    // The detached clip's files are deliberately *not* reaped: the layer that
+    // now carries it plays from them, and a baked file it no longer plays is
+    // kept by the layer so putting the clip back can restore it.
     emit(
       state.copyWith(
         clips: List.unmodifiable(newClips),
@@ -2984,9 +2997,49 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
           previousClips: currentClips,
           // A layer is moved by keyframes of its own, on the canvas; the
           // clip's motion stays with the timeline.
-          detachedClip: clip.copyWith(keyframes: const []),
+          detachedClip: (lifted?.clip ?? clip).copyWith(keyframes: const []),
           placeholder: placeholder,
+          bakedChromaKey: lifted?.baked,
         ),
+      ),
+    );
+  }
+
+  /// [clip] with the green screen baked into its file taken off again, for a
+  /// detach, or `null` when it stays baked.
+  ///
+  /// On the timeline a key has to be burned into the file, which flattens the
+  /// removed area to black or to the chosen fill. A detached clip is drawn
+  /// over the track, so the layer can play the footage the key was applied to
+  /// and apply the same key live: with no fill the removed area then shows the
+  /// track underneath, and a later change to the key starts from the clean
+  /// footage instead of keying a fill that is already blended into the edges.
+  ///
+  /// A colour or image fill moves along with the key, so the layer looks as
+  /// the clip did. A library clip behind the subject stays baked: a layer has
+  /// no second track to play it on. Without the footage the key was baked
+  /// from there is nothing to play instead, so the key stays baked too.
+  ///
+  /// Writes a fresh poster from that footage, added to [renders]: a key baked
+  /// right after the take moved the poster onto the keyed file, and under the
+  /// live key that one would flash its fill while the layer's player loads.
+  Future<({DivineVideoClip clip, DetachedClipBakedChromaKey baked})?>
+  _liftBakedChromaKey(DivineVideoClip clip, List<String> renders) async {
+    final key = clip.chromaKey;
+    final source = clip.chromaKeySourcePath;
+    final video = clip.video?.file?.path;
+    if (key == null || source == null || video == null) return null;
+    if (key.backgroundType == ClipChromaKeyBackgroundType.video) return null;
+
+    final unkey = await _removedColorMask(clip, renders);
+    if (unkey == null) return null;
+    return (
+      clip: unkey(clip),
+      baked: DetachedClipBakedChromaKey(
+        videoPath: video,
+        sourcePath: source,
+        chromaKey: key,
+        thumbnailPath: clip.thumbnailPath,
       ),
     );
   }
@@ -3218,8 +3271,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   /// What the layer did on the canvas stays behind: its position, size and
   /// rotation have no timeline equivalent, and neither has its live green
   /// screen, which a timeline clip can only carry baked into its file. A key
-  /// baked in before the clip was detached is part of its file and comes back
-  /// with it.
+  /// baked in before the clip was detached comes back while the layer still
+  /// keys the footage it was baked from — see [_withBakedChromaKeyRestored].
   ///
   /// Removing the layer is the widget layer's half, driven by
   /// [ClipEditorState.lastDetachedClipReattachResult], so both changes land in
@@ -3256,7 +3309,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
 
     final currentClips = state.clips;
     var clip = detachedClipTrimmedToLayer(
-      clip: event.clip,
+      clip: _withBakedChromaKeyRestored(event),
       sourceOffset: event.sourceOffset,
       window: event.window,
     );
@@ -3315,6 +3368,46 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
           clipId: clip.id,
         ),
       ),
+    );
+  }
+
+  /// The clip of [event] with the key it had baked in before it was detached
+  /// swapped back in, or the clip as the layer plays it when that cannot be.
+  ///
+  /// Detaching took the key off the file and onto the layer, and the layer
+  /// kept the baked file. Swapping it in again gives back the clip as it left
+  /// the timeline, without a second render. That needs the layer to still
+  /// play the footage the key was baked from — a crop on the canvas renders
+  /// new footage — and the baked file to still be there. A layer whose key
+  /// was taken off comes back without one, as it is shown; one whose key was
+  /// changed gets the baked key back, the nearest a timeline clip can carry
+  /// without a render.
+  DivineVideoClip _withBakedChromaKeyRestored(
+    ClipEditorDetachedClipReattachRequested event,
+  ) {
+    final clip = event.clip;
+    final baked = event.bakedChromaKey;
+    if (baked == null || event.chromaKey == null) return clip;
+    if (clip.video?.file?.path != baked.sourcePath) return clip;
+    if (!File(baked.videoPath).existsSync()) {
+      Log.warning(
+        '⚠️ Detached clip ${clip.id} comes back without its color mask: '
+        'its masked video ${baked.videoPath} is gone',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      return clip;
+    }
+    final sources = clip.sourcesWithChromaKey(baked.chromaKey);
+    return clip.copyWith(
+      video: EditorVideo.file(baked.videoPath),
+      chromaKey: baked.chromaKey,
+      chromaKeySourcePath: baked.sourcePath,
+      thumbnailPath: baked.thumbnailPath,
+      derivedFrom: sources,
+      clearDerivedFrom: sources == null,
+      clearForwardVideoPath: true,
+      clearReversedVideoPath: true,
     );
   }
 

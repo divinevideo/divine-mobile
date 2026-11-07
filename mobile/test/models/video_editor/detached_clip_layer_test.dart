@@ -214,6 +214,149 @@ void main() {
       });
     });
 
+    test('protects the baked file a lifted key can be put back with', () {
+      final history = <String, dynamic>{
+        'history': [
+          {
+            'layers': [
+              DetachedClipLayerData(
+                clip: _clip(filePath: '/old/clip-1.mp4'),
+                layerId: 'layer-1',
+                chromaKey: const ClipChromaKey(key: ChromaKey.greenScreen()),
+                bakedChromaKey: const DetachedClipBakedChromaKey(
+                  videoPath: '/old/clip-1_keyed.mp4',
+                  sourcePath: '/old/clip-1.mp4',
+                  chromaKey: ClipChromaKey(key: ChromaKey.greenScreen()),
+                  thumbnailPath: '/old/clip-1_keyed.jpg',
+                ),
+              ).toMeta(),
+            ],
+          },
+        ],
+      };
+
+      // The layer no longer plays the baked file, but putting the clip back
+      // swaps it in again, so the draft sweep must not reap it.
+      expect(
+        DetachedClipLayerData.ownedFilePathsInHistory(history, '/documents'),
+        {
+          '/documents/clip-1.mp4',
+          '/documents/clip-1_keyed.mp4',
+          '/documents/clip-1_keyed.jpg',
+        },
+      );
+    });
+
+    test('protects the backdrop of a baked key the layer took off', () {
+      final history = <String, dynamic>{
+        'history': [
+          {
+            'layers': [
+              // The live key is gone, so only the record still names the
+              // image the baked file was keyed over.
+              DetachedClipLayerData(
+                clip: _clip(filePath: '/old/clip-1.mp4'),
+                layerId: 'layer-1',
+                bakedChromaKey: DetachedClipBakedChromaKey(
+                  videoPath: '/old/clip-1_keyed.mp4',
+                  sourcePath: '/old/clip-1.mp4',
+                  chromaKey: const ClipChromaKey(
+                    key: ChromaKey.greenScreen(),
+                  ).withImageBackground('/old/backdrop.jpg'),
+                ),
+              ).toMeta(),
+            ],
+          },
+        ],
+      };
+
+      expect(
+        DetachedClipLayerData.ownedFilePathsInHistory(history, '/documents'),
+        contains('/documents/backdrop.jpg'),
+      );
+    });
+
+    group('bakedChromaKey', () {
+      final meta = DetachedClipLayerData(
+        clip: _clip(),
+        layerId: 'layer-1',
+        chromaKey: const ClipChromaKey(key: ChromaKey.greenScreen()),
+        bakedChromaKey: DetachedClipBakedChromaKey(
+          videoPath: '/old/clip-1_keyed.mp4',
+          sourcePath: '/old/clip-1.mp4',
+          chromaKey: const ClipChromaKey(
+            key: ChromaKey.greenScreen(),
+          ).withColorBackground(const Color(0xFF3366FF)),
+          thumbnailPath: '/old/clip-1_keyed.jpg',
+        ),
+      ).toMeta();
+
+      test('round-trips through the meta, re-anchoring its files', () {
+        final baked = DetachedClipLayerData.fromMeta(
+          meta,
+          '/new-docs',
+        )!.bakedChromaKey!;
+
+        expect(baked.videoPath, '/new-docs/clip-1_keyed.mp4');
+        expect(baked.sourcePath, '/new-docs/clip-1.mp4');
+        expect(baked.thumbnailPath, '/new-docs/clip-1_keyed.jpg');
+        expect(baked.chromaKey.key.backgroundColor, const Color(0xFF3366FF));
+      });
+
+      test('reads none from a layer that never had one', () {
+        final plain = DetachedClipLayerData(
+          clip: _clip(),
+          layerId: 'layer-1',
+        ).toMeta();
+
+        expect(
+          DetachedClipLayerData.fromMeta(plain, '/docs')!.bakedChromaKey,
+          isNull,
+        );
+      });
+
+      test('drops an unreadable record rather than the whole layer', () {
+        final corrupt = {
+          ...meta,
+          detachedClipLayerBakedChromaKeyKey: {'video': 3},
+        };
+
+        final restored = DetachedClipLayerData.fromMeta(corrupt, '/docs');
+
+        expect(restored, isNotNull);
+        expect(restored!.bakedChromaKey, isNull);
+        expect(restored.chromaKey, isNotNull);
+      });
+
+      test('drops a record whose key cannot be read', () {
+        final corrupt = {
+          ...meta,
+          detachedClipLayerBakedChromaKeyKey: {
+            'video': 'clip-1_keyed.mp4',
+            'source': 'clip-1.mp4',
+            'chromaKey': {'backgroundImage': 3},
+          },
+        };
+
+        final restored = DetachedClipLayerData.fromMeta(corrupt, '/docs');
+
+        expect(restored, isNotNull);
+        expect(restored!.bakedChromaKey, isNull);
+        expect(restored.chromaKey, isNotNull);
+      });
+
+      test('goes when a crop replaces the footage it was baked from', () {
+        final cropped = _clip(filePath: '/docs/clip-1_cropped.mp4');
+
+        final updated = DetachedClipLayerData.withClip(meta, cropped);
+
+        final restored = DetachedClipLayerData.fromMeta(updated, '/docs')!;
+        expect(restored.bakedChromaKey, isNull);
+        // The live key describes the layer, not the footage, and stays.
+        expect(restored.chromaKey, isNotNull);
+      });
+    });
+
     group('chromaKey', () {
       final keyed = DetachedClipLayerData(
         clip: _clip(),
