@@ -19,23 +19,47 @@ import 'package:nostr_sdk/nostr_sdk.dart' show Event;
 class LatestAddressableEvents {
   final _events = <String, Event>{};
   final _operations = <String, Future<void>>{};
-  final _revisions = StreamController<int>.broadcast();
+  final _revisions = StreamController<({String key, int revision})>.broadcast();
+  final _keyRevisions = <String, int>{};
   var _revision = 0;
 
-  /// Monotonic version of the accepted revisions in this store.
-  int get revision => _revision;
+  /// The newest change affecting any of the named coordinates.
+  int revisionFor({
+    required String pubkey,
+    required int kind,
+    required Iterable<String> dTags,
+  }) => _revisionOf(dTags.map((dTag) => _key(pubkey, kind, dTag)));
 
-  /// The current version followed by changes, without a subscribe/snapshot gap.
-  Stream<int> get revisions => Stream.multi((controller) {
-    final subscription = _revisions.stream.listen(
-      controller.add,
-      onError: controller.addError,
-      onDone: controller.close,
-    );
-    controller
-      ..add(_revision)
-      ..onCancel = subscription.cancel;
-  });
+  int _revisionOf(Iterable<String> keys) {
+    var revision = 0;
+    for (final key in keys) {
+      final known = _keyRevisions[key] ?? 0;
+      if (known > revision) revision = known;
+    }
+    return revision;
+  }
+
+  /// The current scoped version followed by changes to those coordinates.
+  /// Subscribe before taking the snapshot so no accepted change is lost.
+  Stream<int> revisionsFor({
+    required String pubkey,
+    required int kind,
+    required Iterable<String> dTags,
+  }) {
+    final keys = dTags.map((dTag) => _key(pubkey, kind, dTag)).toSet();
+    return Stream<int>.multi((controller) {
+      final subscription = _revisions.stream.listen(
+        (change) {
+          if (keys.contains(change.key)) controller.add(change.revision);
+        },
+        onError: controller.addError,
+        onDone: controller.close,
+      );
+      controller
+        ..add(_revisionOf(keys))
+        ..onCancel = subscription.cancel;
+    }).distinct();
+  }
 
   /// Closes revision notifications; existing repository operations keep their
   /// own lifecycle and account guards.
@@ -88,7 +112,8 @@ class LatestAddressableEvents {
       // A copy, so a caller changing its event cannot change the store.
       _events[key] = Event.fromJson(event.toJson());
       _revision++;
-      if (!_revisions.isClosed) _revisions.add(_revision);
+      _keyRevisions[key] = _revision;
+      if (!_revisions.isClosed) _revisions.add((key: key, revision: _revision));
     }
   }
 

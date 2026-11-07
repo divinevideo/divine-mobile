@@ -304,6 +304,16 @@ List _buildOverrides({
       rootAddressableId: any(named: 'rootAddressableId'),
     ),
   ).thenAnswer((_) async => CommentModeration.empty);
+  when(
+    () => commentModeration.knownModeration(
+      rootAddressableId: any(named: 'rootAddressableId'),
+    ),
+  ).thenReturn((moderation: CommentModeration.empty, revision: 0));
+  when(
+    () => commentModeration.watchModeration(
+      rootAddressableId: any(named: 'rootAddressableId'),
+    ),
+  ).thenAnswer((_) => Stream.value(0));
   return [
     ...getStandardTestOverrides(
       mockAuthService: authService ?? createMockAuthService(),

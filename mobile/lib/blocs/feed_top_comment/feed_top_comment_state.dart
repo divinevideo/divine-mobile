@@ -10,6 +10,8 @@ class FeedTopCommentState extends Equatable {
     this.topComment,
     this.hasCompletedLoop = false,
     this.isDismissed = false,
+    this.appliedModeration = CommentModeration.empty,
+    this.moderationRevision = 0,
   });
 
   final FeedTopCommentStatus status;
@@ -23,6 +25,12 @@ class FeedTopCommentState extends Equatable {
   /// Whether the viewer dismissed the overlay.
   final bool isDismissed;
 
+  /// Published policy used for this selection, separate from local owner blocks.
+  final CommentModeration appliedModeration;
+
+  /// Scoped cache version used for this selection, not an app-wide counter.
+  final int moderationRevision;
+
   /// Whether the reaction overlay should be on screen.
   bool get isOverlayVisible =>
       status == FeedTopCommentStatus.ready &&
@@ -35,12 +43,16 @@ class FeedTopCommentState extends Equatable {
     Comment? topComment,
     bool? hasCompletedLoop,
     bool? isDismissed,
+    CommentModeration? appliedModeration,
+    int? moderationRevision,
   }) {
     return FeedTopCommentState(
       status: status ?? this.status,
       topComment: topComment ?? this.topComment,
       hasCompletedLoop: hasCompletedLoop ?? this.hasCompletedLoop,
       isDismissed: isDismissed ?? this.isDismissed,
+      appliedModeration: appliedModeration ?? this.appliedModeration,
+      moderationRevision: moderationRevision ?? this.moderationRevision,
     );
   }
 
@@ -50,5 +62,7 @@ class FeedTopCommentState extends Equatable {
     topComment,
     hasCompletedLoop,
     isDismissed,
+    appliedModeration,
+    moderationRevision,
   ];
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:comments_repository/comments_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -222,6 +224,121 @@ void main() {
                   (tag.length < 4 || tag[3].isEmpty),
             ),
             hasLength(1),
+          );
+        },
+      );
+    });
+
+    group('moderation snapshots', () {
+      test(
+        'observes a native horizontal root through its shared Divine key',
+        () async {
+          final events = LatestAddressableEvents();
+          addTearDown(events.dispose);
+          final scoped = CommentModerationRepository(
+            nostrClient: nostrClient,
+            latestEvents: events,
+          );
+          final root = '34235:$_owner:video-dtag';
+          final changes = StreamIterator<int>(
+            scoped.watchModeration(rootAddressableId: root),
+          );
+          addTearDown(changes.cancel);
+          expect(await changes.moveNext(), isTrue);
+          expect(changes.current, 0);
+          events.remember(
+            _moderationEvent(
+              identifier: _videoIdentifier,
+              tags: [
+                ['e', _commentA, '', 'hidden'],
+              ],
+            ),
+          );
+          expect(await changes.moveNext(), isTrue);
+          expect(changes.current, 1);
+          final snapshot = scoped.knownModeration(rootAddressableId: root);
+          expect(snapshot.revision, 1);
+          expect(snapshot.moderation.hiddenCommentIds, contains(_commentA));
+        },
+      );
+
+      test(
+        'watches only the video and creator-wide policy coordinates',
+        () async {
+          final events = LatestAddressableEvents();
+          addTearDown(events.dispose);
+          final scoped = CommentModerationRepository(
+            nostrClient: nostrClient,
+            latestEvents: events,
+          );
+          final changes = StreamIterator<int>(
+            scoped.watchModeration(rootAddressableId: _coordinate),
+          );
+          addTearDown(changes.cancel);
+          expect(await changes.moveNext(), isTrue);
+          expect(changes.current, 0);
+          events
+            ..remember(
+              _moderationEvent(
+                pubkey: _stranger,
+                identifier: _videoIdentifier,
+                tags: const [],
+              ),
+            )
+            ..remember(
+              _moderationEvent(
+                identifier: '${_videoIdentifier}other',
+                tags: const [],
+              ),
+            )
+            ..remember(
+              _moderationEvent(
+                identifier: hiddenCommentersIdentifier,
+                tags: [
+                  ['p', _commenter],
+                ],
+              ),
+            );
+          expect(await changes.moveNext(), isTrue);
+          expect(changes.current, 3);
+          expect(
+            scoped
+                .knownModeration(rootAddressableId: _coordinate)
+                .moderation
+                .autoHiddenAuthors,
+            contains(_commenter),
+          );
+          events.remember(
+            _moderationEvent(
+              identifier: _videoIdentifier,
+              tags: [
+                ['e', _commentA, '', 'hidden'],
+              ],
+            ),
+          );
+          expect(await changes.moveNext(), isTrue);
+          expect(changes.current, 4);
+          final snapshot = scoped.knownModeration(
+            rootAddressableId: _coordinate,
+          );
+          expect(snapshot.revision, 4);
+          expect(snapshot.moderation.hiddenCommentIds, contains(_commentA));
+        },
+      );
+
+      test(
+        'has an empty snapshot and finite watch without a valid root',
+        () async {
+          final snapshot = repository.knownModeration(
+            rootAddressableId: 'invalid',
+          );
+          expect(snapshot.moderation, CommentModeration.empty);
+          expect(snapshot.revision, 0);
+          expect(
+            await repository
+                .watchModeration(rootAddressableId: 'invalid')
+                .toList(),
+            [0],
           );
         },
       );

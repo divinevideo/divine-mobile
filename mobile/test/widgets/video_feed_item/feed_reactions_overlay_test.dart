@@ -16,7 +16,8 @@ import 'package:likes_repository/likes_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:nostr_client/nostr_client.dart' show LatestAddressableEvents;
+import 'package:nostr_client/nostr_client.dart'
+    show LatestAddressableEvents, NostrClient;
 import 'package:nostr_sdk/nostr_sdk.dart' as nostr;
 import 'package:openvine/blocs/feed_top_comment/feed_top_comment_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -45,6 +46,8 @@ class _MockCommentModerationRepository extends Mock
 
 class _MockBlocklistRepository extends Mock
     implements ContentBlocklistRepository {}
+
+class _MockNostrClient extends Mock implements NostrClient {}
 
 class _TestNostrSession extends NostrSession {
   _TestNostrSession(this.pubkey);
@@ -960,17 +963,36 @@ void main() {
     late _MockBlocklistRepository blocklistRepository;
     String? viewer;
 
+    void stubModeration(CommentModeration moderation, {int revision = 0}) {
+      when(
+        () => moderationRepository.loadModeration(
+          rootAddressableId: any(named: 'rootAddressableId'),
+        ),
+      ).thenAnswer((_) async => moderation);
+      when(
+        () => moderationRepository.knownModeration(
+          rootAddressableId: any(named: 'rootAddressableId'),
+        ),
+      ).thenReturn((moderation: moderation, revision: revision));
+      when(
+        () => moderationRepository.watchModeration(
+          rootAddressableId: any(named: 'rootAddressableId'),
+        ),
+      ).thenAnswer((_) => Stream.value(revision));
+    }
+
+    setUpAll(() {
+      registerFallbackValue(<nostr.Filter>[]);
+      registerFallbackValue(Duration.zero);
+    });
+
     setUp(() {
       commentsRepository = _MockCommentsRepository();
       likesRepository = _MockLikesRepository();
       moderationRepository = _MockCommentModerationRepository();
       blocklistRepository = _MockBlocklistRepository();
       viewer = null;
-      when(
-        () => moderationRepository.loadModeration(
-          rootAddressableId: any(named: 'rootAddressableId'),
-        ),
-      ).thenAnswer((_) async => CommentModeration.empty);
+      stubModeration(CommentModeration.empty);
       when(() => blocklistRepository.blockedPubkeysForAccount(any()))
           .thenReturn(const {});
       when(
@@ -992,12 +1014,13 @@ void main() {
       VideoEvent? video,
       Stream<void> loopCompletions = const Stream<void>.empty(),
       LatestAddressableEvents? latestEvents,
+      CommentModerationRepository? commentModeration,
     }) => ProviderScope(
       overrides: [
         commentsRepositoryProvider.overrideWithValue(commentsRepository),
         likesRepositoryProvider.overrideWithValue(likesRepository),
         commentModerationRepositoryProvider.overrideWithValue(
-          moderationRepository,
+          commentModeration ?? moderationRepository,
         ),
         contentBlocklistRepositoryProvider.overrideWithValue(
           blocklistRepository,
@@ -1019,6 +1042,47 @@ void main() {
     );
 
     group('renders', () {
+      ({
+        VideoEvent video,
+        LatestAddressableEvents events,
+        CommentModerationRepository moderation,
+        String owner,
+        String key,
+      })
+      realModeration() {
+        final key = '1'.padLeft(64, '0');
+        final owner = nostr.getPublicKey(key);
+        final video = _video.copyWith(pubkey: owner, addressableDTag: 'root');
+        final events = LatestAddressableEvents();
+        addTearDown(events.dispose);
+        final event = nostr.Event(
+          owner,
+          30078,
+          [
+            ['d', 'divine:replies:34236:$owner:root'],
+          ],
+          '',
+          createdAt: 1000,
+        )..sign(key);
+        final client = _MockNostrClient();
+        when(
+          () =>
+              client.queryEventsDetailed(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
+          (_) async => (events: [event], timedOut: false, noRelays: false),
+        );
+        return (
+          video: video,
+          events: events,
+          moderation: CommentModerationRepository(
+            nostrClient: client,
+            latestEvents: events,
+          ),
+          owner: owner,
+          key: key,
+        );
+      }
+
       void stubVisibleComment() {
         when(
           () => commentsRepository.loadComments(
@@ -1046,15 +1110,194 @@ void main() {
           .element(find.byType(_MountCounter))
           .read<FeedTopCommentCubit?>()!;
 
+      testWidgets('reads the comments once when moderation was not cached', (
+        tester,
+      ) async {
+        stubVisibleComment();
+        final data = realModeration();
+        await tester.pumpWidget(
+          buildSubject(
+            enabled: true,
+            onMount: () {},
+            video: data.video,
+            latestEvents: data.events,
+            commentModeration: data.moderation,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(hosted(tester).state.status, FeedTopCommentStatus.ready);
+        expect(
+          data.events.latest(
+            pubkey: data.owner,
+            kind: 30078,
+            dTag: 'divine:replies:34236:${data.owner}:root',
+          ),
+          isNotNull,
+        );
+        verify(
+          () => commentsRepository.loadComments(
+            rootEventId: data.video.id,
+            rootEventKind: data.video.referenceKind,
+            rootAddressableId: data.video.addressableId,
+            limit: FeedTopCommentCubit.commentPageSize,
+          ),
+        ).called(1);
+      });
+
+      testWidgets('does not reload for unrelated moderation coordinates', (
+        tester,
+      ) async {
+        stubVisibleComment();
+        final data = realModeration();
+        await tester.pumpWidget(
+          buildSubject(
+            enabled: true,
+            onMount: () {},
+            video: data.video,
+            latestEvents: data.events,
+            commentModeration: data.moderation,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final first = hosted(tester);
+        expect(first.state.status, FeedTopCommentStatus.ready);
+        clearInteractions(commentsRepository);
+        data.events.remember(
+          nostr.Event(
+            data.owner,
+            30078,
+            [
+              ['d', 'divine:replies:34236:${data.owner}:other-video'],
+            ],
+            '',
+            createdAt: 2000,
+          )..sign(data.key),
+        );
+        await tester.pumpAndSettle();
+        expect(hosted(tester), same(first));
+        verifyNever(
+          () => commentsRepository.loadComments(
+            rootEventId: any(named: 'rootEventId'),
+            rootEventKind: any(named: 'rootEventKind'),
+            rootAddressableId: any(named: 'rootAddressableId'),
+            limit: any(named: 'limit'),
+          ),
+        );
+      });
+
+      testWidgets(
+        'does not reload when a scoped revision has unchanged comment policy',
+        (tester) async {
+          stubVisibleComment();
+          final data = realModeration();
+          await tester.pumpWidget(
+            buildSubject(
+              enabled: true,
+              onMount: () {},
+              video: data.video,
+              latestEvents: data.events,
+              commentModeration: data.moderation,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final first = hosted(tester);
+          expect(first.state.status, FeedTopCommentStatus.ready);
+          clearInteractions(commentsRepository);
+          data.events.remember(
+            nostr.Event(
+              data.owner,
+              30078,
+              [
+                ['d', 'divine:replies:34236:${data.owner}:root'],
+                ['a', '34236:$_commenter:reply', '', 'pinned'],
+              ],
+              '',
+              createdAt: 2000,
+            )..sign(data.key),
+          );
+          await tester.pumpAndSettle();
+          expect(hosted(tester), same(first));
+          verifyNever(
+            () => commentsRepository.loadComments(
+              rootEventId: any(named: 'rootEventId'),
+              rootEventKind: any(named: 'rootEventKind'),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              limit: any(named: 'limit'),
+            ),
+          );
+        },
+      );
+
+      testWidgets(
+        'applies a relevant change during loading without fetching the page twice',
+        (tester) async {
+          stubVisibleComment();
+          final data = realModeration();
+          final votes =
+              Completer<
+                ({Map<String, int> upvotes, Map<String, int> downvotes})
+              >();
+          when(
+            () => likesRepository.getVoteCounts(
+              any(),
+              addressableIds: any(named: 'addressableIds'),
+            ),
+          ).thenAnswer((_) => votes.future);
+          await tester.pumpWidget(
+            buildSubject(
+              enabled: true,
+              onMount: () {},
+              video: data.video,
+              latestEvents: data.events,
+              commentModeration: data.moderation,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final first = hosted(tester);
+          expect(first.state.status, FeedTopCommentStatus.loading);
+          expect(
+            data.events.latest(
+              pubkey: data.owner,
+              kind: 30078,
+              dTag: 'divine:replies:34236:${data.owner}:root',
+            ),
+            isNotNull,
+          );
+          data.events.remember(
+            nostr.Event(
+              data.owner,
+              30078,
+              [
+                ['d', 'divine:replies:34236:${data.owner}:root'],
+                ['e', _topComment.id, '', 'hidden'],
+              ],
+              '',
+              createdAt: 2000,
+            )..sign(data.key),
+          );
+          await tester.pumpAndSettle();
+          expect(hosted(tester), same(first));
+          votes.complete((
+            upvotes: {_topComment.id: 20},
+            downvotes: <String, int>{},
+          ));
+          await tester.pumpAndSettle();
+          expect(hosted(tester), same(first));
+          expect(first.state.status, FeedTopCommentStatus.empty);
+          verify(
+            () => commentsRepository.loadComments(
+              rootEventId: data.video.id,
+              rootEventKind: data.video.referenceKind,
+              rootAddressableId: data.video.addressableId,
+              limit: FeedTopCommentCubit.commentPageSize,
+            ),
+          ).called(1);
+        },
+      );
+
       testWidgets('does not feature a creator-hidden comment', (tester) async {
         stubVisibleComment();
-        when(
-          () => moderationRepository.loadModeration(
-            rootAddressableId: any(named: 'rootAddressableId'),
-          ),
-        ).thenAnswer(
-          (_) async => CommentModeration(hiddenCommentIds: {_topComment.id}),
-        );
+        stubModeration(CommentModeration(hiddenCommentIds: {_topComment.id}));
         await tester.pumpWidget(
           buildSubject(
             enabled: true,
@@ -1168,19 +1411,16 @@ void main() {
         'updates a featured comment when another surface accepts moderation',
         (tester) async {
           stubVisibleComment();
-          final key = '1'.padLeft(64, '0');
-          final owner = nostr.getPublicKey(key);
-          final video = _video.copyWith(pubkey: owner, addressableDTag: 'root');
-          final latestEvents = LatestAddressableEvents();
-          addTearDown(latestEvents.dispose);
+          final data = realModeration();
           final loops = StreamController<void>.broadcast();
           addTearDown(loops.close);
           await tester.pumpWidget(
             buildSubject(
               enabled: true,
               onMount: () {},
-              video: video,
-              latestEvents: latestEvents,
+              video: data.video,
+              latestEvents: data.events,
+              commentModeration: data.moderation,
               loopCompletions: loops.stream,
             ),
           );
@@ -1189,24 +1429,17 @@ void main() {
           loops.add(null);
           await tester.pump();
           expect(first.state.isOverlayVisible, isTrue);
-          when(
-            () => moderationRepository.loadModeration(
-              rootAddressableId: any(named: 'rootAddressableId'),
-            ),
-          ).thenAnswer(
-            (_) async => CommentModeration(hiddenCommentIds: {_topComment.id}),
-          );
-          latestEvents.remember(
+          data.events.remember(
             nostr.Event(
-              owner,
+              data.owner,
               30078,
               [
-                ['d', 'divine:replies:34236:$owner:root'],
+                ['d', 'divine:replies:34236:${data.owner}:root'],
                 ['e', _topComment.id, '', 'hidden'],
               ],
               '',
-              createdAt: 1000,
-            )..sign(key),
+              createdAt: 2000,
+            )..sign(data.key),
           );
           await tester.pumpAndSettle();
           expect(hosted(tester), isNot(same(first)));

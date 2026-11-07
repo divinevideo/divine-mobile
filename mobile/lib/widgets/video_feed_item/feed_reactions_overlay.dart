@@ -34,7 +34,7 @@ import 'package:provider/provider.dart' as inherited_provider;
 /// created and is closed once [enabled] turns off or the item goes away;
 /// meanwhile [child] reads `null`. The tree under [child] keeps its shape
 /// either way, so flipping [enabled] does not remount the item.
-/// Account, block and shared moderation revisions refresh the candidate while
+/// Account, block and relevant moderation revisions refresh the candidate while
 /// preserving dismissal and loop progress for the same viewer/video.
 class FeedTopCommentHost extends ConsumerStatefulWidget {
   const FeedTopCommentHost({
@@ -61,7 +61,8 @@ class _FeedTopCommentHostState extends ConsumerState<FeedTopCommentHost> {
   FeedTopCommentCubit? _cubit;
 
   /// What [_cubit] was created for; a change replaces it.
-  ({(String, String?) video, Object dependencies})? _cubitKey;
+  ({(String, String?) video, Object dependencies, int moderationRevision})?
+  _cubitKey;
 
   @override
   Widget build(BuildContext context) {
@@ -76,10 +77,26 @@ class _FeedTopCommentHostState extends ConsumerState<FeedTopCommentHost> {
     final blocklistVersion = widget.enabled
         ? ref.watch(blocklistVersionProvider)
         : 0;
-    final moderationRevision = widget.enabled
-        ? (ref.watch(latestAddressableEventsRevisionProvider).value ??
-              ref.watch(latestAddressableEventsProvider).revision)
-        : 0;
+    final coordinate = widget.video.addressableId;
+    if (moderationRepository != null &&
+        coordinate != null &&
+        coordinate.isNotEmpty) {
+      ref.watch(commentModerationRevisionProvider(coordinate));
+    }
+    final known =
+        moderationRepository == null || coordinate == null || coordinate.isEmpty
+        ? const (moderation: CommentModeration.empty, revision: 0)
+        : moderationRepository.knownModeration(rootAddressableId: coordinate);
+    final applied = _cubit?.state;
+    final needsRefresh =
+        applied != null &&
+        (applied.status == FeedTopCommentStatus.ready ||
+            applied.status == FeedTopCommentStatus.empty) &&
+        known.revision > applied.moderationRevision &&
+        known.moderation != applied.appliedModeration;
+    final moderationRevision = needsRefresh
+        ? known.revision
+        : (_cubitKey?.moderationRevision ?? known.revision);
     final viewerBlocks = viewerPubkey == null
         ? const <String>{}
         : ref
@@ -95,8 +112,8 @@ class _FeedTopCommentHostState extends ConsumerState<FeedTopCommentHost> {
               likesRepository,
               moderationRepository,
               blocklistVersion,
-              moderationRevision,
             ),
+            moderationRevision: moderationRevision,
           )
         : null;
     if (key != _cubitKey) {

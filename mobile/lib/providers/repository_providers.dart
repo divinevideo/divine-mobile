@@ -179,10 +179,12 @@ final latestAddressableEventsProvider = Provider<LatestAddressableEvents>((
   return events;
 });
 
-/// Refreshes consumers when another moderation surface accepts a new revision.
-final StreamProvider<int> latestAddressableEventsRevisionProvider =
-    StreamProvider.autoDispose<int>(
-      (ref) => ref.watch(latestAddressableEventsProvider).revisions,
+/// Invalidates consumers only for the requested video's moderation scope.
+final StreamProviderFamily<int, String> commentModerationRevisionProvider =
+    StreamProvider.autoDispose.family<int, String>(
+      (ref, coordinate) => ref
+          .watch(commentModerationRepositoryProvider)
+          .watchModeration(rootAddressableId: coordinate),
     );
 
 final FutureProviderFamily<List<ProfileBadgeViewData>, String>

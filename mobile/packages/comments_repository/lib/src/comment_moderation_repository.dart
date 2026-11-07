@@ -112,6 +112,38 @@ class CommentModerationRepository {
     return _moderationOf(owner, rootAddressableId);
   }
 
+  /// The latest authenticated cached state and its scoped change version.
+  /// Reading this snapshot does not query relays or emit a new change.
+  ({CommentModeration moderation, int revision}) knownModeration({
+    required String rootAddressableId,
+  }) {
+    final owner = ownerOf(rootAddressableId);
+    if (owner == null)
+      return const (moderation: CommentModeration.empty, revision: 0);
+    return (
+      moderation: _moderationOf(owner, rootAddressableId),
+      revision: _latestEvents.revisionFor(
+        pubkey: owner,
+        kind: commentModerationKind,
+        dTags: [
+          _videoIdentifier(rootAddressableId),
+          hiddenCommentersIdentifier,
+        ],
+      ),
+    );
+  }
+
+  /// Observes only this video's moderation and its owner's hidden commenters.
+  Stream<int> watchModeration({required String rootAddressableId}) {
+    final owner = ownerOf(rootAddressableId);
+    if (owner == null) return Stream.value(0);
+    return _latestEvents.revisionsFor(
+      pubkey: owner,
+      kind: commentModerationKind,
+      dTags: [_videoIdentifier(rootAddressableId), hiddenCommentersIdentifier],
+    );
+  }
+
   /// Hides [comment] on the signed-in owner's video [rootAddressableId].
   ///
   /// Throws [CommentModerationFailedException] when the signed-in account

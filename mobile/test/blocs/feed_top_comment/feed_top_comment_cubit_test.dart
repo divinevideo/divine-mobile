@@ -57,15 +57,24 @@ void main() {
     late _MockCommentModerationRepository moderationRepository;
     late StreamController<void> loops;
 
-    setUp(() {
-      commentsRepository = _MockCommentsRepository();
-      likesRepository = _MockLikesRepository();
-      moderationRepository = _MockCommentModerationRepository();
+    void stubModeration(CommentModeration moderation, {int revision = 0}) {
       when(
         () => moderationRepository.loadModeration(
           rootAddressableId: any(named: 'rootAddressableId'),
         ),
-      ).thenAnswer((_) async => CommentModeration.empty);
+      ).thenAnswer((_) async => moderation);
+      when(
+        () => moderationRepository.knownModeration(
+          rootAddressableId: any(named: 'rootAddressableId'),
+        ),
+      ).thenReturn((moderation: moderation, revision: revision));
+    }
+
+    setUp(() {
+      commentsRepository = _MockCommentsRepository();
+      likesRepository = _MockLikesRepository();
+      moderationRepository = _MockCommentModerationRepository();
+      stubModeration(CommentModeration.empty);
       loops = StreamController<void>.broadcast();
     });
 
@@ -123,17 +132,14 @@ void main() {
         test('ranks only the default-visible comments', () async {
           stubComments([_comment(_alice), _comment(_bob, author: _bob)]);
           stubUpvotes({_alice: 20, _bob: 1});
-          when(
-            () => moderationRepository.loadModeration(rootAddressableId: root),
-          ).thenAnswer(
-            (_) async => const CommentModeration(hiddenCommentIds: {_alice}),
-          );
+          stubModeration(const CommentModeration(hiddenCommentIds: {_alice}));
           final cubit = buildCubit(rootAddressableId: root);
           addTearDown(cubit.close);
           await cubit.load();
           expect(cubit.state.topComment?.id, _bob);
           verify(
             () => likesRepository.getVoteCounts([
+              _alice,
               _bob,
             ], addressableIds: any(named: 'addressableIds')),
           ).called(1);
@@ -142,10 +148,8 @@ void main() {
         test('keeps an explicitly restored comment eligible', () async {
           stubComments([_comment(_alice), _comment(_bob, author: _bob)]);
           stubUpvotes({_alice: 20, _bob: 1});
-          when(
-            () => moderationRepository.loadModeration(rootAddressableId: root),
-          ).thenAnswer(
-            (_) async => const CommentModeration(
+          stubModeration(
+            const CommentModeration(
               autoHiddenAuthors: {_alice},
               restoredCommentIds: {_alice},
             ),
@@ -161,12 +165,7 @@ void main() {
           () async {
             stubComments([_comment(_alice)]);
             stubUpvotes({_alice: 20});
-            when(
-              () =>
-                  moderationRepository.loadModeration(rootAddressableId: root),
-            ).thenAnswer(
-              (_) async => const CommentModeration(hiddenCommentIds: {_alice}),
-            );
+            stubModeration(const CommentModeration(hiddenCommentIds: {_alice}));
             final cubit = buildCubit(
               rootAddressableId: root,
               viewerPubkey: _alice,
@@ -187,16 +186,72 @@ void main() {
               _comment(_bob, author: _bob),
             ]);
             stubUpvotes({_bob: 1});
-            when(
-              () =>
-                  moderationRepository.loadModeration(rootAddressableId: root),
-            ).thenAnswer(
-              (_) async => CommentModeration(hiddenCommentIds: {hiddenId}),
-            );
+            stubModeration(CommentModeration(hiddenCommentIds: {hiddenId}));
             final cubit = buildCubit(rootAddressableId: root);
             addTearDown(cubit.close);
             await cubit.load();
             expect(cubit.state.topComment?.id, _bob);
+          },
+        );
+
+        test(
+          'applies a scoped change received while vote counts are loading',
+          () async {
+            stubComments([_comment(_alice), _comment(_bob, author: _bob)]);
+            final started = Completer<void>();
+            final counts =
+                Completer<
+                  ({Map<String, int> upvotes, Map<String, int> downvotes})
+                >();
+            when(
+              () => likesRepository.getVoteCounts(
+                any(),
+                addressableIds: any(named: 'addressableIds'),
+              ),
+            ).thenAnswer((_) {
+              started.complete();
+              return counts.future;
+            });
+            final cubit = buildCubit(rootAddressableId: root);
+            addTearDown(cubit.close);
+            final loading = cubit.load();
+            await started.future;
+            when(
+              () =>
+                  moderationRepository.knownModeration(rootAddressableId: root),
+            ).thenReturn((
+              moderation: const CommentModeration(hiddenCommentIds: {_alice}),
+              revision: 1,
+            ));
+            counts.complete((
+              upvotes: {_alice: 20, _bob: 1},
+              downvotes: <String, int>{},
+            ));
+            await loading;
+            expect(cubit.state.topComment?.id, _bob);
+            expect(cubit.state.moderationRevision, 1);
+          },
+        );
+
+        test(
+          'skips vote lookup when every eligible comment is hidden',
+          () async {
+            stubComments([_comment(_alice)]);
+            stubModeration(
+              const CommentModeration(hiddenCommentIds: {_alice}),
+              revision: 1,
+            );
+            final cubit = buildCubit(rootAddressableId: root);
+            addTearDown(cubit.close);
+            await cubit.load();
+            expect(cubit.state.status, FeedTopCommentStatus.empty);
+            expect(cubit.state.moderationRevision, 1);
+            verifyNever(
+              () => likesRepository.getVoteCounts(
+                any(),
+                addressableIds: any(named: 'addressableIds'),
+              ),
+            );
           },
         );
 

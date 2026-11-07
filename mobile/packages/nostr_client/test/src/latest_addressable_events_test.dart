@@ -57,7 +57,13 @@ void main() {
 
     test('observes the current revision and only newer events', () async {
       store.remember(_event(createdAt: 1000));
-      final changes = StreamIterator<int>(store.revisions);
+      final changes = StreamIterator<int>(
+        store.revisionsFor(
+          pubkey: _owner,
+          kind: 30078,
+          dTags: const ['divine:replies:video'],
+        ),
+      );
       addTearDown(changes.cancel);
       expect(await changes.moveNext(), isTrue);
       expect(changes.current, 1);
@@ -65,16 +71,60 @@ void main() {
         ..remember(_event(createdAt: 1000))
         ..remember(_event(createdAt: 999))
         ..remember(_event(createdAt: 1001));
-      expect(store.revision, 2);
+      expect(
+        store.revisionFor(
+          pubkey: _owner,
+          kind: 30078,
+          dTags: const ['divine:replies:video'],
+        ),
+        2,
+      );
       expect(await changes.moveNext(), isTrue);
       expect(changes.current, 2);
     });
 
     test('closes revision listeners when disposed', () async {
-      final revisions = store.revisions.toList();
+      final revisions = store
+          .revisionsFor(
+            pubkey: _owner,
+            kind: 30078,
+            dTags: const ['divine:replies:video'],
+          )
+          .toList();
       await store.dispose();
       expect(await revisions, [0]);
     });
+
+    test(
+      'ignores other authors, kinds and identifiers in a scoped watch',
+      () async {
+        final changes = StreamIterator<int>(
+          store.revisionsFor(
+            pubkey: _owner,
+            kind: 30078,
+            dTags: const ['divine:replies:video'],
+          ),
+        );
+        addTearDown(changes.cancel);
+        expect(await changes.moveNext(), isTrue);
+        expect(changes.current, 0);
+        store
+          ..remember(_event(createdAt: 1000, pubkey: _other))
+          ..remember(_event(createdAt: 1000, kind: 30079))
+          ..remember(_event(createdAt: 1000, dTag: 'other'))
+          ..remember(_event(createdAt: 1000));
+        expect(await changes.moveNext(), isTrue);
+        expect(changes.current, 4);
+        expect(
+          store.revisionFor(
+            pubkey: _owner,
+            kind: 30078,
+            dTags: const ['missing'],
+          ),
+          0,
+        );
+      },
+    );
 
     test('knows nothing it was not told', () {
       expect(latest(), isNull);
