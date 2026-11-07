@@ -70,7 +70,9 @@ under an "unverified excerpt" heading. Only moderators read that DM, so the
 reporter's details and the included message lose nothing but private keys:
 both are evidence, so an email or a handle in either stays. The DM names the
 reported account in a `reported_pubkey` tag, so the moderation service can
-queue it for review without anything leaving the encrypted message.
+queue it for review. Only the two accounts' identifiers and the reason reach
+Divine's internal moderation tools; the details and the included message stay
+in the moderation service, and nothing is published.
 
 The email redaction rule also redacts NIP-05 identifiers such as
 `name@divine.video`. That is intentional for public support payloads: NIP-05s
