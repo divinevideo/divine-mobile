@@ -86,6 +86,7 @@ extension CuratedListPublication on CuratedListService {
   }) async {
     if (!isCurrentSession ||
         sourceList.hasRelayConflict ||
+        sourceList.localEditDraft?.canReplay == false ||
         recoveryNeedsRepair ||
         (!isReadyForMutations && !duringInitialization)) {
       return false;

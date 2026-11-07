@@ -464,6 +464,7 @@ class CuratedListEditDraft extends Equatable {
   CuratedListEditDraft({
     required CuratedList baseline,
     required CuratedList desired,
+    this.canReplay = true,
   }) : baseline = _snapshot(baseline),
        desired = _snapshot(desired) {
     if (baseline.authorScopedId != desired.authorScopedId) {
@@ -483,6 +484,7 @@ class CuratedListEditDraft extends Equatable {
     return CuratedListEditDraft(
       baseline: CuratedList.fromJson(baseline),
       desired: CuratedList.fromJson(desired),
+      canReplay: json['canReplay'] as bool? ?? true,
     );
   }
 
@@ -496,6 +498,10 @@ class CuratedListEditDraft extends Equatable {
     pendingPlaintextEventIds: List.unmodifiable(list.pendingPlaintextEventIds),
   );
 
+  /// False for older pending copies whose original delta cannot be proven.
+  /// They require explicit discard/adopt rather than replaying a full snapshot.
+  final bool canReplay;
+
   /// Snapshot against which the owner's edit was made.
   final CuratedList baseline;
 
@@ -507,8 +513,9 @@ class CuratedListEditDraft extends Equatable {
     'version': 1,
     'baseline': baseline.toJson(),
     'desired': desired.toJson(),
+    if (!canReplay) 'canReplay': false,
   };
 
   @override
-  List<Object?> get props => [baseline, desired];
+  List<Object?> get props => [baseline, desired, canReplay];
 }
