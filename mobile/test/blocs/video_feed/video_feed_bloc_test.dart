@@ -401,6 +401,113 @@ void main() {
         expect(bloc.state.videos, [...first, next]);
       });
 
+      test('retries a failed until page after the pages it skipped', () async {
+        final first = [
+          createTestVideo('1' * 64, createdAt: 600),
+          createTestVideo('2' * 64, createdAt: 500),
+          createTestVideo('3' * 64, createdAt: 400),
+        ];
+        final hidden = createTestVideo('4' * 64, createdAt: 300);
+        final next = createTestVideo(
+          '5' * 64,
+          createdAt: 200,
+          pubkey: '1' * 64,
+        );
+        final requested = <int?>[];
+        var failOlderPage = true;
+        when(
+          () => mockVideosRepository.getNewVideos(
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer((call) async {
+          final until = call.namedArguments[#until] as int?;
+          requested.add(until);
+          switch (until) {
+            case null:
+              return HomeFeedResult(videos: first, hasMore: true);
+            case 400:
+              return HomeFeedResult(videos: [hidden], hasMore: true);
+            case 300 when failOlderPage:
+              failOlderPage = false;
+              throw Exception('Temporary network failure');
+            case 300:
+              return HomeFeedResult(videos: [next], hasMore: false);
+          }
+          throw StateError('Unexpected request until $until');
+        });
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+        await pumpEventQueue();
+
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+
+        expect(requested, [null, 400, 300, 300]);
+        expect(bloc.state.videos, [first[0], first[1], next]);
+      });
+
+      test('retries by until when a skipped page ends the cursors', () async {
+        final first = [
+          createTestVideo('1' * 64, createdAt: 600),
+          createTestVideo('2' * 64, createdAt: 500),
+        ];
+        final hidden = createTestVideo('3' * 64, createdAt: 400);
+        final next = createTestVideo(
+          '4' * 64,
+          createdAt: 300,
+          pubkey: '1' * 64,
+        );
+        final requested = <String>[];
+        var failUntilPage = true;
+        when(
+          () => mockVideosRepository.getNewVideos(
+            until: any(named: 'until'),
+            cursor: any(named: 'cursor'),
+            skipCache: any(named: 'skipCache'),
+            revalidate: any(named: 'revalidate'),
+          ),
+        ).thenAnswer((call) async {
+          final cursor = call.namedArguments[#cursor] as String?;
+          final until = call.namedArguments[#until] as int?;
+          requested.add(cursor ?? 'until:$until');
+          if (cursor == null && until == null) {
+            return HomeFeedResult(
+              videos: first,
+              hasMore: true,
+              paginationCursor: 'page-2',
+            );
+          }
+          if (cursor == 'page-2') {
+            return HomeFeedResult(videos: [hidden], hasMore: true);
+          }
+          if (until == 400 && failUntilPage) {
+            failUntilPage = false;
+            throw Exception('Temporary network failure');
+          }
+          if (until == 400) {
+            return HomeFeedResult(videos: [next], hasMore: false);
+          }
+          throw StateError('Unexpected request $cursor $until');
+        });
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
+        await pumpEventQueue();
+
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+        bloc.add(const VideoFeedLoadMoreRequested());
+        await pumpEventQueue();
+
+        expect(requested, ['until:null', 'page-2', 'until:400', 'until:400']);
+        expect(bloc.state.videos, [...first, next]);
+      });
+
       test('ends on an until page that brings no older row', () async {
         final first = [
           createTestVideo('1' * 64, createdAt: 600),
