@@ -561,7 +561,9 @@ final class VideoFeedCoordination extends Equatable {
   /// Refreshing the same source invalidates its previous first page.
   final int loadGeneration;
 
-  /// Oldest raw New-feed row, including rows hidden by the creator limit.
+  /// The next New-feed page's `until`: the oldest row of the last page or
+  /// cached window read, counted before the creator limit. Null when that
+  /// read was empty or the source is not New.
   final int? newVideosUntil;
 
   VideoFeedCoordination copyWith({

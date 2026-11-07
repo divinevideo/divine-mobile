@@ -3,7 +3,8 @@ import 'package:models/models.dart';
 /// Maximum videos from one creator in a displayed New feed window.
 const newFeedVideosPerCreator = 2;
 
-/// Keeps the first two videos per public key, preserving source order.
+/// Keeps the first [newFeedVideosPerCreator] videos per public key,
+/// preserving source order.
 ///
 /// Apply after visibility filtering and deduplication, across the complete
 /// displayed window rather than independently to each fetched page. Repository

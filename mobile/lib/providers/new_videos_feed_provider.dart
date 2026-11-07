@@ -162,7 +162,8 @@ class NewVideosFeed extends _$NewVideosFeed {
         ]);
         final filteredNew = allVideos.skip(currentState.videos.length).toList();
 
-        // A capped page must not strand the viewer at the end of the window.
+        // A page with nothing new to show (capped, filtered or already
+        // shown) must not strand the viewer at the end of the window.
         if (filteredNew.isEmpty && hasMore && progressed) continue;
 
         state = AsyncData(

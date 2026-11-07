@@ -12,7 +12,7 @@ VideoEvent _video(int id, String pubkey) => VideoEvent(
 );
 
 void main() {
-  group(filterNewFeedVideos, () {
+  group('filterNewFeedVideos', () {
     test('caps each creator at two without reordering other creators', () {
       final videos = [
         _video(1, 'a' * 64),

@@ -917,7 +917,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       var result = await _fetchVideosForSource(
         source,
         // `until` is the oldest loaded video rather than `state.videos.last`,
-        // because the list is not always in `createdAt` order.
+        // because the list is not always in `createdAt` order. New reads
+        // `newVideosUntil` instead, so rows its creator limit hid are not
+        // requested again.
         until: pagesByUntil
             ? (source.type == VideoFeedSourceType.newVideos
                   ? state.coordination.newVideosUntil ??
