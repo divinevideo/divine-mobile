@@ -12229,6 +12229,16 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'రంగును నిర్ధారించండి';
 
   @override
+  String get videoEditorEyedropperSemanticLabel =>
+      'వీడియో నుండి రంగును ఎంచుకోండి';
+
+  @override
+  String get videoEditorEyedropperHint => 'రంగును ఎంచుకోవడానికి తాకి లాగండి';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => 'రంగు ఎంపికను ఆపండి';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel =>
       'సంతృప్తత మరియు ప్రకాశం';
 

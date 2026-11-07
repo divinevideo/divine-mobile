@@ -114,6 +114,66 @@ void main() {
     });
   });
 
+  group('back navigation', () {
+    testWidgets('closes only the draw eyedropper while it is open', (
+      tester,
+    ) async {
+      final bodySizeNotifier = ValueNotifier(Size.zero);
+      addTearDown(bodySizeNotifier.dispose);
+      final mainBloc = VideoEditorMainBloc()
+        ..add(const VideoEditorMainOpenSubEditor(SubEditorType.draw));
+      final drawBloc = VideoEditorDrawBloc()
+        ..add(const VideoEditorDrawEyedropperStarted());
+      addTearDown(mainBloc.close);
+      addTearDown(drawBloc.close);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: mainBloc),
+                BlocProvider.value(value: drawBloc),
+                BlocProvider(create: (_) => VideoEditorFilterBloc()),
+                BlocProvider(create: (_) => TextWrapHintCubit()),
+              ],
+              child: VideoEditorScope(
+                editorKey: GlobalKey(),
+                removeAreaKey: GlobalKey(),
+                onOpenCamera: () {},
+                onAddStickers: () {},
+                onOpenClipsEditor: () {},
+                onOpenMusicLibrary: () {},
+                onOpenVoiceOver: () {},
+                onOpenCaptions: () {},
+                onOpenEffects: () {},
+                onAddEditTextLayer: ([_]) async => null,
+                originalClipAspectRatio: 9 / 16,
+                bodySizeNotifier: bodySizeNotifier,
+                zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
+                playTimeNotifier: ValueNotifier(Duration.zero),
+                playheadAdvancingNotifier: ValueNotifier<bool>(false),
+                fromLibrary: false,
+                child: const Scaffold(body: VideoEditorCanvas()),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(mainBloc.state.openSubEditor, SubEditorType.draw);
+      expect(drawBloc.state.isPickingColor, isTrue);
+
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+
+      expect(drawBloc.state.isPickingColor, isFalse);
+      expect(mainBloc.state.openSubEditor, SubEditorType.draw);
+    });
+  });
+
   group('VideoEditorCanvas.syncPositionAfterTrimRelease', () {
     late _SpyVideoEditorMainBloc mainBloc;
     late ProVideoController controller;

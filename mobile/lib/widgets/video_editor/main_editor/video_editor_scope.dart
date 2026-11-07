@@ -76,6 +76,8 @@ class VideoEditorScope extends InheritedWidget {
   ///
   /// [canvasBodyRect] turns it into the body's rectangle on screen, which is
   /// what maps a touch anywhere over the editor back into layer coordinates.
+  /// The first render object below it is a [RepaintBoundary], which the draw
+  /// editor's eyedropper captures to pick a color off the canvas.
   /// Optional so widgets can be tested without a canvas; a feature that needs
   /// the rectangle is expected to stay out of the way when it is absent.
   final GlobalKey? canvasBodyKey;

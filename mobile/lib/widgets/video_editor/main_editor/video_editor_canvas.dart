@@ -606,6 +606,13 @@ class VideoEditorCanvas extends StatelessWidget {
       canPop: !isSubEditorOpen,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
+          // Back while the draw editor's eyedropper is open closes just the
+          // eyedropper.
+          final drawBloc = context.read<VideoEditorDrawBloc>();
+          if (drawBloc.state.isPickingColor) {
+            drawBloc.add(const VideoEditorDrawEyedropperCancelled());
+            return;
+          }
           final scope = VideoEditorScope.of(context);
           scope.editor?.closeSubEditor();
           // The effects editor is app-owned, so it has no route for the back
@@ -4050,16 +4057,20 @@ class _CanvasFitter extends ConsumerWidget {
           // Marks this box — the canvas body — so a tool laid over the editor
           // can map a touch back into layer coordinates.
           key: scope.canvasBodyKey,
-          child: VideoEditorCutAreaOverlay(
-            child: HitTestExpander(
-              visibleSize: geometry.targetSize,
-              child: VideoEditorCanvasFit(
-                geometry: geometry,
-                child: Navigator(
-                  clipBehavior: Clip.none,
-                  onGenerateRoute: (_) => PageRouteBuilder(
-                    pageBuilder: (_, _, _) =>
-                        builder(bodySize, geometry.renderSize),
+          // Its own layer, so the draw editor's eyedropper can capture what
+          // the canvas shows without the controls drawn over it.
+          child: RepaintBoundary(
+            child: VideoEditorCutAreaOverlay(
+              child: HitTestExpander(
+                visibleSize: geometry.targetSize,
+                child: VideoEditorCanvasFit(
+                  geometry: geometry,
+                  child: Navigator(
+                    clipBehavior: Clip.none,
+                    onGenerateRoute: (_) => PageRouteBuilder(
+                      pageBuilder: (_, _, _) =>
+                          builder(bodySize, geometry.renderSize),
+                    ),
                   ),
                 ),
               ),

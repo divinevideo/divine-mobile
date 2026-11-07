@@ -11880,6 +11880,15 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'Xác nhận màu';
 
   @override
+  String get videoEditorEyedropperSemanticLabel => 'Chọn màu từ video';
+
+  @override
+  String get videoEditorEyedropperHint => 'Chạm và kéo để chọn màu';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => 'Dừng chọn màu';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel =>
       'Độ bão hòa và độ sáng';
 

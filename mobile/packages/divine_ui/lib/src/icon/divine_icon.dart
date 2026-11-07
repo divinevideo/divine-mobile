@@ -103,6 +103,9 @@ enum DivineIconName {
   equalizer('equalizer'),
   eye('eye'),
   eyeSlash('eye_slash'),
+
+  /// A pipette, for picking a color off what is on screen.
+  eyedropper('eyedropper'),
   faders('faders'),
   fadersHorizontal('faders_horizontal'),
   filmSlate('FilmSlate'),

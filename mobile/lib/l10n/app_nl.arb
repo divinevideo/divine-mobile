@@ -3363,6 +3363,9 @@
   "videoEditorCloseColorPickerSemanticLabel": "Kleurkiezer sluiten",
   "videoEditorPickColorTitle": "Kleur kiezen",
   "videoEditorConfirmColorSemanticLabel": "Kleur bevestigen",
+  "videoEditorEyedropperSemanticLabel": "Kies een kleur uit de video",
+  "videoEditorEyedropperHint": "Tik en sleep om een kleur te kiezen",
+  "videoEditorEyedropperCancelSemanticLabel": "Stoppen met kleur kiezen",
   "videoEditorSaturationBrightnessSemanticLabel": "Verzadiging en helderheid",
   "videoEditorSaturationBrightnessValue": "Verzadiging {saturation}%, Helderheid {brightness}%",
   "@videoEditorSaturationBrightnessValue": {

@@ -20,7 +20,7 @@ part 'video_editor_draw_state.dart';
 /// Handles:
 /// - Tool selection state (the [DrawToolType.drawingTools], and blur and
 ///   pixelate, which hide an area instead)
-/// - Color selection state
+/// - Color selection state, and whether the eyedropper is open
 /// - Brush size state, per drawing tool
 /// - Undo/redo availability state
 class VideoEditorDrawBloc
@@ -34,6 +34,24 @@ class VideoEditorDrawBloc
     on<VideoEditorDrawOpened>(_onOpened);
     on<VideoEditorDrawCensorIntensityChanged>(_onCensorIntensityChanged);
     on<VideoEditorDrawBrushSizeChanged>(_onBrushSizeChanged);
+    on<VideoEditorDrawEyedropperStarted>(_onEyedropperStarted);
+    on<VideoEditorDrawEyedropperCancelled>(_onEyedropperCancelled);
+  }
+
+  /// Opens the eyedropper over the canvas.
+  void _onEyedropperStarted(
+    VideoEditorDrawEyedropperStarted event,
+    Emitter<VideoEditorDrawState> emit,
+  ) {
+    emit(state.copyWith(isPickingColor: true));
+  }
+
+  /// Closes the eyedropper without a new color.
+  void _onEyedropperCancelled(
+    VideoEditorDrawEyedropperCancelled event,
+    Emitter<VideoEditorDrawState> emit,
+  ) {
+    emit(state.copyWith(isPickingColor: false));
   }
 
   /// Stores how thick the selected drawing tool draws its next strokes.
@@ -88,7 +106,8 @@ class VideoEditorDrawBloc
     );
   }
 
-  /// Resets undo/redo capabilities when the draw editor opens.
+  /// Resets undo/redo capabilities when the draw editor opens, and closes an
+  /// eyedropper left open when it last closed.
   void _onReset(
     VideoEditorDrawReset event,
     Emitter<VideoEditorDrawState> emit,
@@ -98,7 +117,9 @@ class VideoEditorDrawBloc
       name: 'VideoEditorDrawBloc',
       category: LogCategory.video,
     );
-    emit(state.copyWith(canUndo: false, canRedo: false));
+    emit(
+      state.copyWith(canUndo: false, canRedo: false, isPickingColor: false),
+    );
   }
 
   /// Updates undo/redo availability state.
@@ -119,7 +140,8 @@ class VideoEditorDrawBloc
       name: 'VideoEditorDrawBloc',
       category: LogCategory.video,
     );
-    emit(state.copyWith(selectedColor: event.color));
+    // A color from the sheet or the eyedropper both end a pick in progress.
+    emit(state.copyWith(selectedColor: event.color, isPickingColor: false));
   }
 
   /// Updates the selected tool and its configuration in state.
@@ -136,11 +158,13 @@ class VideoEditorDrawBloc
       category: LogCategory.video,
     );
 
+    // Switching tools is moving on from the pick.
     emit(
       state.copyWith(
         selectedTool: tool,
         mode: config.mode,
         opacity: config.opacity,
+        isPickingColor: false,
       ),
     );
   }

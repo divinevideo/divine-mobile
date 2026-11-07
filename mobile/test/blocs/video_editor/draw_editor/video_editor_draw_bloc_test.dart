@@ -256,6 +256,70 @@ void main() {
         ],
       );
     });
+
+    group('eyedropper', () {
+      blocTest<VideoEditorDrawBloc, VideoEditorDrawState>(
+        'opens on $VideoEditorDrawEyedropperStarted',
+        build: buildBloc,
+        act: (bloc) => bloc.add(const VideoEditorDrawEyedropperStarted()),
+        expect: () => [
+          isA<VideoEditorDrawState>().having(
+            (s) => s.isPickingColor,
+            'isPickingColor',
+            isTrue,
+          ),
+        ],
+      );
+
+      blocTest<VideoEditorDrawBloc, VideoEditorDrawState>(
+        'closes on $VideoEditorDrawEyedropperCancelled and keeps the color',
+        build: buildBloc,
+        seed: () => const VideoEditorDrawState(
+          isPickingColor: true,
+          selectedColor: Color(0xFF123456),
+        ),
+        act: (bloc) => bloc.add(const VideoEditorDrawEyedropperCancelled()),
+        expect: () => const [
+          VideoEditorDrawState(selectedColor: Color(0xFF123456)),
+        ],
+      );
+
+      blocTest<VideoEditorDrawBloc, VideoEditorDrawState>(
+        'closes when it picks a color',
+        build: buildBloc,
+        seed: () => const VideoEditorDrawState(isPickingColor: true),
+        act: (bloc) =>
+            bloc.add(const VideoEditorDrawColorSelected(Color(0xFF00C000))),
+        expect: () => const [
+          VideoEditorDrawState(selectedColor: Color(0xFF00C000)),
+        ],
+      );
+
+      blocTest<VideoEditorDrawBloc, VideoEditorDrawState>(
+        'closes when another tool is selected',
+        build: buildBloc,
+        seed: () => const VideoEditorDrawState(isPickingColor: true),
+        act: (bloc) =>
+            bloc.add(const VideoEditorDrawToolSelected(DrawToolType.marker)),
+        expect: () => [
+          isA<VideoEditorDrawState>()
+              .having((s) => s.isPickingColor, 'isPickingColor', isFalse)
+              .having(
+                (s) => s.selectedTool,
+                'selectedTool',
+                DrawToolType.marker,
+              ),
+        ],
+      );
+
+      blocTest<VideoEditorDrawBloc, VideoEditorDrawState>(
+        'is closed again when the draw editor reopens',
+        build: buildBloc,
+        seed: () => const VideoEditorDrawState(isPickingColor: true),
+        act: (bloc) => bloc.add(const VideoEditorDrawReset()),
+        expect: () => const [VideoEditorDrawState()],
+      );
+    });
   });
 
   group('VideoEditorDrawState', () {
@@ -410,6 +474,7 @@ void main() {
         mode: PaintMode.arrow,
         blurIntensity: 0.2,
         pixelateIntensity: 0.9,
+        isPickingColor: true,
       );
       expect(state.props, [
         true, // canUndo
@@ -421,6 +486,7 @@ void main() {
         PaintMode.arrow,
         0.2, // blurIntensity
         0.9, // pixelateIntensity
+        true, // isPickingColor
       ]);
     });
   });

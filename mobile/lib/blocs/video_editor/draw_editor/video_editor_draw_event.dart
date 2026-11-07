@@ -45,6 +45,20 @@ class VideoEditorDrawColorSelected extends VideoEditorDrawEvent {
   List<Object?> get props => [color];
 }
 
+/// Triggered when the creator opens the eyedropper, to pick the drawing color
+/// off what the canvas shows.
+///
+/// The pick itself arrives as a [VideoEditorDrawColorSelected], which closes
+/// the eyedropper again.
+class VideoEditorDrawEyedropperStarted extends VideoEditorDrawEvent {
+  const VideoEditorDrawEyedropperStarted();
+}
+
+/// Triggered when the creator closes the eyedropper without picking a color.
+class VideoEditorDrawEyedropperCancelled extends VideoEditorDrawEvent {
+  const VideoEditorDrawEyedropperCancelled();
+}
+
 /// Triggered when the creator sets how strongly the selected censor tool
 /// hides an area, from 0 to 1.
 class VideoEditorDrawCensorIntensityChanged extends VideoEditorDrawEvent {

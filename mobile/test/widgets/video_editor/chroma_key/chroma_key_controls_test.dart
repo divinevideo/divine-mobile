@@ -223,6 +223,69 @@ void main() {
       verifyNever(() => cubit.detectFromFootage());
     });
 
+    group('eyedropper', () {
+      final eyedropper = find.byWidgetPredicate(
+        (widget) =>
+            widget is DivineIconButton &&
+            widget.icon == DivineIconName.eyedropper,
+      );
+
+      testWidgets('opens from the screen colour row', (tester) async {
+        await pump(tester, VineTheme.theme);
+
+        final en = lookupAppLocalizations(const Locale('en'));
+        expect(
+          tester.widget<DivineIconButton>(eyedropper).semanticLabel,
+          en.videoEditorEyedropperSemanticLabel,
+        );
+        // On the screen colour's row, so it reads as another way to set it.
+        expect(
+          tester.getCenter(eyedropper).dy,
+          moreOrLessEquals(
+            tester
+                .getCenter(find.text(en.videoEditorChromaKeyScreenColorLabel))
+                .dy,
+            epsilon: 4,
+          ),
+        );
+
+        await tester.tap(eyedropper);
+        verify(() => cubit.startPickingKeyColor()).called(1);
+      });
+
+      testWidgets('is not offered by a host without one', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: ChromaKeyControlsPanel(
+                chromaKey: const ClipChromaKey(key: ChromaKey.greenScreen()),
+                isDetecting: false,
+                onDetect: () {},
+                onGreenPreset: () {},
+                onBluePreset: () {},
+                onKeyColorChanged: (_) {},
+                onSimilarityChanged: (_) {},
+                onSmoothnessChanged: (_) {},
+                onSpillChanged: (_) {},
+                onPickBackground: (_) {},
+              ),
+            ),
+          ),
+        );
+
+        // The recorder's preview is the live camera, which the eyedropper
+        // cannot hold still.
+        final en = lookupAppLocalizations(const Locale('en'));
+        expect(
+          find.text(en.videoEditorChromaKeyScreenColorLabel),
+          findsOneWidget,
+        );
+        expect(eyedropper, findsNothing);
+      });
+    });
+
     testWidgets('holds at the largest system text scale', (tester) async {
       await pump(
         tester,

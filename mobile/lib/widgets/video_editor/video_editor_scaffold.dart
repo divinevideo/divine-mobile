@@ -2,6 +2,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -9,6 +10,7 @@ import 'package:openvine/widgets/branded_loading_scaffold.dart';
 import 'package:openvine/widgets/video_editor/clip_editor_result_listeners.dart';
 import 'package:openvine/widgets/video_editor/clip_operation_progress_overlays.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_bottom_bar.dart';
+import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_eyedropper.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_bottom_bar.dart';
@@ -327,11 +329,7 @@ class _OverlayControls extends StatelessWidget {
         VideoEditorMainState(openSubEditor: .voiceOver) =>
           const SizedBox.shrink(),
         // Draw-Editor
-        VideoEditorMainState(openSubEditor: .draw) => const Padding(
-          key: ValueKey('Draw-Overlay-Controls'),
-          padding: .only(bottom: VideoEditorConstants.bottomBarHeight),
-          child: VideoEditorDrawOverlayControls(),
-        ),
+        VideoEditorMainState(openSubEditor: .draw) => const _DrawOverlay(),
         // Filter-Editor
         VideoEditorMainState(openSubEditor: .filter) => const Padding(
           key: ValueKey('Filter-Overlay-Controls'),
@@ -353,6 +351,30 @@ class _OverlayControls extends StatelessWidget {
         // Fallback
         _ => const VideoEditorMainOverlayActions(),
       },
+    );
+  }
+}
+
+/// The draw editor's controls over the canvas, or its eyedropper.
+class _DrawOverlay extends StatelessWidget {
+  const _DrawOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    final isPickingColor = context.select(
+      (VideoEditorDrawBloc b) => b.state.isPickingColor,
+    );
+    // The eyedropper covers the whole canvas, which reaches down behind the
+    // space the controls keep clear above the bottom bar.
+    if (isPickingColor) {
+      return const VideoEditorDrawEyedropper(
+        key: ValueKey('Draw-Eyedropper'),
+      );
+    }
+    return const Padding(
+      key: ValueKey('Draw-Overlay-Controls'),
+      padding: .only(bottom: VideoEditorConstants.bottomBarHeight),
+      child: VideoEditorDrawOverlayControls(),
     );
   }
 }

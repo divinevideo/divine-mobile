@@ -12020,6 +12020,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'Confirm color';
 
   @override
+  String get videoEditorEyedropperSemanticLabel =>
+      'Pick a color from the video';
+
+  @override
+  String get videoEditorEyedropperHint => 'Touch and drag to pick a color';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => 'Stop picking a color';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel =>
       'Saturation and brightness';
 

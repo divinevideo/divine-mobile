@@ -11933,6 +11933,15 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'Bekräfta färg';
 
   @override
+  String get videoEditorEyedropperSemanticLabel => 'Välj en färg från videon';
+
+  @override
+  String get videoEditorEyedropperHint => 'Tryck och dra för att välja en färg';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel => 'Sluta välja färg';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel =>
       'Mättnad och ljusstyrka';
 

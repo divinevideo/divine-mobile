@@ -9395,6 +9395,18 @@
   "videoEditorCloseColorPickerSemanticLabel": "Close color picker",
   "videoEditorPickColorTitle": "Pick color",
   "videoEditorConfirmColorSemanticLabel": "Confirm color",
+  "videoEditorEyedropperSemanticLabel": "Pick a color from the video",
+  "@videoEditorEyedropperSemanticLabel": {
+    "description": "Accessibility label of the eyedropper button beside the draw color and beside the color mask's screen color (videoEditorChromaKeyScreenColorLabel). Opens a picker that takes a color straight off the video frame on screen."
+  },
+  "videoEditorEyedropperHint": "Touch and drag to pick a color",
+  "@videoEditorEyedropperHint": {
+    "description": "Instruction shown at the top of the eyedropper while it is open: the user touches the video, drags the magnifier onto the color they want and lifts the finger to pick it. Keep it short — it sits on one line between the close button and the screen edge."
+  },
+  "videoEditorEyedropperCancelSemanticLabel": "Stop picking a color",
+  "@videoEditorEyedropperCancelSemanticLabel": {
+    "description": "Accessibility label of the button that closes the eyedropper without picking a color. The draw editor's eyedropper button also carries it while the eyedropper is open, since tapping it again closes it."
+  },
   "videoEditorSaturationBrightnessSemanticLabel": "Saturation and brightness",
   "videoEditorSaturationBrightnessValue": "Saturation {saturation}%, Brightness {brightness}%",
   "@videoEditorSaturationBrightnessValue": {

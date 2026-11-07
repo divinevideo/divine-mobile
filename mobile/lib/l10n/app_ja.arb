@@ -2594,6 +2594,9 @@
     }
   },
   "videoEditorConfirmColorSemanticLabel": "色を確定",
+  "videoEditorEyedropperSemanticLabel": "動画から色を選択",
+  "videoEditorEyedropperHint": "タッチしたままドラッグして色を選びます",
+  "videoEditorEyedropperCancelSemanticLabel": "色の選択をやめる",
   "videoEditorDeleteLabel": "削除",
   "videoEditorDeleteLayerDropZone": "レイヤー削除のドロップゾーン",
   "videoEditorDeleteSelectedItemSemanticLabel": "選択したアイテムを削除",

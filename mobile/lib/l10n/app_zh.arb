@@ -5880,6 +5880,9 @@
   "videoEditorCloseColorPickerSemanticLabel": "关闭取色器",
   "videoEditorPickColorTitle": "选取颜色",
   "videoEditorConfirmColorSemanticLabel": "确认颜色",
+  "videoEditorEyedropperSemanticLabel": "从视频中取色",
+  "videoEditorEyedropperHint": "按住并拖动来取色",
+  "videoEditorEyedropperCancelSemanticLabel": "停止取色",
   "videoEditorSaturationBrightnessSemanticLabel": "饱和度和亮度",
   "videoEditorSaturationBrightnessValue": "饱和度 {saturation}%，亮度 {brightness}%",
   "@videoEditorSaturationBrightnessValue": {

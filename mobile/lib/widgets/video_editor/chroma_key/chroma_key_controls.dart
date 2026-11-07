@@ -63,6 +63,7 @@ class ChromaKeyControls extends StatelessWidget {
       onGreenPreset: cubit.useGreenScreenPreset,
       onBluePreset: cubit.useBlueScreenPreset,
       onKeyColorChanged: cubit.setKeyColor,
+      onPickKeyColor: cubit.startPickingKeyColor,
       onSimilarityChanged: cubit.setSimilarity,
       onSmoothnessChanged: cubit.setSmoothness,
       onSpillChanged: cubit.setSpill,
@@ -90,6 +91,7 @@ class ChromaKeyControlsPanel extends StatelessWidget {
     required this.onSpillChanged,
     required this.onPickBackground,
     this.surface = ChromaKeySurface.track,
+    this.onPickKeyColor,
     this.detectionNotice,
     this.scrollController,
     super.key,
@@ -112,6 +114,12 @@ class ChromaKeyControlsPanel extends StatelessWidget {
   final VoidCallback onBluePreset;
 
   final ValueChanged<Color> onKeyColorChanged;
+
+  /// Opens the eyedropper to pick the screen color off the preview, or `null`
+  /// where the host has no eyedropper to open — the recorder, whose preview is
+  /// the live camera.
+  final VoidCallback? onPickKeyColor;
+
   final ValueChanged<double> onSimilarityChanged;
   final ValueChanged<double> onSmoothnessChanged;
   final ValueChanged<double> onSpillChanged;
@@ -168,6 +176,7 @@ class ChromaKeyControlsPanel extends StatelessWidget {
             child: _ScreenColorRow(
               color: chromaKey.key.color,
               onColorChanged: onKeyColorChanged,
+              onPickFromPreview: onPickKeyColor,
             ),
           ),
           _Gutter(
@@ -381,12 +390,18 @@ class _DetectRow extends StatelessWidget {
   }
 }
 
-/// The colour being removed, with a swatch that opens the picker.
+/// The colour being removed, with a swatch that opens the picker and, where
+/// the host has one, the eyedropper.
 class _ScreenColorRow extends StatelessWidget {
-  const _ScreenColorRow({required this.color, required this.onColorChanged});
+  const _ScreenColorRow({
+    required this.color,
+    required this.onColorChanged,
+    required this.onPickFromPreview,
+  });
 
   final Color color;
   final ValueChanged<Color> onColorChanged;
+  final VoidCallback? onPickFromPreview;
 
   @override
   Widget build(BuildContext context) {
@@ -400,6 +415,14 @@ class _ScreenColorRow extends StatelessWidget {
             ),
           ),
         ),
+        if (onPickFromPreview case final onPick?)
+          DivineIconButton(
+            icon: .eyedropper,
+            size: .small,
+            type: .secondary,
+            semanticLabel: context.l10n.videoEditorEyedropperSemanticLabel,
+            onPressed: onPick,
+          ),
         _ColorSwatchButton(
           color: color,
           semanticLabel: context.l10n.videoEditorChromaKeyScreenColorLabel,

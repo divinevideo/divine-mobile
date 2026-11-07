@@ -12173,6 +12173,17 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorConfirmColorSemanticLabel => 'Potwierdź kolor';
 
   @override
+  String get videoEditorEyedropperSemanticLabel => 'Wybierz kolor z filmu';
+
+  @override
+  String get videoEditorEyedropperHint =>
+      'Dotknij i przeciągnij, aby wybrać kolor';
+
+  @override
+  String get videoEditorEyedropperCancelSemanticLabel =>
+      'Przestań wybierać kolor';
+
+  @override
   String get videoEditorSaturationBrightnessSemanticLabel =>
       'Nasycenie i jasność';
 
