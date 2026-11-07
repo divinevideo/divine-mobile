@@ -46,6 +46,13 @@ class _NativePlayerHarness {
   /// Holds the next call of `method` on a player until completed, keyed
   /// `player_<id>:<method>`.
   final Map<String, Completer<void>> callDelays = <String, Completer<void>>{};
+
+  /// Holds every native `create` call, and so every controller's
+  /// `initialize()`, until completed.
+  Completer<void>? createDelay;
+
+  /// Every volume handed to any player, in call order.
+  final List<double> volumesSet = <double>[];
   final Map<int, int> failSetClipsAfter = <int, int>{};
   final Map<int, List<Exception>> setClipsFailures = <int, List<Exception>>{};
   final Set<int> _installedPlayerIds = <int>{};
@@ -61,6 +68,7 @@ class _NativePlayerHarness {
       _globalChannel,
       (call) async {
         if (call.method == 'create') {
+          await createDelay?.future;
           return <Object?, Object?>{
             'playbackTelemetrySupported': playbackTelemetrySupported,
           };
@@ -82,6 +90,9 @@ class _NativePlayerHarness {
           methodCalls.add('player_$playerId:${call.method}');
           final callDelay = callDelays['player_$playerId:${call.method}'];
           if (callDelay != null) await callDelay.future;
+          if (call.method == 'setVolume') {
+            volumesSet.add((call.arguments as Map)['volume'] as double);
+          }
           if (call.method == 'setClips') {
             setClipsArguments.add(
               (call.arguments as Map).cast<Object?, Object?>(),
@@ -3269,73 +3280,95 @@ void main() {
     });
 
     group('setVolume', () {
-      testWidgets('applies volume when an active controller exists', (
+      testWidgets('applies volume to an initialized active controller', (
         tester,
       ) async {
         DivineVideoPlayerController.resetIdCounterForTesting();
-        const globalChannel = MethodChannel('divine_video_player');
-        const playerChannel = MethodChannel('divine_video_player/player_0');
-        const eventChannel = MethodChannel(
-          'divine_video_player/player_0/events',
-        );
-
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          globalChannel,
-          (call) async {
-            if (call.method == 'create') return <Object?, Object?>{};
-            return null;
-          },
-        );
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          playerChannel,
-          (_) async => null,
-        );
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          eventChannel,
-          (_) async => null,
-        );
-
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(playerIds: const [0]);
         final key = GlobalKey<InfiniteVideoFeedState>();
         final notifiedValues = <double>[];
-        final videos = [_makeVideo('active_volume')];
 
-        await tester.pumpWidget(
-          _wrapFeed(
-            InfiniteVideoFeed(
-              key: key,
-              videos: videos,
-              cache: cache,
-              initialVolume: 0.2,
-              onVolumeChanged: notifiedValues.add,
-              prefetchCount: 0,
-              preloadGracePeriod: Duration.zero,
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: [_makeVideo('active_volume')],
+                cache: cache,
+                initialVolume: 0.2,
+                onVolumeChanged: notifiedValues.add,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
             ),
-          ),
-        );
+          );
+          await tester.pumpAndSettle();
+          expect(harness.countCallsForPlayer(0, 'play'), equals(1));
 
-        // Let initState schedule _onIndexChanged and create the active
-        // controller entry before invoking setVolume.
-        await tester.pump();
+          key.currentState!.setVolume(0.8);
+          await tester.pump();
 
-        key.currentState!.setVolume(0.8);
-
-        expect(notifiedValues, equals(<double>[0.8]));
-
-        await tester.pumpAndSettle();
-
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          globalChannel,
-          null,
-        );
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          playerChannel,
-          null,
-        );
-        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          eventChannel,
-          null,
-        );
+          expect(notifiedValues, equals(<double>[0.8]));
+          expect(harness.volumesSet.last, equals(0.8));
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
       });
+
+      testWidgets(
+        'brings an active player that was still initializing up at the new '
+        'volume',
+        (tester) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester)
+            ..createDelay = Completer<void>();
+          await harness.install(playerIds: const [0]);
+          final key = GlobalKey<InfiniteVideoFeedState>();
+
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  key: key,
+                  videos: [_makeVideo('initializing')],
+                  cache: cache,
+                  prefetchCount: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            // The player is in the live window, but its initialize() is still
+            // waiting on the native create call.
+            expect(key.currentState!.debugLiveControllerIndices, contains(0));
+            expect(harness.methodCalls, isEmpty);
+
+            // Muting now must not reach the half-built player, which throws
+            // an unhandled StateError, and the player must still start muted.
+            key.currentState!.setVolume(0);
+            harness.createDelay!.complete();
+            await tester.pumpAndSettle();
+
+            final firstPlay = harness.methodCalls.indexOf('player_0:play');
+            expect(firstPlay, isNonNegative);
+            expect(
+              harness.methodCalls.indexOf('player_0:setVolume'),
+              allOf(isNonNegative, lessThan(firstPlay)),
+            );
+            expect(harness.volumesSet, everyElement(0.0));
+          } finally {
+            if (!harness.createDelay!.isCompleted) {
+              harness.createDelay!.complete();
+            }
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+          }
+        },
+      );
 
       testWidgets('clamps value and notifies listeners', (tester) async {
         final key = GlobalKey<InfiniteVideoFeedState>();
