@@ -34,10 +34,11 @@ import 'package:unified_logger/unified_logger.dart';
 /// intentionally does NOT replicate one list-only concern:
 ///
 /// * **Read rows** — the list needs every conversation; the badge reads only
-///   the unread ones, so a DM write no longer re-reads the whole inbox on
-///   every screen (#7923). The count is the same: every helper named above
-///   decides row by row, and the hidden-member pass only ever turns a row
-///   read, never unread.
+///   the unread ones, so a DM write does not re-read the whole inbox on every
+///   screen (#7923). Counting only unread rows gives the number the full set
+///   would: every helper named above and the protected-minor gate decide row
+///   by row, and the hidden-member pass only ever turns a row read, never
+///   unread.
 ///
 /// The pinned support row (#6283) IS counted, because the inbox renders it
 /// with an unread dot. That pulls one conversation out of the requests bucket
@@ -79,9 +80,9 @@ class DmUnreadCountCubit extends Cubit<int> with CloseGuardedEmit<int> {
 
   /// Window over which bursty conversation writes are coalesced into a single
   /// recompute. This cubit is always mounted (app-shell scope) and re-runs the
-  /// full follow-aware, blocklist-filtered list composition on every
-  /// conversations-table write; a relay delivery, the mark-read fan-out, or the
-  /// post-reinstall history drain can fire dozens of writes in a burst.
+  /// follow-aware, blocklist-filtered composition over the unread rows on
+  /// every conversations-table write; a relay delivery, the mark-read fan-out,
+  /// or the post-reinstall history drain can fire dozens of writes in a burst.
   /// Collapsing each burst into one classify+sort+filter pass removes redundant
   /// main-isolate CPU. The count is not latency-critical, so the small delay is
   /// invisible and the coalesced result is identical. Overridable in tests.

@@ -154,8 +154,8 @@ void main() {
         () => dmRepository.userPubkeyStream,
       ).thenAnswer((_) => const Stream<String>.empty());
       // Matches only an unread-only call WITHOUT a limit, locking in that the
-      // badge counts every unread conversation, not a page, and reads no read
-      // rows on each write (#7923).
+      // badge counts every unread inbox conversation, not a page, and reads no
+      // read rows on each write (#7923).
       when(
         () => dmRepository.watchAcceptedConversations(unreadOnly: true),
       ).thenAnswer((_) => acceptedController.stream);
@@ -347,7 +347,7 @@ void main() {
       _close(fake, cubit);
     });
 
-    _testWithFakeAsync('counts the full unpaginated accepted set', (fake) {
+    _testWithFakeAsync('counts all unread accepted rows, not a page', (fake) {
       final cubit = buildCubit();
 
       // More than one inbox page of unread accepted conversations.
@@ -365,7 +365,7 @@ void main() {
       _settle(fake);
 
       expect(cubit.state, equals(60));
-      // The badge must subscribe without a limit (full count, not a page).
+      // The badge subscribes to unread rows without a limit, not to a page.
       verify(
         () => dmRepository.watchAcceptedConversations(unreadOnly: true),
       ).called(1);

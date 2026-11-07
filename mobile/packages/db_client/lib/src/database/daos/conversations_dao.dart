@@ -336,9 +336,9 @@ END
   ///
   /// These are potential message requests (final classification depends
   /// on follow state, which is applied in the BLoC layer). Returned
-  /// without pagination since the count is typically small and the
-  /// Messages list classifies every row. [unreadOnly] narrows it the same
-  /// way [watchAcceptedConversations] does, for the unread badge.
+  /// without pagination: the count is typically small and callers classify
+  /// every row by follow state. [unreadOnly] narrows it the same way
+  /// [watchAcceptedConversations] does.
   Stream<List<ConversationRow>> watchPotentialRequestConversations({
     String? ownerPubkey,
     bool unreadOnly = false,
