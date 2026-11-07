@@ -320,6 +320,34 @@ void main() {
       },
     );
 
+    testWidgets('offline permissions can be withdrawn without publishing', (
+      tester,
+    ) async {
+      final baseline = list(isPublic: false);
+      var current = baseline.copyWith(
+        localEditDraft: CuratedListEditDraft(
+          baseline: baseline,
+          desired: baseline.copyWith(isPublic: true),
+        ),
+      );
+      when(() => service.getListById(any())).thenAnswer((_) => current);
+      when(() => service.discardLocalEditsAndAdoptRelay(_listIdentity))
+          .thenAnswer((_) async {
+            current = baseline;
+            return true;
+          });
+      await openSheet(tester, existingList: current);
+      expect(find.text(l10n.listUseLatestVersion), findsOneWidget);
+      expect(visibilityTile(tester).onChanged, isNull);
+      await tester.tap(find.text(l10n.listUseLatestVersion));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.listDiscardDraftConfirmation), findsOneWidget);
+      await tester.tap(find.text(l10n.listDiscardLocalEdits));
+      await tester.pumpAndSettle();
+      expect(visibilityTile(tester).onChanged, isNotNull);
+      verifyNever(() => service.retryListSync(any()));
+    });
+
     testWidgets(
       'accepted permissions explain Sync now and block editing until settled',
       (tester) async {

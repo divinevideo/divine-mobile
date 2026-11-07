@@ -240,68 +240,92 @@ extension CuratedListPublication on CuratedListService {
   }
 
   /// Retries this list's pending publication without changing its members.
-  Future<bool> _retryListSync(String listId) => _serializeListOperation(
-    listId,
-    () async {
-      final operationOwner = _relayGateway.currentAuthenticatedPubkey();
-      if (operationOwner == null || !_isCurrent(operationOwner)) return false;
-      final retainedList = getListById(listId);
-      if (retainedList != null && !_relayEvidence.allows(retainedList)) {
-        final event = _relayEvidence.retainedFor(retainedList);
-        if (event == null ||
-            !await _processReceivedListEvents(
-              [event],
-              isCurrentRead: () => _isCurrent(operationOwner),
-            ) ||
-            !_relayEvidence.allows(retainedList)) {
-          return false;
-        }
-      }
-      final list = getListById(listId);
-      if (!isCurrentSession) return false;
-      if (list == null) {
-        final owner = _relayGateway.currentAuthenticatedPubkey();
-        if (owner == null || !listId.startsWith('$owner:')) return false;
-        final id = listId.substring(owner.length + 1);
-        if (_recovery.record(owner, id) == null) return false;
-        return _publisher.retryPlaintextRedactions(listId);
-      }
-      if (!isOwnedList(listId)) return false;
-      Event? signedRetry;
-      if (list.id == defaultListId) {
-        final signed = await _defaultSignedIntentStore?.read(list.pubkey!);
-        if (signed != null) {
-          final items = await _relayGateway.unsealItemTags(signed);
-          if (!isCurrentSession || getListById(listId) != list) return false;
-          if (_defaultAuthority.restoreSignedRetry(signed, items, list)) {
-            signedRetry = signed;
+  Future<bool> _retryListSync(String listId) {
+    Object? permissionIntent(CuratedList? row) {
+      if (row?.hasPendingPermissionDraft != true) return null;
+      final draft = row!.localEditDraft!;
+      final before = draft.baseline.allowedCollaborators.toSet();
+      final after = draft.desired.allowedCollaborators.toSet();
+      final added = after.difference(before).toList()..sort();
+      final removed = before.difference(after).toList()..sort();
+      return (
+        draft.desired.isPublic,
+        draft.desired.isCollaborative,
+        added.join(','),
+        removed.join(','),
+      );
+    }
+
+    final requestedPermissions = permissionIntent(getListById(listId));
+    return _serializeListOperation(
+      listId,
+      () async {
+        final operationOwner = _relayGateway.currentAuthenticatedPubkey();
+        if (operationOwner == null || !_isCurrent(operationOwner)) return false;
+        final retainedList = getListById(listId);
+        if (retainedList != null && !_relayEvidence.allows(retainedList)) {
+          final event = _relayEvidence.retainedFor(retainedList);
+          if (event == null ||
+              !await _processReceivedListEvents(
+                [event],
+                isCurrentRead: () => _isCurrent(operationOwner),
+              ) ||
+              !_relayEvidence.allows(retainedList)) {
+            return false;
           }
         }
-      }
-      if (list.nostrEventId != null &&
-          !list.pendingRepublish &&
-          list.localEditDraft == null &&
-          list.pendingVisibility == null &&
-          list.pendingPlaintextEventIds.isNotEmpty) {
-        return _publisher.retryPlaintextRedactions(list.authorScopedId);
-      }
-      final desired = list.localEditDraft?.desired;
-      final retry = desired == null
-          ? list
-          : list.copyWith(
-              isPublic: desired.isPublic,
-              isCollaborative: desired.isCollaborative,
-              allowedCollaborators: desired.allowedCollaborators,
-            );
-      if (!_defaultAuthority.canRetrySavedPublication(retry)) return false;
-      return _publishListToNostr(
-        retry,
-        signedRetry: signedRetry,
-        confirmed: true,
-        explicitDefaultIntent: true,
-      );
-    },
-    cancelled: false,
-    recovering: true,
-  );
+        final list = getListById(listId);
+        if (!isCurrentSession) return false;
+        if (list == null) {
+          final owner = _relayGateway.currentAuthenticatedPubkey();
+          if (owner == null || !listId.startsWith('$owner:')) return false;
+          final id = listId.substring(owner.length + 1);
+          if (_recovery.record(owner, id) == null) return false;
+          return _publisher.retryPlaintextRedactions(listId);
+        }
+        if (!isOwnedList(listId)) return false;
+        Event? signedRetry;
+        if (list.id == defaultListId) {
+          final signed = await _defaultSignedIntentStore?.read(list.pubkey!);
+          if (signed != null) {
+            final items = await _relayGateway.unsealItemTags(signed);
+            if (!isCurrentSession || getListById(listId) != list) return false;
+            if (_defaultAuthority.restoreSignedRetry(signed, items, list)) {
+              signedRetry = signed;
+            }
+          }
+        }
+        if (list.nostrEventId != null &&
+            !list.pendingRepublish &&
+            list.localEditDraft == null &&
+            list.pendingVisibility == null &&
+            list.pendingPlaintextEventIds.isNotEmpty) {
+          return _publisher.retryPlaintextRedactions(list.authorScopedId);
+        }
+        final desired = list.localEditDraft?.desired;
+        // A queued membership retry cannot consent to a permission proposal
+        // introduced or changed while it waited for the fresh relay read.
+        if (list.hasPendingPermissionDraft &&
+            permissionIntent(list) != requestedPermissions) {
+          return false;
+        }
+        final retry = desired == null
+            ? list
+            : list.copyWith(
+                isPublic: desired.isPublic,
+                isCollaborative: desired.isCollaborative,
+                allowedCollaborators: desired.allowedCollaborators,
+              );
+        if (!_defaultAuthority.canRetrySavedPublication(retry)) return false;
+        return _publishListToNostr(
+          retry,
+          signedRetry: signedRetry,
+          confirmed: true,
+          explicitDefaultIntent: true,
+        );
+      },
+      cancelled: false,
+      recovering: true,
+    );
+  }
 }

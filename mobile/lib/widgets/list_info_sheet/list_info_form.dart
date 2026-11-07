@@ -167,7 +167,7 @@ class _RecoveryMessage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (state.hasRelayConflict)
+          if (state.hasRelayConflict || state.permissionDraftPending)
             const _ConflictRecovery()
           else
             ListInfoRecoveryPendingMessage(
@@ -207,7 +207,9 @@ class _ConflictRecovery extends StatelessWidget {
           child: Text(
             state.confirmDiscardDraft
                 ? l10n.listDiscardDraftConfirmation
-                : l10n.listConflictNotice,
+                : state.hasRelayConflict
+                ? l10n.listConflictNotice
+                : l10n.listRecoveryPending,
             style: VineTheme.bodyMediumFont(
               color: context.vineColors.onSurfaceVariant,
             ),
