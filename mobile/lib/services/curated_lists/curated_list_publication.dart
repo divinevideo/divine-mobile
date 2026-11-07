@@ -10,13 +10,22 @@ extension CuratedListPublication on CuratedListService {
     String listId,
     String? owner, {
     required bool recovering,
+    required bool allowOfflineDraft,
   }) async {
     final list = getListById(listId);
     // Creating a new coordinate has no cached replacement to reconcile.
     // Signed-out drafts stay local and never publish over relay data.
-    if (list == null || owner == null) return true;
+    if (list == null) return true;
+    if (owner == null) {
+      if (allowOfflineDraft && _canStageOfflineDraft(list)) {
+        _offlineListOperations.add(listId);
+      }
+      return true;
+    }
     if (list.pubkey != null && list.pubkey != owner) return false;
-    if (!recovering && !_defaultAuthority.canMutate(list)) return false;
+    if (!recovering && !_defaultAuthority.canMutate(list)) {
+      return false;
+    }
 
     final cancel = Completer<void>();
     _relaySyncCancels.add(cancel);
@@ -27,9 +36,12 @@ extension CuratedListPublication on CuratedListService {
         timeout: _relaySyncTimeout,
         cancelled: cancel.future,
       );
-      if (!snapshot.completedNormally ||
-          cancel.isCompleted ||
-          !_isCurrent(owner)) {
+      if (cancel.isCompleted || !_isCurrent(owner)) return false;
+      if (!snapshot.completedNormally) {
+        if (allowOfflineDraft && _canStageOfflineDraft(list)) {
+          _offlineListOperations.add(listId);
+          return true;
+        }
         return false;
       }
       final events = snapshot.events;
@@ -51,6 +63,13 @@ extension CuratedListPublication on CuratedListService {
         name: 'CuratedListService',
         category: LogCategory.system,
       );
+      if (allowOfflineDraft &&
+          !cancel.isCompleted &&
+          _isCurrent(owner) &&
+          _canStageOfflineDraft(list)) {
+        _offlineListOperations.add(listId);
+        return true;
+      }
       return false;
     } finally {
       _relaySyncCancels.remove(cancel);
@@ -66,6 +85,7 @@ extension CuratedListPublication on CuratedListService {
     void Function()? onPublicationUnconfirmed,
   }) async {
     if (!isCurrentSession ||
+        sourceList.hasRelayConflict ||
         recoveryNeedsRepair ||
         (!isReadyForMutations && !duringInitialization)) {
       return false;
@@ -78,6 +98,8 @@ extension CuratedListPublication on CuratedListService {
       return false;
     }
     _inFlightListPublications.add(sourceList.authorScopedId);
+    _inFlightListTargets[sourceList.authorScopedId] =
+        sourceList.publicationTarget;
     try {
       final published = await _publisher.publish(
         sourceList,
@@ -91,6 +113,7 @@ extension CuratedListPublication on CuratedListService {
       return published;
     } finally {
       _inFlightListPublications.remove(sourceList.authorScopedId);
+      _inFlightListTargets.remove(sourceList.authorScopedId);
     }
   }
 
@@ -135,9 +158,12 @@ extension CuratedListPublication on CuratedListService {
     final stranded = _lists
         .where(
           (list) =>
+              !list.hasRelayConflict &&
+              !_inFlightListPublications.contains(list.authorScopedId) &&
               _relayEvidence.allows(list) &&
               (list.nostrEventId == null ||
                   list.pendingRepublish ||
+                  list.localEditDraft != null ||
                   list.pendingPlaintextEventIds.isNotEmpty) &&
               (list.pubkey == owner || _isUnpublishedLocalList(list)),
         )
@@ -166,14 +192,23 @@ extension CuratedListPublication on CuratedListService {
           if (!_relayEvidence.allows(current)) return true;
           // An ACKed permission target is completed by the visible Sync now
           // action, never silently through a new edit or startup publication.
-          if (current.hasPendingPermissionRecovery) return true;
+          if (current.hasPendingPermissionRecovery ||
+              (current.localEditDraft != null &&
+                  CuratedListVisibility.fromList(current) !=
+                      CuratedListVisibility.fromList(
+                        current.localEditDraft!.desired,
+                      ))) {
+            return true;
+          }
           if (current.id == defaultListId &&
               !_defaultAuthority.authorizeCreation(
                 current.copyWith(pubkey: currentOwner),
               )) {
             return true;
           }
-          if (current.nostrEventId != null && !current.pendingRepublish) {
+          if (current.nostrEventId != null &&
+              !current.pendingRepublish &&
+              current.localEditDraft == null) {
             await _publisher.retryPlaintextRedactions(current.authorScopedId);
             return _isCurrent(owner);
           }
@@ -242,17 +277,24 @@ extension CuratedListPublication on CuratedListService {
           }
         }
       }
-      if (!_defaultAuthority.canRetrySavedPublication(list)) {
-        return false;
-      }
       if (list.nostrEventId != null &&
           !list.pendingRepublish &&
+          list.localEditDraft == null &&
           list.pendingVisibility == null &&
           list.pendingPlaintextEventIds.isNotEmpty) {
         return _publisher.retryPlaintextRedactions(list.authorScopedId);
       }
+      final desired = list.localEditDraft?.desired;
+      final retry = desired == null
+          ? list
+          : list.copyWith(
+              isPublic: desired.isPublic,
+              isCollaborative: desired.isCollaborative,
+              allowedCollaborators: desired.allowedCollaborators,
+            );
+      if (!_defaultAuthority.canRetrySavedPublication(retry)) return false;
       return _publishListToNostr(
-        list,
+        retry,
         signedRetry: signedRetry,
         confirmed: true,
         explicitDefaultIntent: true,

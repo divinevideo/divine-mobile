@@ -33,6 +33,7 @@ export 'package:openvine/services/curated_lists/curated_list_account_authority.d
     show CuratedListAccountBoundaryException;
 
 part 'curated_lists/curated_list_deletion.dart';
+part 'curated_lists/curated_list_draft_recovery.dart';
 part 'curated_lists/curated_list_playlist.dart';
 part 'curated_lists/curated_list_publication.dart';
 part 'curated_lists/curated_list_recovery_service.dart';
@@ -269,12 +270,15 @@ class CuratedListService extends ChangeNotifier {
   bool get _isStopped => _isDisposed || _isSuspended;
   final Set<Completer<void>> _relaySyncCancels = {};
   final Set<String> _inFlightListPublications = {};
+  final Map<String, CuratedList> _inFlightListTargets = {};
+  final Set<String> _offlineListOperations = {};
 
   Future<T> _serializeListOperation<T>(
     String listId,
     Future<T> Function() operation, {
     T? cancelled,
     bool recovering = false,
+    bool allowOfflineDraft = false,
   }) {
     if (!isReadyForMutations) return Future.value(cancelled as T);
     final owner = _relayGateway.currentAuthenticatedPubkey();
@@ -285,10 +289,15 @@ class CuratedListService extends ChangeNotifier {
           listId,
           owner,
           recovering: recovering,
+          allowOfflineDraft: allowOfflineDraft,
         )) {
           return cancelled as T;
         }
-        return operation();
+        try {
+          return await operation();
+        } finally {
+          _offlineListOperations.remove(listId);
+        }
       },
       isCurrentOwner: () => isReadyForMutations && _isCurrent(owner),
       cancelled: cancelled,
@@ -629,10 +638,25 @@ class CuratedListService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Retaining intent grants no default-list publication authority. The normal
+  // owner, evidence, permission-recovery and storage holds still apply.
+  bool _canStageOfflineDraft(CuratedList list) =>
+      isReadyForMutations &&
+      _defaultAuthority.canMutate(list) &&
+      !list.hasRelayConflict &&
+      !list.hasPendingPermissionRecovery &&
+      list.pubkey != null &&
+      list.pubkey == _authService.currentPublicKeyHex &&
+      !_recovery.needsPermissionRecovery(list, list.pubkey!) &&
+      _relayEvidence.allows(list) &&
+      _cacheStore.hasUnambiguousOwnerEvidence(list);
+
   /// Only an explicitly owned row or an unpublished local draft can change.
   /// Remembered owners may edit offline; relay signing still requires auth.
   bool _canMutateCachedList(CuratedList list) {
     if (!isReadyForMutations ||
+        list.hasRelayConflict ||
+        list.hasPendingPermissionDraft ||
         !_defaultAuthority.canMutate(list) ||
         !_relayEvidence.allows(list) ||
         !_cacheStore.hasUnambiguousOwnerEvidence(list)) {
@@ -708,7 +732,24 @@ class CuratedListService extends ChangeNotifier {
     if (changesPermissions && !_authService.isAuthenticated) return false;
     final intent = _defaultAuthority.reserveMutation(previous, ownedUpdate);
     if (intent == null) return false;
-    final locallySaved = ownedUpdate.stageVisibilityFrom(previous);
+    final retainPermissions =
+        _offlineListOperations.contains(previous.id) ||
+        _offlineListOperations.contains(previous.authorScopedId);
+    final draft = CuratedListDraftReconciler.stage(
+      previous,
+      retainPermissions
+          ? ownedUpdate
+          : ownedUpdate.copyWith(
+              isPublic: previous.isPublic,
+              isCollaborative: previous.isCollaborative,
+              allowedCollaborators: previous.allowedCollaborators,
+            ),
+    );
+    final locallySaved = ownedUpdate
+        .stageVisibilityFrom(previous)
+        .copyWith(
+          localEditDraft: draft,
+        );
     _lists[listIndex] = locallySaved;
     if (!await _saveLists(
       ownershipClaims: previous.pubkey == null && ownedUpdate.pubkey != null
@@ -726,8 +767,14 @@ class CuratedListService extends ChangeNotifier {
       return false;
     }
 
+    if (_offlineListOperations.contains(previous.id) ||
+        _offlineListOperations.contains(previous.authorScopedId)) {
+      return !_authService.isAuthenticated;
+    }
     if (_authService.isAuthenticated &&
-        !await _publishListToNostr(ownedUpdate)) {
+        !await _publishListToNostr(
+          ownedUpdate.copyWith(localEditDraft: draft),
+        )) {
       final currentIndex = _lists.indexWhere(
         (list) => list.authorScopedId == ownedUpdate.authorScopedId,
       );
@@ -747,6 +794,7 @@ class CuratedListService extends ChangeNotifier {
     return _serializeListOperation(
       listId,
       () => _addVideoToList(listId, videoEventId),
+      allowOfflineDraft: true,
       cancelled: false,
     );
   }
@@ -807,6 +855,7 @@ class CuratedListService extends ChangeNotifier {
     return _serializeListOperation(
       listId,
       () => _removeVideoFromList(listId, videoEventId),
+      allowOfflineDraft: true,
       cancelled: false,
     );
   }
@@ -854,6 +903,11 @@ class CuratedListService extends ChangeNotifier {
 
   /// Retries this list's pending publication without changing its members.
   Future<bool> retryListSync(String listId) => _retryListSync(listId);
+
+  /// Discards pending local edits only after an explicit owner choice and a
+  /// complete, readable relay revision. Failed recovery retains the draft.
+  Future<bool> discardLocalEditsAndAdoptRelay(String listId) =>
+      _discardLocalEditsAndAdoptRelay(listId);
 
   /// Check if video is in a specific list
   bool isVideoInList(String listId, String videoEventId) {
@@ -971,6 +1025,7 @@ class CuratedListService extends ChangeNotifier {
         onLocalSaved: onLocalSaved,
         onPublicationUnconfirmed: onPublicationUnconfirmed,
       ),
+      allowOfflineDraft: true,
       cancelled: const CuratedListUpdateResult.failed(),
     );
   }
@@ -1074,9 +1129,25 @@ class CuratedListService extends ChangeNotifier {
       }
 
       final intent = _defaultAuthority.reserveMutation(list, updatedList);
-      if (intent == null) return const CuratedListUpdateResult.failed();
+      if (intent == null) {
+        return const CuratedListUpdateResult.failed();
+      }
       // Metadata saves locally; visibility and permissions await acceptance.
-      final locallySaved = updatedList.stageVisibilityFrom(list);
+      final draft = CuratedListDraftReconciler.stage(
+        list,
+        _offlineListOperations.contains(listId)
+            ? updatedList
+            : updatedList.copyWith(
+                isPublic: list.isPublic,
+                isCollaborative: list.isCollaborative,
+                allowedCollaborators: list.allowedCollaborators,
+              ),
+      );
+      final locallySaved = updatedList
+          .stageVisibilityFrom(list)
+          .copyWith(
+            localEditDraft: draft,
+          );
       _lists[listIndex] = locallySaved;
       if (!await _saveLists(
         ownershipClaims: list.pubkey == null && updatedList.pubkey != null
@@ -1092,10 +1163,15 @@ class CuratedListService extends ChangeNotifier {
         return const CuratedListUpdateResult.failed();
       }
       onLocalSaved?.call();
+      if (_offlineListOperations.contains(listId)) {
+        return !_authService.isAuthenticated
+            ? const CuratedListUpdateResult.saved()
+            : const CuratedListUpdateResult.failed();
+      }
 
       if (_authService.isAuthenticated &&
           !await _publishListToNostr(
-            updatedList,
+            updatedList.copyWith(localEditDraft: draft),
             confirmed: true,
             onPublicationUnconfirmed: onPublicationUnconfirmed,
           )) {
@@ -1164,6 +1240,7 @@ class CuratedListService extends ChangeNotifier {
     return _serializeListOperation(
       listId,
       () => _reorderVideos(listId, newOrder),
+      allowOfflineDraft: true,
       cancelled: false,
     );
   }
@@ -1176,6 +1253,7 @@ class CuratedListService extends ChangeNotifier {
     return _serializeListOperation(
       listId,
       () => _addCollaborator(listId, pubkey),
+      allowOfflineDraft: true,
       cancelled: false,
     );
   }
@@ -1237,6 +1315,7 @@ class CuratedListService extends ChangeNotifier {
     return _serializeListOperation(
       listId,
       () => _removeCollaborator(listId, pubkey),
+      allowOfflineDraft: true,
       cancelled: false,
     );
   }
@@ -1730,30 +1809,120 @@ class CuratedListService extends ChangeNotifier {
         canRun: () => isCurrentRead() && isCurrentSession,
       );
       if (!isCurrentRead() || !_isCurrent(owner)) return;
+      if (unsealedItemTags.status == UnsealItemTagsStatus.failed ||
+          (unsealedItemTags.status == UnsealItemTagsStatus.unsealed &&
+              !unsealedItemTags.hasCompleteItemSnapshot) ||
+          (unsealedItemTags.status == UnsealItemTagsStatus.notSealed &&
+              CuratedListConverter.isEncryptedItemPayload(event.content))) {
+        return;
+      }
+      _defaultAuthority.observe(event, unsealedItemTags);
+      if (!_relayEvidence.decoded(
+        event,
+        unsealedItemTags,
+        recordDecoding: false,
+      )) {
+        return;
+      }
+      if (CuratedListConverter.extractDTag(event) == defaultListId &&
+          !_defaultAuthority.hasReadableRevision(event)) {
+        return;
+      }
       final decoded = CuratedListConverter.fromEvent(
         event,
         privateTags: unsealedItemTags.tags,
         isPrivateEvent:
             unsealedItemTags.status == UnsealItemTagsStatus.unsealed,
       );
-      final existing = decoded == null
-          ? null
-          : getListById(decoded.authorScopedId);
+      if (decoded == null ||
+          !hasValidCuratedListVisibility(
+            decoded.isPublic,
+            decoded.isCollaborative,
+          )) {
+        return;
+      }
+      final existing = getListById(decoded.authorScopedId);
+      if (existing != null && existing.localEditDraft != null) {
+        final target = _inFlightListTargets[existing.authorScopedId];
+        final confirmsTarget =
+            target != null &&
+            event.isValid &&
+            event.isSigned &&
+            CuratedListRelayMerger.samePublicationValue(target, decoded);
+        // An identical accepted baseline adds no new data and must not
+        // rebuild an already-signing candidate or replace its reservation.
+        if (target != null &&
+            !confirmsTarget &&
+            existing.localEditDraft!.baseline.nostrEventId == event.id) {
+          _relayEvidence.decoded(event, unsealedItemTags);
+          return;
+        }
+        final draft = confirmsTarget
+            ? CuratedListEditDraft(
+                baseline: existing.localEditDraft!.baseline,
+                desired: target,
+              )
+            : existing.localEditDraft!;
+        final merged = CuratedListDraftReconciler.reconcile(draft, decoded);
+        if (merged == null) {
+          final retained = target == null
+              ? existing
+              : decoded.copyWith(
+                  createdAt: existing.createdAt,
+                  localEditDraft: existing.localEditDraft,
+                  pendingPlaintextEventIds: {
+                    ...existing.pendingPlaintextEventIds,
+                    if (existing.isPublic &&
+                        !decoded.isPublic &&
+                        existing.nostrEventId != null)
+                      existing.nostrEventId!,
+                  }.toList(),
+                );
+          _restoreList(retained.copyWith(hasRelayConflict: true));
+          return;
+        }
+        if (!_relayEvidence.decoded(event, unsealedItemTags)) return;
+        if (decoded.id == defaultListId &&
+            (!_defaultAuthority.hasReadableRevision(event) ||
+                _defaultAuthority.reserveMutation(
+                      decoded,
+                      merged.localEditDraft!.desired,
+                    ) ==
+                    null)) {
+          return;
+        }
+        _publishClock.observe(decoded);
+        _restoreList(
+          merged
+              .stageVisibilityFrom(decoded)
+              .copyWith(
+                hasRelayConflict: false,
+                createdAt: existing.createdAt,
+                pendingPlaintextEventIds: {
+                  ...existing.pendingPlaintextEventIds,
+                  if (existing.isPublic &&
+                      !decoded.isPublic &&
+                      existing.nostrEventId != null)
+                    existing.nostrEventId!,
+                }.toList(),
+              ),
+        );
+        return;
+      }
       if (existing != null &&
           CuratedListRelayMerger.hasConflictingPendingRevision(
             existing,
-            decoded!,
+            decoded,
             publicationInFlight: _inFlightListPublications.contains(
               existing.authorScopedId,
             ),
           )) {
+        _restoreList(existing.copyWith(hasRelayConflict: true));
         return;
       }
-      _defaultAuthority.observe(event, unsealedItemTags);
       if (!_relayEvidence.decoded(event, unsealedItemTags)) return;
-      if (CuratedListConverter.extractDTag(event) == defaultListId &&
-          !_defaultAuthority.hasReadableRevision(event)) {
-        return;
+      if (existing?.hasRelayConflict == true) {
+        _restoreList(existing!.copyWith(hasRelayConflict: false));
       }
       CuratedListRelayMerger(
         lists: _lists,

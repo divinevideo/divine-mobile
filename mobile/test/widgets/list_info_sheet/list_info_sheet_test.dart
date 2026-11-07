@@ -284,6 +284,43 @@ void main() {
     });
 
     testWidgets(
+      'conflict recovery requires explicit confirmation and refreshes the form',
+      (tester) async {
+        final pending = list(name: 'Local draft')
+            .copyWith(pendingRepublish: true, hasRelayConflict: true);
+        var current = pending;
+        when(() => service.getListById(any())).thenAnswer((_) => current);
+        when(() => service.discardLocalEditsAndAdoptRelay(_listIdentity))
+            .thenAnswer((_) async {
+              current = list(name: 'Synced title');
+              return true;
+            });
+        await openSheet(tester, existingList: pending);
+        expect(find.text(l10n.listConflictNotice), findsOneWidget);
+        expect(visibilityTile(tester).onChanged, isNull);
+        await tester.tap(find.text(l10n.listUseLatestVersion));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listDiscardDraftConfirmation), findsOneWidget);
+        verifyNever(() => service.discardLocalEditsAndAdoptRelay(any()));
+        await tester.tap(find.text(l10n.commonCancel));
+        await tester.pumpAndSettle();
+        expect(find.text('Local draft'), findsOneWidget);
+        verifyNever(() => service.discardLocalEditsAndAdoptRelay(any()));
+        await tester.tap(find.text(l10n.listUseLatestVersion));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listDiscardLocalEdits));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listConflictNotice), findsNothing);
+        expect(find.text('Synced title'), findsOneWidget);
+        expect(find.text('Local draft'), findsNothing);
+        expect(visibilityTile(tester).onChanged, isNotNull);
+        verify(() => service.discardLocalEditsAndAdoptRelay(_listIdentity))
+            .called(1);
+        verifyNever(() => service.retryListSync(any()));
+      },
+    );
+
+    testWidgets(
       'accepted permissions explain Sync now and block editing until settled',
       (tester) async {
         final pending = list(isPublic: false).copyWith(
