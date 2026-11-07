@@ -2871,6 +2871,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   /// editor history is the widget layer's half, driven by
   /// [ClipEditorState.lastDetachResult]. Splitting it that way keeps the bloc
   /// free of the editor, and keeps the two changes in one undo entry.
+  ///
+  /// A key baked into the clip's file comes off onto the layer — see
+  /// [_bakedChromaKeyRemoval].
   Future<void> _onClipDetachRequested(
     ClipEditorClipDetachRequested event,
     Emitter<ClipEditorState> emit,
@@ -3301,8 +3304,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   /// What the layer did on the canvas stays behind: its position, size and
   /// rotation have no timeline equivalent, and neither has its live green
   /// screen, which a timeline clip can only carry baked into its file. A key
-  /// baked in before the clip was detached comes back with it — see
-  /// [_withBakedChromaKeyRestored].
+  /// baked in before the clip was detached comes back while the layer still
+  /// keys the footage it was baked from — see [_withBakedChromaKeyRestored].
   ///
   /// Removing the layer is the widget layer's half, driven by
   /// [ClipEditorState.lastDetachedClipReattachResult], so both changes land in

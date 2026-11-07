@@ -71,18 +71,22 @@ const String detachedClipLayerOpacityKey = 'opacity';
 /// id, and nothing else ties it to the layer that left it.
 const String detachedClipLayerPlaceholderIdKey = 'placeholderClipId';
 
-/// Key under which the key the clip had baked into its file when it was
-/// detached is written, as [DetachedClipBakedChromaKey.toJson]. Absent when
-/// the clip carried no baked key, or kept it in its file.
+/// Key under which the green screen the clip had baked into its file when it
+/// was detached is written, as [DetachedClipBakedChromaKey.toJson]. Absent
+/// when the clip carried no baked key or kept it in its file, and once a crop
+/// replaced the footage it was baked from — see
+/// [DetachedClipLayerData.withClip].
 const String detachedClipLayerBakedChromaKeyKey = 'bakedChromaKey';
 
 /// The green screen a timeline clip had baked into its file when it was
 /// detached, kept so putting the clip back can restore it.
 ///
 /// Detaching takes a baked key off the file: the layer plays the footage the
-/// key was applied to and applies the same key live, so the removed area is
-/// see-through rather than the black or the fill the bake flattened it to.
-/// A timeline clip can only carry a key baked in, so the way back swaps the
+/// key was applied to and applies the same key live. A transparent key then
+/// shows the track where the bake left black, a colour or image fill still
+/// shows the fill, and a later change to the key starts from the clean
+/// footage instead of keying a fill already blended into the edges. A
+/// timeline clip can only carry a key baked in, so the way back swaps the
 /// baked file in again instead of rendering it a second time.
 class DetachedClipBakedChromaKey {
   const DetachedClipBakedChromaKey({
@@ -108,7 +112,8 @@ class DetachedClipBakedChromaKey {
   /// moved onto the keyed footage.
   final String? thumbnailPath;
 
-  /// Every file this record keeps alive besides the layer's own clip.
+  /// Every file putting the clip back needs, including the footage the layer
+  /// plays.
   Iterable<String?> get ownedFilePaths => [
     videoPath,
     sourcePath,
@@ -214,7 +219,8 @@ class DetachedClipLayerData {
   final String? placeholderClipId;
 
   /// The key the clip had baked into its file before it was detached, which
-  /// now plays live as [chromaKey], or `null` when there was none to take off.
+  /// the layer started out applying live as [chromaKey]; `null` when it had
+  /// none, kept it, or a crop replaced the footage it was baked from.
   final DetachedClipBakedChromaKey? bakedChromaKey;
 
   /// Serializes to the map stored in `WidgetLayer.exportConfigs.meta`.

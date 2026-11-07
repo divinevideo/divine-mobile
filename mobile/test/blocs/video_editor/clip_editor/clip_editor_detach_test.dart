@@ -1,5 +1,6 @@
 // ABOUTME: Tests for detaching a clip from the timeline onto the canvas —
-// ABOUTME: slot removal, placeholder fill, and the failure paths
+// ABOUTME: slot removal, placeholder fill, a baked color mask moving onto
+// ABOUTME: the layer, and the failure paths
 
 import 'dart:async';
 import 'dart:io';

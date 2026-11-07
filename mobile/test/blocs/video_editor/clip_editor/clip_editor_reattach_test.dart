@@ -1,5 +1,6 @@
 // ABOUTME: Tests for putting a detached clip back onto the timeline — into
-// ABOUTME: its placeholder's slot, or at the playhead once that is gone
+// ABOUTME: its placeholder's slot, or at the playhead once that is gone, with
+// ABOUTME: the color mask it had baked in
 
 import 'dart:io';
 

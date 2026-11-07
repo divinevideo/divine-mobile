@@ -636,7 +636,7 @@ class ClipEditorDetachedClipReattachRequested extends ClipEditorEvent {
   final ClipChromaKey? chromaKey;
 
   /// The key the clip had baked into its file before it was detached, or
-  /// `null` when it had none or kept it.
+  /// `null` when it had none, kept it, or a crop on the canvas dropped it.
   final DetachedClipBakedChromaKey? bakedChromaKey;
 
   @override

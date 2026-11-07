@@ -578,9 +578,9 @@ class _ClipDetachResultListener extends StatelessWidget {
       layerId: layerId,
       // So putting the clip back can find the slot it left.
       placeholderClipId: placeholderClipId,
-      // A key taken off the clip's file plays live on the layer, so what it
-      // removed shows the track rather than the black or fill it was baked
-      // to. The record is what putting the clip back restores.
+      // A key taken off the clip's file plays live on the layer (see
+      // DetachedClipBakedChromaKey); the record is what putting the clip back
+      // restores.
       chromaKey: bakedChromaKey?.chromaKey,
       bakedChromaKey: bakedChromaKey,
     ).toMeta();
@@ -824,9 +824,11 @@ class _DetachedClipTransformResultListener extends StatelessWidget {
     final layer = editor.activeLayers[index];
     if (layer is! WidgetLayer) return;
 
-    // Only the clip is swapped. The layer's own settings — where a split tail
-    // starts inside the clip, and its live green screen — describe the layer,
-    // not the footage, and a crop changes neither.
+    // Only the clip is swapped, and the baked key it no longer matches goes
+    // with it (see DetachedClipLayerData.withClip). The layer's own
+    // settings — where a split tail starts inside the clip, and its live
+    // green screen — describe the layer, not the footage, and a crop changes
+    // neither.
     final meta = DetachedClipLayerData.withClip(
       DetachedClipLayerData.metaOf(layer),
       clip,
