@@ -6,11 +6,14 @@ import android.appwidget.AppWidgetProvider
 import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.widget.RemoteViews
 import java.util.concurrent.Executor
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class CameraQuickActionWidgetProvider internal constructor(
     private val updateExecutor: Executor
@@ -24,16 +27,25 @@ class CameraQuickActionWidgetProvider internal constructor(
         appWidgetIds: IntArray
     ) {
         // Every step of an update calls into another process: the widget
-        // service and the package manager. On the broadcast's main thread a
-        // slow system server froze the app into an ANR.
+        // service and the package manager. A slow system server kept the
+        // broadcast open past its timeout, which the system reports as an ANR.
         val pendingResult = goAsync()
+        val finished = AtomicBoolean(false)
+        val finishBroadcast = Runnable {
+            if (finished.compareAndSet(false, true)) pendingResult.finish()
+        }
+        // The timeout still runs while the broadcast is held, so release it in
+        // time and let a stalled update land whenever the system answers.
+        val mainHandler = Handler(Looper.getMainLooper())
+        mainHandler.postDelayed(finishBroadcast, BROADCAST_DEADLINE_MILLIS)
         updateExecutor.execute {
             try {
                 appWidgetIds.forEach { appWidgetId ->
                     updateWidget(context, appWidgetManager, appWidgetId)
                 }
             } finally {
-                pendingResult.finish()
+                mainHandler.removeCallbacks(finishBroadcast)
+                finishBroadcast.run()
             }
         }
     }
@@ -41,6 +53,9 @@ class CameraQuickActionWidgetProvider internal constructor(
     companion object {
         private const val REQUEST_CODE_OPEN_CAMERA = 4101
         private const val UPDATE_THREAD_IDLE_SECONDS = 10L
+
+        // Half the 10 seconds the platform gives a receiver before an ANR.
+        internal const val BROADCAST_DEADLINE_MILLIS = 5_000L
 
         // One thread keeps updates in the order they were sent. It exits when
         // idle: with no update period, the widget updates only now and then.

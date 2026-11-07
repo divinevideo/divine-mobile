@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import android.os.Looper
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import org.junit.Assert.assertEquals
@@ -21,6 +22,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.util.ReflectionHelpers
+import java.time.Duration
 import java.util.concurrent.Executor
 
 @RunWith(RobolectricTestRunner::class)
@@ -66,6 +68,26 @@ class CameraQuickActionWidgetProviderTest {
         assertEquals(
             QuickActionContract.TYPE_CAMERA,
             opened.getStringExtra(QuickActionContract.EXTRA_ACTION_TYPE)
+        )
+    }
+
+    @Test
+    fun releasesTheBroadcastBeforeAStalledUpdateTimesOut() {
+        val widgetId = bindWidget(AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN)
+
+        deliverUpdate(widgetId)
+        shadowOf(Looper.getMainLooper()).idleFor(
+            Duration.ofMillis(CameraQuickActionWidgetProvider.BROADCAST_DEADLINE_MILLIS)
+        )
+
+        Mockito.verify(broadcast).finish()
+
+        runQueuedUpdates()
+
+        Mockito.verify(broadcast).finish()
+        assertEquals(
+            LinearLayout::class.java,
+            shadowOf(appWidgetManager).getViewFor(widgetId).javaClass
         )
     }
 
