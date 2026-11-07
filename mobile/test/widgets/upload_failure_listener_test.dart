@@ -294,6 +294,10 @@ Future<PostPublishExperiment> _treatmentExperiment(
 }
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(Future<void>.value());
+  });
+
   late _MockBackgroundPublishBloc publishBloc;
   late _MockAuthService authService;
   late StreamController<BackgroundPublishState> publishStream;
@@ -553,6 +557,19 @@ void main() {
       setUp(() {
         repository = _MockCrosspostingRepository();
         apiClient = _MockCrosspostingApiClient();
+        when(
+          () => repository.createCrossposts(
+            eventId: any(named: 'eventId'),
+            platforms: any(named: 'platforms'),
+            cancelled: any(named: 'cancelled'),
+          ),
+        ).thenAnswer((invocation) {
+          return CrosspostingRepository(apiClient).createCrossposts(
+            eventId: invocation.namedArguments[#eventId] as String,
+            platforms: invocation.namedArguments[#platforms] as List<String>,
+            cancelled: invocation.namedArguments[#cancelled] as Future<void>,
+          );
+        });
         router = _routerAt(_ownProfileLocation);
         analytics = _RecordingAnalytics();
         when(() => repository.loadSettings()).thenAnswer(
@@ -758,6 +775,47 @@ void main() {
         expect(find.text(_l10nEn.postPublishConfirmationShare), findsOneWidget);
         expect(find.text(_l10nEn.crosspostSubmit), findsNothing);
         verifyNever(() => repository.loadSettings());
+      });
+
+      testWidgets('crosspost waits for the just-published source', (
+        tester,
+      ) async {
+        var attempts = 0;
+        when(
+          () => apiClient.createCrossposts(
+            eventId: _publishedEventId,
+            platforms: ['instagram'],
+          ),
+        ).thenAnswer((_) async {
+          if (attempts++ == 0) {
+            throw const CrosspostingApiException(
+              'video event not found',
+              statusCode: 404,
+              code: 'not_found',
+            );
+          }
+          return const [
+            CrosspostJob(
+              id: 'job-instagram',
+              platform: 'instagram',
+              status: CrosspostJobStatus.posted,
+            ),
+          ];
+        });
+        await pumpPublished(tester, source: AuthenticationSource.divineOAuth);
+
+        await tester.tap(find.text(_l10nEn.crosspostSubmit));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(_l10nEn.crosspostSubmit));
+        await tester.pump();
+
+        expect(find.text(_l10nEn.crosspostErrorNetwork), findsNothing);
+        expect(attempts, 1);
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pumpAndSettle();
+
+        expect(find.text(_l10nEn.crosspostStatusPosted), findsOneWidget);
+        expect(attempts, 2);
       });
 
       testWidgets('crosspost submits the just-published event', (
