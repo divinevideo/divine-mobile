@@ -1,5 +1,6 @@
 // ABOUTME: #7923 — the Messages badge counts from unread conversations only,
-// ABOUTME: so a DM write no longer re-reads the whole inbox on every screen.
+// ABOUTME: so a DM write does not re-read the whole inbox on every screen,
+// ABOUTME: and still matches what the Messages list renders from the same rows.
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:db_client/db_client.dart';
@@ -53,7 +54,7 @@ class _FakeFollowRepository extends Fake implements FollowRepository {
   bool isFollowing(String pubkey) => _following.contains(pubkey);
 }
 
-/// The real repository, keeping every conversation list it hands out.
+/// The real repository, keeping every conversation it hands out.
 class _RecordingDmRepository extends DmRepository {
   _RecordingDmRepository({
     required super.nostrClient,
@@ -151,7 +152,7 @@ void main() {
       emitsThrough(count),
     ).timeout(const Duration(seconds: 5));
 
-    test('counts the unread conversations the inbox shows', () async {
+    test('counts a conversation while it is unread, not once read', () async {
       await expectCount(2);
 
       // A read conversation gets a new message: it joins the count.
@@ -359,8 +360,12 @@ void main() {
           reach(() => unreadRendered(bloc.state), bloc.stream, count),
           reach(() => cubit.state, cubit.stream, count),
         ]).timeout(const Duration(seconds: 5), onTimeout: () => const []);
-        expect(unreadRendered(bloc.state), count, reason: 'Messages list');
-        expect(cubit.state, count, reason: 'Messages badge');
+        expect(
+          unreadRendered(bloc.state),
+          equals(count),
+          reason: 'Messages list',
+        );
+        expect(cubit.state, equals(count), reason: 'Messages badge');
       }
 
       // Peer 2, followed peer 4, the group a visible member keeps unread,
