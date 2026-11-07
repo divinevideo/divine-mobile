@@ -15,6 +15,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_reattach.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -62,6 +63,9 @@ void main() {
       File('${documents.path}/b_unkeyed.mp4').writeAsBytesSync(const [0]);
       originalPathProvider = PathProviderPlatform.instance;
       PathProviderPlatform.instance = _FakePathProvider(documents.path);
+      // The reattach resolves the documents path, which caches it for every
+      // later suite in the merged test isolate.
+      resetCachedDocumentsPath();
 
       clipBloc = _MockClipEditorBloc();
       mainBloc = _MockVideoEditorMainBloc();
@@ -73,6 +77,7 @@ void main() {
     });
 
     tearDown(() {
+      resetCachedDocumentsPath();
       PathProviderPlatform.instance = originalPathProvider;
       if (documents.existsSync()) documents.deleteSync(recursive: true);
     });
