@@ -46,7 +46,7 @@ class CuratedListRelayMerger {
                 (localSecond > incomingSecond ||
                     (local.pendingRepublish &&
                         localSecond == incomingSecond)))) &&
-        !_samePublicationValue(local, incoming);
+        !samePublicationValue(local, incoming);
   }
 
   /// Applies an editor's membership delta to the freshly reconciled permissions.
@@ -62,7 +62,7 @@ class CuratedListRelayMerger {
 
   /// Compare the intended payload, independently of local/retry timestamps.
   /// A relay echo can confirm an earlier send whose acknowledgement was lost.
-  static bool _samePublicationValue(CuratedList left, CuratedList right) {
+  static bool samePublicationValue(CuratedList left, CuratedList right) {
     String value(CuratedList list) {
       final target = list.publicationTarget;
       final normalized = target.isPublic && target.description == null

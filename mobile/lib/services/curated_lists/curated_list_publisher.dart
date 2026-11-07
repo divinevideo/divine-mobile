@@ -282,6 +282,8 @@ class CuratedListPublisher {
         isCollaborative: target.isCollaborative,
         allowedCollaborators: target.allowedCollaborators,
         pendingRepublish: false,
+        clearLocalEditDraft: true,
+        hasRelayConflict: false,
         clearPendingVisibility: true,
         pendingPlaintextEventIds: plaintextIds.toList(growable: false),
       );
