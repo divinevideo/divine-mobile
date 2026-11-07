@@ -146,7 +146,8 @@ class _Account {
     try {
       await account._seed();
     } on Object {
-      await account.close();
+      // Cleanup is best effort; the seed's own error is the one to report.
+      await account.close().onError((_, _) {});
       rethrow;
     }
     return account;
