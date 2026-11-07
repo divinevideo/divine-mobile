@@ -396,6 +396,52 @@ void main() {
         expect(clip.thumbnailPath, '${documents.path}/b_keyed_poster.jpg');
         expect(clip.derivedFrom, keyed.derivedFrom);
       });
+
+      test('puts an image backdrop back among the clip sources', () async {
+        final backdrop = '${documents.path}/backdrop.jpg';
+        final imageKey = key.withImageBackground(backdrop);
+        final footage = C2paEditSource(path: sourcePath);
+        final image = C2paEditSource(
+          path: backdrop,
+          kind: C2paSourceKind.image,
+        );
+        final keyed = _clip('b').copyWith(
+          video: EditorVideo.file(bakedPath),
+          chromaKey: imageKey,
+          chromaKeySourcePath: sourcePath,
+          derivedFrom: [footage, image],
+        );
+        final bloc = seeded([_clip('a'), keyed, _clip('c')]);
+        await bloc.stream.first;
+
+        bloc.add(const ClipEditorClipDetachRequested(clipId: 'b'));
+        final detached = await bloc.stream.firstWhere(
+          (s) => s.lastDetachResult != null,
+        );
+        final result = detached.lastDetachResult! as ClipDetachSuccess;
+        // The image fill moves onto the layer with the key, so the footage
+        // the layer plays is made from the take alone.
+        expect(result.detachedClip.video?.file?.path, sourcePath);
+        expect(result.detachedClip.derivedFrom, [footage]);
+
+        bloc.add(
+          ClipEditorDetachedClipReattachRequested(
+            layerId: 'detached_b',
+            clip: result.detachedClip,
+            playhead: const Duration(seconds: 2),
+            chromaKey: result.bakedChromaKey?.chromaKey,
+            bakedChromaKey: result.bakedChromaKey,
+          ),
+        );
+        final back = await bloc.stream.firstWhere(
+          (s) => s.lastDetachedClipReattachResult != null,
+        );
+
+        final clip = back.clips[1];
+        expect(clip.video?.file?.path, bakedPath);
+        expect(clip.chromaKey, imageKey);
+        expect(clip.derivedFrom, [footage, image]);
+      });
     });
   });
 }

@@ -541,6 +541,36 @@ void main() {
         expect(queued, contains('${tempDir.path}/fresh_poster.jpg'));
       });
 
+      test('hands the fresh poster to the reaper when the editor closes '
+          'meanwhile', () async {
+        final gate = Completer<ThumbnailFileResult?>();
+        final started = Completer<void>();
+        final queued = <String>[];
+        final bloc = buildBloc(
+          extractPoster: ({required videoPath, required timestamp}) {
+            started.complete();
+            return gate.future;
+          },
+          deferFileCleanup: (paths) => queued.addAll(paths.nonNulls),
+        )..add(ClipEditorInitialized([_clip('a'), keyed(), _clip('c')]));
+        await bloc.stream.first;
+
+        bloc.add(const ClipEditorClipDetachRequested(clipId: 'b'));
+        await started.future;
+        final closing = bloc.close();
+        gate.complete(
+          ThumbnailFileResult(
+            path: '${tempDir.path}/fresh_poster.jpg',
+            timestamp: Duration.zero,
+          ),
+        );
+        await closing;
+        await pumpEventQueue();
+
+        // No layer will ever play the poster the closed editor took.
+        expect(queued, contains('${tempDir.path}/fresh_poster.jpg'));
+      });
+
       /// Detaches `b` while its poster is pending, runs [meanwhile] once the
       /// detach is waiting on it, then hands it the fresh poster.
       Future<ClipDetachSuccess> detachAround(
