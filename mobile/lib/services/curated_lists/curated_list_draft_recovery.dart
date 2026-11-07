@@ -1,9 +1,207 @@
-// ABOUTME: Durable local edits and explicit adoption of a complete relay revision.
+// ABOUTME: Coordinates guarded draft mutations and explicit relay conflict recovery.
 // ABOUTME: Keeps user intent through offline reads without authorizing stale sends.
 
 part of '../curated_list_service.dart';
 
 extension _CuratedListDraftRecovery on CuratedListService {
+  Future<T> _serializeListOperation<T>(
+    String listId,
+    Future<T> Function() operation, {
+    T? cancelled,
+    bool recovering = false,
+    bool allowOfflineDraft = false,
+  }) {
+    if (!isReadyForMutations) return Future.value(cancelled as T);
+    final owner = _relayGateway.currentAuthenticatedPubkey();
+    return _afterDraftRestoration(
+      owner,
+      () => _sessionLease.runListOperation(
+        getListById(listId)?.authorScopedId ?? listId,
+        () async {
+          if (!await _reconcileListBeforeMutation(
+            listId,
+            owner,
+            recovering: recovering,
+            allowOfflineDraft: allowOfflineDraft,
+          )) {
+            return cancelled;
+          }
+          try {
+            return await operation();
+          } finally {
+            _offlineListOperations.remove(listId);
+          }
+        },
+        isCurrentOwner: () => isReadyForMutations && _isCurrent(owner),
+        cancelled: cancelled,
+      ),
+      cancelled: cancelled as T,
+    );
+  }
+
+  void _restoreList(CuratedList list) {
+    final index = _lists.indexWhere(
+      (item) => item.authorScopedId == list.authorScopedId,
+    );
+    if (index == -1) {
+      _lists.add(list);
+    } else {
+      _lists[index] = list;
+    }
+    notifyListeners();
+  }
+
+  // Retaining intent grants no default-list publication authority. The normal
+  // owner, evidence, permission-recovery and storage holds still apply.
+  bool _canStageOfflineDraft(CuratedList list) =>
+      isReadyForMutations &&
+      _defaultAuthority.canMutate(list) &&
+      !list.hasRelayConflict &&
+      !list.hasPendingPermissionRecovery &&
+      list.pubkey != null &&
+      list.pubkey == _authService.currentPublicKeyHex &&
+      !_recovery.needsPermissionRecovery(list, list.pubkey!) &&
+      _relayEvidence.allows(list) &&
+      _cacheStore.hasUnambiguousOwnerEvidence(list);
+
+  /// Only an explicitly owned row or an unpublished local draft can change.
+  /// Remembered owners may edit offline; relay signing still requires auth.
+  bool _canMutateCachedList(CuratedList list) {
+    if (!isReadyForMutations ||
+        list.hasRelayConflict ||
+        list.hasPendingPermissionDraft ||
+        !_defaultAuthority.canMutate(list) ||
+        !_relayEvidence.allows(list) ||
+        !_cacheStore.hasUnambiguousOwnerEvidence(list)) {
+      return false;
+    }
+    if (list.pubkey != null) {
+      final owner = _authService.currentPublicKeyHex;
+      return owner != null && owner.isNotEmpty && list.pubkey == owner;
+    }
+    return _isUnpublishedLocalList(list) &&
+        (!_authService.isAuthenticated ||
+            _relayGateway.currentAuthenticatedPubkey() != null);
+  }
+
+  /// Missing follow metadata is known empty; unreadable metadata is not proof
+  /// that an ownerless row belongs to this account. Check both legacy aliases.
+  bool _isUnpublishedLocalList(CuratedList list) {
+    if (list.pubkey != null ||
+        list.nostrEventId != null ||
+        !_hasLoadedSubscriptionIds ||
+        !_cacheStore.hasUnambiguousOwnerEvidence(list)) {
+      return false;
+    }
+    // A local draft keeps its null coordinate for guests. Claiming it on
+    // sign-in must not alias an already owned row, nor a duplicate local row.
+    final owner = _relayGateway.currentAuthenticatedPubkey();
+    final candidates = _lists.where(
+      (cached) =>
+          cached.id == list.id &&
+          (cached.pubkey == null || cached.pubkey == owner),
+    );
+    if (candidates.length != 1) return false;
+    final snapshot = readCuratedListSubscriptionSnapshot(
+      preferences: _prefs,
+      storageKey: CuratedListService.subscribedListsStorageKey,
+      fallback: _subscribedListIds,
+    );
+    return snapshot.isReadable &&
+        !snapshot.ids.contains(list.id) &&
+        !snapshot.ids.contains(list.authorScopedId) &&
+        !_subscribedListIds.contains(list.id) &&
+        !_subscribedListIds.contains(list.authorScopedId) &&
+        (owner == null ||
+            _cacheStore.canClaimLocalList(list, '$owner:${list.id}'));
+  }
+
+  Future<bool> _commitListMutation(CuratedList updatedList) async {
+    if (recoveryNeedsRepair) return false;
+    final listIndex = _lists.indexWhere(
+      (list) => list.authorScopedId == updatedList.authorScopedId,
+    );
+    if (listIndex == -1) return false;
+
+    final previous = _lists[listIndex];
+    if (!_canMutateCachedList(previous)) return false;
+    if (!updatedList.isPublic &&
+        !_relayGateway.privateItemPayloadFits(updatedList)) {
+      return false;
+    }
+    final ownedUpdate = updatedList.copyWith(
+      pubkey: updatedList.pubkey ?? _relayGateway.currentAuthenticatedPubkey(),
+    );
+    final owner = _relayGateway.currentAuthenticatedPubkey();
+    if (previous.hasPendingPermissionRecovery ||
+        (previous.pubkey != null &&
+            _recovery.needsPermissionRecovery(previous, previous.pubkey!))) {
+      return false;
+    }
+    _publishClock.observe(previous);
+    final changesPermissions =
+        CuratedListVisibility.fromList(previous) !=
+        CuratedListVisibility.fromList(ownedUpdate);
+    if (changesPermissions && !_authService.isAuthenticated) return false;
+    final intent = _defaultAuthority.reserveMutation(previous, ownedUpdate);
+    if (intent == null) return false;
+    final retainPermissions =
+        _offlineListOperations.contains(previous.id) ||
+        _offlineListOperations.contains(previous.authorScopedId);
+    final draft = CuratedListDraftReconciler.stage(
+      previous,
+      retainPermissions
+          ? ownedUpdate
+          : ownedUpdate.copyWith(
+              isPublic: previous.isPublic,
+              isCollaborative: previous.isCollaborative,
+              allowedCollaborators: previous.allowedCollaborators,
+            ),
+    );
+    final locallySaved = ownedUpdate
+        .stageVisibilityFrom(previous)
+        .copyWith(
+          localEditDraft: draft,
+        );
+    _lists[listIndex] = locallySaved;
+    if (!await _saveLists(
+      ownershipClaims: previous.pubkey == null && ownedUpdate.pubkey != null
+          ? {ownedUpdate.authorScopedId: previous}
+          : const {},
+    )) {
+      intent.rollback();
+      if (_isCurrent(owner) &&
+          _prefs.getString(CuratedListService.listsStorageKey) != null &&
+          getListById(previous.authorScopedId) == locallySaved) {
+        _restoreList(
+          owner == null ? previous : _recovery.recover(previous, owner),
+        );
+      }
+      return false;
+    }
+
+    if (_offlineListOperations.contains(previous.id) ||
+        _offlineListOperations.contains(previous.authorScopedId)) {
+      return !_authService.isAuthenticated;
+    }
+    if (_authService.isAuthenticated &&
+        !await _publishListToNostr(
+          ownedUpdate.copyWith(localEditDraft: draft),
+        )) {
+      final currentIndex = _lists.indexWhere(
+        (list) => list.authorScopedId == ownedUpdate.authorScopedId,
+      );
+      if (currentIndex != -1 && _lists[currentIndex] == locallySaved) {
+        _lists[currentIndex] = _lists[currentIndex].copyWith(
+          pendingRepublish: true,
+        );
+        await _saveLists();
+      }
+      return false;
+    }
+    return true;
+  }
+
   /// Discards only this coordinate's pending edit, after a complete fresh read.
   /// Call only for an explicit owner action; startup and retries never adopt it.
   Future<bool> _discardLocalEditsAndAdoptRelay(String listId) {
