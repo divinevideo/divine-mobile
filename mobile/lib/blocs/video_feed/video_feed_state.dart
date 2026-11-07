@@ -562,8 +562,8 @@ final class VideoFeedCoordination extends Equatable {
   final int loadGeneration;
 
   /// The next New-feed page's `until`: the oldest row of the last page or
-  /// cached window read, counted before the creator limit. Null when that
-  /// read was empty or the source is not New.
+  /// cached window read, counted before the creator limit, or null when that
+  /// read was empty. Only meaningful while the source is New.
   final int? newVideosUntil;
 
   VideoFeedCoordination copyWith({
