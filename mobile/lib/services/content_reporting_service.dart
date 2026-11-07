@@ -229,9 +229,9 @@ class ContentReportingService implements ReportChannelDriver {
   static const String unverifiedExcerptHeading =
       'Unverified message excerpt provided by the reporter:';
 
-  /// Marks a moderation DM that carries [unverifiedExcerptHeading], for the
-  /// moderation service to recognise without parsing the body. Nothing there
-  /// reads it yet; until it does, moderators see the labelled section.
+  /// Marks a moderation DM that carries [unverifiedExcerptHeading]. The
+  /// moderation service splits the excerpt into its own field only when this
+  /// tag is present; the heading alone is text anyone can type.
   static const List<String> unverifiedExcerptTag = [
     'evidence',
     'unverified_excerpt',

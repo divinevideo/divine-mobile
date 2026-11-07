@@ -51,7 +51,7 @@ enum ReportedSubject {
 ///   context,
 ///   messageId: message.id,
 ///   senderPubkey: message.senderPubkey,
-///   messageText: message.content,
+///   messageText: message.readableText,
 /// );
 /// await ReportContentDialog.showForUser(
 ///   context,

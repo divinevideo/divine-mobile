@@ -1074,7 +1074,8 @@ void main() {
           publishToRelays: false,
         );
 
-        // Zendesk is unconfigured here, so nothing left the device.
+        // A private report has no event or ticket, and without a queue its
+        // DM is never sent, so nothing left the device.
         expect(result.delivery, ReportDelivery.localOnly);
         verifyNever(
           () => mockAuthService.createAndSignEvent(
@@ -2600,7 +2601,7 @@ void main() {
       });
 
       test(
-        'a report without an excerpt is never refused for its size',
+        'a public report is never refused for its size',
         () async {
           final result = await private.reportContent(
             eventId: _validEventId('b'),
