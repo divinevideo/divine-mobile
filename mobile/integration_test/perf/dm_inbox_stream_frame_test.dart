@@ -76,8 +76,8 @@ const _accountSizes = [100, 1000, 5000];
 /// reported only.
 const _gatedSize = 1000;
 
-/// A single UI-isolate stall this long fails a gated window: the dropped-frame
-/// count cannot see a freeze that starts the window.
+/// A single UI-isolate stall this long fails a gated window, whatever its
+/// dropped-frame count says.
 const _frozenUiStallMs = 100.0;
 
 /// Conversation writes in one burst, issued as fast as Drift accepts them:
@@ -428,6 +428,11 @@ class _Row extends StatelessWidget {
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  // FrameTimings arrive in batches up to ~100 ms late, so they cannot say
+  // which frames a window drew. A persistent frame callback runs in each frame
+  // as it is built.
+  var framesBegun = 0;
+  binding.addPersistentFrameCallback((_) => framesBegun++);
   final results = <String, Object>{};
   final report = StringBuffer();
   final blocErrors = _ErrorRecorder();
@@ -763,10 +768,11 @@ void main() {
             final sampler = _StallSampler()..start();
             final wall = Stopwatch()..start();
             var actFrames = 0;
+            final framesAtStart = framesBegun;
             try {
               await act();
               wall.stop();
-              actFrames = timings.length;
+              actFrames = framesBegun - framesAtStart;
               // FrameTimings arrive in batches, about every 100 ms in profile
               // builds: wait out the last debounced recompute and its batch.
               await Future<void>.delayed(const Duration(seconds: 2));
@@ -824,7 +830,7 @@ void main() {
             );
             report.writeln(
               'N=$size ${variant.name} $label: frames=${timings.length} '
-              '($actFrames while acting) '
+              '($actFrames begun while acting) '
               'in ${wall.elapsedMilliseconds}ms+2000ms dropped=$dropped '
               'over-budget=$overBudget (late start=$late) '
               'build p50/p99/max=${_fmt(p(build, .5))}/${_fmt(p(build, .99))}/'
