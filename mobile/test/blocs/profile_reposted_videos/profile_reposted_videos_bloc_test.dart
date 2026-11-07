@@ -118,6 +118,7 @@ void main() {
       required String id,
       required String pubkey,
       required String vineId,
+      int? eventKind,
     }) {
       final now = DateTime.now();
       return VideoEvent(
@@ -131,6 +132,7 @@ void main() {
         thumbnailUrl: 'https://example.com/thumb.jpg',
         vineId: vineId,
         addressableDTag: vineId,
+        eventKind: eventKind,
       );
     }
 
@@ -975,6 +977,206 @@ void main() {
                 'video vineIds order',
                 ['d3', 'd1', 'd2'],
               ),
+        ],
+      );
+    });
+
+    group('a Kind 34235 video reposted under the old 34236 key (#10776)', () {
+      // Divine stored this repost under 34236:, but the video's own
+      // coordinate is 34235:.
+      final legacyId = createAddressableId(currentUserPubkey, 'normal');
+      final otherId = createAddressableId(currentUserPubkey, 'd2');
+
+      VideoEvent normalVideo() => createTestVideo(
+        id: 'normal-event',
+        pubkey: currentUserPubkey,
+        vineId: 'normal',
+        eventKind: 34235,
+      );
+      VideoEvent otherVideo() =>
+          createTestVideo(id: 'e2', pubkey: currentUserPubkey, vineId: 'd2');
+
+      blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
+        'keeps it when a refresh reconciles the list',
+        setUp: () {
+          when(() => mockRepostsRepository.syncUserReposts()).thenAnswer(
+            (_) async => RepostsSyncResult(
+              orderedAddressableIds: [otherId, legacyId],
+              addressableIdToRepostId: const {},
+            ),
+          );
+          final byId = {otherId: otherVideo(), legacyId: normalVideo()};
+          when(
+            () => mockVideosRepository.getVideosByAddressableIds(
+              any(),
+              cacheResults: any(named: 'cacheResults'),
+            ),
+          ).thenAnswer(
+            (invocation) async => [
+              for (final id
+                  in invocation.positionalArguments.first as List<String>)
+                ?byId[id],
+            ],
+          );
+        },
+        build: createBloc,
+        seed: () => ProfileRepostedVideosState(
+          status: ProfileRepostedVideosStatus.success,
+          videos: [normalVideo()],
+          repostedAddressableIds: [legacyId],
+          nextPageOffset: 1,
+          hasMoreContent: false,
+        ),
+        act: (bloc) => bloc.add(const ProfileRepostedVideosSyncRequested()),
+        wait: const Duration(milliseconds: 50),
+        expect: () => [
+          isA<ProfileRepostedVideosState>().having(
+            (s) => s.isRefreshing,
+            'isRefreshing',
+            true,
+          ),
+          isA<ProfileRepostedVideosState>()
+              .having((s) => s.isRefreshing, 'isRefreshing', false)
+              .having((s) => s.videos.map((v) => v.id).toList(), 'videos', [
+                'e2',
+                'normal-event',
+              ]),
+        ],
+      );
+
+      blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
+        'drops its old key when it is removed',
+        build: () => createBloc(
+          deletedVideoFilter: (video) => video.id == 'normal-event',
+        ),
+        seed: () => ProfileRepostedVideosState(
+          status: ProfileRepostedVideosStatus.success,
+          videos: [normalVideo(), otherVideo()],
+          repostedAddressableIds: [legacyId, otherId],
+          nextPageOffset: 2,
+          hasMoreContent: false,
+        ),
+        act: (bloc) =>
+            bloc.add(const ProfileRepostedVideosVideoRemoved('normal-event')),
+        wait: const Duration(milliseconds: 50),
+        expect: () => [
+          isA<ProfileRepostedVideosState>()
+              .having((s) => s.videos.map((v) => v.id).toList(), 'videos', [
+                'e2',
+              ])
+              .having(
+                (s) => s.repostedAddressableIds,
+                'repostedAddressableIds',
+                [otherId],
+              ),
+        ],
+      );
+
+      group('beside a real Kind 34236 video under the same d', () {
+        const ownId = '34235:$currentUserPubkey:normal';
+        VideoEvent verticalVideo() => createTestVideo(
+          id: 'vertical-event',
+          pubkey: currentUserPubkey,
+          vineId: 'normal',
+          eventKind: 34236,
+        );
+
+        blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
+          'leaves the 34236 key to the real one on refresh',
+          setUp: () {
+            when(() => mockRepostsRepository.syncUserReposts()).thenAnswer(
+              (_) async => RepostsSyncResult(
+                orderedAddressableIds: [otherId, legacyId, ownId],
+                addressableIdToRepostId: const {},
+              ),
+            );
+            when(
+              () => mockVideosRepository.getVideosByAddressableIds(
+                any(),
+                cacheResults: any(named: 'cacheResults'),
+              ),
+            ).thenAnswer((_) async => [otherVideo()]);
+          },
+          build: createBloc,
+          seed: () => ProfileRepostedVideosState(
+            status: ProfileRepostedVideosStatus.success,
+            videos: [verticalVideo(), normalVideo()],
+            repostedAddressableIds: [legacyId, ownId],
+            nextPageOffset: 2,
+            hasMoreContent: false,
+          ),
+          act: (bloc) => bloc.add(const ProfileRepostedVideosSyncRequested()),
+          wait: const Duration(milliseconds: 50),
+          skip: 1,
+          expect: () => [
+            isA<ProfileRepostedVideosState>().having(
+              (s) => s.videos.map((v) => v.id).toList(),
+              'videos',
+              ['e2', 'vertical-event', 'normal-event'],
+            ),
+          ],
+        );
+
+        blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
+          'keeps the 34236 key while the real one stays',
+          build: () => createBloc(
+            deletedVideoFilter: (video) => video.id == 'normal-event',
+          ),
+          seed: () => ProfileRepostedVideosState(
+            status: ProfileRepostedVideosStatus.success,
+            videos: [verticalVideo(), normalVideo()],
+            repostedAddressableIds: [legacyId, ownId],
+            nextPageOffset: 2,
+            hasMoreContent: false,
+          ),
+          act: (bloc) =>
+              bloc.add(const ProfileRepostedVideosVideoRemoved('normal-event')),
+          wait: const Duration(milliseconds: 50),
+          expect: () => [
+            isA<ProfileRepostedVideosState>().having(
+              (s) => s.repostedAddressableIds,
+              'repostedAddressableIds',
+              [legacyId],
+            ),
+          ],
+        );
+      });
+
+      blocTest<ProfileRepostedVideosBloc, ProfileRepostedVideosState>(
+        'drops its old key when a cached snapshot holds it deleted',
+        setUp: () async {
+          await cacheDao.write(
+            key: '$currentUserPubkey:profile_reposted_videos',
+            payload: ProfileVideoListSnapshot(
+              videos: [otherVideo(), normalVideo()],
+              itemIds: [otherId, legacyId],
+              nextPageOffset: 2,
+              hasMoreContent: false,
+            ).toJson(),
+          );
+          when(() => mockRepostsRepository.syncUserReposts()).thenAnswer(
+            (_) async => RepostsSyncResult(
+              orderedAddressableIds: [otherId],
+              addressableIdToRepostId: const {},
+            ),
+          );
+        },
+        build: () => createBloc(
+          deletedVideoFilter: (video) => video.id == 'normal-event',
+        ),
+        act: (bloc) => bloc.add(const ProfileRepostedVideosSyncRequested()),
+        wait: const Duration(milliseconds: 50),
+        expect: () => [
+          isA<ProfileRepostedVideosState>().having(
+            (s) => s.repostedAddressableIds,
+            'cached repostedAddressableIds',
+            [otherId],
+          ),
+          isA<ProfileRepostedVideosState>().having(
+            (s) => s.isRefreshing,
+            'isRefreshing',
+            false,
+          ),
         ],
       );
     });

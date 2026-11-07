@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart';
-import 'package:nostr_sdk/nostr_sdk.dart' show Event;
+import 'package:nostr_sdk/nostr_sdk.dart' show Event, legacyVideoCoordinateFor;
 
 /// What a creator did with the video replies to one of their videos: the one
 /// they pinned to the front, and the ones they hid.
@@ -49,13 +49,15 @@ class RepliesCuration extends Equatable {
   static const String _hiddenMarker = 'hidden';
 
   /// The `d` tag of the curation of the replies to the video at
-  /// [videoAddress].
-  static String dTagFor(String videoAddress) => '$_dTagPrefix$videoAddress';
+  /// [videoAddress], under the 34236 key Divine always gave a Kind 34235
+  /// video ([VideoEvent.divineAddress]).
+  static String dTagFor(String videoAddress) =>
+      '$_dTagPrefix${legacyVideoCoordinateFor(videoAddress) ?? videoAddress}';
 
-  /// How a curation names [reply]: its address when it is addressable, so a
-  /// pin or a hide still applies after the reply is edited, and otherwise
-  /// its event id.
-  static String keyOf(VideoEvent reply) => reply.addressableId ?? reply.id;
+  /// How a curation names [reply]: its [VideoEvent.divineAddress] when it is
+  /// addressable, so a pin or a hide still applies after the reply is edited,
+  /// and otherwise its event id.
+  static String keyOf(VideoEvent reply) => reply.divineAddress ?? reply.id;
 
   /// Whether [value] is an address, `<kind>:<pubkey>:<d>`.
   static bool isAddress(String value) {

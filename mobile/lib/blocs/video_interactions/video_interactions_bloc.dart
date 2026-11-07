@@ -9,6 +9,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:models/models.dart' show NIP71VideoKinds;
+import 'package:nostr_sdk/aid.dart' show AId, legacyVideoCoordinateFor;
 import 'package:openvine/blocs/video_interactions/reportable_sites.dart';
 import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/observability/reportable_error.dart';
@@ -53,6 +54,9 @@ class VideoInteractionsBloc
        _commentsRepository = commentsRepository,
        _repostsRepository = repostsRepository,
        _addressableId = addressableId,
+       _legacyAddressableId = addressableId == null
+           ? null
+           : legacyVideoCoordinateFor(addressableId),
        _likeTargetKind = likeTargetKindFor(
          addressableId: addressableId,
          eventKind: eventKind,
@@ -98,16 +102,28 @@ class VideoInteractionsBloc
   /// Null if the video doesn't have a d-tag (non-addressable event).
   final String? _addressableId;
 
-  /// The NIP-25 `k` value for a like on a video: 34236 when [addressableId]
-  /// is set, matching its legacy `34236:` key (#5720). Without a coordinate,
-  /// the known addressable [eventKind] (#6980). Null for a regular video.
+  /// The `34236:` key Divine stored likes and reposts of a Kind 34235 video
+  /// under before #10776, read alongside [_addressableId]. Null otherwise.
+  final String? _legacyAddressableId;
+
+  /// The NIP-25 `k` value for a like on a video: the kind in [addressableId]
+  /// when set (#10776), otherwise a known video [eventKind] (#6980), including
+  /// the regular kinds 21 and 22. Null when neither names a video kind.
   static int? likeTargetKindFor({String? addressableId, int? eventKind}) {
-    if (addressableId != null) return NIP71VideoKinds.addressableShortVideo;
-    return eventKind == NIP71VideoKinds.addressableShortVideo ||
-            eventKind == NIP71VideoKinds.addressableNormalVideo
+    final coordinateKind = addressableId == null
+        ? null
+        : AId.fromString(addressableId)?.kind;
+    if (coordinateKind != null) return coordinateKind;
+    return eventKind != null && NIP71VideoKinds.isAcceptableVideoKind(eventKind)
         ? eventKind
         : null;
   }
+
+  /// Whether [coordinates] holds this video's coordinate, or its legacy key.
+  bool _containsOwnCoordinate(Set<String> coordinates) =>
+      _addressableId != null &&
+      (coordinates.contains(_addressableId) ||
+          coordinates.contains(_legacyAddressableId));
 
   /// See [likeTargetKindFor].
   final int? _likeTargetKind;
@@ -135,8 +151,7 @@ class VideoInteractionsBloc
     var likedAddressableIds = const <String>{};
     bool resolveIsLiked() =>
         likedEventIds.contains(_eventId) ||
-        (_addressableId != null &&
-            likedAddressableIds.contains(_addressableId));
+        _containsOwnCoordinate(likedAddressableIds);
 
     final subscriptions = [
       emit.forEach<List<String>>(
@@ -172,7 +187,7 @@ class VideoInteractionsBloc
         emit.forEach<Set<String>>(
           _repostsRepository.watchRepostedAddressableIds(),
           onData: (repostedIds) {
-            final isReposted = repostedIds.contains(_addressableId);
+            final isReposted = _containsOwnCoordinate(repostedIds);
             // Load-bearing for the same reason as the likes branch: the
             // repost toggle handler emits optimistically before awaiting,
             // and this early-return absorbs the follow-up stream tick.

@@ -9328,6 +9328,175 @@ void main() {
           ).called(1);
         });
       });
+
+      group('a Kind 34235 video (#10776)', () {
+        final author = 'd' * 64;
+        final normalAddress = '${EventKind.videoHorizontal}:$author:clip';
+        // The key Divine stored reposts and pins of this video under.
+        final legacyAddress = '${EventKind.videoVertical}:$author:clip';
+        late MockFunnelcakeApiClient funnelcake;
+        late VideosRepository withFunnelcake;
+
+        VideoStats stats({required int kind, required String id}) =>
+            _createVideoStats(
+              id: id,
+              pubkey: author,
+              dTag: 'clip',
+              videoUrl: 'https://example.com/$id.mp4',
+              kind: kind,
+            );
+
+        void stubAuthorVideos(List<VideoStats> videos) => when(
+          () => funnelcake.getVideosByAuthor(
+            pubkey: author,
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((_) async => VideosByAuthorResponse(videos: videos));
+
+        setUp(() {
+          funnelcake = MockFunnelcakeApiClient();
+          when(() => funnelcake.isAvailable).thenReturn(true);
+          withFunnelcake = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: funnelcake,
+          );
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => <Event>[]);
+        });
+
+        test('answers its own coordinate from the relays', () async {
+          final event = _createVideoEventWithDTag(
+            id: 'e' * 64,
+            pubkey: author,
+            dTag: 'clip',
+            videoUrl: 'https://example.com/normal.mp4',
+            createdAt: 1704067200,
+            kind: EventKind.videoHorizontal,
+          );
+          when(
+            () => mockNostrClient.queryEvents(any()),
+          ).thenAnswer((_) async => [event]);
+
+          final result = await repository.getVideosByAddressableIds([
+            normalAddress,
+          ]);
+
+          expect(result.single.id, event.id);
+          expect(result.single.eventKind, EventKind.videoHorizontal);
+          final filter =
+              (verify(
+                        () => mockNostrClient.queryEvents(captureAny()),
+                      ).captured.single
+                      as List<Filter>)
+                  .single;
+          expect(filter.kinds, [EventKind.videoHorizontal]);
+        });
+
+        test('answers its own coordinate through Funnelcake when the relays '
+            'hold none', () async {
+          stubAuthorVideos([stats(kind: EventKind.videoHorizontal, id: 'n')]);
+
+          final result = await withFunnelcake.getVideosByAddressableIds([
+            normalAddress,
+          ]);
+
+          expect(result.single.id, 'n');
+        });
+
+        test('still answers the old 34236 key through Funnelcake', () async {
+          stubAuthorVideos([stats(kind: EventKind.videoHorizontal, id: 'n')]);
+
+          final result = await withFunnelcake.getVideosByAddressableIds([
+            legacyAddress,
+          ]);
+
+          expect(result.single.id, 'n');
+          expect(result.single.eventKind, EventKind.videoHorizontal);
+        });
+
+        test('keeps a legacy coordinate in a curated list', () async {
+          stubAuthorVideos([stats(kind: EventKind.videoHorizontal, id: 'n')]);
+
+          final result = await withFunnelcake.getVideosForList([legacyAddress]);
+
+          expect(result.map((video) => video.id), ['n']);
+        });
+
+        test('keeps a legacy coordinate and its list attribution in the home '
+            'feed', () async {
+          _answerDetailedReadsAsFinished(mockNostrClient);
+          stubAuthorVideos([stats(kind: EventKind.videoHorizontal, id: 'n')]);
+
+          final result = await withFunnelcake.getHomeFeedVideos(
+            authors: ['a' * 64],
+            videoRefs: {
+              'list-a': [legacyAddress],
+            },
+          );
+
+          expect(result.videos.map((video) => video.id), ['n']);
+          expect(result.videoListSources, {
+            'n': {'list-a'},
+          });
+          expect(result.listOnlyVideoIds, {'n'});
+        });
+
+        test('keeps a real 34236 coordinate ahead of a list alias', () async {
+          stubAuthorVideos([
+            stats(kind: EventKind.videoVertical, id: 'vertical'),
+            stats(kind: EventKind.videoHorizontal, id: 'horizontal'),
+          ]);
+
+          final result = await withFunnelcake.getVideosForList([
+            legacyAddress,
+            normalAddress,
+          ]);
+
+          expect(result.map((video) => video.id), ['vertical', 'horizontal']);
+        });
+
+        test(
+          'attributes a real 34236 list coordinate to its own video',
+          () async {
+            _answerDetailedReadsAsFinished(mockNostrClient);
+            stubAuthorVideos([
+              stats(kind: EventKind.videoVertical, id: 'vertical'),
+              stats(kind: EventKind.videoHorizontal, id: 'horizontal'),
+            ]);
+
+            final result = await withFunnelcake.getHomeFeedVideos(
+              authors: ['a' * 64],
+              videoRefs: {
+                'short-list': [legacyAddress],
+                'normal-list': [normalAddress],
+              },
+            );
+
+            expect(result.videoListSources, {
+              'vertical': {'short-list'},
+              'horizontal': {'normal-list'},
+            });
+            expect(result.listOnlyVideoIds, {'vertical', 'horizontal'});
+          },
+        );
+
+        test('leaves the old 34236 key to a real Kind 34236 video under the '
+            'same d', () async {
+          stubAuthorVideos([
+            stats(kind: EventKind.videoVertical, id: 'vertical'),
+            stats(kind: EventKind.videoHorizontal, id: 'horizontal'),
+          ]);
+
+          final result = await withFunnelcake.getVideosByAddressableIds([
+            legacyAddress,
+            normalAddress,
+          ]);
+
+          expect(result.map((video) => video.id), ['vertical', 'horizontal']);
+        });
+      });
     });
 
     group('getVideosFromRelaysByAddressableIds', () {
@@ -9398,6 +9567,28 @@ void main() {
         expect(result.videos, isEmpty);
         expect(result.complete, isTrue);
         verifyNever(() => mockNostrClient.readEvents(any()));
+      });
+
+      test('answers a Kind 34235 coordinate (#10776)', () async {
+        final normal = _createVideoEventWithDTag(
+          id: 'f' * 64,
+          pubkey: 'pubkey1',
+          dTag: 'normal',
+          videoUrl: 'https://example.com/normal.mp4',
+          createdAt: 1704067200,
+          kind: EventKind.videoHorizontal,
+        );
+        when(() => mockNostrClient.readEvents(any())).thenAnswer(
+          (_) async =>
+              QueryResult(events: [normal], endedBy: QueryEnd.complete),
+        );
+
+        final result = await repository.getVideosFromRelaysByAddressableIds([
+          '${EventKind.videoHorizontal}:pubkey1:normal',
+        ]);
+
+        expect(result.videos.single.id, normal.id);
+        expect(result.complete, isTrue);
       });
     });
 
@@ -16809,6 +17000,7 @@ Event _createVideoEventWithDTag({
   int? loops,
   List<String>? hashtags,
   bool hasContentWarning = false,
+  int kind = EventKind.videoVertical,
 }) {
   final tags = <List<String>>[
     if (videoUrl != null) ['url', videoUrl],
@@ -16823,7 +17015,7 @@ Event _createVideoEventWithDTag({
     'id': id,
     'pubkey': pubkey,
     'created_at': createdAt,
-    'kind': EventKind.videoVertical,
+    'kind': kind,
     'tags': tags,
     'content': '',
     'sig': '',
@@ -16887,12 +17079,13 @@ VideoStats _createVideoStats({
   Map<String, String> rawTags = const {},
   List<String> moderationLabels = const [],
   List<String> collaboratorPubkeys = const [],
+  int kind = EventKind.videoVertical,
 }) {
   return VideoStats(
     id: id,
     pubkey: pubkey,
     createdAt: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
-    kind: EventKind.videoVertical,
+    kind: kind,
     eventCreatedAt: eventCreatedAt,
     publishedAt: publishedAt,
     dTag: dTag,

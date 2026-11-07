@@ -796,12 +796,7 @@ class VideosRepository {
       resultIndex++;
     }
     if (uniqueAddressableIds.isNotEmpty) {
-      for (final video in results[resultIndex]) {
-        final ref = video.addressableId;
-        if (ref != null) {
-          refToVideo[ref] = video;
-        }
-      }
+      _indexListCoordinates(refToVideo, results[resultIndex]);
     }
 
     // Build attribution metadata
@@ -884,18 +879,28 @@ class VideosRepository {
       resultIndex++;
     }
     if (addressableIds.isNotEmpty) {
-      for (final video in results[resultIndex]) {
-        final ref = video.addressableId;
-        if (ref != null) {
-          refToVideo[ref] = video;
-        }
-      }
+      _indexListCoordinates(refToVideo, results[resultIndex]);
     }
 
     // Return in ref order, omitting unresolved refs
     return deduplicateVideosPreservingOrder([
       for (final ref in videoRefs) ?refToVideo[ref],
     ]);
+  }
+
+  /// Keeps the coordinate a list saved before #10776 as well as the video's
+  /// own coordinate. A real 34236 video takes precedence over a legacy alias.
+  static void _indexListCoordinates(
+    Map<String, VideoEvent> refToVideo,
+    Iterable<VideoEvent> videos,
+  ) {
+    for (final video in videos) {
+      final coordinate = video.addressableId;
+      if (coordinate == null) continue;
+      refToVideo[coordinate] = video;
+      final legacy = legacyVideoCoordinateFor(coordinate);
+      if (legacy != null) refToVideo.putIfAbsent(legacy, () => video);
+    }
   }
 
   /// Fetches videos published by a specific author.
@@ -1908,11 +1913,12 @@ class VideosRepository {
     );
   }
 
-  /// The video addresses among [addressableIds], in their order.
+  /// The video addresses among [addressableIds], in their order: Kind 34236
+  /// and the Kind 34235 addressable normal videos other clients publish.
   static List<AId> _videoAddresses(List<String> addressableIds) => [
     for (final addressableId in addressableIds)
       if (AId.fromString(addressableId) case final parsed?
-          when NIP71VideoKinds.isVideoKind(parsed.kind))
+          when NIP71VideoKinds.isAddressableVideoKind(parsed.kind))
         parsed,
   ];
 
@@ -1962,8 +1968,10 @@ class VideosRepository {
     }
     final foundVideos = <String, VideoEvent>{};
     for (final entry in latestEvents.entries) {
+      // Permissive so a Kind 34235 address the caller asked for is answered.
       final video = _tryParseAndFilter(
         entry.value,
+        permissive: true,
         includeFeedShape: includeFeedShape,
       );
       if (video != null) foundVideos[entry.key] = video;
@@ -1979,6 +1987,10 @@ class VideosRepository {
     Map<String, VideoEvent> foundVideos, {
     required bool includeFeedShape,
   }) async {
+    final requestedIds = missingIds.toSet();
+    // Answers to the 34236 key Divine stored a Kind 34235 video under
+    // (#10776), applied last so a real Kind 34236 video keeps that key.
+    final legacyAnswers = <String, VideoEvent>{};
     // Group missing IDs by pubkey to batch queries
     final missingByPubkey = <String, List<String>>{};
     for (final addressableId in missingIds) {
@@ -2020,6 +2032,10 @@ class VideosRepository {
             if (processed == null) continue;
 
             foundVideos[videoAddressableId] = processed;
+            final legacy = legacyVideoCoordinateFor(videoAddressableId);
+            if (legacy != null && requestedIds.contains(legacy)) {
+              legacyAnswers[legacy] = processed;
+            }
           }
         }
       } on FunnelcakeException {
@@ -2027,6 +2043,9 @@ class VideosRepository {
         // so we don't want to fail the whole operation if it doesn't work.
         // The video simply won't be included in the results.
       }
+    }
+    for (final MapEntry(:key, :value) in legacyAnswers.entries) {
+      foundVideos.putIfAbsent(key, () => value);
     }
   }
 

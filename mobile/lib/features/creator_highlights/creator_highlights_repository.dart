@@ -130,7 +130,10 @@ class FunnelcakeCreatorHighlightsRepository
       Set<String> deletedIds,
       Map<String, int> deletedAddresses,
     ) {
-      final deletedAt = deletedAddresses[video.addressableId];
+      // Older deletions name a Kind 34235 video by its 34236 key (#10776).
+      final deletedAt =
+          deletedAddresses[video.addressableId] ??
+          deletedAddresses[video.divineAddress];
       return !deletedIds.contains(video.id) &&
           (deletedAt == null ||
               (video.eventCreatedAt ?? video.createdAt) > deletedAt);

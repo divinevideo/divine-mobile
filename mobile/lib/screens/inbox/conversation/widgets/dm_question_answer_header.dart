@@ -10,7 +10,6 @@ import 'package:models/models.dart'
     show
         DmMessage,
         DmSharedVideoRef,
-        NIP71VideoKinds,
         VideoEvent,
         VideoStickerKind,
         VideoStickerRegion;
@@ -104,7 +103,7 @@ class DmQuestionAnswerHeader extends ConsumerWidget {
     // citation may spell the address differently, or cite one version only.
     return VideoReplyContext(
       rootEventId: citedVideo.id,
-      rootEventKind: NIP71VideoKinds.addressableShortVideo,
+      rootEventKind: citedVideo.referenceKind,
       rootAuthorPubkey: creator,
       rootAddressableId: citedVideo.addressableId,
       replyToName: _bounded(asked, VideoStickerRegion.maxLabelLength),

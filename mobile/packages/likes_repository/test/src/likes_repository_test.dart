@@ -6288,6 +6288,264 @@ void main() {
       );
     });
 
+    group('legacy 34236 key of a Kind 34235 video (#10776)', () {
+      const oldEventId = 'old_event_id_1234567890abcdef';
+      const newEventId = 'new_event_id_1234567890abcdef';
+      const coordinate = '34235:$testAuthorPubkey:test-d-tag';
+      const legacyCoordinate = '34236:$testAuthorPubkey:test-d-tag';
+
+      void stubLegacyRecord() {
+        when(() => mockLocalStorage.getAllLikeRecords()).thenAnswer(
+          (_) async => [
+            createLikeRecord(
+              targetEventId: oldEventId,
+              addressableId: legacyCoordinate,
+            ),
+          ],
+        );
+      }
+
+      group('on the relays after a cold start', () {
+        test('likeEvent adopts the like left under the legacy key instead of '
+            'sending another', () async {
+          final reaction = createMockReaction(
+            id: testReactionEventId,
+            targetEventId: oldEventId,
+            authorPubkey: testUserPubkey,
+            tags: [
+              ['e', oldEventId],
+              ['a', legacyCoordinate],
+            ],
+          );
+          when(
+            () => mockNostrClient.readEvents(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((invocation) async {
+            final filters = invocation.positionalArguments[0] as List<Filter>;
+            return QueryResult(
+              events:
+                  filters.any(
+                    (filter) => filter.a?.contains(legacyCoordinate) ?? false,
+                  )
+                  ? [reaction]
+                  : <Event>[],
+              endedBy: QueryEnd.complete,
+            );
+          });
+          repository = createRepository(withLocalStorage: false);
+
+          await expectLater(
+            repository.likeEvent(
+              eventId: newEventId,
+              authorPubkey: testAuthorPubkey,
+              addressableId: coordinate,
+              targetKind: 34235,
+            ),
+            throwsA(isA<AlreadyLikedException>()),
+          );
+
+          expect(
+            (await repository.getLikeRecordByCoordinate(
+              coordinate,
+            ))?.reactionEventId,
+            testReactionEventId,
+          );
+          verifyNever(
+            () => mockNostrClient.sendLike(
+              any(),
+              content: any(named: 'content'),
+              addressableId: any(named: 'addressableId'),
+              targetAuthorPubkey: any(named: 'targetAuthorPubkey'),
+              targetKind: any(named: 'targetKind'),
+            ),
+          );
+          when(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).thenAnswer((_) async => MockEvent());
+
+          await repository.unlikeEvent(
+            newEventId,
+            addressableId: coordinate,
+          );
+
+          expect(
+            await repository.getLikeRecordByCoordinate(coordinate),
+            isNull,
+          );
+          verify(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).called(1);
+        });
+
+        Event legacyDownvote() => createMockReaction(
+          id: testReactionEventId,
+          targetEventId: oldEventId,
+          authorPubkey: testUserPubkey,
+          content: '-',
+          tags: [
+            ['e', oldEventId],
+            ['a', legacyCoordinate],
+          ],
+        );
+
+        test('downvoteEvent finds the downvote left under the legacy key '
+            'instead of sending another', () async {
+          mockQueryEventsSequence([
+            <Event>[],
+            [legacyDownvote()],
+            <Event>[],
+          ]);
+          repository = createRepository(withLocalStorage: false);
+
+          await expectLater(
+            repository.downvoteEvent(
+              eventId: newEventId,
+              authorPubkey: testAuthorPubkey,
+              addressableId: coordinate,
+              targetKind: 34235,
+            ),
+            throwsA(isA<AlreadyDownvotedException>()),
+          );
+          verifyNever(
+            () => mockNostrClient.sendLike(
+              any(),
+              content: any(named: 'content'),
+              addressableId: any(named: 'addressableId'),
+              targetAuthorPubkey: any(named: 'targetAuthorPubkey'),
+              targetKind: any(named: 'targetKind'),
+            ),
+          );
+        });
+
+        test('removeDownvote deletes the downvote left under the legacy '
+            'key', () async {
+          mockQueryEventsSequence([
+            <Event>[],
+            [legacyDownvote()],
+            <Event>[],
+          ]);
+          when(
+            () => mockNostrClient.deleteEvent(any()),
+          ).thenAnswer((_) async => MockEvent());
+          repository = createRepository(withLocalStorage: false);
+
+          await repository.removeDownvote(
+            newEventId,
+            addressableId: coordinate,
+          );
+
+          verify(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).called(1);
+        });
+      });
+
+      test('resolves the like stored under the legacy key', () async {
+        stubLegacyRecord();
+        repository = createRepository();
+        await repository.initialize();
+
+        expect(
+          await repository.isLikedResolvingCoordinate(
+            eventId: newEventId,
+            addressableId: coordinate,
+          ),
+          isTrue,
+        );
+      });
+
+      test(
+        'toggleLike unlikes the legacy reaction rather than creating a '
+        'duplicate',
+        () async {
+          stubLegacyRecord();
+          when(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).thenAnswer((_) async => MockEvent());
+          when(
+            () => mockLocalStorage.deleteLikeRecord(oldEventId),
+          ).thenAnswer((_) async => true);
+          repository = createRepository();
+          await repository.initialize();
+
+          final isNowLiked = await repository.toggleLike(
+            eventId: newEventId,
+            authorPubkey: testAuthorPubkey,
+            addressableId: coordinate,
+            targetKind: 34235,
+          );
+
+          expect(isNowLiked, isFalse);
+          verify(
+            () => mockNostrClient.deleteEvent(testReactionEventId),
+          ).called(1);
+        },
+      );
+
+      test(
+        'getLikeCounts credits a 34236 coordinate to the real Kind 34236 '
+        'video, not to the alias of a 34235 video in the same batch',
+        () async {
+          const shortVideoId = 'short_video_id_1234567890abcdef';
+          const normalVideoId = 'normal_video_id_1234567890abcdef';
+          final reactionOnOlderShortVersion = createMockReaction(
+            id: 'reaction_short',
+            targetEventId: oldEventId,
+            authorPubkey: 'liker_a_pubkey_1234567890abcdef',
+            tags: [
+              ['e', oldEventId],
+              ['a', legacyCoordinate],
+            ],
+          );
+          mockQueryEventsSequence([
+            <Event>[],
+            [reactionOnOlderShortVersion],
+            <Event>[],
+          ]);
+
+          repository = createRepository();
+          final counts = await repository.getLikeCounts(
+            [shortVideoId, normalVideoId],
+            addressableIds: {
+              shortVideoId: legacyCoordinate,
+              normalVideoId: coordinate,
+            },
+          );
+
+          expect(counts, equals({shortVideoId: 1, normalVideoId: 0}));
+        },
+      );
+
+      test('getLikeCount counts a like tagged with the legacy key', () async {
+        const liker = 'liker_a_pubkey_1234567890abcdef';
+        final legacyTaggedReaction = createMockReaction(
+          id: 'reaction_legacy',
+          targetEventId: oldEventId,
+          authorPubkey: liker,
+          tags: [
+            ['e', oldEventId],
+            ['a', legacyCoordinate],
+          ],
+        );
+        mockQueryEventsSequence([
+          <Event>[],
+          [legacyTaggedReaction],
+          <Event>[],
+        ]);
+
+        repository = createRepository();
+        final count = await repository.getLikeCount(
+          newEventId,
+          addressableId: coordinate,
+        );
+
+        expect(count, equals(1));
+      });
+    });
+
     group('unlikeEvent resolves by coordinate (#6020)', () {
       const oldEventId = 'old_event_id_1234567890abcdef';
       const newEventId = 'new_event_id_1234567890abcdef';

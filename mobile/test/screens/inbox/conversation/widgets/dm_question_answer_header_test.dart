@@ -26,9 +26,11 @@ VideoEvent _cited({
   String dTag = 'video-d',
   String? id,
   String? question = 'Ask me anything',
+  int? eventKind,
 }) => VideoEvent(
   id: id ?? _videoId,
   pubkey: pubkey ?? _creator,
+  eventKind: eventKind,
   createdAt: 1757385000,
   content: '',
   timestamp: DateTime.utc(2026),
@@ -175,6 +177,26 @@ void main() {
             equals('34236:$_creator:video-d'),
           );
         }
+      });
+
+      test('names a Kind 34235 video by its own kind and address', () {
+        final context = DmQuestionAnswerHeader.replyContextFor(
+          _answer(
+            citation: DmSharedVideoRef(
+              coordinateOrId: _videoId,
+              videoKind: DmSharedVideoKind.shortVideo,
+              authorPubkey: _creator,
+            ),
+          ),
+          citedVideo: _cited(eventKind: 34235),
+          creatorPubkey: _creator,
+        );
+
+        expect(context?.rootEventKind, equals(34235));
+        expect(
+          context?.rootAddressableId,
+          equals('34235:$_creator:video-d'),
+        );
       });
 
       test("puts the creator's own question on the sticker, not the "

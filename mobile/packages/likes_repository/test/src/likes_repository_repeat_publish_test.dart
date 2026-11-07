@@ -881,53 +881,73 @@ void main() {
         },
       );
 
-      test(
-        'joins startup reconciliation and adopts the reaction it filed under '
-        'a superseded revision of the tapped coordinate',
-        () async {
-          // The snapshot files the like under its own `e` target — the
-          // revision that was current when it was cast — and under the
-          // coordinate. The tapped event id holds only this tap's
-          // placeholder, so the coordinate is the one place the like shows.
-          final gate = gateRelaySnapshot();
-          stubSendLike(() async => reaction(id: freshReactionId));
-          when(
-            () => nostrClient.deleteEvent(landedReactionId),
-          ).thenAnswer((_) async => _MockEvent());
+      for (final usesLegacyCoordinate in [false, true]) {
+        for (final isSupersededRevision in [false, true]) {
+          test(
+            'joins startup reconciliation and adopts a '
+            '${usesLegacyCoordinate ? 'legacy' : 'same-kind'} reaction on the '
+            '${isSupersededRevision ? 'superseded' : 'current'} revision',
+            () async {
+              // The snapshot files the like under its own `e` target — the
+              // revision that was current when it was cast — and under the
+              // coordinate. For an earlier revision, only the coordinate
+              // reveals the reaction. A legacy coordinate must also replace
+              // the canonical placeholder without leaving its index behind.
+              final tappedCoordinate = usesLegacyCoordinate
+                  ? '34235:$author:repeat-like-d-tag'
+                  : coordinate;
+              final reactionTarget = isSupersededRevision
+                  ? editedTarget
+                  : target;
+              final gate = gateRelaySnapshot();
+              stubSendLike(() async => reaction(id: freshReactionId));
+              when(
+                () => nostrClient.deleteEvent(landedReactionId),
+              ).thenAnswer((_) async => _MockEvent());
 
-          final initialization = repository.initialize();
-          await Future<void>.delayed(Duration.zero);
-          final like = repository.likeEvent(
-            eventId: target,
-            authorPubkey: author,
-            addressableId: coordinate,
-          );
-          await Future<void>.delayed(Duration.zero);
-          gate.land(
-            reactions: [
-              reaction(
-                id: landedReactionId,
-                tags: [
-                  ['e', editedTarget],
-                  ['a', coordinate],
+              final initialization = repository.initialize();
+              await Future<void>.delayed(Duration.zero);
+              final like = repository.likeEvent(
+                eventId: target,
+                authorPubkey: author,
+                addressableId: tappedCoordinate,
+              );
+              await Future<void>.delayed(Duration.zero);
+              gate.land(
+                reactions: [
+                  reaction(
+                    id: landedReactionId,
+                    tags: [
+                      ['e', reactionTarget],
+                      ['a', coordinate],
+                    ],
+                  ),
                 ],
-              ),
-            ],
+              );
+              await initialization;
+
+              await expectLater(like, throwsA(isA<AlreadyLikedException>()));
+              expectNoPublish();
+              expectNoTargetLookup();
+
+              // The adopted reaction answers the tapped target, so unliking it
+              // publishes the Kind 5 instead of discarding a placeholder.
+              await repository.unlikeEvent(
+                target,
+                addressableId: tappedCoordinate,
+              );
+              verify(() => nostrClient.deleteEvent(landedReactionId)).called(1);
+              expect(await repository.isLiked(reactionTarget), isFalse);
+              expect(
+                await repository.isLikedByCoordinate(tappedCoordinate),
+                isFalse,
+              );
+              expect(await repository.isLikedByCoordinate(coordinate), isFalse);
+              verify(() => storage.deleteLikeRecord(reactionTarget)).called(1);
+            },
           );
-          await initialization;
-
-          await expectLater(like, throwsA(isA<AlreadyLikedException>()));
-          expectNoPublish();
-
-          // The adopted reaction answers the tapped target, so unliking it
-          // publishes the Kind 5 instead of discarding a placeholder.
-          await repository.unlikeEvent(target, addressableId: coordinate);
-          verify(() => nostrClient.deleteEvent(landedReactionId)).called(1);
-          expect(await repository.isLiked(editedTarget), isFalse);
-          expect(await repository.isLikedByCoordinate(coordinate), isFalse);
-          verify(() => storage.deleteLikeRecord(editedTarget)).called(1);
-        },
-      );
+        }
+      }
 
       test(
         'joins startup reconciliation and keeps its coordinate-less reaction '
