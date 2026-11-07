@@ -186,6 +186,9 @@ final class CommentsListState extends Equatable {
   /// Whether the viewer chose to see the comments the owner hid.
   final bool showHiddenComments;
 
+  /// Whether this root has the coordinate required to persist moderation.
+  bool get supportsModeration => rootAddressableId?.isNotEmpty ?? false;
+
   /// Whether the viewer owns the video, and so moderates its comments.
   bool get isViewerRootAuthor {
     final viewer = viewerPubkey;

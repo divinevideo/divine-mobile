@@ -134,6 +134,30 @@ void main() {
         expect(find.byType(HiddenCommentsNotice), findsNothing);
       });
 
+      for (final coordinate in <String?>[
+        null,
+        '34235:$testVideoAuthorPubkey:video',
+      ]) {
+        testWidgets(
+          'passes root moderation capability for coordinate $coordinate',
+          (tester) async {
+            final state = CommentsListState(
+              rootEventId: testVideoEventId,
+              rootAuthorPubkey: testVideoAuthorPubkey,
+              rootAddressableId: coordinate,
+              viewerPubkey: testVideoAuthorPubkey,
+              status: CommentsStatus.success,
+              commentsById: {shown.id: shown},
+            );
+            await tester.pumpWidget(buildTestWidget(listState: state));
+            await tester.pump();
+            final item = tester.widget<CommentItem>(find.byType(CommentItem));
+            expect(item.viewerOwnsVideo, isTrue);
+            expect(item.supportsModeration, coordinate != null);
+          },
+        );
+      }
+
       testWidgets('shows them below a notice once the viewer asks', (
         tester,
       ) async {

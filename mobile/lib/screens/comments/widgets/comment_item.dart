@@ -54,6 +54,7 @@ class CommentItem extends ConsumerStatefulWidget {
     this.depth = 0,
     this.isHiddenByOwner = false,
     this.viewerOwnsVideo = false,
+    this.supportsModeration = true,
     this.repliesToHiddenComment = false,
     super.key,
   });
@@ -68,8 +69,13 @@ class CommentItem extends ConsumerStatefulWidget {
   /// the viewer chose to see hidden comments, and says so.
   final bool isHiddenByOwner;
 
-  /// Whether the viewer owns the video, and so can hide or show the comment.
+  /// Whether the viewer owns the video. Creator Hide/Show also requires
+  /// [supportsModeration]; ownership labels do not.
   final bool viewerOwnsVideo;
+
+  /// Whether the root has the coordinate required to save creator moderation.
+  /// Ownership labels still apply when this is false, but Hide/Show does not.
+  final bool supportsModeration;
 
   /// Whether the comment answers one the video owner hid, whose author the
   /// reply line then leaves out.
@@ -316,7 +322,7 @@ class _CommentItemState extends ConsumerState<CommentItem> {
         context,
         commentId: widget.comment.id,
         authorPubkey: widget.comment.authorPubkey,
-        viewerOwnsVideo: listBloc != null,
+        viewerOwnsVideo: listBloc != null && widget.supportsModeration,
         isHidden: widget.isHiddenByOwner,
       );
     }

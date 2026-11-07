@@ -190,6 +190,7 @@ class _CommentsListState extends State<CommentsList> {
                       depth: node.depth,
                       isHiddenByOwner: state.isHiddenByOwner(node.comment),
                       viewerOwnsVideo: state.isViewerRootAuthor,
+                      supportsModeration: state.supportsModeration,
                       repliesToHiddenComment: state.repliesToHiddenComment(
                         node.comment,
                       ),

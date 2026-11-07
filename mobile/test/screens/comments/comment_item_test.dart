@@ -104,6 +104,7 @@ void main() {
     List<Override>? overrides,
     bool isHiddenByOwner = false,
     bool repliesToHiddenComment = false,
+    bool supportsModeration = true,
     _MockListBloc? listBloc,
   }) {
     comment ??= CommentBuilder()
@@ -131,6 +132,7 @@ void main() {
                 comment: comment,
                 isHiddenByOwner: isHiddenByOwner,
                 viewerOwnsVideo: listBloc != null,
+                supportsModeration: supportsModeration,
                 repliesToHiddenComment: repliesToHiddenComment,
               ),
             ),
@@ -253,6 +255,27 @@ void main() {
       expect(find.text(l10n.commentHiddenByCreator), findsNothing);
       expect(find.text(l10n.commentHiddenByYou), findsNothing);
     });
+
+    testWidgets(
+      'omits unsupported creator moderation without removing report',
+      (tester) async {
+        final mocks = buildMocks();
+        await tester.pumpWidget(
+          buildTestWidget(
+            'unwanted',
+            composerBloc: mocks.composer,
+            reactionsBloc: mocks.reactions,
+            listBloc: _MockListBloc(),
+            supportsModeration: false,
+          ),
+        );
+        await tester.longPress(find.text('unwanted'));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.commentOptionsHideLabel), findsNothing);
+        expect(find.text(l10n.commentOptionsShowLabel), findsNothing);
+        expect(find.text(l10n.commentOptionsFlagContentLabel), findsOneWidget);
+      },
+    );
 
     testWidgets('lets the owner hide a comment from its menu', (tester) async {
       final mocks = buildMocks();
