@@ -25,7 +25,12 @@ class ReportTarget extends Equatable {
     this.videoUrl,
     this.additionalContext,
     this.addressableCoordinate,
-  });
+    this.publishesPublicReport = true,
+    this.messageExcerpt,
+  }) : assert(
+         messageExcerpt == null || !publishesPublicReport,
+         'a message excerpt is only ever sent with a private report',
+       );
 
   /// Id of the reported event. Synthetic (`user_<pubkey>`) for a user
   /// report, which names no event: only local report history keys on it.
@@ -53,6 +58,17 @@ class ReportTarget extends Equatable {
   /// The `<kind>:<pubkey>:<d>` coordinate of a reported addressable event,
   /// such as a list. Published as an `a` tag beside the NIP-56 targets.
   final String? addressableCoordinate;
+
+  /// Whether the report also goes out as a public NIP-56 event. False for a
+  /// report made from a direct message: that event is signed by the reporter
+  /// and names the reported account, so it would tie the reporter to the
+  /// person they message (#7340).
+  final bool publishesPublicReport;
+
+  /// The reported message as the reporter's device shows it, which the
+  /// reporter may choose to send privately to moderators. Only a private
+  /// report carries one.
+  final String? messageExcerpt;
 
   /// Header used in the moderation DM (e.g. "Content Report"). Internal-only.
   final String moderationKindLabel;
@@ -85,12 +101,27 @@ class ReportTarget extends Equatable {
     videoUrl,
     additionalContext,
     addressableCoordinate,
+    publishesPublicReport,
+    messageExcerpt,
     moderationKindLabel,
     moderationEventLabel,
   ];
 }
 
-enum ReportSubmissionStatus { editing, submitting, submitted, failure }
+enum ReportSubmissionStatus {
+  editing,
+  submitting,
+  submitted,
+  failure,
+
+  /// The report with the included message is larger than its moderation DM
+  /// can carry; sending it without the message would fit.
+  tooLong,
+
+  /// The details alone make the report larger than its moderation DM can
+  /// carry, so the reporter has to shorten them.
+  detailsTooLong,
+}
 
 class ReportSubmissionState extends Equatable {
   const ReportSubmissionState({this.status = ReportSubmissionStatus.editing});
@@ -116,10 +147,13 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
   final ContentReportingServiceResolver _resolveContentReportingService;
   final ReportTarget _target;
 
+  /// [includeMessage] sends the target's [ReportTarget.messageExcerpt] to
+  /// moderators, which the reporter has to opt into.
   Future<void> submit({
     required ContentFilterReason reason,
     required String reasonTitle,
     required String details,
+    bool includeMessage = false,
   }) async {
     if (state.status
         case ReportSubmissionStatus.submitting ||
@@ -137,6 +171,12 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
         ..writeln(
           '${_target.moderationEventLabel}: ${_target.moderationSubject}',
         );
+      // A private message report has no public event or ticket to name the
+      // sender, and moderators can't resolve a message ID, so the DM says.
+      // A `p` tag would make the sender a member of the moderation room.
+      if (!_target.isUserReport && !_target.publishesPublicReport) {
+        content.writeln('Sender Pubkey: ${_target.authorPubkey}');
+      }
       if (details.isNotEmpty) content.writeln('Details: $details');
       final tags = ContentReportingService.moderationDmTags(
         reason: reason,
@@ -150,6 +190,7 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
               details: details,
               moderationContent: content.toString().trimRight(),
               moderationTags: tags,
+              publishToRelays: _target.publishesPublicReport,
             )
           : await service.reportContent(
               eventId: _target.eventId,
@@ -161,13 +202,22 @@ class ReportSubmissionCubit extends Cubit<ReportSubmissionState> {
               moderationTags: tags,
               additionalContext: _target.additionalContext,
               addressableCoordinate: _target.addressableCoordinate,
+              publishToRelays: _target.publishesPublicReport,
+              unverifiedMessageExcerpt: includeMessage
+                  ? _target.messageExcerpt
+                  : null,
             );
       if (isClosed) return;
       emit(
         ReportSubmissionState(
-          status: result.isSilentSuccess
-              ? ReportSubmissionStatus.submitted
-              : ReportSubmissionStatus.failure,
+          status: switch (result) {
+            _ when result.isSilentSuccess => ReportSubmissionStatus.submitted,
+            ReportResult(delivery: ReportDelivery.tooLong) =>
+              ReportSubmissionStatus.tooLong,
+            ReportResult(delivery: ReportDelivery.detailsTooLong) =>
+              ReportSubmissionStatus.detailsTooLong,
+            _ => ReportSubmissionStatus.failure,
+          },
         ),
       );
     } catch (e, stackTrace) {

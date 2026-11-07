@@ -2464,4 +2464,324 @@ void main() {
       expectOneReportedStateError();
     });
   });
+
+  // A report made from a direct message never becomes a public kind-1984,
+  // and the reporter may include the reported message privately (#7340).
+  group('direct-message reports', () {
+    late MockNostrClient mockNostrClient;
+    final messageId = 'a' * 64;
+    const messageText = 'the message they sent me';
+
+    setUp(() {
+      mockNostrClient = createMockNostrService();
+      when(() => mockNostrClient.publicKey).thenReturn('test_pubkey_hex');
+      when(
+        () => mockReportingService.reportContent(
+          eventId: any(named: 'eventId'),
+          authorPubkey: any(named: 'authorPubkey'),
+          reason: any(named: 'reason'),
+          details: any(named: 'details'),
+          sourceRelay: any(named: 'sourceRelay'),
+          additionalContext: any(named: 'additionalContext'),
+          hashtags: any(named: 'hashtags'),
+          moderationContent: any(named: 'moderationContent'),
+          moderationTags: any(named: 'moderationTags'),
+          publishToRelays: any(named: 'publishToRelays'),
+          unverifiedMessageExcerpt: any(named: 'unverifiedMessageExcerpt'),
+        ),
+      ).thenAnswer(
+        (_) async => ReportResult.createSuccess(
+          'test_report_id',
+          delivery: ReportDelivery.queued,
+        ),
+      );
+      when(
+        () => mockReportingService.reportUser(
+          userPubkey: any(named: 'userPubkey'),
+          reason: any(named: 'reason'),
+          details: any(named: 'details'),
+          relatedEventIds: any(named: 'relatedEventIds'),
+          moderationContent: any(named: 'moderationContent'),
+          moderationTags: any(named: 'moderationTags'),
+          publishToRelays: any(named: 'publishToRelays'),
+        ),
+      ).thenAnswer(
+        (_) async => ReportResult.createSuccess(
+          'test_user_report_id',
+          delivery: ReportDelivery.queued,
+        ),
+      );
+    });
+
+    Future<void> open(
+      WidgetTester tester,
+      Future<void> Function(BuildContext context) show,
+    ) async {
+      await setLargeSurface(tester);
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => show(context),
+                  child: const Text('Open Report'),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        testProviderScope(
+          mockNostrService: mockNostrClient,
+          additionalOverrides: [
+            contentReportingServiceProvider.overrideWith(
+              (ref) async => mockReportingService,
+            ),
+            contentBlocklistRepositoryProvider.overrideWith(
+              (ref) => mockBlocklistRepository,
+            ),
+          ],
+          child: MaterialApp.router(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open Report'));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> openMessageReport(
+      WidgetTester tester, {
+      String text = messageText,
+    }) => open(
+      tester,
+      (context) => ReportContentDialog.showForMessage(
+        context,
+        messageId: messageId,
+        senderPubkey: syntheticTestPubkey,
+        messageText: text,
+      ),
+    );
+
+    Finder includeMessage() =>
+        find.widgetWithText(DivineCheckboxTile, l10n.reportIncludeMessageTitle);
+
+    Future<void> pickSpamAndSubmit(WidgetTester tester) async {
+      await tester.tap(find.text(l10n.reportReasonSpam));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
+      await tester.pumpAndSettle();
+    }
+
+    (bool, String?) messageReportSent() {
+      final captured = verify(
+        () => mockReportingService.reportContent(
+          eventId: messageId,
+          authorPubkey: syntheticTestPubkey,
+          reason: any(named: 'reason'),
+          details: any(named: 'details'),
+          sourceRelay: any(named: 'sourceRelay'),
+          additionalContext: any(named: 'additionalContext'),
+          hashtags: any(named: 'hashtags'),
+          moderationContent: any(named: 'moderationContent'),
+          moderationTags: any(named: 'moderationTags'),
+          publishToRelays: captureAny(named: 'publishToRelays'),
+          unverifiedMessageExcerpt: captureAny(
+            named: 'unverifiedMessageExcerpt',
+          ),
+        ),
+      ).captured;
+      return (captured[0] as bool, captured[1] as String?);
+    }
+
+    testWidgets('a message report says it stays private and offers the '
+        'message, unticked', (tester) async {
+      await openMessageReport(tester);
+
+      expect(find.text(l10n.reportPrivateNotice), findsOneWidget);
+      expect(
+        tester.widget<DivineCheckboxTile>(includeMessage()).value,
+        isFalse,
+      );
+    });
+
+    testWidgets('submitting without ticking sends neither a public event nor '
+        'the message', (tester) async {
+      await openMessageReport(tester);
+
+      await pickSpamAndSubmit(tester);
+
+      expect(messageReportSent(), (false, null));
+    });
+
+    testWidgets('ticking the box sends the message as the unverified excerpt', (
+      tester,
+    ) async {
+      await openMessageReport(tester);
+
+      await tester.tap(find.text(l10n.reportReasonSpam));
+      await tester.pumpAndSettle();
+      // The sheet's own scroll view, not the note field's inner one.
+      await scrollUntilTappable(
+        tester,
+        includeMessage(),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(ReportContentDialog),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.tap(includeMessage());
+      await tester.pumpAndSettle();
+      expect(tester.widget<DivineCheckboxTile>(includeMessage()).value, isTrue);
+      await tester.tap(find.widgetWithText(DivineButton, l10n.reportSubmit));
+      await tester.pumpAndSettle();
+
+      expect(messageReportSent(), (false, messageText));
+    });
+
+    testWidgets('a message without text offers nothing to include', (
+      tester,
+    ) async {
+      await openMessageReport(tester, text: '   ');
+
+      expect(find.text(l10n.reportPrivateNotice), findsOneWidget);
+      expect(includeMessage(), findsNothing);
+    });
+
+    testWidgets('a report too large to send says so and stays open', (
+      tester,
+    ) async {
+      when(
+        () => mockReportingService.reportContent(
+          eventId: any(named: 'eventId'),
+          authorPubkey: any(named: 'authorPubkey'),
+          reason: any(named: 'reason'),
+          details: any(named: 'details'),
+          sourceRelay: any(named: 'sourceRelay'),
+          additionalContext: any(named: 'additionalContext'),
+          hashtags: any(named: 'hashtags'),
+          moderationContent: any(named: 'moderationContent'),
+          moderationTags: any(named: 'moderationTags'),
+          publishToRelays: any(named: 'publishToRelays'),
+          unverifiedMessageExcerpt: any(named: 'unverifiedMessageExcerpt'),
+        ),
+      ).thenAnswer((_) async => ReportResult.tooLong('too large'));
+      await openMessageReport(tester);
+
+      await pickSpamAndSubmit(tester);
+
+      expect(
+        find.text(l10n.reportMessageTooLong(l10n.reportIncludeMessageTitle)),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.reportFailed), findsNothing);
+      expect(
+        find.widgetWithText(DivineButton, l10n.reportSubmit),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('details too large to send ask for shorter details and the '
+        'sheet stays open', (tester) async {
+      when(
+        () => mockReportingService.reportContent(
+          eventId: any(named: 'eventId'),
+          authorPubkey: any(named: 'authorPubkey'),
+          reason: any(named: 'reason'),
+          details: any(named: 'details'),
+          sourceRelay: any(named: 'sourceRelay'),
+          additionalContext: any(named: 'additionalContext'),
+          hashtags: any(named: 'hashtags'),
+          moderationContent: any(named: 'moderationContent'),
+          moderationTags: any(named: 'moderationTags'),
+          publishToRelays: any(named: 'publishToRelays'),
+          unverifiedMessageExcerpt: any(named: 'unverifiedMessageExcerpt'),
+        ),
+      ).thenAnswer((_) async => ReportResult.detailsTooLong('too large'));
+      await openMessageReport(tester);
+
+      await pickSpamAndSubmit(tester);
+
+      expect(find.text(l10n.reportDetailsTooLong), findsOneWidget);
+      expect(
+        find.text(l10n.reportMessageTooLong(l10n.reportIncludeMessageTitle)),
+        findsNothing,
+      );
+      expect(find.text(l10n.reportFailed), findsNothing);
+      expect(
+        find.widgetWithText(DivineButton, l10n.reportSubmit),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a user report from a DM screen says it stays private and is '
+        'filed without a public event', (tester) async {
+      await open(
+        tester,
+        (context) => ReportContentDialog.showForUser(
+          context,
+          userPubkey: syntheticTestPubkey,
+          fromDirectMessages: true,
+        ),
+      );
+
+      expect(find.text(l10n.reportPrivateNotice), findsOneWidget);
+      expect(includeMessage(), findsNothing);
+      await pickSpamAndSubmit(tester);
+
+      expect(
+        verify(
+          () => mockReportingService.reportUser(
+            userPubkey: syntheticTestPubkey,
+            reason: any(named: 'reason'),
+            details: any(named: 'details'),
+            relatedEventIds: any(named: 'relatedEventIds'),
+            moderationContent: any(named: 'moderationContent'),
+            moderationTags: any(named: 'moderationTags'),
+            publishToRelays: captureAny(named: 'publishToRelays'),
+          ),
+        ).captured.single,
+        isFalse,
+      );
+    });
+
+    testWidgets('a user report from a profile says nothing about privacy', (
+      tester,
+    ) async {
+      await open(
+        tester,
+        (context) => ReportContentDialog.showForUser(
+          context,
+          userPubkey: syntheticTestPubkey,
+        ),
+      );
+
+      expect(find.text(l10n.reportPrivateNotice), findsNothing);
+      await pickSpamAndSubmit(tester);
+
+      expect(
+        verify(
+          () => mockReportingService.reportUser(
+            userPubkey: syntheticTestPubkey,
+            reason: any(named: 'reason'),
+            details: any(named: 'details'),
+            relatedEventIds: any(named: 'relatedEventIds'),
+            moderationContent: any(named: 'moderationContent'),
+            moderationTags: any(named: 'moderationTags'),
+            publishToRelays: captureAny(named: 'publishToRelays'),
+          ),
+        ).captured.single,
+        isTrue,
+      );
+    });
+  });
 }

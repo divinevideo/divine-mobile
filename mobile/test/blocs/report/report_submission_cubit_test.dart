@@ -373,4 +373,205 @@ void main() {
       },
     );
   });
+
+  // Reports made from a direct message never become a public kind-1984
+  // (#7340).
+  group('private targets', () {
+    const excerpt = 'the message they sent me';
+    const messageTarget = ReportTarget(
+      eventId:
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      authorPubkey:
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      moderationKindLabel: 'DM Message Report',
+      moderationEventLabel: 'Message ID',
+      publishesPublicReport: false,
+      messageExcerpt: excerpt,
+    );
+
+    void stubPrivateContent(ReportResult result) => when(
+      () => service.reportContent(
+        eventId: any(named: 'eventId'),
+        authorPubkey: any(named: 'authorPubkey'),
+        reason: any(named: 'reason'),
+        details: any(named: 'details'),
+        sourceRelay: any(named: 'sourceRelay'),
+        moderationContent: any(named: 'moderationContent'),
+        moderationTags: any(named: 'moderationTags'),
+        publishToRelays: false,
+        unverifiedMessageExcerpt: any(named: 'unverifiedMessageExcerpt'),
+      ),
+    ).thenAnswer((_) async => result);
+
+    String? excerptSent() =>
+        verify(
+              () => service.reportContent(
+                eventId: messageTarget.eventId,
+                authorPubkey: messageTarget.authorPubkey,
+                reason: any(named: 'reason'),
+                details: any(named: 'details'),
+                sourceRelay: any(named: 'sourceRelay'),
+                moderationContent: any(named: 'moderationContent'),
+                moderationTags: any(named: 'moderationTags'),
+                publishToRelays: false,
+                unverifiedMessageExcerpt: captureAny(
+                  named: 'unverifiedMessageExcerpt',
+                ),
+              ),
+            ).captured.single
+            as String?;
+
+    setUp(
+      () => stubPrivateContent(
+        ReportResult.createSuccess('report', delivery: ReportDelivery.queued),
+      ),
+    );
+
+    test('a message report is filed without a public event, and without the '
+        'message unless the reporter includes it', () async {
+      final cubit = build(reportTarget: messageTarget);
+      addTearDown(cubit.close);
+
+      await submit(cubit);
+
+      expect(cubit.state.status, ReportSubmissionStatus.submitted);
+      expect(excerptSent(), isNull);
+    });
+
+    test(
+      'a message report names the sender, since nothing else does',
+      () async {
+        final cubit = build(reportTarget: messageTarget);
+        addTearDown(cubit.close);
+
+        await submit(cubit);
+
+        final content =
+            verify(
+                  () => service.reportContent(
+                    eventId: messageTarget.eventId,
+                    authorPubkey: messageTarget.authorPubkey,
+                    reason: any(named: 'reason'),
+                    details: any(named: 'details'),
+                    sourceRelay: any(named: 'sourceRelay'),
+                    moderationContent: captureAny(named: 'moderationContent'),
+                    moderationTags: any(named: 'moderationTags'),
+                    publishToRelays: false,
+                    unverifiedMessageExcerpt: any(
+                      named: 'unverifiedMessageExcerpt',
+                    ),
+                  ),
+                ).captured.single
+                as String;
+        expect(
+          content.split('\n'),
+          contains('Sender Pubkey: ${messageTarget.authorPubkey}'),
+        );
+      },
+    );
+
+    test('an included message is sent as the unverified excerpt', () async {
+      final cubit = build(reportTarget: messageTarget);
+      addTearDown(cubit.close);
+
+      await cubit.submit(
+        reason: ContentFilterReason.harassment,
+        reasonTitle: 'Harassment',
+        details: '',
+        includeMessage: true,
+      );
+
+      expect(excerptSent(), excerpt);
+    });
+
+    test('a report the moderation DM cannot carry ends in tooLong and can be '
+        'sent again', () async {
+      stubPrivateContent(ReportResult.tooLong('too large'));
+      final cubit = build(reportTarget: messageTarget);
+      addTearDown(cubit.close);
+
+      await submit(cubit);
+      expect(cubit.state.status, ReportSubmissionStatus.tooLong);
+
+      stubPrivateContent(
+        ReportResult.createSuccess('report', delivery: ReportDelivery.queued),
+      );
+      await submit(cubit);
+      expect(cubit.state.status, ReportSubmissionStatus.submitted);
+    });
+
+    test('a report whose details the moderation DM cannot carry ends in '
+        'detailsTooLong and can be sent again', () async {
+      stubPrivateContent(ReportResult.detailsTooLong('too large'));
+      final cubit = build(reportTarget: messageTarget);
+      addTearDown(cubit.close);
+
+      await submit(cubit);
+      expect(cubit.state.status, ReportSubmissionStatus.detailsTooLong);
+
+      stubPrivateContent(
+        ReportResult.createSuccess('report', delivery: ReportDelivery.queued),
+      );
+      await submit(cubit);
+      expect(cubit.state.status, ReportSubmissionStatus.submitted);
+    });
+
+    test('a user report made from a DM screen is filed privately', () async {
+      when(
+        () => service.reportUser(
+          userPubkey: any(named: 'userPubkey'),
+          reason: any(named: 'reason'),
+          details: any(named: 'details'),
+          moderationContent: any(named: 'moderationContent'),
+          moderationTags: any(named: 'moderationTags'),
+          publishToRelays: any(named: 'publishToRelays'),
+        ),
+      ).thenAnswer(
+        (_) async => ReportResult.createSuccess(
+          'report',
+          delivery: ReportDelivery.queued,
+        ),
+      );
+      final cubit = build(
+        reportTarget: ReportTarget(
+          eventId: 'user_${target.authorPubkey}',
+          authorPubkey: target.authorPubkey,
+          userPubkey: target.authorPubkey,
+          moderationKindLabel: 'User Report',
+          moderationEventLabel: 'User Pubkey',
+          publishesPublicReport: false,
+        ),
+      );
+      addTearDown(cubit.close);
+
+      await submit(cubit);
+
+      expect(
+        verify(
+          () => service.reportUser(
+            userPubkey: target.authorPubkey,
+            reason: any(named: 'reason'),
+            details: any(named: 'details'),
+            moderationContent: any(named: 'moderationContent'),
+            moderationTags: any(named: 'moderationTags'),
+            publishToRelays: captureAny(named: 'publishToRelays'),
+          ),
+        ).captured.single,
+        isFalse,
+      );
+    });
+
+    test('a public target cannot carry a message excerpt', () {
+      expect(
+        () => ReportTarget(
+          eventId: target.eventId,
+          authorPubkey: target.authorPubkey,
+          moderationKindLabel: 'Content Report',
+          moderationEventLabel: 'Event',
+          messageExcerpt: excerpt,
+        ),
+        throwsAssertionError,
+      );
+    });
+  });
 }

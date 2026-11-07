@@ -49,6 +49,7 @@ import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/watermark_download_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
+import 'package:openvine/widgets/report_content_dialog.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -498,6 +499,118 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.text(l10n.followersUpdateFollowFailed), findsOneWidget);
+      });
+    });
+
+    // Both ways of reporting from a conversation open a private report: one
+    // that never becomes a public kind-1984 naming the counterparty (#7340).
+    group('reporting from a conversation', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      const received = 'the message they sent me';
+
+      Widget subjectWithReceivedMessage() => buildSubject(
+        state: ConversationState(
+          status: ConversationStatus.loaded,
+          messages: [
+            DmMessage(
+              id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+              conversationId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+              senderPubkey: otherPubkey,
+              content: received,
+              createdAt: now.millisecondsSinceEpoch ~/ 1000,
+              giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+            ),
+          ],
+        ),
+      );
+
+      void useTallSurface(WidgetTester tester) {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+      }
+
+      testWidgets('reporting a received message opens a private report that '
+          'offers that message', (tester) async {
+        useTallSurface(tester);
+        await tester.pumpWidget(subjectWithReceivedMessage());
+        await tester.pump();
+
+        await tester.longPress(find.text(received));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.dmMessageActionReport));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ReportContentDialog), findsOneWidget);
+        expect(find.text(l10n.reportPrivateNotice), findsOneWidget);
+        expect(find.text(l10n.reportIncludeMessageTitle), findsOneWidget);
+      });
+
+      // A file message's content is the encrypted file's URL, not words the
+      // sender wrote, so there is nothing readable to include.
+      testWidgets('reporting a received file message offers nothing to '
+          'include', (tester) async {
+        const fileUrl = 'https://media.example/encrypted';
+        useTallSurface(tester);
+        await tester.pumpWidget(
+          buildSubject(
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              messages: [
+                DmMessage(
+                  id: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+                  conversationId: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+                  senderPubkey: otherPubkey,
+                  content: fileUrl,
+                  createdAt: now.millisecondsSinceEpoch ~/ 1000,
+                  giftWrapId: 'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+                  messageKind: 15,
+                  fileMetadata: DmFileMetadata(
+                    fileType: 'image/jpeg',
+                    encryptionAlgorithm: 'aes-gcm',
+                    decryptionKey: '00' * 32,
+                    decryptionNonce: '00' * 12,
+                    fileHash: 'ab' * 32,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.longPress(find.text(fileUrl));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.dmMessageActionReport));
+        await tester.pumpAndSettle();
+
+        // The sheet did open as a private message report.
+        expect(find.text(l10n.reportPrivateNotice), findsOneWidget);
+        expect(find.text(l10n.reportIncludeMessageTitle), findsNothing);
+      });
+
+      testWidgets('reporting the account from the options sheet opens a '
+          'private report', (tester) async {
+        useTallSurface(tester);
+        await tester.pumpWidget(
+          buildSubject(
+            state: const ConversationState(status: ConversationStatus.loaded),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(
+          find.bySemanticsLabel(l10n.inboxConversationOptionsLabel),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.textContaining(l10n.profileReportDisplayName('')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ReportContentDialog), findsOneWidget);
+        expect(find.text(l10n.reportPrivateNotice), findsOneWidget);
+        expect(find.text(l10n.reportIncludeMessageTitle), findsNothing);
       });
     });
 
