@@ -147,6 +147,43 @@ void main() {
   tearDown(() => service.dispose());
 
   group('relay reconciliation before list mutations', () {
+    test('a queued retry cannot confirm a later permission proposal', () async {
+      final entered = Completer<void>();
+      final firstRead = Completer<_Read>();
+      var reads = 0;
+      answer(() {
+        if (reads++ == 0) {
+          entered.complete();
+          return firstRead.future;
+        }
+        return Future.value((
+          events: [remote],
+          timedOut: false,
+          noRelays: false,
+        ));
+      });
+      final editing = service.updateList(
+        listId: cached.id,
+        isCollaborative: true,
+        allowedCollaborators: [addedVideo],
+      );
+      await entered.future;
+      final retry = service.retryListSync(cached.id);
+      firstRead.complete((events: <Event>[], timedOut: true, noRelays: false));
+      expect(await editing, isFalse);
+      expect(await retry, isFalse);
+      expect(published, isEmpty);
+      expect(service.getListById(cached.id)!.hasPendingPermissionDraft, isTrue);
+      expect(
+        service
+            .getListById(cached.id)!
+            .localEditDraft!
+            .desired
+            .allowedCollaborators,
+        [addedVideo],
+      );
+    });
+
     test('offline metadata intent survives restart and preserves remote-only videos', () async {
       answer(() async => (events: <Event>[], timedOut: true, noRelays: false));
       expect(

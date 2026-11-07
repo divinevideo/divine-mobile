@@ -46,6 +46,38 @@ void main() {
 
   group('explicit conflict recovery', () {
     test(
+      'an unconfirmed permission draft can be explicitly discarded',
+      () async {
+        final service = _Service();
+        final baseline = list(isPublic: false, pending: false);
+        var current = baseline.copyWith(
+          localEditDraft: CuratedListEditDraft(
+            baseline: baseline,
+            desired: baseline.copyWith(isPublic: true),
+          ),
+        );
+        when(() => service.getListById(any())).thenAnswer((_) => current);
+        when(
+          () => service.discardLocalEditsAndAdoptRelay(baseline.authorScopedId),
+        ).thenAnswer((_) async {
+          current = baseline;
+          return true;
+        });
+        final cubit = editor(service, current);
+        addTearDown(cubit.close);
+        expect(cubit.state.permissionDraftPending, isTrue);
+        expect(cubit.state.hasRelayConflict, isFalse);
+        cubit.requestDiscardDraft();
+        expect(cubit.state.confirmDiscardDraft, isTrue);
+        await cubit.discardDraftAndAdoptRelay();
+        expect(cubit.state.permissionDraftPending, isFalse);
+        expect(cubit.state.isPublic, isFalse);
+        expect(cubit.state.canEdit, isTrue);
+        verifyNever(() => service.retryListSync(any()));
+      },
+    );
+
+    test(
       'adoption clears collaborator intent before a metadata-only save',
       () async {
         final service = _Service();

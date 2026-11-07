@@ -247,7 +247,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
     refreshRecoveryReadOnly();
     if (!isSessionCurrent ||
         state.isSaving ||
-        !state.hasRelayConflict ||
+        (!state.hasRelayConflict && !state.permissionDraftPending) ||
         state.recoveryReadOnly ||
         state.permissionRecoveryPending) {
       return;
@@ -269,7 +269,7 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
         listId == null ||
         service == null ||
         !state.confirmDiscardDraft ||
-        !state.hasRelayConflict ||
+        (!state.hasRelayConflict && !state.permissionDraftPending) ||
         state.isSaving ||
         state.recoveryReadOnly ||
         state.permissionRecoveryPending ||
@@ -511,12 +511,14 @@ class CuratedListInfoCubit extends Cubit<CuratedListInfoState>
             needsSync: pending?.needsSync ?? false,
             permissionRecoveryPending:
                 pending?.hasPendingPermissionRecovery ?? false,
+            permissionDraftPending: pending?.hasPendingPermissionDraft ?? false,
             status: updated.succeeded
                 ? CuratedListInfoStatus.saved
                 : updated.rejection ==
                       CuratedListUpdateRejection.privateListFull
                 ? CuratedListInfoStatus.privateListFull
-                : publicationUnconfirmed
+                : publicationUnconfirmed ||
+                      pending?.hasPendingPermissionDraft == true
                 ? CuratedListInfoStatus.permissionsUnconfirmed
                 : CuratedListInfoStatus.failure,
           ),
