@@ -186,6 +186,7 @@ void main() {
           final videos = _videos(4);
           final author = videos.first.pubkey;
           final first = [videos[0], videos[1].copyWith(pubkey: author)];
+          var secondPageRequests = 0;
           when(
             () => videosRepository.getNewVideos(
               limit: any(named: 'limit'),
@@ -193,8 +194,14 @@ void main() {
               cursor: any(named: 'cursor'),
               skipCache: any(named: 'skipCache'),
             ),
-          ).thenAnswer(
-            (call) async => switch (call.namedArguments[#cursor]) {
+          ).thenAnswer((call) async {
+            final cursor = call.namedArguments[#cursor];
+            // A walk that never stops would starve the test's timers and hang
+            // it, so fail on the first repeated request instead.
+            if (cursor == 'page-2' && secondPageRequests++ > 0) {
+              throw StateError('page-2 requested twice');
+            }
+            return switch (cursor) {
               null => HomeFeedResult(
                 videos: first,
                 hasMore: true,
@@ -207,8 +214,8 @@ void main() {
               ),
               'page-3' => HomeFeedResult(videos: [videos[3]], hasMore: false),
               _ => throw StateError('Unexpected cursor'),
-            },
-          );
+            };
+          });
           final container = createContainer();
           await container.read(newVideosFeedProvider.future);
 
@@ -218,6 +225,7 @@ void main() {
           expect(state.videos, repeatsCursor ? first : [...first, videos[3]]);
           expect(state.hasMoreContent, isFalse);
           expect(state.isLoadingMore, isFalse);
+          expect(secondPageRequests, equals(1));
         },
       );
     }

@@ -559,6 +559,7 @@ void main() {
           final first = [createTestVideo('1' * 64), createTestVideo('2' * 64)];
           final hidden = createTestVideo('3' * 64);
           final next = createTestVideo('4' * 64, pubkey: '1' * 64);
+          var secondPageRequests = 0;
           when(
             () => mockVideosRepository.getNewVideos(
               until: any(named: 'until'),
@@ -566,8 +567,14 @@ void main() {
               skipCache: any(named: 'skipCache'),
               revalidate: any(named: 'revalidate'),
             ),
-          ).thenAnswer(
-            (call) async => switch (call.namedArguments[#cursor]) {
+          ).thenAnswer((call) async {
+            final cursor = call.namedArguments[#cursor];
+            // A walk that never stops would starve the test's timers and hang
+            // it, so fail on the first repeated request instead.
+            if (cursor == 'page-2' && secondPageRequests++ > 0) {
+              throw StateError('page-2 requested twice');
+            }
+            return switch (cursor) {
               null => HomeFeedResult(
                 videos: first,
                 hasMore: true,
@@ -580,8 +587,8 @@ void main() {
               ),
               'page-3' => HomeFeedResult(videos: [next], hasMore: false),
               _ => throw StateError('Unexpected cursor'),
-            },
-          );
+            };
+          });
           final bloc = createBloc();
           addTearDown(bloc.close);
           bloc.add(const VideoFeedStarted(mode: FeedMode.latest));
@@ -593,6 +600,7 @@ void main() {
           expect(bloc.state.videos, repeatsCursor ? first : [...first, next]);
           expect(bloc.state.hasMore, isFalse);
           expect(bloc.state.isLoadingMore, isFalse);
+          expect(secondPageRequests, equals(1));
         },
       );
     }
