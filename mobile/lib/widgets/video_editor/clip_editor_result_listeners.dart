@@ -511,8 +511,9 @@ class _ClipDetachResultListener extends StatelessWidget {
           ),
         );
       case ClipDetachDiscarded():
-      // The clip the user asked to detach was removed while its placeholder
-      // rendered — nothing to place, and no action that warrants a snackbar.
+      // The clip the user asked to detach, or every other clip, was removed
+      // while it was being detached — nothing to place, and no action that
+      // warrants a snackbar.
       case null:
         break;
     }

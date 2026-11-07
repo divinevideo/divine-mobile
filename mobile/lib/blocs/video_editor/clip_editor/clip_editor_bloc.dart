@@ -2953,9 +2953,16 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
 
     final currentClips = state.clips;
     final currentIndex = currentClips.indexWhere((c) => c.id == clip.id);
-    if (currentIndex == -1) {
+    // Both were checked before the awaits above: the clip can have been
+    // deleted since, or every other clip deleted around it.
+    final discarded = currentIndex == -1
+        ? 'clip ${clip.id} no longer exists'
+        : placeholder == null && currentClips.length <= 1
+        ? 'clip ${clip.id} is now the only clip'
+        : null;
+    if (discarded != null) {
       Log.warning(
-        '⚠️ Detach discarded: clip ${clip.id} no longer exists',
+        '⚠️ Detach discarded: $discarded',
         name: 'ClipEditorBloc',
         category: LogCategory.video,
       );
