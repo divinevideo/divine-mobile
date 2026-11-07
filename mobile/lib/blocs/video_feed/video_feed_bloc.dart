@@ -914,14 +914,17 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       // and the duplicates of what is on screen drop out below. Ending the
       // feed instead would strand it whenever that fresh first load fails.
       final pagesByUntil = !usesCursor && !_isCursorOnly(source);
-      final result = await _fetchVideosForSource(
+      var result = await _fetchVideosForSource(
         source,
         // `until` is the oldest loaded video rather than `state.videos.last`,
-        // because the list is not always in `createdAt` order.
+        // because the list is not always in `createdAt` order. New reads
+        // `newVideosUntil` instead, so rows its creator limit hid are not
+        // requested again.
         until: pagesByUntil
-            ? state.videos
-                  .map((v) => v.createdAt)
-                  .reduce((a, b) => a < b ? a : b)
+            ? (source.type == VideoFeedSourceType.newVideos
+                  ? state.coordination.newVideosUntil ??
+                        _oldestTimestamp(state.videos)
+                  : _oldestTimestamp(state.videos))
             : null,
         paginationCursor: usesCursor ? state.paginationCursor : null,
         paginationGeneration: paginationGeneration,
@@ -929,6 +932,69 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       if (!_canEmitForSource(source, emit) ||
           paginationGeneration != _paginationGeneration) {
         return;
+      }
+
+      if (source.type == VideoFeedSourceType.newVideos) {
+        var previousUntil =
+            state.coordination.newVideosUntil ?? _oldestTimestamp(state.videos);
+        var previousCursor = state.paginationCursor;
+        while (true) {
+          final nextUntil = _oldestTimestamp(result.videos);
+          final nextCursor = result.paginationCursor;
+          final progressed = nextCursor != null
+              ? nextCursor != previousCursor
+              : nextUntil != null &&
+                    (previousUntil == null || nextUntil < previousUntil);
+          final hasMore = result.hasMore ?? result.videos.isNotEmpty;
+          final existingKeys = state.videos.map((v) => v.feedDedupKey).toSet();
+          final displayable = filterNewFeedVideos([
+            ...state.videos,
+            ...result.videos.where(
+              (v) => v.videoUrl != null && existingKeys.add(v.feedDedupKey),
+            ),
+          ]);
+          if (displayable.length > state.videos.length ||
+              !hasMore ||
+              !progressed) {
+            emit(
+              state.copyWith(
+                coordination: state.coordination.copyWith(
+                  newVideosUntil: nextUntil,
+                ),
+              ),
+            );
+            // Progress only decides whether to read another page: a page
+            // that showed nothing new ends the feed.
+            result = HomeFeedResult(
+              videos: result.videos,
+              paginationCursor: nextCursor,
+              hasMore: hasMore && displayable.length > state.videos.length,
+            );
+            break;
+          }
+          previousUntil = nextUntil;
+          previousCursor = nextCursor;
+          // Save the skipped page's position so a failed fetch retries here.
+          emit(
+            state.copyWith(
+              paginationCursor: nextCursor,
+              clearPaginationCursor: nextCursor == null,
+              coordination: state.coordination.copyWith(
+                newVideosUntil: nextUntil,
+              ),
+            ),
+          );
+          result = await _fetchVideosForSource(
+            source,
+            until: nextCursor == null ? nextUntil : null,
+            paginationCursor: nextCursor,
+            paginationGeneration: paginationGeneration,
+          );
+          if (!_canEmitForSource(source, emit) ||
+              paginationGeneration != _paginationGeneration) {
+            return;
+          }
+        }
       }
 
       // Filter out videos without valid URLs
@@ -940,7 +1006,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       // republished with fresh event IDs, and bare d-tags can collide across
       // authors, so the key is the full addressable coordinate when present.
       final seenVideoKeys = <String>{};
-      final updatedVideos = <VideoEvent>[];
+      var updatedVideos = <VideoEvent>[];
       for (final video in [...state.videos, ...validNewVideos]) {
         if (seenVideoKeys.add(video.feedDedupKey)) {
           updatedVideos.add(video);
@@ -952,6 +1018,9 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       // resurface already-seen ones.
       if (pagesByUntil) {
         updatedVideos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      }
+      if (source.type == VideoFeedSourceType.newVideos) {
+        updatedVideos = filterNewFeedVideos(updatedVideos);
       }
       final addedUniqueVideos = updatedVideos.length > state.videos.length;
 
@@ -1621,13 +1690,16 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       // replace the rest with fresh results, so fresh content appears right
       // after the current video. The active controller is preserved by
       // InfiniteVideoFeed's common-prefix handling, so it does not restart.
-      final displayedVideos = servedCache || preserveCurrentVideo
+      final mergedVideos = servedCache || preserveCurrentVideo
           ? _resumeManager.splice(
               existing: state.videos,
               fresh: validVideos,
               currentIndex: state.currentIndex,
             )
           : validVideos;
+      final displayedVideos = source.type == VideoFeedSourceType.newVideos
+          ? filterNewFeedVideos(mergedVideos)
+          : mergedVideos;
 
       if (feedLoad != null) {
         _feedTracker?.markFirstVideosReceived(feedLoad, displayedVideos.length);
@@ -1637,6 +1709,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
         state.copyWith(
           status: VideoFeedStatus.success,
           videos: displayedVideos,
+          coordination: state.coordination.copyWith(
+            newVideosUntil: source.type == VideoFeedSourceType.newVideos
+                ? _oldestTimestamp(result.videos)
+                : null,
+          ),
           isLoadingMore: false,
           hasMore: _hasMoreForSource(
             source,
@@ -1782,16 +1859,24 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     if (requireCurrentSource && state.source != source) return false;
 
     final mode = source.mode.name;
+    final displayedVideos = source.type == VideoFeedSourceType.newVideos
+        ? filterNewFeedVideos(cachedValid)
+        : cachedValid;
 
     // The cached window already starts at the resume position (already-watched
     // videos were dropped on write), so it is served at index 0.
     if (feedLoad != null) {
-      _feedTracker?.markFirstVideosReceived(feedLoad, cachedValid.length);
+      _feedTracker?.markFirstVideosReceived(feedLoad, displayedVideos.length);
     }
     emit(
       (baseState ?? state).copyWith(
         status: VideoFeedStatus.success,
-        videos: cachedValid,
+        videos: displayedVideos,
+        coordination: state.coordination.copyWith(
+          newVideosUntil: source.type == VideoFeedSourceType.newVideos
+              ? _oldestTimestamp(cachedValid)
+              : null,
+        ),
         currentIndex: 0,
         hasMore: true,
         clearPaginationCursor: true,
@@ -1802,7 +1887,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     if (feedLoad != null) {
       _feedTracker?.markFirstVisibleContent(
         feedLoad,
-        cachedValid.length,
+        displayedVideos.length,
         servedFromCache: true,
       );
     }
@@ -1812,7 +1897,7 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     _resumeManager.persistNow(
       pubkey: _userPubkey,
       mode: mode,
-      videos: cachedValid,
+      videos: displayedVideos,
       activeIndex: 0,
     );
     return true;
@@ -1842,6 +1927,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       );
     }
   }
+
+  int? _oldestTimestamp(List<VideoEvent> videos) => videos.isEmpty
+      ? null
+      : videos.map((v) => v.createdAt).reduce((a, b) => a < b ? a : b);
 
   /// Whether [source] has another page after [result].
   ///

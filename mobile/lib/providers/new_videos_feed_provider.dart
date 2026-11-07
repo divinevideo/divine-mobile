@@ -13,6 +13,7 @@ import 'package:openvine/state/video_feed_state.dart';
 import 'package:openvine/utils/video_nostr_enrichment.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 part 'new_videos_feed_provider.g.dart';
 
@@ -88,7 +89,7 @@ class NewVideosFeed extends _$NewVideosFeed {
         );
       }
 
-      final filteredVideos = _filterVideos(videos);
+      final filteredVideos = filterNewFeedVideos(_filterVideos(videos));
       _scheduleEnrichment(filteredVideos);
 
       Log.info(
@@ -131,64 +132,52 @@ class NewVideosFeed extends _$NewVideosFeed {
 
     try {
       final videosRepository = ref.read(videosRepositoryProvider);
-      final page = await videosRepository.getNewVideos(
-        limit: AppConstants.paginationBatchSize,
-        until: _paginationCursor == null ? _nextCursor : null,
-        cursor: _paginationCursor,
-      );
-      final newVideos = page.videos;
+      while (true) {
+        final requestedUntil = _nextCursor;
+        final requestedCursor = _paginationCursor;
+        final page = await videosRepository.getNewVideos(
+          limit: AppConstants.paginationBatchSize,
+          until: requestedCursor == null ? requestedUntil : null,
+          cursor: requestedCursor,
+        );
 
-      // A refresh can install a new first page while this request is pending.
-      // Its cursor and visible rows must not be overwritten by the old page.
-      if (!ref.mounted || paginationGeneration != _paginationGeneration) return;
+        // Refresh owns the new window and its cursors once it commits.
+        if (!ref.mounted || paginationGeneration != _paginationGeneration) {
+          return;
+        }
+        _nextCursor = getOldestTimestamp(page.videos);
+        _paginationCursor = page.paginationCursor;
+        final progressed = _paginationCursor != null
+            ? _paginationCursor != requestedCursor
+            : _nextCursor != null &&
+                  (requestedUntil == null || _nextCursor! < requestedUntil);
+        final hasMore = page.hasMore ?? false;
+        final dedupedNew = dedupeByFeedKey(
+          page.videos,
+          alreadySeen: currentState.videos.map((v) => v.feedDedupKey),
+        );
+        final allVideos = filterNewFeedVideos([
+          ...currentState.videos,
+          ..._filterVideos(dedupedNew),
+        ]);
+        final filteredNew = allVideos.skip(currentState.videos.length).toList();
 
-      _nextCursor = getOldestTimestamp(newVideos);
-      _paginationCursor = page.paginationCursor;
+        // A page with nothing new to show (capped, filtered or already
+        // shown) must not strand the viewer at the end of the window.
+        if (filteredNew.isEmpty && hasMore && progressed) continue;
 
-      if (newVideos.isEmpty) {
         state = AsyncData(
           currentState.copyWith(
-            hasMoreContent: page.hasMore ?? false,
+            videos: allVideos,
+            hasMoreContent: hasMore && filteredNew.isNotEmpty,
             isLoadingMore: false,
+            error: null,
+            lastUpdated: DateTime.now(),
           ),
         );
+        _scheduleEnrichment(filteredNew);
         return;
       }
-
-      final dedupedNew = dedupeByFeedKey(
-        newVideos,
-        alreadySeen: currentState.videos.map((v) => v.feedDedupKey),
-      );
-      final filteredNew = _filterVideos(dedupedNew);
-
-      if (filteredNew.isEmpty) {
-        state = AsyncData(
-          currentState.copyWith(
-            hasMoreContent: page.hasMore ?? false,
-            isLoadingMore: false,
-          ),
-        );
-        return;
-      }
-
-      final allVideos = [...currentState.videos, ...filteredNew];
-
-      Log.info(
-        'NewVideosFeed: Loaded ${filteredNew.length} more videos '
-        '(total: ${allVideos.length})',
-        name: 'NewVideosFeedProvider',
-        category: LogCategory.video,
-      );
-
-      state = AsyncData(
-        VideoFeedState(
-          videos: allVideos,
-          hasMoreContent: page.hasMore ?? false,
-          lastUpdated: DateTime.now(),
-        ),
-      );
-
-      _scheduleEnrichment(filteredNew);
     } catch (e) {
       Log.error(
         'NewVideosFeed: Error loading more: $e',

@@ -79,6 +79,157 @@ void main() {
       ).thenAnswer((_) async => subsequent ?? const HomeFeedResult(videos: []));
     }
 
+    group('creator limit', () {
+      test(
+        'keeps only the first two videos per creator in source order',
+        () async {
+          final videos = _videos(5);
+          final repeated = [
+            videos[0],
+            videos[1],
+            videos[2].copyWith(pubkey: videos[0].pubkey),
+            videos[3].copyWith(pubkey: videos[0].pubkey),
+            videos[4],
+          ];
+          stubPages(first: HomeFeedResult(videos: repeated, hasMore: true));
+
+          final state = await createContainer().read(
+            newVideosFeedProvider.future,
+          );
+
+          expect(state.videos, [
+            repeated[0],
+            repeated[1],
+            repeated[2],
+            repeated[4],
+          ]);
+          expect(state.hasMoreContent, isTrue);
+        },
+      );
+
+      test(
+        'skips capped pages and advances the raw timestamp cursor',
+        () async {
+          final videos = _videos(6);
+          final author = videos.first.pubkey;
+          final first = [videos[0], videos[1].copyWith(pubkey: author)];
+          final hidden = [
+            videos[2].copyWith(pubkey: author),
+            videos[3].copyWith(pubkey: author),
+          ];
+          when(
+            () => videosRepository.getNewVideos(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+              skipCache: any(named: 'skipCache'),
+            ),
+          ).thenAnswer((call) async {
+            final until = call.namedArguments[#until];
+            if (until == null) {
+              return HomeFeedResult(videos: first, hasMore: true);
+            }
+            if (until == first.last.createdAt) {
+              return HomeFeedResult(videos: hidden, hasMore: true);
+            }
+            if (until == hidden.last.createdAt) {
+              return HomeFeedResult(videos: [videos[4]], hasMore: false);
+            }
+            throw StateError('Unexpected pagination timestamp');
+          });
+          final container = createContainer();
+          await container.read(newVideosFeedProvider.future);
+
+          await container.read(newVideosFeedProvider.notifier).loadMore();
+
+          final state = container.read(newVideosFeedProvider).requireValue;
+          expect(state.videos, [...first, videos[4]]);
+          expect(state.hasMoreContent, isFalse);
+        },
+      );
+
+      test('refresh starts a fresh creator allowance', () async {
+        final first = _videos(
+          3,
+          idPrefix: 'old',
+        ).map((v) => v.copyWith(pubkey: '1' * 64)).toList();
+        final fresh = _videos(
+          3,
+          idPrefix: 'fresh',
+        ).map((v) => v.copyWith(pubkey: '1' * 64)).toList();
+        when(
+          () => videosRepository.getNewVideos(
+            limit: any(named: 'limit'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer(
+          (call) async => HomeFeedResult(
+            videos: call.namedArguments[#skipCache] == true ? fresh : first,
+            hasMore: false,
+          ),
+        );
+        final container = createContainer();
+        await container.read(newVideosFeedProvider.future);
+
+        await container.read(newVideosFeedProvider.notifier).refresh();
+
+        expect(
+          container.read(newVideosFeedProvider).requireValue.videos,
+          fresh.take(2),
+        );
+      });
+    });
+
+    for (final repeatsCursor in [false, true]) {
+      test(
+        'capped opaque pages keep advancing: repeated cursor $repeatsCursor',
+        () async {
+          final videos = _videos(4);
+          final author = videos.first.pubkey;
+          final first = [videos[0], videos[1].copyWith(pubkey: author)];
+          var secondPageRequests = 0;
+          when(
+            () => videosRepository.getNewVideos(
+              limit: any(named: 'limit'),
+              until: any(named: 'until'),
+              cursor: any(named: 'cursor'),
+              skipCache: any(named: 'skipCache'),
+            ),
+          ).thenAnswer((call) async {
+            final cursor = call.namedArguments[#cursor];
+            // A walk that never stops would starve the test's timers and hang
+            // it, so fail on the first repeated request instead.
+            if (cursor == 'page-2' && secondPageRequests++ > 0) {
+              throw StateError('page-2 requested twice');
+            }
+            return switch (cursor) {
+              null => HomeFeedResult(
+                videos: first,
+                hasMore: true,
+                paginationCursor: 'page-2',
+              ),
+              'page-2' => HomeFeedResult(
+                videos: [videos[2].copyWith(pubkey: author)],
+                hasMore: true,
+                paginationCursor: repeatsCursor ? 'page-2' : 'page-3',
+              ),
+              'page-3' => HomeFeedResult(videos: [videos[3]], hasMore: false),
+              _ => throw StateError('Unexpected cursor'),
+            };
+          });
+          final container = createContainer();
+          await container.read(newVideosFeedProvider.future);
+
+          await container.read(newVideosFeedProvider.notifier).loadMore();
+
+          final state = container.read(newVideosFeedProvider).requireValue;
+          expect(state.videos, repeatsCursor ? first : [...first, videos[3]]);
+          expect(state.hasMoreContent, isFalse);
+          expect(state.isLoadingMore, isFalse);
+          expect(secondPageRequests, equals(1));
+        },
+      );
+    }
+
     group('build', () {
       test(
         'keeps the cursor when the first page has no visible rows',
@@ -183,6 +334,43 @@ void main() {
     });
 
     group('loadMore', () {
+      test('ends on an until page that brings no older row', () async {
+        final author = _videos(1).single.pubkey;
+        final first = [
+          for (final video in _videos(3)) video.copyWith(pubkey: author),
+        ];
+        final sameSecond = _videos(1, idPrefix: 'same').single.copyWith(
+          pubkey: author,
+          createdAt: first.last.createdAt,
+        );
+        var untilRequests = 0;
+        when(
+          () => videosRepository.getNewVideos(
+            limit: any(named: 'limit'),
+            until: any(named: 'until'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer((call) async {
+          final until = call.namedArguments[#until] as int?;
+          if (until == null) {
+            return HomeFeedResult(videos: first, hasMore: true);
+          }
+          if (until == first.last.createdAt && untilRequests++ == 0) {
+            return HomeFeedResult(videos: [sameSecond], hasMore: true);
+          }
+          throw StateError('Unexpected request until $until');
+        });
+        final container = createContainer();
+        await container.read(newVideosFeedProvider.future);
+
+        await container.read(newVideosFeedProvider.notifier).loadMore();
+
+        final state = container.read(newVideosFeedProvider).requireValue;
+        expect(untilRequests, equals(1));
+        expect(state.videos, first.take(2));
+        expect(state.hasMoreContent, isFalse);
+      });
+
       test('ignores a late page from before refresh', () async {
         final oldPage = Completer<HomeFeedResult>();
         final oldPageStarted = Completer<void>();
@@ -339,11 +527,6 @@ void main() {
           final notifier = container.read(newVideosFeedProvider.notifier);
 
           await notifier.loadMore();
-          expect(
-            container.read(newVideosFeedProvider).requireValue.hasMoreContent,
-            isTrue,
-          );
-          await notifier.loadMore();
           final failed = container.read(newVideosFeedProvider).requireValue;
           expect(failed.hasMoreContent, isTrue);
           expect(failed.isLoadingMore, isFalse);
@@ -354,6 +537,7 @@ void main() {
           final recovered = container.read(newVideosFeedProvider).requireValue;
           expect(recovered.videos.map((v) => v.id), ['new-0', 'more-0']);
           expect(recovered.hasMoreContent, isFalse);
+          expect(recovered.error, isNull);
         },
       );
 
@@ -440,7 +624,7 @@ List<VideoEvent> _videos(int count, {String idPrefix = 'new'}) => [
   for (var i = 0; i < count; i++)
     VideoEvent(
       id: '$idPrefix-$i',
-      pubkey: 'test-pubkey',
+      pubkey: (i + 1).toRadixString(16).padLeft(64, '0'),
       createdAt: DateTime(2026, 1, count - i).millisecondsSinceEpoch ~/ 1000,
       content: 'Test video',
       timestamp: DateTime(2026, 1, count - i),
