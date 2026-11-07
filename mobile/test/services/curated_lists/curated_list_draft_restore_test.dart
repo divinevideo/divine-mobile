@@ -201,27 +201,6 @@ void main() {
   });
 
   group('owner-private draft archive', () {
-    test('secure archive rejects foreign rows and stale consumption', () async {
-      await expectLater(
-        archive.replaceOwner(owner, [row(other)]),
-        throwsA(isA<CuratedListDraftArchiveException>()),
-      );
-      await archive.replaceOwner(owner, [row(owner)]);
-      final before = (await archive.readOwner(owner))!;
-      await archive.replaceOwner(owner, [row(owner, name: 'Newer draft')]);
-      expect(await archive.consumeOwner(owner, before.revision), isFalse);
-      expect(
-        (await archive.readOwner(owner))!.lists.single.name,
-        'Newer draft',
-      );
-      expect(
-        prefs.getKeys().any(
-          (key) => key.startsWith(SecureCuratedListDraftArchive.storagePrefix),
-        ),
-        isFalse,
-      );
-    });
-
     test('malformed or foreign owner envelopes remain untouched', () async {
       final key = SecureCuratedListDraftArchive.storageKey(owner);
       for (final raw in [

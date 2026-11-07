@@ -1,5 +1,5 @@
-// ABOUTME: List edits must apply to a fresh, complete relay revision.
-// ABOUTME: Missing relay answers never authorize replacement from a stale cache.
+// ABOUTME: Exercises saved draft reconciliation and explicit conflict recovery.
+// ABOUTME: Fresh relay authority and owner boundaries protect every recovery.
 
 import 'dart:async';
 import 'dart:convert';
