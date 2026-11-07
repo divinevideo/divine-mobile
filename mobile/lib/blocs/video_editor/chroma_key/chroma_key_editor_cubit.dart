@@ -1,5 +1,5 @@
 // ABOUTME: Drives the chroma-key screen: key colour, tolerances, background
-// ABOUTME: choice, the auto-detect measurement and the eyedropper.
+// ABOUTME: choice, and the auto-detect measurement.
 
 import 'dart:async';
 import 'dart:ui';
@@ -211,25 +211,6 @@ class ChromaKeyEditorCubit extends Cubit<ChromaKeyEditorState>
   void setKeyColor(Color color) => _updateKey(
     state.chromaKey.withKeySettings(color: color),
     detectionStatus: _statusAfterManualKeyEdit,
-  );
-
-  /// Opens the eyedropper over the preview.
-  void startPickingKeyColor() => emit(state.copyWith(isPickingKeyColor: true));
-
-  /// Closes the eyedropper without changing the key.
-  void cancelPickingKeyColor() =>
-      emit(state.copyWith(isPickingKeyColor: false));
-
-  /// Sets the screen colour picked off the preview and closes the eyedropper.
-  ///
-  /// A hand edit like [setKeyColor], so it writes off a measurement in
-  /// flight.
-  void pickKeyColor(Color color) => emit(
-    state.copyWith(
-      chromaKey: state.chromaKey.withKeySettings(color: color),
-      detectionStatus: _statusAfterManualKeyEdit,
-      isPickingKeyColor: false,
-    ),
   );
 
   /// Sets how far from the key colour a pixel may sit and still be removed,

@@ -190,16 +190,20 @@ void main() {
       ) async {
         await pump(tester, snapshot: await halves(tester));
         final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.text(l10n.videoEditorEyedropperHint), findsOneWidget);
-
-        await tester.tap(
-          find.byWidgetPredicate(
-            (widget) =>
-                widget is DivineIconButton &&
-                widget.semanticLabel ==
-                    l10n.videoEditorEyedropperCancelSemanticLabel,
-          ),
+        final close = find.byWidgetPredicate(
+          (widget) =>
+              widget is DivineIconButton &&
+              widget.semanticLabel ==
+                  l10n.videoEditorEyedropperCancelSemanticLabel,
         );
+        final hint = find.text(l10n.videoEditorEyedropperHint);
+        expect(hint, findsOneWidget);
+        // Both sit at the top, where the host's toolbar was, not over the
+        // middle of what is being picked from.
+        expect(tester.getRect(close).bottom, lessThan(_source.top));
+        expect(tester.getRect(hint).bottom, lessThan(_source.top));
+
+        await tester.tap(close);
         await tester.pump();
 
         expect(cancels, 1);

@@ -9,6 +9,7 @@ import 'package:openvine/blocs/video_editor/split_screen_layout/split_screen_lay
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/split_screen_layout.dart';
+import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_layout_controls.dart';
 import 'package:openvine/widgets/video_editor/split_screen_layout/split_screen_layout_preview.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
@@ -147,7 +148,10 @@ class VideoEditorSplitScreenLayoutView extends StatelessWidget {
                     const Expanded(
                       child: Padding(
                         padding: .all(16),
-                        child: SplitScreenLayoutPreview(),
+                        // What the border color's eyedropper picks from.
+                        child: EyedropperSourceRegion(
+                          child: SplitScreenLayoutPreview(),
+                        ),
                       ),
                     ),
                     SplitScreenCellActions(

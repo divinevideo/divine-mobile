@@ -1,6 +1,6 @@
-// ABOUTME: Full-screen green-screen editor for a single clip: auto-detect,
-// ABOUTME: pick or tune the key, choose what replaces it, all over a live
-// ABOUTME: preview that needs no render.
+// ABOUTME: Full-screen green-screen editor for a single clip: auto-detect or
+// ABOUTME: tune the key, choose what replaces it, all over a live preview that
+// ABOUTME: needs no render.
 
 import 'dart:async';
 import 'dart:io';
@@ -21,7 +21,7 @@ import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_backdrop.dar
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_clip_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_key_controls.dart';
 import 'package:openvine/widgets/video_editor/chroma_key/chroma_keyed_video.dart';
-import 'package:openvine/widgets/video_editor/eyedropper/color_eyedropper.dart';
+import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -136,11 +136,6 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
   /// The background image the pending bake was dispatched with, promoted to
   /// [_keptImagePath] once that bake lands.
   String? _pendingImagePath;
-
-  /// The unkeyed video in the preview, which the eyedropper picks from.
-  final GlobalKey _previewSourceKey = GlobalKey(
-    debugLabel: 'chromaKeyPreviewSource',
-  );
 
   @override
   void initState() {
@@ -448,7 +443,6 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
                               : widget.clip.targetAspectRatio.value,
                           player: _player,
                           backdropSync: _player == null ? null : _backdropSync,
-                          sourceKey: _previewSourceKey,
                         ),
                       ),
                       if (_canRemove)
@@ -470,7 +464,6 @@ class _VideoClipChromaKeyScreenState extends State<VideoClipChromaKeyScreen> {
                       ),
                     ],
                   ),
-                  _Eyedropper(sourceKey: _previewSourceKey),
                   if (bakingRenderId != null)
                     _BakingOverlay(renderId: bakingRenderId),
                 ],
@@ -604,53 +597,13 @@ class _BakingOverlay extends StatelessWidget {
   }
 }
 
-/// Picks the screen color off the preview while
-/// [ChromaKeyEditorState.isPickingKeyColor] is set.
-///
-/// Covers the whole screen, so the panel cannot be changed under it, and
-/// shows the clip unkeyed, so the screen color is there to pick.
-class _Eyedropper extends StatelessWidget {
-  const _Eyedropper({required this.sourceKey});
-
-  /// The unkeyed video in the preview.
-  final GlobalKey sourceKey;
-
-  @override
-  Widget build(BuildContext context) {
-    final isPicking = context.select(
-      (ChromaKeyEditorCubit c) => c.state.isPickingKeyColor,
-    );
-    if (!isPicking) return const SizedBox.shrink();
-    final cubit = context.read<ChromaKeyEditorCubit>();
-    return Positioned.fill(
-      // Back closes the eyedropper rather than the screen.
-      child: PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) cubit.cancelPickingKeyColor();
-        },
-        child: ColorEyedropper(
-          sourceKey: sourceKey,
-          sourceBorderRadius: _Preview.borderRadius,
-          onColorPicked: cubit.pickKeyColor,
-          onCancel: cubit.cancelPickingKeyColor,
-        ),
-      ),
-    );
-  }
-}
-
 /// The looping clip with the key applied live.
 class _Preview extends StatelessWidget {
   const _Preview({
     required this.aspectRatio,
     required this.player,
     required this.backdropSync,
-    required this.sourceKey,
   });
-
-  /// The rounding of the preview's corners.
-  static const borderRadius = BorderRadius.all(Radius.circular(16));
 
   final double aspectRatio;
   final DivineVideoPlayerController? player;
@@ -658,8 +611,7 @@ class _Preview extends StatelessWidget {
   /// Keeps a video backdrop aligned with the clip. See [ChromaKeyBackdropSync].
   final ChromaKeyBackdropSync? backdropSync;
 
-  /// Marks the video below the key, which the eyedropper captures.
-  final GlobalKey sourceKey;
+  static const _borderRadius = BorderRadius.all(Radius.circular(16));
 
   @override
   Widget build(BuildContext context) {
@@ -678,14 +630,14 @@ class _Preview extends StatelessWidget {
         child: AspectRatio(
           aspectRatio: aspectRatio,
           child: ClipRRect(
-            borderRadius: borderRadius,
+            borderRadius: _borderRadius,
             child: ChromaKeyedVideo(
               chromaKey: chromaKey,
               backdropSync: backdropSync,
-              // Its own layer below the key's filter, so the eyedropper reads
-              // the footage rather than what the key left of it.
-              child: RepaintBoundary(
-                key: sourceKey,
+              // Below the key's filter, so the eyedropper picks the footage
+              // — the screen color included — rather than what the key left.
+              child: EyedropperSourceRegion(
+                borderRadius: _borderRadius,
                 child: DivineVideoPlayer(controller: controller),
               ),
             ),

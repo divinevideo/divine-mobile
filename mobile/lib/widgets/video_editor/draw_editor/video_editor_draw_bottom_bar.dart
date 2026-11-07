@@ -1,6 +1,5 @@
 // ABOUTME: Bottom bar for the video editor draw screen.
-// ABOUTME: Shows drawing tools, the eyedropper and color picker, or the tools
-// ABOUTME: that hide an area.
+// ABOUTME: Shows drawing tools and color picker, or the tools that hide an area.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,9 +19,9 @@ import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.da
 
 /// Bottom bar for the video editor draw screen.
 ///
-/// Shows the [DrawToolType.drawingTools] in a row that scrolls sideways, the
-/// eyedropper and the color picker, or — while the editor hides areas — the
-/// blur and pixelate tools.
+/// Shows the [DrawToolType.drawingTools] in a row that scrolls sideways and
+/// the color picker, or — while the editor hides areas — the blur and
+/// pixelate tools.
 class VideoEditorDrawBottomBar extends StatelessWidget {
   const VideoEditorDrawBottomBar({super.key});
 
@@ -120,32 +119,16 @@ class VideoEditorDrawBottomBar extends StatelessWidget {
               ),
             ),
 
-            // Eyedropper and color picker
+            // Color picker
             SafeArea(
               top: false,
               right: false,
               left: false,
               child: Padding(
                 padding: const .only(bottom: 12, right: 16),
-                child: Row(
-                  spacing: 8,
-                  crossAxisAlignment: .end,
-                  children: [
-                    // Picks from the canvas body, so only where there is one.
-                    if (VideoEditorScope.of(context).canvasBodyKey != null)
-                      _EyedropperButton(
-                        isActive: state.isPickingColor,
-                        onTap: () => bloc.add(
-                          state.isPickingColor
-                              ? const VideoEditorDrawEyedropperCancelled()
-                              : const VideoEditorDrawEyedropperStarted(),
-                        ),
-                      ),
-                    _ColorPickerButton(
-                      color: state.selectedColor,
-                      onTap: () => _showColorPicker(context, bloc, state),
-                    ),
-                  ],
+                child: _ColorPickerButton(
+                  color: state.selectedColor,
+                  onTap: () => _showColorPicker(context, bloc, state),
                 ),
               ),
             ),
@@ -225,30 +208,6 @@ class _DrawToolButton extends StatelessWidget {
       // The hide tools have their own bar.
       .blur || .pixelate => const SizedBox.shrink(),
     };
-  }
-}
-
-/// Opens the eyedropper, or closes it again while it is open.
-class _EyedropperButton extends StatelessWidget {
-  const _EyedropperButton({required this.isActive, required this.onTap});
-
-  /// Whether the eyedropper is open.
-  final bool isActive;
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return DivineIconButton(
-      icon: .eyedropper,
-      size: .small,
-      type: isActive ? .primary : .ghostSecondary,
-      // Says what a tap does: while it is open, a tap closes it.
-      semanticLabel: isActive
-          ? context.l10n.videoEditorEyedropperCancelSemanticLabel
-          : context.l10n.videoEditorEyedropperSemanticLabel,
-      onPressed: onTap,
-    );
   }
 }
 

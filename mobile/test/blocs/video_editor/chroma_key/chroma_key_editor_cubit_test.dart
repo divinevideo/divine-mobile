@@ -427,22 +427,6 @@ void main() {
       );
 
       blocTest<ChromaKeyEditorCubit, ChromaKeyEditorState>(
-        'a colour picked off the preview while it runs is kept over the '
-        'measurement',
-        build: buildGated,
-        act: (cubit) => editMidFlight(cubit, (cubit) {
-          cubit
-            ..startPickingKeyColor()
-            ..pickKeyColor(const Color(0xFF0000FF));
-        }),
-        verify: (cubit) {
-          expect(cubit.state.chromaKey.key.color, const Color(0xFF0000FF));
-          expect(cubit.state.isDetecting, isFalse);
-          expect(cubit.state.isPickingKeyColor, isFalse);
-        },
-      );
-
-      blocTest<ChromaKeyEditorCubit, ChromaKeyEditorState>(
         'an amount dragged while it runs is kept over the measurement',
         build: buildGated,
         act: (cubit) =>
@@ -872,41 +856,6 @@ void main() {
           ClipChromaKeyBackgroundType.transparent,
         );
         expect(cubit.state.chromaKey.backgroundVideoPath, isNull);
-      });
-    });
-
-    group('eyedropper', () {
-      test('opens and closes without touching the key', () {
-        final cubit = build();
-        addTearDown(cubit.close);
-        final before = cubit.state.chromaKey;
-
-        cubit.startPickingKeyColor();
-        expect(cubit.state.isPickingKeyColor, isTrue);
-
-        cubit.cancelPickingKeyColor();
-        expect(cubit.state.isPickingKeyColor, isFalse);
-        expect(cubit.state.chromaKey, before);
-      });
-
-      test('a picked colour becomes the screen colour and closes it', () {
-        final cubit = build(
-          initialChromaKey: const ClipChromaKey(
-            key: ChromaKey(color: Color(0xFF00FF00), similarity: 0.42),
-            backgroundVideoPath: '/a/backdrop.mp4',
-          ),
-        );
-        addTearDown(cubit.close);
-
-        cubit
-          ..startPickingKeyColor()
-          ..pickKeyColor(const Color(0xFF19A55B));
-
-        expect(cubit.state.isPickingKeyColor, isFalse);
-        expect(cubit.state.chromaKey.key.color, const Color(0xFF19A55B));
-        // Only the colour is picked: the amount and the backdrop stay.
-        expect(cubit.state.chromaKey.key.similarity, 0.42);
-        expect(cubit.state.chromaKey.backgroundVideoPath, '/a/backdrop.mp4');
       });
     });
 

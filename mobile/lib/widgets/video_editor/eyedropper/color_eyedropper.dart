@@ -32,7 +32,7 @@ class ColorEyedropper extends StatefulWidget {
     required this.onColorPicked,
     required this.onCancel,
     this.sourceBorderRadius = BorderRadius.zero,
-    @visibleForTesting this.capture = captureEyedropperSnapshot,
+    this.capture = captureEyedropperSnapshot,
     super.key,
   });
 
@@ -54,7 +54,8 @@ class ColorEyedropper extends StatefulWidget {
   /// its place has the same corners.
   final BorderRadius sourceBorderRadius;
 
-  /// Captures the boundary. Tests replace it to supply known pixels.
+  /// Captures the boundary. Tests replace it, through
+  /// [EyedropperSourceRegion.capture] too, to supply known pixels.
   final EyedropperCapture capture;
 
   @override
@@ -277,7 +278,10 @@ class _TopBar extends StatelessWidget {
               onPressed: onCancel,
             ),
             Expanded(
+              // As tall as the pill: an unbounded Center would stretch the row
+              // over the whole overlay and drop the bar to its middle.
               child: Center(
+                heightFactor: 1,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: VineTheme.scrim65,

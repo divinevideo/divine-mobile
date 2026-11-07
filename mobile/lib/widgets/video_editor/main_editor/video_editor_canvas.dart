@@ -72,6 +72,7 @@ import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player_registry.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/paint_editor_stroke_width.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_preview.dart';
+import 'package:openvine/widgets/video_editor/eyedropper/eyedropper_source.dart';
 import 'package:openvine/widgets/video_editor/main_editor/hit_test_expander.dart';
 import 'package:openvine/widgets/video_editor/main_editor/interactive_card_safe_area_guide.dart';
 import 'package:openvine/widgets/video_editor/main_editor/playhead_interpolator.dart';
@@ -606,13 +607,6 @@ class VideoEditorCanvas extends StatelessWidget {
       canPop: !isSubEditorOpen,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
-          // Back while the draw editor's eyedropper is open closes just the
-          // eyedropper.
-          final drawBloc = context.read<VideoEditorDrawBloc>();
-          if (drawBloc.state.isPickingColor) {
-            drawBloc.add(const VideoEditorDrawEyedropperCancelled());
-            return;
-          }
           final scope = VideoEditorScope.of(context);
           scope.editor?.closeSubEditor();
           // The effects editor is app-owned, so it has no route for the back
@@ -4057,9 +4051,10 @@ class _CanvasFitter extends ConsumerWidget {
           // Marks this box — the canvas body — so a tool laid over the editor
           // can map a touch back into layer coordinates.
           key: scope.canvasBodyKey,
-          // Its own layer, so the draw editor's eyedropper can capture what
-          // the canvas shows without the controls drawn over it.
-          child: RepaintBoundary(
+          // What a color sheet's eyedropper picks from anywhere in the
+          // editor: the video, its layers and drawings, not the controls
+          // drawn over them.
+          child: EyedropperSourceRegion(
             child: VideoEditorCutAreaOverlay(
               child: HitTestExpander(
                 visibleSize: geometry.targetSize,

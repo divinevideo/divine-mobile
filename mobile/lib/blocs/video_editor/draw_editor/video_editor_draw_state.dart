@@ -96,7 +96,6 @@ class VideoEditorDrawState extends Equatable {
     this.mode = .freeStyle,
     this.blurIntensity = VideoEditorConstants.censorDefaultIntensity,
     this.pixelateIntensity = VideoEditorConstants.censorDefaultIntensity,
-    this.isPickingColor = false,
   });
 
   /// Whether the undo action is available.
@@ -126,10 +125,6 @@ class VideoEditorDrawState extends Equatable {
 
   /// How strongly the pixelate tool hides an area, from 0 to 1.
   final double pixelateIntensity;
-
-  /// Whether the eyedropper is open over the canvas, picking the next
-  /// drawing color off what the canvas shows.
-  final bool isPickingColor;
 
   /// The stroke width the selected tool draws with.
   double get strokeWidth => strokeWidthOf(selectedTool);
@@ -162,7 +157,6 @@ class VideoEditorDrawState extends Equatable {
     PaintMode? mode,
     double? blurIntensity,
     double? pixelateIntensity,
-    bool? isPickingColor,
   }) {
     return VideoEditorDrawState(
       canUndo: canUndo ?? this.canUndo,
@@ -174,7 +168,6 @@ class VideoEditorDrawState extends Equatable {
       mode: mode ?? this.mode,
       blurIntensity: blurIntensity ?? this.blurIntensity,
       pixelateIntensity: pixelateIntensity ?? this.pixelateIntensity,
-      isPickingColor: isPickingColor ?? this.isPickingColor,
     );
   }
 
@@ -189,6 +182,5 @@ class VideoEditorDrawState extends Equatable {
     mode,
     blurIntensity,
     pixelateIntensity,
-    isPickingColor,
   ];
 }

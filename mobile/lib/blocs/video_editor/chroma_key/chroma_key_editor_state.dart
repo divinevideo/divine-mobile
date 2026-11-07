@@ -28,7 +28,6 @@ class ChromaKeyEditorState extends Equatable {
   const ChromaKeyEditorState({
     required this.chromaKey,
     this.detectionStatus = ChromaKeyDetectionStatus.idle,
-    this.isPickingKeyColor = false,
   });
 
   /// The key as currently configured. Drives the live preview and is what the
@@ -36,10 +35,6 @@ class ChromaKeyEditorState extends Equatable {
   final ClipChromaKey chromaKey;
 
   final ChromaKeyDetectionStatus detectionStatus;
-
-  /// Whether the eyedropper is open over the preview, picking the screen
-  /// color off the footage.
-  final bool isPickingKeyColor;
 
   /// Which background the keyed area is filled with.
   ClipChromaKeyBackgroundType get backgroundType => chromaKey.backgroundType;
@@ -71,15 +66,13 @@ class ChromaKeyEditorState extends Equatable {
   ChromaKeyEditorState copyWith({
     ClipChromaKey? chromaKey,
     ChromaKeyDetectionStatus? detectionStatus,
-    bool? isPickingKeyColor,
   }) {
     return ChromaKeyEditorState(
       chromaKey: chromaKey ?? this.chromaKey,
       detectionStatus: detectionStatus ?? this.detectionStatus,
-      isPickingKeyColor: isPickingKeyColor ?? this.isPickingKeyColor,
     );
   }
 
   @override
-  List<Object?> get props => [chromaKey, detectionStatus, isPickingKeyColor];
+  List<Object?> get props => [chromaKey, detectionStatus];
 }

@@ -4,7 +4,6 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
-import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -81,7 +80,6 @@ void main() {
     Widget buildWidget({
       MockPaintEditorState? paintEditor,
       double width = 400,
-      GlobalKey? canvasBodyKey,
     }) {
       return ProviderScope(
         overrides: [
@@ -96,7 +94,6 @@ void main() {
               child: VideoEditorScope(
                 editorKey: editorKey,
                 removeAreaKey: GlobalKey(),
-                canvasBodyKey: canvasBodyKey,
                 originalClipAspectRatio: 9 / 16,
                 bodySizeNotifier: ValueNotifier(const Size(400, 600)),
                 zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
@@ -258,73 +255,6 @@ void main() {
 
         // Bottom sheet should be shown
         expect(find.byType(BottomSheet), findsOneWidget);
-      });
-    });
-
-    group('Eyedropper button', () {
-      final eyedropper = find.byWidgetPredicate(
-        (widget) =>
-            widget is DivineIconButton &&
-            widget.icon == DivineIconName.eyedropper,
-      );
-
-      testWidgets('is not offered without a canvas to pick from', (
-        tester,
-      ) async {
-        await tester.pumpWidget(buildWidget());
-        await tester.pump();
-
-        expect(eyedropper, findsNothing);
-      });
-
-      testWidgets('sits beside the color picker and opens the eyedropper', (
-        tester,
-      ) async {
-        await tester.pumpWidget(buildWidget(canvasBodyKey: GlobalKey()));
-        await tester.pump();
-
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(
-          tester.widget<DivineIconButton>(eyedropper).semanticLabel,
-          l10n.videoEditorEyedropperSemanticLabel,
-        );
-        final colorPicker = find.bySemanticsLabel(
-          l10n.videoEditorColorPickerSemanticLabel,
-        );
-        expect(
-          tester.getCenter(eyedropper).dx,
-          lessThan(tester.getCenter(colorPicker).dx),
-        );
-
-        await tester.tap(eyedropper);
-        await tester.pump();
-
-        verify(
-          () => mockBloc.add(const VideoEditorDrawEyedropperStarted()),
-        ).called(1);
-      });
-
-      testWidgets('closes the eyedropper while it is open', (tester) async {
-        when(
-          () => mockBloc.state,
-        ).thenReturn(const VideoEditorDrawState(isPickingColor: true));
-        await tester.pumpWidget(buildWidget(canvasBodyKey: GlobalKey()));
-        await tester.pump();
-
-        final l10n = lookupAppLocalizations(const Locale('en'));
-        final button = tester.widget<DivineIconButton>(eyedropper);
-        expect(button.type, DivineIconButtonType.primary);
-        expect(
-          button.semanticLabel,
-          l10n.videoEditorEyedropperCancelSemanticLabel,
-        );
-
-        await tester.tap(eyedropper);
-        await tester.pump();
-
-        verify(
-          () => mockBloc.add(const VideoEditorDrawEyedropperCancelled()),
-        ).called(1);
       });
     });
 
