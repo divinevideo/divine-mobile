@@ -103,7 +103,7 @@ class SecureCuratedListDraftArchive implements CuratedListDraftArchive {
       _validateRows(owner, lists);
       // An unknown older envelope is retained rather than overwritten.
       await readOwner(owner);
-      if (lists.isEmpty) return removeOwner(owner);
+      if (lists.isEmpty) return await removeOwner(owner);
       final encoded = jsonEncode({
         'version': 1,
         'owner': owner,
@@ -132,7 +132,7 @@ class SecureCuratedListDraftArchive implements CuratedListDraftArchive {
   @override
   Future<void> removeOwner(String owner) async {
     try {
-      await readOwner(owner);
+      // Explicit owner destruction also erases an unreadable envelope.
       final key = storageKey(owner);
       await _storage.delete(key: key);
       if (await _storage.read(key: key) != null) {

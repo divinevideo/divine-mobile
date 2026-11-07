@@ -29,6 +29,39 @@ class _Auth extends Mock implements AuthService {}
 
 class _Client extends Mock implements NostrClient {}
 
+class _ControlledPrefs extends Fake implements SharedPreferences {
+  _ControlledPrefs(this.delegate);
+  final SharedPreferences delegate;
+  bool rejectListWrites = false;
+
+  @override
+  Object? get(String key) => delegate.get(key);
+  @override
+  Set<String> getKeys() => delegate.getKeys();
+  @override
+  String? getString(String key) => delegate.getString(key);
+  @override
+  List<String>? getStringList(String key) => delegate.getStringList(key);
+  @override
+  bool? getBool(String key) => delegate.getBool(key);
+  @override
+  bool containsKey(String key) => delegate.containsKey(key);
+  @override
+  Future<void> reload() => delegate.reload();
+  @override
+  Future<bool> setString(String key, String value) async =>
+      rejectListWrites && key == CuratedListService.listsStorageKey
+      ? false
+      : delegate.setString(key, value);
+  @override
+  Future<bool> setStringList(String key, List<String> value) =>
+      delegate.setStringList(key, value);
+  @override
+  Future<bool> setBool(String key, bool value) => delegate.setBool(key, value);
+  @override
+  Future<bool> remove(String key) => delegate.remove(key);
+}
+
 class _SecureDevice {
   final values = <String, String>{};
   bool rejectWrites = false;
@@ -56,8 +89,9 @@ class _SecureDevice {
         if (!ignoreWrites) values[key!] = args['value'] as String;
         return null;
       case 'delete':
-        if (rejectDeletes)
+        if (rejectDeletes) {
           throw PlatformException(code: 'secure_delete_failed');
+        }
         values.remove(key);
         return null;
       case 'readAll':
@@ -108,11 +142,12 @@ void main() {
 
   Future<void> activate(String pubkey, {List<CuratedList>? cache}) async {
     await prefs.setString('current_user_pubkey_hex', pubkey);
-    if (cache != null)
+    if (cache != null) {
       await prefs.setString(
         CuratedListService.listsStorageKey,
         jsonEncode(cache.map((r) => r.toJson()).toList()),
       );
+    }
     auth = _Auth();
     client = _Client();
     when(() => auth.isAuthenticated).thenReturn(true);
@@ -186,6 +221,61 @@ void main() {
         isFalse,
       );
     });
+
+    test('malformed or foreign owner envelopes remain untouched', () async {
+      final key = SecureCuratedListDraftArchive.storageKey(owner);
+      for (final raw in [
+        '{invalid',
+        jsonEncode({
+          'version': 1,
+          'owner': other,
+          'revision': 'synthetic-revision',
+          'lists': [row(owner).toJson()],
+        }),
+      ]) {
+        device.values[key] = raw;
+        await expectLater(
+          archive.readOwner(owner),
+          throwsA(isA<CuratedListDraftArchiveException>()),
+        );
+        await expectLater(
+          archive.replaceOwner(owner, [row(owner)]),
+          throwsA(isA<CuratedListDraftArchiveException>()),
+        );
+        expect(device.values[key], raw);
+        final service = open();
+        final before = prefs.getString(CuratedListService.listsStorageKey);
+        expect(await service.addVideoToList('$owner:retained', third), isFalse);
+        expect(prefs.getString(CuratedListService.listsStorageKey), before);
+        expect(device.values[key], raw);
+      }
+    });
+
+    test(
+      'a rejected cache projection keeps the archive available for retry',
+      () async {
+        await archive.replaceOwner(owner, [row(owner)]);
+        await prefs.remove(CuratedListService.listsStorageKey);
+        final controlled = _ControlledPrefs(prefs);
+        prefs = controlled;
+        await activate(owner);
+        controlled.rejectListWrites = true;
+        final service = open();
+        await service.initialize();
+        expect(await archive.readOwner(owner), isNotNull);
+        expect(prefs.getString(CuratedListService.listsStorageKey), isNull);
+        expect(await service.addVideoToList('$owner:retained', third), isFalse);
+        expect(await archive.readOwner(owner), isNotNull);
+        controlled.rejectListWrites = false;
+        await service.initialize();
+        expect(service.getListById('$owner:retained')!.videoEventIds, [
+          first,
+          added,
+        ]);
+        expect(await archive.readOwner(owner), isNull);
+        expect(prefs.getString(CuratedListService.listsStorageKey), isNotNull);
+      },
+    );
 
     test(
       'ordinary logout and A to B to A restore only the active owner',
@@ -392,6 +482,21 @@ void main() {
       expect(prefs.getString(CuratedListService.listsStorageKey), cached);
       expect(b.isCurrentSession, isTrue);
     });
+
+    test(
+      'explicit forget erases even an unreadable exact-owner archive',
+      () async {
+        final key = SecureCuratedListDraftArchive.storageKey(owner);
+        device.values[key] = '{unreadable-private-payload';
+        await archive.replaceOwner(other, [row(other)]);
+        await cleanup().clearUserSpecificData(
+          userPubkey: owner,
+          forgetAccount: true,
+        );
+        expect(device.values[key], isNull);
+        expect(await archive.readOwner(other), isNotNull);
+      },
+    );
 
     test(
       'failed forget remains retryable without dropping either owner payload',

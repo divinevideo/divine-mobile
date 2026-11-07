@@ -662,10 +662,12 @@ class UserDataCleanupService {
     if (archive == null ||
         owner == null ||
         owner == deletingOwner ||
-        raw == null)
+        raw == null) {
       return;
-    if (!NostrHexUtils.isValidPubkey(owner))
+    }
+    if (!NostrHexUtils.isValidPubkey(owner)) {
       throw const CuratedListDraftArchiveException();
+    }
     final values = jsonDecode(raw) as List;
     final pending = <CuratedList>[];
     for (final value in values) {
