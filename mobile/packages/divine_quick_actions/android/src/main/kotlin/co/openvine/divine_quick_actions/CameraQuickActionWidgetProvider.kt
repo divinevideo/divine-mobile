@@ -26,16 +26,17 @@ class CameraQuickActionWidgetProvider internal constructor(
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        // Every step of an update calls into another process: the widget
-        // service and the package manager. A slow system server kept the
-        // broadcast open past its timeout, which the system reports as an ANR.
+        // An update calls into the widget service, the package manager and the
+        // activity manager. When the system server is slow, those calls hold
+        // the broadcast past its timeout and the system reports an ANR.
         val pendingResult = goAsync()
         val finished = AtomicBoolean(false)
         val finishBroadcast = Runnable {
             if (finished.compareAndSet(false, true)) pendingResult.finish()
         }
         // The timeout still runs while the broadcast is held, so release it in
-        // time and let a stalled update land whenever the system answers.
+        // time. A stalled update keeps running, but once the broadcast is
+        // released the process can be frozen or killed before it lands.
         val mainHandler = Handler(Looper.getMainLooper())
         mainHandler.postDelayed(finishBroadcast, BROADCAST_DEADLINE_MILLIS)
         updateExecutor.execute {
@@ -54,7 +55,8 @@ class CameraQuickActionWidgetProvider internal constructor(
         private const val REQUEST_CODE_OPEN_CAMERA = 4101
         private const val UPDATE_THREAD_IDLE_SECONDS = 10L
 
-        // Half the 10 seconds the platform gives a receiver before an ANR.
+        // Half the 10 s goAsync() documents for a receiver. The update is a
+        // background broadcast, which the system allows 60 s before an ANR.
         private const val BROADCAST_DEADLINE_MILLIS = 5_000L
 
         // One thread keeps updates in the order they were sent. It exits when
