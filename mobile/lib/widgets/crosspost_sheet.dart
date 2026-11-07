@@ -41,7 +41,7 @@ Future<void> showCrosspostSheetForEvent({
   required String eventId,
   required List<CrosspostingConnection> connections,
 }) {
-  final client = container.read(crosspostingApiClientProvider);
+  final repository = container.read(crosspostingRepositoryProvider);
   // Resolved while the opener is mounted: it may be gone by the time the
   // reconnect button is tapped, and Navigator.of on a defunct element throws.
   final navigator = Navigator.of(context);
@@ -50,7 +50,7 @@ Future<void> showCrosspostSheetForEvent({
     showHeaderDivider: false,
     body: BlocProvider(
       create: (_) => VideoCrosspostCubit(
-        client: client,
+        repository: repository,
         eventId: eventId,
         initialConnections: connections,
       ),

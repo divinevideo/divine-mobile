@@ -182,9 +182,9 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
         enforcementRepository: () =>
             ref.read(creatorDeleteEnforcementRepositoryProvider),
       );
-      // Capture this owner's client now, but do not request signing until tap.
+      // Capture this owner's repository now; signing still waits for a tap.
       _crosspostCubit = VideoCrosspostCubit(
-        client: ref.read(crosspostingApiClientProvider),
+        repository: ref.read(crosspostingRepositoryProvider),
         eventId: widget.video.id,
       );
     }
