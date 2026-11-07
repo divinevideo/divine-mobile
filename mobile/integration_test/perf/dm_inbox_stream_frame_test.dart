@@ -277,6 +277,28 @@ class _StallSampler {
   }
 }
 
+/// Records every error a bloc or cubit reports. Bloc's default observer drops
+/// them, and a window timed over a failing recompute measures nothing.
+class _ErrorRecorder extends BlocObserver {
+  final errors = <Object>[];
+
+  @override
+  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
+    errors.add(error);
+    super.onError(bloc, error, stackTrace);
+  }
+}
+
+/// Waits until [badge] has counted the seed, which leaves every account with
+/// unread rows. Its stream does not replay, so a count that landed before
+/// this call is read from its state.
+Future<void> _counted(DmUnreadCountCubit badge) async {
+  if (badge.state > 0) return;
+  await badge.stream
+      .firstWhere((count) => count > 0)
+      .timeout(const Duration(seconds: 30));
+}
+
 /// Lets queued emissions and the 200 ms debounce run out after a phase.
 Future<void> _settle() =>
     Future<void>.delayed(const Duration(milliseconds: 600));
@@ -385,8 +407,13 @@ void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   final results = <String, Object>{};
   final report = StringBuffer();
+  final blocErrors = _ErrorRecorder();
+  final previousObserver = Bloc.observer;
 
+  setUpAll(() => Bloc.observer = blocErrors);
+  setUp(blocErrors.errors.clear);
   tearDownAll(() {
+    Bloc.observer = previousObserver;
     binding.reportData = results;
     // One line at a time: the iOS console truncates a long single message.
     // This benchmark's result is a human-readable console report.
@@ -401,21 +428,56 @@ void main() {
           final account = await _Account.open(size, variant);
           addTearDown(account.close);
 
-          Future<Map<String, double>> phase(String layer) async {
+          Future<Map<String, double>> phase(
+            String layer, {
+            DmUnreadCountCubit? badge,
+            ConversationListBloc? list,
+          }) async {
             await _settle();
+            var badgeUpdates = 0;
+            var listUpdates = 0;
+            final watchers = <StreamSubscription<Object?>>[
+              ?badge?.stream.listen((_) => badgeUpdates++),
+              ?list?.stream
+                  .where((s) => s.status == ConversationListStatus.loaded)
+                  .listen((_) => listUpdates++),
+            ];
             final sampler = _StallSampler()..start();
             final wall = Stopwatch()..start();
             await _burst(account);
             await _settle();
             wall.stop();
             final s = sampler.stop();
+            for (final watcher in watchers) {
+              await watcher.cancel();
+            }
             await account.restoreSeededReadState();
             report.writeln(
               'N=$size ${variant.name} $layer: '
               'longest stall=${_fmt(s.maxMs)}ms '
               'stalls>8.33ms=${s.over8} (${_fmt(s.over8Ms)}ms) '
-              '>16.67ms=${s.over16} burst+settle=${wall.elapsedMilliseconds}ms',
+              '>16.67ms=${s.over16} burst+settle=${wall.elapsedMilliseconds}ms '
+              'badge updates=$badgeUpdates list updates=$listUpdates',
             );
+            if (badge != null) {
+              expect(
+                badgeUpdates,
+                greaterThan(0),
+                reason: '$layer: the burst must reach the badge',
+              );
+            }
+            if (list != null) {
+              expect(
+                listUpdates,
+                greaterThan(0),
+                reason: '$layer: the burst must reach the list',
+              );
+              expect(
+                list.state.status,
+                equals(ConversationListStatus.loaded),
+                reason: '$layer: the list must still be composing',
+              );
+            }
             return {
               'maxStallMs': s.maxMs,
               'over8': s.over8.toDouble(),
@@ -510,8 +572,11 @@ void main() {
             followRepository: account.follows,
             contentBlocklistRepository: account.blocklist,
           );
-          await badgeAlone.stream.first.timeout(const Duration(seconds: 30));
-          ladder['badgeAlone'] = await phase('badge cubit alone');
+          await _counted(badgeAlone);
+          ladder['badgeAlone'] = await phase(
+            'badge cubit alone',
+            badge: badgeAlone,
+          );
           await badgeAlone.close();
 
           final bloc = ConversationListBloc(
@@ -524,8 +589,6 @@ void main() {
             followRepository: account.follows,
             contentBlocklistRepository: account.blocklist,
           );
-          var emits = 0;
-          subscriptions.add(bloc.stream.listen((_) => emits++));
           await bloc.stream
               .firstWhere((s) => s.status == ConversationListStatus.loaded)
               .timeout(const Duration(seconds: 30));
@@ -535,19 +598,19 @@ void main() {
             greaterThan(size * 0.8),
             reason: 'the bloc must be composing the seeded account',
           );
-          emits = 0;
-          ladder['blocAndCubit'] = await phase('bloc + cubit');
-          report.writeln(
-            'N=$size ${variant.name} bloc emits during burst=$emits',
+          await _counted(cubit);
+          ladder['blocAndCubit'] = await phase(
+            'bloc + cubit',
+            badge: cubit,
+            list: bloc,
           );
-          expect(
-            emits,
-            greaterThan(0),
-            reason: 'the burst must reach the bloc',
-          );
-          await cancelAll();
           await bloc.close();
           await cubit.close();
+          expect(
+            blocErrors.errors,
+            isEmpty,
+            reason: 'a bloc or cubit failed while it was being measured',
+          );
 
           results['ladder_${size}_${variant.name}'] = ladder;
           // Seeding 5000 rows and six bursts outlasts the 30 s default on a
@@ -639,11 +702,33 @@ void main() {
           await tester.pumpWidget(_FeedCanary(feedRows!.take(40).toList()));
 
           final over =
-              <String, ({int frames, int over, int dropped, double stall})>{};
-          Future<void> trace(String label, Future<void> Function() act) async {
+              <
+                String,
+                ({
+                  int frames,
+                  int over,
+                  int dropped,
+                  double stall,
+                  int badge,
+                  int list,
+                })
+              >{};
+          Future<void> trace(
+            String label,
+            Future<void> Function() act, {
+            ConversationListBloc? list,
+          }) async {
             final timings = <FrameTiming>[];
             void collect(List<FrameTiming> t) => timings.addAll(t);
             binding.addTimingsCallback(collect);
+            var badgeUpdates = 0;
+            var listUpdates = 0;
+            final watchers = <StreamSubscription<Object?>>[
+              cubit.stream.listen((_) => badgeUpdates++),
+              ?list?.stream
+                  .where((s) => s.status == ConversationListStatus.loaded)
+                  .listen((_) => listUpdates++),
+            ];
             final sampler = _StallSampler()..start();
             final wall = Stopwatch()..start();
             await act();
@@ -652,6 +737,9 @@ void main() {
             await Future<void>.delayed(const Duration(seconds: 2));
             final s = sampler.stop();
             binding.removeTimingsCallback(collect);
+            for (final watcher in watchers) {
+              await watcher.cancel();
+            }
             double ms(Duration d) => d.inMicroseconds / 1000;
             final build = timings.map((t) => ms(t.buildDuration)).toList()
               ..sort();
@@ -692,6 +780,8 @@ void main() {
               over: overBudget,
               dropped: dropped,
               stall: s.maxMs,
+              badge: badgeUpdates,
+              list: listUpdates,
             );
             report.writeln(
               'N=$size ${variant.name} $label: frames=${timings.length} '
@@ -700,12 +790,13 @@ void main() {
               'build p50/p99/max=${_fmt(p(build, .5))}/${_fmt(p(build, .99))}/'
               '${_fmt(build.isEmpty ? 0 : build.last)}ms '
               'raster p99=${_fmt(p(raster, .99))}ms '
-              'longest stall=${_fmt(s.maxMs)}ms budget=${_fmt(budgetMs)}ms',
+              'longest stall=${_fmt(s.maxMs)}ms budget=${_fmt(budgetMs)}ms '
+              'badge updates=$badgeUpdates list updates=$listUpdates',
             );
           }
 
           await tester.runAsync(() async {
-            await cubit.stream.first.timeout(const Duration(seconds: 30));
+            await _counted(cubit);
             await trace(
               'idle, inbox closed',
               () => Future<void>.delayed(const Duration(seconds: 3)),
@@ -732,9 +823,10 @@ void main() {
             await trace(
               'idle',
               () => Future<void>.delayed(const Duration(seconds: 3)),
+              list: bloc,
             );
-            await trace('burst', () => _burst(account));
-            await trace('trickle', () => _trickle(account));
+            await trace('burst', () => _burst(account), list: bloc);
+            await trace('trickle', () => _trickle(account), list: bloc);
           });
 
           results['frames_${size}_${variant.name}'] = {
@@ -744,10 +836,39 @@ void main() {
                 'overBudget': e.value.over,
                 'dropped': e.value.dropped,
                 'longestStallMs': e.value.stall,
+                'badgeUpdates': e.value.badge,
+                'listUpdates': e.value.list,
               },
           };
 
           final burst = over['burst']!;
+          // The final trickle is not checked: a small account's burst can
+          // leave every row unread, so its writes need not move the count.
+          expect(
+            over['trickle, inbox closed']!.badge,
+            greaterThan(0),
+            reason: 'the trickle must reach the badge',
+          );
+          expect(
+            burst.badge,
+            greaterThan(0),
+            reason: 'the burst must reach the badge',
+          );
+          expect(
+            burst.list,
+            greaterThan(0),
+            reason: 'the burst must reach the list',
+          );
+          expect(
+            bloc.state.status,
+            equals(ConversationListStatus.loaded),
+            reason: 'the list must still be composing after the writes',
+          );
+          expect(
+            blocErrors.errors,
+            isEmpty,
+            reason: 'a bloc or cubit failed while it was being measured',
+          );
           expect(
             burst.frames,
             greaterThan(30),
