@@ -796,12 +796,7 @@ class VideosRepository {
       resultIndex++;
     }
     if (uniqueAddressableIds.isNotEmpty) {
-      for (final video in results[resultIndex]) {
-        final ref = video.addressableId;
-        if (ref != null) {
-          refToVideo[ref] = video;
-        }
-      }
+      _indexListCoordinates(refToVideo, results[resultIndex]);
     }
 
     // Build attribution metadata
@@ -884,18 +879,28 @@ class VideosRepository {
       resultIndex++;
     }
     if (addressableIds.isNotEmpty) {
-      for (final video in results[resultIndex]) {
-        final ref = video.addressableId;
-        if (ref != null) {
-          refToVideo[ref] = video;
-        }
-      }
+      _indexListCoordinates(refToVideo, results[resultIndex]);
     }
 
     // Return in ref order, omitting unresolved refs
     return deduplicateVideosPreservingOrder([
       for (final ref in videoRefs) ?refToVideo[ref],
     ]);
+  }
+
+  /// Keeps the coordinate a list saved before #10776 as well as the video's
+  /// own coordinate. A real 34236 video takes precedence over a legacy alias.
+  static void _indexListCoordinates(
+    Map<String, VideoEvent> refToVideo,
+    Iterable<VideoEvent> videos,
+  ) {
+    for (final video in videos) {
+      final coordinate = video.addressableId;
+      if (coordinate == null) continue;
+      refToVideo[coordinate] = video;
+      final legacy = legacyVideoCoordinateFor(coordinate);
+      if (legacy != null) refToVideo.putIfAbsent(legacy, () => video);
+    }
   }
 
   /// Fetches videos published by a specific author.

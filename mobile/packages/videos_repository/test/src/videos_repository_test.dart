@@ -9416,6 +9416,72 @@ void main() {
           expect(result.single.eventKind, EventKind.videoHorizontal);
         });
 
+        test('keeps a legacy coordinate in a curated list', () async {
+          stubAuthorVideos([stats(kind: EventKind.videoHorizontal, id: 'n')]);
+
+          final result = await withFunnelcake.getVideosForList([legacyAddress]);
+
+          expect(result.map((video) => video.id), ['n']);
+        });
+
+        test('keeps a legacy coordinate and its list attribution in the home '
+            'feed', () async {
+          _answerDetailedReadsAsFinished(mockNostrClient);
+          stubAuthorVideos([stats(kind: EventKind.videoHorizontal, id: 'n')]);
+
+          final result = await withFunnelcake.getHomeFeedVideos(
+            authors: ['a' * 64],
+            videoRefs: {
+              'list-a': [legacyAddress],
+            },
+          );
+
+          expect(result.videos.map((video) => video.id), ['n']);
+          expect(result.videoListSources, {
+            'n': {'list-a'},
+          });
+          expect(result.listOnlyVideoIds, {'n'});
+        });
+
+        test('keeps a real 34236 coordinate ahead of a list alias', () async {
+          stubAuthorVideos([
+            stats(kind: EventKind.videoVertical, id: 'vertical'),
+            stats(kind: EventKind.videoHorizontal, id: 'horizontal'),
+          ]);
+
+          final result = await withFunnelcake.getVideosForList([
+            legacyAddress,
+            normalAddress,
+          ]);
+
+          expect(result.map((video) => video.id), ['vertical', 'horizontal']);
+        });
+
+        test(
+          'attributes a real 34236 list coordinate to its own video',
+          () async {
+            _answerDetailedReadsAsFinished(mockNostrClient);
+            stubAuthorVideos([
+              stats(kind: EventKind.videoVertical, id: 'vertical'),
+              stats(kind: EventKind.videoHorizontal, id: 'horizontal'),
+            ]);
+
+            final result = await withFunnelcake.getHomeFeedVideos(
+              authors: ['a' * 64],
+              videoRefs: {
+                'short-list': [legacyAddress],
+                'normal-list': [normalAddress],
+              },
+            );
+
+            expect(result.videoListSources, {
+              'vertical': {'short-list'},
+              'horizontal': {'normal-list'},
+            });
+            expect(result.listOnlyVideoIds, {'vertical', 'horizontal'});
+          },
+        );
+
         test('leaves the old 34236 key to a real Kind 34236 video under the '
             'same d', () async {
           stubAuthorVideos([
